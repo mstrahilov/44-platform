@@ -88,30 +88,32 @@ export default function LibraryPage() {
     }
 
     async function fetchRelease(id: string) {
-      setLoading(true);
-      console.log('URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+  setLoading(true);
 
-      const [
-        { data: rel },
-        { data: trks },
-        { data: achs },
-        { data: exts },
-        { data: lib },
-      ] = await Promise.all([
-        supabase.from('releases').select('*').eq('id', id).single(),
-        supabase.from('tracks').select('*').eq('release_id', id).order('number'),
-        supabase.from('achievements').select('*').eq('release_id', id),
-        supabase.from('extras').select('*').eq('release_id', id),
-        supabase.from('library_items').select('*').eq('release_id', id).single(),
-      ]);
+  const [
+    { data: rel, error: relError },
+    { data: trks },
+    { data: achs },
+    { data: exts },
+    { data: lib },
+  ] = await Promise.all([
+    supabase.from('releases').select('*').eq('id', id).single(),
+    supabase.from('tracks').select('*').eq('release_id', id).order('number'),
+    supabase.from('achievements').select('*').eq('release_id', id),
+    supabase.from('extras').select('*').eq('release_id', id),
+    supabase.from('library_items').select('*').eq('release_id', id).single(),
+  ]);
 
-      setRelease(rel);
-      setTracks(trks ?? []);
-      setAchievements(achs ?? []);
-      setExtras(exts ?? []);
-      setLibItem(lib);
-      setLoading(false);
-    }
+  console.log('release data:', rel);
+  console.log('release error:', relError);
+
+  setRelease(rel);
+  setTracks(trks ?? []);
+  setAchievements(achs ?? []);
+  setExtras(exts ?? []);
+  setLibItem(lib);
+  setLoading(false);
+}
 
     fetchRelease(item.id);
   }, [activeIndex]);
