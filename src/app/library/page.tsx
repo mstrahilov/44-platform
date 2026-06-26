@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { getSupabase } from '@/lib/supabase';
 
 /* ── types ── */
 interface Release {
@@ -44,7 +44,6 @@ interface LibraryItem {
   last_listened: string;
 }
 
-/* ── hardcoded sidebar releases (until we have full library data) ── */
 const SIDEBAR_ITEMS = [
   { title: 'Always',              artist: 'spiiriit',       id: 'a1000000-0000-0000-0000-000000000001' },
   { title: 'SOMA',                artist: '44 CORPORATION', id: null },
@@ -66,23 +65,19 @@ const LABEL_COLORS: Record<string, string> = {
   paid:   'rgba(255,255,255,0.65)',
 };
 
-/* ── page ── */
 export default function LibraryPage() {
-  const [activeIndex, setActiveIndex]     = useState(0);
-  const [hoveredTrack, setHoveredTrack]   = useState<number | null>(null);
+  const [activeIndex, setActiveIndex]   = useState(0);
+  const [hoveredTrack, setHoveredTrack] = useState<number | null>(null);
+  const [release, setRelease]           = useState<Release | null>(null);
+  const [tracks, setTracks]             = useState<Track[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [extras, setExtras]             = useState<Extra[]>([]);
+  const [libItem, setLibItem]           = useState<LibraryItem | null>(null);
+  const [loading, setLoading]           = useState(true);
 
-  const [release, setRelease]             = useState<Release | null>(null);
-  const [tracks, setTracks]               = useState<Track[]>([]);
-  const [achievements, setAchievements]   = useState<Achievement[]>([]);
-  const [extras, setExtras]               = useState<Extra[]>([]);
-  const [libItem, setLibItem]             = useState<LibraryItem | null>(null);
-  const [loading, setLoading]             = useState(true);
-
-  /* fetch data whenever active sidebar item changes */
   useEffect(() => {
     const item = SIDEBAR_ITEMS[activeIndex];
     if (!item.id) {
-      // no Supabase data yet for this release — clear and show empty
       setRelease(null);
       setTracks([]);
       setAchievements([]);
@@ -94,6 +89,7 @@ export default function LibraryPage() {
 
     async function fetchRelease(id: string) {
       setLoading(true);
+      const supabase = getSupabase();
 
       const [
         { data: rel },
@@ -130,7 +126,7 @@ export default function LibraryPage() {
   return (
     <div style={{ display: 'flex', flex: 1, overflow: 'hidden', gap: 12, padding: '0 12px 12px' }}>
 
-      {/* ── SIDEBAR ── */}
+      {/* SIDEBAR */}
       <aside style={{ width: 234, flexShrink: 0, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', backdropFilter: 'blur(24px)', borderRadius: 16, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '12px 12px 8px' }}>
           <input
@@ -156,7 +152,7 @@ export default function LibraryPage() {
         </div>
       </aside>
 
-      {/* ── MAIN ── */}
+      {/* MAIN */}
       <main style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
 
         {loading ? (
@@ -272,7 +268,6 @@ export default function LibraryPage() {
   );
 }
 
-/* ── sub-component ── */
 function Panel({ title, sub, extra, children }: { title: string; sub?: string; extra?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', backdropFilter: 'blur(24px)', borderRadius: 16, padding: '16px 14px' }}>
