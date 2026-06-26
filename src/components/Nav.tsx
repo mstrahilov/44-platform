@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import AuthControls from '@/components/AuthControls';
 
 const NAV_ITEMS = [
   { label: 'Store',     href: '/' },
@@ -84,6 +85,8 @@ export default function Nav() {
         alignItems: 'center',
         gap: 8,
       }}>
+        <AuthControls />
+
         {/* expanding search input */}
         <div style={{
           width: searchOpen ? 200 : 0,

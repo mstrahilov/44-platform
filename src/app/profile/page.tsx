@@ -206,7 +206,7 @@ export default function ProfilePage() {
           <SidePanel title="Top Review">
             <div style={{ fontSize: 13, color: 'rgba(255,190,0,0.85)', letterSpacing: 1, marginBottom: 6 }}>★★★★★</div>
             <div style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.50)', lineHeight: 1.6, fontStyle: 'italic', marginBottom: 6 }}>
-              "Worked with lvminvs. on album artwork and it was one of the smoothest creative experiences I've had. Delivered way more than expected. The work is genuinely exceptional."
+              &quot;Worked with lvminvs. on album artwork and it was one of the smoothest creative experiences I&apos;ve had. Delivered way more than expected. The work is genuinely exceptional.&quot;
             </div>
             <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.28)' }}>— Ølsten · Graphic Design service</div>
           </SidePanel>

@@ -136,7 +136,7 @@ export default function CommunityPage() {
           <div style={{ height: 3, background: 'rgba(255,255,255,0.08)', borderRadius: 9999, marginBottom: 4 }}>
             <div style={{ height: 3, background: '#93FF00', borderRadius: 9999, width: '72%' }} />
           </div>
-          <div style={{ fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.28)' }}>72% of today's peak</div>
+          <div style={{ fontSize: 10, fontWeight: 500, color: 'rgba(255,255,255,0.28)' }}>72% of today&apos;s peak</div>
         </SidePanel>
 
         {/* trending */}

@@ -4,14 +4,14 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/useAuth';
 
-/* ── types ── */
 interface Release {
   id: string;
   title: string;
   artist: string;
   type: string;
-  tags: string[];
+  tags: string[] | null;
 }
 
 interface Track {
@@ -40,95 +40,153 @@ interface Extra {
 
 interface LibraryItem {
   release_id: string;
-  listen_count: number;
-  last_listened: string;
+  listen_count: number | null;
+  last_listened: string | null;
+  acquisition_type: string | null;
+  acquired_at: string | null;
 }
 
-const SIDEBAR_ITEMS = [
-  { title: 'Always',              artist: 'spiiriit',       id: 'a1000000-0000-0000-0000-000000000001' },
-  { title: 'SOMA',                artist: '44 CORPORATION', id: null },
-  { title: 'MYTHOLOGY VOL. I',    artist: '44 CORPORATION', id: null },
-  { title: 'EVERYTHING AFTER',    artist: 'Ølsten',         id: null },
-  { title: 'EVERYTHING BEFORE',   artist: 'Ølsten',         id: null },
-  { title: 'JOZ',                 artist: 'Ølsten',         id: null },
-  { title: 'ELENΛ',              artist: 'Ølsten',         id: null },
-  { title: 'KΛREN',              artist: 'Ølsten',         id: null },
-  { title: 'GHOST',               artist: 'Ølsten',         id: null },
-  { title: 'MASK',                artist: 'Ølsten',         id: null },
-  { title: 'WAVES',               artist: 'Ølsten',         id: null },
-  { title: 'THE GREAT SHADOWSEA', artist: 'Ølsten',         id: null },
-];
+type LibraryEntry = LibraryItem & {
+  release: Release;
+};
 
 const LABEL_COLORS: Record<string, string> = {
-  free:   '#93FF00',
+  free: '#93FF00',
   locked: 'rgba(255,255,255,0.28)',
-  paid:   'rgba(255,255,255,0.65)',
+  paid: 'rgba(255,255,255,0.65)',
 };
 
 export default function LibraryPage() {
-  const [activeIndex, setActiveIndex]   = useState(0);
+  const { user, loading: authLoading } = useAuth();
+  const [activeIndex, setActiveIndex] = useState(0);
   const [hoveredTrack, setHoveredTrack] = useState<number | null>(null);
-  const [release, setRelease]           = useState<Release | null>(null);
-  const [tracks, setTracks]             = useState<Track[]>([]);
+  const [library, setLibrary] = useState<LibraryEntry[]>([]);
+  const [release, setRelease] = useState<Release | null>(null);
+  const [tracks, setTracks] = useState<Track[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [extras, setExtras]             = useState<Extra[]>([]);
-  const [libItem, setLibItem]           = useState<LibraryItem | null>(null);
-  const [loading, setLoading]           = useState(true);
+  const [extras, setExtras] = useState<Extra[]>([]);
+  const [libItem, setLibItem] = useState<LibraryItem | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const item = SIDEBAR_ITEMS[activeIndex];
-    if (!item.id) {
-      setRelease(null);
-      setTracks([]);
-      setAchievements([]);
-      setExtras([]);
-      setLibItem(null);
-      setLoading(false);
+    if (authLoading) return;
+
+    if (!user) {
+      Promise.resolve().then(() => {
+        setLibrary([]);
+        setRelease(null);
+        setTracks([]);
+        setAchievements([]);
+        setExtras([]);
+        setLibItem(null);
+        setLoading(false);
+        setError(null);
+      });
       return;
     }
 
-    async function fetchRelease(id: string) {
-  setLoading(true);
+    async function fetchLibrary(userId: string) {
+      setLoading(true);
+      setError(null);
 
-  const [
-    { data: rel, error: relError },
-    { data: trks },
-    { data: achs },
-    { data: exts },
-    { data: lib },
-  ] = await Promise.all([
-    supabase.from('releases').select('*').eq('id', id).single(),
-    supabase.from('tracks').select('*').eq('release_id', id).order('number'),
-    supabase.from('achievements').select('*').eq('release_id', id),
-    supabase.from('extras').select('*').eq('release_id', id),
-    supabase.from('library_items').select('*').eq('release_id', id).single(),
-  ]);
+      const { data: items, error: itemsError } = await supabase
+        .from('library_items')
+        .select('release_id,listen_count,last_listened,acquisition_type,acquired_at')
+        .eq('user_id', userId)
+        .order('acquired_at', { ascending: false });
 
-  console.log('release data:', rel);
-  console.log('release error:', relError);
+      if (itemsError) {
+        setError(`${itemsError.message}. Run the Supabase user-library SQL migration, then refresh.`);
+        setLoading(false);
+        return;
+      }
 
-  setRelease(rel);
-  setTracks(trks ?? []);
-  setAchievements(achs ?? []);
-  setExtras(exts ?? []);
-  setLibItem(lib);
-  setLoading(false);
-}
+      const releaseIds = [...new Set((items ?? []).map(item => item.release_id))];
 
-    fetchRelease(item.id);
-  }, [activeIndex]);
+      if (releaseIds.length === 0) {
+        setLibrary([]);
+        setRelease(null);
+        setTracks([]);
+        setAchievements([]);
+        setExtras([]);
+        setLibItem(null);
+        setLoading(false);
+        return;
+      }
+
+      const { data: releases, error: releasesError } = await supabase
+        .from('releases')
+        .select('id,title,artist,type,tags')
+        .in('id', releaseIds);
+
+      if (releasesError) {
+        setError(releasesError.message);
+        setLoading(false);
+        return;
+      }
+
+      const releasesById = new Map((releases ?? []).map(item => [item.id, item]));
+      const entries = (items ?? [])
+        .map(item => {
+          const itemRelease = releasesById.get(item.release_id);
+          return itemRelease ? { ...item, release: itemRelease } : null;
+        })
+        .filter((item): item is LibraryEntry => item !== null);
+
+      setLibrary(entries);
+      setActiveIndex(0);
+      setLoading(false);
+    }
+
+    fetchLibrary(user.id);
+  }, [authLoading, user]);
+
+  useEffect(() => {
+    const entry = library[activeIndex];
+    if (!entry) return;
+
+    async function fetchReleaseDetails(id: string) {
+      setLoading(true);
+      setError(null);
+
+      const [
+        { data: rel, error: relError },
+        { data: trks, error: tracksError },
+        { data: achs, error: achievementsError },
+        { data: exts, error: extrasError },
+      ] = await Promise.all([
+        supabase.from('releases').select('*').eq('id', id).single(),
+        supabase.from('tracks').select('*').eq('release_id', id).order('number'),
+        supabase.from('achievements').select('*').eq('release_id', id),
+        supabase.from('extras').select('*').eq('release_id', id),
+      ]);
+
+      const firstError = relError ?? tracksError ?? achievementsError ?? extrasError;
+      if (firstError) {
+        setError(firstError.message);
+      }
+
+      setRelease(rel);
+      setTracks(trks ?? []);
+      setAchievements(achs ?? []);
+      setExtras(exts ?? []);
+      setLibItem(entry);
+      setLoading(false);
+    }
+
+    fetchReleaseDetails(entry.release_id);
+  }, [activeIndex, library]);
 
   const earnedCount = achievements.filter(a => a.earned).length;
-  const totalCount  = achievements.length;
+  const totalCount = achievements.length;
 
   const lastListened = libItem?.last_listened
     ? new Date(libItem.last_listened).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    : '—';
+    : '-';
 
   return (
     <div style={{ display: 'flex', flex: 1, overflow: 'hidden', gap: 12, padding: '0 12px 12px' }}>
-
-      {/* SIDEBAR */}
       <aside style={{ width: 234, flexShrink: 0, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', backdropFilter: 'blur(24px)', borderRadius: 16, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '12px 12px 8px' }}>
           <input
@@ -138,32 +196,35 @@ export default function LibraryPage() {
           />
         </div>
         <div style={{ flex: 1, overflowY: 'auto' }}>
-          {SIDEBAR_ITEMS.map((item, i) => (
+          {library.map((entry, i) => (
             <div
-              key={i}
+              key={entry.release_id}
               onClick={() => setActiveIndex(i)}
               style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', cursor: 'pointer', background: activeIndex === i ? 'rgba(255,255,255,0.09)' : 'transparent', borderLeft: activeIndex === i ? '2px solid #93FF00' : '2px solid transparent', transition: 'background 120ms ease' }}
             >
               <div style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.09)' }} />
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: activeIndex === i ? '#fff' : 'rgba(255,255,255,0.75)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.title}</div>
-                <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>{item.artist}</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: activeIndex === i ? '#fff' : 'rgba(255,255,255,0.75)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.release.title}</div>
+                <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>{entry.release.artist}</div>
               </div>
             </div>
           ))}
         </div>
       </aside>
 
-      {/* MAIN */}
       <main style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
-
-        {loading ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'rgba(255,255,255,0.30)', fontSize: 13, fontWeight: 500 }}>Loading...</div>
+        {authLoading || loading ? (
+          <CenteredMessage>Loading...</CenteredMessage>
+        ) : !user ? (
+          <CenteredMessage>Sign in to view your library</CenteredMessage>
+        ) : error ? (
+          <CenteredMessage>{error}</CenteredMessage>
+        ) : library.length === 0 ? (
+          <CenteredMessage>Your library is empty. Add a free release from the Store to test ownership.</CenteredMessage>
         ) : !release ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'rgba(255,255,255,0.20)', fontSize: 13, fontWeight: 500 }}>Not yet in Supabase</div>
+          <CenteredMessage>Select a release</CenteredMessage>
         ) : (
           <>
-            {/* RELEASE HEADER */}
             <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', backdropFilter: 'blur(24px)', borderRadius: 16, padding: 20, display: 'flex', gap: 20, alignItems: 'flex-start' }}>
               <div style={{ width: 120, height: 120, flexShrink: 0, borderRadius: 12, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.09)' }} />
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -171,23 +232,22 @@ export default function LibraryPage() {
                 <div style={{ fontSize: 28, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1, marginBottom: 6 }}>{release.title}</div>
                 <div style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.45)', marginBottom: 12 }}>by <span style={{ color: 'rgba(255,255,255,0.75)' }}>{release.artist}</span></div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {release.tags.map(tag => (
+                  {(release.tags ?? []).map(tag => (
                     <div key={tag} style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.11)', borderRadius: 6, padding: '3px 10px', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', color: 'rgba(255,255,255,0.55)' }}>{tag}</div>
                   ))}
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
                 <button style={{ background: '#93FF00', border: 'none', borderRadius: 9999, padding: '10px 24px', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: '#0A0A12', cursor: 'pointer' }}>▶ Play</button>
-                <button style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 9999, padding: '8px 18px', fontFamily: 'inherit', fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.55)', cursor: 'pointer' }}>···</button>
+                <button style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 9999, padding: '8px 18px', fontFamily: 'inherit', fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.55)', cursor: 'pointer' }}>...</button>
               </div>
             </div>
 
-            {/* STATS ROW */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
               {[
                 { value: libItem?.listen_count?.toLocaleString() ?? '0', label: 'Total Listens' },
-                { value: `${earnedCount} / ${totalCount}`,               label: 'Achievements'  },
-                { value: lastListened,                                    label: 'Last Listened' },
+                { value: `${earnedCount} / ${totalCount}`, label: 'Achievements' },
+                { value: lastListened, label: 'Last Listened' },
               ].map((s, i) => (
                 <div key={i} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', backdropFilter: 'blur(24px)', borderRadius: 14, padding: '14px 18px', textAlign: 'center' }}>
                   <div style={{ fontSize: 22, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em' }}>{s.value}</div>
@@ -196,7 +256,6 @@ export default function LibraryPage() {
               ))}
             </div>
 
-            {/* TRACKLIST */}
             <Panel title="Tracklist" sub={`${tracks.length} tracks`}>
               {tracks.map((t, i) => (
                 <div
@@ -214,7 +273,6 @@ export default function LibraryPage() {
               ))}
             </Panel>
 
-            {/* ACHIEVEMENTS */}
             <Panel title="Achievements" extra={
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
                 <div style={{ position: 'relative', width: 28, height: 28 }}>
@@ -244,7 +302,6 @@ export default function LibraryPage() {
               </div>
             </Panel>
 
-            {/* EXTRAS */}
             <Panel title="Extras">
               <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }}>
                 {extras.map(e => (
@@ -266,6 +323,14 @@ export default function LibraryPage() {
           </>
         )}
       </main>
+    </div>
+  );
+}
+
+function CenteredMessage({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'rgba(255,255,255,0.30)', fontSize: 13, fontWeight: 500, textAlign: 'center', padding: 24 }}>
+      {children}
     </div>
   );
 }

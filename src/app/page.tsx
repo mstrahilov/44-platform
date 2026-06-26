@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/useAuth';
 
 /* ── static data ── */
 const FILTERS = ['All', 'Music', 'Games', 'Books', 'Sample Packs', 'Services', 'Merch', 'Free'];
@@ -35,9 +37,74 @@ const SPOTLIGHT = [
   { name: 'Elara Write',     meta: '5K followers · 5 novels'      },
 ];
 
+interface Release {
+  id: string;
+  title: string;
+  artist: string;
+  type: string;
+  tags: string[] | null;
+}
+
 /* ── component ── */
 export default function StorePage() {
+  const { user } = useAuth();
   const [activeFilter, setActiveFilter] = useState('All');
+  const [liveReleases, setLiveReleases] = useState<Release[]>([]);
+  const [ownedReleaseIds, setOwnedReleaseIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    async function fetchReleases() {
+      const { data } = await supabase
+        .from('releases')
+        .select('id,title,artist,type,tags')
+        .order('title');
+
+      setLiveReleases(data ?? []);
+    }
+
+    fetchReleases();
+  }, []);
+
+  useEffect(() => {
+    async function fetchOwnedItems(userId: string) {
+      const { data } = await supabase
+        .from('library_items')
+        .select('release_id')
+        .eq('user_id', userId);
+
+      setOwnedReleaseIds((data ?? []).map(item => item.release_id));
+    }
+
+    if (user) {
+      fetchOwnedItems(user.id);
+    } else {
+      Promise.resolve().then(() => setOwnedReleaseIds([]));
+    }
+  }, [user]);
+
+  async function addToLibrary(releaseId: string) {
+    if (!user) {
+      alert('Sign in first, then add this to your library.');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('library_items')
+      .upsert({
+        user_id: user.id,
+        release_id: releaseId,
+        acquisition_type: 'free',
+        listen_count: 0,
+        last_listened: null,
+      }, { onConflict: 'user_id,release_id' });
+
+    if (error) {
+      alert(`${error.message}. Run the Supabase user-library SQL migration, then refresh.`);
+      return;
+    }
+
+    setOwnedReleaseIds(current => [...new Set([...current, releaseId])]);
+  }
 
   return (
     <div style={{
@@ -156,9 +223,22 @@ export default function StorePage() {
       <div>
         <SectionHeader title="New & Trending" link="See All →" />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 10 }}>
-          {NEW_TRENDING.map((p, i) => (
-            <ProductCard key={i} {...p} />
-          ))}
+          {liveReleases.length > 0
+            ? liveReleases.map(release => (
+                <ProductCard
+                  key={release.id}
+                  type={`${release.type} · Music`}
+                  title={release.title}
+                  creator={release.artist}
+                  price="Free"
+                  free
+                  owned={ownedReleaseIds.includes(release.id)}
+                  onGet={() => addToLibrary(release.id)}
+                />
+              ))
+            : NEW_TRENDING.map((p, i) => (
+                <ProductCard key={i} {...p} />
+              ))}
         </div>
       </div>
 
@@ -211,7 +291,7 @@ function SectionHeader({ title, link }: { title: string; link: string }) {
   );
 }
 
-function ProductCard({ type, title, creator, price, free }: { type: string; title: string; creator: string; price: string; free: boolean }) {
+function ProductCard({ type, title, creator, price, free, owned = false, onGet }: { type: string; title: string; creator: string; price: string; free: boolean; owned?: boolean; onGet?: () => void }) {
   const [hovered, setHovered] = useState(false);
   return (
     <div
@@ -235,12 +315,13 @@ function ProductCard({ type, title, creator, price, free }: { type: string; titl
         <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.38)', marginBottom: 10 }}>{creator}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: free ? '#93FF00' : 'rgba(255,255,255,0.90)' }}>{price}</div>
-          <button style={{
+          <button onClick={onGet} disabled={owned} style={{
             background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.14)',
             borderRadius: 9999, padding: '4px 12px',
             fontFamily: 'inherit', fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.70)',
-            cursor: 'pointer', letterSpacing: '0.04em',
-          }}>Get</button>
+            cursor: owned ? 'default' : 'pointer', letterSpacing: '0.04em',
+            opacity: owned ? 0.6 : 1,
+          }}>{owned ? 'Owned' : 'Get'}</button>
         </div>
       </div>
     </div>
