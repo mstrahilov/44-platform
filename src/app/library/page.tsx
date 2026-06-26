@@ -3,8 +3,11 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
+import type { Product } from '@/lib/products';
+import { browseHref, formatProductPrice, productMeta } from '@/lib/products';
 
 interface Release {
   id: string;
@@ -39,7 +42,8 @@ interface Extra {
 }
 
 interface LibraryItem {
-  release_id: string;
+  release_id: string | null;
+  product_id: string | null;
   listen_count: number | null;
   last_listened: string | null;
   acquisition_type: string | null;
@@ -47,7 +51,8 @@ interface LibraryItem {
 }
 
 type LibraryEntry = LibraryItem & {
-  release: Release;
+  release: Release | null;
+  product: Product | null;
 };
 
 const LABEL_COLORS: Record<string, string> = {
@@ -65,7 +70,7 @@ export default function LibraryPage() {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [extras, setExtras] = useState<Extra[]>([]);
-  const [libItem, setLibItem] = useState<LibraryItem | null>(null);
+  const [libItem, setLibItem] = useState<LibraryEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,7 +97,7 @@ export default function LibraryPage() {
 
       const { data: items, error: itemsError } = await supabase
         .from('library_items')
-        .select('release_id,listen_count,last_listened,acquisition_type,acquired_at')
+        .select('release_id,product_id,listen_count,last_listened,acquisition_type,acquired_at')
         .eq('user_id', userId)
         .order('acquired_at', { ascending: false });
 
@@ -102,9 +107,10 @@ export default function LibraryPage() {
         return;
       }
 
-      const releaseIds = [...new Set((items ?? []).map(item => item.release_id))];
+      const releaseIds = [...new Set((items ?? []).map(item => item.release_id).filter(Boolean))];
+      const productIds = [...new Set((items ?? []).map(item => item.product_id).filter(Boolean))];
 
-      if (releaseIds.length === 0) {
+      if (releaseIds.length === 0 && productIds.length === 0) {
         setLibrary([]);
         setRelease(null);
         setTracks([]);
@@ -115,22 +121,30 @@ export default function LibraryPage() {
         return;
       }
 
-      const { data: releases, error: releasesError } = await supabase
-        .from('releases')
-        .select('id,title,artist,type,tags')
-        .in('id', releaseIds);
+      const [{ data: releases, error: releasesError }, { data: products, error: productsError }] = await Promise.all([
+        releaseIds.length > 0
+          ? supabase.from('releases').select('id,title,artist,type,tags').in('id', releaseIds)
+          : Promise.resolve({ data: [], error: null }),
+        productIds.length > 0
+          ? supabase.from('products').select('*').in('id', productIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
 
-      if (releasesError) {
-        setError(releasesError.message);
+      const firstError = releasesError ?? productsError;
+      if (firstError) {
+        setError(firstError.message);
         setLoading(false);
         return;
       }
 
       const releasesById = new Map((releases ?? []).map(item => [item.id, item]));
+      const productsById = new Map((products ?? []).map(item => [item.id, item]));
       const entries = (items ?? [])
         .map(item => {
-          const itemRelease = releasesById.get(item.release_id);
-          return itemRelease ? { ...item, release: itemRelease } : null;
+          const itemProduct = item.product_id ? productsById.get(item.product_id) ?? null : null;
+          const itemRelease = item.release_id ? releasesById.get(item.release_id) ?? null : null;
+          if (!itemProduct && !itemRelease) return null;
+          return { ...item, product: itemProduct, release: itemRelease };
         })
         .filter((item): item is LibraryEntry => item !== null);
 
@@ -146,9 +160,20 @@ export default function LibraryPage() {
     const entry = library[activeIndex];
     if (!entry) return;
 
-    async function fetchReleaseDetails(id: string) {
+    async function fetchReleaseDetails(entry: LibraryEntry) {
       setLoading(true);
       setError(null);
+      const releaseId = entry.release_id ?? entry.product?.linked_release_id;
+
+      if (!releaseId) {
+        setRelease(null);
+        setTracks([]);
+        setAchievements([]);
+        setExtras([]);
+        setLibItem(entry);
+        setLoading(false);
+        return;
+      }
 
       const [
         { data: rel, error: relError },
@@ -156,10 +181,10 @@ export default function LibraryPage() {
         { data: achs, error: achievementsError },
         { data: exts, error: extrasError },
       ] = await Promise.all([
-        supabase.from('releases').select('*').eq('id', id).single(),
-        supabase.from('tracks').select('*').eq('release_id', id).order('number'),
-        supabase.from('achievements').select('*').eq('release_id', id),
-        supabase.from('extras').select('*').eq('release_id', id),
+        supabase.from('releases').select('*').eq('id', releaseId).single(),
+        supabase.from('tracks').select('*').eq('release_id', releaseId).order('number'),
+        supabase.from('achievements').select('*').eq('release_id', releaseId),
+        supabase.from('extras').select('*').eq('release_id', releaseId),
       ]);
 
       const firstError = relError ?? tracksError ?? achievementsError ?? extrasError;
@@ -175,7 +200,7 @@ export default function LibraryPage() {
       setLoading(false);
     }
 
-    fetchReleaseDetails(entry.release_id);
+    fetchReleaseDetails(entry);
   }, [activeIndex, library]);
 
   const earnedCount = achievements.filter(a => a.earned).length;
@@ -198,14 +223,14 @@ export default function LibraryPage() {
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {library.map((entry, i) => (
             <div
-              key={entry.release_id}
+              key={entry.product_id ?? entry.release_id}
               onClick={() => setActiveIndex(i)}
               style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', cursor: 'pointer', background: activeIndex === i ? 'rgba(255,255,255,0.09)' : 'transparent', borderLeft: activeIndex === i ? '2px solid #93FF00' : '2px solid transparent', transition: 'background 120ms ease' }}
             >
               <div style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.09)' }} />
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: activeIndex === i ? '#fff' : 'rgba(255,255,255,0.75)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.release.title}</div>
-                <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>{entry.release.artist}</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: activeIndex === i ? '#fff' : 'rgba(255,255,255,0.75)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.product?.title ?? entry.release?.title}</div>
+                <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>{entry.product?.creator ?? entry.release?.artist}</div>
               </div>
             </div>
           ))}
@@ -220,20 +245,21 @@ export default function LibraryPage() {
         ) : error ? (
           <CenteredMessage>{error}</CenteredMessage>
         ) : library.length === 0 ? (
-          <CenteredMessage>Your library is empty. Add a free release from the Store to test ownership.</CenteredMessage>
-        ) : !release ? (
-          <CenteredMessage>Select a release</CenteredMessage>
+          <CenteredMessage>Your library is empty. Add a free product from the Store or Browse page to test ownership.</CenteredMessage>
+        ) : !release && !libItem?.product ? (
+          <CenteredMessage>Select a product</CenteredMessage>
         ) : (
           <>
             <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', backdropFilter: 'blur(24px)', borderRadius: 16, padding: 20, display: 'flex', gap: 20, alignItems: 'flex-start' }}>
               <div style={{ width: 120, height: 120, flexShrink: 0, borderRadius: 12, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.09)' }} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.38)', marginBottom: 6 }}>{release.type}</div>
-                <div style={{ fontSize: 28, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1, marginBottom: 6 }}>{release.title}</div>
-                <div style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.45)', marginBottom: 12 }}>by <span style={{ color: 'rgba(255,255,255,0.75)' }}>{release.artist}</span></div>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.38)', marginBottom: 6 }}>{libItem?.product ? productMeta(libItem.product) : release?.type}</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1, marginBottom: 6 }}>{libItem?.product?.title ?? release?.title}</div>
+                <div style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.45)', marginBottom: 12 }}>by <span style={{ color: 'rgba(255,255,255,0.75)' }}>{libItem?.product?.creator ?? release?.artist}</span></div>
+                {libItem?.product && <div style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.42)', lineHeight: 1.6, marginBottom: 12 }}>{libItem.product.description}</div>}
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {(release.tags ?? []).map(tag => (
-                    <div key={tag} style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.11)', borderRadius: 6, padding: '3px 10px', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', color: 'rgba(255,255,255,0.55)' }}>{tag}</div>
+                  {((libItem?.product?.tags ?? release?.tags) ?? []).map(tag => (
+                    <Link key={tag} href={browseHref({ tag })} style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.11)', borderRadius: 6, padding: '3px 10px', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', color: 'rgba(255,255,255,0.55)' }}>{tag}</Link>
                   ))}
                 </div>
               </div>
@@ -245,7 +271,7 @@ export default function LibraryPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
               {[
-                { value: libItem?.listen_count?.toLocaleString() ?? '0', label: 'Total Listens' },
+                { value: libItem?.product ? formatProductPrice(libItem.product) : libItem?.listen_count?.toLocaleString() ?? '0', label: libItem?.product ? 'Price' : 'Total Listens' },
                 { value: `${earnedCount} / ${totalCount}`, label: 'Achievements' },
                 { value: lastListened, label: 'Last Listened' },
               ].map((s, i) => (

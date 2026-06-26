@@ -49,7 +49,7 @@ export default function Nav() {
         padding: 5,
       }}>
         {NAV_ITEMS.map(({ label, href }) => {
-          const active = pathname === href;
+          const active = pathname === href || (href !== '/' && pathname.startsWith(href));
           return (
             <Link
               key={href}
