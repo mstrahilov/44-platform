@@ -1,61 +1,129 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 
-/* ── static data ── */
+/* ── types ── */
+interface Release {
+  id: string;
+  title: string;
+  artist: string;
+  type: string;
+  tags: string[];
+}
+
+interface Track {
+  id: string;
+  number: number;
+  name: string;
+  duration: string;
+}
+
+interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  earned: boolean;
+}
+
+interface Extra {
+  id: string;
+  label: string;
+  label_type: string;
+  title: string;
+  subtitle: string;
+  action: string | null;
+  locked: boolean;
+}
+
+interface LibraryItem {
+  release_id: string;
+  listen_count: number;
+  last_listened: string;
+}
+
+/* ── hardcoded sidebar releases (until we have full library data) ── */
 const SIDEBAR_ITEMS = [
-  { title: 'Always',               artist: 'spiiriit'        },
-  { title: 'SOMA',                 artist: '44 CORPORATION'  },
-  { title: 'MYTHOLOGY VOL. I',     artist: '44 CORPORATION'  },
-  { title: 'EVERYTHING AFTER',     artist: 'Ølsten'          },
-  { title: 'EVERYTHING BEFORE',    artist: 'Ølsten'          },
-  { title: 'JOZ',                  artist: 'Ølsten'          },
-  { title: 'ELENΛ',               artist: 'Ølsten'          },
-  { title: 'KΛREN',               artist: 'Ølsten'          },
-  { title: 'GHOST',                artist: 'Ølsten'          },
-  { title: 'MASK',                 artist: 'Ølsten'          },
-  { title: 'WAVES',                artist: 'Ølsten'          },
-  { title: 'THE GREAT SHADOWSEA',  artist: 'Ølsten'          },
+  { title: 'Always',              artist: 'spiiriit',       id: 'a1000000-0000-0000-0000-000000000001' },
+  { title: 'SOMA',                artist: '44 CORPORATION', id: null },
+  { title: 'MYTHOLOGY VOL. I',    artist: '44 CORPORATION', id: null },
+  { title: 'EVERYTHING AFTER',    artist: 'Ølsten',         id: null },
+  { title: 'EVERYTHING BEFORE',   artist: 'Ølsten',         id: null },
+  { title: 'JOZ',                 artist: 'Ølsten',         id: null },
+  { title: 'ELENΛ',              artist: 'Ølsten',         id: null },
+  { title: 'KΛREN',              artist: 'Ølsten',         id: null },
+  { title: 'GHOST',               artist: 'Ølsten',         id: null },
+  { title: 'MASK',                artist: 'Ølsten',         id: null },
+  { title: 'WAVES',               artist: 'Ølsten',         id: null },
+  { title: 'THE GREAT SHADOWSEA', artist: 'Ølsten',         id: null },
 ];
 
-const TRACKS = [
-  { num: '01', name: 'Samodiva',                                                           dur: '0:34' },
-  { num: '02', name: 'Fade Interlude',                                                     dur: '0:35' },
-  { num: '03', name: 'Away (feat. ØLSTEN)',                                                dur: '2:54' },
-  { num: '04', name: 'Something Sweet Mixed With Something Bitter',                        dur: '1:34' },
-  { num: '05', name: 'Surrender (feat. Oliander)',                                         dur: '3:41' },
-  { num: '06', name: 'All I\'ve Ever Known (feat. Gabrielle Marcí & Wasé Taiwo)',          dur: '2:39' },
-  { num: '07', name: 'Wait For Me (feat. ZK king)',                                        dur: '2:44' },
-  { num: '08', name: 'Waste Ur Time',                                                      dur: '2:51' },
-  { num: '09', name: 'Makdes',                                                             dur: '2:02' },
-  { num: '10', name: 'Come Alive',                                                         dur: '3:33' },
-  { num: '11', name: 'Images of Broken Light',                                             dur: '1:01' },
-  { num: '12', name: 'Connection, Memory + Belief',                                        dur: '1:42' },
-  { num: '13', name: 'Memory: Studies for Piano and Violin in E-Flat Minor',               dur: '3:59' },
-];
-
-const CREATORS = [
-  { name: 'spiiriit',  role: 'ARTIST', followers: '251 followers' },
-  { name: 'Oliander',  role: 'ARTIST', followers: '244 followers' },
-];
-
-const ACHIEVEMENTS = [
-  { name: 'OVERACHIEVER', desc: 'Unlock all achievements. Unlocks Art Book.', earned: false },
-  { name: 'LISTENER',     desc: 'Played all tracks from start to finish without skipping.', earned: false },
-  { name: 'COLLECTOR',    desc: 'Own a physical copy of this release.', earned: true },
-  { name: 'SUPPORTER',    desc: 'Post a review for this release.', earned: true },
-];
-
-const EXTRAS = [
-  { label: 'FREE',   labelColor: '#93FF00',                   title: 'Always (Lyric Book)',  sub: 'Full lyrics, formatted for print.',       action: 'Download', locked: false },
-  { label: 'Locked', labelColor: 'rgba(255,255,255,0.28)',    title: 'Always (Art Book)',    sub: 'Unlock OVERACHIEVER to access.',           action: null,       locked: true  },
-  { label: 'N$40',   labelColor: 'rgba(255,255,255,0.65)',    title: 'Always (CD)',          sub: 'Physical copy for your collection.',       action: 'Shop',     locked: false },
-];
+const LABEL_COLORS: Record<string, string> = {
+  free:   '#93FF00',
+  locked: 'rgba(255,255,255,0.28)',
+  paid:   'rgba(255,255,255,0.65)',
+};
 
 /* ── page ── */
 export default function LibraryPage() {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [hoveredTrack, setHoveredTrack] = useState<number | null>(null);
+  const [activeIndex, setActiveIndex]     = useState(0);
+  const [hoveredTrack, setHoveredTrack]   = useState<number | null>(null);
+
+  const [release, setRelease]             = useState<Release | null>(null);
+  const [tracks, setTracks]               = useState<Track[]>([]);
+  const [achievements, setAchievements]   = useState<Achievement[]>([]);
+  const [extras, setExtras]               = useState<Extra[]>([]);
+  const [libItem, setLibItem]             = useState<LibraryItem | null>(null);
+  const [loading, setLoading]             = useState(true);
+
+  /* fetch data whenever active sidebar item changes */
+  useEffect(() => {
+    const item = SIDEBAR_ITEMS[activeIndex];
+    if (!item.id) {
+      // no Supabase data yet for this release — clear and show empty
+      setRelease(null);
+      setTracks([]);
+      setAchievements([]);
+      setExtras([]);
+      setLibItem(null);
+      setLoading(false);
+      return;
+    }
+
+    async function fetchRelease(id: string) {
+      setLoading(true);
+
+      const [
+        { data: rel },
+        { data: trks },
+        { data: achs },
+        { data: exts },
+        { data: lib },
+      ] = await Promise.all([
+        supabase.from('releases').select('*').eq('id', id).single(),
+        supabase.from('tracks').select('*').eq('release_id', id).order('number'),
+        supabase.from('achievements').select('*').eq('release_id', id),
+        supabase.from('extras').select('*').eq('release_id', id),
+        supabase.from('library_items').select('*').eq('release_id', id).single(),
+      ]);
+
+      setRelease(rel);
+      setTracks(trks ?? []);
+      setAchievements(achs ?? []);
+      setExtras(exts ?? []);
+      setLibItem(lib);
+      setLoading(false);
+    }
+
+    fetchRelease(item.id);
+  }, [activeIndex]);
+
+  const earnedCount = achievements.filter(a => a.earned).length;
+  const totalCount  = achievements.length;
+
+  const lastListened = libItem?.last_listened
+    ? new Date(libItem.last_listened).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : '—';
 
   return (
     <div style={{ display: 'flex', flex: 1, overflow: 'hidden', gap: 12, padding: '0 12px 12px' }}>
@@ -89,123 +157,114 @@ export default function LibraryPage() {
       {/* ── MAIN ── */}
       <main style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
 
-        {/* RELEASE HEADER */}
-        <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', backdropFilter: 'blur(24px)', borderRadius: 16, padding: 20, display: 'flex', gap: 20, alignItems: 'flex-start' }}>
-          <div style={{ width: 120, height: 120, flexShrink: 0, borderRadius: 12, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.09)' }} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.38)', marginBottom: 6 }}>ALBUM</div>
-            <div style={{ fontSize: 28, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1, marginBottom: 6 }}>Always</div>
-            <div style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.45)', marginBottom: 12 }}>by <span style={{ color: 'rgba(255,255,255,0.75)' }}>spiiriit</span></div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {['Electronic', 'Downtempo', 'Ambient'].map(tag => (
-                <div key={tag} style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.11)', borderRadius: 6, padding: '3px 10px', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', color: 'rgba(255,255,255,0.55)' }}>{tag}</div>
+        {loading ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'rgba(255,255,255,0.30)', fontSize: 13, fontWeight: 500 }}>Loading...</div>
+        ) : !release ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'rgba(255,255,255,0.20)', fontSize: 13, fontWeight: 500 }}>Not yet in Supabase</div>
+        ) : (
+          <>
+            {/* RELEASE HEADER */}
+            <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', backdropFilter: 'blur(24px)', borderRadius: 16, padding: 20, display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+              <div style={{ width: 120, height: 120, flexShrink: 0, borderRadius: 12, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.09)' }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.38)', marginBottom: 6 }}>{release.type}</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1, marginBottom: 6 }}>{release.title}</div>
+                <div style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.45)', marginBottom: 12 }}>by <span style={{ color: 'rgba(255,255,255,0.75)' }}>{release.artist}</span></div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {release.tags.map(tag => (
+                    <div key={tag} style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.11)', borderRadius: 6, padding: '3px 10px', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', color: 'rgba(255,255,255,0.55)' }}>{tag}</div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
+                <button style={{ background: '#93FF00', border: 'none', borderRadius: 9999, padding: '10px 24px', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: '#0A0A12', cursor: 'pointer' }}>▶ Play</button>
+                <button style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 9999, padding: '8px 18px', fontFamily: 'inherit', fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.55)', cursor: 'pointer' }}>···</button>
+              </div>
+            </div>
+
+            {/* STATS ROW */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+              {[
+                { value: libItem?.listen_count?.toLocaleString() ?? '0', label: 'Total Listens' },
+                { value: `${earnedCount} / ${totalCount}`,               label: 'Achievements'  },
+                { value: lastListened,                                    label: 'Last Listened' },
+              ].map((s, i) => (
+                <div key={i} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', backdropFilter: 'blur(24px)', borderRadius: 14, padding: '14px 18px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em' }}>{s.value}</div>
+                  <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.32)', marginTop: 4 }}>{s.label}</div>
+                </div>
               ))}
             </div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
-            <button style={{ background: '#93FF00', border: 'none', borderRadius: 9999, padding: '10px 24px', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: '#0A0A12', cursor: 'pointer', letterSpacing: '0.04em' }}>▶ Play</button>
-            <button style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 9999, padding: '8px 18px', fontFamily: 'inherit', fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.55)', cursor: 'pointer', letterSpacing: '0.1em' }}>···</button>
-          </div>
-        </div>
 
-        {/* STATS ROW */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-          {[
-            { value: '1,256', label: 'Total Listens' },
-            { value: '2 / 4', label: 'Achievements' },
-            { value: 'Today',  label: 'Last Listened' },
-          ].map((s, i) => (
-            <div key={i} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', backdropFilter: 'blur(24px)', borderRadius: 14, padding: '14px 18px', textAlign: 'center' }}>
-              <div style={{ fontSize: 22, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em' }}>{s.value}</div>
-              <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.32)', marginTop: 4 }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* TRACKLIST */}
-        <Panel title="Tracklist" sub={`${TRACKS.length} tracks`}>
-          {TRACKS.map((t, i) => (
-            <div
-              key={i}
-              onMouseEnter={() => setHoveredTrack(i)}
-              onMouseLeave={() => setHoveredTrack(null)}
-              style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 14px', borderRadius: 8, background: hoveredTrack === i ? 'rgba(255,255,255,0.06)' : 'transparent', cursor: 'pointer', transition: 'background 120ms ease' }}
-            >
-              <div style={{ width: 24, textAlign: 'right', fontSize: 11, fontWeight: 600, color: hoveredTrack === i ? 'transparent' : 'rgba(255,255,255,0.25)', position: 'relative' }}>
-                {hoveredTrack === i ? <span style={{ position: 'absolute', right: 0, color: 'rgba(255,255,255,0.55)' }}>▶</span> : t.num}
-              </div>
-              <div style={{ flex: 1, fontSize: 13, fontWeight: 500, color: hoveredTrack === i ? '#fff' : 'rgba(255,255,255,0.80)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</div>
-              <div style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.30)', flexShrink: 0 }}>{t.dur}</div>
-            </div>
-          ))}
-        </Panel>
-
-        {/* CREATORS */}
-        <Panel title="Creators">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: '0 6px' }}>
-            {CREATORS.map((c, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, cursor: 'pointer' }}>
-                <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{c.name}</div>
-                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.10em', color: 'rgba(255,255,255,0.32)', textTransform: 'uppercase', marginTop: 2 }}>{c.role}</div>
-                  <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.30)', marginTop: 1 }}>{c.followers}</div>
+            {/* TRACKLIST */}
+            <Panel title="Tracklist" sub={`${tracks.length} tracks`}>
+              {tracks.map((t, i) => (
+                <div
+                  key={t.id}
+                  onMouseEnter={() => setHoveredTrack(i)}
+                  onMouseLeave={() => setHoveredTrack(null)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 14px', borderRadius: 8, background: hoveredTrack === i ? 'rgba(255,255,255,0.06)' : 'transparent', cursor: 'pointer', transition: 'background 120ms ease' }}
+                >
+                  <div style={{ width: 24, textAlign: 'right', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.25)', position: 'relative' }}>
+                    {hoveredTrack === i ? <span style={{ position: 'absolute', right: 0, color: 'rgba(255,255,255,0.55)' }}>▶</span> : String(t.number).padStart(2, '0')}
+                  </div>
+                  <div style={{ flex: 1, fontSize: 13, fontWeight: 500, color: hoveredTrack === i ? '#fff' : 'rgba(255,255,255,0.80)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</div>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.30)', flexShrink: 0 }}>{t.duration}</div>
                 </div>
-                <div style={{ fontSize: 18, color: 'rgba(255,255,255,0.25)' }}>›</div>
-              </div>
-            ))}
-          </div>
-        </Panel>
+              ))}
+            </Panel>
 
-        {/* ACHIEVEMENTS */}
-        <Panel title="Achievements" extra={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
-            <div style={{ position: 'relative', width: 28, height: 28 }}>
-              <svg width="28" height="28" viewBox="0 0 28 28">
-                <circle cx="14" cy="14" r="11" fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="2.5" />
-                <circle cx="14" cy="14" r="11" fill="none" stroke="#93FF00" strokeWidth="2.5" strokeDasharray="34.56 69.12" strokeDashoffset="0" strokeLinecap="round" transform="rotate(-90 14 14)" />
-              </svg>
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 7, fontWeight: 700, color: '#93FF00' }}>2/4</div>
-            </div>
-            <button style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 9999, padding: '4px 12px', fontFamily: 'inherit', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.50)', cursor: 'pointer', letterSpacing: '0.04em' }}>View All</button>
-          </div>
-        }>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: '0 6px' }}>
-            {ACHIEVEMENTS.map((a, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${a.earned ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.08)'}`, borderRadius: 12, opacity: a.earned ? 1 : 0.75 }}>
-                <div style={{ width: 44, height: 44, flexShrink: 0, borderRadius: 10, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.11)' }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: '#fff', letterSpacing: '0.03em', marginBottom: 3 }}>{a.name}</div>
-                  <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.38)', lineHeight: 1.5 }}>{a.desc}</div>
+            {/* ACHIEVEMENTS */}
+            <Panel title="Achievements" extra={
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
+                <div style={{ position: 'relative', width: 28, height: 28 }}>
+                  <svg width="28" height="28" viewBox="0 0 28 28">
+                    <circle cx="14" cy="14" r="11" fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="2.5" />
+                    <circle cx="14" cy="14" r="11" fill="none" stroke="#93FF00" strokeWidth="2.5"
+                      strokeDasharray={`${totalCount > 0 ? (earnedCount / totalCount) * 69.12 : 0} 69.12`}
+                      strokeDashoffset="0" strokeLinecap="round" transform="rotate(-90 14 14)" />
+                  </svg>
                 </div>
-                <div style={{ flexShrink: 0, fontSize: 10, fontWeight: 600, letterSpacing: '0.10em', textTransform: 'uppercase', color: a.earned ? '#93FF00' : 'rgba(255,255,255,0.20)' }}>
-                  {a.earned ? 'Earned' : 'Locked'}
-                </div>
+                <button style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 9999, padding: '4px 12px', fontFamily: 'inherit', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.50)', cursor: 'pointer' }}>View All</button>
               </div>
-            ))}
-          </div>
-        </Panel>
-
-        {/* EXTRAS */}
-        <Panel title="Extras">
-          <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }}>
-            {EXTRAS.map((e, i) => (
-              <div key={i} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 14, minWidth: 174, maxWidth: 174, flexShrink: 0, display: 'flex', flexDirection: 'column', cursor: 'pointer', opacity: e.locked ? 0.48 : 1 }}>
-                <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: e.labelColor, marginBottom: 10 }}>{e.label}</div>
-                <div style={{ width: '100%', height: 88, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, marginBottom: 11, flexShrink: 0 }} />
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.90)', marginBottom: 4, lineHeight: 1.3 }}>{e.title}</div>
-                <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.32)', lineHeight: 1.45, flex: 1 }}>{e.sub}</div>
-                {e.action && (
-                  <div style={{ marginTop: 12, display: 'inline-block', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 9999, padding: '5px 13px', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.70)', letterSpacing: '0.04em', alignSelf: 'flex-start' }}>{e.action}</div>
-                )}
-                {!e.action && e.locked && (
-                  <div style={{ marginTop: 10, fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.25)' }}>Earn Overachiever</div>
-                )}
+            }>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: '0 6px' }}>
+                {achievements.map(a => (
+                  <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${a.earned ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.08)'}`, borderRadius: 12, opacity: a.earned ? 1 : 0.75 }}>
+                    <div style={{ width: 44, height: 44, flexShrink: 0, borderRadius: 10, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.11)' }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#fff', letterSpacing: '0.03em', marginBottom: 3 }}>{a.name}</div>
+                      <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.38)', lineHeight: 1.5 }}>{a.description}</div>
+                    </div>
+                    <div style={{ flexShrink: 0, fontSize: 10, fontWeight: 600, letterSpacing: '0.10em', textTransform: 'uppercase', color: a.earned ? '#93FF00' : 'rgba(255,255,255,0.20)' }}>
+                      {a.earned ? 'Earned' : 'Locked'}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </Panel>
+            </Panel>
 
+            {/* EXTRAS */}
+            <Panel title="Extras">
+              <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }}>
+                {extras.map(e => (
+                  <div key={e.id} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 14, minWidth: 174, maxWidth: 174, flexShrink: 0, display: 'flex', flexDirection: 'column', cursor: 'pointer', opacity: e.locked ? 0.48 : 1 }}>
+                    <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: LABEL_COLORS[e.label_type] ?? 'rgba(255,255,255,0.55)', marginBottom: 10 }}>{e.label}</div>
+                    <div style={{ width: '100%', height: 88, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, marginBottom: 11, flexShrink: 0 }} />
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.90)', marginBottom: 4, lineHeight: 1.3 }}>{e.title}</div>
+                    <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.32)', lineHeight: 1.45, flex: 1 }}>{e.subtitle}</div>
+                    {e.action && (
+                      <div style={{ marginTop: 12, display: 'inline-block', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 9999, padding: '5px 13px', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.70)', letterSpacing: '0.04em', alignSelf: 'flex-start' }}>{e.action}</div>
+                    )}
+                    {!e.action && e.locked && (
+                      <div style={{ marginTop: 10, fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.25)' }}>Earn Overachiever</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Panel>
+          </>
+        )}
       </main>
     </div>
   );
