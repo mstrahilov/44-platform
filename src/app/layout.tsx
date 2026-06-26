@@ -5,6 +5,9 @@ import Nav from '@/components/Nav';
 export const metadata: Metadata = {
   title: '44',
   description: 'A platform for independent creative work.',
+  icons: {
+    icon: process.env.VERCEL ? '/favicon-live.svg' : '/favicon-local.svg',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
