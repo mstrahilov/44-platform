@@ -90,6 +90,7 @@ export default function LibraryPage() {
     async function fetchRelease(id: string) {
       setLoading(true);
       const supabase = getSupabase();
+      console.log('URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
 
       const [
         { data: rel },
