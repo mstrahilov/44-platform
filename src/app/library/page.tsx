@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useState } from 'react';
-import { getSupabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 /* ── types ── */
 interface Release {
@@ -89,7 +89,6 @@ export default function LibraryPage() {
 
     async function fetchRelease(id: string) {
       setLoading(true);
-      const supabase = getSupabase();
       console.log('URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
 
       const [
