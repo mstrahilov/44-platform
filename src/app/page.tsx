@@ -22,7 +22,9 @@ export default function StorePage() {
         .from('products')
         .select('*')
         .eq('is_published', true)
-        .order('created_at', { ascending: false });
+        .order('featured', { ascending: false })
+        .order('year', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
 
       setProducts(data ?? []);
     }
