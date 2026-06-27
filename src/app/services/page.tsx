@@ -48,10 +48,8 @@ export default function ServicesPage() {
           <section style={{ minHeight: 420, borderRadius: 30, border: '1px solid rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.035)', overflow: 'hidden', position: 'relative' }}>
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(8,8,14,0.86), rgba(8,8,14,0.36) 55%, rgba(8,8,14,0.08))' }} />
             <div style={{ position: 'relative', zIndex: 1, minHeight: 420, padding: 36, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', maxWidth: 760 }}>
-              <div className="chip" style={{ marginBottom: 18 }}>Featured Service</div>
               <h1 style={{ fontSize: 58, fontWeight: 780, letterSpacing: '-0.04em', lineHeight: 0.94, color: '#fff', marginBottom: 14 }}>{featured.title}</h1>
-              <div style={{ fontSize: 17, fontWeight: 650, color: 'rgba(255,255,255,0.62)', marginBottom: 14 }}>by {featured.creators?.name ?? '44 Creator'}</div>
-              <p style={{ maxWidth: 580, fontSize: 15, fontWeight: 500, color: 'rgba(255,255,255,0.58)', lineHeight: 1.65, marginBottom: 22 }}>{featured.description}</p>
+              <p style={{ maxWidth: 580, fontSize: 15, fontWeight: 500, color: 'rgba(255,255,255,0.58)', lineHeight: 1.65, marginBottom: 22 }}>{featured.feature_description || featured.description}</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <Link className="btn-primary" href={serviceHref(featured)}>Learn More</Link>
                 <Link className="btn-ghost" href="/services/browse">Browse All</Link>
@@ -61,9 +59,9 @@ export default function ServicesPage() {
         )}
 
         <section>
-          <SectionHeader title="Service Categories" href="/services/browse" />
+          <SectionHeader title="Explore Services" href="/services/browse" />
           <div className="store-category-grid">
-            {categoryCards.map(({ category, service }) => (
+            {categoryCards.map(({ category }) => (
               <Link key={category.id} href={`/services/browse?category=${category.slug}`} style={{ minHeight: 120, borderRadius: 20, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.035)', padding: 16, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', overflow: 'hidden', position: 'relative' }}>
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(10,10,18,0.04), rgba(10,10,18,0.72))' }} />
                 <div style={{ position: 'relative', zIndex: 1, fontSize: 18, fontWeight: 750, color: '#fff', letterSpacing: '-0.02em' }}>{category.name}</div>
@@ -72,12 +70,23 @@ export default function ServicesPage() {
           </div>
         </section>
 
-        <section>
-          <SectionHeader title="Available Services" href="/services/browse" />
-          <div className="service-grid services-home-grid">
-            {serviceCatalog.slice(0, 6).map(service => <ServiceCard key={service.id} service={service} />)}
-          </div>
-        </section>
+        {categoryCatalog.slice(0, 5).map(category => {
+          const shelfServices = serviceCatalog.filter(service => service.category_id === category.id || service.categories?.slug === category.slug).slice(0, 8);
+          if (shelfServices.length === 0) return null;
+
+          return (
+            <section key={category.id}>
+              <SectionHeader title={category.name} href={`/services/browse?category=${category.slug}`} />
+              <div className="service-shelf">
+                {shelfServices.map(service => (
+                  <div key={service.id} className="service-shelf-item">
+                    <ServiceCard service={service} />
+                  </div>
+                ))}
+              </div>
+            </section>
+          );
+        })}
     </PageShell>
   );
 }

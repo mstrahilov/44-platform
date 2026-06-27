@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import type { Service, Resource, CommunityPost } from '@/lib/platform';
-import { formatServicePrice, serviceHref } from '@/lib/platform';
+import { formatServicePrice, resourceHref, serviceHref } from '@/lib/platform';
 
 export function PageShell({ children }: { children: ReactNode }) {
   return (
@@ -32,19 +32,61 @@ export function SurfaceBar({ children }: { children: ReactNode }) {
   return <div className="surface-bar">{children}</div>;
 }
 
+export function DockedLayout({ side = 'left', children }: { side?: 'left' | 'right'; children: ReactNode }) {
+  return <div className={`docked-layout docked-layout-${side}`}>{children}</div>;
+}
+
+export function DockedPanel({ children }: { children: ReactNode }) {
+  return <aside className="docked-panel">{children}</aside>;
+}
+
+export function DockedContent({ children }: { children: ReactNode }) {
+  return <main className="docked-content">{children}</main>;
+}
+
+export function PanelListItem({
+  active,
+  eyebrow,
+  title,
+  subtitle,
+  image,
+  onClick,
+}: {
+  active?: boolean;
+  eyebrow?: string;
+  title: string;
+  subtitle?: string;
+  image?: string | null;
+  onClick?: () => void;
+}) {
+  return (
+    <button className={active ? 'panel-list-item panel-list-item-active' : 'panel-list-item'} onClick={onClick} type="button">
+      <span className="panel-list-thumb">
+        {image && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={image} alt="" />
+        )}
+      </span>
+      <span className="panel-list-copy">
+        {eyebrow && <span className="panel-list-eyebrow">{eyebrow}</span>}
+        <span className="panel-list-title">{title}</span>
+        {subtitle && <span className="panel-list-subtitle">{subtitle}</span>}
+      </span>
+    </button>
+  );
+}
+
 export function ServiceCard({ service }: { service: Service }) {
   return (
     <Link className="service-card" href={serviceHref(service)}>
-      <div className="chip">{service.categories?.name ?? 'Service'}</div>
       <div className="service-card-title">{service.title}</div>
-      <div className="service-card-creator">by {service.creators?.name ?? '44 Creator'}</div>
       <div className="service-card-description">{service.description}</div>
       <div className="service-card-footer">
         <div>
           <div className="service-card-price">{formatServicePrice(service)}</div>
           <div className="service-card-meta">{service.delivery_estimate}</div>
         </div>
-        <div className="card-open-label">Open</div>
+        <div className="btn-ghost service-card-button">Learn More</div>
       </div>
     </Link>
   );
@@ -67,7 +109,7 @@ export function ResourceCard({
       <div className="resource-card-description">{resource.summary}</div>
       <div className="resource-card-footer">
         {onSave && <button className="btn-primary" onClick={() => onSave(resource)}>{saved ? 'Saved' : 'Save Resource'}</button>}
-        <div className="card-open-label">Read</div>
+        <Link className="card-open-label" href={resourceHref(resource)}>Read</Link>
       </div>
     </article>
   );

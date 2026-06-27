@@ -79,6 +79,7 @@ create table public.products (
   product_type text not null,
   category text not null,
   description text,
+  feature_description text,
   price_cents integer not null default 0,
   is_free boolean not null default true,
   is_published boolean not null default true,
@@ -98,6 +99,7 @@ create table public.services (
   slug text not null unique,
   title text not null,
   description text,
+  feature_description text,
   starting_price_cents integer not null default 0,
   delivery_estimate text,
   cover_url text,
@@ -323,15 +325,15 @@ create policy "Public resource tags are readable" on public.resource_tags for se
 create policy "Public post tags are readable" on public.post_tags for select to anon, authenticated using (true);
 
 create policy "Users can read their library items" on public.library_items for select to authenticated using (auth.uid() = user_id);
-create policy "Users can add free products to library" on public.library_items
+create policy "Users can add free or music products to library" on public.library_items
 for insert to authenticated
 with check (
   auth.uid() = user_id
-  and acquisition_type = 'free'
+  and acquisition_type in ('free', 'grant')
   and exists (
     select 1 from public.products
     where products.id = library_items.product_id
-      and products.is_free = true
+      and (products.is_free = true or lower(products.category) = 'music')
       and products.is_published = true
       and products.status = 'published'
   )

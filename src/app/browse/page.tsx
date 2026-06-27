@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
@@ -9,7 +8,7 @@ import type { Product } from '@/lib/products';
 import { FALLBACK_PRODUCTS } from '@/lib/products';
 import type { Category, Tag } from '@/lib/platform';
 import { FALLBACK_CATEGORIES, FALLBACK_TAGS } from '@/lib/platform';
-import { FilterSidebar, SurfaceBar } from '@/components/Ui';
+import { DockedContent, DockedLayout, DockedPanel } from '@/components/Ui';
 
 export default function BrowsePage() {
   const { user } = useAuth();
@@ -114,9 +113,8 @@ export default function BrowsePage() {
   }
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', padding: '0 28px 56px' }}>
-      <div className="browse-shell">
-        <FilterSidebar>
+    <DockedLayout side="left">
+        <DockedPanel>
           <div>
             <div style={{ fontSize: 26, fontWeight: 750, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1 }}>Browse Store</div>
             <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.38)', marginTop: 6 }}>{visibleProducts.length} products</div>
@@ -157,25 +155,16 @@ export default function BrowsePage() {
               })}
             </div>
           </div>
-        </FilterSidebar>
+        </DockedPanel>
 
-        <main style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
-          <SurfaceBar>
-            <div>
-              <div className="surface-eyebrow">{activeCategory}{activeTag ? ` / ${activeTag}` : ''}</div>
-              <div className="surface-title">Full Store Catalog</div>
-            </div>
-            <Link className="btn-ghost" href="/">Back to Store</Link>
-          </SurfaceBar>
-
+        <DockedContent>
           <div className="product-grid">
             {visibleProducts.map(product => (
               <ProductCard key={product.id} product={product} owned={ownedProductIds.includes(product.id)} />
             ))}
           </div>
-        </main>
-      </div>
-    </div>
+        </DockedContent>
+    </DockedLayout>
   );
 }
 

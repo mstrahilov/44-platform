@@ -44,7 +44,7 @@ export default function ProductCard({ product, owned = false }: ProductCardProps
   if (canOpenProduct) {
     return (
       <Link
-        href={`/product/${product.id}`}
+        href={`/product/${product.slug || product.id}`}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={shellStyle}

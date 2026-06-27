@@ -37,6 +37,7 @@ export interface Service {
   starting_price_cents: number;
   delivery_estimate: string | null;
   cover_url: string | null;
+  feature_description?: string | null;
   featured: boolean;
   status: string;
   created_at: string;
@@ -99,11 +100,26 @@ export function formatServicePrice(service: Pick<Service, 'starting_price_cents'
 }
 
 export function serviceHref(service: Pick<Service, 'id' | 'slug'>) {
-  return `/service/${service.slug || service.id}`;
+  return `/services/${service.slug || service.id}`;
 }
 
 export function resourceHref(resource: Pick<Resource, 'slug' | 'id'>) {
-  return `/resources?resource=${encodeURIComponent(resource.slug || resource.id)}`;
+  return `/resources/${resource.slug || resource.id}`;
+}
+
+export function creatorHref(creator: Pick<Creator, 'slug'> | string | null | undefined) {
+  if (!creator) return '/community/creator-a';
+  if (typeof creator !== 'string') return `/community/${creator.slug}`;
+
+  const slug = creator
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ø/g, 'o')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return `/community/${slug || 'creator-a'}`;
 }
 
 export const FALLBACK_CATEGORIES: Category[] = [

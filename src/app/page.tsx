@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
 import { browseHref, FALLBACK_PRODUCTS } from '@/lib/products';
+import { creatorHref } from '@/lib/platform';
 import { PageShell, SectionHeader } from '@/components/Ui';
 
 const STORE_CATEGORIES = ['Music', 'Games', 'Books', 'Interactive', 'Sample Packs', 'Tools', 'Apparel'];
@@ -24,7 +25,7 @@ export default function StorePage() {
         .eq('is_published', true)
         .order('featured', { ascending: false })
         .order('year', { ascending: false, nullsFirst: false })
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false });
 
       setProducts(data ?? []);
     }
@@ -73,7 +74,7 @@ export default function StorePage() {
         )}
 
         <section>
-          <SectionHeader title="Explore 44" href="/browse" />
+          <SectionHeader title="Explore Products" href="/browse" />
           <div className="store-category-grid">
             {categoryCounts.map(item => (
               <CategoryTile key={item.category} category={item.category} />
@@ -103,23 +104,24 @@ export default function StorePage() {
 }
 
 function StoreHero({ product, owned }: { product: Product; owned: boolean }) {
+  const heroImage = product.hero_url || product.cover_url;
+
   return (
     <section className="store-hero-shell">
       <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 28, border: '1px solid rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.035)', minHeight: 420 }}>
-        {product.cover_url && (
+        {heroImage && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={product.cover_url} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src={heroImage} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
         )}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(8,8,14,0.82), rgba(8,8,14,0.42) 48%, rgba(8,8,14,0.10)), linear-gradient(0deg, rgba(8,8,14,0.82), rgba(8,8,14,0.06) 58%)' }} />
         <div style={{ position: 'relative', zIndex: 1, minHeight: 420, padding: 34, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
           <div style={{ maxWidth: 680 }}>
-            <div className="chip" style={{ marginBottom: 18 }}>Featured</div>
             <h1 style={{ fontSize: 58, maxWidth: 740, fontWeight: 750, letterSpacing: '-0.04em', lineHeight: 0.94, color: '#fff', marginBottom: 12 }}>{product.title}</h1>
-            <div style={{ fontSize: 17, fontWeight: 600, color: 'rgba(255,255,255,0.62)', marginBottom: 14 }}>by {product.creator}</div>
-            <p style={{ maxWidth: 560, fontSize: 15, fontWeight: 500, color: 'rgba(255,255,255,0.58)', lineHeight: 1.65, marginBottom: 22 }}>{product.description}</p>
+            <p style={{ maxWidth: 560, fontSize: 15, fontWeight: 500, color: 'rgba(255,255,255,0.58)', lineHeight: 1.65, marginBottom: 22 }}>{product.feature_description || product.description || `${product.product_type} by ${product.creator}.`}</p>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                {!product.id.startsWith('fallback-') && <Link className="btn-primary" href={`/product/${product.id}`}>Learn More</Link>}
+                {!product.id.startsWith('fallback-') && <Link className="btn-primary" href={`/product/${product.slug || product.id}`}>Learn More</Link>}
+                <Link className="btn-ghost" href={creatorHref(product.creator)}>View Creator</Link>
               </div>
               {owned && <div className="chip">Owned</div>}
             </div>
@@ -143,16 +145,12 @@ function CreatorFeature({ product }: { product: Product }) {
   return (
     <section style={{ borderRadius: 24, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.045)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', overflow: 'hidden', minHeight: 330 }}>
       <div style={{ minHeight: 190, background: 'rgba(255,255,255,0.035)', borderBottom: '1px solid rgba(255,255,255,0.07)', position: 'relative' }}>
-        {product.cover_url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={product.cover_url} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-        )}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015)), radial-gradient(circle at 72% 25%, rgba(147,255,0,0.14), transparent 36%)' }} />
       </div>
       <div style={{ padding: 22 }}>
-        <div className="chip" style={{ marginBottom: 14 }}>Creator Feature</div>
         <h2 style={{ fontSize: 30, lineHeight: 1, letterSpacing: '-0.03em', marginBottom: 10 }}>{product.creator}</h2>
         <p style={{ maxWidth: 560, fontSize: 14, lineHeight: 1.65, color: 'rgba(255,255,255,0.52)', fontWeight: 500, marginBottom: 18 }}>Products, releases, experiments, and future services live together around the creator.</p>
-        <Link className="btn-ghost" href={browseHref({ q: product.creator })}>Explore Creator</Link>
+        <Link className="btn-ghost" href={creatorHref(product.creator)}>Explore Creator</Link>
       </div>
     </section>
   );

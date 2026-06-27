@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import type { CommunityPost, Resource } from '@/lib/platform';
-import { FALLBACK_RESOURCES } from '@/lib/platform';
+import type { Category, CommunityPost, Resource } from '@/lib/platform';
+import { FALLBACK_CATEGORIES, FALLBACK_RESOURCES } from '@/lib/platform';
+import { PageShell, PostCard, ResourceCard, SectionHeader } from '@/components/Ui';
 
 const FALLBACK_POSTS: CommunityPost[] = [
   {
@@ -33,13 +34,22 @@ const FALLBACK_POSTS: CommunityPost[] = [
   },
 ];
 
+const COMMUNITY_TILES = [
+  { title: 'Creators', href: '/community?view=creators' },
+  { title: 'Resources', href: '/resources' },
+  { title: 'Feed', href: '/community?view=feed' },
+  { title: 'Discussions', href: '/community?view=discussions' },
+  { title: 'Updates', href: '/community?view=updates' },
+];
+
 export default function CommunityPage() {
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
     async function fetchCommunity() {
-      const [{ data: postRows }, { data: resourceRows }] = await Promise.all([
+      const [{ data: postRows }, { data: resourceRows }, { data: categoryRows }] = await Promise.all([
         supabase
           .from('posts')
           .select('*, creators(id, slug, name, avatar_url), categories(id, slug, name)')
@@ -51,11 +61,13 @@ export default function CommunityPage() {
           .select('*, creators(id, slug, name, avatar_url), categories(id, slug, name)')
           .eq('status', 'published')
           .order('created_at', { ascending: false })
-          .limit(4),
+          .limit(8),
+        supabase.from('categories').select('*').in('scope', ['posts', 'resources']).order('sort_order'),
       ]);
 
       setPosts((postRows as CommunityPost[] | null) ?? []);
       setResources((resourceRows as Resource[] | null) ?? []);
+      setCategories((categoryRows as Category[] | null) ?? []);
     }
 
     fetchCommunity();
@@ -63,64 +75,62 @@ export default function CommunityPage() {
 
   const communityPosts = posts.length > 0 ? posts : FALLBACK_POSTS;
   const resourceList = resources.length > 0 ? resources : FALLBACK_RESOURCES;
+  const categoryTiles = useMemo(() => {
+    const postCategories = categories.filter(category => category.scope === 'posts').slice(0, 4);
+    if (postCategories.length === 0) return COMMUNITY_TILES;
+
+    return [
+      { title: 'Creators', href: '/community?view=creators' },
+      { title: 'Resources', href: '/resources' },
+      ...postCategories.map(category => ({ title: category.name, href: `/community?category=${category.slug}` })),
+    ];
+  }, [categories]);
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', padding: '0 28px 56px' }}>
-      <div style={{ maxWidth: 1440, margin: '0 auto', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 18 }}>
-        <main style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
-          <section style={{ borderRadius: 28, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.045)', backdropFilter: 'blur(24px)', padding: 26 }}>
-            <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.42)', marginBottom: 8 }}>Community</div>
-            <h1 style={{ fontSize: 42, fontWeight: 780, letterSpacing: '-0.04em', lineHeight: 1, color: '#fff', marginBottom: 10 }}>Creator updates, resources, and discussions</h1>
-            <p style={{ maxWidth: 720, fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.52)', lineHeight: 1.7 }}>A calmer community feed for process notes, release updates, free knowledge, and creator-to-creator support.</p>
-          </section>
-
-          {communityPosts.map(post => (
-            <article key={post.id} style={{ borderRadius: 20, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.045)', backdropFilter: 'blur(24px)', padding: '22px 24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.10)' }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.90)' }}>{post.creators?.name ?? '44 Community'}</div>
-                  <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.30)', marginTop: 2 }}>{new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-                </div>
-                <div className="chip">{post.categories?.name ?? post.post_type}</div>
+    <PageShell>
+      <section className="store-hero-shell">
+        <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 28, border: '1px solid rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.035)', minHeight: 420 }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(8,8,14,0.86), rgba(8,8,14,0.40) 52%, rgba(8,8,14,0.10)), radial-gradient(circle at 76% 22%, rgba(147,255,0,0.18), transparent 34%)' }} />
+          <div style={{ position: 'relative', zIndex: 1, minHeight: 420, padding: 34, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+            <div style={{ maxWidth: 720 }}>
+              <h1 style={{ fontSize: 58, maxWidth: 760, fontWeight: 750, letterSpacing: '-0.04em', lineHeight: 0.94, color: '#fff', marginBottom: 12 }}>Community</h1>
+              <p style={{ maxWidth: 590, fontSize: 15, fontWeight: 500, color: 'rgba(255,255,255,0.58)', lineHeight: 1.65, marginBottom: 22 }}>
+                Creator updates, resources, discussions, and practical knowledge for building without the noise.
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <Link className="btn-primary" href="/community/browse">Browse Community</Link>
+                <Link className="btn-ghost" href="/community/creator-a">View Creator Page</Link>
               </div>
-              <div style={{ fontSize: 20, fontWeight: 760, color: '#fff', marginBottom: 8, letterSpacing: '-0.02em' }}>{post.title}</div>
-              <div style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.52)', lineHeight: 1.75 }}>{post.body}</div>
-            </article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <SectionHeader title="Explore Community" href="/community/browse" />
+        <div className="store-category-grid">
+          {categoryTiles.map(tile => (
+            <Link key={`${tile.title}-${tile.href}`} href={tile.href} style={{ minHeight: 120, borderRadius: 20, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.035)', padding: 16, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', overflow: 'hidden', position: 'relative' }}>
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(10,10,18,0.04), rgba(10,10,18,0.72))' }} />
+              <div style={{ position: 'relative', zIndex: 1, fontSize: 18, fontWeight: 750, color: '#fff', letterSpacing: '-0.02em' }}>{tile.title}</div>
+            </Link>
           ))}
-        </main>
+        </div>
+      </section>
 
-        <aside style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <SidePanel title="Resources">
-            <div style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.50)', lineHeight: 1.7, marginBottom: 14 }}>
-              Guides, templates, lessons, and checklists for the DIY path.
-            </div>
-            <Link className="btn-primary" href="/resources" style={{ width: '100%', marginBottom: 8 }}>Browse Resources</Link>
-            {resourceList.slice(0, 3).map(resource => (
-              <div key={resource.id} style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 10, marginTop: 10 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.82)', marginBottom: 3 }}>{resource.title}</div>
-                <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.34)', lineHeight: 1.45 }}>{resource.categories?.name ?? resource.resource_type}</div>
-              </div>
-            ))}
-          </SidePanel>
+      <section>
+        <SectionHeader title="Community Feed" href="/community" />
+        <div className="post-grid">
+          {communityPosts.slice(0, 6).map(post => <PostCard key={post.id} post={post} />)}
+        </div>
+      </section>
 
-          <SidePanel title="Creators">
-            <div style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.50)', lineHeight: 1.7 }}>
-              Creator discovery will expand here once public creator profiles are wired to Supabase profiles.
-            </div>
-            <Link className="btn-ghost" href="/profile" style={{ width: '100%', marginTop: 14 }}>View Example Creator</Link>
-          </SidePanel>
-        </aside>
-      </div>
-    </div>
-  );
-}
-
-function SidePanel({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', backdropFilter: 'blur(24px)', borderRadius: 18, padding: '18px 20px' }}>
-      <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.40)', marginBottom: 12 }}>{title}</div>
-      {children}
-    </div>
+      <section>
+        <SectionHeader title="Free Resources" href="/resources" />
+        <div className="resource-grid">
+          {resourceList.slice(0, 3).map(resource => <ResourceCard key={resource.id} resource={resource} />)}
+        </div>
+      </section>
+    </PageShell>
   );
 }

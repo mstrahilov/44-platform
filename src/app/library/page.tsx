@@ -2,15 +2,14 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
 import { browseHref, formatProductPrice, productMeta } from '@/lib/products';
-import type { SavedResource, ServiceRequest } from '@/lib/platform';
-
-type VaultTab = 'products' | 'resources' | 'services';
+import type { Resource, SavedResource, ServiceRequest } from '@/lib/platform';
+import { DockedContent, DockedLayout, DockedPanel, PanelListItem } from '@/components/Ui';
 
 interface LibraryItem {
   id: string;
@@ -20,12 +19,18 @@ interface LibraryItem {
   products: Product | null;
 }
 
+type LibraryEntry =
+  | { key: string; kind: 'product'; title: string; subtitle: string; eyebrow: string; image: string | null; acquiredAt: string; product: Product }
+  | { key: string; kind: 'resource'; title: string; subtitle: string; eyebrow: string; image: string | null; savedAt: string; resource: Resource }
+  | { key: string; kind: 'service'; title: string; subtitle: string; eyebrow: string; image: string | null; requestedAt: string; request: ServiceRequest };
+
 export default function LibraryPage() {
   const { user, loading: authLoading } = useAuth();
-  const [activeVault, setActiveVault] = useState<VaultTab>('products');
   const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
   const [savedResources, setSavedResources] = useState<SavedResource[]>([]);
   const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
+  const [query, setQuery] = useState('');
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,6 +83,75 @@ export default function LibraryPage() {
     fetchVault(user.id);
   }, [authLoading, user]);
 
+  const entries = useMemo<LibraryEntry[]>(() => {
+    const productEntries = libraryItems.flatMap(item => {
+      if (!item.products) return [];
+
+      return [{
+        key: `product-${item.id}`,
+        kind: 'product' as const,
+        title: item.products.title,
+        subtitle: item.products.creator,
+        eyebrow: item.products.category,
+        image: item.products.cover_url,
+        acquiredAt: item.acquired_at,
+        product: item.products,
+      }];
+    });
+
+    const resourceEntries = savedResources.flatMap(item => {
+      if (!item.resources) return [];
+
+      return [{
+        key: `resource-${item.id}`,
+        kind: 'resource' as const,
+        title: item.resources.title,
+        subtitle: item.resources.creators?.name ?? '44 Community',
+        eyebrow: item.resources.categories?.name ?? item.resources.resource_type,
+        image: item.resources.cover_url,
+        savedAt: item.saved_at,
+        resource: item.resources,
+      }];
+    });
+
+    const serviceEntries = serviceRequests.flatMap(item => {
+      if (!item.services) return [];
+
+      return [{
+        key: `service-${item.id}`,
+        kind: 'service' as const,
+        title: item.services.title,
+        subtitle: item.services.creators?.name ?? '44 Creator',
+        eyebrow: item.status,
+        image: item.services.cover_url,
+        requestedAt: item.created_at,
+        request: item,
+      }];
+    });
+
+    return [...productEntries, ...resourceEntries, ...serviceEntries];
+  }, [libraryItems, savedResources, serviceRequests]);
+
+  const visibleEntries = useMemo(() => {
+    const cleanQuery = query.trim().toLowerCase();
+    if (!cleanQuery) return entries;
+
+    return entries.filter(entry => [entry.title, entry.subtitle, entry.eyebrow].join(' ').toLowerCase().includes(cleanQuery));
+  }, [entries, query]);
+
+  const selectedEntry = visibleEntries.find(entry => entry.key === selectedKey) ?? visibleEntries[0] ?? entries[0] ?? null;
+
+  useEffect(() => {
+    if (!selectedEntry) {
+      setSelectedKey(null);
+      return;
+    }
+
+    if (selectedKey !== selectedEntry.key && !visibleEntries.some(entry => entry.key === selectedKey)) {
+      setSelectedKey(selectedEntry.key);
+    }
+  }, [selectedEntry, selectedKey, visibleEntries]);
+
   if (authLoading || loading) {
     return <CenteredMessage>Loading...</CenteredMessage>;
   }
@@ -91,121 +165,239 @@ export default function LibraryPage() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', gap: 14, padding: '0 28px 56px', width: '100%', maxWidth: 1440, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', backdropFilter: 'blur(24px)', borderRadius: 9999, padding: 5 }}>
-          <VaultButton active={activeVault === 'products'} onClick={() => setActiveVault('products')}>Products</VaultButton>
-          <VaultButton active={activeVault === 'resources'} onClick={() => setActiveVault('resources')}>Resources</VaultButton>
-          <VaultButton active={activeVault === 'services'} onClick={() => setActiveVault('services')}>Services</VaultButton>
+    <DockedLayout side="left">
+      <DockedPanel>
+        <div>
+          <h1 style={{ fontSize: 28, fontWeight: 780, letterSpacing: '-0.035em', color: '#fff', marginBottom: 4 }}>Library</h1>
+          <div style={{ fontSize: 12, fontWeight: 650, color: 'rgba(255,255,255,0.36)' }}>{entries.length} saved item{entries.length === 1 ? '' : 's'}</div>
         </div>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.32)' }}>Personal Vault</div>
-      </div>
+        <input className="input" value={query} onChange={event => setQuery(event.target.value)} placeholder="Filter your library..." />
+        <div className="panel-list">
+          {visibleEntries.map(entry => (
+            <PanelListItem
+              key={entry.key}
+              active={selectedEntry?.key === entry.key}
+              eyebrow={entry.eyebrow}
+              title={entry.title}
+              subtitle={entry.subtitle}
+              image={entry.image}
+              onClick={() => setSelectedKey(entry.key)}
+            />
+          ))}
+        </div>
+      </DockedPanel>
 
-      {activeVault === 'products' && (
-        <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', alignContent: 'start', gap: 14 }}>
-          {libraryItems.length === 0 ? (
-            <EmptyPanel title="Your product library is empty" body="Add a free product from the Store or Browse page to test ownership." href="/browse" action="Browse Store" />
-          ) : (
-            libraryItems.map(item => item.products && (
-              <ProductVaultCard key={item.id} product={item.products} acquiredAt={item.acquired_at} />
-            ))
+      <DockedContent>
+        {!selectedEntry ? (
+          <EmptyPanel title="Your library is empty" body="Add music products, save resources, or request services to test your personal vault." href="/browse" action="Browse Store" />
+        ) : (
+          <LibraryDetail entry={selectedEntry} />
+        )}
+      </DockedContent>
+    </DockedLayout>
+  );
+}
+
+function LibraryDetail({ entry }: { entry: LibraryEntry }) {
+  if (entry.kind === 'resource') {
+    return <ResourceDetail entry={entry} />;
+  }
+
+  if (entry.kind === 'service') {
+    return <ServiceHistoryDetail entry={entry} />;
+  }
+
+  const product = entry.product;
+  const isMusic = product.category.toLowerCase() === 'music';
+
+  if (!isMusic) {
+    return <ProductLibraryDetail entry={entry} />;
+  }
+
+  return (
+    <>
+      <section className="library-release-hero">
+        <div className="library-release-cover">
+          {product.cover_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={product.cover_url} alt="" />
           )}
         </div>
-      )}
+        <div className="library-release-copy">
+          <div className="surface-eyebrow">{product.product_type}</div>
+          <h1>{product.title}</h1>
+          <p>by {product.creator}</p>
+          <div className="library-chip-row">
+            {(product.tags ?? []).slice(0, 4).map(tag => <Link key={tag} href={browseHref({ tag })} className="chip">{tag}</Link>)}
+          </div>
+        </div>
+        <button className="btn-primary" type="button">Play</button>
+      </section>
 
-      {activeVault === 'resources' && (
-        <VaultGrid
-          empty={<EmptyPanel title="No saved resources yet" body="Save guides, templates, lessons, or checklists from Community Resources." href="/resources" action="Browse Resources" />}
-          items={savedResources.map(item => ({
-            id: item.id,
-            title: item.resources?.title ?? 'Saved resource',
-            eyebrow: item.resources?.categories?.name ?? item.resources?.resource_type ?? 'Resource',
-            body: item.resources?.summary ?? item.resources?.body ?? 'No description yet.',
-            meta: item.saved_at ? `Saved ${new Date(item.saved_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : 'Saved',
-          }))}
-        />
-      )}
+      <section className="library-stats-grid">
+        <InfoCard value={product.year ? String(product.year) : 'Now'} label="Release Year" />
+        <InfoCard value={product.product_type} label="Format" />
+        <InfoCard value={new Date(entry.acquiredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} label="Added" />
+      </section>
 
-      {activeVault === 'services' && (
-        <VaultGrid
-          empty={<EmptyPanel title="No service requests yet" body="When you contact a creator for a service, the request will appear here." href="/services/browse" action="Browse Services" />}
-          items={serviceRequests.map(item => ({
-            id: item.id,
-            title: item.services?.title ?? 'Service request',
-            eyebrow: item.status,
-            body: item.message || item.services?.description || 'No message added.',
-            meta: item.created_at ? `Requested ${new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : 'Requested',
-          }))}
-        />
-      )}
+      <section className="library-panel">
+        <div className="library-panel-header">
+          <div className="surface-eyebrow">Tracklist</div>
+          <span>{TRACKS.length} tracks</span>
+        </div>
+        <div className="library-track-list">
+          {TRACKS.map((track, index) => (
+            <div className="library-track-row" key={track.title}>
+              <span>{String(index + 1).padStart(2, '0')}</span>
+              <button type="button" aria-label={`Play ${track.title}`}>▶</button>
+              <strong>{track.title}</strong>
+              <em>{track.length}</em>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="library-two-grid">
+        <InfoPanel title="Included">
+          <InfoLine label="Format" value={product.product_type} />
+          <InfoLine label="Category" value={product.category} />
+          <InfoLine label="Access" value="Library item" />
+        </InfoPanel>
+        <InfoPanel title="Discovery">
+          <div className="library-chip-row">
+            <Link href={browseHref({ category: product.category })} className="chip">{product.category}</Link>
+            {(product.tags ?? []).map(tag => <Link key={tag} href={browseHref({ tag })} className="chip">{tag}</Link>)}
+          </div>
+        </InfoPanel>
+      </section>
+    </>
+  );
+}
+
+function ProductLibraryDetail({ entry }: { entry: Extract<LibraryEntry, { kind: 'product' }> }) {
+  const product = entry.product;
+
+  return (
+    <>
+      <section className="library-release-hero">
+        <div className="library-release-cover">
+          {product.cover_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={product.cover_url} alt="" />
+          )}
+        </div>
+        <div className="library-release-copy">
+          <div className="surface-eyebrow">{productMeta(product)}</div>
+          <h1>{product.title}</h1>
+          <p>by {product.creator}</p>
+          <div className="library-chip-row">
+            {(product.tags ?? []).slice(0, 4).map(tag => <Link key={tag} href={browseHref({ tag })} className="chip">{tag}</Link>)}
+          </div>
+        </div>
+      </section>
+
+      <section className="library-two-grid">
+        <InfoPanel title="Product">
+          <InfoLine label="Price" value={formatProductPrice(product)} />
+          <InfoLine label="Category" value={product.category} />
+          <InfoLine label="Added" value={new Date(entry.acquiredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} />
+        </InfoPanel>
+        <InfoPanel title="About">
+          <div className="library-muted-copy">{product.description ?? 'No description yet.'}</div>
+        </InfoPanel>
+      </section>
+    </>
+  );
+}
+
+function ResourceDetail({ entry }: { entry: Extract<LibraryEntry, { kind: 'resource' }> }) {
+  const resource = entry.resource;
+
+  return (
+    <>
+      <section className="library-release-hero">
+        <div className="library-release-cover">
+          {resource.cover_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={resource.cover_url} alt="" />
+          )}
+        </div>
+        <div className="library-release-copy">
+          <div className="surface-eyebrow">{resource.categories?.name ?? resource.resource_type}</div>
+          <h1>{resource.title}</h1>
+          <p>by {resource.creators?.name ?? '44 Community'}</p>
+        </div>
+      </section>
+      <InfoPanel title="Saved Resource">
+        <div className="library-muted-copy">{resource.summary ?? resource.body ?? 'No resource summary yet.'}</div>
+      </InfoPanel>
+    </>
+  );
+}
+
+function ServiceHistoryDetail({ entry }: { entry: Extract<LibraryEntry, { kind: 'service' }> }) {
+  const service = entry.request.services;
+
+  return (
+    <>
+      <section className="library-release-hero">
+        <div className="library-release-cover">
+          {service?.cover_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={service.cover_url} alt="" />
+          )}
+        </div>
+        <div className="library-release-copy">
+          <div className="surface-eyebrow">{entry.request.status}</div>
+          <h1>{service?.title ?? 'Service request'}</h1>
+          <p>with {service?.creators?.name ?? '44 Creator'}</p>
+        </div>
+      </section>
+      <InfoPanel title="Request">
+        <InfoLine label="Status" value={entry.request.status} />
+        <InfoLine label="Requested" value={new Date(entry.requestedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} />
+        <div className="library-muted-copy">{entry.request.message || service?.description || 'No request note added.'}</div>
+      </InfoPanel>
+    </>
+  );
+}
+
+function InfoCard({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="library-info-card">
+      <strong>{value}</strong>
+      <span>{label}</span>
     </div>
   );
 }
 
-function ProductVaultCard({ product, acquiredAt }: { product: Product; acquiredAt: string }) {
+function InfoPanel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <article style={{ minHeight: 250, borderRadius: 22, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.045)', backdropFilter: 'blur(24px)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ height: 120, background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-        {product.cover_url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={product.cover_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-        )}
-      </div>
-      <div style={{ padding: 18, flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.38)', marginBottom: 8 }}>{productMeta(product)}</div>
-        <div style={{ fontSize: 22, fontWeight: 760, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1, marginBottom: 6 }}>{product.title}</div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.42)', marginBottom: 12 }}>by {product.creator}</div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
-          {(product.tags ?? []).slice(0, 4).map(tag => (
-            <Link key={tag} href={browseHref({ tag })} className="chip">{tag}</Link>
-          ))}
-        </div>
-        <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <div style={{ fontSize: 12, fontWeight: 650, color: 'rgba(255,255,255,0.32)' }}>Added {new Date(acquiredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-          <div style={{ fontSize: 13, fontWeight: 800, color: product.is_free ? '#93FF00' : '#fff' }}>{formatProductPrice(product)}</div>
-        </div>
-      </div>
-    </article>
+    <div className="library-panel">
+      <div className="surface-eyebrow">{title}</div>
+      <div className="library-panel-stack">{children}</div>
+    </div>
   );
 }
 
-function VaultGrid({ items, empty }: { items: { id: string; title: string; eyebrow: string; body: string; meta: string }[]; empty: React.ReactNode }) {
-  if (items.length === 0) return <>{empty}</>;
-
+function InfoLine({ label, value }: { label: string; value: string }) {
   return (
-    <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', alignContent: 'start', gap: 14 }}>
-      {items.map(item => (
-        <article key={item.id} style={{ minHeight: 190, borderRadius: 20, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.045)', backdropFilter: 'blur(24px)', padding: 20, display: 'flex', flexDirection: 'column' }}>
-          <div className="chip" style={{ alignSelf: 'flex-start', marginBottom: 14 }}>{item.eyebrow}</div>
-          <div style={{ fontSize: 22, fontWeight: 760, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1, marginBottom: 10 }}>{item.title}</div>
-          <div style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.50)', lineHeight: 1.65, flex: 1 }}>{item.body}</div>
-          <div style={{ fontSize: 11, fontWeight: 650, color: 'rgba(255,255,255,0.32)', marginTop: 18 }}>{item.meta}</div>
-        </article>
-      ))}
+    <div className="library-info-line">
+      <span>{label}</span>
+      <strong>{value}</strong>
     </div>
   );
 }
 
 function EmptyPanel({ title, body, href, action }: { title: string; body: string; href: string; action: string }) {
   return (
-    <div style={{ gridColumn: '1 / -1', minHeight: 260, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 24, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.04)', textAlign: 'center', padding: 28 }}>
+    <div className="library-empty-panel">
       <div>
-        <div style={{ fontSize: 28, fontWeight: 760, color: '#fff', letterSpacing: '-0.03em', marginBottom: 10 }}>{title}</div>
-        <div style={{ maxWidth: 420, fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.46)', lineHeight: 1.65, marginBottom: 18 }}>{body}</div>
+        <h1>{title}</h1>
+        <p>{body}</p>
         <Link className="btn-primary" href={href}>{action}</Link>
       </div>
     </div>
-  );
-}
-
-function VaultButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{ border: `1px solid ${active ? 'rgba(255,255,255,0.18)' : 'transparent'}`, background: active ? 'rgba(255,255,255,0.13)' : 'transparent', color: active ? '#fff' : 'rgba(255,255,255,0.38)', borderRadius: 9999, padding: '9px 18px', fontFamily: 'inherit', fontSize: 11, fontWeight: 750, letterSpacing: '0.10em', textTransform: 'uppercase', cursor: 'pointer' }}
-    >
-      {children}
-    </button>
   );
 }
 
@@ -216,3 +408,12 @@ function CenteredMessage({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+const TRACKS = [
+  { title: 'Track 01', length: '1:01' },
+  { title: 'Track 02', length: '2:34' },
+  { title: 'Track 03', length: '3:12' },
+  { title: 'Track 04', length: '2:58' },
+  { title: 'Track 05', length: '4:04' },
+  { title: 'Track 06', length: '2:41' },
+];

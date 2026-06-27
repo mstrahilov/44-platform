@@ -1,11 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import type { Category, Service } from '@/lib/platform';
 import { FALLBACK_CATEGORIES, FALLBACK_SERVICES } from '@/lib/platform';
-import { FilterSidebar, ServiceCard, SurfaceBar } from '@/components/Ui';
+import { DockedContent, DockedLayout, DockedPanel, ServiceCard } from '@/components/Ui';
 
 export default function ServicesBrowsePage() {
   const [services, setServices] = useState<Service[]>([]);
@@ -62,9 +61,8 @@ export default function ServicesBrowsePage() {
   }, [activeCategory, categoryCatalog, query, serviceCatalog]);
 
   return (
-    <div style={{ flex: 1, overflowY: 'auto', padding: '0 28px 56px' }}>
-      <div className="browse-shell">
-        <FilterSidebar>
+    <DockedLayout side="left">
+        <DockedPanel>
           <div>
             <div style={{ fontSize: 26, fontWeight: 750, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1 }}>Browse Services</div>
             <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.38)', marginTop: 6 }}>{visibleServices.length} services</div>
@@ -80,25 +78,16 @@ export default function ServicesBrowsePage() {
               ))}
             </div>
           </div>
-        </FilterSidebar>
+        </DockedPanel>
 
-        <main style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
-          <SurfaceBar>
-            <div>
-              <div className="surface-eyebrow">Services</div>
-              <div className="surface-title">Find expert help</div>
-            </div>
-            <Link className="btn-ghost" href="/services">Back to Services</Link>
-          </SurfaceBar>
-
+        <DockedContent>
           <div className="service-grid">
             {visibleServices.map(service => (
               <ServiceCard key={service.id} service={service} />
             ))}
           </div>
-        </main>
-      </div>
-    </div>
+        </DockedContent>
+    </DockedLayout>
   );
 }
 

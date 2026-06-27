@@ -15,7 +15,9 @@ export interface Product {
   tags: string[] | null;
   cover_url: string | null;
   hero_url?: string | null;
+  feature_description?: string | null;
   status?: string | null;
+  year?: number | null;
   created_at: string;
 }
 

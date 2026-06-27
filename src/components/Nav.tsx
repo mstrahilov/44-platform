@@ -9,6 +9,7 @@ import { useAuth } from '@/lib/useAuth';
 const PUBLIC_NAV_ITEMS = [
   { label: 'Store', href: '/' },
   { label: 'Services', href: '/services' },
+  { label: 'Resources', href: '/resources' },
   { label: 'Community', href: '/community' },
 ];
 
@@ -50,7 +51,15 @@ export default function Nav() {
       return;
     }
 
-    router.push(`/browse?q=${encodeURIComponent(query)}`);
+    const searchBase = pathname.startsWith('/services')
+      ? '/services/browse'
+      : pathname.startsWith('/resources')
+        ? '/resources/browse'
+        : pathname.startsWith('/community')
+          ? '/community/browse'
+          : '/browse';
+
+    router.push(`${searchBase}?q=${encodeURIComponent(query)}`);
     setSearchOpen(false);
   }
 
@@ -61,9 +70,7 @@ export default function Nav() {
   return (
     <header className="nav-shell">
       <div className="nav-left">
-        <Link href="/" className="brand-button" aria-label="44 Store">
-          44
-        </Link>
+        <AuthControls />
       </div>
 
       <nav className="nav-pill" aria-label="Primary">
@@ -122,8 +129,6 @@ export default function Nav() {
             </svg>
           </button>
         </form>
-
-        <AuthControls />
       </div>
     </header>
   );

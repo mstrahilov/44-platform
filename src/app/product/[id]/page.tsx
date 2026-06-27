@@ -7,6 +7,8 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
 import { browseHref, formatProductPrice, productMeta } from '@/lib/products';
+import { creatorHref } from '@/lib/platform';
+import { DockedContent, DockedLayout, DockedPanel } from '@/components/Ui';
 
 export default function ProductPage() {
   const { id } = useParams<{ id: string }>();
@@ -45,11 +47,13 @@ export default function ProductPage() {
 
   useEffect(() => {
     async function fetchOwnership(userId: string) {
+      if (!product) return;
+
       const { data } = await supabase
         .from('library_items')
         .select('product_id')
         .eq('user_id', userId)
-        .eq('product_id', id)
+        .eq('product_id', product.id)
         .maybeSingle();
 
       setOwned(Boolean(data));
@@ -60,7 +64,7 @@ export default function ProductPage() {
     } else {
       Promise.resolve().then(() => setOwned(false));
     }
-  }, [id, user]);
+  }, [product, user]);
 
   async function addToLibrary() {
     if (!product) return;
@@ -68,8 +72,8 @@ export default function ProductPage() {
       alert('Sign in first, then add this to your library.');
       return;
     }
-    if (!product.is_free) {
-      alert('Paid checkout is coming later. Free products can be added now.');
+    if (product.category.toLowerCase() !== 'music') {
+      alert('Cart is coming soon. Music items can be added to your library for testing now.');
       return;
     }
 
@@ -78,7 +82,7 @@ export default function ProductPage() {
       .upsert({
         user_id: user.id,
         product_id: product.id,
-        acquisition_type: 'free',
+        acquisition_type: product.is_free ? 'free' : 'grant',
       }, { onConflict: 'user_id,product_id' });
 
     if (error) {
@@ -92,14 +96,17 @@ export default function ProductPage() {
   if (loading) return <CenteredMessage>Loading...</CenteredMessage>;
   if (!product) return <CenteredMessage>Product not found</CenteredMessage>;
 
+  const heroImage = product.hero_url || product.cover_url;
+  const isMusic = product.category.toLowerCase() === 'music';
+  const primaryAction = owned ? 'Owned' : isMusic ? 'Add to Library' : 'Add to Cart';
+
   return (
-    <div style={{ flex: 1, overflowY: 'auto', padding: '0 28px 56px' }}>
-      <div className="product-shell">
-        <main style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
+    <DockedLayout side="right">
+        <DockedContent>
           <section style={{ minHeight: 460, borderRadius: 30, border: '1px solid rgba(255,255,255,0.10)', overflow: 'hidden', position: 'relative', background: getHeroBackground(product) }}>
-            {product.cover_url && (
+            {heroImage && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={product.cover_url} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.45 }} />
+              <img src={heroImage} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.45 }} />
             )}
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(8,8,14,0.92), rgba(8,8,14,0.58) 48%, rgba(8,8,14,0.16)), radial-gradient(circle at 75% 20%, rgba(255,255,255,0.18), transparent 34%)' }} />
             <div style={{ position: 'relative', zIndex: 1, minHeight: 460, padding: 36, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
@@ -117,7 +124,7 @@ export default function ProductPage() {
             <InfoPanel title="Included">
               <InfoLine label="Format" value={product.product_type} />
               <InfoLine label="Category" value={product.category} />
-              <InfoLine label="Access" value={product.is_free ? 'Free library claim' : 'Checkout coming soon'} />
+              <InfoLine label="Access" value={isMusic ? 'Library item' : product.is_free ? 'Free library claim' : 'Cart coming soon'} />
             </InfoPanel>
             <InfoPanel title="Discovery">
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -134,7 +141,7 @@ export default function ProductPage() {
               <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.52)', marginBottom: 12 }}>More Like This</div>
               <div className="related-grid">
                 {related.map(item => (
-                  <Link key={item.id} href={`/product/${item.id}`} style={{ borderRadius: 18, border: '1px solid rgba(255,255,255,0.09)', background: getHeroBackground(item), minHeight: 160, padding: 16, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', overflow: 'hidden' }}>
+                  <Link key={item.id} href={`/product/${item.slug || item.id}`} style={{ borderRadius: 18, border: '1px solid rgba(255,255,255,0.09)', background: getHeroBackground(item), minHeight: 160, padding: 16, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', overflow: 'hidden' }}>
                     <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)', marginBottom: 6 }}>{item.category}</div>
                     <div style={{ fontSize: 18, fontWeight: 780, lineHeight: 1, color: '#fff' }}>{item.title}</div>
                   </Link>
@@ -142,32 +149,40 @@ export default function ProductPage() {
               </div>
             </section>
           )}
-        </main>
+        </DockedContent>
 
-        <aside style={{ position: 'sticky', top: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div style={{ borderRadius: 24, border: '1px solid rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.055)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', padding: 22 }}>
-            <div style={{ width: '100%', aspectRatio: '1', borderRadius: 18, background: getHeroBackground(product), border: '1px solid rgba(255,255,255,0.09)', marginBottom: 18, overflow: 'hidden' }}>
+        <DockedPanel>
+          <div className="detail-panel-stack">
+            <div className="detail-panel-image" style={{ background: getHeroBackground(product) }}>
               {product.cover_url && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={product.cover_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={product.cover_url} alt="" />
               )}
             </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
-              <div style={{ fontSize: 30, fontWeight: 800, color: product.is_free ? '#93FF00' : '#fff', letterSpacing: '-0.03em' }}>{formatProductPrice(product)}</div>
+            <div className="detail-panel-copy">
+              <div className="detail-panel-title">{product.title}</div>
+              <div className="detail-panel-subtitle">by {product.creator}</div>
+              <div className="detail-panel-description">{product.description ?? productMeta(product)}</div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
+              <div className="detail-panel-price" style={{ color: product.is_free ? '#93FF00' : '#fff' }}>{formatProductPrice(product)}</div>
               {owned && <div className="chip">Owned</div>}
             </div>
-            <button className="btn-primary" onClick={addToLibrary} style={{ width: '100%', marginBottom: 10 }}>{owned ? 'Owned' : product.is_free ? 'Add to Library' : 'Checkout Soon'}</button>
-            <Link className="btn-ghost" href={browseHref({ q: product.creator })} style={{ width: '100%' }}>View Creator</Link>
+            <div className="detail-panel-actions">
+              <button className="btn-primary" onClick={addToLibrary} disabled={owned} style={{ opacity: owned ? 0.72 : 1 }}>{primaryAction}</button>
+              <Link className="btn-ghost" href={creatorHref(product.creator)}>View Creator</Link>
+            </div>
+            <div className="divider" />
+            <div className="detail-panel-meta">
+              <div className="detail-panel-section-title">Product Details</div>
+              <InfoLine label="Creator" value={product.creator} />
+              <InfoLine label="Type" value={product.product_type} />
+              <InfoLine label="Access" value={isMusic ? 'Library item' : 'Cart coming soon'} />
+              <InfoLine label="Status" value={product.is_published ? 'Published' : 'Hidden'} />
+            </div>
           </div>
-
-          <InfoPanel title="Product Details">
-            <InfoLine label="Creator" value={product.creator} />
-            <InfoLine label="Type" value={product.product_type} />
-            <InfoLine label="Status" value={product.is_published ? 'Published' : 'Hidden'} />
-          </InfoPanel>
-        </aside>
-      </div>
-    </div>
+        </DockedPanel>
+    </DockedLayout>
   );
 }
 
