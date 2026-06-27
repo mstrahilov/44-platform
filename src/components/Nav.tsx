@@ -4,17 +4,18 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import AuthControls from '@/components/AuthControls';
+import { useAuth } from '@/lib/useAuth';
 
-const NAV_ITEMS = [
+const PUBLIC_NAV_ITEMS = [
   { label: 'Store', href: '/' },
-  { label: 'Library', href: '/library' },
+  { label: 'Services', href: '/services' },
   { label: 'Community', href: '/community' },
-  { label: 'Profile', href: '/profile' },
 ];
 
 export default function Nav() {
   const pathname = usePathname();
   const router = useRouter();
+  const { user } = useAuth();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchVal, setSearchVal] = useState('');
   const searchRef = useRef<HTMLFormElement | null>(null);
@@ -53,6 +54,10 @@ export default function Nav() {
     setSearchOpen(false);
   }
 
+  const navItems = user
+    ? [...PUBLIC_NAV_ITEMS, { label: 'Library', href: '/library' }]
+    : PUBLIC_NAV_ITEMS;
+
   return (
     <header className="nav-shell">
       <div className="nav-left">
@@ -62,7 +67,7 @@ export default function Nav() {
       </div>
 
       <nav className="nav-pill" aria-label="Primary">
-        {NAV_ITEMS.map(({ label, href }) => {
+        {navItems.map(({ label, href }) => {
           const active = pathname === href || (href !== '/' && pathname.startsWith(href));
           return (
             <Link

@@ -6,7 +6,8 @@ import ProductCard from '@/components/ProductCard';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
-import { browseHref, FALLBACK_PRODUCTS, formatProductPrice } from '@/lib/products';
+import { browseHref, FALLBACK_PRODUCTS } from '@/lib/products';
+import { PageShell, SectionHeader } from '@/components/Ui';
 
 const STORE_CATEGORIES = ['Music', 'Games', 'Books', 'Interactive', 'Sample Packs', 'Tools', 'Apparel'];
 
@@ -50,10 +51,7 @@ export default function StorePage() {
   const featured = catalog.find(product => product.featured) ?? catalog[0];
   const freeProducts = catalog.filter(product => product.is_free).slice(0, 6);
   const newest = catalog.slice(0, 10);
-  const creatorFeatures = [
-    catalog.find(product => product.creator === 'ØLSTEN') ?? catalog[0],
-    catalog.find(product => product.creator === '44 CORPORATION') ?? catalog[1] ?? catalog[0],
-  ].filter(Boolean);
+  const creatorFeatures = Array.from(new Map(catalog.map(product => [product.creator, product])).values()).slice(0, 2);
 
   const categoryCounts = useMemo(() => {
     return STORE_CATEGORIES.map(category => ({
@@ -63,81 +61,12 @@ export default function StorePage() {
     })).filter(item => item.count > 0);
   }, [catalog]);
 
-  async function addProductToLibrary(product: Product) {
-    if (!user) {
-      alert('Sign in first, then add this to your library.');
-      return;
-    }
-
-    if (!product.is_free) {
-      alert('Paid checkout is coming later. Free products can be added now.');
-      return;
-    }
-
-    if (product.id.startsWith('fallback-')) {
-      alert('Run the products SQL and import products first, then this item can be added.');
-      return;
-    }
-
-    if (product.linked_release_id) {
-      const { data: existingProductItem } = await supabase
-        .from('library_items')
-        .select('product_id')
-        .eq('user_id', user.id)
-        .eq('product_id', product.id)
-        .maybeSingle();
-
-      if (existingProductItem) {
-        setOwnedProductIds(current => [...new Set([...current, product.id])]);
-        return;
-      }
-
-      const { data: upgradedReleaseItem, error: upgradeError } = await supabase
-        .from('library_items')
-        .update({ product_id: product.id })
-        .eq('user_id', user.id)
-        .eq('release_id', product.linked_release_id)
-        .select('product_id')
-        .maybeSingle();
-
-      if (upgradeError) {
-        alert(upgradeError.message);
-        return;
-      }
-
-      if (upgradedReleaseItem) {
-        setOwnedProductIds(current => [...new Set([...current, product.id])]);
-        return;
-      }
-    }
-
-    const { error } = await supabase
-      .from('library_items')
-      .upsert({
-        user_id: user.id,
-        product_id: product.id,
-        release_id: product.linked_release_id,
-        acquisition_type: 'free',
-        listen_count: 0,
-        last_listened: null,
-      }, { onConflict: 'user_id,product_id' });
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
-    setOwnedProductIds(current => [...new Set([...current, product.id])]);
-  }
-
   return (
-    <div style={{ flex: 1, overflowY: 'auto', padding: '0 28px 56px' }}>
-      <div style={{ maxWidth: 1440, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 30 }}>
+    <PageShell>
         {featured && (
           <StoreHero
             product={featured}
             owned={ownedProductIds.includes(featured.id)}
-            onGet={addProductToLibrary}
           />
         )}
 
@@ -152,7 +81,7 @@ export default function StorePage() {
 
         <section>
           <SectionHeader title="New on 44" href="/browse" />
-          <ProductShelf products={newest} ownedProductIds={ownedProductIds} onGet={addProductToLibrary} />
+          <ProductShelf products={newest} ownedProductIds={ownedProductIds} />
         </section>
 
         <div className="store-feature-shell">
@@ -164,15 +93,14 @@ export default function StorePage() {
         {freeProducts.length > 0 && (
           <section>
             <SectionHeader title="Free to Keep" href={browseHref({ filter: 'free' })} />
-            <ProductGrid products={freeProducts} ownedProductIds={ownedProductIds} onGet={addProductToLibrary} />
+            <ProductGrid products={freeProducts} ownedProductIds={ownedProductIds} />
           </section>
         )}
-      </div>
-    </div>
+    </PageShell>
   );
 }
 
-function StoreHero({ product, owned, onGet }: { product: Product; owned: boolean; onGet: (product: Product) => void }) {
+function StoreHero({ product, owned }: { product: Product; owned: boolean }) {
   return (
     <section className="store-hero-shell">
       <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 28, border: '1px solid rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.035)', minHeight: 420 }}>
@@ -187,10 +115,11 @@ function StoreHero({ product, owned, onGet }: { product: Product; owned: boolean
             <h1 style={{ fontSize: 58, maxWidth: 740, fontWeight: 750, letterSpacing: '-0.04em', lineHeight: 0.94, color: '#fff', marginBottom: 12 }}>{product.title}</h1>
             <div style={{ fontSize: 17, fontWeight: 600, color: 'rgba(255,255,255,0.62)', marginBottom: 14 }}>by {product.creator}</div>
             <p style={{ maxWidth: 560, fontSize: 15, fontWeight: 500, color: 'rgba(255,255,255,0.58)', lineHeight: 1.65, marginBottom: 22 }}>{product.description}</p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <div style={{ fontSize: 24, fontWeight: 800, color: product.is_free ? '#93FF00' : '#fff' }}>{formatProductPrice(product)}</div>
-              <button className="btn-primary" onClick={() => onGet(product)}>{owned ? 'Owned' : product.is_free ? 'Add to Library' : 'View Product'}</button>
-              {!product.id.startsWith('fallback-') && <Link className="btn-ghost" href={`/product/${product.id}`}>Open Page</Link>}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                {!product.id.startsWith('fallback-') && <Link className="btn-primary" href={`/product/${product.id}`}>Learn More</Link>}
+              </div>
+              {owned && <div className="chip">Owned</div>}
             </div>
           </div>
         </div>
@@ -231,31 +160,22 @@ function CreatorFeature({ product }: { product: Product }) {
   );
 }
 
-function SectionHeader({ title, href }: { title: string; href: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-      <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.58)' }}>{title}</div>
-      <Link href={href} style={{ fontSize: 12, fontWeight: 800, color: '#93FF00' }}>View All {'->'}</Link>
-    </div>
-  );
-}
-
-function ProductGrid({ products, ownedProductIds, onGet }: { products: Product[]; ownedProductIds: string[]; onGet: (product: Product) => void }) {
+function ProductGrid({ products, ownedProductIds }: { products: Product[]; ownedProductIds: string[] }) {
   return (
     <div className="product-grid">
       {products.map(product => (
-        <ProductCard key={product.id} product={product} owned={ownedProductIds.includes(product.id)} onGet={onGet} />
+        <ProductCard key={product.id} product={product} owned={ownedProductIds.includes(product.id)} />
       ))}
     </div>
   );
 }
 
-function ProductShelf({ products, ownedProductIds, onGet }: { products: Product[]; ownedProductIds: string[]; onGet: (product: Product) => void }) {
+function ProductShelf({ products, ownedProductIds }: { products: Product[]; ownedProductIds: string[] }) {
   return (
     <div className="product-shelf">
       {products.map(product => (
         <div key={product.id} style={{ width: 190, flex: '0 0 auto' }}>
-          <ProductCard product={product} owned={ownedProductIds.includes(product.id)} onGet={onGet} />
+          <ProductCard product={product} owned={ownedProductIds.includes(product.id)} />
         </div>
       ))}
     </div>

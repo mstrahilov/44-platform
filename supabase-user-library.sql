@@ -1,3 +1,6 @@
+-- LEGACY TEST SQL - DO NOT RUN FOR THE CLEAN PLATFORM RESET.
+-- Use supabase-clean-reset.sql instead.
+--
 -- 44 Platform user library setup
 -- Run this in the Supabase SQL Editor after your existing content tables exist.
 

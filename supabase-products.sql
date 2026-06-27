@@ -1,3 +1,6 @@
+-- LEGACY TEST SQL - DO NOT RUN FOR THE CLEAN PLATFORM RESET.
+-- Use supabase-clean-reset.sql instead.
+--
 -- 44 Platform product catalog setup
 -- Run this in Supabase SQL Editor before importing products from CSV.
 

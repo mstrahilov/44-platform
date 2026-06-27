@@ -18,11 +18,11 @@ export default function ProductPage() {
 
   useEffect(() => {
     async function fetchProduct() {
-      const { data } = await supabase
-        .from('products')
-        .select('*')
-        .eq('id', id)
-        .single();
+      const productQuery = supabase.from('products').select('*');
+      const { data } = await (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+        ? productQuery.eq('id', id)
+        : productQuery.eq('slug', id)
+      ).maybeSingle();
 
       setProduct(data);
       setLoading(false);
@@ -73,47 +73,12 @@ export default function ProductPage() {
       return;
     }
 
-    if (product.linked_release_id) {
-      const { data: existingProductItem } = await supabase
-        .from('library_items')
-        .select('product_id')
-        .eq('user_id', user.id)
-        .eq('product_id', product.id)
-        .maybeSingle();
-
-      if (existingProductItem) {
-        setOwned(true);
-        return;
-      }
-
-      const { data: upgradedReleaseItem, error: upgradeError } = await supabase
-        .from('library_items')
-        .update({ product_id: product.id })
-        .eq('user_id', user.id)
-        .eq('release_id', product.linked_release_id)
-        .select('product_id')
-        .maybeSingle();
-
-      if (upgradeError) {
-        alert(upgradeError.message);
-        return;
-      }
-
-      if (upgradedReleaseItem) {
-        setOwned(true);
-        return;
-      }
-    }
-
     const { error } = await supabase
       .from('library_items')
       .upsert({
         user_id: user.id,
         product_id: product.id,
-        release_id: product.linked_release_id,
         acquisition_type: 'free',
-        listen_count: 0,
-        last_listened: null,
       }, { onConflict: 'user_id,product_id' });
 
     if (error) {

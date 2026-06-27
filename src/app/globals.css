@@ -117,6 +117,7 @@ body {
 .chip {
   display: inline-flex;
   align-items: center;
+  align-self: flex-start;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--r-sm);
@@ -199,6 +200,174 @@ body {
   transition: border-color 150ms ease;
 }
 .card:hover { border-color: rgba(255,255,255,0.18); }
+
+.page-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 var(--page-pad) 56px;
+}
+
+.page-inner {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 760;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.58);
+}
+
+.section-link {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.glass-panel,
+.filter-sidebar,
+.surface-bar,
+.service-card,
+.resource-card,
+.post-card {
+  border: 1px solid rgba(255,255,255,0.09);
+  background: rgba(255,255,255,0.045);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.glass-panel {
+  border-radius: var(--r-xl);
+  padding: 22px;
+}
+
+.filter-sidebar {
+  position: sticky;
+  top: 0;
+  border-radius: var(--r-xl);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.surface-bar {
+  border-radius: var(--r-xl);
+  padding: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.surface-eyebrow {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.42);
+  margin-bottom: 7px;
+}
+
+.surface-title {
+  font-size: 30px;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  color: #fff;
+  line-height: 1;
+}
+
+.service-card,
+.resource-card,
+.post-card {
+  border-radius: 22px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  min-height: 240px;
+  transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+
+.service-card:hover,
+.resource-card:hover,
+.post-card:hover {
+  background: rgba(255,255,255,0.065);
+  border-color: rgba(255,255,255,0.16);
+  transform: translateY(-1px);
+}
+
+.service-card-title,
+.resource-card-title,
+.post-card-title {
+  font-size: 24px;
+  font-weight: 780;
+  color: #fff;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  margin: 16px 0 8px;
+}
+
+.service-card-creator,
+.resource-card-creator,
+.post-card-creator {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.42);
+  margin-bottom: 12px;
+}
+
+.service-card-description,
+.resource-card-description,
+.post-card-body {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.50);
+  line-height: 1.65;
+  flex: 1;
+}
+
+.service-card-footer,
+.resource-card-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-end;
+  margin-top: 20px;
+}
+
+.service-card-price {
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.service-card-meta {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.30);
+  margin-top: 3px;
+}
+
+.card-open-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--accent);
+  white-space: nowrap;
+}
 
 /* ── input / search ── */
 .input {
@@ -542,8 +711,27 @@ body {
 
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(178px, 210px));
+  justify-content: start;
   gap: 10px;
+}
+
+.service-grid,
+.resource-grid,
+.post-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  justify-content: start;
+  gap: 16px;
+}
+
+.resource-grid,
+.post-grid {
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+}
+
+.services-home-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .product-shelf {
@@ -621,5 +809,18 @@ body {
   .browse-shell aside,
   .product-shell aside {
     position: static !important;
+  }
+
+  .product-grid,
+  .service-grid,
+  .resource-grid,
+  .post-grid {
+    grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+  }
+
+  .service-grid,
+  .resource-grid,
+  .post-grid {
+    grid-template-columns: 1fr;
   }
 }

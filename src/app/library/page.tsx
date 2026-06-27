@@ -8,69 +8,24 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
 import { browseHref, formatProductPrice, productMeta } from '@/lib/products';
+import type { SavedResource, ServiceRequest } from '@/lib/platform';
 
-interface Release {
-  id: string;
-  title: string;
-  artist: string;
-  type: string;
-  tags: string[] | null;
-}
-
-interface Track {
-  id: string;
-  number: number;
-  name: string;
-  duration: string;
-}
-
-interface Achievement {
-  id: string;
-  name: string;
-  description: string;
-  earned: boolean;
-}
-
-interface Extra {
-  id: string;
-  label: string;
-  label_type: string;
-  title: string;
-  subtitle: string;
-  action: string | null;
-  locked: boolean;
-}
+type VaultTab = 'products' | 'resources' | 'services';
 
 interface LibraryItem {
-  release_id: string | null;
-  product_id: string | null;
-  listen_count: number | null;
-  last_listened: string | null;
-  acquisition_type: string | null;
-  acquired_at: string | null;
+  id: string;
+  product_id: string;
+  acquisition_type: string;
+  acquired_at: string;
+  products: Product | null;
 }
-
-type LibraryEntry = LibraryItem & {
-  release: Release | null;
-  product: Product | null;
-};
-
-const LABEL_COLORS: Record<string, string> = {
-  free: '#93FF00',
-  locked: 'rgba(255,255,255,0.28)',
-  paid: 'rgba(255,255,255,0.65)',
-};
 
 export default function LibraryPage() {
   const { user, loading: authLoading } = useAuth();
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [hoveredTrack, setHoveredTrack] = useState<number | null>(null);
-  const [library, setLibrary] = useState<LibraryEntry[]>([]);
-  const [release, setRelease] = useState<Release | null>(null);
-  const [tracks, setTracks] = useState<Track[]>([]);
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [extras, setExtras] = useState<Extra[]>([]);
-  const [libItem, setLibItem] = useState<LibraryEntry | null>(null);
+  const [activeVault, setActiveVault] = useState<VaultTab>('products');
+  const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
+  const [savedResources, setSavedResources] = useState<SavedResource[]>([]);
+  const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,296 +34,184 @@ export default function LibraryPage() {
 
     if (!user) {
       Promise.resolve().then(() => {
-        setLibrary([]);
-        setRelease(null);
-        setTracks([]);
-        setAchievements([]);
-        setExtras([]);
-        setLibItem(null);
+        setLibraryItems([]);
+        setSavedResources([]);
+        setServiceRequests([]);
         setLoading(false);
         setError(null);
       });
       return;
     }
 
-    async function fetchLibrary(userId: string) {
+    async function fetchVault(userId: string) {
       setLoading(true);
       setError(null);
 
-      const { data: items, error: itemsError } = await supabase
-        .from('library_items')
-        .select('release_id,product_id,listen_count,last_listened,acquisition_type,acquired_at')
-        .eq('user_id', userId)
-        .order('acquired_at', { ascending: false });
-
-      if (itemsError) {
-        setError(`${itemsError.message}. Run the Supabase user-library SQL migration, then refresh.`);
-        setLoading(false);
-        return;
-      }
-
-      const releaseIds = [...new Set((items ?? []).map(item => item.release_id).filter(Boolean))];
-      const productIds = [...new Set((items ?? []).map(item => item.product_id).filter(Boolean))];
-
-      if (releaseIds.length === 0 && productIds.length === 0) {
-        setLibrary([]);
-        setRelease(null);
-        setTracks([]);
-        setAchievements([]);
-        setExtras([]);
-        setLibItem(null);
-        setLoading(false);
-        return;
-      }
-
-      const [{ data: releases, error: releasesError }, { data: products, error: productsError }] = await Promise.all([
-        releaseIds.length > 0
-          ? supabase.from('releases').select('id,title,artist,type,tags').in('id', releaseIds)
-          : Promise.resolve({ data: [], error: null }),
-        productIds.length > 0
-          ? supabase.from('products').select('*').in('id', productIds)
-          : Promise.resolve({ data: [], error: null }),
+      const [{ data: products, error: productsError }, { data: resources }, { data: requests }] = await Promise.all([
+        supabase
+          .from('library_items')
+          .select('id,product_id,acquisition_type,acquired_at,products(*)')
+          .eq('user_id', userId)
+          .order('acquired_at', { ascending: false }),
+        supabase
+          .from('saved_resources')
+          .select('id,resource_id,saved_at,resources(*, creators(id, slug, name, avatar_url), categories(id, slug, name))')
+          .eq('user_id', userId)
+          .order('saved_at', { ascending: false }),
+        supabase
+          .from('service_requests')
+          .select('id,service_id,message,status,created_at,services(*, creators(id, slug, name, avatar_url), categories(id, slug, name))')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false }),
       ]);
 
-      const firstError = releasesError ?? productsError;
-      if (firstError) {
-        setError(firstError.message);
-        setLoading(false);
-        return;
+      if (productsError) {
+        setError(`${productsError.message}. Run the clean Supabase reset SQL, then refresh.`);
       }
 
-      const releasesById = new Map((releases ?? []).map(item => [item.id, item]));
-      const productsById = new Map((products ?? []).map(item => [item.id, item]));
-      const entries = (items ?? [])
-        .map(item => {
-          const itemProduct = item.product_id ? productsById.get(item.product_id) ?? null : null;
-          const itemRelease = item.release_id ? releasesById.get(item.release_id) ?? null : null;
-          if (!itemProduct && !itemRelease) return null;
-          return { ...item, product: itemProduct, release: itemRelease };
-        })
-        .filter((item): item is LibraryEntry => item !== null);
-
-      setLibrary(entries);
-      setActiveIndex(0);
+      setLibraryItems((products as LibraryItem[] | null) ?? []);
+      setSavedResources((resources as SavedResource[] | null) ?? []);
+      setServiceRequests((requests as ServiceRequest[] | null) ?? []);
       setLoading(false);
     }
 
-    fetchLibrary(user.id);
+    fetchVault(user.id);
   }, [authLoading, user]);
 
-  useEffect(() => {
-    const entry = library[activeIndex];
-    if (!entry) return;
+  if (authLoading || loading) {
+    return <CenteredMessage>Loading...</CenteredMessage>;
+  }
 
-    async function fetchReleaseDetails(entry: LibraryEntry) {
-      setLoading(true);
-      setError(null);
-      const releaseId = entry.release_id ?? entry.product?.linked_release_id;
+  if (!user) {
+    return <CenteredMessage>Sign in to view your library</CenteredMessage>;
+  }
 
-      if (!releaseId) {
-        setRelease(null);
-        setTracks([]);
-        setAchievements([]);
-        setExtras([]);
-        setLibItem(entry);
-        setLoading(false);
-        return;
-      }
-
-      const [
-        { data: rel, error: relError },
-        { data: trks, error: tracksError },
-        { data: achs, error: achievementsError },
-        { data: exts, error: extrasError },
-      ] = await Promise.all([
-        supabase.from('releases').select('*').eq('id', releaseId).single(),
-        supabase.from('tracks').select('*').eq('release_id', releaseId).order('number'),
-        supabase.from('achievements').select('*').eq('release_id', releaseId),
-        supabase.from('extras').select('*').eq('release_id', releaseId),
-      ]);
-
-      const firstError = relError ?? tracksError ?? achievementsError ?? extrasError;
-      if (firstError) {
-        setError(firstError.message);
-      }
-
-      setRelease(rel);
-      setTracks(trks ?? []);
-      setAchievements(achs ?? []);
-      setExtras(exts ?? []);
-      setLibItem(entry);
-      setLoading(false);
-    }
-
-    fetchReleaseDetails(entry);
-  }, [activeIndex, library]);
-
-  const earnedCount = achievements.filter(a => a.earned).length;
-  const totalCount = achievements.length;
-
-  const lastListened = libItem?.last_listened
-    ? new Date(libItem.last_listened).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    : '-';
+  if (error) {
+    return <CenteredMessage>{error}</CenteredMessage>;
+  }
 
   return (
-    <div style={{ display: 'flex', flex: 1, overflow: 'hidden', gap: 20, padding: '0 28px 56px', width: '100%', maxWidth: 1440, margin: '0 auto' }}>
-      <aside style={{ width: 234, flexShrink: 0, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', backdropFilter: 'blur(24px)', borderRadius: 16, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ padding: '12px 12px 8px' }}>
-          <input
-            type="text"
-            placeholder="Filter your library..."
-            style={{ width: '100%', background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 10, padding: '8px 12px', fontFamily: 'inherit', fontSize: 12, fontWeight: 500, color: '#fff', outline: 'none' }}
-          />
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', gap: 14, padding: '0 28px 56px', width: '100%', maxWidth: 1440, margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', backdropFilter: 'blur(24px)', borderRadius: 9999, padding: 5 }}>
+          <VaultButton active={activeVault === 'products'} onClick={() => setActiveVault('products')}>Products</VaultButton>
+          <VaultButton active={activeVault === 'resources'} onClick={() => setActiveVault('resources')}>Resources</VaultButton>
+          <VaultButton active={activeVault === 'services'} onClick={() => setActiveVault('services')}>Services</VaultButton>
         </div>
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-          {library.map((entry, i) => (
-            <div
-              key={entry.product_id ?? entry.release_id}
-              onClick={() => setActiveIndex(i)}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', cursor: 'pointer', background: activeIndex === i ? 'rgba(255,255,255,0.09)' : 'transparent', borderLeft: activeIndex === i ? '2px solid #93FF00' : '2px solid transparent', transition: 'background 120ms ease' }}
-            >
-              <div style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.09)' }} />
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: activeIndex === i ? '#fff' : 'rgba(255,255,255,0.75)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.product?.title ?? entry.release?.title}</div>
-                <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>{entry.product?.creator ?? entry.release?.artist}</div>
-              </div>
-            </div>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.32)' }}>Personal Vault</div>
+      </div>
+
+      {activeVault === 'products' && (
+        <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', alignContent: 'start', gap: 14 }}>
+          {libraryItems.length === 0 ? (
+            <EmptyPanel title="Your product library is empty" body="Add a free product from the Store or Browse page to test ownership." href="/browse" action="Browse Store" />
+          ) : (
+            libraryItems.map(item => item.products && (
+              <ProductVaultCard key={item.id} product={item.products} acquiredAt={item.acquired_at} />
+            ))
+          )}
+        </div>
+      )}
+
+      {activeVault === 'resources' && (
+        <VaultGrid
+          empty={<EmptyPanel title="No saved resources yet" body="Save guides, templates, lessons, or checklists from Community Resources." href="/resources" action="Browse Resources" />}
+          items={savedResources.map(item => ({
+            id: item.id,
+            title: item.resources?.title ?? 'Saved resource',
+            eyebrow: item.resources?.categories?.name ?? item.resources?.resource_type ?? 'Resource',
+            body: item.resources?.summary ?? item.resources?.body ?? 'No description yet.',
+            meta: item.saved_at ? `Saved ${new Date(item.saved_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : 'Saved',
+          }))}
+        />
+      )}
+
+      {activeVault === 'services' && (
+        <VaultGrid
+          empty={<EmptyPanel title="No service requests yet" body="When you contact a creator for a service, the request will appear here." href="/services/browse" action="Browse Services" />}
+          items={serviceRequests.map(item => ({
+            id: item.id,
+            title: item.services?.title ?? 'Service request',
+            eyebrow: item.status,
+            body: item.message || item.services?.description || 'No message added.',
+            meta: item.created_at ? `Requested ${new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : 'Requested',
+          }))}
+        />
+      )}
+    </div>
+  );
+}
+
+function ProductVaultCard({ product, acquiredAt }: { product: Product; acquiredAt: string }) {
+  return (
+    <article style={{ minHeight: 250, borderRadius: 22, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.045)', backdropFilter: 'blur(24px)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ height: 120, background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        {product.cover_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={product.cover_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        )}
+      </div>
+      <div style={{ padding: 18, flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.38)', marginBottom: 8 }}>{productMeta(product)}</div>
+        <div style={{ fontSize: 22, fontWeight: 760, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1, marginBottom: 6 }}>{product.title}</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.42)', marginBottom: 12 }}>by {product.creator}</div>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+          {(product.tags ?? []).slice(0, 4).map(tag => (
+            <Link key={tag} href={browseHref({ tag })} className="chip">{tag}</Link>
           ))}
         </div>
-      </aside>
+        <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 650, color: 'rgba(255,255,255,0.32)' }}>Added {new Date(acquiredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+          <div style={{ fontSize: 13, fontWeight: 800, color: product.is_free ? '#93FF00' : '#fff' }}>{formatProductPrice(product)}</div>
+        </div>
+      </div>
+    </article>
+  );
+}
 
-      <main style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {authLoading || loading ? (
-          <CenteredMessage>Loading...</CenteredMessage>
-        ) : !user ? (
-          <CenteredMessage>Sign in to view your library</CenteredMessage>
-        ) : error ? (
-          <CenteredMessage>{error}</CenteredMessage>
-        ) : library.length === 0 ? (
-          <CenteredMessage>Your library is empty. Add a free product from the Store or Browse page to test ownership.</CenteredMessage>
-        ) : !release && !libItem?.product ? (
-          <CenteredMessage>Select a product</CenteredMessage>
-        ) : (
-          <>
-            <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', backdropFilter: 'blur(24px)', borderRadius: 16, padding: 20, display: 'flex', gap: 20, alignItems: 'flex-start' }}>
-              <div style={{ width: 120, height: 120, flexShrink: 0, borderRadius: 12, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.09)' }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.38)', marginBottom: 6 }}>{libItem?.product ? productMeta(libItem.product) : release?.type}</div>
-                <div style={{ fontSize: 28, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1, marginBottom: 6 }}>{libItem?.product?.title ?? release?.title}</div>
-                <div style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.45)', marginBottom: 12 }}>by <span style={{ color: 'rgba(255,255,255,0.75)' }}>{libItem?.product?.creator ?? release?.artist}</span></div>
-                {libItem?.product && <div style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.42)', lineHeight: 1.6, marginBottom: 12 }}>{libItem.product.description}</div>}
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {((libItem?.product?.tags ?? release?.tags) ?? []).map(tag => (
-                    <Link key={tag} href={browseHref({ tag })} style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.11)', borderRadius: 6, padding: '3px 10px', fontSize: 11, fontWeight: 600, letterSpacing: '0.05em', color: 'rgba(255,255,255,0.55)' }}>{tag}</Link>
-                  ))}
-                </div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end' }}>
-                <button style={{ background: '#93FF00', border: 'none', borderRadius: 9999, padding: '10px 24px', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: '#0A0A12', cursor: 'pointer' }}>▶ Play</button>
-                <button style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 9999, padding: '8px 18px', fontFamily: 'inherit', fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.55)', cursor: 'pointer' }}>...</button>
-              </div>
-            </div>
+function VaultGrid({ items, empty }: { items: { id: string; title: string; eyebrow: string; body: string; meta: string }[]; empty: React.ReactNode }) {
+  if (items.length === 0) return <>{empty}</>;
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-              {[
-                { value: libItem?.product ? formatProductPrice(libItem.product) : libItem?.listen_count?.toLocaleString() ?? '0', label: libItem?.product ? 'Price' : 'Total Listens' },
-                { value: `${earnedCount} / ${totalCount}`, label: 'Achievements' },
-                { value: lastListened, label: 'Last Listened' },
-              ].map((s, i) => (
-                <div key={i} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', backdropFilter: 'blur(24px)', borderRadius: 14, padding: '14px 18px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em' }}>{s.value}</div>
-                  <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.32)', marginTop: 4 }}>{s.label}</div>
-                </div>
-              ))}
-            </div>
-
-            <Panel title="Tracklist" sub={`${tracks.length} tracks`}>
-              {tracks.map((t, i) => (
-                <div
-                  key={t.id}
-                  onMouseEnter={() => setHoveredTrack(i)}
-                  onMouseLeave={() => setHoveredTrack(null)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 14px', borderRadius: 8, background: hoveredTrack === i ? 'rgba(255,255,255,0.06)' : 'transparent', cursor: 'pointer', transition: 'background 120ms ease' }}
-                >
-                  <div style={{ width: 24, textAlign: 'right', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.25)', position: 'relative' }}>
-                    {hoveredTrack === i ? <span style={{ position: 'absolute', right: 0, color: 'rgba(255,255,255,0.55)' }}>▶</span> : String(t.number).padStart(2, '0')}
-                  </div>
-                  <div style={{ flex: 1, fontSize: 13, fontWeight: 500, color: hoveredTrack === i ? '#fff' : 'rgba(255,255,255,0.80)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</div>
-                  <div style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.30)', flexShrink: 0 }}>{t.duration}</div>
-                </div>
-              ))}
-            </Panel>
-
-            <Panel title="Achievements" extra={
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
-                <div style={{ position: 'relative', width: 28, height: 28 }}>
-                  <svg width="28" height="28" viewBox="0 0 28 28">
-                    <circle cx="14" cy="14" r="11" fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="2.5" />
-                    <circle cx="14" cy="14" r="11" fill="none" stroke="#93FF00" strokeWidth="2.5"
-                      strokeDasharray={`${totalCount > 0 ? (earnedCount / totalCount) * 69.12 : 0} 69.12`}
-                      strokeDashoffset="0" strokeLinecap="round" transform="rotate(-90 14 14)" />
-                  </svg>
-                </div>
-                <button style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 9999, padding: '4px 12px', fontFamily: 'inherit', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.50)', cursor: 'pointer' }}>View All</button>
-              </div>
-            }>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: '0 6px' }}>
-                {achievements.map(a => (
-                  <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${a.earned ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.08)'}`, borderRadius: 12, opacity: a.earned ? 1 : 0.75 }}>
-                    <div style={{ width: 44, height: 44, flexShrink: 0, borderRadius: 10, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.11)' }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: '#fff', letterSpacing: '0.03em', marginBottom: 3 }}>{a.name}</div>
-                      <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.38)', lineHeight: 1.5 }}>{a.description}</div>
-                    </div>
-                    <div style={{ flexShrink: 0, fontSize: 10, fontWeight: 600, letterSpacing: '0.10em', textTransform: 'uppercase', color: a.earned ? '#93FF00' : 'rgba(255,255,255,0.20)' }}>
-                      {a.earned ? 'Earned' : 'Locked'}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Panel>
-
-            <Panel title="Extras">
-              <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }}>
-                {extras.map(e => (
-                  <div key={e.id} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: 14, minWidth: 174, maxWidth: 174, flexShrink: 0, display: 'flex', flexDirection: 'column', cursor: 'pointer', opacity: e.locked ? 0.48 : 1 }}>
-                    <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: LABEL_COLORS[e.label_type] ?? 'rgba(255,255,255,0.55)', marginBottom: 10 }}>{e.label}</div>
-                    <div style={{ width: '100%', height: 88, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, marginBottom: 11, flexShrink: 0 }} />
-                    <div style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.90)', marginBottom: 4, lineHeight: 1.3 }}>{e.title}</div>
-                    <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.32)', lineHeight: 1.45, flex: 1 }}>{e.subtitle}</div>
-                    {e.action && (
-                      <div style={{ marginTop: 12, display: 'inline-block', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 9999, padding: '5px 13px', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.70)', letterSpacing: '0.04em', alignSelf: 'flex-start' }}>{e.action}</div>
-                    )}
-                    {!e.action && e.locked && (
-                      <div style={{ marginTop: 10, fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.25)' }}>Earn Overachiever</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </Panel>
-          </>
-        )}
-      </main>
+  return (
+    <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', alignContent: 'start', gap: 14 }}>
+      {items.map(item => (
+        <article key={item.id} style={{ minHeight: 190, borderRadius: 20, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.045)', backdropFilter: 'blur(24px)', padding: 20, display: 'flex', flexDirection: 'column' }}>
+          <div className="chip" style={{ alignSelf: 'flex-start', marginBottom: 14 }}>{item.eyebrow}</div>
+          <div style={{ fontSize: 22, fontWeight: 760, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1, marginBottom: 10 }}>{item.title}</div>
+          <div style={{ fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.50)', lineHeight: 1.65, flex: 1 }}>{item.body}</div>
+          <div style={{ fontSize: 11, fontWeight: 650, color: 'rgba(255,255,255,0.32)', marginTop: 18 }}>{item.meta}</div>
+        </article>
+      ))}
     </div>
+  );
+}
+
+function EmptyPanel({ title, body, href, action }: { title: string; body: string; href: string; action: string }) {
+  return (
+    <div style={{ gridColumn: '1 / -1', minHeight: 260, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 24, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.04)', textAlign: 'center', padding: 28 }}>
+      <div>
+        <div style={{ fontSize: 28, fontWeight: 760, color: '#fff', letterSpacing: '-0.03em', marginBottom: 10 }}>{title}</div>
+        <div style={{ maxWidth: 420, fontSize: 13, fontWeight: 500, color: 'rgba(255,255,255,0.46)', lineHeight: 1.65, marginBottom: 18 }}>{body}</div>
+        <Link className="btn-primary" href={href}>{action}</Link>
+      </div>
+    </div>
+  );
+}
+
+function VaultButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{ border: `1px solid ${active ? 'rgba(255,255,255,0.18)' : 'transparent'}`, background: active ? 'rgba(255,255,255,0.13)' : 'transparent', color: active ? '#fff' : 'rgba(255,255,255,0.38)', borderRadius: 9999, padding: '9px 18px', fontFamily: 'inherit', fontSize: 11, fontWeight: 750, letterSpacing: '0.10em', textTransform: 'uppercase', cursor: 'pointer' }}
+    >
+      {children}
+    </button>
   );
 }
 
 function CenteredMessage({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'rgba(255,255,255,0.30)', fontSize: 13, fontWeight: 500, textAlign: 'center', padding: 24 }}>
-      {children}
-    </div>
-  );
-}
-
-function Panel({ title, sub, extra, children }: { title: string; sub?: string; extra?: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', backdropFilter: 'blur(24px)', borderRadius: 16, padding: '16px 14px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.40)' }}>{title}</div>
-        {sub && <div style={{ fontSize: 11, fontWeight: 500, color: 'rgba(255,255,255,0.25)' }}>{sub}</div>}
-        {extra}
-      </div>
       {children}
     </div>
   );

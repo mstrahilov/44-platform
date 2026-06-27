@@ -1,5 +1,8 @@
 export interface Product {
   id: string;
+  creator_id?: string | null;
+  category_id?: string | null;
+  slug?: string | null;
   title: string;
   creator: string;
   product_type: string;
@@ -11,7 +14,8 @@ export interface Product {
   featured: boolean;
   tags: string[] | null;
   cover_url: string | null;
-  linked_release_id: string | null;
+  hero_url?: string | null;
+  status?: string | null;
   created_at: string;
 }
 
@@ -41,67 +45,63 @@ export function browseHref(params: { category?: string; tag?: string; filter?: s
 
 export const FALLBACK_PRODUCTS: Product[] = [
   {
-    id: 'fallback-muses',
-    title: 'MUSES',
-    creator: 'Tellali',
-    product_type: 'EP',
-    category: 'Music',
-    description: 'Eight tracks. No filler. A debut EP built on voice, touch, and memory.',
-    price_cents: 799,
-    is_free: false,
-    is_published: true,
-    featured: true,
-    tags: ['44 Exclusive', 'Electronic', 'Alternative'],
-    cover_url: null,
-    linked_release_id: null,
-    created_at: new Date(0).toISOString(),
-  },
-  {
-    id: 'fallback-shadowsea',
-    title: 'THE GREAT SHADOWSEA',
-    creator: 'Ølsten',
+    id: 'fallback-product-a',
+    title: 'Product A',
+    creator: 'Creator A',
     product_type: 'Album',
     category: 'Music',
-    description: 'A large-format album from the Ølsten catalog.',
+    description: 'Description text for a music product used to test product cards and detail pages.',
     price_cents: 0,
     is_free: true,
     is_published: true,
-    featured: false,
-    tags: ['Album', 'Free'],
+    featured: true,
+    tags: ['Album', 'Ambient'],
     cover_url: null,
-    linked_release_id: null,
     created_at: new Date(0).toISOString(),
   },
   {
-    id: 'fallback-soma',
-    title: 'SOMA',
-    creator: '44 CORPORATION',
+    id: 'fallback-product-b',
+    title: 'Product B',
+    creator: 'Creator B',
     product_type: 'Game',
     category: 'Games',
-    description: 'First-person puzzle game. Copy a state from any object. Paste it onto another.',
+    description: 'Description text for a game product used to test grid wrapping and product pages.',
     price_cents: 1499,
     is_free: false,
     is_published: true,
     featured: true,
-    tags: ['Game', 'Puzzle'],
+    tags: ['Puzzle', 'Web Game'],
     cover_url: null,
-    linked_release_id: null,
     created_at: new Date(0).toISOString(),
   },
   {
-    id: 'fallback-myth',
-    title: 'ELSEWHERE MYTH VOL. 1',
-    creator: '44 CORPORATION',
-    product_type: 'Book',
-    category: 'Books',
-    description: 'Locations, factions, and mythology from a world built inside a dream.',
-    price_cents: 1299,
-    is_free: false,
+    id: 'fallback-product-c',
+    title: 'Product C',
+    creator: 'Creator C',
+    product_type: 'Interactive Experience',
+    category: 'Interactive',
+    description: 'Description text for an interactive product used to test hero and browse surfaces.',
+    price_cents: 0,
+    is_free: true,
     is_published: true,
     featured: true,
-    tags: ['Book', 'Lore'],
+    tags: ['Interactive', 'Unity'],
     cover_url: null,
-    linked_release_id: null,
+    created_at: new Date(0).toISOString(),
+  },
+  {
+    id: 'fallback-product-d',
+    title: 'Product D',
+    creator: 'Creator A',
+    product_type: 'Sample Pack',
+    category: 'Sample Packs',
+    description: 'Description text for a sample pack product.',
+    price_cents: 999,
+    is_free: false,
+    is_published: true,
+    featured: false,
+    tags: ['Samples', 'Ambient'],
+    cover_url: null,
     created_at: new Date(0).toISOString(),
   },
 ];
