@@ -211,7 +211,7 @@ export default function LibraryPage() {
     : '-';
 
   return (
-    <div style={{ display: 'flex', flex: 1, overflow: 'hidden', gap: 12, padding: '0 12px 12px' }}>
+    <div style={{ display: 'flex', flex: 1, overflow: 'hidden', gap: 20, padding: '0 28px 56px', width: '100%', maxWidth: 1440, margin: '0 auto' }}>
       <aside style={{ width: 234, flexShrink: 0, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)', backdropFilter: 'blur(24px)', borderRadius: 16, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '12px 12px 8px' }}>
           <input

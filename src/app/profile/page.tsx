@@ -69,15 +69,21 @@ const TYPE_STYLES: Record<string, React.CSSProperties> = {
 /* ── page ── */
 export default function ProfilePage() {
   return (
-    <div style={{ flex: 1, overflowY: 'auto' }}>
+    <div style={{ flex: 1, overflowY: 'auto', padding: '0 28px 56px' }}>
 
       {/* ── BANNER ── */}
-      <div style={{ width: '100%', height: 180, position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(10,20,60,0.9) 0%, rgba(30,10,50,0.8) 40%, rgba(5,15,40,0.95) 100%)' }} />
+      <div style={{ width: '100%', height: 320, maxWidth: 1440, margin: '0 auto', position: 'relative', overflow: 'hidden', flexShrink: 0, borderRadius: 28, border: '1px solid rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.04)' }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 18% 18%, rgba(147,255,0,0.22), transparent 26%), radial-gradient(circle at 78% 26%, rgba(110,140,255,0.24), transparent 30%), linear-gradient(135deg, rgba(20,28,64,0.96) 0%, rgba(30,18,48,0.94) 48%, rgba(8,10,18,1) 100%)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(10,10,18,0) 0%, rgba(10,10,18,0.18) 52%, #0A0A12 100%)' }} />
+        <div style={{ position: 'absolute', left: 28, right: 28, bottom: 34 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.48)', marginBottom: 12 }}>Creator Space</div>
+          <div style={{ maxWidth: 620, fontSize: 42, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1, color: '#fff', marginBottom: 10 }}>lvminvs.</div>
+          <div style={{ maxWidth: 560, fontSize: 14, fontWeight: 500, lineHeight: 1.6, color: 'rgba(255,255,255,0.58)' }}>Products, services, posts, and community activity will live here under a creator-controlled visual header.</div>
+        </div>
       </div>
 
       {/* ── PROFILE ROW ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 20, padding: '0 28px', marginTop: -36, position: 'relative', zIndex: 2, marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 20, maxWidth: 1440, margin: '-36px auto 16px', position: 'relative', zIndex: 2 }}>
         <div style={{ width: 80, height: 80, borderRadius: '50%', flexShrink: 0, background: 'rgba(255,255,255,0.08)', border: '3px solid #0A0A12', boxShadow: '0 4px 24px rgba(0,0,0,0.6)' }} />
         <div style={{ flex: 1, paddingBottom: 4 }}>
           <div style={{ fontSize: 26, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1, marginBottom: 4 }}>
@@ -93,7 +99,7 @@ export default function ProfilePage() {
       </div>
 
       {/* ── STATS BAR ── */}
-      <div style={{ display: 'flex', padding: '0 28px', marginBottom: 16, background: 'rgba(255,255,255,0.04)', borderTop: '1px solid rgba(255,255,255,0.07)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+      <div style={{ display: 'flex', maxWidth: 1440, margin: '0 auto 16px', background: 'rgba(255,255,255,0.04)', borderTop: '1px solid rgba(255,255,255,0.07)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
         {STATS.map((s, i) => (
           <div key={i} style={{ flex: 1, padding: '14px 0', textAlign: 'center', borderRight: i < STATS.length - 1 ? '1px solid rgba(255,255,255,0.07)' : 'none' }}>
             <div style={{ fontSize: 20, fontWeight: 700, color: '#fff', letterSpacing: '-0.02em' }}>{s.value}</div>
@@ -103,7 +109,7 @@ export default function ProfilePage() {
       </div>
 
       {/* ── CONTENT ── */}
-      <div style={{ display: 'flex', gap: 14, padding: '0 28px 32px' }}>
+      <div style={{ display: 'flex', gap: 14, maxWidth: 1440, margin: '0 auto' }}>
 
         {/* main column — all sections always visible */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 24 }}>
