@@ -74,7 +74,7 @@ export default function StorePage() {
           <SectionHeader title="Explore 44" href="/browse" />
           <div className="store-category-grid">
             {categoryCounts.map(item => (
-              <CategoryTile key={item.category} category={item.category} product={item.product} />
+              <CategoryTile key={item.category} category={item.category} />
             ))}
           </div>
         </section>
