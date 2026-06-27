@@ -128,13 +128,9 @@ function StoreHero({ product, owned }: { product: Product; owned: boolean }) {
   );
 }
 
-function CategoryTile({ category, product }: { category: string; product?: Product }) {
+function CategoryTile({ category }: { category: string }) {
   return (
     <Link href={browseHref({ category })} style={{ minHeight: 120, borderRadius: 20, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.035)', padding: 16, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', overflow: 'hidden', position: 'relative' }}>
-      {product?.cover_url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={product.cover_url} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-      )}
       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(10,10,18,0.04), rgba(10,10,18,0.72))' }} />
       <div style={{ position: 'relative', zIndex: 1, fontSize: 18, fontWeight: 750, color: '#fff', letterSpacing: '-0.02em' }}>{category}</div>
     </Link>
