@@ -1120,6 +1120,9 @@ body {
   gap: 22px;
   align-items: center;
   min-height: 170px;
+  position: relative;
+  z-index: 2;
+  overflow: visible;
 }
 
 .library-release-cover {
@@ -1157,6 +1160,103 @@ body {
   font-weight: 550;
   color: rgba(255,255,255,0.50);
   line-height: 1.65;
+}
+
+.library-action-cluster {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-self: end;
+}
+
+.library-action-cluster .btn-primary {
+  min-width: 116px;
+  justify-content: center;
+}
+
+.library-options-wrap {
+  position: relative;
+}
+
+.library-options-button {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.075);
+  color: rgba(255,255,255,0.70);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.library-options-button:hover {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+}
+
+.library-options-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 50;
+  width: 168px;
+  padding: 8px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.11);
+  background: rgba(18,20,32,0.94);
+  box-shadow: 0 18px 46px rgba(0,0,0,0.42);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.library-options-menu button,
+.library-options-menu a {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(255,255,255,0.72);
+  padding: 9px 10px;
+  text-align: left;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.library-options-menu button:hover,
+.library-options-menu a:hover {
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+}
+
+.library-player-panel {
+  border: 1px solid rgba(255,255,255,0.09);
+  background: rgba(255,255,255,0.045);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: var(--r-xl);
+  padding: 18px 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 420px);
+  gap: 18px;
+  align-items: center;
+}
+
+.library-player-panel strong {
+  display: block;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 760;
+  letter-spacing: -0.02em;
+}
+
+.library-player-panel audio {
+  width: 100%;
 }
 
 .library-chip-row {
@@ -1269,6 +1369,267 @@ body {
   color: rgba(255,255,255,0.78);
 }
 
+.library-achievement-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.library-achievement-card {
+  min-height: 92px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.035);
+  padding: 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.library-achievement-card strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: rgba(255,255,255,0.82);
+  margin-bottom: 6px;
+}
+
+.library-achievement-card p {
+  font-size: 12px;
+  font-weight: 540;
+  line-height: 1.45;
+  color: rgba(255,255,255,0.40);
+}
+
+.library-achievement-card span {
+  align-self: flex-start;
+  font-size: 10px;
+  font-weight: 820;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.28);
+}
+
+.library-achievement-card-unlocked {
+  border-color: rgba(147,255,0,0.22);
+  background: rgba(147,255,0,0.055);
+}
+
+.library-achievement-card-unlocked span {
+  color: var(--accent);
+}
+
+.product-review-panel {
+  border: 1px solid rgba(255,255,255,0.09);
+  background: rgba(255,255,255,0.045);
+  border-radius: 24px;
+  padding: 22px;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(280px, 1.1fr);
+  gap: 22px;
+}
+
+.product-review-summary h2 {
+  margin-top: 10px;
+  font-size: clamp(28px, 4vw, 46px);
+  line-height: 0.95;
+  font-weight: 790;
+  letter-spacing: -0.045em;
+  color: #fff;
+}
+
+.product-review-summary p {
+  margin-top: 12px;
+  max-width: 420px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.48);
+}
+
+.product-review-meter {
+  margin-top: 22px;
+  width: min(360px, 100%);
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.07);
+}
+
+.product-review-meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.product-review-form {
+  display: grid;
+  gap: 14px;
+}
+
+.product-review-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.product-review-toggle button {
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.055);
+  color: rgba(255,255,255,0.56);
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 760;
+  cursor: pointer;
+}
+
+.product-review-toggle button.active {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  border-color: rgba(255,255,255,0.24);
+}
+
+.product-review-form textarea {
+  min-height: 130px;
+  width: 100%;
+  resize: vertical;
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 18px;
+  background: rgba(0,0,0,0.18);
+  color: rgba(255,255,255,0.86);
+  padding: 16px 18px;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.55;
+  outline: none;
+}
+
+.product-review-form textarea::placeholder {
+  color: rgba(255,255,255,0.30);
+}
+
+.product-review-form textarea:focus {
+  border-color: rgba(147,255,0,0.36);
+  box-shadow: 0 0 0 3px rgba(147,255,0,0.08);
+}
+
+.product-review-list {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.product-review-card {
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px;
+  background: rgba(0,0,0,0.14);
+  padding: 16px;
+}
+
+.product-review-card div {
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.product-review-card p {
+  color: rgba(255,255,255,0.60);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.achievement-toast {
+  position: fixed;
+  top: 104px;
+  right: clamp(18px, 3vw, 42px);
+  z-index: 120;
+  width: min(420px, calc(100vw - 36px));
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(34,38,55,0.88), rgba(15,17,27,0.82));
+  box-shadow: 0 22px 70px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.08);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  animation: achievement-toast-in 420ms cubic-bezier(.16,1,.3,1) both;
+}
+
+.achievement-toast-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(147,255,0,0.34);
+  background: rgba(147,255,0,0.10);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: -0.02em;
+}
+
+.achievement-toast-copy {
+  min-width: 0;
+}
+
+.achievement-toast-eyebrow {
+  margin-bottom: 3px;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: rgba(147,255,0,0.86);
+}
+
+.achievement-toast-copy strong {
+  display: block;
+  color: #fff;
+  font-size: 15px;
+  line-height: 1.15;
+  font-weight: 780;
+}
+
+.achievement-toast-copy p {
+  margin-top: 4px;
+  color: rgba(255,255,255,0.52);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.achievement-toast-points {
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.07);
+  padding: 7px 9px;
+  color: rgba(255,255,255,0.72);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+@keyframes achievement-toast-in {
+  from {
+    opacity: 0;
+    transform: translate3d(18px, -8px, 0) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
 .library-info-line {
   display: flex;
   justify-content: space-between;
@@ -1341,6 +1702,8 @@ body {
   .browse-shell,
   .product-shell,
   .product-info-grid,
+  .product-review-panel,
+  .product-review-list,
   .library-release-hero,
   .library-stats-grid,
   .library-two-grid {

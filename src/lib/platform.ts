@@ -55,10 +55,45 @@ export interface Resource {
   body: string | null;
   resource_type: string;
   cover_url: string | null;
+  download_url?: string | null;
   status: string;
   created_at: string;
   creators?: Pick<Creator, 'id' | 'slug' | 'name' | 'avatar_url'> | null;
   categories?: Pick<Category, 'id' | 'slug' | 'name'> | null;
+}
+
+export interface Track {
+  id: string;
+  product_id: string;
+  number: number;
+  title: string;
+  duration_seconds: number | null;
+  audio_url: string | null;
+  download_url: string | null;
+}
+
+export interface ProductAchievement {
+  id: string;
+  product_id: string;
+  code: string;
+  title: string;
+  description: string | null;
+  trigger_type: string;
+  trigger_config: Record<string, unknown>;
+  reward_product_id: string | null;
+  reward_config: Record<string, unknown>;
+  points: number;
+  icon: string | null;
+  sort_order: number;
+  is_secret: boolean;
+}
+
+export interface UserAchievement {
+  id: string;
+  user_id: string;
+  achievement_id: string;
+  product_id: string;
+  unlocked_at: string;
 }
 
 export interface CommunityPost {

@@ -16,6 +16,10 @@ export interface Product {
   cover_url: string | null;
   hero_url?: string | null;
   feature_description?: string | null;
+  runtime_type?: string | null;
+  launch_url?: string | null;
+  read_url?: string | null;
+  download_url?: string | null;
   status?: string | null;
   year?: number | null;
   created_at: string;

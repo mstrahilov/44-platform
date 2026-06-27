@@ -9,12 +9,29 @@ import type { Product } from '@/lib/products';
 import { browseHref, formatProductPrice, productMeta } from '@/lib/products';
 import { creatorHref } from '@/lib/platform';
 import { DockedContent, DockedLayout, DockedPanel } from '@/components/Ui';
+import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
+
+interface ProductReview {
+  id: string;
+  user_id: string;
+  product_id: string;
+  body: string;
+  sentiment: 'recommended' | 'not_recommended';
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
 
 export default function ProductPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const [product, setProduct] = useState<Product | null>(null);
   const [related, setRelated] = useState<Product[]>([]);
+  const [reviews, setReviews] = useState<ProductReview[]>([]);
+  const [reviewBody, setReviewBody] = useState('');
+  const [reviewSentiment, setReviewSentiment] = useState<'recommended' | 'not_recommended'>('recommended');
+  const [reviewSaving, setReviewSaving] = useState(false);
+  const [toast, setToast] = useState<AchievementToastData | null>(null);
   const [owned, setOwned] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -39,6 +56,15 @@ export default function ProductPage() {
           .limit(4);
 
         setRelated(relatedProducts ?? []);
+
+        const { data: reviewRows } = await supabase
+          .from('product_reviews')
+          .select('id,user_id,product_id,body,sentiment,status,created_at,updated_at')
+          .eq('product_id', data.id)
+          .eq('status', 'published')
+          .order('created_at', { ascending: false });
+
+        setReviews((reviewRows as ProductReview[] | null) ?? []);
       }
     }
 
@@ -66,6 +92,20 @@ export default function ProductPage() {
     }
   }, [product, user]);
 
+  useEffect(() => {
+    if (!user) {
+      setReviewBody('');
+      setReviewSentiment('recommended');
+      return;
+    }
+
+    const ownReview = reviews.find(review => review.user_id === user.id);
+    if (ownReview) {
+      setReviewBody(ownReview.body);
+      setReviewSentiment(ownReview.sentiment);
+    }
+  }, [reviews, user]);
+
   async function addToLibrary() {
     if (!product) return;
     if (!user) {
@@ -91,6 +131,52 @@ export default function ProductPage() {
     }
 
     setOwned(true);
+  }
+
+  async function saveReview() {
+    if (!product || !user) {
+      alert('Sign in first, then leave a review.');
+      return;
+    }
+
+    if (!owned) {
+      alert('Add this item to your library before leaving a review.');
+      return;
+    }
+
+    const body = reviewBody.trim();
+    if (!body) return;
+
+    setReviewSaving(true);
+    const { data, error } = await supabase
+      .from('product_reviews')
+      .upsert({
+        user_id: user.id,
+        product_id: product.id,
+        body,
+        sentiment: reviewSentiment,
+        status: 'published',
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,product_id' })
+      .select('id,user_id,product_id,body,sentiment,status,created_at,updated_at')
+      .single();
+
+    setReviewSaving(false);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    if (data) {
+      setReviews(previous => {
+        const withoutOwnReview = previous.filter(review => review.user_id !== user.id);
+        return [data as ProductReview, ...withoutOwnReview];
+      });
+    }
+
+    const unlocked = await unlockSupporterAchievement(user.id, product.id);
+    if (unlocked) setToast(unlocked);
   }
 
   if (loading) return <CenteredMessage>Loading...</CenteredMessage>;
@@ -135,6 +221,18 @@ export default function ProductPage() {
               </div>
             </InfoPanel>
           </section>
+
+          <ProductReviewSection
+            owned={owned}
+            userSignedIn={Boolean(user)}
+            reviews={reviews}
+            body={reviewBody}
+            sentiment={reviewSentiment}
+            saving={reviewSaving}
+            onBody={setReviewBody}
+            onSentiment={setReviewSentiment}
+            onSave={saveReview}
+          />
 
           {related.length > 0 && (
             <section>
@@ -182,6 +280,7 @@ export default function ProductPage() {
             </div>
           </div>
         </DockedPanel>
+        <AchievementToast toast={toast} onDone={() => setToast(null)} />
     </DockedLayout>
   );
 }
@@ -192,6 +291,74 @@ function InfoPanel({ title, children }: { title: string; children: React.ReactNo
       <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.36)', marginBottom: 14 }}>{title}</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{children}</div>
     </div>
+  );
+}
+
+function ProductReviewSection({
+  owned,
+  userSignedIn,
+  reviews,
+  body,
+  sentiment,
+  saving,
+  onBody,
+  onSentiment,
+  onSave,
+}: {
+  owned: boolean;
+  userSignedIn: boolean;
+  reviews: ProductReview[];
+  body: string;
+  sentiment: 'recommended' | 'not_recommended';
+  saving: boolean;
+  onBody: (value: string) => void;
+  onSentiment: (value: 'recommended' | 'not_recommended') => void;
+  onSave: () => Promise<void>;
+}) {
+  const recommended = reviews.filter(review => review.sentiment === 'recommended').length;
+  const total = reviews.length;
+  const ratio = total > 0 ? Math.round((recommended / total) * 100) : 0;
+  const prompt = !userSignedIn
+    ? 'Sign in to review this item.'
+    : !owned
+      ? 'Add this item to your Library before reviewing it.'
+      : 'Recommend this item to the community.';
+
+  return (
+    <section id="reviews" className="product-review-panel">
+      <div className="product-review-summary">
+        <div>
+          <div className="surface-eyebrow">Community Reviews</div>
+          <h2>{total > 0 ? `${ratio}% recommend` : 'No reviews yet'}</h2>
+          <p>{total > 0 ? `${recommended} of ${total} review${total === 1 ? '' : 's'} recommend this item.` : prompt}</p>
+        </div>
+        <div className="product-review-meter" aria-hidden="true">
+          <span style={{ width: `${ratio}%` }} />
+        </div>
+      </div>
+
+      <div className="product-review-form">
+        <div className="product-review-toggle">
+          <button type="button" className={sentiment === 'recommended' ? 'active' : ''} onClick={() => onSentiment('recommended')}>Recommend</button>
+          <button type="button" className={sentiment === 'not_recommended' ? 'active' : ''} onClick={() => onSentiment('not_recommended')}>Not for me</button>
+        </div>
+        <textarea value={body} onChange={event => onBody(event.target.value)} placeholder="Share a short review..." disabled={!userSignedIn || !owned} />
+        <button className="btn-primary" type="button" disabled={!userSignedIn || !owned || saving || body.trim().length === 0} onClick={onSave}>
+          {saving ? 'Saving...' : 'Save Review'}
+        </button>
+      </div>
+
+      {reviews.length > 0 && (
+        <div className="product-review-list">
+          {reviews.slice(0, 4).map(review => (
+            <article key={review.id} className="product-review-card">
+              <div>{review.sentiment === 'recommended' ? 'Recommended' : 'Not for me'}</div>
+              <p>{review.body}</p>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -210,6 +377,49 @@ function CenteredMessage({ children }: { children: React.ReactNode }) {
       {children}
     </div>
   );
+}
+
+async function unlockSupporterAchievement(userId: string, productId: string) {
+  const { data: achievement } = await supabase
+    .from('product_achievements')
+    .select('id,code,title,description,points,trigger_type')
+    .eq('product_id', productId)
+    .eq('trigger_type', 'reviewed')
+    .maybeSingle();
+
+  if (!achievement) return null;
+
+  const { data: existingUnlock } = await supabase
+    .from('user_achievements')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('achievement_id', achievement.id)
+    .maybeSingle();
+
+  if (existingUnlock) return null;
+
+  const { error } = await supabase.from('user_achievements').insert({
+    user_id: userId,
+    product_id: productId,
+    achievement_id: achievement.id,
+  });
+
+  if (error) return null;
+
+  await supabase.from('achievement_events').insert({
+    user_id: userId,
+    product_id: productId,
+    achievement_id: achievement.id,
+    event_type: 'achievement_unlocked',
+    metadata: { trigger_type: 'reviewed', achievement_code: achievement.code, source: 'product_review' },
+  });
+
+  return {
+    id: achievement.id,
+    title: achievement.title,
+    description: achievement.description,
+    points: achievement.points,
+  };
 }
 
 function getHeroBackground(product: Product) {
