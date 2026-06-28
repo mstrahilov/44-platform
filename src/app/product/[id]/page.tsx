@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
 import { browseHref, formatProductPrice, productMeta } from '@/lib/products';
+import { getProductStoreAccessLabel, isFreeLibraryClaim } from '@/lib/libraryContent';
 import { creatorHref } from '@/lib/platform';
 import { DockedContent, DockedLayout, DockedPanel } from '@/components/Ui';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
@@ -94,15 +95,19 @@ export default function ProductPage() {
 
   useEffect(() => {
     if (!user) {
-      setReviewBody('');
-      setReviewSentiment('recommended');
+      Promise.resolve().then(() => {
+        setReviewBody('');
+        setReviewSentiment('recommended');
+      });
       return;
     }
 
     const ownReview = reviews.find(review => review.user_id === user.id);
     if (ownReview) {
-      setReviewBody(ownReview.body);
-      setReviewSentiment(ownReview.sentiment);
+      Promise.resolve().then(() => {
+        setReviewBody(ownReview.body);
+        setReviewSentiment(ownReview.sentiment);
+      });
     }
   }, [reviews, user]);
 
@@ -112,8 +117,8 @@ export default function ProductPage() {
       alert('Sign in first, then add this to your library.');
       return;
     }
-    if (product.category.toLowerCase() !== 'music') {
-      alert('Cart is coming soon. Music items can be added to your library for testing now.');
+    if (!isFreeLibraryClaim(product)) {
+      alert('Cart is coming soon. Free items can be added to your library now.');
       return;
     }
 
@@ -122,7 +127,7 @@ export default function ProductPage() {
       .upsert({
         user_id: user.id,
         product_id: product.id,
-        acquisition_type: product.is_free ? 'free' : 'grant',
+        acquisition_type: 'free',
       }, { onConflict: 'user_id,product_id' });
 
     if (error) {
@@ -183,8 +188,9 @@ export default function ProductPage() {
   if (!product) return <CenteredMessage>Product not found</CenteredMessage>;
 
   const heroImage = product.hero_url || product.cover_url;
-  const isMusic = product.category.toLowerCase() === 'music';
-  const primaryAction = owned ? 'Owned' : isMusic ? 'Add to Library' : 'Add to Cart';
+  const canClaimToLibrary = isFreeLibraryClaim(product);
+  const primaryAction = owned ? 'Owned' : canClaimToLibrary ? 'Add to Library' : 'Add to Cart';
+  const accessLabel = getProductStoreAccessLabel(product);
 
   return (
     <DockedLayout side="right">
@@ -210,7 +216,7 @@ export default function ProductPage() {
             <InfoPanel title="Included">
               <InfoLine label="Format" value={product.product_type} />
               <InfoLine label="Category" value={product.category} />
-              <InfoLine label="Access" value={isMusic ? 'Library item' : product.is_free ? 'Free library claim' : 'Cart coming soon'} />
+              <InfoLine label="Access" value={accessLabel} />
             </InfoPanel>
             <InfoPanel title="Discovery">
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -263,7 +269,7 @@ export default function ProductPage() {
               <div className="detail-panel-description">{product.description ?? productMeta(product)}</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
-              <div className="detail-panel-price" style={{ color: product.is_free ? '#93FF00' : '#fff' }}>{formatProductPrice(product)}</div>
+              <div className="detail-panel-price" style={{ color: canClaimToLibrary ? '#93FF00' : '#fff' }}>{formatProductPrice(product)}</div>
               {owned && <div className="chip">Owned</div>}
             </div>
             <div className="detail-panel-actions">
@@ -275,7 +281,7 @@ export default function ProductPage() {
               <div className="detail-panel-section-title">Product Details</div>
               <InfoLine label="Creator" value={product.creator} />
               <InfoLine label="Type" value={product.product_type} />
-              <InfoLine label="Access" value={isMusic ? 'Library item' : 'Cart coming soon'} />
+              <InfoLine label="Access" value={accessLabel} />
               <InfoLine label="Status" value={product.is_published ? 'Published' : 'Hidden'} />
             </div>
           </div>

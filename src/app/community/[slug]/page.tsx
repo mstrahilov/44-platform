@@ -26,6 +26,7 @@ export default function CreatorPage() {
         slug,
         name: slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
         bio: 'Creator profile, posts, products, services, resources, and community activity will live here.',
+        creator_type: 'Creator',
         hero_url: null,
         avatar_url: null,
         is_published: true,
@@ -51,7 +52,7 @@ export default function CreatorPage() {
           <div style={{ position: 'relative', zIndex: 1, minHeight: 460, padding: 36, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <div>
               <Link className="btn-ghost" href="/community/browse" style={{ marginBottom: 28 }}>Back to Community</Link>
-              <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.48)', marginBottom: 10 }}>Creator</div>
+              <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.48)', marginBottom: 10 }}>{creator.categories?.name ?? 'Creators'} · {creator.creator_type ?? 'Creator'}</div>
               <h1 style={{ maxWidth: 820, fontSize: 64, fontWeight: 780, letterSpacing: '-0.045em', lineHeight: 0.92, color: '#fff', marginBottom: 14 }}>{creator.name}</h1>
               <div style={{ fontSize: 18, fontWeight: 650, color: 'rgba(255,255,255,0.62)' }}>Community profile</div>
             </div>
@@ -82,7 +83,7 @@ export default function CreatorPage() {
           </div>
           <div className="detail-panel-copy">
             <div className="detail-panel-title">{creator.name}</div>
-            <div className="detail-panel-subtitle">Creator Profile</div>
+            <div className="detail-panel-subtitle">{creator.creator_type ?? 'Creator Profile'}</div>
             <div className="detail-panel-description">{creator.bio ?? 'Creator bio will live here.'}</div>
           </div>
           <div className="detail-panel-actions">
@@ -93,6 +94,8 @@ export default function CreatorPage() {
           <div className="divider" />
           <div className="detail-panel-meta">
             <div className="detail-panel-section-title">Creator Details</div>
+            <InfoLine label="Category" value={creator.categories?.name ?? 'Creators'} />
+            <InfoLine label="Type" value={creator.creator_type ?? 'Creator'} />
             <InfoLine label="Profile" value={creator.slug ?? creator.name} />
             <InfoLine label="Status" value={creator.is_published ? 'Published' : 'Hidden'} />
           </div>

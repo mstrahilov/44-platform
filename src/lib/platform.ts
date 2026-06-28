@@ -1,4 +1,4 @@
-export type PlatformScope = 'products' | 'services' | 'resources' | 'posts';
+export type PlatformScope = 'products' | 'services' | 'resources' | 'posts' | 'creators';
 
 export interface Category {
   id: string;
@@ -19,12 +19,15 @@ export interface Tag {
 export interface Creator {
   id: string;
   profile_id: string | null;
+  category_id?: string | null;
   slug: string;
   name: string;
   bio: string | null;
+  creator_type?: string | null;
   hero_url: string | null;
   avatar_url: string | null;
   is_published: boolean;
+  categories?: Pick<Category, 'id' | 'slug' | 'name'> | null;
 }
 
 export interface Service {
@@ -34,6 +37,7 @@ export interface Service {
   slug: string;
   title: string;
   description: string | null;
+  service_type?: string | null;
   starting_price_cents: number;
   delivery_estimate: string | null;
   cover_url: string | null;
@@ -159,50 +163,71 @@ export function creatorHref(creator: Pick<Creator, 'slug'> | string | null | und
 
 export const FALLBACK_CATEGORIES: Category[] = [
   { id: 'cat-products-music', scope: 'products', slug: 'music', name: 'Music', sort_order: 10 },
-  { id: 'cat-products-games', scope: 'products', slug: 'games', name: 'Games', sort_order: 20 },
-  { id: 'cat-products-books', scope: 'products', slug: 'books', name: 'Books', sort_order: 30 },
-  { id: 'cat-products-apparel', scope: 'products', slug: 'apparel', name: 'Apparel', sort_order: 40 },
+  { id: 'cat-products-books', scope: 'products', slug: 'books', name: 'Books', sort_order: 20 },
+  { id: 'cat-products-sample-packs', scope: 'products', slug: 'sample-packs', name: 'Sample Packs', sort_order: 30 },
+  { id: 'cat-products-interactive', scope: 'products', slug: 'interactive', name: 'Interactive', sort_order: 40 },
   { id: 'cat-products-tools', scope: 'products', slug: 'tools', name: 'Tools', sort_order: 50 },
-  { id: 'cat-products-interactive', scope: 'products', slug: 'interactive', name: 'Interactive', sort_order: 60 },
-  { id: 'cat-products-sample-packs', scope: 'products', slug: 'sample-packs', name: 'Sample Packs', sort_order: 70 },
-  { id: 'cat-services-music', scope: 'services', slug: 'music', name: 'Music', sort_order: 10 },
-  { id: 'cat-services-design', scope: 'services', slug: 'design', name: 'Design', sort_order: 20 },
-  { id: 'cat-services-video', scope: 'services', slug: 'video', name: 'Video', sort_order: 30 },
+  { id: 'cat-products-apparel', scope: 'products', slug: 'apparel', name: 'Apparel', sort_order: 60 },
+  { id: 'cat-services-music-production', scope: 'services', slug: 'music-production', name: 'Music Production', sort_order: 10 },
+  { id: 'cat-services-session-performance', scope: 'services', slug: 'session-performance', name: 'Session & Performance', sort_order: 20 },
+  { id: 'cat-services-visual-design', scope: 'services', slug: 'visual-design', name: 'Visual & Design', sort_order: 30 },
+  { id: 'cat-services-video-motion', scope: 'services', slug: 'video-motion', name: 'Video & Motion', sort_order: 35 },
   { id: 'cat-services-development', scope: 'services', slug: 'development', name: 'Development', sort_order: 40 },
-  { id: 'cat-services-consulting', scope: 'services', slug: 'consulting', name: 'Consulting', sort_order: 50 },
-  { id: 'cat-resources-guides', scope: 'resources', slug: 'guides', name: 'Guides', sort_order: 10 },
-  { id: 'cat-resources-templates', scope: 'resources', slug: 'templates', name: 'Templates', sort_order: 20 },
-  { id: 'cat-resources-lessons', scope: 'resources', slug: 'lessons', name: 'Lessons', sort_order: 30 },
-  { id: 'cat-resources-downloads', scope: 'resources', slug: 'downloads', name: 'Downloads', sort_order: 40 },
-  { id: 'cat-resources-checklists', scope: 'resources', slug: 'checklists', name: 'Checklists', sort_order: 50 },
-  { id: 'cat-posts-feed', scope: 'posts', slug: 'feed', name: 'Feed', sort_order: 10 },
-  { id: 'cat-posts-dev-logs', scope: 'posts', slug: 'dev-logs', name: 'Dev Logs', sort_order: 20 },
-  { id: 'cat-posts-showcase', scope: 'posts', slug: 'showcase', name: 'Showcase', sort_order: 30 },
-  { id: 'cat-posts-discussions', scope: 'posts', slug: 'discussions', name: 'Discussions', sort_order: 40 },
-  { id: 'cat-posts-updates', scope: 'posts', slug: 'updates', name: 'Updates', sort_order: 50 },
+  { id: 'cat-services-marketing', scope: 'services', slug: 'marketing', name: 'Marketing', sort_order: 50 },
+  { id: 'cat-services-strategy', scope: 'services', slug: 'strategy', name: 'Strategy', sort_order: 60 },
+  { id: 'cat-resources-articles', scope: 'resources', slug: 'articles', name: 'Articles', sort_order: 10 },
+  { id: 'cat-resources-guides', scope: 'resources', slug: 'guides', name: 'Guides', sort_order: 20 },
+  { id: 'cat-resources-templates', scope: 'resources', slug: 'templates', name: 'Templates', sort_order: 30 },
+  { id: 'cat-resources-lessons', scope: 'resources', slug: 'lessons', name: 'Lessons', sort_order: 40 },
+  { id: 'cat-resources-downloads', scope: 'resources', slug: 'downloads', name: 'Downloads', sort_order: 50 },
+  { id: 'cat-resources-checklists', scope: 'resources', slug: 'checklists', name: 'Checklists', sort_order: 60 },
+  { id: 'cat-creators-creators', scope: 'creators', slug: 'creators', name: 'Creators', sort_order: 10 },
+  { id: 'cat-posts-discussions', scope: 'posts', slug: 'discussions', name: 'Discussions', sort_order: 20 },
+  { id: 'cat-posts-news', scope: 'posts', slug: 'news', name: 'News', sort_order: 30 },
+  { id: 'cat-posts-streams', scope: 'posts', slug: 'streams', name: 'Streams', sort_order: 40 },
+  { id: 'cat-posts-reviews', scope: 'posts', slug: 'reviews', name: 'Reviews', sort_order: 50 },
+  { id: 'cat-posts-showcases', scope: 'posts', slug: 'showcases', name: 'Showcases', sort_order: 60 },
+  { id: 'cat-posts-requests', scope: 'posts', slug: 'requests', name: 'Requests', sort_order: 70 },
+  { id: 'cat-posts-updates', scope: 'posts', slug: 'updates', name: 'Updates', sort_order: 80 },
 ];
 
 export const FALLBACK_TAGS: Tag[] = [
-  { id: 'tag-products-music-ambient', category_id: 'cat-products-music', slug: 'ambient', name: 'Ambient', sort_order: 10 },
-  { id: 'tag-products-music-electronic', category_id: 'cat-products-music', slug: 'electronic', name: 'Electronic', sort_order: 20 },
-  { id: 'tag-products-games-puzzle', category_id: 'cat-products-games', slug: 'puzzle', name: 'Puzzle', sort_order: 10 },
-  { id: 'tag-products-books-lore', category_id: 'cat-products-books', slug: 'lore', name: 'Lore', sort_order: 10 },
-  { id: 'tag-services-music-production', category_id: 'cat-services-music', slug: 'production', name: 'Production', sort_order: 10 },
-  { id: 'tag-services-design-album-art', category_id: 'cat-services-design', slug: 'album-art', name: 'Album Art', sort_order: 10 },
+  { id: 'tag-products-music-album', category_id: 'cat-products-music', slug: 'album', name: 'Album', sort_order: 10 },
+  { id: 'tag-products-music-ep', category_id: 'cat-products-music', slug: 'ep', name: 'EP', sort_order: 20 },
+  { id: 'tag-products-music-single', category_id: 'cat-products-music', slug: 'single', name: 'Single', sort_order: 30 },
+  { id: 'tag-products-books-art-book', category_id: 'cat-products-books', slug: 'art-book', name: 'Art Book', sort_order: 10 },
+  { id: 'tag-products-sample-packs-drum-kit', category_id: 'cat-products-sample-packs', slug: 'drum-kit', name: 'Drum Kit', sort_order: 10 },
+  { id: 'tag-products-sample-packs-loop-pack', category_id: 'cat-products-sample-packs', slug: 'loop-pack', name: 'Loop Pack', sort_order: 20 },
+  { id: 'tag-products-interactive-web-game', category_id: 'cat-products-interactive', slug: 'web-game', name: 'Web Game', sort_order: 10 },
+  { id: 'tag-products-tools-template', category_id: 'cat-products-tools', slug: 'template', name: 'Template', sort_order: 10 },
+  { id: 'tag-services-music-production-production', category_id: 'cat-services-music-production', slug: 'production', name: 'Production', sort_order: 10 },
+  { id: 'tag-services-music-production-mixing', category_id: 'cat-services-music-production', slug: 'mixing', name: 'Mixing', sort_order: 20 },
+  { id: 'tag-services-visual-design-cover-art', category_id: 'cat-services-visual-design', slug: 'cover-art', name: 'Cover Art', sort_order: 10 },
   { id: 'tag-services-development-unity', category_id: 'cat-services-development', slug: 'unity', name: 'Unity', sort_order: 10 },
-  { id: 'tag-resources-guides-music-publishing', category_id: 'cat-resources-guides', slug: 'music-publishing', name: 'Music Publishing', sort_order: 10 },
+  { id: 'tag-resources-articles-news-article', category_id: 'cat-resources-articles', slug: 'news-article', name: 'News Article', sort_order: 10 },
+  { id: 'tag-resources-guides-publishing-guide', category_id: 'cat-resources-guides', slug: 'publishing-guide', name: 'Publishing Guide', sort_order: 10 },
   { id: 'tag-resources-templates-release-plan', category_id: 'cat-resources-templates', slug: 'release-plan', name: 'Release Plan', sort_order: 10 },
-  { id: 'tag-posts-discussions-feedback', category_id: 'cat-posts-discussions', slug: 'feedback', name: 'Feedback', sort_order: 10 },
+  { id: 'tag-resources-lessons-music-lesson', category_id: 'cat-resources-lessons', slug: 'music-lesson', name: 'Music Lesson', sort_order: 10 },
+  { id: 'tag-creators-creators-artist', category_id: 'cat-creators-creators', slug: 'artist', name: 'Artist', sort_order: 10 },
+  { id: 'tag-creators-creators-producer', category_id: 'cat-creators-creators', slug: 'producer', name: 'Producer', sort_order: 20 },
+  { id: 'tag-posts-discussions-question', category_id: 'cat-posts-discussions', slug: 'question', name: 'Question', sort_order: 10 },
+  { id: 'tag-posts-news-platform-news', category_id: 'cat-posts-news', slug: 'platform-news', name: 'Platform News', sort_order: 10 },
+  { id: 'tag-posts-streams-live-show', category_id: 'cat-posts-streams', slug: 'live-show', name: 'Live Show', sort_order: 10 },
+  { id: 'tag-posts-reviews-product-review', category_id: 'cat-posts-reviews', slug: 'product-review', name: 'Product Review', sort_order: 10 },
+  { id: 'tag-posts-showcases-music-showcase', category_id: 'cat-posts-showcases', slug: 'music-showcase', name: 'Music Showcase', sort_order: 10 },
+  { id: 'tag-posts-requests-help-request', category_id: 'cat-posts-requests', slug: 'help-request', name: 'Help Request', sort_order: 10 },
+  { id: 'tag-posts-updates-dev-log', category_id: 'cat-posts-updates', slug: 'dev-log', name: 'Dev Log', sort_order: 10 },
 ];
 
 export const FALLBACK_SERVICES: Service[] = [
   {
     id: 'fallback-service-production',
     creator_id: null,
-    category_id: 'cat-services-music',
+    category_id: 'cat-services-music-production',
     slug: 'music-production',
     title: 'Music Production',
     description: 'Full track production from concept to master-ready file.',
+    service_type: 'Production',
     starting_price_cents: 14900,
     delivery_estimate: '5-7 day delivery',
     cover_url: null,
@@ -210,15 +235,16 @@ export const FALLBACK_SERVICES: Service[] = [
     status: 'published',
     created_at: new Date(0).toISOString(),
     creators: { id: 'fallback-creator-a', slug: 'creator-a', name: 'Creator A', avatar_url: null },
-    categories: { id: 'cat-services-music', slug: 'music', name: 'Music' },
+    categories: { id: 'cat-services-music-production', slug: 'music-production', name: 'Music Production' },
   },
   {
     id: 'fallback-service-web-design',
     creator_id: null,
-    category_id: 'cat-services-design',
+    category_id: 'cat-services-visual-design',
     slug: 'web-design',
     title: 'Web Design',
     description: 'Website and landing page design for creators, products, and releases.',
+    service_type: 'Web Design',
     starting_price_cents: 29900,
     delivery_estimate: '7-10 day delivery',
     cover_url: null,
@@ -226,15 +252,16 @@ export const FALLBACK_SERVICES: Service[] = [
     status: 'published',
     created_at: new Date(0).toISOString(),
     creators: { id: 'fallback-creator-b', slug: 'creator-b', name: 'Creator B', avatar_url: null },
-    categories: { id: 'cat-services-design', slug: 'design', name: 'Design' },
+    categories: { id: 'cat-services-visual-design', slug: 'visual-design', name: 'Visual & Design' },
   },
   {
     id: 'fallback-service-graphic-design',
     creator_id: null,
-    category_id: 'cat-services-design',
+    category_id: 'cat-services-visual-design',
     slug: 'graphic-design',
     title: 'Graphic Design',
     description: 'Visual identity, cover design, and campaign assets.',
+    service_type: 'Graphic Design',
     starting_price_cents: 9900,
     delivery_estimate: '3-5 day delivery',
     cover_url: null,
@@ -242,7 +269,7 @@ export const FALLBACK_SERVICES: Service[] = [
     status: 'published',
     created_at: new Date(0).toISOString(),
     creators: { id: 'fallback-creator-c', slug: 'creator-c', name: 'Creator C', avatar_url: null },
-    categories: { id: 'cat-services-design', slug: 'design', name: 'Design' },
+    categories: { id: 'cat-services-visual-design', slug: 'visual-design', name: 'Visual & Design' },
   },
 ];
 

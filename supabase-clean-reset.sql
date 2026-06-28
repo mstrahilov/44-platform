@@ -87,6 +87,10 @@ create table public.products (
   tags text[] not null default '{}',
   cover_url text,
   hero_url text,
+  runtime_type text,
+  launch_url text,
+  read_url text,
+  download_url text,
   status text not null default 'published' check (status in ('draft', 'published', 'archived')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -119,6 +123,7 @@ create table public.resources (
   body text,
   resource_type text not null default 'guide',
   cover_url text,
+  download_url text,
   status text not null default 'published' check (status in ('draft', 'published', 'archived')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -325,20 +330,21 @@ create policy "Public resource tags are readable" on public.resource_tags for se
 create policy "Public post tags are readable" on public.post_tags for select to anon, authenticated using (true);
 
 create policy "Users can read their library items" on public.library_items for select to authenticated using (auth.uid() = user_id);
-create policy "Users can add free or music products to library" on public.library_items
+create policy "Users can add free products to library" on public.library_items
 for insert to authenticated
 with check (
   auth.uid() = user_id
-  and acquisition_type in ('free', 'grant')
+  and acquisition_type = 'free'
   and exists (
     select 1 from public.products
     where products.id = library_items.product_id
-      and (products.is_free = true or lower(products.category) = 'music')
+      and products.is_free = true
       and products.is_published = true
       and products.status = 'published'
   )
 );
 create policy "Users can update their library items" on public.library_items for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
+create policy "Users can remove free library products" on public.library_items for delete to authenticated using (auth.uid() = user_id and acquisition_type = 'free');
 
 create policy "Users can read their saved resources" on public.saved_resources for select to authenticated using (auth.uid() = user_id);
 create policy "Users can save resources" on public.saved_resources for insert to authenticated with check (auth.uid() = user_id);

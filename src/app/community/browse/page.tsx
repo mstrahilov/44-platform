@@ -1,66 +1,104 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import type { Category, CommunityPost, Creator, Resource } from '@/lib/platform';
-import { creatorHref, FALLBACK_CATEGORIES, FALLBACK_RESOURCES } from '@/lib/platform';
-import { DockedContent, DockedLayout, DockedPanel, PostCard, ResourceCard } from '@/components/Ui';
-
-type CommunityView = 'creators' | 'feed' | 'resources';
+import type { Category, CommunityPost, Creator, Tag } from '@/lib/platform';
+import { creatorHref, FALLBACK_CATEGORIES, FALLBACK_TAGS } from '@/lib/platform';
+import { matchesCategory, matchesQuery, matchesType, mergeTaxonomyCategories, mergeTaxonomyTypes, resolveCategory, typesForCategory } from '@/lib/taxonomy';
+import { DockedContent, DockedLayout, DockedPanel, PostCard } from '@/components/Ui';
 
 const FALLBACK_CREATORS: Creator[] = [
-  { id: 'fallback-creator-a', profile_id: null, slug: 'creator-a', name: 'Creator A', bio: 'Placeholder creator profile.', hero_url: null, avatar_url: null, is_published: true },
-  { id: 'fallback-creator-b', profile_id: null, slug: 'creator-b', name: 'Creator B', bio: 'Placeholder creator profile.', hero_url: null, avatar_url: null, is_published: true },
+  {
+    id: 'fallback-creator-a',
+    profile_id: null,
+    category_id: 'cat-creators-creators',
+    slug: 'creator-a',
+    name: 'Creator A',
+    bio: 'Placeholder creator profile.',
+    creator_type: 'Artist',
+    hero_url: null,
+    avatar_url: null,
+    is_published: true,
+    categories: { id: 'cat-creators-creators', slug: 'creators', name: 'Creators' },
+  },
+  {
+    id: 'fallback-creator-b',
+    profile_id: null,
+    category_id: 'cat-creators-creators',
+    slug: 'creator-b',
+    name: 'Creator B',
+    bio: 'Placeholder creator profile.',
+    creator_type: 'Producer',
+    hero_url: null,
+    avatar_url: null,
+    is_published: true,
+    categories: { id: 'cat-creators-creators', slug: 'creators', name: 'Creators' },
+  },
 ];
 
 const FALLBACK_POSTS: CommunityPost[] = [
   {
-    id: 'fallback-post-a',
+    id: 'fallback-post-discussion',
     creator_id: null,
-    category_id: null,
-    title: 'Post A',
-    body: 'Generic community feed post for testing.',
-    post_type: 'feed',
+    category_id: 'cat-posts-discussions',
+    title: 'Community Question',
+    body: 'Generic discussion item for testing community browse.',
+    post_type: 'Question',
     status: 'published',
     created_at: new Date().toISOString(),
     creators: { id: 'fallback-creator-a', slug: 'creator-a', name: 'Creator A', avatar_url: null },
-    categories: { id: 'fallback-post-feed', slug: 'feed', name: 'Feed' },
+    categories: { id: 'cat-posts-discussions', slug: 'discussions', name: 'Discussions' },
+  },
+  {
+    id: 'fallback-post-update',
+    creator_id: null,
+    category_id: 'cat-posts-updates',
+    title: 'Project Update',
+    body: 'Generic update post for testing community browse.',
+    post_type: 'Project Update',
+    status: 'published',
+    created_at: new Date().toISOString(),
+    creators: { id: 'fallback-creator-b', slug: 'creator-b', name: 'Creator B', avatar_url: null },
+    categories: { id: 'cat-posts-updates', slug: 'updates', name: 'Updates' },
   },
 ];
 
 export default function CommunityBrowsePage() {
   const [creators, setCreators] = useState<Creator[]>([]);
   const [posts, setPosts] = useState<CommunityPost[]>([]);
-  const [resources, setResources] = useState<Resource[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [view, setView] = useState<CommunityView>('creators');
+  const [types, setTypes] = useState<Tag[]>([]);
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeType, setActiveType] = useState('');
   const [query, setQuery] = useState('');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const currentView = params.get('view');
+    const category = params.get('category') ?? params.get('view');
+    const type = params.get('type');
     const q = params.get('q');
 
     Promise.resolve().then(() => {
-      if (currentView === 'feed' || currentView === 'resources' || currentView === 'creators') setView(currentView);
+      if (category && category !== 'feed') setActiveCategory(category);
+      if (type) setActiveType(type);
       if (q) setQuery(q);
     });
   }, []);
 
   useEffect(() => {
     async function fetchCommunity() {
-      const [{ data: creatorRows }, { data: postRows }, { data: resourceRows }, { data: categoryRows }] = await Promise.all([
+      const [{ data: creatorRows }, { data: postRows }, { data: categoryRows }, { data: typeRows }] = await Promise.all([
         supabase.from('creators').select('*').eq('is_published', true).order('name'),
         supabase.from('posts').select('*, creators(id, slug, name, avatar_url), categories(id, slug, name)').eq('status', 'published').order('created_at', { ascending: false }),
-        supabase.from('resources').select('*, creators(id, slug, name, avatar_url), categories(id, slug, name)').eq('status', 'published').order('created_at', { ascending: false }),
-        supabase.from('categories').select('*').in('scope', ['posts', 'resources']).order('sort_order'),
+        supabase.from('categories').select('*').in('scope', ['creators', 'posts']).order('sort_order'),
+        supabase.from('tags').select('*').order('sort_order'),
       ]);
 
       setCreators((creatorRows as Creator[] | null) ?? []);
       setPosts((postRows as CommunityPost[] | null) ?? []);
-      setResources((resourceRows as Resource[] | null) ?? []);
       setCategories((categoryRows as Category[] | null) ?? []);
+      setTypes((typeRows as Tag[] | null) ?? []);
     }
 
     fetchCommunity();
@@ -68,62 +106,78 @@ export default function CommunityBrowsePage() {
 
   const creatorCatalog = creators.length > 0 ? creators : FALLBACK_CREATORS;
   const postCatalog = posts.length > 0 ? posts : FALLBACK_POSTS;
-  const resourceCatalog = resources.length > 0 ? resources : FALLBACK_RESOURCES;
-  const categoryCatalog = categories.length > 0
-    ? categories
-    : FALLBACK_CATEGORIES.filter(category => category.scope === 'posts' || category.scope === 'resources');
+  const categoryCatalog = mergeTaxonomyCategories(
+    categories,
+    FALLBACK_CATEGORIES.filter(category => category.scope === 'creators' || category.scope === 'posts'),
+  );
+  const typeCatalog = mergeTaxonomyTypes(
+    types,
+    FALLBACK_TAGS.filter(type => categoryCatalog.some(category => category.id === type.category_id)),
+  );
 
-  const filteredCreators = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    return creatorCatalog.filter(creator => !normalizedQuery || creator.name.toLowerCase().includes(normalizedQuery) || (creator.bio ?? '').toLowerCase().includes(normalizedQuery));
-  }, [creatorCatalog, query]);
+  const activeCategoryRow = resolveCategory(categoryCatalog, activeCategory);
+  const activeTypeRow = resolveCategory(typeCatalog.map(type => ({ ...type, scope: 'posts' as const })), activeType) as Tag | undefined;
 
-  const filteredPosts = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    return postCatalog.filter(post => !normalizedQuery || post.title.toLowerCase().includes(normalizedQuery) || (post.body ?? '').toLowerCase().includes(normalizedQuery) || (post.creators?.name ?? '').toLowerCase().includes(normalizedQuery));
-  }, [postCatalog, query]);
+  const filteredCreators = creatorCatalog.filter(creator => {
+    const categoryMatches = activeCategory === 'all' || activeCategoryRow?.scope === 'creators';
+    return categoryMatches && matchesType(creator, activeTypeRow) && matchesQuery(creator, query);
+  });
 
-  const filteredResources = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    return resourceCatalog.filter(resource => !normalizedQuery || resource.title.toLowerCase().includes(normalizedQuery) || (resource.summary ?? '').toLowerCase().includes(normalizedQuery));
-  }, [query, resourceCatalog]);
+  const filteredPosts = postCatalog.filter(post => {
+    const categoryMatches = activeCategory === 'all' || matchesCategory(post, activeCategoryRow);
+    return categoryMatches && matchesType(post, activeTypeRow) && matchesQuery(post, query);
+  });
+
+  const visibleCount = filteredCreators.length + filteredPosts.length;
+
+  function activateCategory(slug: string) {
+    setActiveCategory(slug);
+    setActiveType('');
+  }
 
   return (
     <DockedLayout side="left">
       <DockedPanel>
         <div>
           <div style={{ fontSize: 26, fontWeight: 750, color: '#fff', letterSpacing: '-0.03em', lineHeight: 1 }}>Browse Community</div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.38)', marginTop: 6 }}>Creators, posts, and resources</div>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.38)', marginTop: 6 }}>{visibleCount} community items</div>
         </div>
         <input className="input" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search community..." />
         <div className="divider" />
-        <FilterButton active={view === 'creators'} onClick={() => setView('creators')}>Creators</FilterButton>
-        <FilterButton active={view === 'feed'} onClick={() => setView('feed')}>Feed</FilterButton>
-        <FilterButton active={view === 'resources'} onClick={() => setView('resources')}>Resources</FilterButton>
+        <FilterButton active={activeCategory === 'all'} onClick={() => activateCategory('all')}>All Community</FilterButton>
         <div>
           <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.32)', marginBottom: 8 }}>Categories</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {categoryCatalog.slice(0, 8).map(category => (
-              <FilterButton key={category.id} active={false} onClick={() => setQuery(category.name)}>{category.name}</FilterButton>
-            ))}
+            {categoryCatalog.map(category => {
+              const categoryTypes = typesForCategory(typeCatalog, category.id);
+              const active = activeCategory === category.slug || activeCategory === category.name;
+              return (
+                <div key={category.id}>
+                  <FilterButton active={active} onClick={() => activateCategory(category.slug)}>{category.name}</FilterButton>
+                  {active && categoryTypes.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, padding: '4px 0 8px 12px' }}>
+                      <FilterButton active={!activeType} onClick={() => setActiveType('')}>All Types</FilterButton>
+                      {categoryTypes.map(type => (
+                        <FilterButton key={type.id} active={activeType === type.name || activeType === type.slug} onClick={() => setActiveType(type.name)}>{type.name}</FilterButton>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </DockedPanel>
 
       <DockedContent>
-        {view === 'creators' && (
+        {filteredCreators.length > 0 && (
           <div className="resource-grid">
             {filteredCreators.map(creator => <CreatorCard key={creator.id} creator={creator} />)}
           </div>
         )}
-        {view === 'feed' && (
+        {filteredPosts.length > 0 && (
           <div className="post-grid">
             {filteredPosts.map(post => <PostCard key={post.id} post={post} />)}
-          </div>
-        )}
-        {view === 'resources' && (
-          <div className="resource-grid">
-            {filteredResources.map(resource => <ResourceCard key={resource.id} resource={resource} />)}
           </div>
         )}
       </DockedContent>
@@ -134,6 +188,7 @@ export default function CommunityBrowsePage() {
 function CreatorCard({ creator }: { creator: Creator }) {
   return (
     <Link className="resource-card" href={creatorHref(creator)}>
+      <div className="chip">{creator.creator_type ?? 'Creator'}</div>
       <div className="panel-list-thumb" style={{ width: 54, height: 54, borderRadius: '50%', marginBottom: 18 }}>
         {creator.avatar_url && (
           // eslint-disable-next-line @next/next/no-img-element

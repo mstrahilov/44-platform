@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import type { Product } from '@/lib/products';
 import { formatProductPrice } from '@/lib/products';
+import { isFreeLibraryClaim } from '@/lib/libraryContent';
 
 interface ProductCardProps {
   product: Product;
@@ -13,6 +14,7 @@ interface ProductCardProps {
 export default function ProductCard({ product, owned = false }: ProductCardProps) {
   const [hovered, setHovered] = useState(false);
   const canOpenProduct = !product.id.startsWith('fallback-');
+  const canClaimToLibrary = isFreeLibraryClaim(product);
   const cardBody = (
     <>
       <ProductArt product={product} />
@@ -20,7 +22,7 @@ export default function ProductCard({ product, owned = false }: ProductCardProps
         <div style={{ fontSize: 14, fontWeight: 650, color: 'rgba(255,255,255,0.94)', marginBottom: 4, lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.title}</div>
         <div style={{ fontSize: 12, fontWeight: 550, color: 'rgba(255,255,255,0.42)', marginBottom: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.creator}</div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 'auto' }}>
-          <div style={{ fontSize: 14, fontWeight: 750, color: product.is_free ? '#93FF00' : 'rgba(255,255,255,0.92)' }}>{formatProductPrice(product)}</div>
+          <div style={{ fontSize: 14, fontWeight: 750, color: canClaimToLibrary ? '#93FF00' : 'rgba(255,255,255,0.92)' }}>{formatProductPrice(product)}</div>
           {owned && <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.42)' }}>Owned</div>}
         </div>
       </div>

@@ -75,7 +75,7 @@ export default function ServicePage() {
           <div style={{ position: 'relative', zIndex: 1, minHeight: 460, padding: 36, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
             <div>
               <Link className="btn-ghost" href="/services/browse" style={{ marginBottom: 28 }}>Back to Services</Link>
-              <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.48)', marginBottom: 10 }}>{service.categories?.name ?? 'Service'}</div>
+              <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.48)', marginBottom: 10 }}>{service.categories?.name ?? 'Service'} · {service.service_type ?? service.title}</div>
               <h1 style={{ maxWidth: 820, fontSize: 64, fontWeight: 780, letterSpacing: '-0.045em', lineHeight: 0.92, color: '#fff', marginBottom: 14 }}>{service.title}</h1>
               <div style={{ fontSize: 18, fontWeight: 650, color: 'rgba(255,255,255,0.62)' }}>Compare creator offerings and send an inquiry.</div>
             </div>
@@ -84,7 +84,8 @@ export default function ServicePage() {
         </section>
 
         <section className="product-info-grid">
-          <InfoPanel title="How It Works">
+            <InfoPanel title="How It Works">
+            <InfoLine label="Type" value={service.service_type ?? service.title} />
             <InfoLine label="Starting at" value={formatServicePrice(service)} />
             <InfoLine label="Timeline" value={service.delivery_estimate ?? 'Project-based'} />
             <InfoLine label="Status" value="Inquiry first" />
@@ -127,6 +128,7 @@ export default function ServicePage() {
           <div className="detail-panel-meta">
             <div className="detail-panel-section-title">Service Details</div>
             <InfoLine label="Category" value={service.categories?.name ?? 'Service'} />
+            <InfoLine label="Type" value={service.service_type ?? service.title} />
             <InfoLine label="Current provider" value={service.creators?.name ?? '44 Creator'} />
             <InfoLine label="Status" value={service.status === 'published' ? 'Published' : service.status} />
           </div>

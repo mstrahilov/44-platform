@@ -8,6 +8,7 @@ import type { Product } from '@/lib/products';
 import { FALLBACK_PRODUCTS } from '@/lib/products';
 import type { Category, Tag } from '@/lib/platform';
 import { FALLBACK_CATEGORIES, FALLBACK_TAGS } from '@/lib/platform';
+import { matchesCategory, matchesQuery, matchesType, resolveCategory, typesForCategory } from '@/lib/taxonomy';
 import { DockedContent, DockedLayout, DockedPanel } from '@/components/Ui';
 
 export default function BrowsePage() {
@@ -17,19 +18,19 @@ export default function BrowsePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [activeCategory, setActiveCategory] = useState('all');
-  const [activeTag, setActiveTag] = useState('');
+  const [activeType, setActiveType] = useState('');
   const [query, setQuery] = useState('');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const category = params.get('category');
-    const tag = params.get('tag');
+    const type = params.get('type') ?? params.get('tag');
     const filter = params.get('filter');
     const q = params.get('q');
 
     Promise.resolve().then(() => {
       if (category) setActiveCategory(category);
-      if (tag) setActiveTag(tag);
+      if (type) setActiveType(type);
       if (filter === 'free') setActiveCategory('free');
       if (filter === 'featured') setActiveCategory('featured');
       if (q) setQuery(q);
@@ -88,28 +89,21 @@ export default function BrowsePage() {
 
   const visibleProducts = useMemo(() => {
     return catalog.filter(product => {
-      const category = categoryList.find(item => item.slug === activeCategory || item.name === activeCategory);
-      const matchesCategory =
+      const category = resolveCategory(categoryList, activeCategory);
+      const type = resolveCategory(tagList.map(tag => ({ ...tag, scope: 'products' as const })), activeType) as Tag | undefined;
+      const categoryMatches =
         activeCategory === 'all'
         || (activeCategory === 'featured' && product.featured)
         || (activeCategory === 'free' && product.is_free)
-        || (category && (product.category_id === category.id || product.category.toLowerCase() === category.name.toLowerCase() || product.category.toLowerCase() === category.slug));
-      const matchesTag = !activeTag || (product.tags ?? []).some(tag => tag.toLowerCase() === activeTag.toLowerCase());
-      const normalizedQuery = query.trim().toLowerCase();
-      const matchesQuery = !normalizedQuery
-        || product.title.toLowerCase().includes(normalizedQuery)
-        || product.creator.toLowerCase().includes(normalizedQuery)
-        || product.category.toLowerCase().includes(normalizedQuery)
-        || product.product_type.toLowerCase().includes(normalizedQuery)
-        || (product.tags ?? []).some(tag => tag.toLowerCase().includes(normalizedQuery));
+        || matchesCategory(product, category);
 
-      return matchesCategory && matchesTag && matchesQuery;
+      return categoryMatches && matchesType(product, type) && matchesQuery(product, query);
     });
-  }, [activeCategory, activeTag, catalog, categoryList, query]);
+  }, [activeCategory, activeType, catalog, categoryList, query, tagList]);
 
   function activateCategory(slug: string) {
     setActiveCategory(slug);
-    setActiveTag('');
+    setActiveType('');
   }
 
   return (
@@ -137,16 +131,16 @@ export default function BrowsePage() {
             <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.32)', marginBottom: 8 }}>Categories</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {categoryList.map(category => {
-                const categoryTags = tagList.filter(tag => tag.category_id === category.id);
+                const categoryTypes = typesForCategory(tagList, category.id);
                 const active = activeCategory === category.slug || activeCategory === category.name;
                 return (
                   <div key={category.id}>
                     <FilterButton active={active} onClick={() => activateCategory(category.slug)}>{category.name}</FilterButton>
-                    {active && categoryTags.length > 0 && (
+                    {active && categoryTypes.length > 0 && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 3, padding: '4px 0 8px 12px' }}>
-                        <FilterButton active={!activeTag} onClick={() => setActiveTag('')}>All {category.name}</FilterButton>
-                        {categoryTags.map(tag => (
-                          <FilterButton key={tag.id} active={activeTag === tag.name || activeTag === tag.slug} onClick={() => setActiveTag(tag.name)}>{tag.name}</FilterButton>
+                        <FilterButton active={!activeType} onClick={() => setActiveType('')}>All Types</FilterButton>
+                        {categoryTypes.map(type => (
+                          <FilterButton key={type.id} active={activeType === type.name || activeType === type.slug} onClick={() => setActiveType(type.name)}>{type.name}</FilterButton>
                         ))}
                       </div>
                     )}

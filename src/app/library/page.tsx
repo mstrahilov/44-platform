@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
 import { browseHref, formatProductPrice, productMeta } from '@/lib/products';
+import { getProductLibraryContent, getProductLibraryPrimaryAction, getProductRuntimeKind, isFreeLibraryClaim } from '@/lib/libraryContent';
 import type { ProductAchievement, Resource, SavedResource, ServiceRequest, Track, UserAchievement } from '@/lib/platform';
 import { DockedContent, DockedLayout, DockedPanel, PanelListItem } from '@/components/Ui';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
@@ -188,12 +189,12 @@ export default function LibraryPage() {
 
   useEffect(() => {
     if (!selectedEntry) {
-      setSelectedKey(null);
+      Promise.resolve().then(() => setSelectedKey(null));
       return;
     }
 
     if (selectedKey !== selectedEntry.key && !visibleEntries.some(entry => entry.key === selectedKey)) {
-      setSelectedKey(selectedEntry.key);
+      Promise.resolve().then(() => setSelectedKey(selectedEntry.key));
     }
   }, [selectedEntry, selectedKey, visibleEntries]);
 
@@ -237,13 +238,22 @@ export default function LibraryPage() {
           <EmptyPanel title="Your library is empty" body="Add music products, save resources, or request services to test your personal vault." href="/browse" action="Browse Store" />
         ) : (
           <LibraryDetail
+            key={selectedEntry.key}
             entry={selectedEntry}
             tracks={selectedEntry.kind === 'product' ? tracksByProductId[selectedEntry.product.id] ?? [] : []}
             achievements={selectedEntry.kind === 'product' ? achievementsByProductId[selectedEntry.product.id] ?? [] : []}
             unlockedAchievementIds={unlockedAchievementIds}
-            onLibraryItemStatus={async status => {
+            onHideProduct={async () => {
               if (selectedEntry.kind !== 'product') return;
-              await updateLibraryItemStatus(selectedEntry.key, status, setLibraryItems);
+              await updateLibraryItemStatus(selectedEntry.key, 'hidden', setLibraryItems);
+            }}
+            onRemoveProduct={async () => {
+              if (selectedEntry.kind !== 'product') return;
+              await removeLibraryItem(selectedEntry.key, setLibraryItems);
+            }}
+            onRemoveSavedResource={async () => {
+              if (selectedEntry.kind !== 'resource') return;
+              await removeSavedResource(selectedEntry.key, setSavedResources);
             }}
             onActivity={async activityType => {
               if (!user) return;
@@ -294,7 +304,9 @@ function LibraryDetail({
   tracks,
   achievements,
   unlockedAchievementIds,
-  onLibraryItemStatus,
+  onHideProduct,
+  onRemoveProduct,
+  onRemoveSavedResource,
   onActivity,
   onTrackComplete,
   onUnlockAchievement,
@@ -303,13 +315,15 @@ function LibraryDetail({
   tracks: Track[];
   achievements: ProductAchievement[];
   unlockedAchievementIds: Set<string>;
-  onLibraryItemStatus: (status: 'hidden' | 'archived') => Promise<void>;
+  onHideProduct: () => Promise<void>;
+  onRemoveProduct: () => Promise<void>;
+  onRemoveSavedResource: () => Promise<void>;
   onActivity: (activityType: string) => Promise<void>;
   onTrackComplete: (track: Track, allTracks: Track[]) => Promise<void>;
   onUnlockAchievement: (triggerType: string) => Promise<void>;
 }) {
   if (entry.kind === 'resource') {
-    return <ResourceDetail entry={entry} onActivity={onActivity} />;
+    return <ResourceDetail entry={entry} onActivity={onActivity} onRemove={onRemoveSavedResource} />;
   }
 
   if (entry.kind === 'service') {
@@ -317,13 +331,13 @@ function LibraryDetail({
   }
 
   const product = entry.product;
-  const isMusic = product.category.toLowerCase() === 'music';
+  const isMusic = getProductRuntimeKind(product) === 'music';
 
   if (!isMusic) {
-    return <ProductLibraryDetail entry={entry} onLibraryItemStatus={onLibraryItemStatus} onActivity={onActivity} onUnlockAchievement={onUnlockAchievement} />;
+    return <ProductLibraryDetail entry={entry} onHideProduct={onHideProduct} onRemoveProduct={onRemoveProduct} onActivity={onActivity} onUnlockAchievement={onUnlockAchievement} />;
   }
 
-  return <MusicLibraryDetail entry={entry} tracks={tracks} achievements={achievements} unlockedAchievementIds={unlockedAchievementIds} onLibraryItemStatus={onLibraryItemStatus} onActivity={onActivity} onTrackComplete={onTrackComplete} onUnlockAchievement={onUnlockAchievement} />;
+  return <MusicLibraryDetail entry={entry} tracks={tracks} achievements={achievements} unlockedAchievementIds={unlockedAchievementIds} onHideProduct={onHideProduct} onRemoveProduct={onRemoveProduct} onActivity={onActivity} onTrackComplete={onTrackComplete} onUnlockAchievement={onUnlockAchievement} />;
 }
 
 function MusicLibraryDetail({
@@ -331,7 +345,8 @@ function MusicLibraryDetail({
   tracks,
   achievements,
   unlockedAchievementIds,
-  onLibraryItemStatus,
+  onHideProduct,
+  onRemoveProduct,
   onActivity,
   onTrackComplete,
   onUnlockAchievement,
@@ -340,12 +355,14 @@ function MusicLibraryDetail({
   tracks: Track[];
   achievements: ProductAchievement[];
   unlockedAchievementIds: Set<string>;
-  onLibraryItemStatus: (status: 'hidden' | 'archived') => Promise<void>;
+  onHideProduct: () => Promise<void>;
+  onRemoveProduct: () => Promise<void>;
   onActivity: (activityType: string) => Promise<void>;
   onTrackComplete: (track: Track, allTracks: Track[]) => Promise<void>;
   onUnlockAchievement: (triggerType: string) => Promise<void>;
 }) {
   const product = entry.product;
+  const canRemove = isFreeLibraryClaim(product);
   const playableTracks = tracks.length > 0 ? tracks : FALLBACK_TRACKS;
   const [activeTrackId, setActiveTrackId] = useState<string | null>(playableTracks[0]?.id ?? null);
   const activeTrack = playableTracks.find(track => track.id === activeTrackId) ?? playableTracks[0] ?? null;
@@ -392,8 +409,8 @@ function MusicLibraryDetail({
           onPrimary={() => activeTrack && playTrack(activeTrack)}
           onDownload={downloadAlbum}
           reviewHref={`/product/${product.slug || product.id}#reviews`}
-          onHide={() => onLibraryItemStatus('hidden')}
-          onArchive={() => onLibraryItemStatus('archived')}
+          onRemove={canRemove ? onRemoveProduct : undefined}
+          onHide={canRemove ? undefined : onHideProduct}
         />
       </section>
 
@@ -456,17 +473,21 @@ function MusicLibraryDetail({
 
 function ProductLibraryDetail({
   entry,
-  onLibraryItemStatus,
+  onHideProduct,
+  onRemoveProduct,
   onActivity,
   onUnlockAchievement,
 }: {
   entry: Extract<LibraryEntry, { kind: 'product' }>;
-  onLibraryItemStatus: (status: 'hidden' | 'archived') => Promise<void>;
+  onHideProduct: () => Promise<void>;
+  onRemoveProduct: () => Promise<void>;
   onActivity: (activityType: string) => Promise<void>;
   onUnlockAchievement: (triggerType: string) => Promise<void>;
 }) {
   const product = entry.product;
-  const action = getProductLibraryAction(product);
+  const action = getProductLibraryPrimaryAction(product);
+  const content = getProductLibraryContent(product);
+  const canRemove = isFreeLibraryClaim(product);
 
   async function runPrimaryAction() {
     await onActivity(action.activityType);
@@ -478,7 +499,7 @@ function ProductLibraryDetail({
     if (target) {
       window.open(target, '_blank', 'noopener,noreferrer');
     } else {
-      alert(`${action.label} is coming soon for this item.`);
+      alert(action.missingMessage);
     }
   }
 
@@ -502,33 +523,56 @@ function ProductLibraryDetail({
         <LibraryActionCluster
           primaryLabel={action.label}
           onPrimary={runPrimaryAction}
-          onDownload={product.download_url ? () => {
+          onDownload={product.download_url && action.activityType !== 'download' ? () => {
             onActivity('download');
             onUnlockAchievement('downloaded');
             window.open(product.download_url!, '_blank', 'noopener,noreferrer');
           } : undefined}
           reviewHref={`/product/${product.slug || product.id}#reviews`}
-          onHide={() => onLibraryItemStatus('hidden')}
-          onArchive={() => onLibraryItemStatus('archived')}
+          onRemove={canRemove ? onRemoveProduct : undefined}
+          onHide={canRemove ? undefined : onHideProduct}
         />
       </section>
 
       <section className="library-two-grid">
-        <InfoPanel title="Product">
+        <InfoPanel title={content.detailsTitle}>
           <InfoLine label="Price" value={formatProductPrice(product)} />
           <InfoLine label="Category" value={product.category} />
+          <InfoLine label="Access" value={content.accessLabel} />
           <InfoLine label="Added" value={new Date(entry.acquiredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} />
         </InfoPanel>
-        <InfoPanel title="About">
-          <div className="library-muted-copy">{product.description ?? 'No description yet.'}</div>
+        <InfoPanel title={content.contentTitle}>
+          <div className="library-muted-copy">{product.description ?? content.emptyCopy}</div>
+          <div className="library-helper-list">
+            {content.notes.map(note => <span key={note}>{note}</span>)}
+          </div>
         </InfoPanel>
       </section>
     </>
   );
 }
 
-function ResourceDetail({ entry, onActivity }: { entry: Extract<LibraryEntry, { kind: 'resource' }>; onActivity: (activityType: string) => Promise<void> }) {
+function ResourceDetail({
+  entry,
+  onActivity,
+  onRemove,
+}: {
+  entry: Extract<LibraryEntry, { kind: 'resource' }>;
+  onActivity: (activityType: string) => Promise<void>;
+  onRemove: () => Promise<void>;
+}) {
   const resource = entry.resource;
+  const hasDownload = Boolean(resource.download_url);
+
+  async function downloadResource() {
+    await onActivity('download');
+
+    if (resource.download_url) {
+      window.open(resource.download_url, '_blank', 'noopener,noreferrer');
+    } else {
+      alert('Download file coming soon for this resource.');
+    }
+  }
 
   return (
     <>
@@ -545,17 +589,21 @@ function ResourceDetail({ entry, onActivity }: { entry: Extract<LibraryEntry, { 
           <p>by {resource.creators?.name ?? '44 Community'}</p>
         </div>
         <LibraryActionCluster
-          primaryLabel="Read"
-          onPrimary={() => onActivity('read')}
-          onDownload={resource.download_url ? () => {
-            onActivity('download');
-            window.open(resource.download_url!, '_blank', 'noopener,noreferrer');
-          } : undefined}
+          primaryLabel="Download"
+          onPrimary={downloadResource}
+          onRemove={onRemove}
         />
       </section>
-      <InfoPanel title="Saved Resource">
-        <div className="library-muted-copy">{resource.summary ?? resource.body ?? 'No resource summary yet.'}</div>
-      </InfoPanel>
+      <section className="library-two-grid">
+        <InfoPanel title="Resource">
+          <InfoLine label="Type" value={resource.resource_type} />
+          <InfoLine label="Category" value={resource.categories?.name ?? 'Resource'} />
+          <InfoLine label="Download" value={hasDownload ? 'Available' : 'Coming soon'} />
+        </InfoPanel>
+        <InfoPanel title="Preview">
+          <div className="library-muted-copy">{resource.body ?? resource.summary ?? 'No resource preview yet.'}</div>
+        </InfoPanel>
+      </section>
     </>
   );
 }
@@ -630,17 +678,22 @@ function LibraryActionCluster({
   onPrimary,
   onDownload,
   reviewHref,
+  onRemove,
   onHide,
-  onArchive,
 }: {
   primaryLabel: string;
   onPrimary: () => void | Promise<void>;
   onDownload?: () => void | Promise<void>;
   reviewHref?: string;
+  onRemove?: () => void | Promise<void>;
   onHide?: () => void | Promise<void>;
-  onArchive?: () => void | Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
+
+  async function runMenuAction(action: () => void | Promise<void>) {
+    setOpen(false);
+    await action();
+  }
 
   return (
     <div className="library-action-cluster">
@@ -649,11 +702,11 @@ function LibraryActionCluster({
         <button className="library-options-button" type="button" aria-label="Library item options" onClick={() => setOpen(value => !value)}>...</button>
         {open && (
           <div className="library-options-menu">
-            <button type="button" onClick={() => navigator.clipboard?.writeText(window.location.href)}>Share</button>
+            <button type="button" onClick={() => runMenuAction(() => navigator.clipboard?.writeText(window.location.href))}>Share</button>
             {reviewHref && <Link href={reviewHref}>Review</Link>}
-            {onDownload && <button type="button" onClick={onDownload}>Download</button>}
-            {onHide && <button type="button" onClick={onHide}>Hide</button>}
-            {onArchive && <button type="button" onClick={onArchive}>Archive</button>}
+            {onDownload && <button type="button" onClick={() => runMenuAction(onDownload)}>Download</button>}
+            {onRemove && <button type="button" onClick={() => runMenuAction(onRemove)}>Remove from Library</button>}
+            {onHide && <button type="button" onClick={() => runMenuAction(onHide)}>Hide</button>}
           </div>
         )}
       </div>
@@ -715,18 +768,6 @@ function groupByProductId<T extends { product_id: string }>(items: T[]) {
   }, {});
 }
 
-function getProductLibraryAction(product: Product) {
-  const category = product.category.toLowerCase();
-  const runtime = (product.runtime_type ?? '').toLowerCase();
-
-  if (category === 'books' || runtime === 'book') return { label: 'Read', href: product.read_url || product.download_url, activityType: 'read' };
-  if (category === 'interactive' || category === 'games' || runtime === 'interactive' || runtime === 'game') return { label: 'Launch', href: product.launch_url, activityType: 'launch' };
-  if (category === 'sample packs' || runtime === 'sample_pack') return { label: 'Download', href: product.download_url, activityType: 'download' };
-  if (product.download_url) return { label: 'Download', href: product.download_url, activityType: 'download' };
-
-  return { label: 'Open', href: product.read_url || product.launch_url || product.download_url, activityType: 'open' };
-}
-
 function formatDuration(seconds: number | null) {
   if (!seconds) return '--:--';
 
@@ -735,7 +776,7 @@ function formatDuration(seconds: number | null) {
   return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
 }
 
-async function updateLibraryItemStatus(key: string, status: 'hidden' | 'archived', setLibraryItems: Dispatch<SetStateAction<LibraryItem[]>>) {
+async function updateLibraryItemStatus(key: string, status: 'hidden', setLibraryItems: Dispatch<SetStateAction<LibraryItem[]>>) {
   const id = key.replace('product-', '');
   const { error } = await supabase
     .from('library_items')
@@ -748,6 +789,36 @@ async function updateLibraryItemStatus(key: string, status: 'hidden' | 'archived
   }
 
   setLibraryItems(items => items.filter(item => item.id !== id));
+}
+
+async function removeLibraryItem(key: string, setLibraryItems: Dispatch<SetStateAction<LibraryItem[]>>) {
+  const id = key.replace('product-', '');
+  const { error } = await supabase
+    .from('library_items')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  setLibraryItems(items => items.filter(item => item.id !== id));
+}
+
+async function removeSavedResource(key: string, setSavedResources: Dispatch<SetStateAction<SavedResource[]>>) {
+  const id = key.replace('resource-', '');
+  const { error } = await supabase
+    .from('saved_resources')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  setSavedResources(items => items.filter(item => item.id !== id));
 }
 
 async function recordLibraryActivity(userId: string, entry: LibraryEntry, activityType: string) {

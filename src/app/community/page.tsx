@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import type { Category, CommunityPost, Resource } from '@/lib/platform';
 import { FALLBACK_CATEGORIES, FALLBACK_RESOURCES } from '@/lib/platform';
+import { mergeTaxonomyCategories } from '@/lib/taxonomy';
 import { PageShell, PostCard, ResourceCard, SectionHeader } from '@/components/Ui';
 
 const FALLBACK_POSTS: CommunityPost[] = [
@@ -35,11 +36,12 @@ const FALLBACK_POSTS: CommunityPost[] = [
 ];
 
 const COMMUNITY_TILES = [
-  { title: 'Creators', href: '/community?view=creators' },
-  { title: 'Resources', href: '/resources' },
-  { title: 'Feed', href: '/community?view=feed' },
-  { title: 'Discussions', href: '/community?view=discussions' },
-  { title: 'Updates', href: '/community?view=updates' },
+  { title: 'Creators', href: '/community/browse?category=creators' },
+  { title: 'Discussions', href: '/community/browse?category=discussions' },
+  { title: 'News', href: '/community/browse?category=news' },
+  { title: 'Streams', href: '/community/browse?category=streams' },
+  { title: 'Showcases', href: '/community/browse?category=showcases' },
+  { title: 'Updates', href: '/community/browse?category=updates' },
 ];
 
 export default function CommunityPage() {
@@ -62,7 +64,7 @@ export default function CommunityPage() {
           .eq('status', 'published')
           .order('created_at', { ascending: false })
           .limit(8),
-        supabase.from('categories').select('*').in('scope', ['posts', 'resources']).order('sort_order'),
+        supabase.from('categories').select('*').in('scope', ['creators', 'posts']).order('sort_order'),
       ]);
 
       setPosts((postRows as CommunityPost[] | null) ?? []);
@@ -76,14 +78,18 @@ export default function CommunityPage() {
   const communityPosts = posts.length > 0 ? posts : FALLBACK_POSTS;
   const resourceList = resources.length > 0 ? resources : FALLBACK_RESOURCES;
   const categoryTiles = useMemo(() => {
-    const postCategories = categories.filter(category => category.scope === 'posts').slice(0, 4);
+    const communityCategories = mergeTaxonomyCategories(
+      categories,
+      FALLBACK_CATEGORIES.filter(category => category.scope === 'creators' || category.scope === 'posts'),
+    );
+    const postCategories = communityCategories.filter(category => category.scope === 'posts' || category.scope === 'creators').slice(0, 6);
     if (postCategories.length === 0) return COMMUNITY_TILES;
 
-    return [
-      { title: 'Creators', href: '/community?view=creators' },
-      { title: 'Resources', href: '/resources' },
-      ...postCategories.map(category => ({ title: category.name, href: `/community?category=${category.slug}` })),
-    ];
+    const tiles = postCategories
+      .filter(category => category.slug !== 'feed')
+      .map(category => ({ title: category.name, href: `/community/browse?category=${category.slug}` }));
+
+    return [{ title: 'Creators', href: '/community/browse?category=creators' }, ...tiles].slice(0, 6);
   }, [categories]);
 
   return (

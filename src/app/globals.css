@@ -1162,6 +1162,22 @@ body {
   line-height: 1.65;
 }
 
+.library-helper-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.library-helper-list span {
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.045);
+  padding: 10px 12px;
+  color: rgba(255,255,255,0.52);
+  font-size: 12px;
+  font-weight: 650;
+}
+
 .library-action-cluster {
   display: flex;
   align-items: center;
