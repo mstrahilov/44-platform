@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import type { Creator } from '@/lib/platform';
-import { DockedContent, DockedLayout, DockedPanel } from '@/components/Ui';
+import { DockedContent, DockedLayout, InfoPanel as DetailInfoPanel } from '@/components/Ui';
 
 export default function CreatorPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -16,21 +16,11 @@ export default function CreatorPage() {
     async function fetchCreator() {
       const { data } = await supabase
         .from('creators')
-        .select('*')
+        .select('*, categories(id, slug, name)')
         .eq('slug', slug)
         .maybeSingle();
 
-      setCreator((data as Creator | null) ?? {
-        id: 'fallback-creator-a',
-        profile_id: null,
-        slug,
-        name: slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
-        bio: 'Creator profile, posts, products, services, resources, and community activity will live here.',
-        creator_type: 'Creator',
-        hero_url: null,
-        avatar_url: null,
-        is_published: true,
-      });
+      setCreator(data as Creator | null);
       setLoading(false);
     }
 
@@ -73,34 +63,27 @@ export default function CreatorPage() {
         </main>
       </DockedContent>
 
-      <DockedPanel>
-        <div className="detail-panel-stack">
-          <div className="detail-panel-image">
-            {creator.avatar_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={creator.avatar_url} alt="" />
-            )}
-          </div>
-          <div className="detail-panel-copy">
-            <div className="detail-panel-title">{creator.name}</div>
-            <div className="detail-panel-subtitle">{creator.creator_type ?? 'Creator Profile'}</div>
-            <div className="detail-panel-description">{creator.bio ?? 'Creator bio will live here.'}</div>
-          </div>
-          <div className="detail-panel-actions">
-            <button className="btn-primary" type="button">Follow</button>
-            <button className="btn-ghost" type="button">Message</button>
-            <Link className="btn-ghost" href="/community/browse">Browse Community</Link>
-          </div>
-          <div className="divider" />
-          <div className="detail-panel-meta">
-            <div className="detail-panel-section-title">Creator Details</div>
-            <InfoLine label="Category" value={creator.categories?.name ?? 'Creators'} />
-            <InfoLine label="Type" value={creator.creator_type ?? 'Creator'} />
-            <InfoLine label="Profile" value={creator.slug ?? creator.name} />
-            <InfoLine label="Status" value={creator.is_published ? 'Published' : 'Hidden'} />
-          </div>
-        </div>
-      </DockedPanel>
+      <DetailInfoPanel
+        imageUrl={creator.avatar_url}
+        imageAlt={creator.name}
+        imageCircle
+        eyebrow={creator.categories?.name ?? 'Members'}
+        title={creator.name}
+        subtitle={creator.creator_type ?? 'Creator Profile'}
+        description={creator.bio}
+        status={creator.is_published ? 'Published' : 'Hidden'}
+        actions={[
+          { label: 'Follow', onClick: () => undefined },
+          { label: 'Message', onClick: () => undefined, variant: 'ghost' },
+          { label: 'Browse Community', href: '/community/browse', variant: 'ghost' },
+        ]}
+        details={[
+          { label: 'Category', value: creator.categories?.name ?? 'Members' },
+          { label: 'Type', value: creator.creator_type ?? 'Creator' },
+          { label: 'Profile', value: creator.slug ?? creator.name },
+          { label: 'Status', value: creator.is_published ? 'Published' : 'Hidden' },
+        ]}
+      />
     </DockedLayout>
   );
 }
@@ -109,15 +92,6 @@ function CenteredMessage({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'rgba(255,255,255,0.30)', fontSize: 13, fontWeight: 500 }}>
       {children}
-    </div>
-  );
-}
-
-function InfoLine({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, borderBottom: '1px solid rgba(255,255,255,0.07)', paddingBottom: 10 }}>
-      <div style={{ fontSize: 12, fontWeight: 650, color: 'rgba(255,255,255,0.38)' }}>{label}</div>
-      <div style={{ fontSize: 12, fontWeight: 750, color: 'rgba(255,255,255,0.76)', textAlign: 'right' }}>{value}</div>
     </div>
   );
 }

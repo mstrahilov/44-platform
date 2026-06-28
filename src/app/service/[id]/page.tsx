@@ -6,14 +6,13 @@ import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Service } from '@/lib/platform';
-import { FALLBACK_SERVICES, formatServicePrice } from '@/lib/platform';
-import { DockedContent, DockedLayout, DockedPanel } from '@/components/Ui';
+import { creatorHref, formatServicePrice } from '@/lib/platform';
+import { DockedContent, DockedLayout, InfoPanel as DetailInfoPanel } from '@/components/Ui';
 
 export default function ServicePage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const [service, setService] = useState<Service | null>(null);
-  const [message, setMessage] = useState('');
   const [requested, setRequested] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -25,8 +24,7 @@ export default function ServicePage() {
         .eq('slug', id)
         .maybeSingle();
 
-      const fallback = FALLBACK_SERVICES.find(item => item.id === id || item.slug === id) ?? null;
-      setService((data as Service | null) ?? fallback);
+      setService(data as Service | null);
       setLoading(false);
     }
 
@@ -41,17 +39,12 @@ export default function ServicePage() {
       return;
     }
 
-    if (service.id.startsWith('fallback-')) {
-      alert('Run the platform architecture SQL first, then service requests can be saved.');
-      return;
-    }
-
     const { error } = await supabase
       .from('service_requests')
       .insert({
         user_id: user.id,
         service_id: service.id,
-        message: message.trim() || null,
+        message: null,
         status: 'inquiry',
       });
 
@@ -61,7 +54,6 @@ export default function ServicePage() {
     }
 
     setRequested(true);
-    setMessage('');
   }
 
   if (loading) return <CenteredMessage>Loading...</CenteredMessage>;
@@ -98,42 +90,30 @@ export default function ServicePage() {
         </section>
       </DockedContent>
 
-      <DockedPanel>
-        <div className="detail-panel-stack">
-          <div className="detail-panel-image">
-            {service.cover_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={service.cover_url} alt="" />
-            )}
-          </div>
-          <div className="detail-panel-copy">
-            <div className="detail-panel-title">{service.title}</div>
-            <div className="detail-panel-subtitle">{service.categories?.name ?? 'Service'}</div>
-            <div className="detail-panel-description">{service.description}</div>
-          </div>
-          <div>
-            <div className="detail-panel-price">{formatServicePrice(service)}</div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.34)', marginTop: 4 }}>{service.delivery_estimate ?? 'Timeline varies'}</div>
-          </div>
-          <textarea
-            value={message}
-            onChange={event => setMessage(event.target.value)}
-            placeholder="Tell the creator what you need..."
-            style={{ width: '100%', minHeight: 132, resize: 'vertical', background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 16, padding: 14, fontFamily: 'inherit', fontSize: 13, fontWeight: 500, color: '#fff', outline: 'none', lineHeight: 1.5 }}
-          />
-          <div className="detail-panel-actions">
-            <button className="btn-primary" onClick={submitRequest}>{requested ? 'Request Sent' : 'Send Request'}</button>
-          </div>
-          <div className="divider" />
-          <div className="detail-panel-meta">
-            <div className="detail-panel-section-title">Service Details</div>
-            <InfoLine label="Category" value={service.categories?.name ?? 'Service'} />
-            <InfoLine label="Type" value={service.service_type ?? service.title} />
-            <InfoLine label="Current provider" value={service.creators?.name ?? '44 Creator'} />
-            <InfoLine label="Status" value={service.status === 'published' ? 'Published' : service.status} />
-          </div>
-        </div>
-      </DockedPanel>
+      <DetailInfoPanel
+        imageUrl={service.cover_url}
+        imageAlt={service.title}
+        eyebrow={service.categories?.name ?? 'Service'}
+        title={service.title}
+        subtitle={service.service_type ?? undefined}
+        description={service.description}
+        price={formatServicePrice(service)}
+        actions={[
+          { label: requested ? 'Request Sent' : 'Send Request', onClick: submitRequest },
+        ]}
+        details={[
+          { label: 'Category', value: service.categories?.name ?? 'Service' },
+          { label: 'Type', value: service.service_type ?? service.title },
+          { label: 'Current provider', value: service.creators?.name ?? '44 Creator' },
+          { label: 'Timeline', value: service.delivery_estimate ?? 'Project-based' },
+          { label: 'Status', value: service.status === 'published' ? 'Published' : service.status },
+        ]}
+        creator={service.creators ? {
+          name: service.creators.name,
+          avatarUrl: service.creators.avatar_url,
+          href: creatorHref(service.creators),
+        } : undefined}
+      />
     </DockedLayout>
   );
 }

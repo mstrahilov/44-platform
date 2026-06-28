@@ -9,39 +9,51 @@ import { isFreeLibraryClaim } from '@/lib/libraryContent';
 interface ProductCardProps {
   product: Product;
   owned?: boolean;
+  variant?: 'compact' | 'wide';
 }
 
-export default function ProductCard({ product, owned = false }: ProductCardProps) {
+export default function ProductCard({ product, owned = false, variant = 'compact' }: ProductCardProps) {
   const [hovered, setHovered] = useState(false);
   const canOpenProduct = !product.id.startsWith('fallback-');
   const canClaimToLibrary = isFreeLibraryClaim(product);
-  const cardBody = (
-    <>
-      <ProductArt product={product} />
-      <div style={{ padding: 14, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 110 }}>
-        <div style={{ fontSize: 14, fontWeight: 650, color: 'rgba(255,255,255,0.94)', marginBottom: 4, lineHeight: 1.25, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.title}</div>
-        <div style={{ fontSize: 12, fontWeight: 550, color: 'rgba(255,255,255,0.42)', marginBottom: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.creator}</div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 'auto' }}>
-          <div style={{ fontSize: 14, fontWeight: 750, color: canClaimToLibrary ? '#93FF00' : 'rgba(255,255,255,0.92)' }}>{formatProductPrice(product)}</div>
-          {owned && <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.42)' }}>Owned</div>}
-        </div>
-      </div>
-    </>
+  const className = `product-card product-card-${variant} ${hovered ? 'card-hovered' : ''}`;
+
+  const priceOrOwned = owned ? (
+    <div className="product-card-owned">Owned</div>
+  ) : (
+    <div className={canClaimToLibrary ? 'product-card-price product-card-price-free' : 'product-card-price'}>
+      {formatProductPrice(product)}
+    </div>
   );
 
-  const shellStyle = {
-    background: hovered ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.04)',
-    border: `1px solid ${hovered ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.08)'}`,
-    borderRadius: 18,
-    overflow: 'hidden',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    minWidth: 0,
-    height: '100%',
-    transition: 'border-color 150ms ease, background 150ms ease, transform 150ms ease',
-    transform: hovered && canOpenProduct ? 'translateY(-1px)' : 'translateY(0)',
-    cursor: canOpenProduct ? 'pointer' : 'default',
-  };
+  const cardBody = (
+  <>
+    <ProductArt product={product} variant={variant} />
+    <span className="card-heart" aria-hidden="true">♡</span>
+
+    <div className="product-card-body">
+      <div className="product-card-header">
+        <div className="product-card-meta">
+          <div className="product-card-title">{product.title}</div>
+        </div>
+
+        <div
+          className={`product-card-price ${
+            canClaimToLibrary ? 'product-card-price-free' : ''
+          }`}
+        >
+          {formatProductPrice(product)}
+        </div>
+      </div>
+
+      {variant === 'wide' && product.description && (
+        <div className="product-card-description">
+          {product.description}
+        </div>
+      )}
+    </div>
+  </>
+);
 
   if (canOpenProduct) {
     return (
@@ -49,7 +61,7 @@ export default function ProductCard({ product, owned = false }: ProductCardProps
         href={`/product/${product.slug || product.id}`}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
-        style={shellStyle}
+        className={className}
       >
         {cardBody}
       </Link>
@@ -60,19 +72,19 @@ export default function ProductCard({ product, owned = false }: ProductCardProps
     <article
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      style={shellStyle}
+      className={className}
     >
       {cardBody}
     </article>
   );
 }
 
-function ProductArt({ product }: { product: Product }) {
+function ProductArt({ product, variant }: { product: Product; variant: 'compact' | 'wide' }) {
   return (
-    <div style={{ width: '100%', aspectRatio: '1', background: 'rgba(255,255,255,0.035)', overflow: 'hidden', position: 'relative', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+    <div className="product-card-art" data-variant={variant}>
       {product.cover_url && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={product.cover_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+        <img src={product.cover_url} alt="" />
       )}
     </div>
   );

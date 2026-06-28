@@ -9,7 +9,7 @@ import type { Product } from '@/lib/products';
 import { browseHref, formatProductPrice, productMeta } from '@/lib/products';
 import { getProductStoreAccessLabel, isFreeLibraryClaim } from '@/lib/libraryContent';
 import { creatorHref } from '@/lib/platform';
-import { DockedContent, DockedLayout, DockedPanel } from '@/components/Ui';
+import { DockedContent, DockedLayout, InfoPanel as DetailInfoPanel } from '@/components/Ui';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
 
 interface ProductReview {
@@ -255,37 +255,30 @@ export default function ProductPage() {
           )}
         </DockedContent>
 
-        <DockedPanel>
-          <div className="detail-panel-stack">
-            <div className="detail-panel-image" style={{ background: getHeroBackground(product) }}>
-              {product.cover_url && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={product.cover_url} alt="" />
-              )}
-            </div>
-            <div className="detail-panel-copy">
-              <div className="detail-panel-title">{product.title}</div>
-              <div className="detail-panel-subtitle">by {product.creator}</div>
-              <div className="detail-panel-description">{product.description ?? productMeta(product)}</div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 }}>
-              <div className="detail-panel-price" style={{ color: canClaimToLibrary ? '#93FF00' : '#fff' }}>{formatProductPrice(product)}</div>
-              {owned && <div className="chip">Owned</div>}
-            </div>
-            <div className="detail-panel-actions">
-              <button className="btn-primary" onClick={addToLibrary} disabled={owned} style={{ opacity: owned ? 0.72 : 1 }}>{primaryAction}</button>
-              <Link className="btn-ghost" href={creatorHref(product.creator)}>View Creator</Link>
-            </div>
-            <div className="divider" />
-            <div className="detail-panel-meta">
-              <div className="detail-panel-section-title">Product Details</div>
-              <InfoLine label="Creator" value={product.creator} />
-              <InfoLine label="Type" value={product.product_type} />
-              <InfoLine label="Access" value={accessLabel} />
-              <InfoLine label="Status" value={product.is_published ? 'Published' : 'Hidden'} />
-            </div>
-          </div>
-        </DockedPanel>
+        <DetailInfoPanel
+          imageUrl={product.cover_url}
+          imageAlt={product.title}
+          eyebrow={product.category}
+          title={product.title}
+          subtitle={`by ${product.creator}`}
+          description={product.description ?? productMeta(product)}
+          price={formatProductPrice(product)}
+          priceTone={canClaimToLibrary ? 'free' : 'default'}
+          tags={product.tags ?? []}
+          actions={[
+            { label: primaryAction, onClick: addToLibrary, disabled: owned },
+          ]}
+          details={[
+            { label: 'Creator', value: product.creator },
+            { label: 'Type', value: product.product_type },
+            { label: 'Access', value: accessLabel },
+            { label: 'Status', value: owned ? 'Owned' : product.is_published ? 'Published' : 'Hidden' },
+          ]}
+          creator={{
+            name: product.creator,
+            href: creatorHref(product.creator),
+          }}
+        />
         <AchievementToast toast={toast} onDone={() => setToast(null)} />
     </DockedLayout>
   );

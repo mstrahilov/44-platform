@@ -6,11 +6,9 @@ import ProductCard from '@/components/ProductCard';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
-import { browseHref, FALLBACK_PRODUCTS } from '@/lib/products';
+import { browseHref } from '@/lib/products';
 import { creatorHref } from '@/lib/platform';
 import { PageShell, SectionHeader } from '@/components/Ui';
-
-const STORE_CATEGORIES = ['Music', 'Games', 'Books', 'Interactive', 'Sample Packs', 'Tools', 'Apparel'];
 
 export default function StorePage() {
   const { user } = useAuth();
@@ -50,14 +48,12 @@ export default function StorePage() {
     }
   }, [user]);
 
-  const catalog = products.length > 0 ? products : FALLBACK_PRODUCTS;
+  const catalog = products;
   const featured = catalog.find(product => product.featured) ?? catalog[0];
-  const freeProducts = catalog.filter(product => product.is_free).slice(0, 6);
   const newest = catalog.slice(0, 10);
-  const creatorFeatures = Array.from(new Map(catalog.map(product => [product.creator, product])).values()).slice(0, 2);
 
   const categoryCounts = useMemo(() => {
-    return STORE_CATEGORIES.map(category => ({
+    return Array.from(new Set(catalog.map(product => product.category).filter(Boolean))).map(category => ({
       category,
       count: catalog.filter(product => product.category === category).length,
       product: catalog.find(product => product.category === category),
@@ -83,49 +79,111 @@ export default function StorePage() {
         </section>
 
         <section>
-          <SectionHeader title="New on 44" href="/browse" />
+          <SectionHeader title="NEW ARRIVALS" href="/browse" />
           <ProductShelf products={newest} ownedProductIds={ownedProductIds} />
         </section>
 
-        <div className="store-feature-shell">
-          {creatorFeatures.map(product => (
-            <CreatorFeature key={`${product.creator}-${product.id}`} product={product} />
-          ))}
-        </div>
+        <section>
+          <SectionHeader title="EXPLORE MUSIC" href={browseHref({ category: 'Music' })} />
+          <ProductShelf
+            products={catalog.filter(product => product.category === 'Music')}
+            ownedProductIds={ownedProductIds}
+          />
+        </section>
 
-        {freeProducts.length > 0 && (
-          <section>
-            <SectionHeader title="Free to Keep" href={browseHref({ filter: 'free' })} />
-            <ProductGrid products={freeProducts} ownedProductIds={ownedProductIds} />
-          </section>
-        )}
+        <section>
+          <SectionHeader title="EXPLORE APPAREL" href={browseHref({ category: 'Apparel' })} />
+          <ProductShelf
+            products={catalog.filter(product => product.category === 'Apparel')}
+            ownedProductIds={ownedProductIds}
+          />
+        </section>
     </PageShell>
   );
 }
 
-function StoreHero({ product, owned }: { product: Product; owned: boolean }) {
+function StoreHero({ product }: { product: Product; owned: boolean }) {
   const heroImage = product.hero_url || product.cover_url;
 
   return (
     <section className="store-hero-shell">
-      <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 28, border: '1px solid rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.035)', minHeight: 420 }}>
+      <div
+        style={{
+          position: 'relative',
+          overflow: 'hidden',
+          borderRadius: 28,
+          border: '1px solid rgba(255,255,255,0.10)',
+          background: 'rgba(255,255,255,0.035)',
+          minHeight: 460,
+        }}
+      >
         {heroImage && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={heroImage} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img
+            src={heroImage}
+            alt=""
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+            }}
+          />
         )}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(8,8,14,0.82), rgba(8,8,14,0.42) 48%, rgba(8,8,14,0.10)), linear-gradient(0deg, rgba(8,8,14,0.82), rgba(8,8,14,0.06) 58%)' }} />
-        <div style={{ position: 'relative', zIndex: 1, minHeight: 420, padding: 34, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-          <div style={{ maxWidth: 680 }}>
-            <h1 style={{ fontSize: 58, maxWidth: 740, fontWeight: 750, letterSpacing: '-0.04em', lineHeight: 0.94, color: '#fff', marginBottom: 12 }}>{product.title}</h1>
-            <p style={{ maxWidth: 560, fontSize: 15, fontWeight: 500, color: 'rgba(255,255,255,0.58)', lineHeight: 1.65, marginBottom: 22 }}>{product.feature_description || product.description || `${product.product_type} by ${product.creator}.`}</p>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                {!product.id.startsWith('fallback-') && <Link className="btn-primary" href={`/product/${product.slug || product.id}`}>Learn More</Link>}
-                <Link className="btn-ghost" href={creatorHref(product.creator)}>View Creator</Link>
-              </div>
-              {owned && <div className="chip">Owned</div>}
-            </div>
-          </div>
+
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background:
+              'linear-gradient(90deg, rgba(8,8,14,0.84), rgba(8,8,14,0.42) 48%, rgba(8,8,14,0.10)), linear-gradient(0deg, rgba(8,8,14,0.84), rgba(8,8,14,0.06) 58%)',
+          }}
+        />
+
+        <div
+          style={{
+            position: 'relative',
+            zIndex: 1,
+            minHeight: 460,
+            padding: '52px 56px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'flex-end',
+            alignItems: 'flex-start',
+          }}
+        >
+          <h1
+            style={{
+              fontSize: 'clamp(40px, 4.5vw, 60px)',
+              maxWidth: 740,
+              fontWeight: 760,
+              letterSpacing: '-0.045em',
+              lineHeight: 0.96,
+              color: '#fff',
+              marginBottom: 16,
+            }}
+          >
+            {product.title}
+          </h1>
+
+          <p
+            style={{
+              maxWidth: 640,
+              fontSize: 17,
+              fontWeight: 520,
+              color: 'rgba(255,255,255,0.62)',
+              lineHeight: 1.55,
+              marginBottom: 28,
+            }}
+          >
+            {product.feature_description ||
+              product.description ||
+              `${product.product_type} by ${product.creator}.`}
+          </p>
+
+          <Link className="btn-primary" href={`/product/${product.slug || product.id}`}>
+            Learn More
+          </Link>
         </div>
       </div>
     </section>
@@ -133,44 +191,60 @@ function StoreHero({ product, owned }: { product: Product; owned: boolean }) {
 }
 
 function CategoryTile({ category }: { category: string }) {
+  const icon = category.toLowerCase().replace(/\s+/g, '-');
+
   return (
-    <Link href={browseHref({ category })} style={{ minHeight: 120, borderRadius: 20, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.035)', padding: 16, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', overflow: 'hidden', position: 'relative' }}>
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(10,10,18,0.04), rgba(10,10,18,0.72))' }} />
-      <div style={{ position: 'relative', zIndex: 1, fontSize: 18, fontWeight: 750, color: '#fff', letterSpacing: '-0.02em' }}>{category}</div>
+    <Link
+      href={browseHref({ category })}
+      style={{
+        minHeight: 118,
+        borderRadius: 20,
+        border: '1px solid rgba(255,255,255,0.09)',
+        background: 'rgba(255,255,255,0.035)',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 14,
+        textAlign: 'center',
+        padding: '20px',
+        overflow: 'hidden',
+        position: 'relative',
+      }}
+    >
+      <img
+        src={`/icons/${icon}.svg`}
+        alt=""
+        style={{
+          width: 40,
+          height: 40,
+          opacity: 0.92,
+          flexShrink: 0,
+        }}
+      />
+
+      <div
+        style={{
+          fontSize: 17,
+          fontWeight: 700,
+          color: '#fff',
+          letterSpacing: '-0.025em',
+          lineHeight: 1.2,
+        }}
+      >
+        {category}
+      </div>
     </Link>
   );
 }
 
-function CreatorFeature({ product }: { product: Product }) {
-  return (
-    <section style={{ borderRadius: 24, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.045)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', overflow: 'hidden', minHeight: 330 }}>
-      <div style={{ minHeight: 190, background: 'rgba(255,255,255,0.035)', borderBottom: '1px solid rgba(255,255,255,0.07)', position: 'relative' }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg, rgba(255,255,255,0.035), rgba(255,255,255,0.015)), radial-gradient(circle at 72% 25%, rgba(147,255,0,0.14), transparent 36%)' }} />
-      </div>
-      <div style={{ padding: 22 }}>
-        <h2 style={{ fontSize: 30, lineHeight: 1, letterSpacing: '-0.03em', marginBottom: 10 }}>{product.creator}</h2>
-        <p style={{ maxWidth: 560, fontSize: 14, lineHeight: 1.65, color: 'rgba(255,255,255,0.52)', fontWeight: 500, marginBottom: 18 }}>Products, releases, experiments, and future services live together around the creator.</p>
-        <Link className="btn-ghost" href={creatorHref(product.creator)}>Explore Creator</Link>
-      </div>
-    </section>
-  );
-}
 
-function ProductGrid({ products, ownedProductIds }: { products: Product[]; ownedProductIds: string[] }) {
-  return (
-    <div className="product-grid">
-      {products.map(product => (
-        <ProductCard key={product.id} product={product} owned={ownedProductIds.includes(product.id)} />
-      ))}
-    </div>
-  );
-}
 
 function ProductShelf({ products, ownedProductIds }: { products: Product[]; ownedProductIds: string[] }) {
   return (
     <div className="product-shelf">
       {products.map(product => (
-        <div key={product.id} style={{ width: 190, flex: '0 0 auto' }}>
+        <div key={product.id} className="product-shelf-item">
           <ProductCard product={product} owned={ownedProductIds.includes(product.id)} />
         </div>
       ))}

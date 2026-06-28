@@ -6,8 +6,8 @@ import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Resource } from '@/lib/platform';
-import { creatorHref, FALLBACK_RESOURCES } from '@/lib/platform';
-import { DockedContent, DockedLayout, DockedPanel } from '@/components/Ui';
+import { creatorHref } from '@/lib/platform';
+import { DockedContent, DockedLayout, InfoPanel as DetailInfoPanel } from '@/components/Ui';
 
 export default function ResourcePage() {
   const { id } = useParams<{ id: string }>();
@@ -27,8 +27,7 @@ export default function ResourcePage() {
         : resourceQuery.eq('slug', id)
       ).maybeSingle();
 
-      const fallback = FALLBACK_RESOURCES.find(item => item.id === id || item.slug === id) ?? null;
-      setResource((data as Resource | null) ?? fallback);
+      setResource(data as Resource | null);
       setLoading(false);
     }
 
@@ -47,7 +46,7 @@ export default function ResourcePage() {
       setSaved(Boolean(data));
     }
 
-    if (user && resource && !resource.id.startsWith('fallback-')) {
+    if (user && resource) {
       fetchSaved(user.id, resource.id);
     } else {
       Promise.resolve().then(() => setSaved(false));
@@ -60,11 +59,6 @@ export default function ResourcePage() {
       alert('Sign in first, then save this resource to your library.');
       return;
     }
-    if (resource.id.startsWith('fallback-')) {
-      alert('Run the platform architecture SQL first, then saved resources can be stored.');
-      return;
-    }
-
     const { error } = await supabase
       .from('saved_resources')
       .upsert({ user_id: user.id, resource_id: resource.id }, { onConflict: 'user_id,resource_id' });
@@ -106,43 +100,30 @@ export default function ResourcePage() {
         </section>
       </DockedContent>
 
-      <DockedPanel>
-        <div className="detail-panel-stack">
-          <div className="detail-panel-image">
-            {resource.cover_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={resource.cover_url} alt="" />
-            )}
-          </div>
-          <div className="detail-panel-copy">
-            <div className="detail-panel-title">{resource.title}</div>
-            <div className="detail-panel-subtitle">by {resource.creators?.name ?? '44 Community'}</div>
-            <div className="detail-panel-description">{resource.summary ?? resource.body ?? 'Resource body will live here.'}</div>
-          </div>
-          <div className="detail-panel-actions">
-            <button className="btn-primary" onClick={saveResource} disabled={saved} style={{ opacity: saved ? 0.72 : 1 }}>{saved ? 'Saved' : 'Save Resource'}</button>
-            <Link className="btn-ghost" href={creatorHref(resource.creators)}>View Creator</Link>
-          </div>
-          <div className="divider" />
-          <div className="detail-panel-meta">
-            <div className="detail-panel-section-title">Resource Details</div>
-            <InfoLine label="Type" value={resource.resource_type} />
-            <InfoLine label="Category" value={resource.categories?.name ?? 'Resource'} />
-            <InfoLine label="Access" value="Free" />
-            <InfoLine label="Status" value={resource.status === 'published' ? 'Published' : resource.status} />
-          </div>
-        </div>
-      </DockedPanel>
+      <DetailInfoPanel
+        imageUrl={resource.cover_url}
+        imageAlt={resource.title}
+        eyebrow={resource.categories?.name ?? 'Resource'}
+        title={resource.title}
+        subtitle={`by ${resource.creators?.name ?? '44 Community'}`}
+        description={resource.summary ?? resource.body}
+        status="Free"
+        actions={[
+          { label: saved ? 'Saved' : 'Save Resource', onClick: saveResource, disabled: saved },
+        ]}
+        details={[
+          { label: 'Type', value: resource.resource_type },
+          { label: 'Category', value: resource.categories?.name ?? 'Resource' },
+          { label: 'Access', value: 'Free' },
+          { label: 'Status', value: resource.status === 'published' ? 'Published' : resource.status },
+        ]}
+        creator={resource.creators ? {
+          name: resource.creators.name,
+          avatarUrl: resource.creators.avatar_url,
+          href: creatorHref(resource.creators),
+        } : undefined}
+      />
     </DockedLayout>
-  );
-}
-
-function InfoLine({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, borderBottom: '1px solid rgba(255,255,255,0.07)', paddingBottom: 10 }}>
-      <div style={{ fontSize: 12, fontWeight: 650, color: 'rgba(255,255,255,0.38)' }}>{label}</div>
-      <div style={{ fontSize: 12, fontWeight: 750, color: 'rgba(255,255,255,0.76)', textAlign: 'right' }}>{value}</div>
-    </div>
   );
 }
 

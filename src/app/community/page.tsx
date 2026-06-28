@@ -36,12 +36,10 @@ const FALLBACK_POSTS: CommunityPost[] = [
 ];
 
 const COMMUNITY_TILES = [
-  { title: 'Creators', href: '/community/browse?category=creators' },
   { title: 'Discussions', href: '/community/browse?category=discussions' },
+  { title: 'Members', href: '/community/browse?category=members' },
+  { title: 'Reviews', href: '/community/browse?category=reviews' },
   { title: 'News', href: '/community/browse?category=news' },
-  { title: 'Streams', href: '/community/browse?category=streams' },
-  { title: 'Showcases', href: '/community/browse?category=showcases' },
-  { title: 'Updates', href: '/community/browse?category=updates' },
 ];
 
 export default function CommunityPage() {
@@ -82,14 +80,14 @@ export default function CommunityPage() {
       categories,
       FALLBACK_CATEGORIES.filter(category => category.scope === 'creators' || category.scope === 'posts'),
     );
-    const postCategories = communityCategories.filter(category => category.scope === 'posts' || category.scope === 'creators').slice(0, 6);
+    const postCategories = communityCategories.filter(category => category.scope === 'posts' || category.scope === 'creators');
     if (postCategories.length === 0) return COMMUNITY_TILES;
 
     const tiles = postCategories
-      .filter(category => category.slug !== 'feed')
+      .filter(category => ['discussions', 'members', 'reviews', 'news'].includes(category.slug))
       .map(category => ({ title: category.name, href: `/community/browse?category=${category.slug}` }));
 
-    return [{ title: 'Creators', href: '/community/browse?category=creators' }, ...tiles].slice(0, 6);
+    return tiles.length > 0 ? tiles : COMMUNITY_TILES;
   }, [categories]);
 
   return (
