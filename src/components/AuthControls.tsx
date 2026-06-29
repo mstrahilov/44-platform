@@ -53,18 +53,20 @@ export default function AuthControls() {
 
   return (
     <div className="user-menu-wrap" ref={menuRef}>
-      <button className={user ? 'user-button' : 'sign-in-button'} onClick={() => setOpen(value => !value)} aria-label={user ? 'Open account menu' : 'Open sign in menu'}>
-        {user ? (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <circle cx="8" cy="8" r="2.2" stroke="currentColor" strokeWidth="1.35" />
-            <path d="M13.2 8.8c.04-.26.06-.53.06-.8s-.02-.54-.06-.8l1.22-.94-1.2-2.08-1.44.58a5.4 5.4 0 0 0-1.38-.8L10.18 2.4H5.82L5.6 3.96c-.5.2-.96.46-1.38.8l-1.44-.58-1.2 2.08 1.22.94c-.04.26-.06.53-.06.8s.02.54.06.8l-1.22.94 1.2 2.08 1.44-.58c.42.34.88.6 1.38.8l.22 1.56h4.36l.22-1.56c.5-.2.96-.46 1.38-.8l1.44.58 1.2-2.08-1.22-.94Z" stroke="currentColor" strokeWidth="1.15" strokeLinejoin="round" />
-          </svg>
-        ) : (
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <circle cx="8" cy="8" r="2.2" stroke="currentColor" strokeWidth="1.35" />
-            <path d="M13.2 8.8c.04-.26.06-.53.06-.8s-.02-.54-.06-.8l1.22-.94-1.2-2.08-1.44.58a5.4 5.4 0 0 0-1.38-.8L10.18 2.4H5.82L5.6 3.96c-.5.2-.96.46-1.38.8l-1.44-.58-1.2 2.08 1.22.94c-.04.26-.06.53-.06.8s.02.54.06.8l-1.22.94 1.2 2.08 1.44-.58c.42.34.88.6 1.38.8l.22 1.56h4.36l.22-1.56c.5-.2.96-.46 1.38-.8l1.44.58 1.2-2.08-1.22-.94Z" stroke="currentColor" strokeWidth="1.15" strokeLinejoin="round" />
-          </svg>
-        )}
+      <button
+        className={user ? 'user-button' : 'sign-in-button'}
+        onClick={() => setOpen(value => !value)}
+        aria-label={user ? 'Open account menu' : 'Open sign in menu'}
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="8" r="2.2" stroke="currentColor" strokeWidth="1.35" />
+          <path
+            d="M13.2 8.8c.04-.26.06-.53.06-.8s-.02-.54-.06-.8l1.22-.94-1.2-2.08-1.44.58a5.4 5.4 0 0 0-1.38-.8L10.18 2.4H5.82L5.6 3.96c-.5.2-.96.46-1.38.8l-1.44-.58-1.2 2.08 1.22.94c-.04.26-.06.53-.06.8s.02.54.06.8l-1.22.94 1.2 2.08 1.44-.58c.42.34.88.6 1.38.8l.22 1.56h4.36l.22-1.56c.5-.2.96-.46 1.38-.8l1.44.58 1.2-2.08-1.22-.94Z"
+            stroke="currentColor"
+            strokeWidth="1.15"
+            strokeLinejoin="round"
+          />
+        </svg>
       </button>
 
       {open && (
@@ -75,12 +77,46 @@ export default function AuthControls() {
                 <div className="user-menu-title">Account</div>
                 <div className="user-menu-email">{user.email}</div>
               </div>
+
               <div className="user-menu-divider" />
-              <Link className="user-menu-item" href="/community/creator-a" onClick={() => setOpen(false)}>Profile</Link>
-              <button className="user-menu-item" type="button" disabled>Creator Dashboard</button>
-              <button className="user-menu-item" type="button" disabled>Settings</button>
+
+              <Link
+                className="user-menu-item"
+                href="/community/profile"
+                onClick={() => setOpen(false)}
+              >
+                Profile
+              </Link>
+
+              <Link
+                className="user-menu-item"
+                href="/account"
+                onClick={() => setOpen(false)}
+              >
+                Account
+              </Link>
+
+              <Link
+                className="user-menu-item"
+                href="/dashboard"
+                onClick={() => setOpen(false)}
+              >
+                Dashboard
+              </Link>
+
+              <Link
+                className="user-menu-item"
+                href="/settings"
+                onClick={() => setOpen(false)}
+              >
+                Settings
+              </Link>
+
               <div className="user-menu-divider" />
-              <button className="user-menu-item" type="button" onClick={signOut}>Sign Out</button>
+
+              <button className="user-menu-item" type="button" onClick={signOut}>
+                Sign Out
+              </button>
             </>
           ) : (
             <>
@@ -88,6 +124,7 @@ export default function AuthControls() {
                 <div className="user-menu-title">Sign In</div>
                 <div className="user-menu-email">Use your email to receive a login link.</div>
               </div>
+
               <input
                 className="input"
                 type="email"
@@ -97,7 +134,18 @@ export default function AuthControls() {
                 placeholder={message || 'Email'}
                 style={{ fontSize: 12, padding: '9px 12px' }}
               />
-              <button className="btn-primary" onClick={signIn} disabled={sending} style={{ width: '100%', padding: '9px 14px', fontSize: 11, marginTop: 8 }}>
+
+              <button
+                className="btn-primary"
+                onClick={signIn}
+                disabled={sending}
+                style={{
+                  width: '100%',
+                  padding: '9px 14px',
+                  fontSize: 11,
+                  marginTop: 8,
+                }}
+              >
                 {sending ? 'Sending' : 'Send Link'}
               </button>
             </>
