@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { Service, Resource, CommunityPost } from '@/lib/platform';
 import { formatServicePrice, resourceHref, serviceHref } from '@/lib/platform';
 
@@ -20,8 +20,20 @@ export function SectionHeader({ title, href }: { title: string; href?: string })
   );
 }
 
-export function GlassPanel({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <div className={`glass-panel ${className}`}>{children}</div>;
+export function GlassPanel({
+  children,
+  className = '',
+  style,
+}: {
+  children: ReactNode;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <section className={`glass-panel ${className}`} style={style}>
+      {children}
+    </section>
+  );
 }
 
 export function FilterSidebar({ children }: { children: ReactNode }) {
