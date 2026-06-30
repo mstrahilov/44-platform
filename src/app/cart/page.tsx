@@ -1,15 +1,10 @@
-import { PageShell, GlassPanel } from '@/components/Ui';
+import { PageShell, EmptyPanel } from '@/components/Ui';
 
-export default function PlaceholderPage() {
+export default function CartPage() {
   return (
     <PageShell>
-      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '64px 0' }}>
-        <GlassPanel style={{ padding: 40 }}>
-          <h1 style={{ fontSize: 42, fontWeight: 780, marginBottom: 12, letterSpacing: '-0.04em' }}>
-            Cart
-          </h1>
-        </GlassPanel>
-      </div>
+      <h1 className="browse-page-title os-type-display">Cart</h1>
+      <EmptyPanel title="Your cart is empty" body="Browse the store and add items — checkout is coming soon." />
     </PageShell>
   );
 }

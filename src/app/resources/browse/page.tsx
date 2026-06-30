@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Category, Resource } from '@/lib/platform';
-import { FALLBACK_CATEGORIES, FALLBACK_RESOURCES } from '@/lib/platform';
 import { matchesCategory, matchesQuery } from '@/lib/taxonomy';
 import { ResourceCard, PageShell } from '@/components/Ui';
 
@@ -37,10 +36,8 @@ export default function ResourcesBrowsePage() {
     fetchData();
   }, []);
 
-  const resourceCatalog = resources.length > 0 ? resources : FALLBACK_RESOURCES;
-  const categoryCatalog = categories.length > 0
-    ? categories
-    : FALLBACK_CATEGORIES.filter(c => c.scope === 'resources');
+  const resourceCatalog = resources;
+  const categoryCatalog = categories;
 
   const visible = useMemo(() => {
     return resourceCatalog.filter(resource => {

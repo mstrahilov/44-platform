@@ -32,7 +32,7 @@ export default function DashboardProductsPage() {
               Products
             </h1>
 
-            <p style={{ color: 'rgba(255,255,255,.62)', fontSize: 18 }}>
+            <p style={{ color: 'var(--os-color-ink-secondary)', fontSize: 18 }}>
               Manage releases, products, assets, and experiences.
             </p>
           </div>
@@ -64,14 +64,14 @@ export default function DashboardProductsPage() {
                   style={{
                     marginTop: 5,
                     fontSize: 13,
-                    color: 'rgba(255,255,255,.48)',
+                    color: 'var(--os-color-ink-muted)',
                   }}
                 >
                   Product
                 </div>
               </div>
 
-              <div style={{ color: 'rgba(255,255,255,.58)', fontSize: 14 }}>
+              <div style={{ color: 'var(--os-color-ink-secondary)', fontSize: 14 }}>
                 {product.type}
               </div>
 
@@ -81,7 +81,7 @@ export default function DashboardProductsPage() {
                   borderRadius: 999,
                   padding: '7px 12px',
                   background: 'rgba(255,255,255,.07)',
-                  color: 'rgba(255,255,255,.68)',
+                  color: 'var(--os-color-ink-secondary)',
                   fontSize: 12,
                   fontWeight: 700,
                 }}

@@ -9,7 +9,7 @@ import type { Product } from '@/lib/products';
 import { browseHref, formatProductPrice, productMeta } from '@/lib/products';
 import { getProductStoreAccessLabel, isFreeLibraryClaim } from '@/lib/libraryContent';
 import { creatorHref } from '@/lib/platform';
-import { DockedContent, DockedLayout, InfoPanel as DetailInfoPanel } from '@/components/Ui';
+import { PageShell, DetailLayout, DetailRow, CenteredMessage, ProductGrid, ProductCard } from '@/components/Ui';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
 
 interface ProductReview {
@@ -124,11 +124,7 @@ export default function ProductPage() {
 
     const { error } = await supabase
       .from('library_items')
-      .upsert({
-        user_id: user.id,
-        product_id: product.id,
-        acquisition_type: 'free',
-      }, { onConflict: 'user_id,product_id' });
+      .upsert({ user_id: user.id, product_id: product.id, acquisition_type: 'free' }, { onConflict: 'user_id,product_id' });
 
     if (error) {
       alert(error.message);
@@ -184,8 +180,8 @@ export default function ProductPage() {
     if (unlocked) setToast(unlocked);
   }
 
-  if (loading) return <CenteredMessage>Loading...</CenteredMessage>;
-  if (!product) return <CenteredMessage>Product not found</CenteredMessage>;
+  if (loading) return <PageShell><CenteredMessage>Loading…</CenteredMessage></PageShell>;
+  if (!product) return <PageShell><CenteredMessage>Product not found</CenteredMessage></PageShell>;
 
   const heroImage = product.hero_url || product.cover_url;
   const canClaimToLibrary = isFreeLibraryClaim(product);
@@ -193,103 +189,100 @@ export default function ProductPage() {
   const accessLabel = getProductStoreAccessLabel(product);
 
   return (
-    <DockedLayout side="right">
-        <DockedContent>
-          <section style={{ minHeight: 460, borderRadius: 30, border: '1px solid rgba(255,255,255,0.10)', overflow: 'hidden', position: 'relative', background: getHeroBackground(product) }}>
-            {heroImage && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={heroImage} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.45 }} />
-            )}
-            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(8,8,14,0.92), rgba(8,8,14,0.58) 48%, rgba(8,8,14,0.16)), radial-gradient(circle at 75% 20%, rgba(255,255,255,0.18), transparent 34%)' }} />
-            <div style={{ position: 'relative', zIndex: 1, minHeight: 460, padding: 36, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div>
-                <Link className="btn-ghost" href="/browse" style={{ marginBottom: 28 }}>Back to Browse</Link>
-                <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.48)', marginBottom: 10 }}>{productMeta(product)}</div>
-                <h1 style={{ maxWidth: 820, fontSize: 64, fontWeight: 780, letterSpacing: '-0.045em', lineHeight: 0.92, color: '#fff', marginBottom: 14 }}>{product.title}</h1>
-                <div style={{ fontSize: 18, fontWeight: 650, color: 'rgba(255,255,255,0.62)' }}>by {product.creator}</div>
-              </div>
-              <p style={{ maxWidth: 720, fontSize: 16, fontWeight: 500, color: 'rgba(255,255,255,0.62)', lineHeight: 1.75 }}>{product.description}</p>
+    <PageShell>
+      <Link className="os-button os-button-ghost os-button-compact" href="/browse" style={{ marginBottom: 'var(--os-space-5)', alignSelf: 'flex-start' }}>
+        ← Back to Browse
+      </Link>
+
+      <DetailLayout
+        inspector={
+          <>
+            <div className="app-inspector-art">
+              {product.cover_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={product.cover_url} alt={product.title} />
+              )}
             </div>
-          </section>
-
-          <section className="product-info-grid">
-            <InfoPanel title="Included">
-              <InfoLine label="Format" value={product.product_type} />
-              <InfoLine label="Category" value={product.category} />
-              <InfoLine label="Access" value={accessLabel} />
-            </InfoPanel>
-            <InfoPanel title="Discovery">
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                <Link href={browseHref({ category: product.category })} className="chip">{product.category}</Link>
-                {(product.tags ?? []).map(tag => (
-                  <Link key={tag} href={browseHref({ tag })} className="chip">{tag}</Link>
-                ))}
+            <div>
+              <div className="app-detail-eyebrow os-type-eyebrow">{product.category}</div>
+              <div className="os-type-section-title">{product.title}</div>
+              <div className="os-type-meta" style={{ color: 'var(--os-color-ink-secondary)', marginTop: 'var(--os-space-1)' }}>by {product.creator}</div>
+              <div
+                className="app-card-price os-type-panel-title"
+                style={{ marginTop: 'var(--os-space-3)', color: canClaimToLibrary ? 'var(--os-color-owned)' : 'var(--os-color-ink)' }}
+              >
+                {formatProductPrice(product)}
               </div>
-            </InfoPanel>
-          </section>
-
-          <ProductReviewSection
-            owned={owned}
-            userSignedIn={Boolean(user)}
-            reviews={reviews}
-            body={reviewBody}
-            sentiment={reviewSentiment}
-            saving={reviewSaving}
-            onBody={setReviewBody}
-            onSentiment={setReviewSentiment}
-            onSave={saveReview}
-          />
-
-          {related.length > 0 && (
-            <section>
-              <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.52)', marginBottom: 12 }}>More Like This</div>
-              <div className="related-grid">
-                {related.map(item => (
-                  <Link key={item.id} href={`/product/${item.slug || item.id}`} style={{ borderRadius: 18, border: '1px solid rgba(255,255,255,0.09)', background: getHeroBackground(item), minHeight: 160, padding: 16, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', overflow: 'hidden' }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)', marginBottom: 6 }}>{item.category}</div>
-                    <div style={{ fontSize: 18, fontWeight: 780, lineHeight: 1, color: '#fff' }}>{item.title}</div>
-                  </Link>
-                ))}
-              </div>
-            </section>
+            </div>
+            <div className="app-detail-actions">
+              <button className="os-button os-button-primary" onClick={addToLibrary} disabled={owned}>{primaryAction}</button>
+            </div>
+            <hr className="app-detail-divider" />
+            <DetailRow label="Creator" value={product.creator} />
+            <DetailRow label="Type" value={product.product_type} />
+            <DetailRow label="Access" value={accessLabel} />
+            <DetailRow label="Status" value={owned ? 'Owned' : product.is_published ? 'Published' : 'Hidden'} />
+            {(product.tags ?? []).length > 0 && (
+              <>
+                <hr className="app-detail-divider" />
+                <div className="app-tag-row">
+                  {(product.tags ?? []).map(tag => (
+                    <Link key={tag} href={browseHref({ tag })} className="os-pill os-type-pill">{tag}</Link>
+                  ))}
+                </div>
+              </>
+            )}
+          </>
+        }
+      >
+        <section className="app-detail-hero">
+          {heroImage && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={heroImage} alt={product.title} />
           )}
-        </DockedContent>
+        </section>
 
-        <DetailInfoPanel
-          imageUrl={product.cover_url}
-          imageAlt={product.title}
-          eyebrow={product.category}
-          title={product.title}
-          subtitle={`by ${product.creator}`}
-          description={product.description ?? productMeta(product)}
-          price={formatProductPrice(product)}
-          priceTone={canClaimToLibrary ? 'free' : 'default'}
-          tags={product.tags ?? []}
-          actions={[
-            { label: primaryAction, onClick: addToLibrary, disabled: owned },
-          ]}
-          details={[
-            { label: 'Creator', value: product.creator },
-            { label: 'Type', value: product.product_type },
-            { label: 'Access', value: accessLabel },
-            { label: 'Status', value: owned ? 'Owned' : product.is_published ? 'Published' : 'Hidden' },
-          ]}
-          creator={{
-            name: product.creator,
-            href: creatorHref(product.creator),
-          }}
+        <div>
+          <div className="app-detail-eyebrow os-type-eyebrow">{productMeta(product)}</div>
+          <h1 className="app-detail-title os-type-page-title">{product.title}</h1>
+          <p className="app-detail-lede os-type-body">{product.description}</p>
+        </div>
+
+        <div className="app-panel">
+          <div className="app-panel-title os-type-eyebrow">Included</div>
+          <DetailRow label="Format" value={product.product_type} />
+          <DetailRow label="Category" value={product.category} />
+          <DetailRow label="Access" value={accessLabel} />
+        </div>
+
+        <ProductReviewSection
+          owned={owned}
+          userSignedIn={Boolean(user)}
+          reviews={reviews}
+          body={reviewBody}
+          sentiment={reviewSentiment}
+          saving={reviewSaving}
+          onBody={setReviewBody}
+          onSentiment={setReviewSentiment}
+          onSave={saveReview}
         />
-        <AchievementToast toast={toast} onDone={() => setToast(null)} />
-    </DockedLayout>
-  );
-}
 
-function InfoPanel({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div style={{ borderRadius: 22, border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.045)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', padding: 20 }}>
-      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.36)', marginBottom: 14 }}>{title}</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{children}</div>
-    </div>
+        {related.length > 0 && (
+          <section className="app-section">
+            <div className="hub-section-head">
+              <h2 className="hub-section-title os-type-section-title">More Like This</h2>
+            </div>
+            <ProductGrid>
+              {related.map(item => (
+                <ProductCard key={item.id} product={item} />
+              ))}
+            </ProductGrid>
+          </section>
+        )}
+      </DetailLayout>
+
+      <AchievementToast toast={toast} onDone={() => setToast(null)} />
+    </PageShell>
   );
 }
 
@@ -324,57 +317,63 @@ function ProductReviewSection({
       : 'Recommend this item to the community.';
 
   return (
-    <section id="reviews" className="product-review-panel">
-      <div className="product-review-summary">
-        <div>
-          <div className="surface-eyebrow">Community Reviews</div>
-          <h2>{total > 0 ? `${ratio}% recommend` : 'No reviews yet'}</h2>
-          <p>{total > 0 ? `${recommended} of ${total} review${total === 1 ? '' : 's'} recommend this item.` : prompt}</p>
-        </div>
-        <div className="product-review-meter" aria-hidden="true">
-          <span style={{ width: `${ratio}%` }} />
-        </div>
+    <section id="reviews" className="app-panel app-detail-stack">
+      <div>
+        <div className="app-panel-title os-type-eyebrow">Community Reviews</div>
+        <div className="os-type-section-title">{total > 0 ? `${ratio}% recommend` : 'No reviews yet'}</div>
+        <p className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)', marginTop: 'var(--os-space-1)' }}>
+          {total > 0 ? `${recommended} of ${total} review${total === 1 ? '' : 's'} recommend this item.` : prompt}
+        </p>
       </div>
 
-      <div className="product-review-form">
-        <div className="product-review-toggle">
-          <button type="button" className={sentiment === 'recommended' ? 'active' : ''} onClick={() => onSentiment('recommended')}>Recommend</button>
-          <button type="button" className={sentiment === 'not_recommended' ? 'active' : ''} onClick={() => onSentiment('not_recommended')}>Not for me</button>
+      <div className="app-detail-stack">
+        <div className="app-tag-row">
+          <button
+            type="button"
+            className={sentiment === 'recommended' ? 'os-button os-button-primary os-button-compact' : 'os-button os-button-ghost os-button-compact'}
+            onClick={() => onSentiment('recommended')}
+          >
+            Recommend
+          </button>
+          <button
+            type="button"
+            className={sentiment === 'not_recommended' ? 'os-button os-button-primary os-button-compact' : 'os-button os-button-ghost os-button-compact'}
+            onClick={() => onSentiment('not_recommended')}
+          >
+            Not for me
+          </button>
         </div>
-        <textarea value={body} onChange={event => onBody(event.target.value)} placeholder="Share a short review..." disabled={!userSignedIn || !owned} />
-        <button className="btn-primary" type="button" disabled={!userSignedIn || !owned || saving || body.trim().length === 0} onClick={onSave}>
-          {saving ? 'Saving...' : 'Save Review'}
+        <textarea
+          className="os-input-textarea"
+          value={body}
+          onChange={event => onBody(event.target.value)}
+          placeholder="Share a short review…"
+          disabled={!userSignedIn || !owned}
+        />
+        <button
+          className="os-button os-button-primary os-button-compact"
+          type="button"
+          disabled={!userSignedIn || !owned || saving || body.trim().length === 0}
+          onClick={onSave}
+          style={{ alignSelf: 'flex-start' }}
+        >
+          {saving ? 'Saving…' : 'Save Review'}
         </button>
       </div>
 
       {reviews.length > 0 && (
-        <div className="product-review-list">
+        <div className="app-detail-stack">
           {reviews.slice(0, 4).map(review => (
-            <article key={review.id} className="product-review-card">
-              <div>{review.sentiment === 'recommended' ? 'Recommended' : 'Not for me'}</div>
-              <p>{review.body}</p>
+            <article key={review.id} className="app-panel">
+              <div className="os-type-eyebrow" style={{ color: review.sentiment === 'recommended' ? 'var(--os-color-owned)' : 'var(--os-color-ink-muted)', marginBottom: 'var(--os-space-2)' }}>
+                {review.sentiment === 'recommended' ? 'Recommended' : 'Not for me'}
+              </div>
+              <p className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>{review.body}</p>
             </article>
           ))}
         </div>
       )}
     </section>
-  );
-}
-
-function InfoLine({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, borderBottom: '1px solid rgba(255,255,255,0.07)', paddingBottom: 10 }}>
-      <div style={{ fontSize: 12, fontWeight: 650, color: 'rgba(255,255,255,0.38)' }}>{label}</div>
-      <div style={{ fontSize: 12, fontWeight: 750, color: 'rgba(255,255,255,0.76)', textAlign: 'right' }}>{value}</div>
-    </div>
-  );
-}
-
-function CenteredMessage({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'rgba(255,255,255,0.30)', fontSize: 13, fontWeight: 500 }}>
-      {children}
-    </div>
   );
 }
 
@@ -419,18 +418,4 @@ async function unlockSupporterAchievement(userId: string, productId: string) {
     description: achievement.description,
     points: achievement.points,
   };
-}
-
-function getHeroBackground(product: Product) {
-  const tones: Record<string, string> = {
-    Music: 'linear-gradient(135deg, rgba(72,74,92,0.92), rgba(14,14,22,0.96)), radial-gradient(circle at 78% 18%, rgba(147,255,0,0.22), transparent 36%)',
-    Games: 'linear-gradient(135deg, rgba(32,42,78,0.94), rgba(9,12,20,0.96)), radial-gradient(circle at 75% 22%, rgba(92,144,255,0.30), transparent 38%)',
-    Books: 'linear-gradient(135deg, rgba(78,65,52,0.92), rgba(18,15,14,0.96)), radial-gradient(circle at 74% 20%, rgba(255,230,200,0.20), transparent 36%)',
-    'Sample Packs': 'linear-gradient(135deg, rgba(60,48,76,0.92), rgba(15,12,20,0.96)), radial-gradient(circle at 76% 20%, rgba(220,170,255,0.24), transparent 36%)',
-    Interactive: 'linear-gradient(135deg, rgba(30,64,68,0.92), rgba(8,16,18,0.96)), radial-gradient(circle at 76% 20%, rgba(125,255,232,0.22), transparent 36%)',
-    Tools: 'linear-gradient(135deg, rgba(58,61,68,0.94), rgba(14,15,18,0.96)), radial-gradient(circle at 76% 20%, rgba(255,255,255,0.20), transparent 36%)',
-    Apparel: 'linear-gradient(135deg, rgba(70,60,58,0.92), rgba(18,15,14,0.96)), radial-gradient(circle at 76% 20%, rgba(255,205,160,0.22), transparent 36%)',
-  };
-
-  return tones[product.category] ?? tones.Music;
 }

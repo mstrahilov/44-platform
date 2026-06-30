@@ -191,7 +191,7 @@ export default function Sidebar() {
   }
 
   const studioActive  = pathname.startsWith('/studio');
-  const accountActive = ['/account', '/messages', '/friends', '/achievements', '/notifications'].some(p => pathname.startsWith(p));
+  const accountActive = pathname.startsWith('/account');
   const settingsActive = pathname.startsWith('/settings');
 
   return (

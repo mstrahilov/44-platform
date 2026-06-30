@@ -4,19 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import type { Category, CommunityPost } from '@/lib/platform';
-import { FALLBACK_CATEGORIES } from '@/lib/platform';
 import { matchesCategory, matchesQuery } from '@/lib/taxonomy';
 import { PostCard, PageShell } from '@/components/Ui';
-
-const FALLBACK_POSTS: CommunityPost[] = [
-  {
-    id: 'fp1', creator_id: null, category_id: 'cat-posts-discussions',
-    title: 'Community Question', body: 'Generic discussion item.',
-    post_type: 'Question', status: 'published', created_at: new Date().toISOString(),
-    creators: { id: 'c1', slug: 'creator-a', name: 'Creator A', avatar_url: null },
-    categories: { id: 'cat-posts-discussions', slug: 'discussions', name: 'Discussions' },
-  },
-];
 
 export default function CommunityBrowsePage() {
   const [posts, setPosts] = useState<CommunityPost[]>([]);
@@ -48,10 +37,8 @@ export default function CommunityBrowsePage() {
     fetchData();
   }, []);
 
-  const postCatalog = posts.length > 0 ? posts : FALLBACK_POSTS;
-  const categoryCatalog = categories.length > 0
-    ? categories
-    : FALLBACK_CATEGORIES.filter(c => c.scope === 'posts');
+  const postCatalog = posts;
+  const categoryCatalog = categories;
 
   const visible = useMemo(() => {
     return postCatalog.filter(post => {

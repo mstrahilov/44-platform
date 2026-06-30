@@ -28,7 +28,7 @@ export default function DashboardPlaceholder() {
 
           <p
             style={{
-              color: 'rgba(255,255,255,.6)',
+              color: 'var(--os-color-ink-secondary)',
               fontSize: 18,
             }}
           >

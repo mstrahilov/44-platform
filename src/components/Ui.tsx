@@ -2,20 +2,13 @@ import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
 import type { Service, Resource, CommunityPost } from '@/lib/platform';
 import { formatServicePrice, resourceHref, serviceHref } from '@/lib/platform';
+import type { Product } from '@/lib/products';
+import { formatProductPrice } from '@/lib/products';
 
 export function PageShell({ children }: { children: ReactNode }) {
   return (
     <div className="page-scroll">
       <div className="page-inner">{children}</div>
-    </div>
-  );
-}
-
-export function SectionHeader({ title, href }: { title: string; href?: string }) {
-  return (
-    <div className="section-header">
-      <div className="section-title">{title}</div>
-      {href && <Link className="section-link" href={href}>View All {'->'}</Link>}
     </div>
   );
 }
@@ -36,14 +29,6 @@ export function GlassPanel({
   );
 }
 
-export function FilterSidebar({ children }: { children: ReactNode }) {
-  return <aside className="filter-sidebar">{children}</aside>;
-}
-
-export function SurfaceBar({ children }: { children: ReactNode }) {
-  return <div className="surface-bar">{children}</div>;
-}
-
 export function DockedLayout({ side = 'left', children }: { side?: 'left' | 'right'; children: ReactNode }) {
   return <div className={`docked-layout docked-layout-${side}`}>{children}</div>;
 }
@@ -54,257 +39,6 @@ export function DockedPanel({ children }: { children: ReactNode }) {
 
 export function DockedContent({ children }: { children: ReactNode }) {
   return <main className="docked-content">{children}</main>;
-}
-
-export interface BrowsePanelItem {
-  id: string;
-  label: string;
-  count?: number;
-  icon?: string;
-}
-
-export function BrowsePanel({
-  title,
-  totalCount,
-  allLabel = 'All Items',
-  activeId,
-  categories,
-  onSelect,
-  onClear,
-}: {
-  title: string;
-  totalCount: number;
-  allLabel?: string;
-  activeId: string;
-  categories: BrowsePanelItem[];
-  onSelect: (id: string) => void;
-  onClear?: () => void;
-}) {
-  return (
-    <DockedPanel>
-      <div className="browse-panel-title">{title}</div>
-      <div className="divider" />
-
-      <BrowsePanelButton
-        active={activeId === 'all'}
-        icon="grid"
-        count={totalCount}
-        onClick={() => onSelect('all')}
-      >
-        {allLabel}
-      </BrowsePanelButton>
-
-      <div className="browse-panel-group">
-        <div className="browse-panel-section-title">Categories</div>
-        <div className="browse-panel-list">
-          {categories.map(category => (
-            <BrowsePanelButton
-              key={category.id}
-              active={activeId === category.id}
-              icon={category.icon ?? category.id}
-              count={category.count}
-              onClick={() => onSelect(category.id)}
-            >
-              {category.label}
-            </BrowsePanelButton>
-          ))}
-        </div>
-      </div>
-    </DockedPanel>
-  );
-}
-
-function BrowsePanelButton({
-  active,
-  icon,
-  count,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  icon?: string;
-  count?: number;
-  onClick: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={active ? 'browse-filter-button browse-filter-button-active' : 'browse-filter-button'}
-      type="button"
-    >
-      <span className="browse-filter-left">
-        <span className="browse-filter-icon">
-        <img
-          src={iconForBrowse(icon)}
-          alt=""
-          aria-hidden="true"
-        />
-      </span>
-        <span className="browse-filter-label">{children}</span>
-      </span>
-      {typeof count === 'number' && <span className="browse-filter-count">{count.toLocaleString()}</span>}
-    </button>
-  );
-}
-
-function iconForBrowse(icon?: string) {
-  return `/icons/browse/${icon ?? 'grid'}.svg`;
-}
-
-export interface InfoPanelDetail {
-  label: string;
-  value: ReactNode;
-}
-
-export interface InfoPanelAction {
-  label: string;
-  href?: string;
-  onClick?: () => void;
-  disabled?: boolean;
-  variant?: 'primary' | 'ghost';
-}
-
-export interface InfoPanelCreator {
-  name: string;
-  subtitle?: string;
-  avatarUrl?: string | null;
-  href?: string;
-}
-
-export function InfoPanel({
-  imageUrl,
-  imageAlt = '',
-  imageCircle = false,
-  eyebrow,
-  title,
-  subtitle,
-  description,
-  price,
-  priceTone,
-  status,
-  tags = [],
-  actions = [],
-  details = [],
-  creator,
-  children,
-}: {
-  imageUrl?: string | null;
-  imageAlt?: string;
-  imageCircle?: boolean;
-  eyebrow?: string;
-  title: string;
-  subtitle?: string;
-  description?: string | null;
-  price?: string;
-  priceTone?: 'free' | 'default';
-  status?: string;
-  tags?: string[];
-  actions?: InfoPanelAction[];
-  details?: InfoPanelDetail[];
-  creator?: InfoPanelCreator;
-  children?: ReactNode;
-}) {
-  return (
-    <DockedPanel>
-      <div className="info-panel-stack">
-        <div className="info-panel-head">
-          <div className={imageCircle ? 'info-panel-image info-panel-image-circle' : 'info-panel-image'}>
-            {imageUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={imageUrl} alt={imageAlt} />
-            )}
-          </div>
-          <div className="info-panel-heading">
-            {eyebrow && <div className="info-panel-eyebrow">{eyebrow}</div>}
-            <div className="info-panel-title">{title}</div>
-            {subtitle && <div className="info-panel-subtitle">{subtitle}</div>}
-          </div>
-          {price && <div className={priceTone === 'free' ? 'info-panel-price info-panel-price-free' : 'info-panel-price'}>{price}</div>}
-          {!price && status && <div className="info-panel-status">{status}</div>}
-        </div>
-
-        {children}
-
-        {actions.length > 0 && (
-          <div className="info-panel-actions">
-            {actions.map(action => action.href ? (
-              <Link
-                key={`${action.label}-${action.href}`}
-                className={action.variant === 'ghost' ? 'btn-ghost' : 'btn-primary'}
-                href={action.href}
-              >
-                {action.label}
-              </Link>
-            ) : (
-              <button
-                key={action.label}
-                className={action.variant === 'ghost' ? 'btn-ghost' : 'btn-primary'}
-                onClick={action.onClick}
-                disabled={action.disabled}
-                type="button"
-              >
-                {action.label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {tags.length > 0 && (
-          <>
-            <div className="divider" />
-            <div>
-              <div className="info-panel-section-title">Tags</div>
-              <div className="info-panel-tags">
-                {tags.map(tag => <span className="info-panel-tag" key={tag}>{tag}</span>)}
-              </div>
-            </div>
-          </>
-        )}
-
-        {details.length > 0 && (
-          <>
-            <div className="divider" />
-            <div className="info-panel-meta">
-              <div className="info-panel-section-title">Details</div>
-              {details.map(detail => <InfoPanelLine key={detail.label} label={detail.label} value={detail.value} />)}
-            </div>
-          </>
-        )}
-
-        {creator && (
-          <>
-            <div className="divider" />
-            <div className="info-panel-creator">
-              <div className="info-panel-section-title">Creator</div>
-              <div className="info-panel-creator-row">
-                <span className="info-panel-creator-avatar">
-                  {creator.avatarUrl && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={creator.avatarUrl} alt="" />
-                  )}
-                </span>
-                <span>
-                  <span className="info-panel-creator-name">{creator.name}</span>
-                  {creator.subtitle && <span className="info-panel-creator-subtitle">{creator.subtitle}</span>}
-                </span>
-              </div>
-              {creator.href && <Link className="btn-ghost" href={creator.href}>View Profile</Link>}
-            </div>
-          </>
-        )}
-      </div>
-    </DockedPanel>
-  );
-}
-
-function InfoPanelLine({ label, value }: InfoPanelDetail) {
-  return (
-    <div className="info-panel-line">
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
 }
 
 export function PanelListItem({
@@ -339,25 +73,53 @@ export function PanelListItem({
   );
 }
 
-export function ServiceCard({ service, variant = 'wide' }: { service: Service; variant?: 'wide' | 'compact' }) {
+export function ProductCard({ product, owned }: { product: Product; owned?: boolean }) {
+  const href = `/product/${product.slug || product.id}`;
+  const image = product.cover_url || product.hero_url;
   return (
-    <Link className={`service-card service-card-${variant}`} href={serviceHref(service)}>
-      <div className="service-card-bg">
+    <Link href={href} className="app-card">
+      <div className="app-card-art">
+        {image && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={image} alt="" />
+        )}
+      </div>
+      <div className="app-card-body">
+        <div className="app-card-title os-type-card-title">{product.title}</div>
+        <div className="app-card-creator os-type-meta">{product.creator || '44 Creator'}</div>
+      </div>
+      <div className="app-card-footer">
+        {owned ? (
+          <span className="os-pill os-status-owned">Owned</span>
+        ) : (
+          <span className="app-card-price os-type-section-title">{formatProductPrice(product)}</span>
+        )}
+        <span className="os-button os-button-primary os-button-compact">View</span>
+      </div>
+    </Link>
+  );
+}
+
+export function ServiceCard({ service }: { service: Service }) {
+  return (
+    <Link className="app-card" href={serviceHref(service)}>
+      <div className="app-card-art app-card-art-wide">
         {service.cover_url && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={service.cover_url} alt="" />
         )}
       </div>
-      <span className="card-heart" aria-hidden="true">♡</span>
-      <div className="service-card-chip">{service.categories?.name ?? 'Service'}</div>
-      <div className="service-card-title">{service.title}</div>
-      <div className="service-card-description">{service.description}</div>
-      <div className="service-card-footer">
+      <div className="app-card-body">
+        <span className="os-pill os-type-pill app-card-chip">{service.categories?.name ?? 'Service'}</span>
+        <div className="app-card-title os-type-card-title">{service.title}</div>
+        <div className="app-card-desc os-type-body-small">{service.description}</div>
+      </div>
+      <div className="app-card-footer">
         <div>
-          <div className="service-card-price">{formatServicePrice(service)}</div>
-          <div className="service-card-meta">{service.delivery_estimate}</div>
+          <div className="app-card-price os-type-card-title">{formatServicePrice(service)}</div>
+          <div className="os-type-meta" style={{ color: 'var(--os-color-ink-muted)' }}>{service.delivery_estimate}</div>
         </div>
-        <div className="btn-ghost service-card-button">Learn More</div>
+        <span className="os-button os-button-secondary os-button-compact">Learn More</span>
       </div>
     </Link>
   );
@@ -367,28 +129,32 @@ export function ResourceCard({
   resource,
   saved,
   onSave,
-  variant = 'wide',
 }: {
   resource: Resource;
   saved?: boolean;
   onSave?: (resource: Resource) => void;
-  variant?: 'wide' | 'compact';
 }) {
   return (
-    <article className={`resource-card resource-card-${variant}`}>
-      <div className="resource-card-bg">
+    <article className="app-card">
+      <div className="app-card-art app-card-art-wide">
         {resource.cover_url && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={resource.cover_url} alt="" />
         )}
       </div>
-      <span className="card-heart" aria-hidden="true">♡</span>
-      <div className="resource-card-title">{resource.title}</div>
-      <div className="resource-card-creator">by {resource.creators?.name ?? '44 Community'}</div>
-      <div className="resource-card-description">{resource.summary}</div>
-      <div className="resource-card-footer">
-        {onSave && <button className="btn-ghost resource-card-action" onClick={() => onSave(resource)}>{saved ? 'Saved' : 'Save Resource'}</button>}
-        <Link className="card-open-label" href={resourceHref(resource)}>Read</Link>
+      <div className="app-card-body">
+        <span className="os-pill os-type-pill app-card-chip">{resource.categories?.name ?? resource.resource_type}</span>
+        <div className="app-card-title os-type-card-title">{resource.title}</div>
+        <div className="app-card-creator os-type-meta">by {resource.creators?.name ?? '44 Community'}</div>
+        <div className="app-card-desc os-type-body-small">{resource.summary}</div>
+      </div>
+      <div className="app-card-footer">
+        {onSave ? (
+          <button className="os-button os-button-ghost os-button-compact" onClick={() => onSave(resource)}>{saved ? 'Saved' : 'Save'}</button>
+        ) : (
+          <span />
+        )}
+        <Link className="os-button os-button-secondary os-button-compact" href={resourceHref(resource)}>Read</Link>
       </div>
     </article>
   );
@@ -396,11 +162,89 @@ export function ResourceCard({
 
 export function PostCard({ post }: { post: CommunityPost }) {
   return (
-    <article className="post-card">
-      <div className="chip">{post.categories?.name ?? post.post_type}</div>
-      <div className="post-card-title">{post.title}</div>
-      <div className="post-card-creator">by {post.creators?.name ?? '44 Community'}</div>
-      <div className="post-card-body">{post.body}</div>
+    <article className="app-card">
+      <div className="app-card-body">
+        <span className="os-pill os-type-pill app-card-chip">{post.categories?.name ?? post.post_type}</span>
+        <div className="app-card-title os-type-card-title">{post.title}</div>
+        <div className="app-card-creator os-type-meta">by {post.creators?.name ?? '44 Community'}</div>
+        <div className="app-card-desc os-type-body-small">{post.body}</div>
+      </div>
     </article>
   );
+}
+
+export function CategoryCard({ label, href, icon }: { label: string; href: string; icon?: string }) {
+  return (
+    <Link href={href} className="os-category-card os-category-icon-card">
+      {icon && (
+        <div className="os-category-icon">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={icon} alt="" />
+        </div>
+      )}
+      <div className="os-category-card-title os-type-section-title">{label}</div>
+    </Link>
+  );
+}
+
+export function HubHero({ title, copy }: { title: string; copy?: string }) {
+  return (
+    <section className="app-hero">
+      <h1 className="app-hero-title os-type-display">{title}</h1>
+      {copy && <p className="app-hero-copy os-type-body">{copy}</p>}
+    </section>
+  );
+}
+
+export function HubSection({ title, href, children }: { title: string; href?: string; children: ReactNode }) {
+  return (
+    <section className="app-section">
+      <div className="hub-section-head">
+        <h2 className="hub-section-title os-type-section-title">{title}</h2>
+        {href && <Link href={href} className="hub-view-all">View All →</Link>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+export function Shelf({ children }: { children: ReactNode }) {
+  return <div className="app-shelf">{children}</div>;
+}
+
+export function ProductGrid({ children }: { children: ReactNode }) {
+  return <div className="app-grid">{children}</div>;
+}
+
+export function EmptyPanel({ title, body }: { title: string; body?: string }) {
+  return (
+    <div className="app-empty">
+      <div className="os-type-section-title">{title}</div>
+      {body && (
+        <p className="os-type-body" style={{ marginTop: 'var(--os-space-2)', color: 'var(--os-color-ink-secondary)' }}>{body}</p>
+      )}
+    </div>
+  );
+}
+
+export function DetailLayout({ children, inspector }: { children: ReactNode; inspector: ReactNode }) {
+  return (
+    <div className="app-detail">
+      <div className="app-detail-main app-detail-stack">{children}</div>
+      <aside className="app-detail-inspector">{inspector}</aside>
+    </div>
+  );
+}
+
+export function DetailRow({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="app-detail-row os-type-body-small">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+export function CenteredMessage({ children }: { children: ReactNode }) {
+  return <div className="app-centered os-type-body">{children}</div>;
 }

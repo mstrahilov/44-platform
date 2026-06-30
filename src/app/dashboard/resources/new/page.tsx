@@ -8,7 +8,7 @@ export default function NewProductPage() {
           New Resource
         </h1>
 
-        <p style={{ color: 'rgba(255,255,255,.62)', fontSize: 18, marginBottom: 32 }}>
+        <p style={{ color: 'var(--os-color-ink-secondary)', fontSize: 18, marginBottom: 32 }}>
           Create a release, asset, book, apparel item, or interactive experience.
         </p>
 

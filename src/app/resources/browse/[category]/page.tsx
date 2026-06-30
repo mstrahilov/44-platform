@@ -3,7 +3,6 @@
 import { use, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Category, Resource } from '@/lib/platform';
-import { FALLBACK_CATEGORIES, FALLBACK_RESOURCES } from '@/lib/platform';
 import { matchesCategory } from '@/lib/taxonomy';
 import { ResourceCard, PageShell } from '@/components/Ui';
 
@@ -28,10 +27,8 @@ export default function ResourcesCategoryPage({ params }: { params: Promise<{ ca
     fetchData();
   }, []);
 
-  const resourceCatalog = resources.length > 0 ? resources : FALLBACK_RESOURCES;
-  const categoryCatalog = categories.length > 0
-    ? categories
-    : FALLBACK_CATEGORIES.filter(c => c.scope === 'resources');
+  const resourceCatalog = resources;
+  const categoryCatalog = categories;
 
   const cat = categoryCatalog.find(c => c.slug === category || c.name.toLowerCase() === category);
   const label = cat?.name ?? category.charAt(0).toUpperCase() + category.slice(1);

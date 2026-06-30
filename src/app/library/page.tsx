@@ -214,8 +214,8 @@ export default function LibraryPage() {
     <DockedLayout side="left">
       <DockedPanel>
         <div>
-          <h1 style={{ fontSize: 28, fontWeight: 780, letterSpacing: '-0.035em', color: '#fff', marginBottom: 4 }}>Library</h1>
-          <div style={{ fontSize: 12, fontWeight: 650, color: 'rgba(255,255,255,0.36)' }}>{entries.length} saved item{entries.length === 1 ? '' : 's'}</div>
+          <h1 style={{ fontSize: 28, fontWeight: 780, letterSpacing: '-0.035em', color: 'var(--os-color-ink)', marginBottom: 4 }}>Library</h1>
+          <div style={{ fontSize: 12, fontWeight: 650, color: 'var(--os-color-ink-muted)' }}>{entries.length} saved item{entries.length === 1 ? '' : 's'}</div>
         </div>
         <input className="input" value={query} onChange={event => setQuery(event.target.value)} placeholder="Filter your library..." />
         <div className="panel-list">
@@ -363,7 +363,7 @@ function MusicLibraryDetail({
 }) {
   const product = entry.product;
   const canRemove = isFreeLibraryClaim(product);
-  const playableTracks = tracks.length > 0 ? tracks : FALLBACK_TRACKS;
+  const playableTracks = tracks;
   const [activeTrackId, setActiveTrackId] = useState<string | null>(playableTracks[0]?.id ?? null);
   const activeTrack = playableTracks.find(track => track.id === activeTrackId) ?? playableTracks[0] ?? null;
 
@@ -455,17 +455,17 @@ function MusicLibraryDetail({
       <AchievementPanel achievements={achievements} unlockedAchievementIds={unlockedAchievementIds} />
 
       <section className="library-two-grid">
-        <InfoPanel title="Included">
+        <DetailCard title="Included">
           <InfoLine label="Format" value={product.product_type} />
           <InfoLine label="Category" value={product.category} />
           <InfoLine label="Access" value="Library item" />
-        </InfoPanel>
-        <InfoPanel title="Discovery">
+        </DetailCard>
+        <DetailCard title="Discovery">
           <div className="library-chip-row">
             <Link href={browseHref({ category: product.category })} className="chip">{product.category}</Link>
             {(product.tags ?? []).map(tag => <Link key={tag} href={browseHref({ tag })} className="chip">{tag}</Link>)}
           </div>
-        </InfoPanel>
+        </DetailCard>
       </section>
     </>
   );
@@ -535,18 +535,18 @@ function ProductLibraryDetail({
       </section>
 
       <section className="library-two-grid">
-        <InfoPanel title={content.detailsTitle}>
+        <DetailCard title={content.detailsTitle}>
           <InfoLine label="Price" value={formatProductPrice(product)} />
           <InfoLine label="Category" value={product.category} />
           <InfoLine label="Access" value={content.accessLabel} />
           <InfoLine label="Added" value={new Date(entry.acquiredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} />
-        </InfoPanel>
-        <InfoPanel title={content.contentTitle}>
+        </DetailCard>
+        <DetailCard title={content.contentTitle}>
           <div className="library-muted-copy">{product.description ?? content.emptyCopy}</div>
           <div className="library-helper-list">
             {content.notes.map(note => <span key={note}>{note}</span>)}
           </div>
-        </InfoPanel>
+        </DetailCard>
       </section>
     </>
   );
@@ -595,14 +595,14 @@ function ResourceDetail({
         />
       </section>
       <section className="library-two-grid">
-        <InfoPanel title="Resource">
+        <DetailCard title="Resource">
           <InfoLine label="Type" value={resource.resource_type} />
           <InfoLine label="Category" value={resource.categories?.name ?? 'Resource'} />
           <InfoLine label="Download" value={hasDownload ? 'Available' : 'Coming soon'} />
-        </InfoPanel>
-        <InfoPanel title="Preview">
+        </DetailCard>
+        <DetailCard title="Preview">
           <div className="library-muted-copy">{resource.body ?? resource.summary ?? 'No resource preview yet.'}</div>
-        </InfoPanel>
+        </DetailCard>
       </section>
     </>
   );
@@ -625,13 +625,13 @@ function ServiceHistoryDetail({ entry }: { entry: Extract<LibraryEntry, { kind: 
           <h1>{service?.title ?? 'Service request'}</h1>
           <p>with {service?.creators?.name ?? '44 Creator'}</p>
         </div>
-        <Link className="btn-primary" href={service ? `/services/${service.slug || service.id}` : '/services'}>View Request</Link>
+        <Link className="btn-primary" href={service ? `/service/${service.slug || service.id}` : '/services'}>View Request</Link>
       </section>
-      <InfoPanel title="Request">
+      <DetailCard title="Request">
         <InfoLine label="Status" value={entry.request.status} />
         <InfoLine label="Requested" value={new Date(entry.requestedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} />
         <div className="library-muted-copy">{entry.request.message || service?.description || 'No request note added.'}</div>
-      </InfoPanel>
+      </DetailCard>
     </>
   );
 }
@@ -723,11 +723,11 @@ function InfoCard({ value, label }: { value: string; label: string }) {
   );
 }
 
-function InfoPanel({ title, children }: { title: string; children: React.ReactNode }) {
+function DetailCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="library-panel">
-      <div className="surface-eyebrow">{title}</div>
-      <div className="library-panel-stack">{children}</div>
+    <div className="app-panel">
+      <div className="app-panel-title os-type-eyebrow">{title}</div>
+      <div className="app-detail-stack">{children}</div>
     </div>
   );
 }
@@ -755,7 +755,7 @@ function EmptyPanel({ title, body, href, action }: { title: string; body: string
 
 function CenteredMessage({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'rgba(255,255,255,0.30)', fontSize: 13, fontWeight: 500, textAlign: 'center', padding: 24 }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'var(--os-color-ink-muted)', fontSize: 13, fontWeight: 500, textAlign: 'center', padding: 24 }}>
       {children}
     </div>
   );
@@ -964,12 +964,3 @@ async function unlockAchievementsForTrigger({
 
   return newlyUnlockedAchievements;
 }
-
-const FALLBACK_TRACKS: Track[] = [
-  { id: 'fallback-track-1', product_id: 'fallback', number: 1, title: 'Track 01', duration_seconds: 61, audio_url: null, download_url: null },
-  { id: 'fallback-track-2', product_id: 'fallback', number: 2, title: 'Track 02', duration_seconds: 154, audio_url: null, download_url: null },
-  { id: 'fallback-track-3', product_id: 'fallback', number: 3, title: 'Track 03', duration_seconds: 192, audio_url: null, download_url: null },
-  { id: 'fallback-track-4', product_id: 'fallback', number: 4, title: 'Track 04', duration_seconds: 178, audio_url: null, download_url: null },
-  { id: 'fallback-track-5', product_id: 'fallback', number: 5, title: 'Track 05', duration_seconds: 244, audio_url: null, download_url: null },
-  { id: 'fallback-track-6', product_id: 'fallback', number: 6, title: 'Track 06', duration_seconds: 161, audio_url: null, download_url: null },
-];

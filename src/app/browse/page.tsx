@@ -1,15 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import ProductCard from '@/components/ProductCard';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
-import { FALLBACK_PRODUCTS } from '@/lib/products';
 import type { Category } from '@/lib/platform';
-import { FALLBACK_CATEGORIES } from '@/lib/platform';
 import { matchesCategory, matchesQuery, resolveCategory } from '@/lib/taxonomy';
-import { BrowsePanel, DockedContent, DockedLayout } from '@/components/Ui';
+import { PageShell, ProductGrid, ProductCard, EmptyPanel } from '@/components/Ui';
 
 export default function BrowsePage() {
   const { user } = useAuth();
@@ -75,10 +72,8 @@ export default function BrowsePage() {
     }
   }, [user]);
 
-  const catalog = products.length > 0 ? products : FALLBACK_PRODUCTS;
-  const categoryList = categories.length > 0
-    ? categories
-    : FALLBACK_CATEGORIES.filter(category => category.scope === 'products');
+  const catalog = products;
+  const categoryList = categories;
 
   const visibleProducts = useMemo(() => {
     return catalog.filter(product => {
@@ -93,40 +88,34 @@ export default function BrowsePage() {
     });
   }, [activeCategory, catalog, categoryList, query]);
 
-  function activateCategory(slug: string) {
-    setActiveCategory(slug);
-  }
-
-  function countForCategory(category: Category) {
-    return catalog.filter(product => matchesCategory(product, category)).length;
-  }
+  const filters = [{ slug: 'all', name: 'All' }, ...categoryList.map(c => ({ slug: c.slug, name: c.name }))];
 
   return (
-    <DockedLayout side="left">
-        <BrowsePanel
-          title="Browse Store"
-          totalCount={catalog.length}
-          activeId={activeCategory}
-          onSelect={activateCategory}
-          onClear={() => {
-            setActiveCategory('all');
-            setQuery('');
-          }}
-          categories={categoryList.map(category => ({
-              id: category.slug,
-              label: category.name,
-              icon: category.slug,
-              count: countForCategory(category),
-            }))}
-        />
+    <PageShell>
+      <h1 className="browse-page-title os-type-display">Browse</h1>
 
-        <DockedContent>
-          <div className="product-grid">
-            {visibleProducts.map(product => (
-              <ProductCard key={product.id} product={product} owned={ownedProductIds.includes(product.id)} />
-            ))}
-          </div>
-        </DockedContent>
-    </DockedLayout>
+      <div className="app-tag-row" style={{ marginBottom: 'var(--os-space-5)' }}>
+        {filters.map(filter => (
+          <button
+            key={filter.slug}
+            type="button"
+            className={filter.slug === activeCategory ? 'os-button os-button-primary os-button-compact' : 'os-button os-button-ghost os-button-compact'}
+            onClick={() => setActiveCategory(filter.slug)}
+          >
+            {filter.name}
+          </button>
+        ))}
+      </div>
+
+      {visibleProducts.length === 0 ? (
+        <EmptyPanel title="Nothing here yet." body="Try a different category or clear your filters." />
+      ) : (
+        <ProductGrid>
+          {visibleProducts.map(product => (
+            <ProductCard key={product.id} product={product} owned={ownedProductIds.includes(product.id)} />
+          ))}
+        </ProductGrid>
+      )}
+    </PageShell>
   );
 }

@@ -3,7 +3,6 @@
 import { use, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Category, Service } from '@/lib/platform';
-import { FALLBACK_CATEGORIES, FALLBACK_SERVICES } from '@/lib/platform';
 import { matchesCategory } from '@/lib/taxonomy';
 import { ServiceCard, PageShell } from '@/components/Ui';
 
@@ -28,10 +27,8 @@ export default function ServicesCategoryPage({ params }: { params: Promise<{ cat
     fetchData();
   }, []);
 
-  const serviceCatalog = services.length > 0 ? services : FALLBACK_SERVICES;
-  const categoryCatalog = categories.length > 0
-    ? categories
-    : FALLBACK_CATEGORIES.filter(c => c.scope === 'services');
+  const serviceCatalog = services;
+  const categoryCatalog = categories;
 
   const cat = categoryCatalog.find(c => c.slug === category || c.name.toLowerCase() === category);
   const label = cat?.name ?? category.charAt(0).toUpperCase() + category.slice(1);

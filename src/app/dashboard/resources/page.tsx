@@ -32,7 +32,7 @@ export default function DashboardResourcesPage() {
               Resources
             </h1>
 
-            <p style={{ color: 'rgba(255,255,255,.62)', fontSize: 18 }}>
+            <p style={{ color: 'var(--os-color-ink-secondary)', fontSize: 18 }}>
               Manage guides, articles, and creator documentation.
             </p>
           </div>
@@ -65,14 +65,14 @@ export default function DashboardResourcesPage() {
                   style={{
                     marginTop: 5,
                     fontSize: 13,
-                    color: 'rgba(255,255,255,.48)',
+                    color: 'var(--os-color-ink-muted)',
                   }}
                 >
                   Resource
                 </div>
               </div>
 
-              <div style={{ color: 'rgba(255,255,255,.58)', fontSize: 14 }}>
+              <div style={{ color: 'var(--os-color-ink-secondary)', fontSize: 14 }}>
                 {resource.type}
               </div>
 
@@ -82,7 +82,7 @@ export default function DashboardResourcesPage() {
                   borderRadius: 999,
                   padding: '7px 12px',
                   background: 'rgba(255,255,255,.07)',
-                  color: 'rgba(255,255,255,.68)',
+                  color: 'var(--os-color-ink-secondary)',
                   fontSize: 12,
                   fontWeight: 700,
                 }}

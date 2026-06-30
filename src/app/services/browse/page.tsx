@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Category, Service } from '@/lib/platform';
-import { FALLBACK_CATEGORIES, FALLBACK_SERVICES } from '@/lib/platform';
 import { matchesCategory, matchesQuery } from '@/lib/taxonomy';
 import { ServiceCard, PageShell } from '@/components/Ui';
 
@@ -37,10 +36,8 @@ export default function ServicesBrowsePage() {
     fetchData();
   }, []);
 
-  const serviceCatalog = services.length > 0 ? services : FALLBACK_SERVICES;
-  const categoryCatalog = categories.length > 0
-    ? categories
-    : FALLBACK_CATEGORIES.filter(c => c.scope === 'services');
+  const serviceCatalog = services;
+  const categoryCatalog = categories;
 
   const visible = useMemo(() => {
     return serviceCatalog.filter(service => {

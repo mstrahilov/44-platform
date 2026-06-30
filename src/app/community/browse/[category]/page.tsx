@@ -3,11 +3,9 @@
 import { use, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Category, CommunityPost } from '@/lib/platform';
-import { FALLBACK_CATEGORIES } from '@/lib/platform';
 import { matchesCategory } from '@/lib/taxonomy';
 import { PostCard, PageShell } from '@/components/Ui';
 
-const FALLBACK_POSTS: CommunityPost[] = [];
 
 export default function CommunityBrowseCategoryPage({ params }: { params: Promise<{ category: string }> }) {
   const { category } = use(params);
@@ -30,10 +28,8 @@ export default function CommunityBrowseCategoryPage({ params }: { params: Promis
     fetchData();
   }, []);
 
-  const postCatalog = posts.length > 0 ? posts : FALLBACK_POSTS;
-  const categoryCatalog = categories.length > 0
-    ? categories
-    : FALLBACK_CATEGORIES.filter(c => c.scope === 'posts');
+  const postCatalog = posts;
+  const categoryCatalog = categories;
 
   const cat = categoryCatalog.find(c => c.slug === category || c.name.toLowerCase() === category);
   const label = cat?.name ?? category.charAt(0).toUpperCase() + category.slice(1);
