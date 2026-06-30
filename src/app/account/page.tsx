@@ -1,21 +1,72 @@
-// src/app/account/page.tsx
+'use client';
 
-import { PageShell, GlassPanel } from '@/components/Ui';
+import { SystemPanel } from '@/components/SystemPanel';
+import { useAuth } from '@/lib/useAuth';
+
+const TABS = [
+  { id: 'account', label: 'Account' },
+  { id: 'achievements', label: 'Achievements' },
+  { id: 'orders', label: 'Orders' },
+  { id: 'notifications', label: 'Notifications' },
+  { id: 'messages', label: 'Messages' },
+  { id: 'friends', label: 'Friends' },
+];
 
 export default function AccountPage() {
-  return (
-    <PageShell>
-      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '64px 0' }}>
-        <GlassPanel style={{ padding: 40 }}>
-          <h1 style={{ fontSize: 42, fontWeight: 780, marginBottom: 12, letterSpacing: '-0.04em' }}>
-            Account
-          </h1>
+  const { user } = useAuth();
+  const initials = user?.email?.charAt(0).toUpperCase() ?? '?';
 
-          <p style={{ color: 'rgba(255,255,255,.6)', fontSize: 18 }}>
-            Manage your email, security, billing, and account details.
-          </p>
-        </GlassPanel>
-      </div>
-    </PageShell>
+  return (
+    <div className="panel-scroll">
+      <SystemPanel tabs={TABS} avatar={initials}>
+        {tab => (
+          <>
+            {tab === 'account' && (
+              <div>
+                <h2 className="os-type-panel-title" style={{ marginBottom: 8 }}>Account</h2>
+                <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)' }}>
+                  Manage your email, password, and account details.
+                </p>
+                {user && (
+                  <p className="os-type-body-small" style={{ marginTop: 16, color: 'var(--os-color-ink-muted)' }}>
+                    Signed in as {user.email}
+                  </p>
+                )}
+              </div>
+            )}
+            {tab === 'achievements' && (
+              <div>
+                <h2 className="os-type-panel-title" style={{ marginBottom: 8 }}>Achievements</h2>
+                <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)' }}>Your badges and milestones will appear here.</p>
+              </div>
+            )}
+            {tab === 'orders' && (
+              <div>
+                <h2 className="os-type-panel-title" style={{ marginBottom: 8 }}>Orders</h2>
+                <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)' }}>Your purchase history will appear here.</p>
+              </div>
+            )}
+            {tab === 'notifications' && (
+              <div>
+                <h2 className="os-type-panel-title" style={{ marginBottom: 8 }}>Notifications</h2>
+                <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)' }}>Your notifications will appear here.</p>
+              </div>
+            )}
+            {tab === 'messages' && (
+              <div>
+                <h2 className="os-type-panel-title" style={{ marginBottom: 8 }}>Messages</h2>
+                <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)' }}>Your messages will appear here.</p>
+              </div>
+            )}
+            {tab === 'friends' && (
+              <div>
+                <h2 className="os-type-panel-title" style={{ marginBottom: 8 }}>Friends</h2>
+                <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)' }}>Your friends will appear here.</p>
+              </div>
+            )}
+          </>
+        )}
+      </SystemPanel>
+    </div>
   );
 }

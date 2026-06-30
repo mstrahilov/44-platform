@@ -326,26 +326,6 @@ export default function ServicesPage() {
       <div className="svc-page">
         <ServiceHero />
 
-        {categoryTiles.length > 0 && (
-          <section className="svc-section" aria-label="Service categories">
-            <div className="svc-section-head">
-              <h2 className="svc-section-title os-type-panel-title">Browse by Category</h2>
-            </div>
-            <div className="svc-category-grid">
-              {categoryTiles.map(category => (
-                <CategoryTile key={category.slug} category={category} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {newest.length > 0 && (
-          <section className="svc-section">
-            <SvcSectionHead title="Featured Services" href="/services/browse" />
-            <ServiceShelf services={newest} />
-          </section>
-        )}
-
         {orderedCategories.map(category => {
           const categoryServices = services
             .filter(service => {
@@ -362,10 +342,10 @@ export default function ServicesPage() {
 
           return (
             <section key={category.slug} className="svc-section">
-              <SvcSectionHead
-                title={`Explore ${category.name}`}
-                href={`/services/browse?category=${category.slug}`}
-              />
+              <div className="hub-section-head">
+                <h2 className="hub-section-title">Explore {category.name}</h2>
+                <Link href={`/services/browse?category=${category.slug}`} className="hub-view-all">View All →</Link>
+              </div>
               <ServiceShelf services={categoryServices} />
             </section>
           );

@@ -1,21 +1,55 @@
-// src/app/settings/page.tsx
+'use client';
 
-import { PageShell, GlassPanel } from '@/components/Ui';
+import { SystemPanel } from '@/components/SystemPanel';
+
+const TABS = [
+  { id: 'appearance', label: 'Appearance' },
+  { id: 'notifications', label: 'Notifications' },
+  { id: 'privacy', label: 'Privacy' },
+  { id: 'connected-apps', label: 'Connected Apps' },
+];
 
 export default function SettingsPage() {
   return (
-    <PageShell>
-      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '64px 0' }}>
-        <GlassPanel style={{ padding: 40 }}>
-          <h1 style={{ fontSize: 42, fontWeight: 780, marginBottom: 12, letterSpacing: '-0.04em' }}>
-            Settings
-          </h1>
-
-          <p style={{ color: 'rgba(255,255,255,.6)', fontSize: 18 }}>
-            Customize your app preferences, appearance, notifications, and connected features.
-          </p>
-        </GlassPanel>
-      </div>
-    </PageShell>
+    <div className="panel-scroll">
+      <SystemPanel tabs={TABS}>
+        {tab => (
+          <>
+            {tab === 'appearance' && (
+              <div>
+                <h2 className="os-type-panel-title" style={{ marginBottom: 8 }}>Appearance</h2>
+                <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)' }}>
+                  Customize your theme, accent color, and display preferences.
+                </p>
+              </div>
+            )}
+            {tab === 'notifications' && (
+              <div>
+                <h2 className="os-type-panel-title" style={{ marginBottom: 8 }}>Notifications</h2>
+                <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)' }}>
+                  Control what you get notified about and how.
+                </p>
+              </div>
+            )}
+            {tab === 'privacy' && (
+              <div>
+                <h2 className="os-type-panel-title" style={{ marginBottom: 8 }}>Privacy</h2>
+                <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)' }}>
+                  Manage your data, visibility, and privacy settings.
+                </p>
+              </div>
+            )}
+            {tab === 'connected-apps' && (
+              <div>
+                <h2 className="os-type-panel-title" style={{ marginBottom: 8 }}>Connected Apps</h2>
+                <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)' }}>
+                  Manage third-party apps and integrations.
+                </p>
+              </div>
+            )}
+          </>
+        )}
+      </SystemPanel>
+    </div>
   );
 }

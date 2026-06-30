@@ -60,7 +60,7 @@ export default function StorePage() {
   }, [catalog]);
 
   const musicProducts = catalog.filter(product => product.category === 'Music').slice(0, 10);
-  const apparelProducts = catalog.filter(product => product.category === 'Apparel').slice(0, 10);
+  const apparelProducts = catalog.filter(product => product.category === 'Apparel' || product.category === 'Merch').slice(0, 10);
 
   return (
     <PageShell>
@@ -322,26 +322,12 @@ export default function StorePage() {
       <div className="store44-page">
         <StoreHero />
 
-        {categories.length > 0 && (
-          <section className="store44-section" aria-label="Product categories">
-            <div className="store44-section-head">
-              <h2 className="store44-section-title os-type-panel-title">
-                Browse by Category
-              </h2>
-            </div>
-
-            <div className="store44-category-grid">
-              {categories.map(category => (
-                <CategoryTile key={category} category={category} />
-              ))}
-            </div>
-          </section>
-        )}
-
         {musicProducts.length > 0 && (
           <section className="store44-section">
-            <SectionHeading title="Explore Music" href={browseHref({ category: 'Music' })} />
-
+            <div className="hub-section-head">
+              <h2 className="hub-section-title">Explore Music</h2>
+              <Link href="/store/music" className="hub-view-all">View All →</Link>
+            </div>
             <ProductShelf
               products={musicProducts}
               ownedProductIds={ownedProductIds}
@@ -352,8 +338,10 @@ export default function StorePage() {
 
         {apparelProducts.length > 0 && (
           <section className="store44-section">
-            <SectionHeading title="Explore Apparel" href={browseHref({ category: 'Apparel' })} />
-
+            <div className="hub-section-head">
+              <h2 className="hub-section-title">Explore Merch</h2>
+              <Link href="/store/merch" className="hub-view-all">View All →</Link>
+            </div>
             <ProductShelf
               products={apparelProducts}
               ownedProductIds={ownedProductIds}

@@ -1,25 +1,16 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { use, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Category, Service } from '@/lib/platform';
 import { FALLBACK_CATEGORIES, FALLBACK_SERVICES } from '@/lib/platform';
-import { matchesCategory, matchesQuery } from '@/lib/taxonomy';
+import { matchesCategory } from '@/lib/taxonomy';
 import { ServiceCard, PageShell } from '@/components/Ui';
 
-export default function ServicesBrowsePage() {
+export default function ServicesCategoryPage({ params }: { params: Promise<{ category: string }> }) {
+  const { category } = use(params);
   const [services, setServices] = useState<Service[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [query, setQuery] = useState('');
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const cat = params.get('category');
-    const q = params.get('q');
-    if (cat) setActiveCategory(cat);
-    if (q) setQuery(q);
-  }, []);
 
   useEffect(() => {
     async function fetchData() {
@@ -42,24 +33,17 @@ export default function ServicesBrowsePage() {
     ? categories
     : FALLBACK_CATEGORIES.filter(c => c.scope === 'services');
 
-  const visible = useMemo(() => {
-    return serviceCatalog.filter(service => {
-      const cat = categoryCatalog.find(c => c.slug === activeCategory || c.name === activeCategory);
-      const catMatch = activeCategory === 'all' || matchesCategory(service, cat);
-      const qMatch = !query.trim() || matchesQuery(service, query);
-      return catMatch && qMatch;
-    });
-  }, [activeCategory, categoryCatalog, query, serviceCatalog]);
+  const cat = categoryCatalog.find(c => c.slug === category || c.name.toLowerCase() === category);
+  const label = cat?.name ?? category.charAt(0).toUpperCase() + category.slice(1);
 
-  const label = activeCategory === 'all'
-    ? 'All Services'
-    : (categoryCatalog.find(c => c.slug === activeCategory)?.name ?? activeCategory);
+  const visible = useMemo(() => {
+    return serviceCatalog.filter(s => matchesCategory(s, cat));
+  }, [serviceCatalog, cat]);
 
   return (
     <PageShell>
       <style>{`
         .browse-page { display: flex; flex-direction: column; gap: 20px; }
-        .browse-heading { display: flex; flex-direction: column; gap: 6px; }
         .service-grid {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

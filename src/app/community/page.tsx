@@ -165,24 +165,6 @@ export default function CommunityPage() {
           </div>
         </section>
 
-        {categoryTiles.length > 0 && (
-          <section className="cmty-section" aria-label="Community categories">
-            <div className="cmty-section-head">
-              <h2 className="cmty-section-title os-type-panel-title">Browse by Category</h2>
-            </div>
-            <div className="cmty-category-grid">
-              {categoryTiles.map(tile => (
-                <Link key={tile.href} href={tile.href} className="os-category-icon-card cmty-category-tile">
-                  <div className="os-category-icon">
-                    <img src={COMMUNITY_ICON_MAP[tile.title] ?? '/icons/browse/grid.svg'} alt="" />
-                  </div>
-                  <div className="os-category-card-title os-type-section-title">{tile.title}</div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
-
         {categoryList.map(category => {
           const categoryPosts = communityPosts
             .filter(p =>
@@ -194,11 +176,9 @@ export default function CommunityPage() {
           if (categoryPosts.length === 0) return null;
           return (
             <section key={category.slug} className="cmty-section">
-              <div className="cmty-section-head">
-                <h2 className="cmty-section-title os-type-panel-title">Explore {category.name}</h2>
-                <Link className="os-button os-button-glass os-button-compact cmty-section-action" href={`/community/browse?category=${category.slug}`}>
-                  View All
-                </Link>
+              <div className="hub-section-head">
+                <h2 className="hub-section-title">Explore {category.name}</h2>
+                <Link href={`/community/browse?category=${category.slug}`} className="hub-view-all">View All →</Link>
               </div>
               <div className="cmty-post-grid">
                 {categoryPosts.map(post => (

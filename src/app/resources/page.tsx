@@ -182,28 +182,6 @@ export default function ResourcesPage() {
           </div>
         </section>
 
-        {categoryTiles.length > 0 && (
-          <section className="res-section" aria-label="Resource categories">
-            <div className="res-section-head">
-              <h2 className="res-section-title os-type-panel-title">Browse by Category</h2>
-            </div>
-            <div className="res-category-grid">
-              {categoryTiles.map(category => (
-                <Link
-                  key={category.id}
-                  href={`/resources/browse?category=${category.slug}`}
-                  className="os-category-icon-card res-category-tile"
-                >
-                  <div className="os-category-icon">
-                    <img src={RESOURCE_ICON_MAP[category.name] ?? '/icons/browse/grid.svg'} alt="" />
-                  </div>
-                  <div className="os-category-card-title os-type-section-title">{category.name}</div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
-
         {categoryCatalog.map(category => {
           const categoryResources = resourceCatalog
             .filter(r => r.category_id === category.id || r.categories?.slug === category.slug)
@@ -211,11 +189,9 @@ export default function ResourcesPage() {
           if (categoryResources.length === 0) return null;
           return (
             <section key={category.slug} className="res-section">
-              <div className="res-section-head">
-                <h2 className="res-section-title os-type-panel-title">Explore {category.name}</h2>
-                <Link className="os-button os-button-glass os-button-compact res-section-action" href={`/resources/browse?category=${category.slug}`}>
-                  View All
-                </Link>
+              <div className="hub-section-head">
+                <h2 className="hub-section-title">Explore {category.name}</h2>
+                <Link href={`/resources/browse?category=${category.slug}`} className="hub-view-all">View All →</Link>
               </div>
               <div className="res-shelf">
                 {categoryResources.map(resource => (
@@ -227,26 +203,6 @@ export default function ResourcesPage() {
             </section>
           );
         })}
-
-        {resourceCatalog.length > 0 && categoryCatalog.every(cat =>
-          resourceCatalog.filter(r => r.category_id === cat.id || r.categories?.slug === cat.slug).length === 0
-        ) && (
-          <section className="res-section">
-            <div className="res-section-head">
-              <h2 className="res-section-title os-type-panel-title">New Resources</h2>
-              <Link className="os-button os-button-glass os-button-compact res-section-action" href="/resources/browse">
-                View All
-              </Link>
-            </div>
-            <div className="res-shelf">
-              {resourceCatalog.slice(0, 8).map(resource => (
-                <div key={resource.id} className="res-shelf-item">
-                  <ResourceCard resource={resource} />
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
       </div>
     </PageShell>
   );

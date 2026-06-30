@@ -1,25 +1,16 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { use, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Category, Resource } from '@/lib/platform';
 import { FALLBACK_CATEGORIES, FALLBACK_RESOURCES } from '@/lib/platform';
-import { matchesCategory, matchesQuery } from '@/lib/taxonomy';
+import { matchesCategory } from '@/lib/taxonomy';
 import { ResourceCard, PageShell } from '@/components/Ui';
 
-export default function ResourcesBrowsePage() {
+export default function ResourcesCategoryPage({ params }: { params: Promise<{ category: string }> }) {
+  const { category } = use(params);
   const [resources, setResources] = useState<Resource[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [query, setQuery] = useState('');
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const cat = params.get('category');
-    const q = params.get('q');
-    if (cat) setActiveCategory(cat);
-    if (q) setQuery(q);
-  }, []);
 
   useEffect(() => {
     async function fetchData() {
@@ -42,18 +33,12 @@ export default function ResourcesBrowsePage() {
     ? categories
     : FALLBACK_CATEGORIES.filter(c => c.scope === 'resources');
 
-  const visible = useMemo(() => {
-    return resourceCatalog.filter(resource => {
-      const cat = categoryCatalog.find(c => c.slug === activeCategory || c.name === activeCategory);
-      const catMatch = activeCategory === 'all' || matchesCategory(resource, cat);
-      const qMatch = !query.trim() || matchesQuery(resource, query);
-      return catMatch && qMatch;
-    });
-  }, [activeCategory, categoryCatalog, query, resourceCatalog]);
+  const cat = categoryCatalog.find(c => c.slug === category || c.name.toLowerCase() === category);
+  const label = cat?.name ?? category.charAt(0).toUpperCase() + category.slice(1);
 
-  const label = activeCategory === 'all'
-    ? 'All Resources'
-    : (categoryCatalog.find(c => c.slug === activeCategory)?.name ?? activeCategory);
+  const visible = useMemo(() => {
+    return resourceCatalog.filter(r => matchesCategory(r, cat));
+  }, [resourceCatalog, cat]);
 
   return (
     <PageShell>

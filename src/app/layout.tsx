@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import Nav from '@/components/Nav';
+import Sidebar from '@/components/Sidebar';
 
 export const metadata: Metadata = {
   title: '44',
@@ -22,7 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </div>
 
         <div className="app-shell">
-          <Nav />
+          <Sidebar />
           <main className="app-main">
             {children}
           </main>

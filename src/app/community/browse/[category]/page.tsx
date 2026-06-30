@@ -1,36 +1,18 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
+import { use, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Category, CommunityPost } from '@/lib/platform';
 import { FALLBACK_CATEGORIES } from '@/lib/platform';
-import { matchesCategory, matchesQuery } from '@/lib/taxonomy';
+import { matchesCategory } from '@/lib/taxonomy';
 import { PostCard, PageShell } from '@/components/Ui';
 
-const FALLBACK_POSTS: CommunityPost[] = [
-  {
-    id: 'fp1', creator_id: null, category_id: 'cat-posts-discussions',
-    title: 'Community Question', body: 'Generic discussion item.',
-    post_type: 'Question', status: 'published', created_at: new Date().toISOString(),
-    creators: { id: 'c1', slug: 'creator-a', name: 'Creator A', avatar_url: null },
-    categories: { id: 'cat-posts-discussions', slug: 'discussions', name: 'Discussions' },
-  },
-];
+const FALLBACK_POSTS: CommunityPost[] = [];
 
-export default function CommunityBrowsePage() {
+export default function CommunityBrowseCategoryPage({ params }: { params: Promise<{ category: string }> }) {
+  const { category } = use(params);
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [query, setQuery] = useState('');
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const cat = params.get('category') ?? params.get('view');
-    const q = params.get('q');
-    if (cat && cat !== 'feed') setActiveCategory(cat);
-    if (q) setQuery(q);
-  }, []);
 
   useEffect(() => {
     async function fetchData() {
@@ -53,18 +35,12 @@ export default function CommunityBrowsePage() {
     ? categories
     : FALLBACK_CATEGORIES.filter(c => c.scope === 'posts');
 
-  const visible = useMemo(() => {
-    return postCatalog.filter(post => {
-      const cat = categoryCatalog.find(c => c.slug === activeCategory || c.name === activeCategory);
-      const catMatch = activeCategory === 'all' || matchesCategory(post, cat);
-      const qMatch = !query.trim() || matchesQuery(post, query);
-      return catMatch && qMatch;
-    });
-  }, [activeCategory, categoryCatalog, query, postCatalog]);
+  const cat = categoryCatalog.find(c => c.slug === category || c.name.toLowerCase() === category);
+  const label = cat?.name ?? category.charAt(0).toUpperCase() + category.slice(1);
 
-  const label = activeCategory === 'all'
-    ? 'Community'
-    : (categoryCatalog.find(c => c.slug === activeCategory)?.name ?? activeCategory);
+  const visible = useMemo(() => {
+    return postCatalog.filter(p => matchesCategory(p, cat));
+  }, [postCatalog, cat]);
 
   return (
     <PageShell>
