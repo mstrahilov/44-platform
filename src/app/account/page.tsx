@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { SystemPanel } from '@/components/SystemPanel';
 import { useAuth } from '@/lib/useAuth';
 
@@ -13,8 +15,19 @@ const TABS = [
 ];
 
 export default function AccountPage() {
-  const { user } = useAuth();
+  const router = useRouter();
+  const { user, loading } = useAuth();
   const initials = user?.email?.charAt(0).toUpperCase() ?? '?';
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace('/login');
+    }
+  }, [loading, router, user]);
+
+  if (loading || !user) {
+    return <div className="panel-scroll" />;
+  }
 
   return (
     <div className="panel-scroll">

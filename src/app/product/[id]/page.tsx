@@ -7,8 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
 import { browseHref, formatProductPrice, productMeta } from '@/lib/products';
-import { getProductStoreAccessLabel, isFreeLibraryClaim } from '@/lib/libraryContent';
-import { creatorHref } from '@/lib/platform';
+import { getProductStoreAccessLabel, isFreeCollectionClaim } from '@/lib/collectionContent';
 import { PageShell, DetailLayout, DetailRow, CenteredMessage, ProductGrid, ProductCard } from '@/components/Ui';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
 
@@ -77,7 +76,7 @@ export default function ProductPage() {
       if (!product) return;
 
       const { data } = await supabase
-        .from('library_items')
+        .from('collection_items')
         .select('product_id')
         .eq('user_id', userId)
         .eq('product_id', product.id)
@@ -111,19 +110,19 @@ export default function ProductPage() {
     }
   }, [reviews, user]);
 
-  async function addToLibrary() {
+  async function addToCollection() {
     if (!product) return;
     if (!user) {
-      alert('Sign in first, then add this to your library.');
+      alert('Sign in first, then add this to your collection.');
       return;
     }
-    if (!isFreeLibraryClaim(product)) {
-      alert('Cart is coming soon. Free items can be added to your library now.');
+    if (!isFreeCollectionClaim(product)) {
+      alert('Cart is coming soon. Free items can be added to your collection now.');
       return;
     }
 
     const { error } = await supabase
-      .from('library_items')
+      .from('collection_items')
       .upsert({ user_id: user.id, product_id: product.id, acquisition_type: 'free' }, { onConflict: 'user_id,product_id' });
 
     if (error) {
@@ -141,7 +140,7 @@ export default function ProductPage() {
     }
 
     if (!owned) {
-      alert('Add this item to your library before leaving a review.');
+      alert('Add this item to your collection before leaving a review.');
       return;
     }
 
@@ -184,8 +183,8 @@ export default function ProductPage() {
   if (!product) return <PageShell><CenteredMessage>Product not found</CenteredMessage></PageShell>;
 
   const heroImage = product.hero_url || product.cover_url;
-  const canClaimToLibrary = isFreeLibraryClaim(product);
-  const primaryAction = owned ? 'Owned' : canClaimToLibrary ? 'Add to Library' : 'Add to Cart';
+  const canClaimToCollection = isFreeCollectionClaim(product);
+  const primaryAction = owned ? 'Owned' : canClaimToCollection ? 'Add to Collection' : 'Add to Cart';
   const accessLabel = getProductStoreAccessLabel(product);
 
   return (
@@ -209,13 +208,13 @@ export default function ProductPage() {
               <div className="os-type-meta" style={{ color: 'var(--os-color-ink-secondary)', marginTop: 'var(--os-space-1)' }}>by {product.creator}</div>
               <div
                 className="app-card-price os-type-panel-title"
-                style={{ marginTop: 'var(--os-space-3)', color: canClaimToLibrary ? 'var(--os-color-owned)' : 'var(--os-color-ink)' }}
+                style={{ marginTop: 'var(--os-space-3)', color: canClaimToCollection ? 'var(--os-color-owned)' : 'var(--os-color-ink)' }}
               >
                 {formatProductPrice(product)}
               </div>
             </div>
             <div className="app-detail-actions">
-              <button className="os-button os-button-primary" onClick={addToLibrary} disabled={owned}>{primaryAction}</button>
+              <button className="os-button os-button-primary" onClick={addToCollection} disabled={owned}>{primaryAction}</button>
             </div>
             <hr className="app-detail-divider" />
             <DetailRow label="Creator" value={product.creator} />
@@ -313,7 +312,7 @@ function ProductReviewSection({
   const prompt = !userSignedIn
     ? 'Sign in to review this item.'
     : !owned
-      ? 'Add this item to your Library before reviewing it.'
+      ? 'Add this item to your Collection before reviewing it.'
       : 'Recommend this item to the community.';
 
   return (

@@ -56,7 +56,7 @@ export default function ResourcePage() {
   async function saveResource() {
     if (!resource) return;
     if (!user) {
-      alert('Sign in first, then save this resource to your library.');
+      alert('Sign in first, then save this resource to your collection.');
       return;
     }
     const { error } = await supabase

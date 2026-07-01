@@ -47,7 +47,7 @@ const IconCommunity = () => (
   </svg>
 );
 
-const IconLibrary = () => (
+const IconCollection = () => (
   <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 3v12"/>
     <path d="M7 3v12"/>
@@ -94,19 +94,12 @@ const STORE_CHILDREN: NavChild[] = [
   { label: 'Assets', href: '/store/assets', icon: <ChildIcon src="/icons/assets.svg" /> },
 ];
 
-const LIBRARY_CHILDREN: NavChild[] = [
-  { label: 'Music',  href: '/library/music',  icon: <ChildIcon src="/icons/music.svg" /> },
-  { label: 'Books',  href: '/library/books',  icon: <ChildIcon src="/icons/books.svg" /> },
-  { label: 'Merch',  href: '/library/merch',  icon: <ChildIcon src="/icons/apparel.svg" /> },
-  { label: 'Assets', href: '/library/assets', icon: <ChildIcon src="/icons/assets.svg" /> },
-];
-
 function getActiveSectionId(pathname: string): string {
   if (pathname === '/' || pathname.startsWith('/store')) return 'store';
   if (pathname.startsWith('/services')) return 'services';
   if (pathname.startsWith('/resources')) return 'resources';
   if (pathname.startsWith('/community')) return 'community';
-  if (pathname.startsWith('/library')) return 'library';
+  if (pathname.startsWith('/collection')) return 'collection';
   return '';
 }
 
@@ -128,14 +121,15 @@ export default function Sidebar() {
   const { user } = useAuth();
   const activeSectionId = getActiveSectionId(pathname);
   const [openId, setOpenId] = useState<string>(activeSectionId);
-  const [search, setSearch] = useState('');
+  const search = '';
 
   const [serviceChildren, setServiceChildren] = useState<NavChild[]>([]);
   const [resourceChildren, setResourceChildren] = useState<NavChild[]>([]);
   const [communityChildren, setCommunityChildren] = useState<NavChild[]>([]);
 
-  useEffect(() => { setSearch(window.location.search); }, [pathname]);
-  useEffect(() => { setOpenId(activeSectionId); }, [activeSectionId]);
+  useEffect(() => {
+    Promise.resolve().then(() => setOpenId(activeSectionId));
+  }, [activeSectionId]);
 
   useEffect(() => {
     async function fetchCategories() {
@@ -155,34 +149,12 @@ export default function Sidebar() {
     fetchCategories();
   }, []);
 
-  const svcFallback: NavChild[] = [
-    { label: 'Audio',       href: '/services/browse/audio' },
-    { label: 'Video',       href: '/services/browse/video' },
-    { label: 'Design',      href: '/services/browse/design' },
-    { label: 'Development', href: '/services/browse/development' },
-    { label: 'Marketing',   href: '/services/browse/marketing' },
-  ];
-  const resFallback: NavChild[] = [
-    { label: 'Getting Started', href: '/resources/browse/getting-started' },
-    { label: 'Crafting',        href: '/resources/browse/crafting' },
-    { label: 'Building',        href: '/resources/browse/building' },
-    { label: 'Publishing',      href: '/resources/browse/publishing' },
-    { label: 'Case Studies',    href: '/resources/browse/case-studies' },
-  ];
-  const cmtyFallback: NavChild[] = [
-    { label: 'Showcase',      href: '/community/browse/showcase' },
-    { label: 'Discussion',    href: '/community/browse/discussion' },
-    { label: 'Questions',     href: '/community/browse/questions' },
-    { label: 'Collaboration', href: '/community/browse/collaboration' },
-    { label: 'Updates',       href: '/community/browse/updates' },
-  ];
-
   const NAV: NavSection[] = [
     { id: 'store',     label: 'Store',     href: '/',          icon: <IconStore />,     children: STORE_CHILDREN },
-    { id: 'services',  label: 'Services',  href: '/services',  icon: <IconServices />,  children: serviceChildren.length  ? serviceChildren  : svcFallback },
-    { id: 'resources', label: 'Resources', href: '/resources', icon: <IconResources />, children: resourceChildren.length ? resourceChildren : resFallback },
-    { id: 'community', label: 'Community', href: '/community', icon: <IconCommunity />, children: communityChildren.length ? communityChildren : cmtyFallback },
-    { id: 'library',   label: 'Library',   href: '/library',   icon: <IconLibrary />,   children: LIBRARY_CHILDREN },
+    { id: 'services',  label: 'Services',  href: '/services',  icon: <IconServices />,  children: serviceChildren },
+    { id: 'resources', label: 'Resources', href: '/resources', icon: <IconResources />, children: resourceChildren },
+    { id: 'community', label: 'Community', href: '/community', icon: <IconCommunity />, children: communityChildren },
+    ...(user ? [{ id: 'collection', label: 'Collection', href: '/collection', icon: <IconCollection />, children: [] }] : []),
   ];
 
   function handleSectionClick(section: NavSection) {
@@ -193,6 +165,7 @@ export default function Sidebar() {
   const studioActive  = pathname.startsWith('/studio');
   const accountActive = pathname.startsWith('/account');
   const settingsActive = pathname.startsWith('/settings');
+  const loginActive = pathname.startsWith('/login');
 
   return (
     <aside className="app-sidebar">
@@ -217,7 +190,7 @@ export default function Sidebar() {
                 <span className="sidebar-item-label">{section.label}</span>
               </button>
 
-              {isOpen && (
+              {isOpen && section.children.length > 0 && (
                 <div className="sidebar-children">
                   {section.children.map(child => (
                     <Link
@@ -237,20 +210,27 @@ export default function Sidebar() {
       </nav>
 
       <div className="sidebar-footer">
-        {user && (
-          <Link href="/studio" className={studioActive ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}>
-            <span className="sidebar-item-icon"><IconStudio /></span>
-            <span className="sidebar-item-label">Studio</span>
+        {user ? (
+          <>
+            <Link href="/studio" className={studioActive ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}>
+              <span className="sidebar-item-icon"><IconStudio /></span>
+              <span className="sidebar-item-label">Studio</span>
+            </Link>
+            <Link href="/account" className={accountActive ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}>
+              <span className="sidebar-item-icon"><IconAccount /></span>
+              <span className="sidebar-item-label">Account</span>
+            </Link>
+            <Link href="/settings" className={settingsActive ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}>
+              <span className="sidebar-item-icon"><IconSettings /></span>
+              <span className="sidebar-item-label">Settings</span>
+            </Link>
+          </>
+        ) : (
+          <Link href="/login" className={loginActive ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}>
+            <span className="sidebar-item-icon"><IconAccount /></span>
+            <span className="sidebar-item-label">Sign In</span>
           </Link>
         )}
-        <Link href="/account" className={accountActive ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}>
-          <span className="sidebar-item-icon"><IconAccount /></span>
-          <span className="sidebar-item-label">Account</span>
-        </Link>
-        <Link href="/settings" className={settingsActive ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}>
-          <span className="sidebar-item-icon"><IconSettings /></span>
-          <span className="sidebar-item-label">Settings</span>
-        </Link>
       </div>
     </aside>
   );

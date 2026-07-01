@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import type { Category, CommunityPost } from '@/lib/platform';
 import { matchesCategory, matchesQuery } from '@/lib/taxonomy';
@@ -10,22 +9,22 @@ import { PostCard, PageShell } from '@/components/Ui';
 export default function CommunityBrowsePage() {
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [query, setQuery] = useState('');
-
-  useEffect(() => {
+  const [activeCategory] = useState(() => {
+    if (typeof window === 'undefined') return 'all';
     const params = new URLSearchParams(window.location.search);
     const cat = params.get('category') ?? params.get('view');
-    const q = params.get('q');
-    if (cat && cat !== 'feed') setActiveCategory(cat);
-    if (q) setQuery(q);
-  }, []);
+    return cat && cat !== 'feed' ? cat : 'all';
+  });
+  const [query] = useState(() => {
+    if (typeof window === 'undefined') return '';
+    return new URLSearchParams(window.location.search).get('q') ?? '';
+  });
 
   useEffect(() => {
     async function fetchData() {
       const [{ data: postRows }, { data: categoryRows }] = await Promise.all([
         supabase
-          .from('community_posts')
+          .from('posts')
           .select('*, creators(id, slug, name, avatar_url), categories(id, slug, name)')
           .eq('status', 'published')
           .order('created_at', { ascending: false }),

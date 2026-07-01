@@ -139,7 +139,7 @@ export function formatServicePrice(service: Pick<Service, 'starting_price_cents'
 }
 
 export function serviceHref(service: Pick<Service, 'id' | 'slug'>) {
-  return `/services/${service.slug || service.id}`;
+  return `/service/${service.slug || service.id}`;
 }
 
 export function resourceHref(resource: Pick<Resource, 'slug' | 'id'>) {
@@ -160,4 +160,3 @@ export function creatorHref(creator: Pick<Creator, 'slug'> | string | null | und
 
   return `/community/${slug || 'creator-a'}`;
 }
-

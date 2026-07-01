@@ -16,7 +16,7 @@ export default function CommunityBrowseCategoryPage({ params }: { params: Promis
     async function fetchData() {
       const [{ data: postRows }, { data: categoryRows }] = await Promise.all([
         supabase
-          .from('community_posts')
+          .from('posts')
           .select('*, creators(id, slug, name, avatar_url), categories(id, slug, name)')
           .eq('status', 'published')
           .order('created_at', { ascending: false }),

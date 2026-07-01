@@ -882,17 +882,17 @@ body {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.library-release-hero,
-.library-panel,
-.library-info-card,
-.library-empty-panel {
+.collection-release-hero,
+.collection-panel,
+.collection-info-card,
+.collection-empty-panel {
   border: 1px solid rgba(255,255,255,0.09);
   background: rgba(255,255,255,0.045);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
 }
 
-.library-release-hero {
+.collection-release-hero {
   border-radius: var(--r-xl);
   padding: 24px;
   display: grid;
@@ -905,7 +905,7 @@ body {
   overflow: visible;
 }
 
-.library-release-cover {
+.collection-release-cover {
   width: 104px;
   aspect-ratio: 1;
   border-radius: 16px;
@@ -914,18 +914,18 @@ body {
   overflow: hidden;
 }
 
-.library-release-cover img {
+.collection-release-cover img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.library-release-copy {
+.collection-release-copy {
   min-width: 0;
 }
 
-.library-release-copy h1 {
+.collection-release-copy h1 {
   font-size: 34px;
   font-weight: 780;
   letter-spacing: -0.04em;
@@ -934,21 +934,21 @@ body {
   margin-bottom: 8px;
 }
 
-.library-release-copy p,
-.library-muted-copy {
+.collection-release-copy p,
+.collection-muted-copy {
   font-size: 14px;
   font-weight: 550;
   color: var(--os-color-ink-secondary);
   line-height: 1.65;
 }
 
-.library-helper-list {
+.collection-helper-list {
   display: grid;
   gap: 8px;
   margin-top: 14px;
 }
 
-.library-helper-list span {
+.collection-helper-list span {
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 12px;
   background: rgba(255,255,255,0.045);
@@ -958,23 +958,23 @@ body {
   font-weight: 650;
 }
 
-.library-action-cluster {
+.collection-action-cluster {
   display: flex;
   align-items: center;
   gap: 10px;
   justify-self: end;
 }
 
-.library-action-cluster .btn-primary {
+.collection-action-cluster .btn-primary {
   min-width: 116px;
   justify-content: center;
 }
 
-.library-options-wrap {
+.collection-options-wrap {
   position: relative;
 }
 
-.library-options-button {
+.collection-options-button {
   width: 46px;
   height: 46px;
   border-radius: 50%;
@@ -987,12 +987,12 @@ body {
   cursor: pointer;
 }
 
-.library-options-button:hover {
+.collection-options-button:hover {
   background: rgba(255,255,255,0.12);
   color: var(--os-color-ink);
 }
 
-.library-options-menu {
+.collection-options-menu {
   position: absolute;
   right: 0;
   top: calc(100% + 8px);
@@ -1007,8 +1007,8 @@ body {
   -webkit-backdrop-filter: blur(24px);
 }
 
-.library-options-menu button,
-.library-options-menu a {
+.collection-options-menu button,
+.collection-options-menu a {
   display: block;
   width: 100%;
   border: 0;
@@ -1024,13 +1024,13 @@ body {
   text-decoration: none;
 }
 
-.library-options-menu button:hover,
-.library-options-menu a:hover {
+.collection-options-menu button:hover,
+.collection-options-menu a:hover {
   background: rgba(255,255,255,0.08);
   color: var(--os-color-ink);
 }
 
-.library-player-panel {
+.collection-player-panel {
   border: 1px solid rgba(255,255,255,0.09);
   background: rgba(255,255,255,0.045);
   backdrop-filter: blur(24px);
@@ -1043,7 +1043,7 @@ body {
   align-items: center;
 }
 
-.library-player-panel strong {
+.collection-player-panel strong {
   display: block;
   color: var(--os-color-ink);
   font-size: 18px;
@@ -1051,37 +1051,37 @@ body {
   letter-spacing: -0.02em;
 }
 
-.library-player-panel audio {
+.collection-player-panel audio {
   width: 100%;
 }
 
-.library-chip-row {
+.collection-chip-row {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
   margin-top: 14px;
 }
 
-.library-stats-grid,
-.library-two-grid {
+.collection-stats-grid,
+.collection-two-grid {
   display: grid;
   gap: 14px;
 }
 
-.library-stats-grid {
+.collection-stats-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.library-two-grid {
+.collection-two-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.library-info-card {
+.collection-info-card {
   border-radius: 18px;
   padding: 20px;
 }
 
-.library-info-card strong {
+.collection-info-card strong {
   display: block;
   font-size: 28px;
   font-weight: 800;
@@ -1090,7 +1090,7 @@ body {
   margin-bottom: 5px;
 }
 
-.library-info-card span {
+.collection-info-card span {
   font-size: 11px;
   font-weight: 760;
   letter-spacing: 0.12em;
@@ -1098,18 +1098,18 @@ body {
   color: var(--os-color-ink-muted);
 }
 
-.library-panel {
+.collection-panel {
   border-radius: var(--r-xl);
   padding: 22px;
 }
 
-.library-panel-stack {
+.collection-panel-stack {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.library-panel-header {
+.collection-panel-header {
   display: flex;
   justify-content: space-between;
   gap: 14px;
@@ -1117,18 +1117,18 @@ body {
   margin-bottom: 14px;
 }
 
-.library-panel-header span {
+.collection-panel-header span {
   font-size: 12px;
   font-weight: 650;
   color: var(--os-color-ink-muted);
 }
 
-.library-track-list {
+.collection-track-list {
   display: flex;
   flex-direction: column;
 }
 
-.library-track-row {
+.collection-track-row {
   display: grid;
   grid-template-columns: 34px 34px minmax(0, 1fr) auto;
   align-items: center;
@@ -1137,15 +1137,15 @@ body {
   border-bottom: 1px solid rgba(255,255,255,0.055);
 }
 
-.library-track-row span,
-.library-track-row em {
+.collection-track-row span,
+.collection-track-row em {
   font-style: normal;
   font-size: 12px;
   font-weight: 650;
   color: var(--os-color-ink-muted);
 }
 
-.library-track-row button {
+.collection-track-row button {
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -1155,7 +1155,7 @@ body {
   cursor: pointer;
 }
 
-.library-track-row strong {
+.collection-track-row strong {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1165,13 +1165,13 @@ body {
   color: var(--os-color-ink-secondary);
 }
 
-.library-achievement-grid {
+.collection-achievement-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
-.library-achievement-card {
+.collection-achievement-card {
   min-height: 92px;
   border-radius: 16px;
   border: 1px solid rgba(255,255,255,0.08);
@@ -1182,7 +1182,7 @@ body {
   gap: 14px;
 }
 
-.library-achievement-card strong {
+.collection-achievement-card strong {
   display: block;
   font-size: 13px;
   font-weight: 800;
@@ -1191,14 +1191,14 @@ body {
   margin-bottom: 6px;
 }
 
-.library-achievement-card p {
+.collection-achievement-card p {
   font-size: 12px;
   font-weight: 540;
   line-height: 1.45;
   color: var(--os-color-ink-muted);
 }
 
-.library-achievement-card span {
+.collection-achievement-card span {
   align-self: flex-start;
   font-size: 10px;
   font-weight: 820;
@@ -1207,12 +1207,12 @@ body {
   color: var(--os-color-ink-muted);
 }
 
-.library-achievement-card-unlocked {
+.collection-achievement-card-unlocked {
   border-color: rgba(147,255,0,0.22);
   background: rgba(147,255,0,0.055);
 }
 
-.library-achievement-card-unlocked span {
+.collection-achievement-card-unlocked span {
   color: var(--accent);
 }
 
@@ -1301,7 +1301,7 @@ body {
   }
 }
 
-.library-info-line {
+.collection-info-line {
   display: flex;
   justify-content: space-between;
   gap: 16px;
@@ -1309,20 +1309,20 @@ body {
   padding-bottom: 10px;
 }
 
-.library-info-line span {
+.collection-info-line span {
   font-size: 12px;
   font-weight: 650;
   color: var(--os-color-ink-muted);
 }
 
-.library-info-line strong {
+.collection-info-line strong {
   font-size: 12px;
   font-weight: 750;
   color: var(--os-color-ink-secondary);
   text-align: right;
 }
 
-.library-empty-panel {
+.collection-empty-panel {
   min-height: 360px;
   border-radius: var(--r-xl);
   display: flex;
@@ -1332,19 +1332,120 @@ body {
   padding: 28px;
 }
 
-.library-empty-panel h1 {
+.collection-empty-panel h1 {
   font-size: 30px;
   font-weight: 780;
   letter-spacing: -0.04em;
   margin-bottom: 10px;
 }
 
-.library-empty-panel p {
+.collection-empty-panel p {
   max-width: 430px;
   font-size: 14px;
   line-height: 1.65;
   color: var(--os-color-ink-secondary);
   margin-bottom: 18px;
+}
+
+.collection-system-section {
+  display: grid;
+  gap: var(--os-space-6);
+}
+
+.collection-system-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--os-space-4);
+}
+
+.collection-system-heading h1 {
+  margin: 0;
+  color: var(--os-color-ink);
+  font-size: clamp(32px, 4vw, 56px);
+  font-weight: 820;
+  letter-spacing: 0;
+  line-height: 0.95;
+}
+
+.collection-system-heading p {
+  margin: 0;
+  color: var(--os-color-ink-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.collection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: var(--os-space-5);
+}
+
+.collection-grid-card {
+  display: grid;
+  overflow: hidden;
+  min-height: 300px;
+  color: inherit;
+  text-decoration: none;
+  border: 1px solid var(--os-color-border);
+  border-radius: var(--os-radius-card);
+  background: linear-gradient(145deg, rgba(255,255,255,0.09), rgba(255,255,255,0.03));
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.collection-grid-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--os-color-border-strong);
+  background: linear-gradient(145deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04));
+}
+
+.collection-grid-art {
+  display: block;
+  aspect-ratio: 1;
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255,255,255,0.13), transparent 34%),
+    linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+}
+
+.collection-grid-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.collection-grid-copy {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 16px;
+}
+
+.collection-grid-copy strong {
+  color: var(--os-color-ink);
+  font-size: 16px;
+  font-weight: 820;
+  line-height: 1.08;
+}
+
+.collection-grid-copy span,
+.collection-grid-copy em {
+  color: var(--os-color-ink-secondary);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.collection-add-button {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: inherit;
+  color: var(--os-color-ink);
+  background: transparent;
+  font-size: 24px;
+  font-weight: 560;
+  cursor: pointer;
 }
 
 @media (max-width: 980px) {
@@ -1375,9 +1476,9 @@ body {
   .product-info-grid,
   .product-review-panel,
   .product-review-list,
-  .library-release-hero,
-  .library-stats-grid,
-  .library-two-grid {
+  .collection-release-hero,
+  .collection-stats-grid,
+  .collection-two-grid {
     grid-template-columns: 1fr;
   }
 

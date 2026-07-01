@@ -30,7 +30,7 @@ export default function StorePage() {
   useEffect(() => {
     async function fetchOwnedItems(userId: string) {
       const { data } = await supabase
-        .from('library_items')
+        .from('collection_items')
         .select('product_id')
         .eq('user_id', userId);
 
@@ -40,7 +40,7 @@ export default function StorePage() {
     if (user) {
       fetchOwnedItems(user.id);
     } else {
-      setOwnedProductIds([]);
+      Promise.resolve().then(() => setOwnedProductIds([]));
     }
   }, [user]);
 

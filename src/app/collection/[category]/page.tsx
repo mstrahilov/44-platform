@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
-export default function LegacyLibraryRedirect() {
+export default function CollectionCategoryRedirect() {
   redirect('/collection');
 }

@@ -9,16 +9,14 @@ import { ServiceCard, PageShell } from '@/components/Ui';
 export default function ServicesBrowsePage() {
   const [services, setServices] = useState<Service[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [query, setQuery] = useState('');
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const cat = params.get('category');
-    const q = params.get('q');
-    if (cat) setActiveCategory(cat);
-    if (q) setQuery(q);
-  }, []);
+  const [activeCategory] = useState(() => {
+    if (typeof window === 'undefined') return 'all';
+    return new URLSearchParams(window.location.search).get('category') ?? 'all';
+  });
+  const [query] = useState(() => {
+    if (typeof window === 'undefined') return '';
+    return new URLSearchParams(window.location.search).get('q') ?? '';
+  });
 
   useEffect(() => {
     async function fetchData() {
