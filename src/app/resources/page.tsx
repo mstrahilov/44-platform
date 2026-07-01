@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Category, Resource } from '@/lib/platform';
 import { PageShell, HubHero, HubSection, Shelf, ResourceCard } from '@/components/Ui';
+import { useTopbarTabs } from '@/components/TopbarContext';
 
 export default function ResourcesPage() {
   const [resources, setResources] = useState<Resource[]>([]);
@@ -28,6 +29,19 @@ export default function ResourcesPage() {
 
   const resourceCatalog = resources;
   const categoryCatalog = categories;
+
+  useTopbarTabs(
+    categoryCatalog.length > 0
+      ? [
+          { id: 'all', label: 'All', href: '/resources', active: true },
+          ...categoryCatalog.slice(0, 5).map(c => ({
+            id: c.slug,
+            label: c.name,
+            href: `/resources/browse/${c.slug}`,
+          })),
+        ]
+      : undefined,
+  );
 
   return (
     <PageShell>

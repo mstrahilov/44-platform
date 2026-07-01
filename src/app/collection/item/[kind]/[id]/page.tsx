@@ -8,12 +8,11 @@ import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
-import { formatProductPrice } from '@/lib/products';
 import { getProductCollectionContent, getProductCollectionPrimaryAction, getProductRuntimeKind } from '@/lib/collectionContent';
 import { creatorHref, type ProductAchievement, type Resource, type ServiceRequest, type Track, type UserAchievement } from '@/lib/platform';
-import { DetailRow, PageShell } from '@/components/Ui';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
 import { unlockAchievementForUser } from '@/lib/achievementNotifications';
+import { useTopbarBack } from '@/components/TopbarContext';
 
 type CollectionKind = 'product' | 'resource' | 'service';
 
@@ -29,6 +28,7 @@ interface CollectionItemRow {
 export default function CollectionItemPage() {
   const { kind, id } = useParams<{ kind: CollectionKind; id: string }>();
   const { user, loading: authLoading } = useAuth();
+  useTopbarBack({ href: '/collection', label: 'Collection' });
   const [productRow, setProductRow] = useState<CollectionItemRow | null>(null);
   const [resourceRow, setResourceRow] = useState<{ id: string; saved_at: string; resources: Resource | null } | null>(null);
   const [serviceRow, setServiceRow] = useState<ServiceRequest | null>(null);
@@ -125,9 +125,9 @@ export default function CollectionItemPage() {
     fetchItem(user.id);
   }, [authLoading, id, kind, user]);
 
-  if (authLoading || loading) return <CenteredMessage>Loading...</CenteredMessage>;
-  if (error) return <CenteredMessage>{error}</CenteredMessage>;
-  if (!user) return <CenteredMessage>Sign in to view this collection item.</CenteredMessage>;
+  if (authLoading || loading) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Loading…</div>;
+  if (error) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>{error}</div>;
+  if (!user) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Sign in to view this collection item.</div>;
 
   if (kind === 'product' && productRow?.products) {
     return <ProductCollectionDetail userId={user.id} row={productRow} tracks={tracks} achievements={achievements} unlockedAchievementIds={unlockedAchievementIds} />;
@@ -141,7 +141,7 @@ export default function CollectionItemPage() {
     return <ServiceCollectionDetail row={serviceRow} />;
   }
 
-  return <CenteredMessage>Collection item not found.</CenteredMessage>;
+  return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Collection item not found.</div>;
 }
 
 function ProductCollectionDetail({
@@ -169,14 +169,8 @@ function ProductCollectionDetail({
   const [playedTrackIds, setPlayedTrackIds] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<AchievementToastData | null>(null);
 
-  useEffect(() => {
-    setActiveTrackId(null);
-    setPlayedTrackIds(new Set());
-  }, [product.id]);
-
-  useEffect(() => {
-    setLocalUnlockedAchievementIds(unlockedAchievementIds);
-  }, [unlockedAchievementIds]);
+  useEffect(() => { setActiveTrackId(null); setPlayedTrackIds(new Set()); }, [product.id]);
+  useEffect(() => { setLocalUnlockedAchievementIds(unlockedAchievementIds); }, [unlockedAchievementIds]);
 
   async function toggleTrack(track: Track) {
     setActiveTrackId(current => {
@@ -184,7 +178,6 @@ function ProductCollectionDetail({
       const next = current === track.id ? null : track.id;
       return next;
     });
-
     setPlayedTrackIds(current => {
       const next = new Set(current);
       next.add(track.id);
@@ -199,22 +192,13 @@ function ProductCollectionDetail({
       const requiredTrackCount = tracks.filter(track => track.title?.trim()).length || tracks.length;
       if (playedTrackIds.size < requiredTrackCount) return;
       if (!row.product_id) return;
-
       const achievement = achievements.find(
         item => item.trigger_type === 'all_tracks_listened' || item.trigger_type === 'played_all_tracks',
       );
       if (!achievement) return;
       if (localUnlockedAchievementIds.has(achievement.id)) return;
-
-      const unlockedAchievement = await unlockAchievementForUser(
-        userId,
-        row.product_id,
-        achievement,
-        { source: 'collection_playback' },
-      );
-
+      const unlockedAchievement = await unlockAchievementForUser(userId, row.product_id, achievement, { source: 'collection_playback' });
       if (!unlockedAchievement) return;
-
       setLocalUnlockedAchievementIds(current => {
         const next = new Set(current);
         next.add(achievement.id);
@@ -222,98 +206,132 @@ function ProductCollectionDetail({
       });
       setToast(unlockedAchievement);
     }
-
     maybeUnlockCasualListener();
   }, [achievements, isMusic, localUnlockedAchievementIds, playedTrackIds, row.product_id, tracks.length, userId]);
 
+  const heroImage = product.hero_url || product.cover_url;
+  const description = product.long_description || product.short_description || '';
+
   return (
-    <PageShell>
-      <AchievementToast toast={toast} onDone={() => setToast(null)} />
-      <CollectionHeaderPanel
-        coverUrl={product.cover_url}
-        eyebrow={product.product_type}
-        title={product.title}
-        subtitle={`by ${product.creator}`}
-        actions={(
-          <>
+    <div className="view-detail-single">
+
+      {/* Album header */}
+      <div
+        className={heroImage ? 'view-album-header' : 'view-album-header view-album-header-fallback'}
+        style={heroImage ? { backgroundImage: `url(${heroImage})` } as React.CSSProperties : undefined}
+      >
+        <div className="view-album-cover">
+          {heroImage && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={heroImage} alt={product.title} />
+          )}
+        </div>
+        <div className="view-album-copy">
+          <div className="view-album-eyebrow">{product.product_type}</div>
+          <h1 className="view-album-title">{product.title}</h1>
+          <div className="view-album-meta">
+            <span style={{ fontWeight: 700 }}>{product.creator}</span>
+            {isMusic && tracks.length > 0 && (
+              <>
+                <span className="view-album-meta-sep" />
+                <span>{tracks.length} track{tracks.length === 1 ? '' : 's'}</span>
+              </>
+            )}
+          </div>
+          <div className="view-album-actions">
             <button className="os-button os-button-primary" type="button" onClick={() => runProductAction(action)}>{action.label}</button>
             <Link className="os-button os-button-secondary" href={creatorLink}>View Creator</Link>
-          </>
-        )}
-      />
-
-      <CollectionInfoPanel
-        title="Info"
-        copy={product.long_description || product.short_description || `${product.title} is ready in your Collection.`}
-      />
-
-      {isMusic && (
-        <section className="collection-panel">
-          <div className="collection-panel-header">
-            <div className="surface-eyebrow">Tracklist</div>
-            <span>{tracks.length} tracks</span>
           </div>
-          <div className="collection-track-list">
+        </div>
+      </div>
+
+      {/* Description */}
+      {description.length > 40 && (
+        <div className="view-section">
+          <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', lineHeight: 1.72, maxWidth: 720, fontSize: 16 }}>
+            {description}
+          </p>
+        </div>
+      )}
+
+      {/* Tracklist (music) */}
+      {isMusic && tracks.length > 0 && (
+        <div className="view-section">
+          <h2 className="view-section-title">Tracklist</h2>
+          <div className="view-tracklist">
             {tracks.map((track, index) => (
-              <div className="collection-track-row" key={track.id}>
-                <span>{String(index + 1).padStart(2, '0')}</span>
+              <div className="view-track-row" key={track.id}>
+                <span className="view-track-number">{String(index + 1).padStart(2, '0')}</span>
                 <button
                   type="button"
+                  className="view-track-play"
                   aria-label={`${activeTrackId === track.id ? 'Pause' : 'Play'} ${track.title}`}
                   onClick={() => toggleTrack(track)}
                 >
                   {activeTrackId === track.id ? '❚❚' : '▶'}
                 </button>
-                <strong>{track.title}</strong>
-                <em>{formatDuration(track.duration_seconds)}</em>
+                <span className="view-track-title">{track.title}</span>
+                <span className="view-track-duration">{formatDuration(track.duration_seconds)}</span>
               </div>
             ))}
           </div>
-        </section>
+        </div>
       )}
 
+      {/* Non-music content placeholder */}
       {!isMusic && (
-        <section className="collection-panel">
-          <div className="collection-panel-header">
-            <div className="surface-eyebrow">{content.contentTitle}</div>
-          </div>
-          <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)' }}>
+        <div className="view-section">
+          <h2 className="view-section-title">{content.contentTitle}</h2>
+          <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', lineHeight: 1.72, maxWidth: 720 }}>
             {content.emptyCopy}
           </p>
-        </section>
-      )}
-
-      {achievements.length > 0 && (
-        <section className="collection-panel">
-          <div className="collection-panel-header">
-            <div className="surface-eyebrow">Achievements</div>
-            <span>{unlocked.length} of {achievements.length}</span>
-          </div>
-          <AchievementList title="Unlocked" achievements={unlocked} unlocked />
-          <AchievementList title="Locked" achievements={locked} />
-        </section>
-      )}
-
-      <section className="collection-panel">
-        <div className="collection-panel-header">
-          <div className="surface-eyebrow">Details / Meta</div>
         </div>
-        <div className="collection-panel-stack">
-          <DetailRow label="Type" value={product.product_type} />
-          <DetailRow label="Category" value={product.category} />
-          <DetailRow label="Creator" value={product.creator} />
-          <DetailRow label="Access" value={content.accessLabel} />
-          <DetailRow label="Added" value={new Date(row.acquired_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} />
-          {(product.tags ?? []).length > 0 && (
-            <div className="app-tag-row" style={{ marginTop: 'var(--os-space-2)' }}>
-              {(product.tags ?? []).map(tag => (
-                <span key={tag} className="os-pill os-type-pill">{tag}</span>
+      )}
+
+      {/* Achievements — flat, no cards */}
+      {achievements.length > 0 && (
+        <div className="view-section">
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 20 }}>
+            <h2 className="view-section-title" style={{ margin: 0 }}>Achievements</h2>
+            <span className="os-type-body-small" style={{ color: 'var(--os-color-ink-muted)' }}>
+              {unlocked.length} of {achievements.length}
+            </span>
+          </div>
+
+          {unlocked.length > 0 && (
+            <div className="view-achievement-group">
+              <div className="os-type-eyebrow" style={{ color: 'var(--os-color-ink-muted)', marginBottom: 14 }}>Unlocked</div>
+              {unlocked.map(a => (
+                <div key={a.id} className="view-achievement-row view-achievement-row-unlocked">
+                  <div>
+                    <div className="os-type-card-title" style={{ marginBottom: 3 }}>{a.title}</div>
+                    <div className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>{a.description}</div>
+                  </div>
+                  <span className="os-pill os-status-owned">Unlocked</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {locked.length > 0 && (
+            <div className="view-achievement-group" style={{ marginTop: unlocked.length > 0 ? 28 : 0 }}>
+              <div className="os-type-eyebrow" style={{ color: 'var(--os-color-ink-muted)', marginBottom: 14 }}>Locked</div>
+              {locked.map(a => (
+                <div key={a.id} className="view-achievement-row">
+                  <div>
+                    <div className="os-type-card-title" style={{ marginBottom: 3 }}>{a.title}</div>
+                    <div className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>{a.description}</div>
+                  </div>
+                  <span className="os-pill os-status-locked">Locked</span>
+                </div>
               ))}
             </div>
           )}
         </div>
-      </section>
-    </PageShell>
+      )}
+
+      <AchievementToast toast={toast} onDone={() => setToast(null)} />
+    </div>
   );
 }
 
@@ -324,49 +342,57 @@ function ResourceCollectionDetail({ row }: { row: { id: string; saved_at: string
   const infoCopy = resource.long_description ?? resource.short_description ?? 'Resource content coming soon.';
 
   return (
-    <PageShell>
-      <CollectionHeaderPanel
-        coverUrl={resource.cover_url}
-        eyebrow={resource.resource_type}
-        title={resource.title}
-        subtitle={`by ${creatorName}`}
-        actions={(
+    <div className="view-detail-single">
+      <div className="view-hero">
+        {resource.cover_url ? (
           <>
-            <button className="os-button os-button-primary" type="button" onClick={() => openTarget(resource.download_url)}>Download</button>
-            <Link className="os-button os-button-secondary" href={creatorLink}>View Creator</Link>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={resource.cover_url} alt={resource.title} />
+            <div className="view-hero-overlay">
+              <div className="os-type-eyebrow" style={{ opacity: 0.72, marginBottom: 10 }}>{resource.resource_type}</div>
+              <h1 className="os-type-display" style={{ color: '#fff' }}>{resource.title}</h1>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="view-hero-gradient" />
+            <div className="view-hero-overlay" style={{ background: 'none' }}>
+              <div className="os-type-eyebrow" style={{ color: 'var(--os-color-ink-muted)', marginBottom: 10 }}>{resource.resource_type}</div>
+              <h1 className="os-type-display">{resource.title}</h1>
+            </div>
           </>
         )}
-      />
+      </div>
 
-      <CollectionInfoPanel title="Info" copy={infoCopy} />
+      <div className="view-section">
+        <div className="view-action-bar">
+          <div>
+            <div className="os-type-eyebrow" style={{ color: 'var(--os-color-ink-muted)', marginBottom: 4 }}>{resource.categories?.name ?? 'Resource'}</div>
+            <div className="os-type-panel-title">by {creatorName}</div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <Link className="os-button os-button-secondary" href={creatorLink}>View Creator</Link>
+            <button className="os-button os-button-primary" type="button" onClick={() => openTarget(resource.download_url)}>Download</button>
+          </div>
+        </div>
+      </div>
 
-      <section className="collection-panel">
-        <div className="collection-panel-header">
-          <div className="surface-eyebrow">Content</div>
-        </div>
-        <div className="collection-rich-copy">
-          {resource.long_description ? (
-            resource.long_description.split('\n').filter(Boolean).map((paragraph, index) => (
-              <p key={`${resource.id}-paragraph-${index}`}>{paragraph}</p>
-            ))
-          ) : (
-            <p>{resource.short_description ?? 'No in-app reader content yet.'}</p>
-          )}
-        </div>
-      </section>
+      <div className="view-section">
+        <h2 className="view-section-title">About</h2>
+        <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', lineHeight: 1.72, maxWidth: 720 }}>{infoCopy}</p>
+      </div>
 
-      <section className="collection-panel">
-        <div className="collection-panel-header">
-          <div className="surface-eyebrow">Details / Meta</div>
+      {resource.long_description && (
+        <div className="view-section">
+          <h2 className="view-section-title">Content</h2>
+          <div style={{ display: 'grid', gap: 16, maxWidth: 720 }}>
+            {resource.long_description.split('\n').filter(Boolean).map((paragraph, i) => (
+              <p key={i} className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', lineHeight: 1.72 }}>{paragraph}</p>
+            ))}
+          </div>
         </div>
-        <div className="collection-panel-stack">
-          <DetailRow label="Type" value={resource.resource_type} />
-          <DetailRow label="Category" value={resource.categories?.name ?? 'Resource'} />
-          <DetailRow label="Creator" value={creatorName} />
-          <DetailRow label="Saved" value={new Date(row.saved_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} />
-        </div>
-      </section>
-    </PageShell>
+      )}
+    </div>
   );
 }
 
@@ -377,124 +403,62 @@ function ServiceCollectionDetail({ row }: { row: ServiceRequest }) {
   const infoCopy = service.long_description || service.short_description || 'Service details coming soon.';
 
   return (
-    <PageShell>
-      <CollectionHeaderPanel
-        coverUrl={service.cover_url}
-        eyebrow={service.categories?.name ?? 'Service'}
-        title={service.title}
-        subtitle={creatorName}
-        actions={(
+    <div className="view-detail-single">
+      <div className="view-hero">
+        {service.cover_url ? (
           <>
-            <Link className="os-button os-button-primary" href={creatorLink}>View Creator</Link>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={service.cover_url} alt={service.title} />
+            <div className="view-hero-overlay">
+              <div className="os-type-eyebrow" style={{ opacity: 0.72, marginBottom: 10 }}>{service.categories?.name ?? 'Service'}</div>
+              <h1 className="os-type-display" style={{ color: '#fff' }}>{service.title}</h1>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="view-hero-gradient" />
+            <div className="view-hero-overlay" style={{ background: 'none' }}>
+              <div className="os-type-eyebrow" style={{ color: 'var(--os-color-ink-muted)', marginBottom: 10 }}>{service.categories?.name ?? 'Service'}</div>
+              <h1 className="os-type-display">{service.title}</h1>
+            </div>
           </>
         )}
-      />
-
-      <CollectionInfoPanel title="Info" copy={infoCopy} />
-
-      <section className="collection-panel">
-        <div className="collection-panel-header">
-          <div className="surface-eyebrow">Content</div>
-        </div>
-        <div className="collection-rich-copy">
-          <p>{row.message || 'No request note added yet.'}</p>
-        </div>
-      </section>
-
-      <section className="collection-panel">
-        <div className="collection-panel-header">
-          <div className="surface-eyebrow">Details / Meta</div>
-        </div>
-        <div className="collection-panel-stack">
-          <DetailRow label="Type" value={service.service_type ?? service.title} />
-          <DetailRow label="Category" value={service.categories?.name ?? 'Service'} />
-          <DetailRow label="Creator" value={creatorName} />
-          <DetailRow label="Status" value={row.status} />
-          <DetailRow label="Requested" value={new Date(row.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} />
-        </div>
-      </section>
-    </PageShell>
-  );
-}
-
-function CollectionHeaderPanel({
-  coverUrl,
-  eyebrow,
-  title,
-  subtitle,
-  actions,
-}: {
-  coverUrl?: string | null;
-  eyebrow: string;
-  title: string;
-  subtitle: string;
-  actions?: React.ReactNode;
-}) {
-  return (
-    <section className="collection-release-hero">
-      <div className="collection-release-cover">
-        {coverUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={coverUrl} alt="" />
-        )}
       </div>
-      <div className="collection-release-copy">
-        <div className="surface-eyebrow">{eyebrow}</div>
-        <h1>{title}</h1>
-        <p>{subtitle}</p>
-      </div>
-      {actions && <div className="collection-action-buttons">{actions}</div>}
-    </section>
-  );
-}
 
-function CollectionInfoPanel({ title, copy }: { title: string; copy: string }) {
-  return (
-    <section className="collection-panel">
-      <div className="collection-panel-header">
-        <div className="surface-eyebrow">{title}</div>
-      </div>
-      <p className="os-type-body collection-muted-copy">{copy}</p>
-    </section>
-  );
-}
-
-function AchievementList({ title, achievements, unlocked = false }: { title: string; achievements: ProductAchievement[]; unlocked?: boolean }) {
-  if (achievements.length === 0) return null;
-
-  return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      <div className="surface-eyebrow">{title}</div>
-      <div className="collection-achievement-grid">
-        {achievements.map(achievement => (
-          <div key={achievement.id} className={unlocked ? 'collection-achievement-card collection-achievement-card-unlocked' : 'collection-achievement-card'}>
-            <div>
-              <strong>{achievement.title}</strong>
-              <p>{achievement.description}</p>
-            </div>
-            <span>{unlocked ? 'Unlocked' : 'Locked'}</span>
+      <div className="view-section">
+        <div className="view-action-bar">
+          <div>
+            <div className="os-type-eyebrow" style={{ color: 'var(--os-color-ink-muted)', marginBottom: 4 }}>{service.categories?.name ?? 'Service'}</div>
+            <div className="os-type-panel-title">{creatorName}</div>
           </div>
-        ))}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <Link className="os-button os-button-primary" href={creatorLink}>View Creator</Link>
+          </div>
+        </div>
+      </div>
+
+      <div className="view-section">
+        <h2 className="view-section-title">About</h2>
+        <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', lineHeight: 1.72, maxWidth: 720 }}>{infoCopy}</p>
+      </div>
+
+      <div className="view-section">
+        <h2 className="view-section-title">Your Note</h2>
+        <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', lineHeight: 1.72, maxWidth: 720 }}>
+          {row.message || 'No request note added yet.'}
+        </p>
       </div>
     </div>
   );
 }
 
 function runProductAction(action: ReturnType<typeof getProductCollectionPrimaryAction>) {
-  if (action.href) {
-    window.open(action.href, '_blank', 'noopener,noreferrer');
-    return;
-  }
-
+  if (action.href) { window.open(action.href, '_blank', 'noopener,noreferrer'); return; }
   alert(action.missingMessage);
 }
 
 function openTarget(url?: string | null) {
-  if (url) {
-    window.open(url, '_blank', 'noopener,noreferrer');
-    return;
-  }
-
+  if (url) { window.open(url, '_blank', 'noopener,noreferrer'); return; }
   alert('Download file coming soon.');
 }
 
@@ -503,12 +467,4 @@ function formatDuration(seconds: number | null) {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
   return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
-}
-
-function CenteredMessage({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'var(--os-color-ink-muted)', fontSize: 13, fontWeight: 500, textAlign: 'center', padding: 24 }}>
-      {children}
-    </div>
-  );
 }

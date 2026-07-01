@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Category, CommunityPost } from '@/lib/platform';
 import { PageShell, HubHero, HubSection, ThreadRow } from '@/components/Ui';
+import { useTopbarTabs } from '@/components/TopbarContext';
 
 type CountMap = Record<string, number>;
 
@@ -52,6 +53,19 @@ export default function CommunityPage() {
       .filter(c => c.scope === 'posts')
       .sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999));
   }, [categories]);
+
+  useTopbarTabs(
+    categoryList.length > 0
+      ? [
+          { id: 'all', label: 'All', href: '/community', active: true },
+          ...categoryList.slice(0, 5).map(c => ({
+            id: c.slug,
+            label: c.name,
+            href: `/community/browse/${c.slug}`,
+          })),
+        ]
+      : undefined,
+  );
 
   return (
     <PageShell>

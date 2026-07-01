@@ -58,7 +58,8 @@ type CollectionEntry =
 
 type CollectionTabId = 'music' | 'books' | 'games' | 'products';
 
-const TAB_LABELS: Record<CollectionEntry['tab'], string> = {
+const TAB_LABELS: Record<CollectionEntry['tab'] | 'all', string> = {
+  all: 'All Items',
   music: 'Music',
   books: 'Books',
   games: 'Games',
@@ -181,9 +182,12 @@ export default function CollectionPage() {
 
   const tabs = useMemo(() => {
     const order: CollectionEntry['tab'][] = ['music', 'books', 'games', 'products', 'resources', 'services'];
-    return order
-      .filter(tab => entries.some(entry => entry.tab === tab))
-      .map(tab => ({ id: tab, label: TAB_LABELS[tab] }));
+    const filtered = order.filter(tab => entries.some(entry => entry.tab === tab));
+    if (filtered.length === 0) return [];
+    return [
+      { id: 'all', label: TAB_LABELS.all },
+      ...filtered.map(tab => ({ id: tab, label: TAB_LABELS[tab] })),
+    ];
   }, [entries]);
 
   if (authLoading || loading) {
@@ -218,14 +222,17 @@ export default function CollectionPage() {
 
   return (
     <div className="panel-scroll">
-      <SystemPanel tabs={tabs} avatar={<CollectionAddButton />}>
+      <SystemPanel tabs={tabs} defaultTab="all">
         {activeTab => {
-          const activeEntries = entries.filter(entry => entry.tab === activeTab);
+          const activeEntries = activeTab === 'all'
+            ? entries
+            : entries.filter(entry => entry.tab === activeTab);
+          const label = TAB_LABELS[activeTab as CollectionEntry['tab'] | 'all'];
 
           return (
             <div className="collection-system-section">
               <div className="collection-system-heading">
-                <h1>{TAB_LABELS[activeTab as CollectionEntry['tab']]}</h1>
+                <h1>{label}</h1>
                 <p>{activeEntries.length} item{activeEntries.length === 1 ? '' : 's'}</p>
               </div>
               <div className="collection-grid">

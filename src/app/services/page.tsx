@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Service } from '@/lib/platform';
 import { PageShell, HubHero, HubSection, Shelf, ServiceCard } from '@/components/Ui';
+import { useTopbarTabs } from '@/components/TopbarContext';
 
 type Category = {
   id: string;
@@ -64,6 +65,19 @@ export default function ServicesPage() {
       return a.name.localeCompare(b.name);
     });
   }, [categories]);
+
+  useTopbarTabs(
+    orderedCategories.length > 0
+      ? [
+          { id: 'all', label: 'All', href: '/services', active: true },
+          ...orderedCategories.slice(0, 5).map(c => ({
+            id: c.slug,
+            label: c.name,
+            href: `/services/browse/${c.slug}`,
+          })),
+        ]
+      : undefined,
+  );
 
   return (
     <PageShell>

@@ -6,11 +6,7 @@ import type { Product } from '@/lib/products';
 import { formatProductPrice } from '@/lib/products';
 
 export function PageShell({ children }: { children: ReactNode }) {
-  return (
-    <div className="page-scroll">
-      <div className="page-inner">{children}</div>
-    </div>
-  );
+  return <div className="view-hub">{children}</div>;
 }
 
 export function GlassPanel({

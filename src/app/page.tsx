@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
 import { PageShell, HubHero, HubSection, Shelf, ProductCard } from '@/components/Ui';
+import { useTopbarTabs } from '@/components/TopbarContext';
 
 export default function StorePage() {
   const { user } = useAuth();
@@ -48,6 +49,14 @@ export default function StorePage() {
   const merchProducts = products
     .filter(p => p.category === 'Apparel' || p.category === 'Merch')
     .slice(0, 10);
+
+  useTopbarTabs([
+    { id: 'all',     label: 'All',      href: '/',              active: true },
+    { id: 'music',   label: 'Music',    href: '/store/music' },
+    { id: 'apparel', label: 'Apparel',  href: '/store/apparel' },
+    { id: 'books',   label: 'Books',    href: '/store/books' },
+    { id: 'digital', label: 'Digital',  href: '/store/digital' },
+  ]);
 
   return (
     <PageShell>

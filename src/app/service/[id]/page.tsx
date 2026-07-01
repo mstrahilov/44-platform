@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Service } from '@/lib/platform';
 import { creatorHref, formatServicePrice } from '@/lib/platform';
-import { PageShell, DetailLayout, DetailRow, CenteredMessage } from '@/components/Ui';
+import { useTopbarBack } from '@/components/TopbarContext';
 
 export default function ServicePage() {
   const { id } = useParams<{ id: string }>();
@@ -16,6 +16,8 @@ export default function ServicePage() {
   const [requested, setRequested] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  useTopbarBack({ href: '/services', label: 'Services' });
+
   useEffect(() => {
     async function fetchService() {
       const { data } = await supabase
@@ -23,110 +25,102 @@ export default function ServicePage() {
         .select('*, creators:profiles!author_id(id, slug, name:display_name, avatar_url), categories(id, slug, name)')
         .eq('slug', id)
         .maybeSingle();
-
       setService(data as Service | null);
       setLoading(false);
     }
-
     fetchService();
   }, [id]);
 
   async function submitRequest() {
     if (!service) return;
-
-    if (!user) {
-      alert('Sign in first, then send this service request.');
-      return;
-    }
-
-    const { error } = await supabase
-      .from('service_requests')
-      .insert({ user_id: user.id, service_id: service.id, message: null, status: 'inquiry' });
-
-    if (error) {
-      alert(error.message);
-      return;
-    }
-
+    if (!user) { alert('Sign in first, then send this service request.'); return; }
+    const { error } = await supabase.from('service_requests').insert({ user_id: user.id, service_id: service.id, message: null, status: 'inquiry' });
+    if (error) { alert(error.message); return; }
     setRequested(true);
   }
 
-  if (loading) return <PageShell><CenteredMessage>Loading…</CenteredMessage></PageShell>;
-  if (!service) return <PageShell><CenteredMessage>Service not found</CenteredMessage></PageShell>;
+  if (loading) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Loading…</div>;
+  if (!service) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Service not found</div>;
+
+  const hasCover = Boolean(service.cover_url);
+
+  const description = service.long_description || service.short_description || '';
 
   return (
-    <PageShell>
-      <Link className="os-button os-button-ghost os-button-compact" href="/services/browse" style={{ marginBottom: 'var(--os-space-5)', alignSelf: 'flex-start' }}>
-        ← Back to Services
-      </Link>
+    <div className="view-detail-single">
 
-      <DetailLayout
-        inspector={
-          <>
-            <div className="app-inspector-art">
-              {service.cover_url && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={service.cover_url} alt={service.title} />
-              )}
-            </div>
-            <div>
-              <div className="app-detail-eyebrow os-type-eyebrow">{service.categories?.name ?? 'Service'}</div>
-              <div className="os-type-section-title">{service.title}</div>
-              <div className="app-card-price os-type-card-title" style={{ marginTop: 'var(--os-space-2)' }}>{formatServicePrice(service)}</div>
-            </div>
-            <div className="app-detail-actions">
-              <button className="os-button os-button-primary" onClick={submitRequest} disabled={requested}>
-                {requested ? 'Request Sent' : 'Send Request'}
-              </button>
-            </div>
-            <hr className="app-detail-divider" />
-            <DetailRow label="Category" value={service.categories?.name ?? 'Service'} />
-            <DetailRow label="Type" value={service.service_type ?? service.title} />
-            <DetailRow label="Provider" value={service.creators?.name ?? '44 Creator'} />
-            <DetailRow label="Timeline" value={service.delivery_estimate ?? 'Project-based'} />
-            <DetailRow label="Status" value={service.status === 'published' ? 'Published' : service.status} />
-            {service.creators && (
-              <>
-                <hr className="app-detail-divider" />
-                <Link className="os-button os-button-secondary os-button-compact" href={creatorHref(service.creators)}>
-                  View {service.creators.name}
-                </Link>
-              </>
-            )}
-          </>
-        }
+      {/* Album-style header */}
+      <div
+        className={hasCover ? 'view-album-header' : 'view-album-header view-album-header-fallback'}
+        style={hasCover ? { backgroundImage: `url(${service.cover_url})` } as React.CSSProperties : undefined}
       >
-        <section className="app-detail-hero">
-          {service.cover_url && (
+        <div className="view-album-cover">
+          {hasCover && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={service.cover_url} alt={service.title} />
+            <img src={service.cover_url!} alt={service.title} />
           )}
-        </section>
-
-        <div>
-          <div className="app-detail-eyebrow os-type-eyebrow">
-            {service.categories?.name ?? 'Service'} · {service.service_type ?? service.title}
+        </div>
+        <div className="view-album-copy">
+          <div className="view-album-eyebrow">{service.categories?.name ?? 'Service'}</div>
+          <h1 className="view-album-title">{service.title}</h1>
+          <div className="view-album-meta">
+            {service.creators && <span style={{ fontWeight: 700 }}>{service.creators.name}</span>}
+            <span className="view-album-meta-sep" />
+            <span>{formatServicePrice(service)}</span>
+            {service.delivery_estimate && (<><span className="view-album-meta-sep" /><span>{service.delivery_estimate}</span></>)}
           </div>
-          <h1 className="app-detail-title os-type-page-title">{service.title}</h1>
-          <p className="app-detail-lede os-type-body">{service.long_description || service.short_description}</p>
+          <div className="view-album-actions">
+            <button className="os-button os-button-primary" onClick={submitRequest} disabled={requested}>
+              {requested ? 'Request Sent' : 'Send Request'}
+            </button>
+            {service.creators && (
+              <Link className="os-button os-button-secondary" href={creatorHref(service.creators)}>
+                View {service.creators.name}
+              </Link>
+            )}
+          </div>
         </div>
+      </div>
 
-        <div className="app-panel">
-          <div className="app-panel-title os-type-eyebrow">How It Works</div>
-          <DetailRow label="Type" value={service.service_type ?? service.title} />
-          <DetailRow label="Starting at" value={formatServicePrice(service)} />
-          <DetailRow label="Timeline" value={service.delivery_estimate ?? 'Project-based'} />
-          <DetailRow label="Status" value="Inquiry first" />
-        </div>
-
-        <div className="app-panel">
-          <div className="app-panel-title os-type-eyebrow">Next Step</div>
-          <p className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>
-            Send a short note about what you need. Checkout, milestones, files, and project
-            management can be layered in later.
+      {/* Description */}
+      {description.length > 40 && (
+        <div className="view-section">
+          <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', lineHeight: 1.72, maxWidth: 720, fontSize: 16 }}>
+            {description}
           </p>
         </div>
-      </DetailLayout>
-    </PageShell>
+      )}
+
+      {/* How It Works */}
+      <div className="view-section">
+        <h2 className="view-section-title">How It Works</h2>
+        <div>
+          <div className="view-row">
+            <span className="view-row-label">Type</span>
+            <span className="view-row-value">{service.service_type ?? service.title}</span>
+          </div>
+          <div className="view-row">
+            <span className="view-row-label">Starting at</span>
+            <span className="view-row-value">{formatServicePrice(service)}</span>
+          </div>
+          <div className="view-row">
+            <span className="view-row-label">Timeline</span>
+            <span className="view-row-value">{service.delivery_estimate ?? 'Project-based'}</span>
+          </div>
+          <div className="view-row">
+            <span className="view-row-label">Engagement</span>
+            <span className="view-row-value">Inquiry first</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Next Steps */}
+      <div className="view-section">
+        <h2 className="view-section-title">Next Steps</h2>
+        <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', lineHeight: 1.72, maxWidth: 720 }}>
+          Send a short note about what you need. Checkout, milestones, files, and project management can be layered in once the conversation starts.
+        </p>
+      </div>
+    </div>
   );
 }

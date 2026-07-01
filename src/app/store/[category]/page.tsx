@@ -4,6 +4,7 @@ import { use, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Product } from '@/lib/products';
 import { PageShell, ProductGrid, ProductCard, EmptyPanel } from '@/components/Ui';
+import { useTopbarTabs } from '@/components/TopbarContext';
 
 const CATEGORY_LABEL: Record<string, string> = {
   music: 'Music',
@@ -14,11 +15,24 @@ const CATEGORY_LABEL: Record<string, string> = {
   assets: 'Assets',
 };
 
+const STORE_CATEGORIES = [
+  { id: 'music', label: 'Music', href: '/store/music' },
+  { id: 'apparel', label: 'Apparel', href: '/store/apparel' },
+  { id: 'books', label: 'Books', href: '/store/books' },
+  { id: 'games', label: 'Games', href: '/store/games' },
+  { id: 'assets', label: 'Assets', href: '/store/assets' },
+];
+
 export default function StoreCategoryPage({ params }: { params: Promise<{ category: string }> }) {
   const { category } = use(params);
   const label = CATEGORY_LABEL[category] ?? (category.charAt(0).toUpperCase() + category.slice(1));
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useTopbarTabs([
+    { id: 'all', label: 'All', href: '/' },
+    ...STORE_CATEGORIES.map(c => ({ ...c, active: c.id === category.toLowerCase() })),
+  ]);
 
   useEffect(() => {
     async function load() {

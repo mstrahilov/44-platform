@@ -5,11 +5,26 @@ import { supabase } from '@/lib/supabase';
 import type { Category, Resource } from '@/lib/platform';
 import { matchesCategory } from '@/lib/taxonomy';
 import { ResourceCard, PageShell } from '@/components/Ui';
+import { useTopbarTabs } from '@/components/TopbarContext';
 
 export default function ResourcesCategoryPage({ params }: { params: Promise<{ category: string }> }) {
   const { category } = use(params);
   const [resources, setResources] = useState<Resource[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+
+  useTopbarTabs(
+    categories.length > 0
+      ? [
+          { id: 'all', label: 'All', href: '/resources' },
+          ...categories.slice(0, 5).map(c => ({
+            id: c.slug,
+            label: c.name,
+            href: `/resources/browse/${c.slug}`,
+            active: c.slug === category,
+          })),
+        ]
+      : undefined,
+  );
 
   useEffect(() => {
     async function fetchData() {
