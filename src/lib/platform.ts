@@ -16,6 +16,24 @@ export interface Tag {
   sort_order: number;
 }
 
+// A 44 user. `profiles` is the single users table (member | creator | admin).
+// Content authors are profiles; joins alias the relation back to `creators`
+// (`creators:profiles!author_id(name:display_name, ...)`) so `.creators?.name`
+// keeps working across cards and detail pages.
+export interface Profile {
+  id: string;
+  slug: string | null;
+  username: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+  hero_url?: string | null;
+  bio?: string | null;
+  role?: string | null;
+  creator_type?: string | null;
+  is_official?: boolean | null;
+  is_published?: boolean | null;
+}
+
 export interface Creator {
   id: string;
   profile_id: string | null;

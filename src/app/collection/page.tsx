@@ -103,12 +103,12 @@ export default function CollectionPage() {
           .order('acquired_at', { ascending: false }),
         supabase
           .from('saved_resources')
-          .select('id,resource_id,saved_at,resources(*, creators(id, slug, name, avatar_url), categories(id, slug, name))')
+          .select('id,resource_id,saved_at,resources(*, creators:profiles!author_id(id, slug, name:display_name, avatar_url), categories(id, slug, name))')
           .eq('user_id', userId)
           .order('saved_at', { ascending: false }),
         supabase
           .from('service_requests')
-          .select('id,service_id,message,status,created_at,services(*, creators(id, slug, name, avatar_url), categories(id, slug, name))')
+          .select('id,service_id,message,status,created_at,services(*, creators:profiles!author_id(id, slug, name:display_name, avatar_url), categories(id, slug, name))')
           .eq('user_id', userId)
           .order('created_at', { ascending: false }),
       ]);

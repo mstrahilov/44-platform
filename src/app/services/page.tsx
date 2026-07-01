@@ -19,7 +19,7 @@ export default function ServicesPage() {
 
   useEffect(() => {
     async function fetchServices() {
-      const select = '*, creators(id, slug, name, avatar_url), categories(id, slug, name, sort_order)';
+      const select = '*, creators:profiles!author_id(id, slug, name:display_name, avatar_url), categories(id, slug, name, sort_order)';
 
       const publishedResult = await supabase
         .from('services')

@@ -4,24 +4,24 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import type { Creator } from '@/lib/platform';
+import type { Profile } from '@/lib/platform';
 import { PageShell, DetailLayout, DetailRow, CenteredMessage } from '@/components/Ui';
 
 export default function CreatorPage() {
   const { slug } = useParams<{ slug: string }>();
-  const [creator, setCreator] = useState<Creator | null>(null);
+  const [creator, setCreator] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('Feed');
 
   useEffect(() => {
     async function fetchCreator() {
       const { data } = await supabase
-        .from('creators')
-        .select('*, categories(id, slug, name)')
+        .from('profiles')
+        .select('*')
         .eq('slug', slug)
         .maybeSingle();
 
-      setCreator(data as Creator | null);
+      setCreator(data as Profile | null);
       setLoading(false);
     }
 
@@ -43,12 +43,12 @@ export default function CreatorPage() {
             <div className="app-inspector-art app-inspector-art-circle">
               {creator.avatar_url && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={creator.avatar_url} alt={creator.name} />
+                <img src={creator.avatar_url} alt={(creator.display_name ?? creator.username ?? 'Member')} />
               )}
             </div>
             <div>
-              <div className="app-detail-eyebrow os-type-eyebrow">{creator.categories?.name ?? 'Members'}</div>
-              <div className="os-type-section-title">{creator.name}</div>
+              <div className="app-detail-eyebrow os-type-eyebrow">{creator.creator_type ?? 'Member'}</div>
+              <div className="os-type-section-title">{(creator.display_name ?? creator.username ?? 'Member')}</div>
               <div className="os-type-meta" style={{ color: 'var(--os-color-ink-secondary)', marginTop: 'var(--os-space-1)' }}>
                 {creator.creator_type ?? 'Creator Profile'}
               </div>
@@ -58,9 +58,9 @@ export default function CreatorPage() {
               <button className="os-button os-button-secondary" type="button">Message</button>
             </div>
             <hr className="app-detail-divider" />
-            <DetailRow label="Category" value={creator.categories?.name ?? 'Members'} />
+            <DetailRow label="Category" value={creator.creator_type ?? 'Member'} />
             <DetailRow label="Type" value={creator.creator_type ?? 'Creator'} />
-            <DetailRow label="Profile" value={creator.slug ?? creator.name} />
+            <DetailRow label="Profile" value={creator.slug ?? (creator.display_name ?? creator.username ?? 'Member')} />
             <DetailRow label="Status" value={creator.is_published ? 'Published' : 'Hidden'} />
           </>
         }
@@ -68,15 +68,15 @@ export default function CreatorPage() {
         <section className="app-detail-hero">
           {creator.hero_url && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={creator.hero_url} alt={creator.name} />
+            <img src={creator.hero_url} alt={(creator.display_name ?? creator.username ?? 'Member')} />
           )}
         </section>
 
         <div>
           <div className="app-detail-eyebrow os-type-eyebrow">
-            {creator.categories?.name ?? 'Creators'} · {creator.creator_type ?? 'Creator'}
+            {creator.creator_type ?? (creator.role === 'creator' ? 'Creator' : 'Member')}
           </div>
-          <h1 className="app-detail-title os-type-page-title">{creator.name}</h1>
+          <h1 className="app-detail-title os-type-page-title">{(creator.display_name ?? creator.username ?? 'Member')}</h1>
           <p className="app-detail-lede os-type-body">{creator.bio}</p>
         </div>
 

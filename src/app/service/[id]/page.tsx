@@ -20,7 +20,7 @@ export default function ServicePage() {
     async function fetchService() {
       const { data } = await supabase
         .from('services')
-        .select('*, creators(id, slug, name, avatar_url), categories(id, slug, name)')
+        .select('*, creators:profiles!author_id(id, slug, name:display_name, avatar_url), categories(id, slug, name)')
         .eq('slug', id)
         .maybeSingle();
 

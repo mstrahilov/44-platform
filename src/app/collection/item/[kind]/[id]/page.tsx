@@ -96,7 +96,7 @@ export default function CollectionItemPage() {
       if (kind === 'resource') {
         const { data, error: itemError } = await supabase
           .from('saved_resources')
-          .select('id,saved_at,resources(*, creators(id, slug, name, avatar_url), categories(id, slug, name))')
+          .select('id,saved_at,resources(*, creators:profiles!author_id(id, slug, name:display_name, avatar_url), categories(id, slug, name))')
           .eq('id', id)
           .eq('user_id', userId)
           .maybeSingle();
@@ -108,7 +108,7 @@ export default function CollectionItemPage() {
       if (kind === 'service') {
         const { data, error: itemError } = await supabase
           .from('service_requests')
-          .select('id,service_id,message,status,created_at,services(*, creators(id, slug, name, avatar_url), categories(id, slug, name))')
+          .select('id,service_id,message,status,created_at,services(*, creators:profiles!author_id(id, slug, name:display_name, avatar_url), categories(id, slug, name))')
           .eq('id', id)
           .eq('user_id', userId)
           .maybeSingle();

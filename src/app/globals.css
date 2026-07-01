@@ -87,22 +87,22 @@ body {
   background: var(--os-color-app-environment);
 }
 
+/* Ambient background: a base canvas (light/dark per mode) with soft orbs tinted
+   by the active accent — so every accent works in both modes from one system. */
 .app-environment-image {
   position: absolute;
   inset: -4%;
   background:
-    radial-gradient(circle at 18% 12%, var(--theme-orb-a, transparent), transparent 34%),
-    radial-gradient(circle at 78% 18%, var(--theme-orb-b, transparent), transparent 34%),
-    radial-gradient(circle at 52% 76%, var(--theme-orb-c, transparent), transparent 42%),
-    linear-gradient(
-      135deg,
-      var(--theme-bg-a, var(--os-color-app-environment)),
-      var(--theme-bg-b, var(--os-color-app-environment)) 48%,
-      var(--theme-bg-c, var(--os-color-app-environment))
-    );
-  filter: saturate(1.12);
+    radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--os-color-accent) 42%, transparent), transparent 36%),
+    radial-gradient(circle at 80% 16%, color-mix(in srgb, var(--os-color-accent) 22%, transparent), transparent 34%),
+    radial-gradient(circle at 52% 82%, color-mix(in srgb, var(--os-color-accent) 26%, transparent), transparent 44%),
+    var(--os-color-app-environment);
+  filter: saturate(1.08);
   transform: scale(1.04);
 }
+
+/* Slightly stronger glow on dark, softer wash on light. */
+body.theme-light .app-environment-image { opacity: 0.6; }
 
 .app-environment-veil {
   display: none;
@@ -3360,6 +3360,123 @@ body.theme-dark .os-category-icon img {
   place-items: center;
   padding: var(--os-space-10);
   color: var(--os-color-ink-muted);
+}
+
+/* ── Settings ── */
+.settings-section { display: grid; gap: var(--os-space-6); max-width: 660px; }
+.settings-block { display: grid; gap: var(--os-space-2); }
+.settings-block p { margin: 0; color: var(--os-color-ink-secondary); }
+
+.settings-field {
+  display: grid;
+  gap: var(--os-space-4);
+  padding: var(--os-space-6) 0;
+  border-top: 1px solid var(--os-color-hairline);
+}
+.settings-field:first-of-type { border-top: 0; padding-top: var(--os-space-2); }
+.settings-field-head { display: grid; gap: 3px; }
+.settings-field-head p { margin: 0; color: var(--os-color-ink-secondary); }
+
+.settings-segment {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  width: fit-content;
+  border-radius: var(--os-radius-pill);
+  background: var(--os-glass-recessed-bg);
+  border: 1px solid var(--os-glass-panel-border);
+}
+.settings-segment-item {
+  padding: 7px 20px;
+  border: 0;
+  border-radius: var(--os-radius-pill);
+  background: none;
+  cursor: pointer;
+  font-family: var(--os-font-app);
+  font-size: 13px;
+  font-weight: 560;
+  color: var(--os-color-ink-secondary);
+  transition: background 120ms ease, color 120ms ease;
+}
+.settings-segment-item:hover { color: var(--os-color-ink); }
+.settings-segment-item-active {
+  background: color-mix(in srgb, var(--os-color-ink) 12%, transparent);
+  color: var(--os-color-ink);
+}
+
+.settings-swatches { display: flex; flex-wrap: wrap; gap: var(--os-space-3); }
+.settings-swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--os-space-2);
+  padding: 8px 16px 8px 10px;
+  border-radius: var(--os-radius-pill);
+  background: var(--os-glass-panel-bg);
+  border: 1px solid var(--os-glass-panel-border);
+  color: var(--os-color-ink-secondary);
+  font-family: var(--os-font-app);
+  font-size: 13px;
+  font-weight: 560;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
+}
+.settings-swatch:hover { color: var(--os-color-ink); }
+.settings-swatch-active {
+  color: var(--os-color-ink);
+  border-color: var(--os-color-accent);
+  box-shadow: 0 0 0 1px var(--os-color-accent);
+}
+.settings-swatch-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--os-space-4);
+  padding: var(--os-space-4) 0;
+  border-top: 1px solid var(--os-color-hairline);
+}
+.settings-row:first-of-type { border-top: 0; }
+.settings-row-copy { display: grid; gap: 2px; }
+.settings-row-copy p { margin: 0; color: var(--os-color-ink-secondary); }
+
+.settings-toggle {
+  width: 44px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: var(--os-radius-pill);
+  border: 1px solid var(--os-glass-panel-border);
+  background: var(--os-glass-recessed-bg);
+  position: relative;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+.settings-toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--os-color-ink);
+  opacity: 0.65;
+  transition: transform 140ms ease, opacity 140ms ease;
+}
+.settings-toggle-on {
+  background: color-mix(in srgb, var(--os-color-accent) 55%, transparent);
+  border-color: var(--os-color-accent);
+}
+.settings-toggle-on::after { transform: translateX(18px); opacity: 1; }
+
+.settings-soon {
+  align-self: flex-start;
+  margin-top: var(--os-space-2);
 }
 
 @media (max-width: 860px) {

@@ -20,7 +20,7 @@ export default function ResourcePage() {
     async function fetchResource() {
       const resourceQuery = supabase
         .from('resources')
-        .select('*, creators(id, slug, name, avatar_url), categories(id, slug, name)');
+        .select('*, creators:profiles!author_id(id, slug, name:display_name, avatar_url), categories(id, slug, name)');
 
       const { data } = await (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
         ? resourceQuery.eq('id', id)

@@ -23,7 +23,7 @@ export default function ResourcesBrowsePage() {
       const [{ data: resourceRows }, { data: categoryRows }] = await Promise.all([
         supabase
           .from('resources')
-          .select('*, creators(id, slug, name, avatar_url), categories(id, slug, name)')
+          .select('*, creators:profiles!author_id(id, slug, name:display_name, avatar_url), categories(id, slug, name)')
           .eq('status', 'published')
           .order('created_at', { ascending: false }),
         supabase.from('categories').select('*').eq('scope', 'resources').order('sort_order'),
