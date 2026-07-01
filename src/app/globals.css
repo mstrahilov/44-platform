@@ -163,6 +163,19 @@ body.theme-light .app-environment-image { opacity: 0.6; }
   object-fit: contain;
 }
 
+.sidebar-logo-light { display: none; }
+.sidebar-logo-dark  { display: block; }
+
+body.theme-light .sidebar-logo-light { display: block; }
+body.theme-light .sidebar-logo-dark  { display: none; }
+
+.sidebar-divider {
+  height: 1px;
+  background: var(--os-color-hairline, rgba(255,255,255,0.08));
+  margin: var(--os-space-3, 10px) 12px;
+  flex-shrink: 0;
+}
+
 .sidebar-nav {
   display: flex;
   flex-direction: column;

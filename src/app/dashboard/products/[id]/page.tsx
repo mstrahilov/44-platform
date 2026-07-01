@@ -2,19 +2,14 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { PageShell, GlassPanel } from '@/components/Ui';
 import { UploadField } from '@/components/UploadField';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
-import type { Category } from '@/lib/platform';
-import { getStudioDisplayName, isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
-import { normalizeTaxonomyValue } from '@/lib/taxonomy';
-
-function buildSlug(title: string) {
-  const base = normalizeTaxonomyValue(title) || 'product';
-  return `${base}-${crypto.randomUUID().slice(0, 8)}`;
-}
+import type { Category, Track } from '@/lib/platform';
+import type { Product } from '@/lib/products';
+import { getStudioDisplayName, loadStudioProfile } from '@/lib/studioProfiles';
 
 function formatPriceInput(value: string) {
   const digits = value.replace(/\D/g, '').slice(0, 9);
@@ -27,6 +22,7 @@ function formatPriceInput(value: string) {
 }
 
 type DraftTrack = {
+  id?: string;
   title: string;
   durationSeconds: string;
   audioUrl: string;
@@ -48,11 +44,11 @@ function ensureTrackCount(current: DraftTrack[], nextCount: number) {
   return [...current, ...Array.from({ length: clamped - current.length }, createDraftTrack)];
 }
 
-export default function NewProductPage() {
+export default function EditProductPage() {
+  const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { user, loading } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
-  const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [creatorName, setCreatorName] = useState('');
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -65,16 +61,15 @@ export default function NewProductPage() {
   const [trackCount, setTrackCount] = useState('1');
   const [tracks, setTracks] = useState<DraftTrack[]>([createDraftTrack()]);
   const [saving, setSaving] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.replace('/login');
-    }
+    if (!loading && !user) router.replace('/login');
   }, [loading, router, user]);
 
   useEffect(() => {
-    async function loadFormData() {
+    async function loadData() {
       if (!user) return;
 
       const [{ data: categoryRows }, profileResult] = await Promise.all([
@@ -82,16 +77,47 @@ export default function NewProductPage() {
         loadStudioProfile(user.id),
       ]);
 
-      const resolvedCategories = (categoryRows as Category[] | null) ?? [];
-      setCategories(resolvedCategories);
-      setCategoryId(resolvedCategories[0]?.id ?? '');
-
-      setProfile(profileResult.profile);
+      setCategories((categoryRows as Category[] | null) ?? []);
       setCreatorName(getStudioDisplayName(profileResult.profile, user.email));
+      const creatorIds = Array.from(
+        new Set([profileResult.profile?.id, user.id].filter((value): value is string => Boolean(value))),
+      );
+
+      const [{ data: productRow }, { data: trackRows }] = await Promise.all([
+        supabase.from('products').select('*').eq('id', id).in('creator_id', creatorIds).maybeSingle(),
+        supabase.from('tracks').select('*').eq('product_id', id).order('number'),
+      ]);
+
+      const product = (productRow as Product | null) ?? null;
+      if (!product) {
+        setError('Product not found.');
+        setFetching(false);
+        return;
+      }
+
+      setTitle(product.title ?? '');
+      setCategoryId(product.category_id ?? '');
+      setProductType(product.product_type ?? '');
+      setDescription(product.description ?? '');
+      setPrice(((product.price_cents ?? 0) / 100).toFixed(2));
+      setCoverUrl(product.cover_url ?? '');
+      setHeroUrl(product.hero_url ?? '');
+      setYear(product.year ? String(product.year) : '');
+
+      const resolvedTracks = ((trackRows as Track[] | null) ?? []).map(track => ({
+        id: track.id,
+        title: track.title ?? '',
+        durationSeconds: track.duration_seconds ? String(track.duration_seconds) : '',
+        audioUrl: track.audio_url ?? '',
+      }));
+      const nextTracks = resolvedTracks.length ? resolvedTracks : [createDraftTrack()];
+      setTracks(nextTracks);
+      setTrackCount(String(Math.min(30, nextTracks.length)));
+      setFetching(false);
     }
 
-    loadFormData();
-  }, [user]);
+    loadData();
+  }, [id, user]);
 
   const selectedCategory = useMemo(
     () => categories.find(category => category.id === categoryId) ?? null,
@@ -112,15 +138,10 @@ export default function NewProductPage() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!user) return;
-
-    const cleanTitle = title.trim();
-    const cleanDescription = description.trim();
-    const cleanType = productType.trim();
-
-    if (!cleanTitle || !categoryId || !cleanType || !cleanDescription) {
-      setError('Please fill out the title, category, type, and description.');
-      return;
-    }
+    const profileResult = await loadStudioProfile(user.id);
+    const creatorIds = Array.from(
+      new Set([profileResult.profile?.id, user.id].filter((value): value is string => Boolean(value))),
+    );
 
     const visibleTracks = tracks.slice(0, Number(trackCount || '0'));
     if (isMusicProduct) {
@@ -137,52 +158,69 @@ export default function NewProductPage() {
     const priceNumber = Number(price || '0');
     const isFree = !Number.isFinite(priceNumber) || priceNumber <= 0;
     const priceCents = isFree ? 0 : Math.round(priceNumber * 100);
-    const slug = buildSlug(cleanTitle);
 
-    const { data: insertedProduct, error: insertError } = await supabase
+    const { error: updateError } = await supabase
       .from('products')
-      .insert({
-        creator_id: profile?.id ?? user.id,
+      .update({
+        title: title.trim(),
         category_id: categoryId,
-        slug,
-        title: cleanTitle,
-        creator: creatorName,
-        product_type: cleanType,
-        category: selectedCategory?.name ?? 'Products',
-        description: cleanDescription,
+        product_type: productType.trim(),
+        description: description.trim(),
         price_cents: priceCents,
         is_free: isFree,
         cover_url: coverUrl.trim() || null,
         hero_url: heroUrl.trim() || null,
-        featured: false,
-        status: 'draft',
-        is_published: false,
         year: year ? Number(year) : null,
+        creator: creatorName,
       })
-      .select('id')
-      .single();
+      .eq('id', id)
+      .in('creator_id', creatorIds);
 
-    if (insertError) {
+    if (updateError) {
       setSaving(false);
-      setError(insertError.message);
+      setError(updateError.message);
       return;
     }
 
-    if (isMusicProduct && insertedProduct?.id) {
-      const trackRows = visibleTracks.map((track, index) => ({
-        product_id: insertedProduct.id,
-        number: index + 1,
-        title: track.title.trim(),
-        duration_seconds: track.durationSeconds ? Number(track.durationSeconds) : null,
-        audio_url: track.audioUrl.trim(),
-        download_url: null,
-      }));
+    if (isMusicProduct) {
+      const existingIds = tracks.map(track => track.id).filter(Boolean) as string[];
+      const keptIds = visibleTracks.map(track => track.id).filter(Boolean) as string[];
+      const idsToDelete = existingIds.filter(existingId => !keptIds.includes(existingId));
 
-      const { error: trackInsertError } = await supabase.from('tracks').insert(trackRows);
-      if (trackInsertError) {
-        setSaving(false);
-        setError(trackInsertError.message);
-        return;
+      for (const [index, track] of visibleTracks.entries()) {
+        const payload = {
+          product_id: id,
+          number: index + 1,
+          title: track.title.trim(),
+          duration_seconds: track.durationSeconds ? Number(track.durationSeconds) : null,
+          audio_url: track.audioUrl.trim(),
+          download_url: null,
+        };
+
+        if (track.id) {
+          const { error: trackUpdateError } = await supabase.from('tracks').update(payload).eq('id', track.id).eq('product_id', id);
+          if (trackUpdateError) {
+            setSaving(false);
+            setError(trackUpdateError.message);
+            return;
+          }
+        } else {
+          const { error: trackInsertError } = await supabase.from('tracks').insert(payload);
+          if (trackInsertError) {
+            setSaving(false);
+            setError(trackInsertError.message);
+            return;
+          }
+        }
+      }
+
+      if (idsToDelete.length) {
+        const { error: deleteError } = await supabase.from('tracks').delete().in('id', idsToDelete).eq('product_id', id);
+        if (deleteError) {
+          setSaving(false);
+          setError(deleteError.message);
+          return;
+        }
       }
     }
 
@@ -190,8 +228,36 @@ export default function NewProductPage() {
     router.push('/dashboard/products');
   }
 
-  if (loading || !user) {
-    return <PageShell><div style={{ minHeight: '40vh' }} /></PageShell>;
+  if (loading || !user || fetching) return <PageShell><div style={{ minHeight: '40vh' }} /></PageShell>;
+
+  async function handleDelete() {
+    if (!user) return;
+    const confirmed = window.confirm('Delete this product? This will also remove its tracks.');
+    if (!confirmed) return;
+
+    const profileResult = await loadStudioProfile(user.id);
+    const creatorIds = Array.from(
+      new Set([profileResult.profile?.id, user.id].filter((value): value is string => Boolean(value))),
+    );
+
+    const { error: tracksError } = await supabase.from('tracks').delete().eq('product_id', id);
+    if (tracksError) {
+      setError(tracksError.message);
+      return;
+    }
+
+    const { error: deleteError } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', id)
+      .in('creator_id', creatorIds);
+
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
+
+    router.push('/dashboard/products');
   }
 
   return (
@@ -199,63 +265,27 @@ export default function NewProductPage() {
       <div style={{ maxWidth: 980, margin: '0 auto', padding: '64px 0' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20, alignItems: 'flex-start', marginBottom: 32 }}>
           <div>
-            <h1 style={{ fontSize: 48, fontWeight: 780, letterSpacing: '-0.04em', marginBottom: 10 }}>
-              New Product
-            </h1>
-
-            <p style={{ color: 'var(--os-color-ink-secondary)', fontSize: 18 }}>
-              Create a release, game, book, apparel item, or asset directly from inside the app.
-            </p>
+            <h1 style={{ fontSize: 48, fontWeight: 780, letterSpacing: '-0.04em', marginBottom: 10 }}>Edit Product</h1>
+            <p style={{ color: 'var(--os-color-ink-secondary)', fontSize: 18 }}>Update the product details stored in 44.</p>
           </div>
-
-          <Link href="/dashboard/products" className="os-button os-button-ghost os-button-compact">
-            Back to Products
-          </Link>
+          <Link href="/dashboard/products" className="os-button os-button-ghost os-button-compact">Back to Products</Link>
         </div>
 
         <GlassPanel style={{ padding: 32 }}>
           <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 22 }}>
-            <label>
-              <div style={{ marginBottom: 8, fontWeight: 700 }}>Product Title</div>
-              <input className="input" value={title} onChange={event => setTitle(event.target.value)} placeholder="Example: Here Comes The Feeling" />
-            </label>
+            <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Product Title</div><input className="input" value={title} onChange={e => setTitle(e.target.value)} /></label>
 
             <div style={{ display: 'grid', gap: 22, gridTemplateColumns: '1fr 1fr' }}>
-              <label>
-                <div style={{ marginBottom: 8, fontWeight: 700 }}>Category</div>
-                <select className="input" value={categoryId} onChange={event => setCategoryId(event.target.value)}>
-                  {categories.map(category => (
-                    <option key={category.id} value={category.id}>{category.name}</option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                <div style={{ marginBottom: 8, fontWeight: 700 }}>Type</div>
-                <input className="input" value={productType} onChange={event => setProductType(event.target.value)} placeholder="Album, Book, Patch, Unity WebGL…" />
-              </label>
+              <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Category</div><select className="input" value={categoryId} onChange={e => setCategoryId(e.target.value)}>{categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
+              <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Type</div><input className="input" value={productType} onChange={e => setProductType(e.target.value)} /></label>
             </div>
 
-            <label>
-              <div style={{ marginBottom: 8, fontWeight: 700 }}>Short Description</div>
-              <textarea className="input" rows={4} value={description} onChange={event => setDescription(event.target.value)} placeholder="Describe what this item is and what someone gets from it." />
-            </label>
+            <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Short Description</div><textarea className="input" rows={4} value={description} onChange={e => setDescription(e.target.value)} /></label>
 
             <div style={{ display: 'grid', gap: 22, gridTemplateColumns: '1fr 1fr 1fr' }}>
-              <label>
-                <div style={{ marginBottom: 8, fontWeight: 700 }}>Price</div>
-                <input className="input" value={price} onChange={event => setPrice(formatPriceInput(event.target.value))} placeholder="0.00" />
-              </label>
-
-              <label>
-                <div style={{ marginBottom: 8, fontWeight: 700 }}>Release Year</div>
-                <input className="input" value={year} onChange={event => setYear(event.target.value.replace(/[^0-9]/g, '').slice(0, 4))} placeholder="2026" />
-              </label>
-
-              <label>
-                <div style={{ marginBottom: 8, fontWeight: 700 }}>Creator</div>
-                <input className="input" value={creatorName} readOnly />
-              </label>
+              <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Price</div><input className="input" value={price} onChange={e => setPrice(formatPriceInput(e.target.value))} /></label>
+              <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Release Year</div><input className="input" value={year} onChange={e => setYear(e.target.value.replace(/\D/g, '').slice(0, 4))} /></label>
+              <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Creator</div><input className="input" value={creatorName} readOnly /></label>
             </div>
 
             <div style={{ display: 'grid', gap: 22, gridTemplateColumns: '1fr 1fr' }}>
@@ -268,7 +298,6 @@ export default function NewProductPage() {
                 buttonLabel="Upload cover"
                 onChange={setCoverUrl}
               />
-
               <UploadField
                 label="Hero Image"
                 folder="products/heroes"
@@ -286,7 +315,7 @@ export default function NewProductPage() {
                   <div>
                     <div style={{ fontWeight: 700, marginBottom: 6 }}>Tracks</div>
                     <div style={{ color: 'var(--os-color-ink-secondary)', fontSize: 14 }}>
-                      Add up to 30 tracks for this release. Each track should have a title and an audio upload.
+                      Update the release tracklist here. Each visible row should have a title and an audio upload.
                     </div>
                   </div>
 
@@ -302,7 +331,7 @@ export default function NewProductPage() {
 
                 <div style={{ display: 'grid', gap: 16 }}>
                   {tracks.slice(0, Number(trackCount || '0')).map((track, index) => (
-                    <GlassPanel key={`track-${index}`} style={{ padding: 18 }}>
+                    <GlassPanel key={track.id ?? `track-${index}`} style={{ padding: 18 }}>
                       <div style={{ display: 'grid', gap: 16 }}>
                         <div style={{ fontWeight: 700 }}>Track {index + 1}</div>
 
@@ -344,25 +373,12 @@ export default function NewProductPage() {
               </div>
             ) : null}
 
-            {error && (
-              <p style={{ color: '#ff9b9b', fontSize: 14, fontWeight: 600 }}>
-                {error}
-              </p>
-            )}
-
-            {!isCreatorProfile(profile) && (
-              <p style={{ color: 'var(--os-color-ink-secondary)', fontSize: 14 }}>
-                This account is not marked as a creator yet. You can still save drafts, but switch your profile role to creator before publishing publicly.
-              </p>
-            )}
+            {error && <p style={{ color: '#ff9b9b', fontSize: 14, fontWeight: 600 }}>{error}</p>}
 
             <div style={{ display: 'flex', gap: 12, justifySelf: 'start' }}>
-              <button className="os-button os-button-primary" type="submit" disabled={saving}>
-                {saving ? 'Saving…' : 'Save Draft'}
-              </button>
-              <Link className="os-button os-button-ghost" href="/dashboard/products">
-                Cancel
-              </Link>
+              <button className="os-button os-button-primary" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>
+              <Link className="os-button os-button-ghost" href="/dashboard/products">Cancel</Link>
+              <button className="os-button os-button-ghost" type="button" onClick={handleDelete}>Delete Product</button>
             </div>
           </form>
         </GlassPanel>

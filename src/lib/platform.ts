@@ -118,8 +118,20 @@ export interface UserAchievement {
   unlocked_at: string;
 }
 
+export interface AchievementEvent {
+  id: string;
+  user_id: string;
+  product_id: string | null;
+  achievement_id: string | null;
+  event_type: string;
+  metadata: Record<string, unknown> | null;
+  created_at?: string;
+}
+
 export interface CommunityPost {
   id: string;
+  slug?: string | null;
+  author_id?: string | null;
   creator_id: string | null;
   category_id: string | null;
   title: string;
@@ -129,6 +141,18 @@ export interface CommunityPost {
   created_at: string;
   creators?: Pick<Creator, 'id' | 'slug' | 'name' | 'avatar_url'> | null;
   categories?: Pick<Category, 'id' | 'slug' | 'name'> | null;
+}
+
+export interface CommunityReply {
+  id: string;
+  post_id: string;
+  author_id: string | null;
+  parent_reply_id: string | null;
+  body: string;
+  status: string;
+  created_at: string;
+  updated_at?: string | null;
+  authors?: Pick<Profile, 'id' | 'slug' | 'display_name' | 'username' | 'avatar_url'> | null;
 }
 
 export interface SavedResource {
@@ -177,4 +201,8 @@ export function creatorHref(creator: Pick<Creator, 'slug'> | string | null | und
     .replace(/^-+|-+$/g, '');
 
   return `/community/${slug || 'creator-a'}`;
+}
+
+export function communityThreadHref(post: Pick<CommunityPost, 'id' | 'slug'>) {
+  return `/community/thread/${post.slug || post.id}`;
 }

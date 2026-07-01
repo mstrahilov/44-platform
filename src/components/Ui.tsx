@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
 import type { Service, Resource, CommunityPost } from '@/lib/platform';
-import { formatServicePrice, resourceHref, serviceHref } from '@/lib/platform';
+import { communityThreadHref, formatServicePrice, resourceHref, serviceHref } from '@/lib/platform';
 import type { Product } from '@/lib/products';
 import { formatProductPrice } from '@/lib/products';
 
@@ -162,14 +162,75 @@ export function ResourceCard({
 
 export function PostCard({ post }: { post: CommunityPost }) {
   return (
-    <article className="app-card">
+    <Link href={communityThreadHref(post)} className="app-card">
       <div className="app-card-body">
         <span className="os-pill os-type-pill app-card-chip">{post.categories?.name ?? post.post_type}</span>
         <div className="app-card-title os-type-card-title">{post.title}</div>
         <div className="app-card-creator os-type-meta">by {post.creators?.name ?? '44 Community'}</div>
         <div className="app-card-desc os-type-body-small">{post.body}</div>
       </div>
-    </article>
+    </Link>
+  );
+}
+
+export function ThreadRow({
+  post,
+  replyCount = 0,
+  likeCount = 0,
+  pinned = false,
+}: {
+  post: CommunityPost;
+  replyCount?: number;
+  likeCount?: number;
+  pinned?: boolean;
+}) {
+  const author = post.creators?.name ?? '44 Community';
+  const meta = post.categories?.name ?? post.post_type ?? 'Discussion';
+
+  return (
+    <Link
+      href={communityThreadHref(post)}
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr auto',
+        gap: 18,
+        alignItems: 'start',
+        padding: '20px 22px',
+        borderRadius: 'var(--os-radius-lg)',
+        textDecoration: 'none',
+        color: 'inherit',
+        background: 'rgba(255,255,255,0.035)',
+        border: '1px solid rgba(255,255,255,0.06)',
+      }}
+    >
+      <div style={{ minWidth: 0 }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
+          {pinned ? (
+            <span className="os-pill os-type-pill" style={{ color: 'var(--os-color-accent)', borderColor: 'rgba(179, 255, 23, 0.3)' }}>
+              Pinned
+            </span>
+          ) : null}
+          <span className="os-pill os-type-pill">{meta}</span>
+        </div>
+        <div style={{ fontSize: 26, fontWeight: 760, lineHeight: 1.05, marginBottom: 8 }}>{post.title}</div>
+        <div style={{ color: 'var(--os-color-ink-secondary)', fontSize: 15, lineHeight: 1.55, marginBottom: 10 }}>
+          {post.body}
+        </div>
+        <div className="os-type-meta" style={{ color: 'var(--os-color-ink-muted)' }}>
+          by {author}
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gap: 8, justifyItems: 'end', minWidth: 110 }}>
+        <div className="os-type-meta" style={{ color: 'var(--os-color-ink-muted)' }}>
+          {new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+        </div>
+        <div style={{ display: 'flex', gap: 14, color: 'var(--os-color-ink-secondary)', fontSize: 14, fontWeight: 650 }}>
+          <span>{likeCount} likes</span>
+          <span>{replyCount} replies</span>
+        </div>
+      </div>
+    </Link>
   );
 }
 

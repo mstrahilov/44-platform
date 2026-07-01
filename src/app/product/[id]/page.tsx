@@ -10,6 +10,7 @@ import { browseHref, formatProductPrice, productMeta } from '@/lib/products';
 import { getProductStoreAccessLabel, isFreeCollectionClaim } from '@/lib/collectionContent';
 import { PageShell, DetailLayout, DetailRow, CenteredMessage, ProductGrid, ProductCard } from '@/components/Ui';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
+import { unlockAchievementForUser } from '@/lib/achievementNotifications';
 
 interface ProductReview {
   id: string;
@@ -386,35 +387,5 @@ async function unlockSupporterAchievement(userId: string, productId: string) {
 
   if (!achievement) return null;
 
-  const { data: existingUnlock } = await supabase
-    .from('user_achievements')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('achievement_id', achievement.id)
-    .maybeSingle();
-
-  if (existingUnlock) return null;
-
-  const { error } = await supabase.from('user_achievements').insert({
-    user_id: userId,
-    product_id: productId,
-    achievement_id: achievement.id,
-  });
-
-  if (error) return null;
-
-  await supabase.from('achievement_events').insert({
-    user_id: userId,
-    product_id: productId,
-    achievement_id: achievement.id,
-    event_type: 'achievement_unlocked',
-    metadata: { trigger_type: 'reviewed', achievement_code: achievement.code, source: 'product_review' },
-  });
-
-  return {
-    id: achievement.id,
-    title: achievement.title,
-    description: achievement.description,
-    points: achievement.points,
-  };
+  return unlockAchievementForUser(userId, productId, achievement, { source: 'product_review' });
 }

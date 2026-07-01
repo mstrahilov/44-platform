@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
+import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 
 type NavChild = { label: string; href: string; icon?: React.ReactNode };
 type NavSection = {
@@ -57,6 +58,27 @@ const IconCollection = () => (
   </svg>
 );
 
+const IconProfile = () => (
+  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="9" cy="6" r="3"/>
+    <path d="M2 16c0-3.314 3.134-6 7-6s7 2.686 7 6"/>
+  </svg>
+);
+
+const IconInbox = () => (
+  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2 6l7 5 7-5"/>
+    <rect x="2" y="3" width="14" height="12" rx="1.5"/>
+  </svg>
+);
+
+const IconNotifications = () => (
+  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M13 6a4 4 0 0 0-8 0c0 5-2 6-2 6h12s-2-1-2-6"/>
+    <path d="M7.5 15a1.5 1.5 0 0 0 3 0"/>
+  </svg>
+);
+
 const IconStudio = () => (
   <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
     <rect x="2" y="2" width="6" height="6" rx="1.5"/>
@@ -66,17 +88,18 @@ const IconStudio = () => (
   </svg>
 );
 
-const IconAccount = () => (
-  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="9" cy="6" r="3"/>
-    <path d="M2 16c0-3.314 3.134-6 7-6s7 2.686 7 6"/>
-  </svg>
-);
-
 const IconSettings = () => (
   <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="9" cy="9" r="2.5"/>
     <path d="M9 1v2M9 15v2M1 9h2M15 9h2M3.22 3.22l1.42 1.42M13.36 13.36l1.42 1.42M3.22 14.78l1.42-1.42M13.36 4.64l1.42-1.42"/>
+  </svg>
+);
+
+const IconSignIn = () => (
+  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M7 2H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h3"/>
+    <path d="M11 12l4-3-4-3"/>
+    <line x1="15" y1="9" x2="7" y2="9"/>
   </svg>
 );
 
@@ -119,6 +142,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useAuth();
+  const [profile, setProfile] = useState<StudioProfile | null>(null);
   const activeSectionId = getActiveSectionId(pathname);
   const [openId, setOpenId] = useState<string>(activeSectionId);
   const search = '';
@@ -130,6 +154,18 @@ export default function Sidebar() {
   useEffect(() => {
     Promise.resolve().then(() => setOpenId(activeSectionId));
   }, [activeSectionId]);
+
+  useEffect(() => {
+    async function fetchProfile() {
+      if (!user) {
+        setProfile(null);
+        return;
+      }
+      const result = await loadStudioProfile(user.id);
+      setProfile(result.profile);
+    }
+    fetchProfile();
+  }, [user]);
 
   useEffect(() => {
     async function fetchCategories() {
@@ -154,7 +190,7 @@ export default function Sidebar() {
     { id: 'services',  label: 'Services',  href: '/services',  icon: <IconServices />,  children: serviceChildren },
     { id: 'resources', label: 'Resources', href: '/resources', icon: <IconResources />, children: resourceChildren },
     { id: 'community', label: 'Community', href: '/community', icon: <IconCommunity />, children: communityChildren },
-    ...(user ? [{ id: 'collection', label: 'Collection', href: '/collection', icon: <IconCollection />, children: [] }] : []),
+    ...(user ? [{ id: 'collection', label: 'Collection', href: '/collection', icon: <IconCollection />, children: [] as NavChild[] }] : []),
   ];
 
   function handleSectionClick(section: NavSection) {
@@ -162,16 +198,22 @@ export default function Sidebar() {
     router.push(section.href);
   }
 
-  const studioActive  = pathname.startsWith('/studio');
-  const accountActive = pathname.startsWith('/account');
+  const profileActive = pathname.startsWith('/profile');
+  const inboxActive = pathname.startsWith('/inbox');
+  const notificationsActive = pathname.startsWith('/notifications');
+  const studioActive = pathname.startsWith('/studio');
   const settingsActive = pathname.startsWith('/settings');
   const loginActive = pathname.startsWith('/login');
+
+  const profileHref = profile?.username ? `/profile/${profile.username}` : '/profile';
 
   return (
     <aside className="app-sidebar">
       <Link href="/" className="sidebar-logo" aria-label="44 Home">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/44icon.svg" alt="44" width={30} height={30} />
+        <img src="/44-logo-dark.svg" alt="44" width={30} height={30} className="sidebar-logo-dark" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/44-logo-light.svg" alt="44" width={30} height={30} className="sidebar-logo-light" />
       </Link>
 
       <nav className="sidebar-nav" aria-label="Primary">
@@ -207,29 +249,61 @@ export default function Sidebar() {
             </div>
           );
         })}
+
+        {user && (
+          <>
+            <div className="sidebar-divider" />
+
+            <div className="sidebar-section">
+              <Link href={profileHref} className={profileActive ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}>
+                <span className="sidebar-item-icon"><IconProfile /></span>
+                <span className="sidebar-item-label">Profile</span>
+              </Link>
+            </div>
+            <div className="sidebar-section">
+              <Link href="/inbox" className={inboxActive ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}>
+                <span className="sidebar-item-icon"><IconInbox /></span>
+                <span className="sidebar-item-label">Inbox</span>
+              </Link>
+            </div>
+            <div className="sidebar-section">
+              <Link href="/notifications" className={notificationsActive ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}>
+                <span className="sidebar-item-icon"><IconNotifications /></span>
+                <span className="sidebar-item-label">Notifications</span>
+              </Link>
+            </div>
+          </>
+        )}
       </nav>
 
       <div className="sidebar-footer">
         {user ? (
           <>
-            <Link href="/studio" className={studioActive ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}>
-              <span className="sidebar-item-icon"><IconStudio /></span>
-              <span className="sidebar-item-label">Studio</span>
-            </Link>
-            <Link href="/account" className={accountActive ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}>
-              <span className="sidebar-item-icon"><IconAccount /></span>
-              <span className="sidebar-item-label">Account</span>
-            </Link>
+            {isCreatorProfile(profile) && (
+              <>
+                <div className="sidebar-divider" />
+                <Link href="/studio" className={studioActive ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}>
+                  <span className="sidebar-item-icon"><IconStudio /></span>
+                  <span className="sidebar-item-label">Studio</span>
+                </Link>
+              </>
+            )}
             <Link href="/settings" className={settingsActive ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}>
               <span className="sidebar-item-icon"><IconSettings /></span>
               <span className="sidebar-item-label">Settings</span>
             </Link>
           </>
         ) : (
-          <Link href="/login" className={loginActive ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}>
-            <span className="sidebar-item-icon"><IconAccount /></span>
-            <span className="sidebar-item-label">Sign In</span>
-          </Link>
+          <>
+            <Link href="/settings" className={settingsActive ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}>
+              <span className="sidebar-item-icon"><IconSettings /></span>
+              <span className="sidebar-item-label">Settings</span>
+            </Link>
+            <Link href="/login" className={loginActive ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}>
+              <span className="sidebar-item-icon"><IconSignIn /></span>
+              <span className="sidebar-item-label">Sign In</span>
+            </Link>
+          </>
         )}
       </div>
     </aside>

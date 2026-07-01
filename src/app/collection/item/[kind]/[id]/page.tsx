@@ -12,6 +12,8 @@ import { formatProductPrice } from '@/lib/products';
 import { getProductCollectionPrimaryAction, getProductRuntimeKind, isFreeCollectionClaim } from '@/lib/collectionContent';
 import type { ProductAchievement, Resource, ServiceRequest, Track, UserAchievement } from '@/lib/platform';
 import { DetailLayout, DetailRow, PageShell } from '@/components/Ui';
+import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
+import { unlockAchievementForUser } from '@/lib/achievementNotifications';
 
 type CollectionKind = 'product' | 'resource' | 'service';
 
@@ -125,9 +127,10 @@ export default function CollectionItemPage() {
 
   if (authLoading || loading) return <CenteredMessage>Loading...</CenteredMessage>;
   if (error) return <CenteredMessage>{error}</CenteredMessage>;
+  if (!user) return <CenteredMessage>Sign in to view this collection item.</CenteredMessage>;
 
   if (kind === 'product' && productRow?.products) {
-    return <ProductCollectionDetail row={productRow} tracks={tracks} achievements={achievements} unlockedAchievementIds={unlockedAchievementIds} />;
+    return <ProductCollectionDetail userId={user.id} row={productRow} tracks={tracks} achievements={achievements} unlockedAchievementIds={unlockedAchievementIds} />;
   }
 
   if (kind === 'resource' && resourceRow?.resources) {
@@ -142,11 +145,13 @@ export default function CollectionItemPage() {
 }
 
 function ProductCollectionDetail({
+  userId,
   row,
   tracks,
   achievements,
   unlockedAchievementIds,
 }: {
+  userId: string;
   row: CollectionItemRow;
   tracks: Track[];
   achievements: ProductAchievement[];
@@ -156,11 +161,73 @@ function ProductCollectionDetail({
   const action = getProductCollectionPrimaryAction(product);
   const isMusic = getProductRuntimeKind(product) === 'music';
   const canRemove = isFreeCollectionClaim(product);
-  const unlocked = achievements.filter(item => unlockedAchievementIds.has(item.id));
-  const locked = achievements.filter(item => !unlockedAchievementIds.has(item.id));
+  const [localUnlockedAchievementIds, setLocalUnlockedAchievementIds] = useState(unlockedAchievementIds);
+  const unlocked = achievements.filter(item => localUnlockedAchievementIds.has(item.id));
+  const locked = achievements.filter(item => !localUnlockedAchievementIds.has(item.id));
+  const [activeTrackId, setActiveTrackId] = useState<string | null>(null);
+  const [playedTrackIds, setPlayedTrackIds] = useState<Set<string>>(new Set());
+  const [toast, setToast] = useState<AchievementToastData | null>(null);
+
+  useEffect(() => {
+    setActiveTrackId(null);
+    setPlayedTrackIds(new Set());
+  }, [product.id]);
+
+  useEffect(() => {
+    setLocalUnlockedAchievementIds(unlockedAchievementIds);
+  }, [unlockedAchievementIds]);
+
+  async function toggleTrack(track: Track) {
+    if (!track.audio_url) return;
+
+    setActiveTrackId(current => {
+      const next = current === track.id ? null : track.id;
+      return next;
+    });
+
+    setPlayedTrackIds(current => {
+      const next = new Set(current);
+      next.add(track.id);
+      return next;
+    });
+  }
+
+  useEffect(() => {
+    async function maybeUnlockCasualListener() {
+      if (!isMusic) return;
+      if (tracks.length === 0) return;
+      if (playedTrackIds.size < tracks.length) return;
+      if (!row.product_id) return;
+
+      const achievement = achievements.find(
+        item => item.trigger_type === 'all_tracks_listened' || item.trigger_type === 'played_all_tracks',
+      );
+      if (!achievement) return;
+      if (localUnlockedAchievementIds.has(achievement.id)) return;
+
+      const unlockedAchievement = await unlockAchievementForUser(
+        userId,
+        row.product_id,
+        achievement,
+        { source: 'collection_playback' },
+      );
+
+      if (!unlockedAchievement) return;
+
+      setLocalUnlockedAchievementIds(current => {
+        const next = new Set(current);
+        next.add(achievement.id);
+        return next;
+      });
+      setToast(unlockedAchievement);
+    }
+
+    maybeUnlockCasualListener();
+  }, [achievements, isMusic, localUnlockedAchievementIds, playedTrackIds, row.product_id, tracks.length, userId]);
 
   return (
     <PageShell>
+      <AchievementToast toast={toast} onDone={() => setToast(null)} />
       <Link className="os-button os-button-ghost os-button-compact" href="/collection">← Back to Collection</Link>
       <DetailLayout
         inspector={
@@ -213,7 +280,13 @@ function ProductCollectionDetail({
               {tracks.map((track, index) => (
                 <div className="collection-track-row" key={track.id}>
                   <span>{String(index + 1).padStart(2, '0')}</span>
-                  <button type="button" aria-label={`Play ${track.title}`}>▶</button>
+                  <button
+                    type="button"
+                    aria-label={`${activeTrackId === track.id ? 'Pause' : 'Play'} ${track.title}`}
+                    onClick={() => toggleTrack(track)}
+                  >
+                    {activeTrackId === track.id ? '❚❚' : '▶'}
+                  </button>
                   <strong>{track.title}</strong>
                   <em>{formatDuration(track.duration_seconds)}</em>
                 </div>

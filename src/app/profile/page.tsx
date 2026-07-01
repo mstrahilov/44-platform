@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/useAuth';
 import { loadStudioProfile } from '@/lib/studioProfiles';
 
-export default function AccountRedirect() {
+export default function ProfileRedirect() {
   const router = useRouter();
   const { user, loading } = useAuth();
 
