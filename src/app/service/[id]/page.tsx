@@ -108,7 +108,7 @@ export default function ServicePage() {
             {service.categories?.name ?? 'Service'} · {service.service_type ?? service.title}
           </div>
           <h1 className="app-detail-title os-type-page-title">{service.title}</h1>
-          <p className="app-detail-lede os-type-body">{service.description}</p>
+          <p className="app-detail-lede os-type-body">{service.long_description || service.short_description}</p>
         </div>
 
         <div className="app-panel">

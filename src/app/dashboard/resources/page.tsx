@@ -7,7 +7,7 @@ import { PageShell, GlassPanel } from '@/components/Ui';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Resource } from '@/lib/platform';
-import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
+import { buildOwnershipFilter, isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 
 export default function DashboardResourcesPage() {
   const router = useRouter();
@@ -28,11 +28,17 @@ export default function DashboardResourcesPage() {
 
       const profileResult = await loadStudioProfile(user.id);
       setProfile(profileResult.profile);
+      const ownershipFilter = buildOwnershipFilter({
+        idFields: ['creator_id', 'author_id'],
+        profile: profileResult.profile,
+        userId: user.id,
+        email: user.email,
+      });
 
       const { data: resourceRows } = await supabase
         .from('resources')
         .select('*')
-        .or(`creator_id.eq.${user.id},author_id.eq.${user.id}`)
+        .or(ownershipFilter)
         .order('created_at', { ascending: false });
       setResources((resourceRows as Resource[] | null) ?? []);
       setFetching(false);
@@ -115,7 +121,7 @@ export default function DashboardResourcesPage() {
             </div>
           ) : resources.length === 0 ? (
             <div style={{ padding: '24px 26px', color: 'var(--os-color-ink-secondary)' }}>
-              No resources yet. Create your first one from inside Studio.
+              No resources yet. Create your first one from inside Dashboard.
             </div>
           ) : (
             resources.map((resource, index) => (

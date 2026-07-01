@@ -7,7 +7,7 @@ import { PageShell, GlassPanel } from '@/components/Ui';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Service } from '@/lib/platform';
-import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
+import { buildOwnershipFilter, isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 
 export default function DashboardServicesPage() {
   const router = useRouter();
@@ -28,11 +28,17 @@ export default function DashboardServicesPage() {
 
       const profileResult = await loadStudioProfile(user.id);
       setProfile(profileResult.profile);
+      const ownershipFilter = buildOwnershipFilter({
+        idFields: ['creator_id', 'author_id'],
+        profile: profileResult.profile,
+        userId: user.id,
+        email: user.email,
+      });
 
       const { data: serviceRows } = await supabase
         .from('services')
         .select('*')
-        .or(`creator_id.eq.${user.id},author_id.eq.${user.id}`)
+        .or(ownershipFilter)
         .order('created_at', { ascending: false });
       setServices((serviceRows as Service[] | null) ?? []);
       setFetching(false);
@@ -115,7 +121,7 @@ export default function DashboardServicesPage() {
             </div>
           ) : services.length === 0 ? (
             <div style={{ padding: '24px 26px', color: 'var(--os-color-ink-secondary)' }}>
-              No services yet. Create your first one from inside Studio.
+              No services yet. Create your first one from inside Dashboard.
             </div>
           ) : (
             services.map((service, index) => (

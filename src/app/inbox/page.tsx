@@ -12,6 +12,13 @@ const TABS = [
   { id: 'archived', label: 'Archived' },
 ];
 
+const EMPTY: Record<string, { title: string; body: string }> = {
+  messages:  { title: 'No messages',        body: 'Direct messages from members you follow will appear here.' },
+  requests:  { title: 'No requests',        body: 'Message requests from people you don\'t follow yet will appear here.' },
+  friends:   { title: 'No friends yet',     body: 'Follow members and connect to build your friends list.' },
+  archived:  { title: 'Nothing archived',   body: 'Conversations you archive will be stored here.' },
+};
+
 export default function InboxPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
@@ -25,32 +32,23 @@ export default function InboxPage() {
   return (
     <div className="panel-scroll">
       <SystemPanel tabs={TABS}>
-        {tab => (
-          <>
-            {tab === 'messages' && (
-              <Placeholder title="Messages" body="Your direct messages will appear here." />
-            )}
-            {tab === 'requests' && (
-              <Placeholder title="Requests" body="Message requests from people you don't follow will appear here." />
-            )}
-            {tab === 'friends' && (
-              <Placeholder title="Friends" body="Your friends list will appear here." />
-            )}
-            {tab === 'archived' && (
-              <Placeholder title="Archived" body="Archived conversations will appear here." />
-            )}
-          </>
-        )}
+        {tab => {
+          const empty = EMPTY[tab];
+          return (
+            <div className="settings-section">
+              <div className="settings-block">
+                <h2 className="os-type-panel-title">{empty.title.split(' ').slice(1).join(' ') || tab}</h2>
+              </div>
+              <div className="app-empty">
+                <div className="os-type-section-title">{empty.title}</div>
+                <p className="os-type-body" style={{ marginTop: 'var(--os-space-2)', color: 'var(--os-color-ink-secondary)' }}>
+                  {empty.body}
+                </p>
+              </div>
+            </div>
+          );
+        }}
       </SystemPanel>
-    </div>
-  );
-}
-
-function Placeholder({ title, body }: { title: string; body: string }) {
-  return (
-    <div>
-      <h2 className="os-type-panel-title" style={{ marginBottom: 8 }}>{title}</h2>
-      <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)' }}>{body}</p>
     </div>
   );
 }

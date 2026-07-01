@@ -8,7 +8,8 @@ import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
 import { browseHref, formatProductPrice, productMeta } from '@/lib/products';
 import { getProductStoreAccessLabel, isFreeCollectionClaim } from '@/lib/collectionContent';
-import { PageShell, DetailLayout, DetailRow, CenteredMessage, ProductGrid, ProductCard } from '@/components/Ui';
+import { creatorHref } from '@/lib/platform';
+import { PageShell, DetailRow, CenteredMessage, ProductGrid, ProductCard } from '@/components/Ui';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
 import { unlockAchievementForUser } from '@/lib/achievementNotifications';
 
@@ -52,9 +53,9 @@ export default function ProductPage() {
           .from('products')
           .select('*')
           .eq('is_published', true)
-          .eq('category', data.category)
+          .eq('creator', data.creator)
           .neq('id', data.id)
-          .limit(4);
+          .limit(8);
 
         setRelated(relatedProducts ?? []);
 
@@ -187,99 +188,85 @@ export default function ProductPage() {
   const canClaimToCollection = isFreeCollectionClaim(product);
   const primaryAction = owned ? 'Owned' : canClaimToCollection ? 'Add to Collection' : 'Add to Cart';
   const accessLabel = getProductStoreAccessLabel(product);
+  const creatorLink = creatorHref(product.creator);
 
   return (
     <PageShell>
-      <Link className="os-button os-button-ghost os-button-compact" href="/browse" style={{ marginBottom: 'var(--os-space-5)', alignSelf: 'flex-start' }}>
-        ← Back to Browse
-      </Link>
-
-      <DetailLayout
-        inspector={
-          <>
-            <div className="app-inspector-art">
-              {product.cover_url && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={product.cover_url} alt={product.title} />
-              )}
-            </div>
-            <div>
-              <div className="app-detail-eyebrow os-type-eyebrow">{product.category}</div>
-              <div className="os-type-section-title">{product.title}</div>
-              <div className="os-type-meta" style={{ color: 'var(--os-color-ink-secondary)', marginTop: 'var(--os-space-1)' }}>by {product.creator}</div>
-              <div
-                className="app-card-price os-type-panel-title"
-                style={{ marginTop: 'var(--os-space-3)', color: canClaimToCollection ? 'var(--os-color-owned)' : 'var(--os-color-ink)' }}
-              >
-                {formatProductPrice(product)}
-              </div>
-            </div>
-            <div className="app-detail-actions">
-              <button className="os-button os-button-primary" onClick={addToCollection} disabled={owned}>{primaryAction}</button>
-            </div>
-            <hr className="app-detail-divider" />
-            <DetailRow label="Creator" value={product.creator} />
-            <DetailRow label="Type" value={product.product_type} />
-            <DetailRow label="Access" value={accessLabel} />
-            <DetailRow label="Status" value={owned ? 'Owned' : product.is_published ? 'Published' : 'Hidden'} />
-            {(product.tags ?? []).length > 0 && (
-              <>
-                <hr className="app-detail-divider" />
-                <div className="app-tag-row">
-                  {(product.tags ?? []).map(tag => (
-                    <Link key={tag} href={browseHref({ tag })} className="os-pill os-type-pill">{tag}</Link>
-                  ))}
-                </div>
-              </>
-            )}
-          </>
-        }
-      >
-        <section className="app-detail-hero">
-          {heroImage && (
-            // eslint-disable-next-line @next/next/no-img-element
+      <section className="collection-release-hero collection-release-hero-product">
+        {heroImage && (
+          <div className="collection-release-hero-image">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={heroImage} alt={product.title} />
-          )}
-        </section>
-
-        <div>
-          <div className="app-detail-eyebrow os-type-eyebrow">{productMeta(product)}</div>
-          <h1 className="app-detail-title os-type-page-title">{product.title}</h1>
-          <p className="app-detail-lede os-type-body">{product.description}</p>
-        </div>
-
-        <div className="app-panel">
-          <div className="app-panel-title os-type-eyebrow">Included</div>
-          <DetailRow label="Format" value={product.product_type} />
-          <DetailRow label="Category" value={product.category} />
-          <DetailRow label="Access" value={accessLabel} />
-        </div>
-
-        <ProductReviewSection
-          owned={owned}
-          userSignedIn={Boolean(user)}
-          reviews={reviews}
-          body={reviewBody}
-          sentiment={reviewSentiment}
-          saving={reviewSaving}
-          onBody={setReviewBody}
-          onSentiment={setReviewSentiment}
-          onSave={saveReview}
-        />
-
-        {related.length > 0 && (
-          <section className="app-section">
-            <div className="hub-section-head">
-              <h2 className="hub-section-title os-type-section-title">More Like This</h2>
-            </div>
-            <ProductGrid>
-              {related.map(item => (
-                <ProductCard key={item.id} product={item} />
-              ))}
-            </ProductGrid>
-          </section>
+          </div>
         )}
-      </DetailLayout>
+        <div className="collection-release-copy">
+          <div className="surface-eyebrow">{productMeta(product)}</div>
+          <h1>{product.title}</h1>
+          <p>{product.long_description || product.short_description}</p>
+        </div>
+      </section>
+
+      <section className="collection-panel">
+        <div className="collection-panel-header">
+          <div className="surface-eyebrow">Action Items</div>
+        </div>
+        <div className="collection-action-row">
+          <div
+            className="app-card-price os-type-panel-title"
+            style={{ color: canClaimToCollection ? 'var(--os-color-owned)' : 'var(--os-color-ink)' }}
+          >
+            {formatProductPrice(product)}
+          </div>
+          <div className="collection-action-buttons">
+            <button className="os-button os-button-primary" onClick={addToCollection} disabled={owned}>{primaryAction}</button>
+            <Link className="os-button os-button-secondary" href={creatorLink}>View Creator</Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="collection-panel">
+        <div className="collection-panel-header">
+          <div className="surface-eyebrow">Meta</div>
+        </div>
+        <div className="collection-panel-stack">
+          <DetailRow label="Creator" value={product.creator} />
+          <DetailRow label="Type" value={product.product_type} />
+          <DetailRow label="Access" value={accessLabel} />
+          <DetailRow label="Status" value={owned ? 'Owned' : product.is_published ? 'Published' : 'Hidden'} />
+          {(product.tags ?? []).length > 0 && (
+            <div className="app-tag-row" style={{ marginTop: 'var(--os-space-2)' }}>
+              {(product.tags ?? []).map(tag => (
+                <Link key={tag} href={browseHref({ tag })} className="os-pill os-type-pill">{tag}</Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <ProductReviewSection
+        owned={owned}
+        userSignedIn={Boolean(user)}
+        reviews={reviews}
+        body={reviewBody}
+        sentiment={reviewSentiment}
+        saving={reviewSaving}
+        onBody={setReviewBody}
+        onSentiment={setReviewSentiment}
+        onSave={saveReview}
+      />
+
+      {related.length > 0 && (
+        <section className="app-section">
+          <div className="hub-section-head">
+            <h2 className="hub-section-title os-type-section-title">Similar Products</h2>
+          </div>
+          <ProductGrid>
+            {related.map(item => (
+              <ProductCard key={item.id} product={item} />
+            ))}
+          </ProductGrid>
+        </section>
+      )}
 
       <AchievementToast toast={toast} onDone={() => setToast(null)} />
     </PageShell>

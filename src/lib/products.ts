@@ -1,13 +1,15 @@
 export interface Product {
   id: string;
   creator_id?: string | null;
+  author_id?: string | null;
   category_id?: string | null;
   slug?: string | null;
   title: string;
   creator: string;
   product_type: string;
   category: string;
-  description: string | null;
+  short_description: string | null;
+  long_description: string | null;
   price_cents: number;
   is_free: boolean;
   is_published: boolean;
@@ -48,4 +50,3 @@ export function browseHref(params: { category?: string; tag?: string; filter?: s
   const query = searchParams.toString();
   return query ? `/browse?${query}` : '/browse';
 }
-

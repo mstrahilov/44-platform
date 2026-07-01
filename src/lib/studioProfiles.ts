@@ -122,3 +122,49 @@ export function getStudioDisplayName(profile: StudioProfile | null, email?: stri
 export function isCreatorProfile(profile: StudioProfile | null) {
   return profile?.role === 'creator' || profile?.role === 'admin';
 }
+
+function escapeFilterValue(value: string) {
+  return `"${String(value).replace(/"/g, '\\"')}"`;
+}
+
+export function getOwnershipKeys(profile: StudioProfile | null, userId: string, email?: string | null) {
+  const ids = Array.from(
+    new Set([profile?.id, userId].filter((value): value is string => Boolean(value))),
+  );
+
+  const names = Array.from(
+    new Set(
+      [
+        profile?.display_name?.trim(),
+        profile?.username?.trim(),
+        profile?.slug?.trim(),
+        email?.split('@')[0]?.trim(),
+      ].filter((value): value is string => Boolean(value)),
+    ),
+  );
+
+  return { ids, names };
+}
+
+type OwnershipFilterOptions = {
+  idFields: string[];
+  textFields?: string[];
+  profile: StudioProfile | null;
+  userId: string;
+  email?: string | null;
+};
+
+export function buildOwnershipFilter({
+  idFields,
+  textFields = [],
+  profile,
+  userId,
+  email,
+}: OwnershipFilterOptions) {
+  const { ids, names } = getOwnershipKeys(profile, userId, email);
+
+  const idFilters = idFields.flatMap(field => ids.map(value => `${field}.eq.${escapeFilterValue(value)}`));
+  const textFilters = textFields.flatMap(field => names.map(value => `${field}.eq.${escapeFilterValue(value)}`));
+
+  return [...idFilters, ...textFilters].join(',');
+}

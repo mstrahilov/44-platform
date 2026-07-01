@@ -25,8 +25,8 @@ export default function NewResourcePage() {
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [resourceType, setResourceType] = useState('');
-  const [summary, setSummary] = useState('');
-  const [body, setBody] = useState('');
+  const [shortDescription, setShortDescription] = useState('');
+  const [longDescription, setLongDescription] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
   const [downloadUrl, setDownloadUrl] = useState('');
   const [saving, setSaving] = useState(false);
@@ -62,12 +62,12 @@ export default function NewResourcePage() {
     if (!user) return;
 
     const cleanTitle = title.trim();
-    const cleanSummary = summary.trim();
+    const cleanShortDescription = shortDescription.trim();
+    const cleanLongDescription = longDescription.trim();
     const cleanType = resourceType.trim();
-    const cleanBody = body.trim();
 
-    if (!cleanTitle || !categoryId || !cleanType || !cleanSummary) {
-      setError('Please fill out the title, category, type, and summary.');
+    if (!cleanTitle || !categoryId || !cleanType || !cleanShortDescription || !cleanLongDescription) {
+      setError('Please fill out the title, category, type, and both descriptions.');
       return;
     }
 
@@ -80,8 +80,8 @@ export default function NewResourcePage() {
       category_id: categoryId,
       slug: buildSlug(cleanTitle),
       title: cleanTitle,
-      summary: cleanSummary,
-      body: cleanBody || cleanSummary,
+      short_description: cleanShortDescription,
+      long_description: cleanLongDescription,
       resource_type: cleanType,
       cover_url: coverUrl.trim() || null,
       download_url: downloadUrl.trim() || null,
@@ -145,13 +145,13 @@ export default function NewResourcePage() {
             </div>
 
             <label>
-              <div style={{ marginBottom: 8, fontWeight: 700 }}>Summary</div>
-              <textarea className="input" rows={3} value={summary} onChange={event => setSummary(event.target.value)} placeholder="A short description that helps someone understand the value of this resource." />
+              <div style={{ marginBottom: 8, fontWeight: 700 }}>Short Description</div>
+              <textarea className="input" rows={3} value={shortDescription} onChange={event => setShortDescription(event.target.value)} placeholder="Short card copy for this resource." />
             </label>
 
             <label>
-              <div style={{ marginBottom: 8, fontWeight: 700 }}>Body</div>
-              <textarea className="input" rows={8} value={body} onChange={event => setBody(event.target.value)} placeholder="Write the resource content here. This can stay minimal for now and be expanded later." />
+              <div style={{ marginBottom: 8, fontWeight: 700 }}>Long Description</div>
+              <textarea className="input" rows={8} value={longDescription} onChange={event => setLongDescription(event.target.value)} placeholder="Write the full resource content or in-app reading copy here." />
             </label>
 
             <div style={{ display: 'grid', gap: 22, gridTemplateColumns: '1fr 1fr 1fr' }}>

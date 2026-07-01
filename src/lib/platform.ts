@@ -54,7 +54,8 @@ export interface Service {
   category_id: string | null;
   slug: string;
   title: string;
-  description: string | null;
+  short_description: string | null;
+  long_description: string | null;
   service_type?: string | null;
   starting_price_cents: number;
   delivery_estimate: string | null;
@@ -73,8 +74,8 @@ export interface Resource {
   category_id: string | null;
   slug: string;
   title: string;
-  summary: string | null;
-  body: string | null;
+  short_description: string | null;
+  long_description: string | null;
   resource_type: string;
   cover_url: string | null;
   download_url?: string | null;
@@ -189,8 +190,8 @@ export function resourceHref(resource: Pick<Resource, 'slug' | 'id'>) {
 }
 
 export function creatorHref(creator: Pick<Creator, 'slug'> | string | null | undefined) {
-  if (!creator) return '/community/creator-a';
-  if (typeof creator !== 'string') return `/community/${creator.slug}`;
+  if (!creator) return '/community/profile/member';
+  if (typeof creator !== 'string') return `/community/profile/${creator.slug}`;
 
   const slug = creator
     .toLowerCase()
@@ -200,7 +201,7 @@ export function creatorHref(creator: Pick<Creator, 'slug'> | string | null | und
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
-  return `/community/${slug || 'creator-a'}`;
+  return `/community/profile/${slug || 'member'}`;
 }
 
 export function communityThreadHref(post: Pick<CommunityPost, 'id' | 'slug'>) {

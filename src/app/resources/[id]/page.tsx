@@ -133,7 +133,7 @@ export default function ResourcePage() {
         <div className="app-panel">
           <div className="app-panel-title os-type-eyebrow">Resource</div>
           <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)' }}>
-            {resource.body ?? resource.summary ?? 'Resource body will live here.'}
+            {resource.long_description ?? resource.short_description ?? 'Resource body will live here.'}
           </p>
         </div>
       </DetailLayout>

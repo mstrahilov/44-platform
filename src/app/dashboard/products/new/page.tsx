@@ -57,7 +57,8 @@ export default function NewProductPage() {
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [productType, setProductType] = useState('');
-  const [description, setDescription] = useState('');
+  const [shortDescription, setShortDescription] = useState('');
+  const [longDescription, setLongDescription] = useState('');
   const [price, setPrice] = useState('0.00');
   const [coverUrl, setCoverUrl] = useState('');
   const [heroUrl, setHeroUrl] = useState('');
@@ -114,11 +115,12 @@ export default function NewProductPage() {
     if (!user) return;
 
     const cleanTitle = title.trim();
-    const cleanDescription = description.trim();
+    const cleanShortDescription = shortDescription.trim();
+    const cleanLongDescription = longDescription.trim();
     const cleanType = productType.trim();
 
-    if (!cleanTitle || !categoryId || !cleanType || !cleanDescription) {
-      setError('Please fill out the title, category, type, and description.');
+    if (!cleanTitle || !categoryId || !cleanType || !cleanShortDescription || !cleanLongDescription) {
+      setError('Please fill out the title, category, type, and both descriptions.');
       return;
     }
 
@@ -143,13 +145,15 @@ export default function NewProductPage() {
       .from('products')
       .insert({
         creator_id: profile?.id ?? user.id,
+        author_id: profile?.id ?? user.id,
         category_id: categoryId,
         slug,
         title: cleanTitle,
         creator: creatorName,
         product_type: cleanType,
         category: selectedCategory?.name ?? 'Products',
-        description: cleanDescription,
+        short_description: cleanShortDescription,
+        long_description: cleanLongDescription,
         price_cents: priceCents,
         is_free: isFree,
         cover_url: coverUrl.trim() || null,
@@ -238,7 +242,12 @@ export default function NewProductPage() {
 
             <label>
               <div style={{ marginBottom: 8, fontWeight: 700 }}>Short Description</div>
-              <textarea className="input" rows={4} value={description} onChange={event => setDescription(event.target.value)} placeholder="Describe what this item is and what someone gets from it." />
+              <textarea className="input" rows={3} value={shortDescription} onChange={event => setShortDescription(event.target.value)} placeholder="Short card copy." />
+            </label>
+
+            <label>
+              <div style={{ marginBottom: 8, fontWeight: 700 }}>Long Description</div>
+              <textarea className="input" rows={5} value={longDescription} onChange={event => setLongDescription(event.target.value)} placeholder="Full item description used across detail and collection views." />
             </label>
 
             <div style={{ display: 'grid', gap: 22, gridTemplateColumns: '1fr 1fr 1fr' }}>

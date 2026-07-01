@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Category, Track } from '@/lib/platform';
 import type { Product } from '@/lib/products';
-import { getStudioDisplayName, loadStudioProfile } from '@/lib/studioProfiles';
+import { buildOwnershipFilter, getStudioDisplayName, loadStudioProfile } from '@/lib/studioProfiles';
 
 function formatPriceInput(value: string) {
   const digits = value.replace(/\D/g, '').slice(0, 9);
@@ -53,7 +53,8 @@ export default function EditProductPage() {
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [productType, setProductType] = useState('');
-  const [description, setDescription] = useState('');
+  const [shortDescription, setShortDescription] = useState('');
+  const [longDescription, setLongDescription] = useState('');
   const [price, setPrice] = useState('0.00');
   const [coverUrl, setCoverUrl] = useState('');
   const [heroUrl, setHeroUrl] = useState('');
@@ -79,12 +80,16 @@ export default function EditProductPage() {
 
       setCategories((categoryRows as Category[] | null) ?? []);
       setCreatorName(getStudioDisplayName(profileResult.profile, user.email));
-      const creatorIds = Array.from(
-        new Set([profileResult.profile?.id, user.id].filter((value): value is string => Boolean(value))),
-      );
+      const ownershipFilter = buildOwnershipFilter({
+        idFields: ['creator_id', 'author_id'],
+        textFields: ['creator'],
+        profile: profileResult.profile,
+        userId: user.id,
+        email: user.email,
+      });
 
       const [{ data: productRow }, { data: trackRows }] = await Promise.all([
-        supabase.from('products').select('*').eq('id', id).in('creator_id', creatorIds).maybeSingle(),
+        supabase.from('products').select('*').eq('id', id).or(ownershipFilter).maybeSingle(),
         supabase.from('tracks').select('*').eq('product_id', id).order('number'),
       ]);
 
@@ -98,7 +103,8 @@ export default function EditProductPage() {
       setTitle(product.title ?? '');
       setCategoryId(product.category_id ?? '');
       setProductType(product.product_type ?? '');
-      setDescription(product.description ?? '');
+      setShortDescription(product.short_description ?? '');
+      setLongDescription(product.long_description ?? '');
       setPrice(((product.price_cents ?? 0) / 100).toFixed(2));
       setCoverUrl(product.cover_url ?? '');
       setHeroUrl(product.hero_url ?? '');
@@ -139,9 +145,13 @@ export default function EditProductPage() {
     event.preventDefault();
     if (!user) return;
     const profileResult = await loadStudioProfile(user.id);
-    const creatorIds = Array.from(
-      new Set([profileResult.profile?.id, user.id].filter((value): value is string => Boolean(value))),
-    );
+    const ownershipFilter = buildOwnershipFilter({
+      idFields: ['creator_id', 'author_id'],
+      textFields: ['creator'],
+      profile: profileResult.profile,
+      userId: user.id,
+      email: user.email,
+    });
 
     const visibleTracks = tracks.slice(0, Number(trackCount || '0'));
     if (isMusicProduct) {
@@ -165,7 +175,8 @@ export default function EditProductPage() {
         title: title.trim(),
         category_id: categoryId,
         product_type: productType.trim(),
-        description: description.trim(),
+        short_description: shortDescription.trim(),
+        long_description: longDescription.trim(),
         price_cents: priceCents,
         is_free: isFree,
         cover_url: coverUrl.trim() || null,
@@ -174,7 +185,7 @@ export default function EditProductPage() {
         creator: creatorName,
       })
       .eq('id', id)
-      .in('creator_id', creatorIds);
+      .or(ownershipFilter);
 
     if (updateError) {
       setSaving(false);
@@ -236,9 +247,13 @@ export default function EditProductPage() {
     if (!confirmed) return;
 
     const profileResult = await loadStudioProfile(user.id);
-    const creatorIds = Array.from(
-      new Set([profileResult.profile?.id, user.id].filter((value): value is string => Boolean(value))),
-    );
+    const ownershipFilter = buildOwnershipFilter({
+      idFields: ['creator_id', 'author_id'],
+      textFields: ['creator'],
+      profile: profileResult.profile,
+      userId: user.id,
+      email: user.email,
+    });
 
     const { error: tracksError } = await supabase.from('tracks').delete().eq('product_id', id);
     if (tracksError) {
@@ -250,7 +265,7 @@ export default function EditProductPage() {
       .from('products')
       .delete()
       .eq('id', id)
-      .in('creator_id', creatorIds);
+      .or(ownershipFilter);
 
     if (deleteError) {
       setError(deleteError.message);
@@ -280,7 +295,8 @@ export default function EditProductPage() {
               <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Type</div><input className="input" value={productType} onChange={e => setProductType(e.target.value)} /></label>
             </div>
 
-            <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Short Description</div><textarea className="input" rows={4} value={description} onChange={e => setDescription(e.target.value)} /></label>
+            <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Short Description</div><textarea className="input" rows={3} value={shortDescription} onChange={e => setShortDescription(e.target.value)} /></label>
+            <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Long Description</div><textarea className="input" rows={5} value={longDescription} onChange={e => setLongDescription(e.target.value)} /></label>
 
             <div style={{ display: 'grid', gap: 22, gridTemplateColumns: '1fr 1fr 1fr' }}>
               <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Price</div><input className="input" value={price} onChange={e => setPrice(formatPriceInput(e.target.value))} /></label>

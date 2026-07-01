@@ -8,7 +8,7 @@ import { UploadField } from '@/components/UploadField';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Category } from '@/lib/platform';
-import { getStudioDisplayName, loadStudioProfile } from '@/lib/studioProfiles';
+import { buildOwnershipFilter, getStudioDisplayName, loadStudioProfile } from '@/lib/studioProfiles';
 
 export default function EditResourcePage() {
   const { id } = useParams<{ id: string }>();
@@ -19,8 +19,8 @@ export default function EditResourcePage() {
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [resourceType, setResourceType] = useState('');
-  const [summary, setSummary] = useState('');
-  const [body, setBody] = useState('');
+  const [shortDescription, setShortDescription] = useState('');
+  const [longDescription, setLongDescription] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
   const [downloadUrl, setDownloadUrl] = useState('');
   const [saving, setSaving] = useState(false);
@@ -34,14 +34,26 @@ export default function EditResourcePage() {
   useEffect(() => {
     async function loadData() {
       if (!user) return;
-      const [{ data: categoryRows }, profileResult, { data: resourceRow }] = await Promise.all([
+      const [{ data: categoryRows }, profileResult] = await Promise.all([
         supabase.from('categories').select('*').eq('scope', 'resources').order('sort_order'),
         loadStudioProfile(user.id),
-        supabase.from('resources').select('*').eq('id', id).or(`creator_id.eq.${user.id},author_id.eq.${user.id}`).maybeSingle(),
       ]);
 
       setCategories((categoryRows as Category[] | null) ?? []);
       setCreatorName(getStudioDisplayName(profileResult.profile, user.email));
+      const ownershipFilter = buildOwnershipFilter({
+        idFields: ['creator_id', 'author_id'],
+        profile: profileResult.profile,
+        userId: user.id,
+        email: user.email,
+      });
+      const { data: resourceRow } = await supabase
+        .from('resources')
+        .select('*')
+        .eq('id', id)
+        .or(ownershipFilter)
+        .maybeSingle();
+
       if (!resourceRow) {
         setError('Resource not found.');
         setFetching(false);
@@ -51,8 +63,8 @@ export default function EditResourcePage() {
       setTitle(resourceRow.title ?? '');
       setCategoryId(resourceRow.category_id ?? '');
       setResourceType(resourceRow.resource_type ?? '');
-      setSummary(resourceRow.summary ?? '');
-      setBody(resourceRow.body ?? '');
+      setShortDescription(resourceRow.short_description ?? '');
+      setLongDescription(resourceRow.long_description ?? '');
       setCoverUrl(resourceRow.cover_url ?? '');
       setDownloadUrl(resourceRow.download_url ?? '');
       setFetching(false);
@@ -66,6 +78,13 @@ export default function EditResourcePage() {
     if (!user) return;
     setSaving(true);
     setError('');
+    const profileResult = await loadStudioProfile(user.id);
+    const ownershipFilter = buildOwnershipFilter({
+      idFields: ['creator_id', 'author_id'],
+      profile: profileResult.profile,
+      userId: user.id,
+      email: user.email,
+    });
 
     const { error: updateError } = await supabase
       .from('resources')
@@ -73,13 +92,13 @@ export default function EditResourcePage() {
         title: title.trim(),
         category_id: categoryId,
         resource_type: resourceType.trim(),
-        summary: summary.trim(),
-        body: body.trim() || summary.trim(),
+        short_description: shortDescription.trim(),
+        long_description: longDescription.trim(),
         cover_url: coverUrl.trim() || null,
         download_url: downloadUrl.trim() || null,
       })
       .eq('id', id)
-      .or(`creator_id.eq.${user.id},author_id.eq.${user.id}`);
+      .or(ownershipFilter);
 
     setSaving(false);
     if (updateError) {
@@ -90,6 +109,33 @@ export default function EditResourcePage() {
   }
 
   if (loading || !user || fetching) return <PageShell><div style={{ minHeight: '40vh' }} /></PageShell>;
+
+  async function handleDelete() {
+    if (!user) return;
+    const confirmed = window.confirm('Delete this resource?');
+    if (!confirmed) return;
+
+    const profileResult = await loadStudioProfile(user.id);
+    const ownershipFilter = buildOwnershipFilter({
+      idFields: ['creator_id', 'author_id'],
+      profile: profileResult.profile,
+      userId: user.id,
+      email: user.email,
+    });
+
+    const { error: deleteError } = await supabase
+      .from('resources')
+      .delete()
+      .eq('id', id)
+      .or(ownershipFilter);
+
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
+
+    router.push('/dashboard/resources');
+  }
 
   return (
     <PageShell>
@@ -108,8 +154,8 @@ export default function EditResourcePage() {
               <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Category</div><select className="input" value={categoryId} onChange={e => setCategoryId(e.target.value)}>{categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
               <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Type</div><input className="input" value={resourceType} onChange={e => setResourceType(e.target.value)} /></label>
             </div>
-            <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Summary</div><textarea className="input" rows={3} value={summary} onChange={e => setSummary(e.target.value)} /></label>
-            <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Body</div><textarea className="input" rows={8} value={body} onChange={e => setBody(e.target.value)} /></label>
+            <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Short Description</div><textarea className="input" rows={3} value={shortDescription} onChange={e => setShortDescription(e.target.value)} /></label>
+            <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Long Description</div><textarea className="input" rows={8} value={longDescription} onChange={e => setLongDescription(e.target.value)} /></label>
             <div style={{ display: 'grid', gap: 22, gridTemplateColumns: '1fr 1fr 1fr' }}>
               <UploadField
                 label="Cover Image"
@@ -134,6 +180,7 @@ export default function EditResourcePage() {
             <div style={{ display: 'flex', gap: 12, justifySelf: 'start' }}>
               <button className="os-button os-button-primary" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>
               <Link className="os-button os-button-ghost" href="/dashboard/resources">Cancel</Link>
+              <button className="os-button os-button-secondary" type="button" onClick={handleDelete}>Delete Resource</button>
             </div>
           </form>
         </GlassPanel>

@@ -57,7 +57,7 @@ export default function DashboardPostsPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 24, marginBottom: 32 }}>
           <div>
             <h1 style={{ fontSize: 48, fontWeight: 780, letterSpacing: '-0.04em', marginBottom: 10 }}>Posts</h1>
-            <p style={{ color: 'var(--os-color-ink-secondary)', fontSize: 18 }}>Write updates, news, and community posts directly from Studio.</p>
+            <p style={{ color: 'var(--os-color-ink-secondary)', fontSize: 18 }}>Write updates, news, and community posts directly from Dashboard.</p>
           </div>
           <Link className="os-button os-button-primary" href="/dashboard/posts/new">New Post</Link>
         </div>
@@ -74,7 +74,7 @@ export default function DashboardPostsPage() {
           {fetching ? (
             <div style={{ padding: '24px 26px', color: 'var(--os-color-ink-secondary)' }}>Loading posts…</div>
           ) : posts.length === 0 ? (
-            <div style={{ padding: '24px 26px', color: 'var(--os-color-ink-secondary)' }}>No posts yet. Create your first one from inside Studio.</div>
+            <div style={{ padding: '24px 26px', color: 'var(--os-color-ink-secondary)' }}>No posts yet. Create your first one from inside Dashboard.</div>
           ) : (
             posts.map((post, index) => (
               <div key={post.id} style={{ padding: '22px 26px', display: 'grid', gridTemplateColumns: '1fr 180px 240px', gap: 20, alignItems: 'center', borderTop: index === 0 ? 'none' : '1px solid rgba(255,255,255,0.08)' }}>

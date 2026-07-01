@@ -20,7 +20,7 @@ export default function ProfileRedirect() {
     async function redirect() {
       const { profile } = await loadStudioProfile(user!.id);
       const username = profile?.username || user!.id.slice(0, 8);
-      router.replace(`/profile/${username}`);
+      router.replace(`/community/profile/${username}`);
     }
 
     redirect();

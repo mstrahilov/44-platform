@@ -31,7 +31,8 @@ export default function NewServicePage() {
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [serviceType, setServiceType] = useState('');
-  const [description, setDescription] = useState('');
+  const [shortDescription, setShortDescription] = useState('');
+  const [longDescription, setLongDescription] = useState('');
   const [startingPrice, setStartingPrice] = useState('0.00');
   const [deliveryEstimate, setDeliveryEstimate] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
@@ -73,11 +74,12 @@ export default function NewServicePage() {
     if (!user) return;
 
     const cleanTitle = title.trim();
-    const cleanDescription = description.trim();
+    const cleanShortDescription = shortDescription.trim();
+    const cleanLongDescription = longDescription.trim();
     const cleanType = serviceType.trim();
 
-    if (!cleanTitle || !categoryId || !cleanType || !cleanDescription) {
-      setError('Please fill out the title, category, type, and description.');
+    if (!cleanTitle || !categoryId || !cleanType || !cleanShortDescription || !cleanLongDescription) {
+      setError('Please fill out the title, category, type, and both descriptions.');
       return;
     }
 
@@ -93,7 +95,8 @@ export default function NewServicePage() {
       category_id: categoryId,
       slug: buildSlug(cleanTitle),
       title: cleanTitle,
-      description: cleanDescription,
+      short_description: cleanShortDescription,
+      long_description: cleanLongDescription,
       service_type: cleanType,
       starting_price_cents: startingPriceCents,
       delivery_estimate: deliveryEstimate.trim() || null,
@@ -162,8 +165,13 @@ export default function NewServicePage() {
             </div>
 
             <label>
-              <div style={{ marginBottom: 8, fontWeight: 700 }}>Description</div>
-              <textarea className="input" rows={4} value={description} onChange={event => setDescription(event.target.value)} placeholder="Describe what someone receives when they book this service." />
+              <div style={{ marginBottom: 8, fontWeight: 700 }}>Short Description</div>
+              <textarea className="input" rows={3} value={shortDescription} onChange={event => setShortDescription(event.target.value)} placeholder="Short card copy for this service." />
+            </label>
+
+            <label>
+              <div style={{ marginBottom: 8, fontWeight: 700 }}>Long Description</div>
+              <textarea className="input" rows={5} value={longDescription} onChange={event => setLongDescription(event.target.value)} placeholder="Full service description used on detail pages." />
             </label>
 
             <div style={{ display: 'grid', gap: 22, gridTemplateColumns: '1fr 1fr 1fr' }}>

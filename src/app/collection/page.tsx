@@ -207,7 +207,7 @@ export default function CollectionPage() {
               <div>
                 <h1>Your collection is empty</h1>
                 <p>Add products, save resources, or request services to start building your 44 collection.</p>
-                <Link className="btn-primary" href="/browse">Browse Store</Link>
+                <Link className="os-button os-button-primary" href="/">Browse Store</Link>
               </div>
             </div>
           )}

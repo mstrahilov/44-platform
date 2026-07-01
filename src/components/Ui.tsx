@@ -112,7 +112,7 @@ export function ServiceCard({ service }: { service: Service }) {
       <div className="app-card-body">
         <span className="os-pill os-type-pill app-card-chip">{service.categories?.name ?? 'Service'}</span>
         <div className="app-card-title os-type-card-title">{service.title}</div>
-        <div className="app-card-desc os-type-body-small">{service.description}</div>
+        <div className="app-card-desc os-type-body-small">{service.short_description}</div>
       </div>
       <div className="app-card-footer">
         <div>
@@ -146,7 +146,7 @@ export function ResourceCard({
         <span className="os-pill os-type-pill app-card-chip">{resource.categories?.name ?? resource.resource_type}</span>
         <div className="app-card-title os-type-card-title">{resource.title}</div>
         <div className="app-card-creator os-type-meta">by {resource.creators?.name ?? '44 Community'}</div>
-        <div className="app-card-desc os-type-body-small">{resource.summary}</div>
+        <div className="app-card-desc os-type-body-small">{resource.short_description}</div>
       </div>
       <div className="app-card-footer">
         {onSave ? (
@@ -188,32 +188,18 @@ export function ThreadRow({
   const meta = post.categories?.name ?? post.post_type ?? 'Discussion';
 
   return (
-    <Link
-      href={communityThreadHref(post)}
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr auto',
-        gap: 18,
-        alignItems: 'start',
-        padding: '20px 22px',
-        borderRadius: 'var(--os-radius-lg)',
-        textDecoration: 'none',
-        color: 'inherit',
-        background: 'rgba(255,255,255,0.035)',
-        border: '1px solid rgba(255,255,255,0.06)',
-      }}
-    >
+    <Link href={communityThreadHref(post)} className="thread-row">
       <div style={{ minWidth: 0 }}>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
-          {pinned ? (
-            <span className="os-pill os-type-pill" style={{ color: 'var(--os-color-accent)', borderColor: 'rgba(179, 255, 23, 0.3)' }}>
+          {pinned && (
+            <span className="os-pill os-type-pill" style={{ color: 'var(--os-color-accent)' }}>
               Pinned
             </span>
-          ) : null}
+          )}
           <span className="os-pill os-type-pill">{meta}</span>
         </div>
-        <div style={{ fontSize: 26, fontWeight: 760, lineHeight: 1.05, marginBottom: 8 }}>{post.title}</div>
-        <div style={{ color: 'var(--os-color-ink-secondary)', fontSize: 15, lineHeight: 1.55, marginBottom: 10 }}>
+        <div className="os-type-section-title" style={{ marginBottom: 8, fontSize: 'clamp(1.1rem, 1.2vw + 0.8rem, 1.7rem)' }}>{post.title}</div>
+        <div className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', marginBottom: 10, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
           {post.body}
         </div>
         <div className="os-type-meta" style={{ color: 'var(--os-color-ink-muted)' }}>
@@ -225,7 +211,7 @@ export function ThreadRow({
         <div className="os-type-meta" style={{ color: 'var(--os-color-ink-muted)' }}>
           {new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
         </div>
-        <div style={{ display: 'flex', gap: 14, color: 'var(--os-color-ink-secondary)', fontSize: 14, fontWeight: 650 }}>
+        <div className="os-type-meta" style={{ display: 'flex', gap: 14, color: 'var(--os-color-ink-secondary)' }}>
           <span>{likeCount} likes</span>
           <span>{replyCount} replies</span>
         </div>

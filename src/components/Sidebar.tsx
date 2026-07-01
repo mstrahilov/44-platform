@@ -1,19 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 
-type NavChild = { label: string; href: string; icon?: React.ReactNode };
 type NavSection = {
   id: string;
   label: string;
   href: string;
   icon: React.ReactNode;
-  children: NavChild[];
 };
 
 /* ── Section icons (SF Symbol-inspired, stroke-based) ── */
@@ -79,7 +76,7 @@ const IconNotifications = () => (
   </svg>
 );
 
-const IconStudio = () => (
+const IconDashboard = () => (
   <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
     <rect x="2" y="2" width="6" height="6" rx="1.5"/>
     <rect x="10" y="2" width="6" height="6" rx="1.5"/>
@@ -103,20 +100,6 @@ const IconSignIn = () => (
   </svg>
 );
 
-/* ── Small child icons using public/icons ── */
-const ChildIcon = ({ src }: { src: string }) => (
-  // eslint-disable-next-line @next/next/no-img-element
-  <img src={src} alt="" width={15} height={15} style={{ opacity: 'inherit', filter: 'brightness(0) invert(1)' }} />
-);
-
-const STORE_CHILDREN: NavChild[] = [
-  { label: 'Music',  href: '/store/music',  icon: <ChildIcon src="/icons/music.svg" /> },
-  { label: 'Books',  href: '/store/books',  icon: <ChildIcon src="/icons/books.svg" /> },
-  { label: 'Games',  href: '/store/games',  icon: <ChildIcon src="/icons/games.svg" /> },
-  { label: 'Merch',  href: '/store/merch',  icon: <ChildIcon src="/icons/apparel.svg" /> },
-  { label: 'Assets', href: '/store/assets', icon: <ChildIcon src="/icons/assets.svg" /> },
-];
-
 function getActiveSectionId(pathname: string): string {
   if (pathname === '/' || pathname.startsWith('/store')) return 'store';
   if (pathname.startsWith('/services')) return 'services';
@@ -126,34 +109,11 @@ function getActiveSectionId(pathname: string): string {
   return '';
 }
 
-function isChildActive(href: string, pathname: string, search: string): boolean {
-  if (!href.includes('?')) return pathname === href;
-  const [path, query] = href.split('?');
-  if (pathname !== path) return false;
-  const params = new URLSearchParams(query);
-  const current = new URLSearchParams(search);
-  for (const [k, v] of params) {
-    if (current.get(k) !== v) return false;
-  }
-  return true;
-}
-
 export default function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const { user } = useAuth();
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const activeSectionId = getActiveSectionId(pathname);
-  const [openId, setOpenId] = useState<string>(activeSectionId);
-  const search = '';
-
-  const [serviceChildren, setServiceChildren] = useState<NavChild[]>([]);
-  const [resourceChildren, setResourceChildren] = useState<NavChild[]>([]);
-  const [communityChildren, setCommunityChildren] = useState<NavChild[]>([]);
-
-  useEffect(() => {
-    Promise.resolve().then(() => setOpenId(activeSectionId));
-  }, [activeSectionId]);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -167,85 +127,57 @@ export default function Sidebar() {
     fetchProfile();
   }, [user]);
 
-  useEffect(() => {
-    async function fetchCategories() {
-      const { data } = await supabase
-        .from('categories')
-        .select('scope, slug, name, sort_order')
-        .in('scope', ['services', 'resources', 'posts'])
-        .order('sort_order');
-      if (!data) return;
-      const svcs  = data.filter(c => c.scope === 'services').map(c => ({ label: c.name, href: `/services/browse/${c.slug}` }));
-      const res   = data.filter(c => c.scope === 'resources').map(c => ({ label: c.name, href: `/resources/browse/${c.slug}` }));
-      const posts = data.filter(c => c.scope === 'posts').map(c => ({ label: c.name, href: `/community/browse/${c.slug}` }));
-      if (svcs.length)  setServiceChildren(svcs);
-      if (res.length)   setResourceChildren(res);
-      if (posts.length) setCommunityChildren(posts);
-    }
-    fetchCategories();
-  }, []);
-
   const NAV: NavSection[] = [
-    { id: 'store',     label: 'Store',     href: '/',          icon: <IconStore />,     children: STORE_CHILDREN },
-    { id: 'services',  label: 'Services',  href: '/services',  icon: <IconServices />,  children: serviceChildren },
-    { id: 'resources', label: 'Resources', href: '/resources', icon: <IconResources />, children: resourceChildren },
-    { id: 'community', label: 'Community', href: '/community', icon: <IconCommunity />, children: communityChildren },
-    ...(user ? [{ id: 'collection', label: 'Collection', href: '/collection', icon: <IconCollection />, children: [] as NavChild[] }] : []),
+    { id: 'store',     label: 'Store',     href: '/',          icon: <IconStore /> },
+    { id: 'services',  label: 'Services',  href: '/services',  icon: <IconServices /> },
+    { id: 'resources', label: 'Resources', href: '/resources', icon: <IconResources /> },
+    { id: 'community', label: 'Community', href: '/community', icon: <IconCommunity /> },
+    ...(user ? [{ id: 'collection', label: 'Collection', href: '/collection', icon: <IconCollection /> }] : []),
   ];
 
-  function handleSectionClick(section: NavSection) {
-    setOpenId(section.id);
-    router.push(section.href);
-  }
-
-  const profileActive = pathname.startsWith('/profile');
+  const profileActive = pathname.startsWith('/community/profile') || pathname.startsWith('/profile');
   const inboxActive = pathname.startsWith('/inbox');
   const notificationsActive = pathname.startsWith('/notifications');
-  const studioActive = pathname.startsWith('/studio');
+  const dashboardActive = pathname.startsWith('/dashboard') || pathname.startsWith('/studio');
   const settingsActive = pathname.startsWith('/settings');
   const loginActive = pathname.startsWith('/login');
 
-  const profileHref = profile?.username ? `/profile/${profile.username}` : '/profile';
+  const profileHref = profile?.username ? `/community/profile/${profile.username}` : '/profile';
 
   return (
     <aside className="app-sidebar">
-      <Link href="/" className="sidebar-logo" aria-label="44 Home">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/44-logo-dark.svg" alt="44" width={30} height={30} className="sidebar-logo-dark" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/44-logo-light.svg" alt="44" width={30} height={30} className="sidebar-logo-light" />
-      </Link>
+      <div className="sidebar-top">
+        <Link href="/" className="sidebar-logo" aria-label="44 Home">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/44-logo-dark.svg" alt="44" width={30} height={30} className="sidebar-logo-dark" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/44-logo-light.svg" alt="44" width={30} height={30} className="sidebar-logo-light" />
+        </Link>
+
+        {user && (
+          <Link
+            href="/notifications"
+            aria-label="Notifications"
+            className={notificationsActive ? 'sidebar-notification-button sidebar-notification-button-active' : 'sidebar-notification-button'}
+          >
+            <IconNotifications />
+          </Link>
+        )}
+      </div>
 
       <nav className="sidebar-nav" aria-label="Primary">
         {NAV.map(section => {
-          const isOpen   = openId === section.id;
           const isActive = activeSectionId === section.id;
 
           return (
             <div key={section.id} className="sidebar-section">
-              <button
+              <Link
+                href={section.href}
                 className={isActive ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}
-                onClick={() => handleSectionClick(section)}
-                aria-expanded={isOpen}
               >
                 <span className="sidebar-item-icon">{section.icon}</span>
                 <span className="sidebar-item-label">{section.label}</span>
-              </button>
-
-              {isOpen && section.children.length > 0 && (
-                <div className="sidebar-children">
-                  {section.children.map(child => (
-                    <Link
-                      key={child.href}
-                      href={child.href}
-                      className={isChildActive(child.href, pathname, search) ? 'sidebar-child sidebar-child-active' : 'sidebar-child'}
-                    >
-                      {child.icon && <span className="sidebar-child-icon">{child.icon}</span>}
-                      {child.label}
-                    </Link>
-                  ))}
-                </div>
-              )}
+              </Link>
             </div>
           );
         })}
@@ -266,12 +198,14 @@ export default function Sidebar() {
                 <span className="sidebar-item-label">Inbox</span>
               </Link>
             </div>
-            <div className="sidebar-section">
-              <Link href="/notifications" className={notificationsActive ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}>
-                <span className="sidebar-item-icon"><IconNotifications /></span>
-                <span className="sidebar-item-label">Notifications</span>
-              </Link>
-            </div>
+            {isCreatorProfile(profile) && (
+              <div className="sidebar-section">
+                <Link href="/dashboard" className={dashboardActive ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}>
+                  <span className="sidebar-item-icon"><IconDashboard /></span>
+                  <span className="sidebar-item-label">Dashboard</span>
+                </Link>
+              </div>
+            )}
           </>
         )}
       </nav>
@@ -279,15 +213,6 @@ export default function Sidebar() {
       <div className="sidebar-footer">
         {user ? (
           <>
-            {isCreatorProfile(profile) && (
-              <>
-                <div className="sidebar-divider" />
-                <Link href="/studio" className={studioActive ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}>
-                  <span className="sidebar-item-icon"><IconStudio /></span>
-                  <span className="sidebar-item-label">Studio</span>
-                </Link>
-              </>
-            )}
             <Link href="/settings" className={settingsActive ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}>
               <span className="sidebar-item-icon"><IconSettings /></span>
               <span className="sidebar-item-label">Settings</span>

@@ -86,11 +86,14 @@ export default function CommunityPage() {
           );
         })}
 
-        <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+        <section className="app-section">
+          <div className="hub-section-head">
+            <h2 className="hub-section-title os-type-section-title">Start a conversation</h2>
+          </div>
           <Link href="/community/new" className="os-button os-button-primary">
-            Start Discussion
+            New Discussion
           </Link>
-        </div>
+        </section>
       </div>
     </PageShell>
   );

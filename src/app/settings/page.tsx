@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { SystemPanel } from '@/components/SystemPanel';
 import { useAuth } from '@/lib/useAuth';
+import { SystemPanel } from '@/components/SystemPanel';
 import {
   ACCENTS,
   MODES,
@@ -61,10 +61,6 @@ const TABS = [
 ];
 
 export default function SettingsPage() {
-  const { user, loading } = useAuth();
-
-  if (loading) return <div className="panel-scroll" />;
-
   return (
     <div className="panel-scroll">
       <SystemPanel tabs={TABS}>

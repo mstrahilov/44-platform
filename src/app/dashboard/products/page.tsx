@@ -7,7 +7,7 @@ import { PageShell, GlassPanel } from '@/components/Ui';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
-import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
+import { buildOwnershipFilter, isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 
 export default function DashboardProductsPage() {
   const router = useRouter();
@@ -28,14 +28,18 @@ export default function DashboardProductsPage() {
 
       const profileResult = await loadStudioProfile(user.id);
       setProfile(profileResult.profile);
-      const creatorIds = Array.from(
-        new Set([profileResult.profile?.id, user.id].filter((value): value is string => Boolean(value))),
-      );
+      const ownershipFilter = buildOwnershipFilter({
+        idFields: ['creator_id', 'author_id'],
+        textFields: ['creator'],
+        profile: profileResult.profile,
+        userId: user.id,
+        email: user.email,
+      });
 
       const { data: productRows } = await supabase
         .from('products')
         .select('*')
-        .in('creator_id', creatorIds)
+        .or(ownershipFilter)
         .order('created_at', { ascending: false });
       setProducts((productRows as Product[] | null) ?? []);
       setFetching(false);
@@ -125,7 +129,7 @@ export default function DashboardProductsPage() {
             </div>
           ) : products.length === 0 ? (
             <div style={{ padding: '24px 26px', color: 'var(--os-color-ink-secondary)' }}>
-              No products yet. Create your first one from inside Studio.
+              No products yet. Create your first one from inside Dashboard.
             </div>
           ) : (
             products.map((product, index) => (

@@ -93,8 +93,8 @@ export function itemSearchText(item: TaxonomyItem, extra: Array<string | null | 
   if ('title' in item) fields.push(item.title);
   if ('name' in item) fields.push(item.name);
   if ('creator' in item) fields.push(item.creator);
-  if ('description' in item) fields.push(item.description);
-  if ('summary' in item) fields.push(item.summary);
+  if ('short_description' in item) fields.push(item.short_description);
+  if ('long_description' in item) fields.push(item.long_description);
   if ('body' in item) fields.push(item.body);
   if ('bio' in item) fields.push(item.bio);
   if ('creators' in item) fields.push(item.creators?.name);
