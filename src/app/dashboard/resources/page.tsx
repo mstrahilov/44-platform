@@ -6,10 +6,12 @@ import { useRouter } from 'next/navigation';
 import { PageShell, GlassPanel } from '@/components/Ui';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
-import type { Resource } from '@/lib/platform';
-import { buildOwnershipFilter, isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
+import { resourceHref, type Resource } from '@/lib/platform';
+import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
+import { useDashboardTabs } from '@/lib/dashboardTabs';
 
 export default function DashboardResourcesPage() {
+  useDashboardTabs('resources');
   const router = useRouter();
   const { user, loading } = useAuth();
   const [resources, setResources] = useState<Resource[]>([]);
@@ -28,17 +30,12 @@ export default function DashboardResourcesPage() {
 
       const profileResult = await loadStudioProfile(user.id);
       setProfile(profileResult.profile);
-      const ownershipFilter = buildOwnershipFilter({
-        idFields: ['creator_id', 'author_id'],
-        profile: profileResult.profile,
-        userId: user.id,
-        email: user.email,
-      });
+      const profileId = profileResult.profile?.id ?? user.id;
 
       const { data: resourceRows } = await supabase
         .from('resources')
         .select('*')
-        .or(ownershipFilter)
+        .eq('author_id', profileId)
         .order('created_at', { ascending: false });
       setResources((resourceRows as Resource[] | null) ?? []);
       setFetching(false);
@@ -48,11 +45,14 @@ export default function DashboardResourcesPage() {
   }, [user]);
 
   async function togglePublish(resource: Resource) {
+    if (!user) return;
+    const profileId = profile?.id ?? user.id;
     const nextStatus = resource.status === 'published' ? 'draft' : 'published';
     const { error } = await supabase
       .from('resources')
       .update({ status: nextStatus, is_published: nextStatus === 'published' })
-      .eq('id', resource.id);
+      .eq('id', resource.id)
+      .eq('author_id', profileId);
 
     if (error) {
       alert(error.message);
@@ -173,6 +173,9 @@ export default function DashboardResourcesPage() {
                   </div>
                   <Link href={`/dashboard/resources/${resource.id}`} className="os-button os-button-ghost os-button-compact">
                     Edit
+                  </Link>
+                  <Link href={resourceHref(resource)} className="os-button os-button-ghost os-button-compact">
+                    Open
                   </Link>
                   <button className="os-button os-button-secondary os-button-compact" onClick={() => togglePublish(resource)}>
                     {resource.status === 'published' ? 'Unpublish' : 'Publish'}

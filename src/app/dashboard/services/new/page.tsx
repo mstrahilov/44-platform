@@ -90,7 +90,6 @@ export default function NewServicePage() {
     const startingPriceCents = Number.isFinite(priceNumber) ? Math.max(0, Math.round(priceNumber * 100)) : 0;
 
     const { error: insertError } = await supabase.from('services').insert({
-      creator_id: profile?.id ?? user.id,
       author_id: profile?.id ?? user.id,
       category_id: categoryId,
       slug: buildSlug(cleanTitle),

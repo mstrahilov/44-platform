@@ -5,7 +5,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { supabase } from '@/lib/supabase';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
-import { loadAchievementNotifications, type AchievementNotification } from '@/lib/achievementNotifications';
+import {
+  ACHIEVEMENT_NOTIFICATIONS_UPDATED,
+  loadAchievementNotifications,
+  type AchievementNotification,
+} from '@/lib/achievementNotifications';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTopbar } from './TopbarContext';
 
@@ -91,6 +95,23 @@ export function Topbar() {
   useEffect(() => {
     if (!user) { setNotifications([]); return; }
     loadAchievementNotifications(user.id).then(rows => setNotifications(rows.slice(0, 10)));
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const userId = user.id;
+
+    async function refreshNotifications() {
+      const rows = await loadAchievementNotifications(userId);
+      setNotifications(rows.slice(0, 10));
+    }
+
+    function onAchievementUpdate() {
+      refreshNotifications();
+    }
+
+    window.addEventListener(ACHIEVEMENT_NOTIFICATIONS_UPDATED, onAchievementUpdate);
+    return () => window.removeEventListener(ACHIEVEMENT_NOTIFICATIONS_UPDATED, onAchievementUpdate);
   }, [user]);
 
   useEffect(() => { setSeenIds(loadSeenIds()); }, []);

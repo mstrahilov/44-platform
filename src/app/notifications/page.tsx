@@ -4,7 +4,11 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SystemPanel } from '@/components/SystemPanel';
 import { useAuth } from '@/lib/useAuth';
-import { loadAchievementNotifications, type AchievementNotification } from '@/lib/achievementNotifications';
+import {
+  ACHIEVEMENT_NOTIFICATIONS_UPDATED,
+  loadAchievementNotifications,
+  type AchievementNotification,
+} from '@/lib/achievementNotifications';
 
 const TABS = [
   { id: 'all', label: 'All' },
@@ -30,6 +34,23 @@ export default function NotificationsPage() {
       setNotifications(rows);
     }
     load();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const userId = user.id;
+
+    async function refresh() {
+      const rows = await loadAchievementNotifications(userId);
+      setNotifications(rows);
+    }
+
+    function onAchievementUpdate() {
+      refresh();
+    }
+
+    window.addEventListener(ACHIEVEMENT_NOTIFICATIONS_UPDATED, onAchievementUpdate);
+    return () => window.removeEventListener(ACHIEVEMENT_NOTIFICATIONS_UPDATED, onAchievementUpdate);
   }, [user]);
 
   if (loading || !user) return <div className="panel-scroll" />;

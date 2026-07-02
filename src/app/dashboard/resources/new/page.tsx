@@ -75,7 +75,6 @@ export default function NewResourcePage() {
     setError('');
 
     const { error: insertError } = await supabase.from('resources').insert({
-      creator_id: profile?.id ?? user.id,
       author_id: profile?.id ?? user.id,
       category_id: categoryId,
       slug: buildSlug(cleanTitle),

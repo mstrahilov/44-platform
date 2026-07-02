@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import type { Category, CommunityPost } from '@/lib/platform';
 import { matchesCategory, matchesQuery } from '@/lib/taxonomy';
 import { ThreadRow, PageShell } from '@/components/Ui';
+import { useTopbarTabs } from '@/components/TopbarContext';
 
 type CountMap = Record<string, number>;
 
@@ -70,6 +71,20 @@ export default function CommunityBrowsePage() {
   const label = activeCategory === 'all'
     ? 'Community'
     : (categoryCatalog.find(c => c.slug === activeCategory)?.name ?? activeCategory);
+
+  useTopbarTabs(
+    categoryCatalog.length > 0
+      ? [
+          { id: 'all', label: 'All', href: '/community', active: activeCategory === 'all' },
+          ...categoryCatalog.slice(0, 5).map(category => ({
+            id: category.slug,
+            label: category.name,
+            href: `/community/browse/${category.slug}`,
+            active: category.slug === activeCategory,
+          })),
+        ]
+      : undefined,
+  );
 
   return (
     <PageShell>

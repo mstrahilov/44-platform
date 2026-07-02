@@ -55,7 +55,8 @@ export default function StorePage() {
     { id: 'music',   label: 'Music',    href: '/store/music' },
     { id: 'apparel', label: 'Apparel',  href: '/store/apparel' },
     { id: 'books',   label: 'Books',    href: '/store/books' },
-    { id: 'digital', label: 'Digital',  href: '/store/digital' },
+    { id: 'games',   label: 'Games',    href: '/store/games' },
+    { id: 'assets',  label: 'Assets',   href: '/store/assets' },
   ]);
 
   return (

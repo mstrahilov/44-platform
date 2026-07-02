@@ -2,9 +2,20 @@ import { supabase } from '@/lib/supabase';
 import type { AchievementEvent, ProductAchievement } from '@/lib/platform';
 import type { AchievementToastData } from '@/components/AchievementToast';
 
+export const ACHIEVEMENT_NOTIFICATIONS_UPDATED = '44:achievement-notifications-updated';
+
 export interface AchievementNotification extends AchievementToastData {
   createdAt?: string;
   productId?: string | null;
+}
+
+function broadcastAchievementNotification(notification: AchievementNotification) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(
+    new CustomEvent(ACHIEVEMENT_NOTIFICATIONS_UPDATED, {
+      detail: notification,
+    }),
+  );
 }
 
 export async function unlockAchievementForUser(
@@ -42,12 +53,16 @@ export async function unlockAchievementForUser(
     },
   });
 
-  return {
+  const notification = {
     id: achievement.id,
     title: achievement.title,
     description: achievement.description,
     points: achievement.points,
-  } satisfies AchievementToastData;
+  } satisfies AchievementNotification;
+
+  broadcastAchievementNotification(notification);
+
+  return notification;
 }
 
 export async function loadAchievementNotifications(userId: string): Promise<AchievementNotification[]> {

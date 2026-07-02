@@ -124,7 +124,12 @@ export function isCreatorProfile(profile: StudioProfile | null) {
 }
 
 function escapeFilterValue(value: string) {
-  return `"${String(value).replace(/"/g, '\\"')}"`;
+  const normalized = String(value);
+  if (/^[a-zA-Z0-9_-]+$/.test(normalized)) {
+    return normalized;
+  }
+
+  return `"${normalized.replace(/"/g, '\\"')}"`;
 }
 
 export function getOwnershipKeys(profile: StudioProfile | null, userId: string, email?: string | null) {
@@ -164,7 +169,7 @@ export function buildOwnershipFilter({
   const { ids, names } = getOwnershipKeys(profile, userId, email);
 
   const idFilters = idFields.flatMap(field => ids.map(value => `${field}.eq.${escapeFilterValue(value)}`));
-  const textFilters = textFields.flatMap(field => names.map(value => `${field}.eq.${escapeFilterValue(value)}`));
+  const textFilters = textFields.flatMap(field => names.map(value => `${field}.ilike.${escapeFilterValue(value)}`));
 
   return [...idFilters, ...textFilters].join(',');
 }

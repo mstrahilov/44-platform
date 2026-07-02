@@ -42,7 +42,9 @@ export default function ProductPage() {
 
   useEffect(() => {
     async function fetchProduct() {
-      const productQuery = supabase.from('products').select('*');
+      const productQuery = supabase
+        .from('products')
+        .select('*, creators:profiles!author_id(id, slug, username, display_name, avatar_url)');
       const { data } = await (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
         ? productQuery.eq('id', id)
         : productQuery.eq('slug', id)
@@ -52,8 +54,19 @@ export default function ProductPage() {
       setLoading(false);
 
       if (data) {
+        const relatedQuery = supabase
+          .from('products')
+          .select('*, creators:profiles!author_id(id, slug, username, display_name, avatar_url)')
+          .eq('is_published', true)
+          .neq('id', data.id)
+          .limit(8);
+
+        const relatedScope = data.author_id
+          ? relatedQuery.eq('author_id', data.author_id)
+          : relatedQuery.eq('creator', data.creator);
+
         const [{ data: relatedProducts }, { data: reviewRows }] = await Promise.all([
-          supabase.from('products').select('*').eq('is_published', true).eq('creator', data.creator).neq('id', data.id).limit(8),
+          relatedScope,
           supabase.from('product_reviews').select('id,user_id,product_id,body,sentiment,status,created_at,updated_at').eq('product_id', data.id).eq('status', 'published').order('created_at', { ascending: false }),
         ]);
         setRelated(relatedProducts ?? []);
@@ -117,7 +130,7 @@ export default function ProductPage() {
   const canClaimToCollection = isFreeCollectionClaim(product);
   const primaryAction = owned ? 'Owned' : canClaimToCollection ? 'Add to Collection' : 'Add to Cart';
   const accessLabel = getProductStoreAccessLabel(product);
-  const creatorLink = creatorHref(product.creator);
+  const creatorLink = creatorHref(product.creators ?? product.creator);
   const recommended = reviews.filter(r => r.sentiment === 'recommended').length;
   const total = reviews.length;
   const ratio = total > 0 ? Math.round((recommended / total) * 100) : 0;
@@ -143,7 +156,7 @@ export default function ProductPage() {
           <div className="view-album-eyebrow">{productMeta(product)}</div>
           <h1 className="view-album-title">{product.title}</h1>
           <div className="view-album-meta">
-            <span style={{ fontWeight: 700 }}>{product.creator}</span>
+            <span style={{ fontWeight: 700 }}>{product.creators?.display_name || product.creator}</span>
             {product.year && (<><span className="view-album-meta-sep" /><span>{product.year}</span></>)}
             <span className="view-album-meta-sep" />
             <span style={{ color: canClaimToCollection ? '#7cff4f' : '#fff', fontWeight: 700 }}>
@@ -172,7 +185,7 @@ export default function ProductPage() {
         <div>
           <div className="view-row">
             <span className="view-row-label">Creator</span>
-            <span className="view-row-value">{product.creator}</span>
+            <span className="view-row-value">{product.creators?.display_name || product.creator}</span>
           </div>
           <div className="view-row">
             <span className="view-row-label">Type</span>
@@ -236,7 +249,7 @@ export default function ProductPage() {
       {/* Related */}
       {related.length > 0 && (
         <div className="view-section">
-          <h2 className="view-section-title">More from {product.creator}</h2>
+          <h2 className="view-section-title">More from {product.creators?.display_name || product.creator}</h2>
           <ProductGrid>
             {related.map(item => <ProductCard key={item.id} product={item} />)}
           </ProductGrid>

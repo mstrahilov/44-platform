@@ -97,7 +97,13 @@ export function itemSearchText(item: TaxonomyItem, extra: Array<string | null | 
   if ('long_description' in item) fields.push(item.long_description);
   if ('body' in item) fields.push(item.body);
   if ('bio' in item) fields.push(item.bio);
-  if ('creators' in item) fields.push(item.creators?.name);
+  if ('creators' in item) {
+    const creatorLabel =
+      item.creators && 'display_name' in item.creators
+        ? item.creators.display_name
+        : item.creators?.name;
+    fields.push(creatorLabel);
+  }
   if ('tags' in item) fields.push(...(item.tags ?? []));
 
   return fields.filter(Boolean).join(' ').toLowerCase();

@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Category, Track } from '@/lib/platform';
 import type { Product } from '@/lib/products';
-import { buildOwnershipFilter, getStudioDisplayName, loadStudioProfile } from '@/lib/studioProfiles';
+import { getStudioDisplayName, loadStudioProfile } from '@/lib/studioProfiles';
 
 function formatPriceInput(value: string) {
   const digits = value.replace(/\D/g, '').slice(0, 9);
@@ -61,6 +61,7 @@ export default function EditProductPage() {
   const [year, setYear] = useState('');
   const [trackCount, setTrackCount] = useState('1');
   const [tracks, setTracks] = useState<DraftTrack[]>([createDraftTrack()]);
+  const [ownerId, setOwnerId] = useState('');
   const [saving, setSaving] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState('');
@@ -80,18 +81,15 @@ export default function EditProductPage() {
 
       setCategories((categoryRows as Category[] | null) ?? []);
       setCreatorName(getStudioDisplayName(profileResult.profile, user.email));
-      const ownershipFilter = buildOwnershipFilter({
-        idFields: ['creator_id', 'author_id'],
-        textFields: ['creator'],
-        profile: profileResult.profile,
-        userId: user.id,
-        email: user.email,
-      });
+      const profileId = profileResult.profile?.id ?? user.id;
+      setOwnerId(profileId);
 
-      const [{ data: productRow }, { data: trackRows }] = await Promise.all([
-        supabase.from('products').select('*').eq('id', id).or(ownershipFilter).maybeSingle(),
-        supabase.from('tracks').select('*').eq('product_id', id).order('number'),
-      ]);
+      const { data: productRow } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', id)
+        .eq('author_id', profileId)
+        .maybeSingle();
 
       const product = (productRow as Product | null) ?? null;
       if (!product) {
@@ -99,6 +97,8 @@ export default function EditProductPage() {
         setFetching(false);
         return;
       }
+
+      const { data: trackRows } = await supabase.from('tracks').select('*').eq('product_id', id).order('number');
 
       setTitle(product.title ?? '');
       setCategoryId(product.category_id ?? '');
@@ -144,14 +144,8 @@ export default function EditProductPage() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!user) return;
-    const profileResult = await loadStudioProfile(user.id);
-    const ownershipFilter = buildOwnershipFilter({
-      idFields: ['creator_id', 'author_id'],
-      textFields: ['creator'],
-      profile: profileResult.profile,
-      userId: user.id,
-      email: user.email,
-    });
+    const profileResult = ownerId ? null : await loadStudioProfile(user.id);
+    const profileId = ownerId || profileResult?.profile?.id || user.id;
 
     const visibleTracks = tracks.slice(0, Number(trackCount || '0'));
     if (isMusicProduct) {
@@ -185,7 +179,7 @@ export default function EditProductPage() {
         creator: creatorName,
       })
       .eq('id', id)
-      .or(ownershipFilter);
+      .eq('author_id', profileId);
 
     if (updateError) {
       setSaving(false);
@@ -246,14 +240,20 @@ export default function EditProductPage() {
     const confirmed = window.confirm('Delete this product? This will also remove its tracks.');
     if (!confirmed) return;
 
-    const profileResult = await loadStudioProfile(user.id);
-    const ownershipFilter = buildOwnershipFilter({
-      idFields: ['creator_id', 'author_id'],
-      textFields: ['creator'],
-      profile: profileResult.profile,
-      userId: user.id,
-      email: user.email,
-    });
+    const profileResult = ownerId ? null : await loadStudioProfile(user.id);
+    const profileId = ownerId || profileResult?.profile?.id || user.id;
+
+    const { data: ownedProduct, error: ownershipError } = await supabase
+      .from('products')
+      .select('id')
+      .eq('id', id)
+      .eq('author_id', profileId)
+      .maybeSingle();
+
+    if (ownershipError || !ownedProduct) {
+      setError(ownershipError?.message || 'Product not found.');
+      return;
+    }
 
     const { error: tracksError } = await supabase.from('tracks').delete().eq('product_id', id);
     if (tracksError) {
@@ -265,7 +265,7 @@ export default function EditProductPage() {
       .from('products')
       .delete()
       .eq('id', id)
-      .or(ownershipFilter);
+      .eq('author_id', profileId);
 
     if (deleteError) {
       setError(deleteError.message);

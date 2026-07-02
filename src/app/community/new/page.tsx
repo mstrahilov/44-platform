@@ -57,7 +57,6 @@ export default function NewCommunityThreadPage() {
       .from('posts')
       .insert({
         author_id: user.id,
-        creator_id: user.id,
         category_id: categoryId || null,
         slug: buildSlug(title),
         title: title.trim(),

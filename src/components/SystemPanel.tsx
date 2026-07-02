@@ -1,9 +1,10 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import { useTopbarTabs } from './TopbarContext';
 
-type Tab = { label: string; id: string };
+type Tab = { label: string; id: string; href?: string };
 
 interface Props {
   tabs: Tab[];
@@ -19,7 +20,8 @@ export function SystemPanel({ tabs, defaultTab, children }: Props) {
     tabs.map(t => ({
       id: t.id,
       label: t.label,
-      onClick: () => setActiveTab(t.id),
+      href: t.href,
+      onClick: t.href ? undefined : () => setActiveTab(t.id),
       active: t.id === activeTab,
     })),
   );

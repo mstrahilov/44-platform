@@ -48,9 +48,11 @@ export interface Creator {
   categories?: Pick<Category, 'id' | 'slug' | 'name'> | null;
 }
 
+export type ProfileLinkTarget = Pick<Profile, 'slug' | 'username'>;
+
 export interface Service {
   id: string;
-  creator_id: string | null;
+  author_id: string | null;
   category_id: string | null;
   slug: string;
   title: string;
@@ -70,7 +72,7 @@ export interface Service {
 
 export interface Resource {
   id: string;
-  creator_id: string | null;
+  author_id: string | null;
   category_id: string | null;
   slug: string;
   title: string;
@@ -133,7 +135,6 @@ export interface CommunityPost {
   id: string;
   slug?: string | null;
   author_id?: string | null;
-  creator_id: string | null;
   category_id: string | null;
   title: string;
   body: string | null;
@@ -189,9 +190,12 @@ export function resourceHref(resource: Pick<Resource, 'slug' | 'id'>) {
   return `/resources/${resource.slug || resource.id}`;
 }
 
-export function creatorHref(creator: Pick<Creator, 'slug'> | string | null | undefined) {
+export function creatorHref(creator: ProfileLinkTarget | Pick<Creator, 'slug'> | string | null | undefined) {
   if (!creator) return '/community/profile/member';
-  if (typeof creator !== 'string') return `/community/profile/${creator.slug}`;
+  if (typeof creator !== 'string') {
+    const handle = ('username' in creator ? creator.username : null) || creator.slug;
+    return `/community/profile/${handle || 'member'}`;
+  }
 
   const slug = creator
     .toLowerCase()

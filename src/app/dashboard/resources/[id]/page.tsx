@@ -8,7 +8,7 @@ import { UploadField } from '@/components/UploadField';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Category } from '@/lib/platform';
-import { buildOwnershipFilter, getStudioDisplayName, loadStudioProfile } from '@/lib/studioProfiles';
+import { getStudioDisplayName, loadStudioProfile } from '@/lib/studioProfiles';
 
 export default function EditResourcePage() {
   const { id } = useParams<{ id: string }>();
@@ -41,17 +41,12 @@ export default function EditResourcePage() {
 
       setCategories((categoryRows as Category[] | null) ?? []);
       setCreatorName(getStudioDisplayName(profileResult.profile, user.email));
-      const ownershipFilter = buildOwnershipFilter({
-        idFields: ['creator_id', 'author_id'],
-        profile: profileResult.profile,
-        userId: user.id,
-        email: user.email,
-      });
+      const profileId = profileResult.profile?.id ?? user.id;
       const { data: resourceRow } = await supabase
         .from('resources')
         .select('*')
         .eq('id', id)
-        .or(ownershipFilter)
+        .eq('author_id', profileId)
         .maybeSingle();
 
       if (!resourceRow) {
@@ -79,12 +74,7 @@ export default function EditResourcePage() {
     setSaving(true);
     setError('');
     const profileResult = await loadStudioProfile(user.id);
-    const ownershipFilter = buildOwnershipFilter({
-      idFields: ['creator_id', 'author_id'],
-      profile: profileResult.profile,
-      userId: user.id,
-      email: user.email,
-    });
+    const profileId = profileResult.profile?.id ?? user.id;
 
     const { error: updateError } = await supabase
       .from('resources')
@@ -98,7 +88,7 @@ export default function EditResourcePage() {
         download_url: downloadUrl.trim() || null,
       })
       .eq('id', id)
-      .or(ownershipFilter);
+      .eq('author_id', profileId);
 
     setSaving(false);
     if (updateError) {
@@ -116,18 +106,13 @@ export default function EditResourcePage() {
     if (!confirmed) return;
 
     const profileResult = await loadStudioProfile(user.id);
-    const ownershipFilter = buildOwnershipFilter({
-      idFields: ['creator_id', 'author_id'],
-      profile: profileResult.profile,
-      userId: user.id,
-      email: user.email,
-    });
+    const profileId = profileResult.profile?.id ?? user.id;
 
     const { error: deleteError } = await supabase
       .from('resources')
       .delete()
       .eq('id', id)
-      .or(ownershipFilter);
+      .eq('author_id', profileId);
 
     if (deleteError) {
       setError(deleteError.message);

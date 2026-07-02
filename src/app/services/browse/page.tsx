@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import type { Category, Service } from '@/lib/platform';
 import { matchesCategory, matchesQuery } from '@/lib/taxonomy';
 import { ServiceCard, PageShell } from '@/components/Ui';
+import { useTopbarTabs } from '@/components/TopbarContext';
 
 export default function ServicesBrowsePage() {
   const [services, setServices] = useState<Service[]>([]);
@@ -50,16 +51,25 @@ export default function ServicesBrowsePage() {
     ? 'All Services'
     : (categoryCatalog.find(c => c.slug === activeCategory)?.name ?? activeCategory);
 
+  useTopbarTabs(
+    categoryCatalog.length > 0
+      ? [
+          { id: 'all', label: 'All', href: '/services', active: activeCategory === 'all' },
+          ...categoryCatalog.slice(0, 5).map(category => ({
+            id: category.slug,
+            label: category.name,
+            href: `/services/browse/${category.slug}`,
+            active: category.slug === activeCategory,
+          })),
+        ]
+      : undefined,
+  );
+
   return (
     <PageShell>
       <style>{`
-        .browse-page { display: flex; flex-direction: column; gap: 20px; }
+        .browse-page { display: flex; flex-direction: column; gap: var(--os-space-7); }
         .browse-heading { display: flex; flex-direction: column; gap: 6px; }
-        .service-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-          gap: 14px;
-        }
       `}</style>
       <div className="browse-page">
         <h1 className="browse-page-title os-type-display">{label}</h1>

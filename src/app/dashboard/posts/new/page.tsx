@@ -62,7 +62,6 @@ export default function NewPostPage() {
 
     const { error: insertError } = await supabase.from('posts').insert({
       author_id: user.id,
-      creator_id: user.id,
       category_id: categoryId || null,
       slug: buildSlug(title),
       title: title.trim(),

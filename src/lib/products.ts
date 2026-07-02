@@ -1,6 +1,7 @@
+import type { Profile } from '@/lib/platform';
+
 export interface Product {
   id: string;
-  creator_id?: string | null;
   author_id?: string | null;
   category_id?: string | null;
   slug?: string | null;
@@ -25,6 +26,7 @@ export interface Product {
   status?: string | null;
   year?: number | null;
   created_at: string;
+  creators?: Pick<Profile, 'id' | 'slug' | 'username' | 'display_name' | 'avatar_url'> | null;
 }
 
 export function formatProductPrice(product: Pick<Product, 'is_free' | 'price_cents'>) {

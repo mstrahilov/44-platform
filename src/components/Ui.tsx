@@ -243,7 +243,7 @@ export function HubSection({ title, href, children }: { title: string; href?: st
   return (
     <section className="app-section">
       <div className="hub-section-head">
-        <h2 className="hub-section-title os-type-section-title">{title}</h2>
+        <h2 className="hub-section-title">{title}</h2>
         {href && <Link href={href} className="hub-view-all">View All →</Link>}
       </div>
       {children}

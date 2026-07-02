@@ -6,10 +6,12 @@ import { useRouter } from 'next/navigation';
 import { PageShell, GlassPanel } from '@/components/Ui';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
-import type { CommunityPost } from '@/lib/platform';
+import { communityThreadHref, type CommunityPost } from '@/lib/platform';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
+import { useDashboardTabs } from '@/lib/dashboardTabs';
 
 export default function DashboardPostsPage() {
+  useDashboardTabs('posts');
   const router = useRouter();
   const { user, loading } = useAuth();
   const [posts, setPosts] = useState<CommunityPost[]>([]);
@@ -25,11 +27,12 @@ export default function DashboardPostsPage() {
       if (!user) return;
       const profileResult = await loadStudioProfile(user.id);
       setProfile(profileResult.profile);
+      const profileId = profileResult.profile?.id ?? user.id;
 
       const { data } = await supabase
         .from('posts')
         .select('*, categories(id, slug, name)')
-        .eq('author_id', user.id)
+        .eq('author_id', profileId)
         .order('created_at', { ascending: false });
 
       setPosts((data as CommunityPost[] | null) ?? []);
@@ -40,8 +43,10 @@ export default function DashboardPostsPage() {
   }, [user]);
 
   async function togglePublish(post: CommunityPost) {
+    if (!user) return;
+    const profileId = profile?.id ?? user.id;
     const nextStatus = post.status === 'published' ? 'draft' : 'published';
-    const { error } = await supabase.from('posts').update({ status: nextStatus }).eq('id', post.id).eq('author_id', user?.id);
+    const { error } = await supabase.from('posts').update({ status: nextStatus }).eq('id', post.id).eq('author_id', profileId);
     if (error) {
       alert(error.message);
       return;
@@ -85,6 +90,9 @@ export default function DashboardPostsPage() {
                 <div style={{ color: 'var(--os-color-ink-secondary)', fontSize: 14 }}>{post.categories?.name || 'Community'}</div>
                 <div style={{ justifySelf: 'end', display: 'flex', gap: 10, alignItems: 'center' }}>
                   <div style={{ borderRadius: 999, padding: '7px 12px', background: 'rgba(255,255,255,.07)', color: 'var(--os-color-ink-secondary)', fontSize: 12, fontWeight: 700, textTransform: 'capitalize' }}>{post.status || 'draft'}</div>
+                  <Link href={communityThreadHref(post)} className="os-button os-button-ghost os-button-compact">
+                    Open
+                  </Link>
                   <button className="os-button os-button-secondary os-button-compact" onClick={() => togglePublish(post)}>
                     {post.status === 'published' ? 'Unpublish' : 'Publish'}
                   </button>

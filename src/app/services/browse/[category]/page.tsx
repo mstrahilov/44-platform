@@ -55,12 +55,7 @@ export default function ServicesCategoryPage({ params }: { params: Promise<{ cat
   return (
     <PageShell>
       <style>{`
-        .browse-page { display: flex; flex-direction: column; gap: 20px; }
-        .service-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-          gap: 14px;
-        }
+        .browse-page { display: flex; flex-direction: column; gap: var(--os-space-7); }
       `}</style>
       <div className="browse-page">
         <h1 className="browse-page-title os-type-display">{label}</h1>

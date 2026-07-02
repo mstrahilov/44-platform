@@ -56,7 +56,7 @@ export default function CollectionItemPage() {
       if (kind === 'product') {
         const { data, error: itemError } = await supabase
           .from('collection_items')
-          .select('id,product_id,acquisition_type,acquired_at,status,products(*)')
+          .select('id,product_id,acquisition_type,acquired_at,status,products(*, creators:profiles!author_id(id, slug, username, display_name, avatar_url))')
           .eq('id', id)
           .eq('user_id', userId)
           .maybeSingle();
@@ -161,7 +161,7 @@ function ProductCollectionDetail({
   const action = getProductCollectionPrimaryAction(product);
   const content = getProductCollectionContent(product);
   const isMusic = getProductRuntimeKind(product) === 'music';
-  const creatorLink = creatorHref(product.creator);
+  const creatorLink = creatorHref(product.creators ?? product.creator);
   const [localUnlockedAchievementIds, setLocalUnlockedAchievementIds] = useState(unlockedAchievementIds);
   const unlocked = achievements.filter(item => localUnlockedAchievementIds.has(item.id));
   const locked = achievements.filter(item => !localUnlockedAchievementIds.has(item.id));
@@ -193,7 +193,12 @@ function ProductCollectionDetail({
       if (playedTrackIds.size < requiredTrackCount) return;
       if (!row.product_id) return;
       const achievement = achievements.find(
-        item => item.trigger_type === 'all_tracks_listened' || item.trigger_type === 'played_all_tracks',
+        item =>
+          item.trigger_type === 'all_tracks_listened'
+          || item.trigger_type === 'played_all_tracks'
+          || item.trigger_type === 'tracks_completed'
+          || item.trigger_type === 'listen_all_tracks'
+          || item.code?.toLowerCase() === 'casual_listener',
       );
       if (!achievement) return;
       if (localUnlockedAchievementIds.has(achievement.id)) return;
@@ -230,7 +235,7 @@ function ProductCollectionDetail({
           <div className="view-album-eyebrow">{product.product_type}</div>
           <h1 className="view-album-title">{product.title}</h1>
           <div className="view-album-meta">
-            <span style={{ fontWeight: 700 }}>{product.creator}</span>
+            <span style={{ fontWeight: 700 }}>{product.creators?.display_name || product.creator}</span>
             {isMusic && tracks.length > 0 && (
               <>
                 <span className="view-album-meta-sep" />

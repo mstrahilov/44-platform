@@ -8,12 +8,15 @@ import { useAuth } from '@/lib/useAuth';
 import type { Profile, Resource, Service, CommunityPost } from '@/lib/platform';
 import type { Product } from '@/lib/products';
 import { PageShell, CenteredMessage } from '@/components/Ui';
+import { getOwnershipKeys } from '@/lib/studioProfiles';
+import { useTopbarBack } from '@/components/TopbarContext';
 
 type ProfileTab = 'feed' | 'products' | 'services' | 'resources';
 
 export default function PublicProfilePage() {
   const { username } = useParams<{ username: string }>();
   const { user } = useAuth();
+  useTopbarBack({ href: '/community', label: 'Community' });
   const [profile, setProfile] = useState<Profile | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -45,36 +48,38 @@ export default function PublicProfilePage() {
       }
 
       const profileId = resolvedProfile.id;
-      const displayName = resolvedProfile.display_name ?? null;
-      const slug = resolvedProfile.slug ?? null;
-
-      const creatorFilters = Array.from(
-        new Set([profileId, displayName, slug].filter((value): value is string => Boolean(value))),
-      );
-      const stringMatches = Array.from(
-        new Set([displayName, slug].filter((value): value is string => Boolean(value))),
-      );
+      const ownershipProfile = {
+        id: resolvedProfile.id,
+        display_name: resolvedProfile.display_name ?? null,
+        username: resolvedProfile.username ?? null,
+        role: resolvedProfile.role ?? null,
+        slug: resolvedProfile.slug ?? null,
+        avatar_url: resolvedProfile.avatar_url ?? null,
+        bio: resolvedProfile.bio ?? null,
+        creator_type: resolvedProfile.creator_type ?? null,
+      };
+      const { ids } = getOwnershipKeys(ownershipProfile, profileId);
 
       const [productResult, serviceResult, resourceResult, postResult] = await Promise.all([
         supabase
           .from('products')
-          .select('*')
-          .or(buildMultiOwnershipFilter(['author_id', 'creator_id'], creatorFilters, 'creator', stringMatches))
+          .select('*, creators:profiles!author_id(id, slug, username, display_name, avatar_url)')
+          .eq('author_id', profileId)
           .order('created_at', { ascending: false }),
         supabase
           .from('services')
-          .select('*')
-          .or(buildOwnershipFilter('creator_id', creatorFilters, 'creator', stringMatches))
+          .select('*, creators:profiles!author_id(id, slug, username, name:display_name, avatar_url)')
+          .eq('author_id', profileId)
           .order('created_at', { ascending: false }),
         supabase
           .from('resources')
-          .select('*')
-          .or(buildOwnershipFilter('creator_id', creatorFilters, 'creator', stringMatches))
+          .select('*, creators:profiles!author_id(id, slug, username, name:display_name, avatar_url)')
+          .eq('author_id', profileId)
           .order('created_at', { ascending: false }),
         supabase
           .from('posts')
-          .select('*')
-          .eq('author_id', profileId)
+          .select('*, creators:profiles!author_id(id, slug, username, name:display_name, avatar_url), categories(id, slug, name)')
+          .in('author_id', ids)
           .order('created_at', { ascending: false }),
       ]);
 
@@ -112,21 +117,18 @@ export default function PublicProfilePage() {
   return (
     <PageShell>
       <section
-        className="app-detail-hero"
+        className="profile-hero"
         style={{
-          minHeight: 200,
-          background: profile.hero_url
-            ? undefined
-            : 'linear-gradient(135deg, color-mix(in srgb, var(--os-color-accent) 28%, transparent), color-mix(in srgb, var(--os-color-accent) 8%, transparent) 60%, var(--os-glass-panel-bg))',
+          backgroundImage: profile.hero_url ? `url(${profile.hero_url})` : undefined,
         }}
       >
         {profile.hero_url && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={profile.hero_url} alt={displayName} />
+          <img src={profile.hero_url} alt="" />
         )}
       </section>
 
-      <section className="app-panel" style={{ display: 'grid', gap: 'var(--os-space-6)' }}>
+      <section className="app-panel profile-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
             <div className="app-inspector-art app-inspector-art-circle" style={{ width: 96, height: 96, flex: '0 0 auto' }}>
@@ -270,22 +272,6 @@ function StackList({
       )}
     </section>
   );
-}
-
-function buildOwnershipFilter(idField: string, ids: string[], textField: string, names: string[]) {
-  const idFilters = ids.map(value => `${idField}.eq.${escapeFilterValue(value)}`);
-  const textFilters = names.map(value => `${textField}.ilike.${escapeFilterValue(value)}`);
-  return [...idFilters, ...textFilters].join(',');
-}
-
-function buildMultiOwnershipFilter(idFields: string[], ids: string[], textField: string, names: string[]) {
-  const idFilters = idFields.flatMap(field => ids.map(value => `${field}.eq.${escapeFilterValue(value)}`));
-  const textFilters = names.map(value => `${textField}.ilike.${escapeFilterValue(value)}`);
-  return [...idFilters, ...textFilters].join(',');
-}
-
-function escapeFilterValue(value: string) {
-  return `"${String(value).replace(/"/g, '\\"')}"`;
 }
 
 function formatDate(value: string) {

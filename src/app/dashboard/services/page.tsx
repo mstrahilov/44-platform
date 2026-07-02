@@ -6,10 +6,12 @@ import { useRouter } from 'next/navigation';
 import { PageShell, GlassPanel } from '@/components/Ui';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
-import type { Service } from '@/lib/platform';
-import { buildOwnershipFilter, isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
+import { serviceHref, type Service } from '@/lib/platform';
+import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
+import { useDashboardTabs } from '@/lib/dashboardTabs';
 
 export default function DashboardServicesPage() {
+  useDashboardTabs('services');
   const router = useRouter();
   const { user, loading } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
@@ -28,17 +30,12 @@ export default function DashboardServicesPage() {
 
       const profileResult = await loadStudioProfile(user.id);
       setProfile(profileResult.profile);
-      const ownershipFilter = buildOwnershipFilter({
-        idFields: ['creator_id', 'author_id'],
-        profile: profileResult.profile,
-        userId: user.id,
-        email: user.email,
-      });
+      const profileId = profileResult.profile?.id ?? user.id;
 
       const { data: serviceRows } = await supabase
         .from('services')
         .select('*')
-        .or(ownershipFilter)
+        .eq('author_id', profileId)
         .order('created_at', { ascending: false });
       setServices((serviceRows as Service[] | null) ?? []);
       setFetching(false);
@@ -48,11 +45,14 @@ export default function DashboardServicesPage() {
   }, [user]);
 
   async function togglePublish(service: Service) {
+    if (!user) return;
+    const profileId = profile?.id ?? user.id;
     const nextStatus = service.status === 'published' ? 'draft' : 'published';
     const { error } = await supabase
       .from('services')
       .update({ status: nextStatus, is_published: nextStatus === 'published' })
-      .eq('id', service.id);
+      .eq('id', service.id)
+      .eq('author_id', profileId);
 
     if (error) {
       alert(error.message);
@@ -173,6 +173,9 @@ export default function DashboardServicesPage() {
                   </div>
                   <Link href={`/dashboard/services/${service.id}`} className="os-button os-button-ghost os-button-compact">
                     Edit
+                  </Link>
+                  <Link href={serviceHref(service)} className="os-button os-button-ghost os-button-compact">
+                    Open
                   </Link>
                   <button className="os-button os-button-secondary os-button-compact" onClick={() => togglePublish(service)}>
                     {service.status === 'published' ? 'Unpublish' : 'Publish'}

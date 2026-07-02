@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { CommunityPost, CommunityReply } from '@/lib/platform';
 import { PageShell, DetailLayout, DetailRow, CenteredMessage } from '@/components/Ui';
+import { useTopbarBack } from '@/components/TopbarContext';
 
 type ThreadLike = {
   post_id: string;
@@ -16,6 +17,7 @@ type ThreadLike = {
 export default function CommunityThreadPage() {
   const { id } = useParams<{ id: string }>();
   const { user, loading: authLoading } = useAuth();
+  useTopbarBack({ href: '/community', label: 'Community' });
   const [thread, setThread] = useState<CommunityPost | null>(null);
   const [replies, setReplies] = useState<CommunityReply[]>([]);
   const [likes, setLikes] = useState<ThreadLike[]>([]);
@@ -160,10 +162,6 @@ export default function CommunityThreadPage() {
 
   return (
     <PageShell>
-      <Link className="os-button os-button-ghost os-button-compact" href="/community/browse" style={{ alignSelf: 'flex-start', marginBottom: 'var(--os-space-4, 16px)' }}>
-        ← Back to Community
-      </Link>
-
       <DetailLayout
         inspector={
           <>

@@ -144,7 +144,6 @@ export default function NewProductPage() {
     const { data: insertedProduct, error: insertError } = await supabase
       .from('products')
       .insert({
-        creator_id: profile?.id ?? user.id,
         author_id: profile?.id ?? user.id,
         category_id: categoryId,
         slug,

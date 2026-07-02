@@ -7,9 +7,15 @@ import { PageShell, GlassPanel } from '@/components/Ui';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
-import { buildOwnershipFilter, isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
+import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
+import { useDashboardTabs } from '@/lib/dashboardTabs';
+
+function productHref(product: Pick<Product, 'id' | 'slug'>) {
+  return `/product/${product.slug || product.id}`;
+}
 
 export default function DashboardProductsPage() {
+  useDashboardTabs('products');
   const router = useRouter();
   const { user, loading } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
@@ -28,18 +34,12 @@ export default function DashboardProductsPage() {
 
       const profileResult = await loadStudioProfile(user.id);
       setProfile(profileResult.profile);
-      const ownershipFilter = buildOwnershipFilter({
-        idFields: ['creator_id', 'author_id'],
-        textFields: ['creator'],
-        profile: profileResult.profile,
-        userId: user.id,
-        email: user.email,
-      });
+      const profileId = profileResult.profile?.id ?? user.id;
 
       const { data: productRows } = await supabase
         .from('products')
         .select('*')
-        .or(ownershipFilter)
+        .eq('author_id', profileId)
         .order('created_at', { ascending: false });
       setProducts((productRows as Product[] | null) ?? []);
       setFetching(false);
@@ -49,6 +49,8 @@ export default function DashboardProductsPage() {
   }, [user]);
 
   async function togglePublish(product: Product) {
+    if (!user) return;
+    const profileId = profile?.id ?? user.id;
     const nextPublished = !(product.is_published || product.status === 'published');
     const { error } = await supabase
       .from('products')
@@ -56,7 +58,8 @@ export default function DashboardProductsPage() {
         is_published: nextPublished,
         status: nextPublished ? 'published' : 'draft',
       })
-      .eq('id', product.id);
+      .eq('id', product.id)
+      .eq('author_id', profileId);
 
     if (error) {
       alert(error.message);
@@ -180,6 +183,9 @@ export default function DashboardProductsPage() {
                   </div>
                   <Link href={`/dashboard/products/${product.id}`} className="os-button os-button-ghost os-button-compact">
                     Edit
+                  </Link>
+                  <Link href={productHref(product)} className="os-button os-button-ghost os-button-compact">
+                    Open
                   </Link>
                   <button className="os-button os-button-secondary os-button-compact" onClick={() => togglePublish(product)}>
                     {product.is_published || product.status === 'published' ? 'Unpublish' : 'Publish'}

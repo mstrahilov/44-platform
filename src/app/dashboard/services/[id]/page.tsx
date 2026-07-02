@@ -8,7 +8,7 @@ import { UploadField } from '@/components/UploadField';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Category } from '@/lib/platform';
-import { buildOwnershipFilter, getStudioDisplayName, loadStudioProfile } from '@/lib/studioProfiles';
+import { getStudioDisplayName, loadStudioProfile } from '@/lib/studioProfiles';
 
 function formatPriceInput(value: string) {
   const normalized = value.replace(/[^0-9.]/g, '');
@@ -48,17 +48,12 @@ export default function EditServicePage() {
 
       setCategories((categoryRows as Category[] | null) ?? []);
       setCreatorName(getStudioDisplayName(profileResult.profile, user.email));
-      const ownershipFilter = buildOwnershipFilter({
-        idFields: ['creator_id', 'author_id'],
-        profile: profileResult.profile,
-        userId: user.id,
-        email: user.email,
-      });
+      const profileId = profileResult.profile?.id ?? user.id;
       const { data: ownedService } = await supabase
         .from('services')
         .select('*')
         .eq('id', id)
-        .or(ownershipFilter)
+        .eq('author_id', profileId)
         .maybeSingle();
       if (!ownedService) {
         setError('Service not found.');
@@ -86,12 +81,7 @@ export default function EditServicePage() {
     setSaving(true);
     setError('');
     const profileResult = await loadStudioProfile(user.id);
-    const ownershipFilter = buildOwnershipFilter({
-      idFields: ['creator_id', 'author_id'],
-      profile: profileResult.profile,
-      userId: user.id,
-      email: user.email,
-    });
+    const profileId = profileResult.profile?.id ?? user.id;
     const priceNumber = Number(startingPrice || '0');
     const startingPriceCents = Number.isFinite(priceNumber) ? Math.max(0, Math.round(priceNumber * 100)) : 0;
 
@@ -108,7 +98,7 @@ export default function EditServicePage() {
         cover_url: coverUrl.trim() || null,
       })
       .eq('id', id)
-      .or(ownershipFilter);
+      .eq('author_id', profileId);
 
     setSaving(false);
     if (updateError) {
@@ -126,18 +116,13 @@ export default function EditServicePage() {
     if (!confirmed) return;
 
     const profileResult = await loadStudioProfile(user.id);
-    const ownershipFilter = buildOwnershipFilter({
-      idFields: ['creator_id', 'author_id'],
-      profile: profileResult.profile,
-      userId: user.id,
-      email: user.email,
-    });
+    const profileId = profileResult.profile?.id ?? user.id;
 
     const { error: deleteError } = await supabase
       .from('services')
       .delete()
       .eq('id', id)
-      .or(ownershipFilter);
+      .eq('author_id', profileId);
 
     if (deleteError) {
       setError(deleteError.message);
