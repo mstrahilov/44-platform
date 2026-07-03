@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PageShell, GlassPanel } from '@/components/Ui';
+import { PageShell, GlassPanel, HubHero } from '@/components/Ui';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { UploadField } from '@/components/UploadField';
 import { supabase } from '@/lib/supabase';
@@ -250,16 +250,12 @@ export default function NewProductPage() {
   return (
     <PageShell>
       <div className="dashboard-editor">
-        <header className="dashboard-header">
-          <div className="dashboard-header-copy">
-            <h1 className="os-type-display">New Product</h1>
-            <p className="os-type-body">
-              Create a release, game, book, apparel item, or asset directly from inside the app.
-            </p>
-          </div>
-        </header>
+        <HubHero
+          title="New Product"
+          copy="Create a release, game, book, apparel item, or asset directly from inside the app."
+        />
 
-        <GlassPanel className="dashboard-form-panel" style={{ padding: 32 }}>
+        <div className="dashboard-flat">
           <form onSubmit={handleSubmit} className="dashboard-form">
             <label className="dashboard-field">
               <div className="dashboard-field-label">Product Title</div>
@@ -294,7 +290,7 @@ export default function NewProductPage() {
 
             <div className="dashboard-form-grid dashboard-form-grid-3">
               <label className="dashboard-field">
-                <div className="dashboard-field-label">Global Price (USD)</div>
+                <div className="dashboard-field-label">Price (USD)</div>
                 <input className="input" value={price} onChange={event => setPrice(formatPriceInput(event.target.value))} placeholder="0.00" />
               </label>
 
@@ -455,7 +451,7 @@ export default function NewProductPage() {
               </div>
             </div>
           </form>
-        </GlassPanel>
+        </div>
       </div>
     </PageShell>
   );

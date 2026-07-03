@@ -3,9 +3,10 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PageShell, GlassPanel } from '@/components/Ui';
+import { PageShell, HubHero } from '@/components/Ui';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { UploadField } from '@/components/UploadField';
+import { RichEditor } from '@/components/RichEditor';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Category } from '@/lib/platform';
@@ -106,16 +107,12 @@ export default function NewResourcePage() {
   return (
     <PageShell>
       <div className="dashboard-editor">
-        <header className="dashboard-header">
-          <div className="dashboard-header-copy">
-            <h1 className="os-type-display">New Resource</h1>
-            <p className="os-type-body">
-              Create guides, articles, lessons, templates, and downloadable resources from inside the app.
-            </p>
-          </div>
-        </header>
+        <HubHero
+          title="New Resource"
+          copy="Create guides, articles, lessons, templates, and downloadable resources from inside the app."
+        />
 
-        <GlassPanel className="dashboard-form-panel" style={{ padding: 32 }}>
+        <div className="dashboard-flat">
           <form onSubmit={handleSubmit} className="dashboard-form">
             <label className="dashboard-field">
               <div className="dashboard-field-label">Resource Title</div>
@@ -143,10 +140,15 @@ export default function NewResourcePage() {
               <textarea className="input" rows={3} value={shortDescription} onChange={event => setShortDescription(event.target.value)} placeholder="Short card copy for this resource." />
             </label>
 
-            <label className="dashboard-field">
-              <div className="dashboard-field-label">Long Description</div>
-              <textarea className="input" rows={8} value={longDescription} onChange={event => setLongDescription(event.target.value)} placeholder="Write the full resource content or in-app reading copy here." />
-            </label>
+            <div className="dashboard-field">
+              <div className="dashboard-field-label">Article Content</div>
+              <RichEditor
+                value={longDescription}
+                onChange={setLongDescription}
+                userId={user.id}
+                placeholder="Write the article. Add headings, quotes, links, and inline images."
+              />
+            </div>
 
             <div className="dashboard-form-grid dashboard-form-grid-3">
               <UploadField
@@ -194,7 +196,7 @@ export default function NewResourcePage() {
               </div>
             </div>
           </form>
-        </GlassPanel>
+        </div>
       </div>
     </PageShell>
   );

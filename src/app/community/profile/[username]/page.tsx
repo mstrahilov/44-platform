@@ -14,7 +14,7 @@ import { CommunitySetupGate } from '@/components/CommunitySetupGate';
 import { SocialArtifactCard, SocialAvatar, SocialPostRow } from '@/components/Social';
 import { getOwnershipKeys, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { useTopbarBack } from '@/components/TopbarContext';
-import { authorHandle, countById, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type ReplyEngagerRow, type SocialPost, type SocialReply } from '@/lib/social';
+import { authorHandle, countById, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type ReplyEngagerRow, type SocialPost } from '@/lib/social';
 import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { isMissingRelationError } from '@/lib/schemaCompat';
 import { createOrOpenConversation } from '@/lib/messages';
@@ -28,7 +28,7 @@ import {
   type FriendshipState,
 } from '@/lib/friends';
 
-type ProfileTab = 'posts' | 'replies' | 'products' | 'services' | 'resources';
+type ProfileTab = 'posts' | 'products' | 'services' | 'resources';
 
 export default function PublicProfilePage() {
   const { username } = useParams<{ username: string }>();
@@ -40,7 +40,6 @@ export default function PublicProfilePage() {
   const [services, setServices] = useState<Service[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [posts, setPosts] = useState<SocialPost[]>([]);
-  const [replies, setReplies] = useState<SocialReply[]>([]);
   const [replyCounts, setReplyCounts] = useState<CountMap>({});
   const [repliersMap, setRepliersMap] = useState<LikersMap>({});
   const [likeCounts, setLikeCounts] = useState<CountMap>({});
@@ -73,7 +72,6 @@ export default function PublicProfilePage() {
         setServices([]);
         setResources([]);
         setPosts([]);
-        setReplies([]);
         setFriendshipState('none');
         setFriendRequest(null);
         setLoading(false);
@@ -98,7 +96,6 @@ export default function PublicProfilePage() {
         serviceResult,
         resourceResult,
         postResult,
-        replyResult,
         replyCountResult,
         likeResult,
       ] = await Promise.all([
@@ -125,12 +122,6 @@ export default function PublicProfilePage() {
           .order('created_at', { ascending: false }),
         supabase
           .from('post_replies')
-          .select('*, authors:profiles!author_id(id, slug, display_name, username, avatar_url), posts(id, slug, title)')
-          .eq('author_id', profileId)
-          .eq('status', 'published')
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('post_replies')
           .select('post_id, author_id, authors:profiles!author_id(id, display_name, username, avatar_url)')
           .eq('status', 'published')
           .order('created_at', { ascending: false }),
@@ -144,7 +135,6 @@ export default function PublicProfilePage() {
       setServices(((serviceResult.data as Service[] | null) ?? []).filter(Boolean));
       setResources(((resourceResult.data as Resource[] | null) ?? []).filter(Boolean));
       setPosts(((postResult.data as SocialPost[] | null) ?? []).filter(Boolean));
-      setReplies(((replyResult.data as SocialReply[] | null) ?? []).filter(Boolean));
       const replyRowsData = (replyCountResult.data as ReplyEngagerRow[] | null) ?? [];
       setReplyCounts(countById(replyRowsData, 'post_id'));
       setRepliersMap(repliersByPost(replyRowsData));
@@ -184,7 +174,6 @@ export default function PublicProfilePage() {
   const tabs = useMemo(
     () => [
       { id: 'posts' as const, label: 'Posts' },
-      { id: 'replies' as const, label: 'Replies' },
       { id: 'products' as const, label: 'Releases' },
       { id: 'services' as const, label: 'Services' },
       { id: 'resources' as const, label: 'Resources' },
@@ -364,36 +353,6 @@ export default function PublicProfilePage() {
               ))
             ) : (
               <div className="app-empty-text">No posts yet.</div>
-            )}
-          </section>
-        )}
-
-        {tab === 'replies' && (
-          <section className="social-feed" aria-label="Replies">
-            {replies.length ? (
-              replies.map(reply => {
-                const post = (reply as SocialReply & { posts?: { id: string; slug?: string | null; title?: string | null } | null }).posts;
-                return (
-                  <article className="social-row" key={reply.id}>
-                    <SocialAvatar profile={profile} />
-                    <div className="social-row-main">
-                      <div className="social-row-meta">
-                        {handle && <span className="social-author-name">@{handle}</span>}
-                        <span className="social-dot" />
-                        <span className="social-time">replied</span>
-                      </div>
-                      <p className="social-row-body">{reply.body}</p>
-                      {post && (
-                        <Link href={`/community/thread/${post.slug || post.id}`} className="social-note os-type-body-small">
-                          View thread: {post.title || 'Community post'}
-                        </Link>
-                      )}
-                    </div>
-                  </article>
-                );
-              })
-            ) : (
-              <div className="app-empty-text">No replies yet.</div>
             )}
           </section>
         )}

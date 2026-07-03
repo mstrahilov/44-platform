@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { PageShell, GlassPanel } from '@/components/Ui';
+import { PageShell, GlassPanel, HubHero } from '@/components/Ui';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { UploadField } from '@/components/UploadField';
@@ -350,14 +350,8 @@ export default function EditProductPage() {
   return (
     <PageShell>
       <div className="dashboard-editor">
-        <header className="dashboard-header">
-          <div className="dashboard-header-copy">
-            <h1 className="os-type-display">Edit Product</h1>
-            <p className="os-type-body">Update the product details stored in 44.</p>
-          </div>
-        </header>
-
-        <GlassPanel className="dashboard-form-panel" style={{ padding: 32 }}>
+        <HubHero title="Edit Product" copy="Update the product details stored in 44." />
+        <div className="dashboard-flat">
           <form onSubmit={handleSubmit} className="dashboard-form">
             <label className="dashboard-field"><div className="dashboard-field-label">Product Title</div><input className="input" value={title} onChange={e => setTitle(e.target.value)} /></label>
 
@@ -370,7 +364,7 @@ export default function EditProductPage() {
             <label className="dashboard-field"><div className="dashboard-field-label">Long Description</div><textarea className="input" rows={5} value={longDescription} onChange={e => setLongDescription(e.target.value)} /></label>
 
             <div className="dashboard-form-grid dashboard-form-grid-3">
-              <label className="dashboard-field"><div className="dashboard-field-label">Global Price (USD)</div><input className="input" value={price} onChange={e => setPrice(formatPriceInput(e.target.value))} /></label>
+              <label className="dashboard-field"><div className="dashboard-field-label">Price (USD)</div><input className="input" value={price} onChange={e => setPrice(formatPriceInput(e.target.value))} /></label>
               {marketMode !== 'global' && (
                 <label className="dashboard-field"><div className="dashboard-field-label">Local Price ({localCurrency})</div><input className="input" value={localPrice} onChange={e => setLocalPrice(formatPriceInput(e.target.value))} /></label>
               )}
@@ -501,7 +495,7 @@ export default function EditProductPage() {
 
             <div className="dashboard-form-actions">
               <div className="dashboard-form-actions-left">
-                <button className="os-button os-button-primary" type="button" onClick={() => setShowDeleteConfirm(true)}>Delete Product</button>
+                <button className="os-button os-button-danger" type="button" onClick={() => setShowDeleteConfirm(true)}>Delete Product</button>
               </div>
               <div className="dashboard-form-actions-right">
                 <Link className="os-button os-button-secondary" href="/dashboard/products">Cancel</Link>
@@ -509,7 +503,7 @@ export default function EditProductPage() {
               </div>
             </div>
           </form>
-        </GlassPanel>
+        </div>
         <ConfirmDialog
           open={showDeleteConfirm}
           title="Delete Product"

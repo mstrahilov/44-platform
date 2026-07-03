@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import type { Category } from '@/lib/platform';
 import { PageShell } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
 import { SocialPostRow } from '@/components/Social';
@@ -16,32 +15,31 @@ import { countById, likersByPost, repliersByPost, type CountMap, type LikeRow, t
 import { loadFriendRequests, otherFriendProfile } from '@/lib/friends';
 
 type PostLike = LikeRow;
+type FeedMode = 'feed' | 'friends' | 'local' | 'updates' | 'questions' | 'collaboration';
 
 export default function CommunityPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [posts, setPosts] = useState<SocialPost[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [replyCounts, setReplyCounts] = useState<CountMap>({});
   const [repliersMap, setRepliersMap] = useState<LikersMap>({});
   const [likes, setLikes] = useState<PostLike[]>([]);
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
-  const [feedMode, setFeedMode] = useState<'all' | 'friends'>('all');
+  const [feedMode, setFeedMode] = useState<FeedMode>('feed');
   const [likingId, setLikingId] = useState('');
   const [error, setError] = useState('');
   const [setupGateOpen, setSetupGateOpen] = useState(false);
 
   useEffect(() => {
     async function fetchCommunity() {
-      const [{ data: postRows }, { data: categoryRows }, { data: replyRows }, { data: likeRows }] = await Promise.all([
+      const [{ data: postRows }, { data: replyRows }, { data: likeRows }] = await Promise.all([
         supabase
           .from('posts')
-          .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type), categories(id, slug, name)')
+          .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type, country_code, home_country_code), categories(id, slug, name)')
           .eq('status', 'published')
           .order('created_at', { ascending: false })
           .limit(80),
-        supabase.from('categories').select('*').eq('scope', 'posts').order('sort_order'),
         supabase
           .from('post_replies')
           .select('post_id, author_id, authors:profiles!author_id(id, display_name, username, avatar_url)')
@@ -53,7 +51,6 @@ export default function CommunityPage() {
           .order('created_at', { ascending: false }),
       ]);
       setPosts((postRows as SocialPost[] | null) ?? []);
-      setCategories((categoryRows as Category[] | null) ?? []);
       const replies = (replyRows as ReplyEngagerRow[] | null) ?? [];
       setReplyCounts(countById(replies, 'post_id'));
       setRepliersMap(repliersByPost(replies));
@@ -66,7 +63,7 @@ export default function CommunityPage() {
     if (!user) {
       setProfile(null);
       setFriendIds(new Set());
-      setFeedMode('all');
+      setFeedMode('feed');
       return;
     }
     loadStudioProfile(user.id).then(result => setProfile(result.profile));
@@ -79,24 +76,15 @@ export default function CommunityPage() {
     });
   }, [user]);
 
-  const categoryList = useMemo(() => {
-    return categories
-      .filter(c => c.scope === 'posts')
-      .sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999));
-  }, [categories]);
-
   useTopbarTabs(
-    categoryList.length > 0
-      ? [
-          { id: 'all', label: 'For You', onClick: () => setFeedMode('all'), active: feedMode === 'all' },
-          ...(user ? [{ id: 'friends', label: 'Friends', onClick: () => setFeedMode('friends'), active: feedMode === 'friends' }] : []),
-          ...categoryList.slice(0, 5).map(c => ({
-            id: c.slug,
-            label: c.name,
-            href: `/community/browse/${c.slug}`,
-          })),
-        ]
-      : undefined,
+    [
+      { id: 'feed', label: 'Feed', onClick: () => setFeedMode('feed'), active: feedMode === 'feed' },
+      ...(user ? [{ id: 'friends', label: 'Friends', onClick: () => setFeedMode('friends'), active: feedMode === 'friends' }] : []),
+      { id: 'local', label: 'Local', onClick: () => setFeedMode('local'), active: feedMode === 'local' },
+      { id: 'updates', label: 'Updates', onClick: () => setFeedMode('updates'), active: feedMode === 'updates' },
+      { id: 'questions', label: 'Questions', onClick: () => setFeedMode('questions'), active: feedMode === 'questions' },
+      { id: 'collaboration', label: 'Collaboration', onClick: () => setFeedMode('collaboration'), active: feedMode === 'collaboration' },
+    ],
   );
 
   const likeCounts = useMemo(() => countById(likes, 'post_id'), [likes]);
@@ -106,9 +94,18 @@ export default function CommunityPage() {
     return new Set(likes.filter(like => like.profile_id === user.id).map(like => like.post_id));
   }, [likes, user]);
   const canInteract = hasCommunityIdentity(profile);
-  const visiblePosts = feedMode === 'friends'
-    ? posts.filter(post => Boolean(post.author_id && friendIds.has(post.author_id)))
-    : posts;
+  const viewerCountry = profile?.country_code || profile?.home_country_code || null;
+  const visiblePosts = posts.filter(post => {
+    if (feedMode === 'friends') return Boolean(post.author_id && friendIds.has(post.author_id));
+    if (feedMode === 'local') {
+      const authorCountry = post.creators?.country_code || post.creators?.home_country_code || null;
+      return Boolean(viewerCountry && authorCountry && viewerCountry === authorCountry);
+    }
+    if (feedMode === 'updates') return post.categories?.slug === 'updates' || post.post_type === 'updates' || post.post_type === 'update';
+    if (feedMode === 'questions') return post.categories?.slug === 'questions' || post.post_type === 'questions' || post.post_type === 'question';
+    if (feedMode === 'collaboration') return post.post_type === 'collaboration' || post.categories?.slug === 'collaboration' || post.categories?.name?.toLowerCase() === 'collaboration';
+    return true;
+  });
 
   async function toggleLike(post: SocialPost) {
     if (likingId) return;
@@ -177,7 +174,7 @@ export default function CommunityPage() {
 
         <section className="social-feed" aria-label="Community feed">
           {visiblePosts.length === 0 ? (
-            <div className="app-empty-text">{feedMode === 'friends' ? 'No friend posts yet.' : 'No posts yet.'}</div>
+            <div className="app-empty-text">{feedMode === 'friends' ? 'No friend posts yet.' : feedMode === 'local' ? 'No local posts yet.' : 'No posts yet.'}</div>
           ) : (
             visiblePosts.map(post => (
               <SocialPostRow

@@ -89,9 +89,6 @@ export default function DashboardPage() {
   const draftServices = overview.services.length - publishedServices;
   const publishedResources = overview.resources.filter(item => item.status === 'published').length;
   const draftResources = overview.resources.length - publishedResources;
-  const totalContent = overview.products.length + overview.services.length + overview.resources.length;
-  const totalPublished = publishedProducts + publishedServices + publishedResources;
-  const publishRate = totalContent ? Math.round((totalPublished / totalContent) * 100) : 0;
 
   const recentItems = [
     ...overview.products.slice(0, 3).map(item => ({
@@ -124,7 +121,7 @@ export default function DashboardPage() {
           <div className="dashboard-header-copy">
             <h1 className="os-type-display">Overview</h1>
             <p className="os-type-body">
-              Your private creator workspace. Keep an eye on releases, service offerings, resources, and what still needs to be published.
+              Your creator workspace for catalog health, sales signals, and what should go live next.
             </p>
           </div>
         </header>
@@ -155,33 +152,6 @@ export default function DashboardPage() {
 
         <section className="dashboard-section">
           <div className="dashboard-header-copy">
-            <h2 className="os-type-panel-content">Workspace Health</h2>
-            <p className="os-type-body-small">
-              A single view of what exists, what is live, and how much of your creator workspace is ready for the world.
-            </p>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 18 }}>
-            <MetricCard
-              label="Total Content"
-              value={totalContent}
-              description="products, services, and resources"
-            />
-            <MetricCard
-              label="Published"
-              value={totalPublished}
-              description="items currently live on 44"
-            />
-            <MetricCard
-              label="Publish Rate"
-              value={`${publishRate}%`}
-              description="of your content is live and discoverable"
-            />
-          </div>
-        </section>
-
-        <section className="dashboard-section">
-          <div className="dashboard-header-copy">
             <h2 className="os-type-panel-content">Recent Content</h2>
             <p className="os-type-body-small">
               The latest products, services, and resources in your workspace.
@@ -195,34 +165,22 @@ export default function DashboardPage() {
               No content yet. Start with a product, service, or resource.
             </div>
           ) : (
-            <div>
+            <div className="dashboard-list-surface">
               {recentItems.map((item, index) => (
                 <div
                   key={`${item.type}-${item.id}`}
                   className="dashboard-list-row"
                   style={{
                     gridTemplateColumns: '1fr 180px 120px',
-                    borderTop: index === 0 ? '1px solid rgba(17, 24, 39, 0.08)' : '1px solid rgba(17, 24, 39, 0.08)',
+                    borderTop: index === 0 ? 'none' : undefined,
                   }}
                 >
-                  <div>
-                    <div style={{ fontSize: 17, fontWeight: 720 }}>{item.title}</div>
+                  <div className="dashboard-row-copy">
+                    <div className="dashboard-row-title">{item.title}</div>
                   </div>
-                  <div style={{ color: 'var(--os-color-ink-secondary)', fontSize: 14 }}>{item.type}</div>
-                  <div style={{ justifySelf: 'end', display: 'flex', gap: 10, alignItems: 'center' }}>
-                    <div
-                      style={{
-                        borderRadius: 999,
-                        padding: '7px 12px',
-                        background: 'rgba(255,255,255,.52)',
-                        color: 'var(--os-color-ink-secondary)',
-                        fontSize: 12,
-                        fontWeight: 700,
-                        textTransform: 'capitalize',
-                      }}
-                    >
-                      {item.status}
-                    </div>
+                  <div className="dashboard-row-meta">{item.type}</div>
+                  <div className="dashboard-row-actions">
+                    <div className="dashboard-status-pill">{item.status}</div>
                     <Link href={item.href} className="os-button os-button-ghost os-button-compact">Open</Link>
                   </div>
                 </div>
@@ -232,28 +190,6 @@ export default function DashboardPage() {
         </section>
       </div>
     </PageShell>
-  );
-}
-
-function MetricCard({
-  label,
-  value,
-  description,
-}: {
-  label: string;
-  value: string | number;
-  description: string;
-}) {
-  return (
-    <GlassPanel style={{ padding: 24 }}>
-      <div style={{ display: 'grid', gap: 8 }}>
-        <div className="os-type-meta" style={{ color: 'var(--os-color-ink-muted)', textTransform: 'uppercase' }}>{label}</div>
-        <div className="os-type-display" style={{ fontSize: 42 }}>{value}</div>
-        <div className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>
-          {description}
-        </div>
-      </div>
-    </GlassPanel>
   );
 }
 
@@ -271,17 +207,16 @@ function OverviewCard({
   href: string;
 }) {
   return (
-    <GlassPanel style={{ padding: 24 }}>
-      <div style={{ display: 'grid', gap: 8 }}>
-        <div className="os-type-meta" style={{ color: 'var(--os-color-ink-muted)', textTransform: 'uppercase' }}>{title}</div>
-        <div className="os-type-display" style={{ fontSize: 42 }}>{total}</div>
-        <div className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>
-          {published} published, {drafts} draft
+    <Link href={href} className="dashboard-card-link">
+      <GlassPanel style={{ padding: 24 }}>
+        <div style={{ display: 'grid', gap: 8 }}>
+          <div className="os-type-meta" style={{ color: 'var(--os-color-ink-muted)', textTransform: 'uppercase' }}>{title}</div>
+          <div className="os-type-display" style={{ fontSize: 42 }}>{total}</div>
+          <div className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>
+            {published} published, {drafts} draft
+          </div>
         </div>
-        <div style={{ marginTop: 10 }}>
-          <Link href={href} className="os-button os-button-ghost os-button-compact">Open {title}</Link>
-        </div>
-      </div>
-    </GlassPanel>
+      </GlassPanel>
+    </Link>
   );
 }

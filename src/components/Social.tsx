@@ -38,14 +38,14 @@ export function SocialAuthorLine({
   return (
     <div className="social-row-meta">
       {handleOnly && handle ? (
-        <Link href={authorHref(author)} className="social-author-name">
+        <span className="social-author-name">
           @{handle}
-        </Link>
+        </span>
       ) : (
         <>
-          <Link href={authorHref(author)} className="social-author-name">
+          <span className="social-author-name">
             {authorDisplayName(author)}
-          </Link>
+          </span>
           {handle && <span className="social-handle">@{handle}</span>}
         </>
       )}

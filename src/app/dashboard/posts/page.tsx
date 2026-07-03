@@ -58,14 +58,14 @@ export default function DashboardPostsPage() {
 
   return (
     <PageShell>
-      <div style={{ maxWidth: 1180, margin: '0 auto', padding: '64px 0' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 24, marginBottom: 32 }}>
-          <div>
-            <h1 style={{ fontSize: 48, fontWeight: 780, letterSpacing: '-0.04em', marginBottom: 10 }}>Posts</h1>
-            <p style={{ color: 'var(--os-color-ink-secondary)', fontSize: 18 }}>Write updates, news, and community posts directly from Dashboard.</p>
+      <div className="dashboard-page">
+        <header className="dashboard-header">
+          <div className="dashboard-header-copy">
+            <h1 className="os-type-display">Posts</h1>
+            <p className="os-type-body">Write updates, announcements, and conversation starters for the community.</p>
           </div>
           <Link className="os-button os-button-primary" href="/dashboard/posts/new">New Post</Link>
-        </div>
+        </header>
 
         {!isCreatorProfile(profile) && (
           <GlassPanel style={{ padding: 24, marginBottom: 18 }}>
@@ -75,32 +75,39 @@ export default function DashboardPostsPage() {
           </GlassPanel>
         )}
 
-        <GlassPanel style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="dashboard-list-surface">
           {fetching ? (
-            <div style={{ padding: '24px 26px', color: 'var(--os-color-ink-secondary)' }}>Loading posts…</div>
+            <div className="dashboard-empty">Loading posts…</div>
           ) : posts.length === 0 ? (
-            <div style={{ padding: '24px 26px', color: 'var(--os-color-ink-secondary)' }}>No posts yet. Create your first one from inside Dashboard.</div>
+            <div className="dashboard-empty">No posts yet. Create your first one from inside Dashboard.</div>
           ) : (
             posts.map((post, index) => (
-              <div key={post.id} style={{ padding: '22px 26px', display: 'grid', gridTemplateColumns: '1fr 180px 240px', gap: 20, alignItems: 'center', borderTop: index === 0 ? 'none' : '1px solid rgba(255,255,255,0.08)' }}>
-                <div>
-                  <div style={{ fontSize: 18, fontWeight: 720 }}>{post.title}</div>
-                  <div style={{ marginTop: 5, fontSize: 13, color: 'var(--os-color-ink-muted)' }}>{post.post_type || 'Post'}</div>
+              <div
+                key={post.id}
+                className="dashboard-list-row"
+                style={{ gridTemplateColumns: 'minmax(0, 1fr) 180px minmax(300px, auto)', borderTop: index === 0 ? 'none' : undefined }}
+              >
+                <div className="dashboard-row-copy">
+                  <div className="dashboard-row-title">{post.title}</div>
+                  <div className="dashboard-row-subtitle">{post.post_type || 'Post'}</div>
                 </div>
-                <div style={{ color: 'var(--os-color-ink-secondary)', fontSize: 14 }}>{post.categories?.name || 'Community'}</div>
-                <div style={{ justifySelf: 'end', display: 'flex', gap: 10, alignItems: 'center' }}>
-                  <div style={{ borderRadius: 999, padding: '7px 12px', background: 'rgba(255,255,255,.07)', color: 'var(--os-color-ink-secondary)', fontSize: 12, fontWeight: 700, textTransform: 'capitalize' }}>{post.status || 'draft'}</div>
+                <div className="dashboard-row-meta">{post.categories?.name || 'Community'}</div>
+                <div className="dashboard-row-actions">
+                  <div className="dashboard-status-pill">{post.status || 'draft'}</div>
                   <Link href={communityThreadHref(post)} className="os-button os-button-ghost os-button-compact">
                     Open
                   </Link>
-                  <button className="os-button os-button-secondary os-button-compact" onClick={() => togglePublish(post)}>
+                  <button
+                    className="os-button os-button-secondary os-button-compact"
+                    onClick={() => togglePublish(post)}
+                  >
                     {post.status === 'published' ? 'Unpublish' : 'Publish'}
                   </button>
                 </div>
               </div>
             ))
           )}
-        </GlassPanel>
+        </div>
       </div>
     </PageShell>
   );

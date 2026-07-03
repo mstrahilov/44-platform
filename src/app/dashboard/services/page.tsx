@@ -122,51 +122,29 @@ export default function DashboardServicesPage() {
                 key={service.id}
                 className="dashboard-list-row"
                 style={{
-                  gridTemplateColumns: '1fr 180px 240px',
-                  borderTop: index === 0 ? 'none' : '1px solid rgba(17, 24, 39, 0.08)',
+                  gridTemplateColumns: 'minmax(0, 1fr) 180px minmax(360px, auto)',
+                  borderTop: index === 0 ? 'none' : undefined,
                 }}
               >
-                <div>
-                  <div style={{ fontSize: 18, fontWeight: 720 }}>
-                    {service.title}
-                  </div>
-
-                  <div
-                    style={{
-                      marginTop: 5,
-                      fontSize: 13,
-                      color: 'var(--os-color-ink-muted)',
-                    }}
-                  >
-                    {service.service_type || 'Service'}
-                  </div>
+                <div className="dashboard-row-copy">
+                  <div className="dashboard-row-title">{service.title}</div>
+                  <div className="dashboard-row-subtitle">{service.service_type || 'Service'}</div>
                 </div>
 
-                <div style={{ color: 'var(--os-color-ink-secondary)', fontSize: 14 }}>
-                  {service.categories?.name || 'Uncategorized'}
-                </div>
+                <div className="dashboard-row-meta">{service.categories?.name || 'Uncategorized'}</div>
 
-                <div style={{ justifySelf: 'end', display: 'flex', gap: 10, alignItems: 'center' }}>
-                  <div
-                    style={{
-                      borderRadius: 999,
-                      padding: '7px 12px',
-                      background: 'rgba(255,255,255,.07)',
-                      color: 'var(--os-color-ink-secondary)',
-                      fontSize: 12,
-                      fontWeight: 700,
-                      textTransform: 'capitalize',
-                    }}
-                  >
-                    {service.status || 'draft'}
-                  </div>
+                <div className="dashboard-row-actions">
+                  <div className="dashboard-status-pill">{service.status || 'draft'}</div>
                   <Link href={`/dashboard/services/${service.id}`} className="os-button os-button-ghost os-button-compact">
                     Edit
                   </Link>
                   <Link href={serviceHref(service)} className="os-button os-button-ghost os-button-compact">
                     Open
                   </Link>
-                  <button className="os-button os-button-secondary os-button-compact" onClick={() => togglePublish(service)}>
+                  <button
+                    className="os-button os-button-secondary os-button-compact"
+                    onClick={() => togglePublish(service)}
+                  >
                     {service.status === 'published' ? 'Unpublish' : 'Publish'}
                   </button>
                 </div>

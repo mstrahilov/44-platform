@@ -2,7 +2,7 @@ import type { CommunityPost, CommunityReply, Profile } from '@/lib/platform';
 
 export type SocialAuthor = Pick<
   Profile,
-  'id' | 'slug' | 'username' | 'display_name' | 'avatar_url' | 'role' | 'creator_type'
+  'id' | 'slug' | 'username' | 'display_name' | 'avatar_url' | 'role' | 'creator_type' | 'country_code' | 'home_country_code'
 > & {
   name?: string | null;
 };

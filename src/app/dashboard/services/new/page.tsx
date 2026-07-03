@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PageShell, GlassPanel } from '@/components/Ui';
+import { PageShell, HubHero } from '@/components/Ui';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { UploadField } from '@/components/UploadField';
 import { supabase } from '@/lib/supabase';
@@ -154,16 +154,8 @@ export default function NewServicePage() {
   return (
     <PageShell>
       <div className="dashboard-editor">
-        <header className="dashboard-header">
-          <div className="dashboard-header-copy">
-            <h1 className="os-type-display">New Service</h1>
-            <p className="os-type-body">
-              Create a service offering directly from inside the app.
-            </p>
-          </div>
-        </header>
-
-        <GlassPanel className="dashboard-form-panel" style={{ padding: 32 }}>
+        <HubHero title="New Service" copy="Create a service offering directly from inside the app." />
+        <div className="dashboard-flat">
           <form onSubmit={handleSubmit} className="dashboard-form">
             <label className="dashboard-field">
               <div className="dashboard-field-label">Service Title</div>
@@ -198,7 +190,7 @@ export default function NewServicePage() {
 
             <div className="dashboard-form-grid dashboard-form-grid-3">
               <label className="dashboard-field">
-                <div className="dashboard-field-label">Global Starting Price (USD)</div>
+                <div className="dashboard-field-label">Starting Price (USD)</div>
                 <input className="input" value={startingPrice} onChange={event => setStartingPrice(formatPriceInput(event.target.value))} placeholder="299.00" />
               </label>
 
@@ -283,7 +275,7 @@ export default function NewServicePage() {
               </div>
             </div>
           </form>
-        </GlassPanel>
+        </div>
       </div>
     </PageShell>
   );

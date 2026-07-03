@@ -13,17 +13,27 @@ import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import type { SubjectType } from '@/lib/social';
 
-// Only these 4 categories are pickable in the New Post UI.
-// Slugs match the DB (existing `discussions` stays for FK integrity; display is "General").
-const NEW_POST_CATEGORY_SLUGS = ['discussions', 'updates', 'reviews', 'questions'] as const;
-type PickableSlug = (typeof NEW_POST_CATEGORY_SLUGS)[number];
+// The composer keeps DB slugs intact while presenting the cleaner 44OS labels.
+const NEW_POST_CATEGORY_SLUGS = ['discussions', 'discussion', 'updates', 'reviews', 'questions'] as const;
+const NEW_POST_CATEGORY_ORDER = ['discussions', 'discussion', 'updates', 'questions', 'reviews'] as const;
+type PickableSlug = (typeof NEW_POST_CATEGORY_SLUGS)[number] | 'collaboration';
+
+type ComposerCategory = {
+  id: string;
+  label: string;
+  categoryId: string;
+  slug: PickableSlug;
+  postType: string;
+};
 
 // Which subject types are allowed for each category.
 const SUBJECT_TYPES_FOR_CATEGORY: Record<PickableSlug, SubjectType[]> = {
   discussions: ['product', 'service', 'resource', 'profile'],
+  discussion:  ['product', 'service', 'resource', 'profile'],
   updates:     ['product'],
   reviews:     ['product', 'service'],
   questions:   ['resource', 'product'],
+  collaboration: ['product', 'service', 'resource', 'profile'],
 };
 
 type SubjectResult = {
@@ -49,8 +59,8 @@ function subjectTypeLabel(type: SubjectType | null) {
 }
 
 function displayCategoryName(slug: string, dbName: string) {
-  // Display override: 'discussions' shows as "General"
-  if (slug === 'discussions') return 'General';
+  // Display override: the DB discussion category shows as "General".
+  if (slug === 'discussions' || slug === 'discussion') return 'General';
   return dbName;
 }
 
@@ -109,7 +119,12 @@ function NewCommunityThreadContent() {
       const rows = ((data as Category[] | null) ?? [])
         .filter(c => (NEW_POST_CATEGORY_SLUGS as readonly string[]).includes(c.slug))
         // Hide 'updates' from non-creators — updates are creator-to-owner communications
-        .filter(c => c.slug !== 'updates' || isCreator || categoryLocked);
+        .filter(c => c.slug !== 'updates' || isCreator || categoryLocked)
+        .sort((a, b) => {
+          const aIndex = (NEW_POST_CATEGORY_ORDER as readonly string[]).indexOf(a.slug);
+          const bIndex = (NEW_POST_CATEGORY_ORDER as readonly string[]).indexOf(b.slug);
+          return (aIndex === -1 ? 99 : aIndex) - (bIndex === -1 ? 99 : bIndex);
+        });
       setCategories(rows);
     }
     loadCategories();
@@ -127,19 +142,44 @@ function NewCommunityThreadContent() {
     } else {
       targetSlug = 'discussions';
     }
-    const target = categories.find(c => c.slug === targetSlug) ?? categories[0];
+    const target = categories.find(c => c.slug === targetSlug)
+      ?? (targetSlug === 'discussions' ? categories.find(c => c.slug === 'discussion') : null)
+      ?? categories[0];
     if (target) {
       setCategoryId(target.id);
       setPostType(target.slug);
     }
   }, [categories, categoryId, initialCategorySlug, initialSubjectType]);
 
-  const activeCategory = useMemo(() => categories.find(c => c.id === categoryId) ?? null, [categories, categoryId]);
+  const categoryOptions = useMemo<ComposerCategory[]>(() => {
+    const base = categories.map(category => ({
+      id: category.slug,
+      label: displayCategoryName(category.slug, category.name),
+      categoryId: category.id,
+      slug: category.slug as PickableSlug,
+      postType: category.slug,
+    }));
+    const general = categories.find(category => category.slug === 'discussions' || category.slug === 'discussion');
+    if (general) {
+      base.push({
+        id: 'collaboration',
+        label: 'Collaboration',
+        categoryId: general.id,
+        slug: 'collaboration',
+        postType: 'collaboration',
+      });
+    }
+    return base;
+  }, [categories]);
+  const activeOption = useMemo(
+    () => categoryOptions.find(option => option.categoryId === categoryId && option.postType === postType) ?? categoryOptions.find(option => option.categoryId === categoryId) ?? null,
+    [categoryOptions, categoryId, postType],
+  );
   const allowedSubjectTypes: SubjectType[] = useMemo(() => {
-    if (!activeCategory) return [];
-    const slug = activeCategory.slug as PickableSlug;
+    if (!activeOption) return [];
+    const slug = activeOption.slug;
     return SUBJECT_TYPES_FOR_CATEGORY[slug] ?? [];
-  }, [activeCategory]);
+  }, [activeOption]);
 
   // When the user changes category and their attached subject is no longer compatible, clear it.
   useEffect(() => {
@@ -271,38 +311,36 @@ function NewCommunityThreadContent() {
   return (
     <PageShell>
       <div style={{ maxWidth: 720, margin: '0 auto', display: 'grid', gap: 24 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start' }}>
-          <div>
-            <h1 className="os-type-page-title">New Post</h1>
-            <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', marginTop: 8 }}>
-              Pick a category — it decides where your post appears across 44.
-            </p>
+        <div className="dashboard-header">
+          <div className="dashboard-header-copy">
+            <h1 className="os-type-display">New Post</h1>
+            <p className="os-type-body">Pick a category and tag a related item when the post belongs somewhere specific.</p>
           </div>
-          <Link href="/community" className="os-button os-button-ghost os-button-compact">Back</Link>
+          <Link href="/community" className="os-button os-button-secondary os-button-compact">Back</Link>
         </div>
 
-        <div className="app-panel" style={{ padding: 'var(--os-space-6, 28px)' }}>
+        <div className="dashboard-list-surface" style={{ padding: 'var(--os-space-6, 28px)' }}>
           <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 20 }}>
             <div>
               <div className="os-type-card-title" style={{ marginBottom: 8 }}>Category</div>
-              {categoryLocked && activeCategory ? (
+              {categoryLocked && activeOption ? (
                 <div className="post-attach-chip">
                   <span className="post-attach-chip-type">Locked</span>
-                  <span className="post-attach-chip-label">{displayCategoryName(activeCategory.slug, activeCategory.name)}</span>
+                  <span className="post-attach-chip-label">{activeOption.label}</span>
                 </div>
               ) : (
                 <div className="settings-segment" role="group" aria-label="Post category">
-                  {categories.map(category => (
+                  {categoryOptions.map(category => (
                     <button
                       key={category.id}
                       type="button"
-                      className={category.id === categoryId ? 'settings-segment-item settings-segment-item-active' : 'settings-segment-item'}
+                      className={category.categoryId === categoryId && category.postType === postType ? 'settings-segment-item settings-segment-item-active' : 'settings-segment-item'}
                       onClick={() => {
-                        setCategoryId(category.id);
-                        setPostType(category.slug);
+                        setCategoryId(category.categoryId);
+                        setPostType(category.postType);
                       }}
                     >
-                      {displayCategoryName(category.slug, category.name)}
+                      {category.label}
                     </button>
                   ))}
                 </div>
@@ -312,7 +350,7 @@ function NewCommunityThreadContent() {
             <label>
               <div className="os-type-card-title" style={{ marginBottom: 8 }}>Title</div>
               <input
-                className="os-input-large"
+                className="os-input-field os-input-large"
                 value={title}
                 onChange={event => setTitle(event.target.value)}
                 placeholder="What do you want to talk about?"
@@ -321,7 +359,7 @@ function NewCommunityThreadContent() {
             </label>
 
             <div>
-              <div className="os-type-card-title" style={{ marginBottom: 8 }}>Attach to</div>
+              <div className="os-type-card-title" style={{ marginBottom: 8 }}>Tag</div>
               {attachId ? (
                 <div className="post-attach-chip">
                   <span className="post-attach-chip-type">{subjectTypeLabel(attachType)}</span>
@@ -333,7 +371,7 @@ function NewCommunityThreadContent() {
               ) : (
                 <div style={{ position: 'relative' }}>
                   <input
-                    className="os-input-large"
+                    className="os-input-field os-input-large"
                     value={query}
                     onChange={event => setQuery(event.target.value)}
                     placeholder={allowedSubjectTypes.length > 0 ? `Search ${allowedSubjectTypes.map(t => subjectTypeLabel(t).toLowerCase() + 's').join(', ')}…` : ''}

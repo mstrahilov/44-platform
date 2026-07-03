@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { PageShell, GlassPanel } from '@/components/Ui';
+import { PageShell, HubHero } from '@/components/Ui';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { UploadField } from '@/components/UploadField';
@@ -181,13 +181,8 @@ export default function EditServicePage() {
   return (
     <PageShell>
       <div className="dashboard-editor">
-        <header className="dashboard-header">
-          <div className="dashboard-header-copy">
-            <h1 className="os-type-display">Edit Service</h1>
-            <p className="os-type-body">Update the service details stored in 44.</p>
-          </div>
-        </header>
-        <GlassPanel className="dashboard-form-panel" style={{ padding: 32 }}>
+        <HubHero title="Edit Service" copy="Update the service details stored in 44." />
+        <div className="dashboard-flat">
           <form onSubmit={handleSubmit} className="dashboard-form">
             <label className="dashboard-field"><div className="dashboard-field-label">Service Title</div><input className="input" value={title} onChange={e => setTitle(e.target.value)} /></label>
             <div className="dashboard-form-grid dashboard-form-grid-2">
@@ -197,7 +192,7 @@ export default function EditServicePage() {
             <label className="dashboard-field"><div className="dashboard-field-label">Short Description</div><textarea className="input" rows={3} value={shortDescription} onChange={e => setShortDescription(e.target.value)} /></label>
             <label className="dashboard-field"><div className="dashboard-field-label">Long Description</div><textarea className="input" rows={5} value={longDescription} onChange={e => setLongDescription(e.target.value)} /></label>
             <div className="dashboard-form-grid dashboard-form-grid-3">
-              <label className="dashboard-field"><div className="dashboard-field-label">Global Starting Price (USD)</div><input className="input" value={startingPrice} onChange={e => setStartingPrice(formatPriceInput(e.target.value))} /></label>
+              <label className="dashboard-field"><div className="dashboard-field-label">Starting Price (USD)</div><input className="input" value={startingPrice} onChange={e => setStartingPrice(formatPriceInput(e.target.value))} /></label>
               {marketMode !== 'global' && (
                 <label className="dashboard-field"><div className="dashboard-field-label">Local Starting Price ({localCurrency})</div><input className="input" value={localPrice} onChange={e => setLocalPrice(formatPriceInput(e.target.value))} /></label>
               )}
@@ -249,7 +244,7 @@ export default function EditServicePage() {
             {success && <div className="dashboard-status dashboard-status-success">{success}</div>}
             <div className="dashboard-form-actions">
               <div className="dashboard-form-actions-left">
-                <button className="os-button os-button-primary" type="button" onClick={() => setShowDeleteConfirm(true)}>Delete Service</button>
+                <button className="os-button os-button-danger" type="button" onClick={() => setShowDeleteConfirm(true)}>Delete Service</button>
               </div>
               <div className="dashboard-form-actions-right">
                 <Link className="os-button os-button-secondary" href="/dashboard/services">Cancel</Link>
@@ -257,7 +252,7 @@ export default function EditServicePage() {
               </div>
             </div>
           </form>
-        </GlassPanel>
+        </div>
         <ConfirmDialog
           open={showDeleteConfirm}
           title="Delete Service"

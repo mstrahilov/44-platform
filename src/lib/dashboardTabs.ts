@@ -7,8 +7,7 @@ export const DASHBOARD_TABS: Array<{ id: string; label: string; href: string }> 
   { id: 'products', label: 'Products', href: '/dashboard/products' },
   { id: 'services', label: 'Services', href: '/dashboard/services' },
   { id: 'resources', label: 'Resources', href: '/dashboard/resources' },
-  { id: 'orders', label: 'Orders', href: '/dashboard/orders' },
-  { id: 'payouts', label: 'Payouts', href: '/dashboard/payouts' },
+  { id: 'payouts', label: 'Earnings', href: '/dashboard/payouts' },
   { id: 'preferences', label: 'Preferences', href: '/dashboard/preferences' },
 ];
 

@@ -134,7 +134,7 @@ function AccountSettings() {
     <div className="settings-section">
       <div className="settings-block">
         <h2 className="os-type-panel-title">Account</h2>
-        <p className="os-type-body">Manage your email, password, and data.</p>
+        <p className="os-type-body">Manage your email, password, and account access.</p>
         {user?.email && (
           <span className="os-type-body-small" style={{ color: 'var(--os-color-ink-muted)' }}>
             Signed in as {user.email}
@@ -214,7 +214,7 @@ function AccountSettings() {
           <p className="os-type-body-small">Permanently delete your account and all associated data. This cannot be undone.</p>
         </div>
         <div>
-          <button className="os-button os-button-ghost" type="button" disabled style={{ color: '#ff6b6b' }}>Delete Account</button>
+          <button className="os-button os-button-danger" type="button" disabled>Delete Account</button>
         </div>
       </div>
 
@@ -311,7 +311,7 @@ function SystemSettings() {
     <div className="settings-section">
       <div className="settings-block">
         <h2 className="os-type-panel-title">System</h2>
-        <p className="os-type-body">Choose how 44 looks. Changes apply instantly and are saved to this device.</p>
+        <p className="os-type-body">Adjust appearance, landing page, and regional browsing defaults.</p>
       </div>
 
       <div className="settings-field">
@@ -376,7 +376,7 @@ function SystemSettings() {
       <div className="settings-field">
         <div className="settings-field-head">
           <div className="os-type-card-title">Region</div>
-          <p className="os-type-body-small">Tell 44 which market you browse from so local creator pricing can appear when it applies.</p>
+          <p className="os-type-body-small">Choose the market you browse from so local pricing can appear when it fits.</p>
         </div>
         <select
           className="input"
@@ -395,7 +395,7 @@ function SystemSettings() {
       <div className="settings-field">
         <div className="settings-field-head">
           <div className="os-type-card-title">Display Currency</div>
-          <p className="os-type-body-small">Prices outside local creator offers are converted from USD into this currency.</p>
+          <p className="os-type-body-small">Set the currency used when prices are shown outside local creator offers.</p>
         </div>
         <select
           className="input"
@@ -481,7 +481,7 @@ function NotificationSettings() {
     <div className="settings-section">
       <div className="settings-block">
         <h2 className="os-type-panel-title">Notifications</h2>
-        <p className="os-type-body">Control what you get notified about. These choices are saved on this device.</p>
+        <p className="os-type-body">Choose which activity should reach you.</p>
       </div>
       <div>
         <ToggleRow storageKey={SETTINGS_KEYS.replies} title="Replies to your posts" desc="When someone replies in the community." defaultOn />
@@ -499,7 +499,7 @@ function PrivacySecuritySettings() {
     <div className="settings-section">
       <div className="settings-block">
         <h2 className="os-type-panel-title">Privacy & Security</h2>
-        <p className="os-type-body">Control what others see about you and how your account is protected.</p>
+        <p className="os-type-body">Control visibility, messaging, and account protection.</p>
       </div>
       <div>
         <ToggleRow storageKey={SETTINGS_KEYS.publicProfile} title="Public profile" desc="Let others view your profile and activity." defaultOn />
@@ -519,7 +519,7 @@ function BillingOrders() {
     <div className="settings-section">
       <div className="settings-block">
         <h2 className="os-type-panel-title">Billing & Orders</h2>
-        <p className="os-type-body">Your purchase history and payment methods.</p>
+        <p className="os-type-body">Review purchase history and payment details.</p>
       </div>
       <div>
         <h2 className="os-type-panel-title" style={{ marginBottom: 8 }}>Orders</h2>

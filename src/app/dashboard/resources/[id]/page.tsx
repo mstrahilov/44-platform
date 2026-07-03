@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { PageShell, GlassPanel } from '@/components/Ui';
+import { PageShell, HubHero } from '@/components/Ui';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { UploadField } from '@/components/UploadField';
+import { RichEditor } from '@/components/RichEditor';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Category } from '@/lib/platform';
@@ -136,13 +137,8 @@ export default function EditResourcePage() {
   return (
     <PageShell>
       <div className="dashboard-editor">
-        <header className="dashboard-header">
-          <div className="dashboard-header-copy">
-            <h1 className="os-type-display">Edit Resource</h1>
-            <p className="os-type-body">Update the resource details stored in 44.</p>
-          </div>
-        </header>
-        <GlassPanel className="dashboard-form-panel" style={{ padding: 32 }}>
+        <HubHero title="Edit Resource" copy="Update the resource details stored in 44." />
+        <div className="dashboard-flat">
           <form onSubmit={handleSubmit} className="dashboard-form">
             <label className="dashboard-field"><div className="dashboard-field-label">Resource Title</div><input className="input" value={title} onChange={e => setTitle(e.target.value)} /></label>
             <div className="dashboard-form-grid dashboard-form-grid-2">
@@ -150,7 +146,15 @@ export default function EditResourcePage() {
               <label className="dashboard-field"><div className="dashboard-field-label">Type</div><input className="input" value={resourceType} onChange={e => setResourceType(e.target.value)} /></label>
             </div>
             <label className="dashboard-field"><div className="dashboard-field-label">Short Description</div><textarea className="input" rows={3} value={shortDescription} onChange={e => setShortDescription(e.target.value)} /></label>
-            <label className="dashboard-field"><div className="dashboard-field-label">Long Description</div><textarea className="input" rows={8} value={longDescription} onChange={e => setLongDescription(e.target.value)} /></label>
+            <div className="dashboard-field">
+              <div className="dashboard-field-label">Article Content</div>
+              <RichEditor
+                value={longDescription}
+                onChange={setLongDescription}
+                userId={user.id}
+                placeholder="Write the article. Add headings, quotes, links, and inline images."
+              />
+            </div>
             <div className="dashboard-form-grid dashboard-form-grid-3">
               <UploadField
                 label="Cover Image"
@@ -175,7 +179,7 @@ export default function EditResourcePage() {
             {success && <div className="dashboard-status dashboard-status-success">{success}</div>}
             <div className="dashboard-form-actions">
               <div className="dashboard-form-actions-left">
-                <button className="os-button os-button-primary" type="button" onClick={() => setShowDeleteConfirm(true)}>Delete Resource</button>
+                <button className="os-button os-button-danger" type="button" onClick={() => setShowDeleteConfirm(true)}>Delete Resource</button>
               </div>
               <div className="dashboard-form-actions-right">
                 <Link className="os-button os-button-secondary" href="/dashboard/resources">Cancel</Link>
@@ -183,7 +187,7 @@ export default function EditResourcePage() {
               </div>
             </div>
           </form>
-        </GlassPanel>
+        </div>
         <ConfirmDialog
           open={showDeleteConfirm}
           title="Delete Resource"

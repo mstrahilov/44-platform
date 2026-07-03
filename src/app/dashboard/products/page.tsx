@@ -133,50 +133,29 @@ export default function DashboardProductsPage() {
                 key={product.id}
                 className="dashboard-list-row"
                 style={{
-                  gridTemplateColumns: '1fr 160px 240px',
-                  borderTop: index === 0 ? 'none' : '1px solid rgba(17, 24, 39, 0.08)',
+                  gridTemplateColumns: 'minmax(0, 1fr) 160px minmax(360px, auto)',
+                  borderTop: index === 0 ? 'none' : undefined,
                 }}
               >
-                <div>
-                  <div style={{ fontSize: 18, fontWeight: 720 }}>
-                    {product.title}
-                  </div>
-                  <div
-                    style={{
-                      marginTop: 5,
-                      fontSize: 13,
-                      color: 'var(--os-color-ink-muted)',
-                    }}
-                  >
-                    {product.product_type || 'Product'}
-                  </div>
+                <div className="dashboard-row-copy">
+                  <div className="dashboard-row-title">{product.title}</div>
+                  <div className="dashboard-row-subtitle">{product.product_type || 'Product'}</div>
                 </div>
 
-                <div style={{ color: 'var(--os-color-ink-secondary)', fontSize: 14 }}>
-                  {product.category || 'Uncategorized'}
-                </div>
+                <div className="dashboard-row-meta">{product.category || 'Uncategorized'}</div>
 
-                <div style={{ justifySelf: 'end', display: 'flex', gap: 10, alignItems: 'center' }}>
-                  <div
-                    style={{
-                      borderRadius: 999,
-                      padding: '7px 12px',
-                      background: 'rgba(255,255,255,.07)',
-                      color: 'var(--os-color-ink-secondary)',
-                      fontSize: 12,
-                      fontWeight: 700,
-                      textTransform: 'capitalize',
-                    }}
-                  >
-                    {product.status || (product.is_published ? 'published' : 'draft')}
-                  </div>
+                <div className="dashboard-row-actions">
+                  <div className="dashboard-status-pill">{product.status || (product.is_published ? 'published' : 'draft')}</div>
                   <Link href={`/dashboard/products/${product.id}`} className="os-button os-button-ghost os-button-compact">
                     Edit
                   </Link>
                   <Link href={productHref(product)} className="os-button os-button-ghost os-button-compact">
                     Open
                   </Link>
-                  <button className="os-button os-button-secondary os-button-compact" onClick={() => togglePublish(product)}>
+                  <button
+                    className="os-button os-button-secondary os-button-compact"
+                    onClick={() => togglePublish(product)}
+                  >
                     {product.is_published || product.status === 'published' ? 'Unpublish' : 'Publish'}
                   </button>
                 </div>

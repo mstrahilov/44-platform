@@ -9,6 +9,9 @@ import type { Resource } from '@/lib/platform';
 import { creatorHref } from '@/lib/platform';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { ItemCommunitySection } from '@/components/ItemCommunitySection';
+import { ArticleContent } from '@/components/ArticleContent';
+import { SocialAvatar } from '@/components/Social';
+import { estimateReadTime } from '@/lib/articles';
 
 export default function ResourcePage() {
   const { id } = useParams<{ id: string }>();
@@ -54,86 +57,66 @@ export default function ResourcePage() {
   if (loading) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Loading…</div>;
   if (!resource) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Resource not found</div>;
 
-  const description = resource.long_description ?? resource.short_description ?? '';
+  const authorName = resource.creators?.name ?? '44 Community';
+  const readTime = estimateReadTime(resource.long_description);
+  const category = resource.categories?.name ?? resource.resource_type ?? 'Resource';
 
   return (
     <div className="view-detail-single">
-
-      {/* Album-style header */}
-      <div
-        className={resource.cover_url ? 'view-album-header' : 'view-album-header view-album-header-fallback'}
-        style={resource.cover_url ? { backgroundImage: `url(${resource.cover_url})` } as React.CSSProperties : undefined}
-      >
-        <div className="view-album-cover">
-          {resource.cover_url && (
-            // eslint-disable-next-line @next/next/no-img-element
+      <article className="article-shell">
+        {resource.cover_url && (
+          <div className="article-hero">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={resource.cover_url} alt={resource.title} />
+          </div>
+        )}
+
+        <div className="article-eyebrow">{category}</div>
+        <h1 className="article-title">{resource.title}</h1>
+
+        <div className="article-byline">
+          <SocialAvatar profile={resource.creators ? { id: resource.creators.id, display_name: authorName, username: null, slug: resource.creators.slug ?? null, avatar_url: resource.creators.avatar_url ?? null, role: null, creator_type: null } : null} />
+          {resource.creators ? (
+            <Link href={creatorHref(resource.creators)} className="article-byline-name" style={{ textDecoration: 'none' }}>
+              {authorName}
+            </Link>
+          ) : (
+            <span className="article-byline-name">{authorName}</span>
           )}
-        </div>
-        <div className="view-album-copy">
-          <div className="view-album-eyebrow">{resource.categories?.name ?? resource.resource_type}</div>
-          <h1 className="view-album-title">{resource.title}</h1>
-          <div className="view-album-meta">
-            <span style={{ fontWeight: 700 }}>{resource.creators?.name ?? '44 Community'}</span>
-            <span className="view-album-meta-sep" />
-            <span>Free</span>
-          </div>
-          <div className="view-album-actions">
-            <button className="os-button os-button-primary" onClick={saveResource} disabled={saved}>
-              {saved ? 'Saved' : 'Save Resource'}
+          {readTime > 0 && (
+            <>
+              <span className="article-byline-dot" aria-hidden="true" />
+              <span>{readTime} min read</span>
+            </>
+          )}
+          <span style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
+            <button
+              type="button"
+              className="os-button os-button-secondary os-button-compact"
+              onClick={saveResource}
+              disabled={saved}
+            >
+              {saved ? 'Saved' : 'Save'}
             </button>
-            {resource.creators && (
-              <Link className="os-button os-button-secondary" href={creatorHref(resource.creators)}>
-                View Profile
-              </Link>
-            )}
-          </div>
+          </span>
         </div>
+
+        <ArticleContent html={resource.long_description ?? resource.short_description ?? ''} />
+      </article>
+
+      <div style={{ maxWidth: 720, margin: '0 auto', padding: '0 4px', width: '100%' }}>
+        <ItemCommunitySection
+          subjectType="resource"
+          subjectId={resource.id}
+          subjectLabel={resource.title}
+          categorySlugs={['questions']}
+          sectionTitle="Questions"
+          actionLabel="Ask a Question"
+          titlePlaceholder="What do you want to know?"
+          composerPlaceholder="Add the details of your question…"
+          emptyMessage="No questions yet — be the first to ask."
+        />
       </div>
-
-      {/* Description */}
-      {description.length > 40 && (
-        <div className="view-section">
-          <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', lineHeight: 1.72, maxWidth: 720, fontSize: 16 }}>
-            {description}
-          </p>
-        </div>
-      )}
-
-      {/* Details */}
-      <div className="view-section">
-        <h2 className="view-section-title">Details</h2>
-        <div>
-          <div className="view-row">
-            <span className="view-row-label">Type</span>
-            <span className="view-row-value">{resource.resource_type}</span>
-          </div>
-          <div className="view-row">
-            <span className="view-row-label">Category</span>
-            <span className="view-row-value">{resource.categories?.name ?? 'Resource'}</span>
-          </div>
-          <div className="view-row">
-            <span className="view-row-label">Access</span>
-            <span className="view-row-value">Free</span>
-          </div>
-          <div className="view-row">
-            <span className="view-row-label">Author</span>
-            <span className="view-row-value">{resource.creators?.name ?? '44 Community'}</span>
-          </div>
-        </div>
-      </div>
-
-      <ItemCommunitySection
-        subjectType="resource"
-        subjectId={resource.id}
-        subjectLabel={resource.title}
-        categorySlugs={['questions']}
-        sectionTitle="Questions"
-        actionLabel="Ask a Question"
-        titlePlaceholder="What do you want to know?"
-        composerPlaceholder="Add the details of your question…"
-        emptyMessage="No questions yet — be the first to ask."
-      />
     </div>
   );
 }

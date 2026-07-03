@@ -122,7 +122,7 @@ export default function DashboardPreferencesPage() {
           <div className="dashboard-header-copy">
             <h1 className="os-type-display">Preferences</h1>
             <p className="os-type-body">
-              Shape how new products and services inherit global USD pricing and optional local market pricing.
+              Choose how new products and services inherit pricing and market defaults.
             </p>
           </div>
         </header>
@@ -131,7 +131,7 @@ export default function DashboardPreferencesPage() {
           <div className="dashboard-header-copy">
             <h2 className="os-type-panel-content">Market Defaults</h2>
             <p className="os-type-body-small">
-              These controls establish creator-level defaults for new products and services.
+              Set the local market and pricing behavior used by new products and services.
             </p>
           </div>
 
@@ -183,39 +183,6 @@ export default function DashboardPreferencesPage() {
               </div>
             </div>
           </GlassPanel>
-        </section>
-
-        <section className="dashboard-section">
-          <div className="dashboard-header-copy">
-            <h2 className="os-type-panel-content">Pricing Model Preview</h2>
-            <p className="os-type-body-small">
-              This is how product and service forms behave when local and global pricing are enabled.
-            </p>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 18 }}>
-            <GlassPanel style={{ padding: 24 }}>
-              <div className="os-type-meta" style={{ color: 'var(--os-color-ink-muted)', textTransform: 'uppercase' }}>Universal Price</div>
-              <div className="os-type-panel-content" style={{ marginTop: 10 }}>USD stays the global anchor.</div>
-              <p className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)', marginTop: 8 }}>
-                Buyers outside a creator's local market see the universal catalog price.
-              </p>
-            </GlassPanel>
-            <GlassPanel style={{ padding: 24 }}>
-              <div className="os-type-meta" style={{ color: 'var(--os-color-ink-muted)', textTransform: 'uppercase' }}>Local Price</div>
-              <div className="os-type-panel-content" style={{ marginTop: 10 }}>{currencyForCountry(preferences.homeCountryCode)} follows Local Market.</div>
-              <p className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)', marginTop: 8 }}>
-                Local buyers can receive a creator-defined regional price instead of a converted USD price.
-              </p>
-            </GlassPanel>
-            <GlassPanel style={{ padding: 24 }}>
-              <div className="os-type-meta" style={{ color: 'var(--os-color-ink-muted)', textTransform: 'uppercase' }}>Buyer View</div>
-              <div className="os-type-panel-content" style={{ marginTop: 10 }}>Pricing follows market context.</div>
-              <p className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)', marginTop: 8 }}>
-                44 can show local pricing where enabled and global pricing everywhere else.
-              </p>
-            </GlassPanel>
-          </div>
         </section>
       </div>
     </PageShell>

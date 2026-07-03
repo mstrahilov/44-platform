@@ -74,8 +74,12 @@ export function Topbar() {
   const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notifMenuOpen, setNotifMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const userWrapRef = useRef<HTMLDivElement | null>(null);
   const notifWrapRef = useRef<HTMLDivElement | null>(null);
+  const searchWrapRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!user) { setProfile(null); return; }
@@ -106,7 +110,42 @@ export function Topbar() {
 
   useEffect(() => { setSeenIds(loadSeenIds()); }, []);
 
-  useEffect(() => { setUserMenuOpen(false); setNotifMenuOpen(false); }, [pathname]);
+  useEffect(() => { setUserMenuOpen(false); setNotifMenuOpen(false); setSearchOpen(false); }, [pathname]);
+
+  useEffect(() => {
+    if (!searchOpen) return;
+    const timeout = setTimeout(() => searchInputRef.current?.focus(), 60);
+    return () => clearTimeout(timeout);
+  }, [searchOpen]);
+
+  useEffect(() => {
+    if (!searchOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') { setSearchOpen(false); setSearchQuery(''); }
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [searchOpen]);
+
+  useEffect(() => {
+    if (!searchOpen) return;
+    function onClick(e: MouseEvent) {
+      if (searchWrapRef.current && !searchWrapRef.current.contains(e.target as Node)) {
+        if (!searchQuery.trim()) setSearchOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [searchOpen, searchQuery]);
+
+  function submitSearch(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (!q) return;
+    router.push(`/store?q=${encodeURIComponent(q)}`);
+    setSearchOpen(false);
+    setSearchQuery('');
+  }
 
   function openNotifMenu() {
     const nextOpen = !notifMenuOpen;
@@ -167,9 +206,42 @@ export function Topbar() {
       </div>
 
       <div className="os-topbar-right">
-        <button type="button" className="os-topbar-icon-button" aria-label="Search">
-          <IconSearch />
-        </button>
+        <div
+          ref={searchWrapRef}
+          className={searchOpen ? 'os-topbar-search os-topbar-search-open' : 'os-topbar-search'}
+        >
+          {searchOpen ? (
+            <form onSubmit={submitSearch} className="os-topbar-search-form" role="search">
+              <span className="os-topbar-search-icon" aria-hidden="true"><IconSearch /></span>
+              <input
+                ref={searchInputRef}
+                type="text"
+                className="os-topbar-search-input"
+                placeholder="Search 44"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                aria-label="Search"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  className="os-topbar-search-clear"
+                  onClick={() => { setSearchQuery(''); searchInputRef.current?.focus(); }}
+                  aria-label="Clear"
+                >×</button>
+              )}
+            </form>
+          ) : (
+            <button
+              type="button"
+              className="os-topbar-icon-button"
+              aria-label="Search"
+              onClick={() => setSearchOpen(true)}
+            >
+              <IconSearch />
+            </button>
+          )}
+        </div>
 
         {user && (
           <div ref={notifWrapRef} style={{ position: 'relative' }}>
