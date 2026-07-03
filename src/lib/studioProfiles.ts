@@ -117,7 +117,7 @@ export async function ensureProfileForUser(user: Pick<User, 'id' | 'email' | 'us
     display_name: displayName,
     username,
     slug,
-    role: existingProfile?.role ?? 'member',
+    role: existingProfile?.role ?? 'creator',
     avatar_url: existingProfile?.avatar_url ?? null,
     bio: existingProfile?.bio ?? null,
     creator_type: existingProfile?.creator_type ?? null,
