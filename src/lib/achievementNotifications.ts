@@ -7,6 +7,8 @@ export const ACHIEVEMENT_NOTIFICATIONS_UPDATED = '44:achievement-notifications-u
 export interface AchievementNotification extends AchievementToastData {
   createdAt?: string;
   productId?: string | null;
+  href?: string | null;
+  kind?: 'achievement' | 'reply';
 }
 
 function broadcastAchievementNotification(notification: AchievementNotification) {
@@ -65,12 +67,54 @@ export async function unlockAchievementForUser(
   return notification;
 }
 
+export async function createReplyNotification(params: {
+  recipientUserId: string;
+  actorUserId: string;
+  actorName: string;
+  postId: string;
+  postSlug?: string | null;
+  postTitle: string;
+  replyId: string;
+  replyBody: string;
+  parentReplyId?: string | null;
+}) {
+  const {
+    recipientUserId,
+    actorUserId,
+    actorName,
+    postId,
+    postSlug,
+    postTitle,
+    replyId,
+    replyBody,
+    parentReplyId,
+  } = params;
+
+  if (!recipientUserId || recipientUserId === actorUserId) return;
+
+  await supabase.from('achievement_events').insert({
+    user_id: recipientUserId,
+    product_id: null,
+    achievement_id: null,
+    event_type: 'reply_received',
+    metadata: {
+      actor_user_id: actorUserId,
+      actor_name: actorName,
+      post_id: postId,
+      post_slug: postSlug ?? null,
+      post_title: postTitle,
+      reply_id: replyId,
+      reply_body: replyBody,
+      parent_reply_id: parentReplyId ?? null,
+    },
+  });
+}
+
 export async function loadAchievementNotifications(userId: string): Promise<AchievementNotification[]> {
   const { data, error } = await supabase
     .from('achievement_events')
     .select('id,user_id,product_id,achievement_id,event_type,metadata,created_at')
     .eq('user_id', userId)
-    .eq('event_type', 'achievement_unlocked')
     .order('created_at', { ascending: false })
     .limit(24);
 
@@ -78,34 +122,62 @@ export async function loadAchievementNotifications(userId: string): Promise<Achi
 
   const eventRows = data as AchievementEvent[];
   const achievementIds = Array.from(
-    new Set(eventRows.map(item => item.achievement_id).filter((value): value is string => Boolean(value))),
+    new Set(
+      eventRows
+        .filter(item => item.event_type === 'achievement_unlocked')
+        .map(item => item.achievement_id)
+        .filter((value): value is string => Boolean(value)),
+    ),
   );
+  const achievementMap = new Map<string, Pick<ProductAchievement, 'id' | 'title' | 'description' | 'points'>>();
 
-  if (achievementIds.length === 0) return [];
+  if (achievementIds.length > 0) {
+    const { data: achievements } = await supabase
+      .from('product_achievements')
+      .select('id,title,description,points')
+      .in('id', achievementIds);
 
-  const { data: achievements } = await supabase
-    .from('product_achievements')
-    .select('id,title,description,points')
-    .in('id', achievementIds);
-
-  const achievementMap = new Map(
-    ((achievements as Array<Pick<ProductAchievement, 'id' | 'title' | 'description' | 'points'>> | null) ?? []).map(item => [item.id, item]),
-  );
+    ((achievements as Array<Pick<ProductAchievement, 'id' | 'title' | 'description' | 'points'>> | null) ?? []).forEach(item => {
+      achievementMap.set(item.id, item);
+    });
+  }
 
   const notifications: AchievementNotification[] = [];
 
   for (const event of eventRows) {
-    const achievement = event.achievement_id ? achievementMap.get(event.achievement_id) : null;
-    if (!achievement) continue;
+    if (event.event_type === 'achievement_unlocked') {
+      const achievement = event.achievement_id ? achievementMap.get(event.achievement_id) : null;
+      if (!achievement) continue;
 
-    notifications.push({
-      id: event.id,
-      title: achievement.title,
-      description: achievement.description,
-      points: achievement.points,
-      createdAt: event.created_at,
-      productId: event.product_id,
-    });
+      notifications.push({
+        id: event.id,
+        title: achievement.title,
+        description: achievement.description,
+        points: achievement.points,
+        createdAt: event.created_at,
+        productId: event.product_id,
+        kind: 'achievement',
+      });
+      continue;
+    }
+
+    if (event.event_type === 'reply_received') {
+      const actorName = typeof event.metadata?.actor_name === 'string' ? event.metadata.actor_name : 'Someone';
+      const postTitle = typeof event.metadata?.post_title === 'string' ? event.metadata.post_title : 'your post';
+      const replyBody = typeof event.metadata?.reply_body === 'string' ? event.metadata.reply_body : '';
+      const postId = typeof event.metadata?.post_id === 'string' ? event.metadata.post_id : null;
+      const postSlug = typeof event.metadata?.post_slug === 'string' ? event.metadata.post_slug : null;
+
+      notifications.push({
+        id: event.id,
+        title: `${actorName} replied`,
+        description: replyBody || `New reply on ${postTitle}.`,
+        createdAt: event.created_at,
+        productId: null,
+        href: postSlug || postId ? `/community/thread/${postSlug || postId}` : '/notifications',
+        kind: 'reply',
+      });
+    }
   }
 
   return notifications;

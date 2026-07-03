@@ -155,17 +155,17 @@ export default function NewServicePage() {
     <PageShell>
       <div className="dashboard-editor">
         <HubHero title="New Service" copy="Create a service offering directly from inside the app." />
-        <div className="dashboard-flat">
+        <div className="dashboard-section">
           <form onSubmit={handleSubmit} className="dashboard-form">
             <label className="dashboard-field">
               <div className="dashboard-field-label">Service Title</div>
-              <input className="input" value={title} onChange={event => setTitle(event.target.value)} placeholder="Example: Bass Guitar Recording" />
+              <input className="os-input-field" value={title} onChange={event => setTitle(event.target.value)} placeholder="Example: Bass Guitar Recording" />
             </label>
 
             <div className="dashboard-form-grid dashboard-form-grid-2">
               <label className="dashboard-field">
                 <div className="dashboard-field-label">Category</div>
-                <select className="input" value={categoryId} onChange={event => setCategoryId(event.target.value)}>
+                <select className="os-input-field" value={categoryId} onChange={event => setCategoryId(event.target.value)}>
                   {categories.map(category => (
                     <option key={category.id} value={category.id}>{category.name}</option>
                   ))}
@@ -174,41 +174,41 @@ export default function NewServicePage() {
 
               <label className="dashboard-field">
                 <div className="dashboard-field-label">Type</div>
-                <input className="input" value={serviceType} onChange={event => setServiceType(event.target.value)} placeholder="Mixing, Web Design, Strategy…" />
+                <input className="os-input-field" value={serviceType} onChange={event => setServiceType(event.target.value)} placeholder="Mixing, Web Design, Strategy…" />
               </label>
             </div>
 
             <label className="dashboard-field">
               <div className="dashboard-field-label">Short Description</div>
-              <textarea className="input" rows={3} value={shortDescription} onChange={event => setShortDescription(event.target.value)} placeholder="Short card copy for this service." />
+              <textarea className="os-input-textarea" rows={3} value={shortDescription} onChange={event => setShortDescription(event.target.value)} placeholder="Short card copy for this service." />
             </label>
 
             <label className="dashboard-field">
               <div className="dashboard-field-label">Long Description</div>
-              <textarea className="input" rows={5} value={longDescription} onChange={event => setLongDescription(event.target.value)} placeholder="Full service description used on detail pages." />
+              <textarea className="os-input-textarea" rows={5} value={longDescription} onChange={event => setLongDescription(event.target.value)} placeholder="Full service description used on detail pages." />
             </label>
 
             <div className="dashboard-form-grid dashboard-form-grid-3">
               <label className="dashboard-field">
                 <div className="dashboard-field-label">Starting Price (USD)</div>
-                <input className="input" value={startingPrice} onChange={event => setStartingPrice(formatPriceInput(event.target.value))} placeholder="299.00" />
+                <input className="os-input-field" value={startingPrice} onChange={event => setStartingPrice(formatPriceInput(event.target.value))} placeholder="299.00" />
               </label>
 
               {marketMode !== 'global' && (
                 <label className="dashboard-field">
                   <div className="dashboard-field-label">Local Starting Price ({localCurrency})</div>
-                  <input className="input" value={localPrice} onChange={event => setLocalPrice(formatPriceInput(event.target.value))} placeholder="0.00" />
+                  <input className="os-input-field" value={localPrice} onChange={event => setLocalPrice(formatPriceInput(event.target.value))} placeholder="0.00" />
                 </label>
               )}
 
               <label className="dashboard-field">
                 <div className="dashboard-field-label">Delivery Estimate</div>
-                <input className="input" value={deliveryEstimate} onChange={event => setDeliveryEstimate(event.target.value)} placeholder="3–5 days" />
+                <input className="os-input-field" value={deliveryEstimate} onChange={event => setDeliveryEstimate(event.target.value)} placeholder="3–5 days" />
               </label>
 
               <label className="dashboard-field">
                 <div className="dashboard-field-label">Creator</div>
-                <input className="input" value={creatorName} readOnly />
+                <input className="os-input-field" value={creatorName} readOnly />
               </label>
             </div>
 

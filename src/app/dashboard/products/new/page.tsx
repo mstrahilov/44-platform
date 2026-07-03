@@ -255,17 +255,17 @@ export default function NewProductPage() {
           copy="Create a release, game, book, apparel item, or asset directly from inside the app."
         />
 
-        <div className="dashboard-flat">
+        <div className="dashboard-section">
           <form onSubmit={handleSubmit} className="dashboard-form">
             <label className="dashboard-field">
               <div className="dashboard-field-label">Product Title</div>
-              <input className="input" value={title} onChange={event => setTitle(event.target.value)} placeholder="Example: Here Comes The Feeling" />
+              <input className="os-input-field" value={title} onChange={event => setTitle(event.target.value)} placeholder="Example: Here Comes The Feeling" />
             </label>
 
             <div className="dashboard-form-grid dashboard-form-grid-2">
               <label className="dashboard-field">
                 <div className="dashboard-field-label">Category</div>
-                <select className="input" value={categoryId} onChange={event => setCategoryId(event.target.value)}>
+                <select className="os-input-field" value={categoryId} onChange={event => setCategoryId(event.target.value)}>
                   {categories.map(category => (
                     <option key={category.id} value={category.id}>{category.name}</option>
                   ))}
@@ -274,41 +274,41 @@ export default function NewProductPage() {
 
               <label className="dashboard-field">
                 <div className="dashboard-field-label">Type</div>
-                <input className="input" value={productType} onChange={event => setProductType(event.target.value)} placeholder="Album, Book, Patch, Unity WebGL…" />
+                <input className="os-input-field" value={productType} onChange={event => setProductType(event.target.value)} placeholder="Album, Book, Patch, Unity WebGL…" />
               </label>
             </div>
 
             <label className="dashboard-field">
               <div className="dashboard-field-label">Short Description</div>
-              <textarea className="input" rows={3} value={shortDescription} onChange={event => setShortDescription(event.target.value)} placeholder="Short card copy." />
+              <textarea className="os-input-textarea" rows={3} value={shortDescription} onChange={event => setShortDescription(event.target.value)} placeholder="Short card copy." />
             </label>
 
             <label className="dashboard-field">
               <div className="dashboard-field-label">Long Description</div>
-              <textarea className="input" rows={5} value={longDescription} onChange={event => setLongDescription(event.target.value)} placeholder="Full item description used across detail and library views." />
+              <textarea className="os-input-textarea" rows={5} value={longDescription} onChange={event => setLongDescription(event.target.value)} placeholder="Full item description used across detail and library views." />
             </label>
 
             <div className="dashboard-form-grid dashboard-form-grid-3">
               <label className="dashboard-field">
                 <div className="dashboard-field-label">Price (USD)</div>
-                <input className="input" value={price} onChange={event => setPrice(formatPriceInput(event.target.value))} placeholder="0.00" />
+                <input className="os-input-field" value={price} onChange={event => setPrice(formatPriceInput(event.target.value))} placeholder="0.00" />
               </label>
 
               {marketMode !== 'global' && (
                 <label className="dashboard-field">
                   <div className="dashboard-field-label">Local Price ({localCurrency})</div>
-                  <input className="input" value={localPrice} onChange={event => setLocalPrice(formatPriceInput(event.target.value))} placeholder="0.00" />
+                  <input className="os-input-field" value={localPrice} onChange={event => setLocalPrice(formatPriceInput(event.target.value))} placeholder="0.00" />
                 </label>
               )}
 
               <label className="dashboard-field">
                 <div className="dashboard-field-label">Release Year</div>
-                <input className="input" value={year} onChange={event => setYear(event.target.value.replace(/[^0-9]/g, '').slice(0, 4))} placeholder="2026" />
+                <input className="os-input-field" value={year} onChange={event => setYear(event.target.value.replace(/[^0-9]/g, '').slice(0, 4))} placeholder="2026" />
               </label>
 
               <label className="dashboard-field">
                 <div className="dashboard-field-label">Creator</div>
-                <input className="input" value={creatorName} readOnly />
+                <input className="os-input-field" value={creatorName} readOnly />
               </label>
             </div>
 
@@ -379,7 +379,7 @@ export default function NewProductPage() {
 
                   <label className="dashboard-field" style={{ minWidth: 140 }}>
                     <div className="dashboard-field-label">Track Count</div>
-                    <select className="input" value={trackCount} onChange={event => setTrackCount(event.target.value)}>
+                    <select className="os-input-field" value={trackCount} onChange={event => setTrackCount(event.target.value)}>
                       {Array.from({ length: 30 }, (_, index) => index + 1).map(count => (
                         <option key={count} value={count}>{count}</option>
                       ))}
@@ -397,7 +397,7 @@ export default function NewProductPage() {
                           <label className="dashboard-field">
                             <div className="dashboard-field-label">Track Title</div>
                             <input
-                              className="input"
+                              className="os-input-field"
                               value={track.title}
                               onChange={event => updateTrack(index, { title: event.target.value })}
                               placeholder={`Track ${index + 1} title`}
@@ -407,7 +407,7 @@ export default function NewProductPage() {
                           <label className="dashboard-field">
                             <div className="dashboard-field-label">Duration (seconds)</div>
                             <input
-                              className="input"
+                              className="os-input-field"
                               value={track.durationSeconds}
                               onChange={event => updateTrack(index, { durationSeconds: event.target.value.replace(/\D/g, '').slice(0, 4) })}
                               placeholder="180"

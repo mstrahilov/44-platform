@@ -81,7 +81,7 @@ export default function ProductPage() {
 
   const heroImage = product.hero_url || product.cover_url;
   const canClaimToLibrary = isFreeLibraryClaim(product);
-  const primaryAction = owned ? 'Owned' : canClaimToLibrary ? 'Add to Library' : 'Add to Cart';
+  const primaryAction = canClaimToLibrary ? 'Add to Library' : 'Add to Cart';
   const accessLabel = getProductStoreAccessLabel(product);
   const creatorLink = creatorHref(product.creators ?? product.creator);
 
@@ -106,15 +106,19 @@ export default function ProductPage() {
           <div className="view-album-eyebrow">{productMeta(product)}</div>
           <h1 className="view-album-title">{product.title}</h1>
           <div className="view-album-meta">
-            <span style={{ fontWeight: 700 }}>{product.creators?.display_name || product.creator}</span>
+            <span className="view-album-meta-strong">{product.creators?.display_name || product.creator}</span>
             {product.year && (<><span className="view-album-meta-sep" /><span>{product.year}</span></>)}
             <span className="view-album-meta-sep" />
-            <span style={{ color: canClaimToLibrary ? '#7cff4f' : '#fff', fontWeight: 700 }}>
+            <span className={`view-album-meta-strong${canClaimToLibrary ? ' view-album-meta-accent' : ''}`}>
               {formatProductPrice(product)}
             </span>
           </div>
           <div className="view-album-actions">
-            <button className="os-button os-button-primary" onClick={addToLibrary} disabled={owned}>{primaryAction}</button>
+            {owned ? (
+              <Link className="os-button os-button-primary" href="/library">View in Library</Link>
+            ) : (
+              <button className="os-button os-button-primary" onClick={addToLibrary}>{primaryAction}</button>
+            )}
             <Link className="os-button os-button-secondary" href={creatorLink}>View Creator</Link>
           </div>
         </div>
@@ -123,7 +127,7 @@ export default function ProductPage() {
       {/* Description — only if it's long enough to matter */}
       {hasDescription && description.length > 40 && (
         <div className="view-section">
-          <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', lineHeight: 1.72, maxWidth: 720, fontSize: 16 }}>
+          <p className="os-type-body view-description">
             {description}
           </p>
         </div>

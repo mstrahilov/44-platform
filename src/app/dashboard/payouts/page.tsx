@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PageShell, GlassPanel } from '@/components/Ui';
+import { PageShell, GlassPanel, HubHero } from '@/components/Ui';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { useDashboardTabs } from '@/lib/dashboardTabs';
@@ -60,31 +60,15 @@ export default function DashboardPayoutsPage() {
   return (
     <PageShell>
       <div className="dashboard-page">
-        <header className="dashboard-header">
-          <div className="dashboard-header-copy">
-            <h1 className="os-type-display">Earnings</h1>
-            <p className="os-type-body">
-              Track sold items and creator earnings as purchases come online.
-            </p>
+        <HubHero
+          title="Earnings"
+          copy="Track sold items and creator earnings as purchases come online."
+        />
+        <div className="dashboard-list-surface">
+          <div className="dashboard-empty">
+            {fetching ? 'Loading earnings…' : 'No sold items yet.'}
           </div>
-        </header>
-
-        <section className="dashboard-section">
-          <div className="dashboard-header-copy">
-            <h2 className="os-type-panel-content">Sold Items</h2>
-            <p className="os-type-body-small">
-              Completed sales will show up here once earnings reporting is connected.
-            </p>
-          </div>
-
-          {fetching ? (
-            <div className="dashboard-empty">Loading earnings…</div>
-          ) : (
-            <div className="dashboard-list-surface">
-              <div className="dashboard-empty">No sold items yet.</div>
-            </div>
-          )}
-        </section>
+        </div>
       </div>
     </PageShell>
   );

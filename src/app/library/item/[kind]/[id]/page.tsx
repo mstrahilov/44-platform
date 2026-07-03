@@ -266,7 +266,7 @@ function ProductLibraryDetail({
           <div className="view-album-eyebrow">{product.product_type}</div>
           <h1 className="view-album-title">{product.title}</h1>
           <div className="view-album-meta">
-            <span style={{ fontWeight: 700 }}>{product.creators?.display_name || product.creator}</span>
+            <span className="view-album-meta-strong">{product.creators?.display_name || product.creator}</span>
             {isMusic && tracks.length > 0 && (
               <>
                 <span className="view-album-meta-sep" />
@@ -284,7 +284,7 @@ function ProductLibraryDetail({
       {/* Description */}
       {description.length > 40 && (
         <div className="view-section">
-          <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', lineHeight: 1.72, maxWidth: 720, fontSize: 16 }}>
+          <p className="os-type-body view-description">
             {description}
           </p>
         </div>
@@ -319,7 +319,7 @@ function ProductLibraryDetail({
       {!isMusic && (
         <div className="view-section">
           <h2 className="view-section-title">{content.contentTitle}</h2>
-          <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', lineHeight: 1.72, maxWidth: 720 }}>
+          <p className="os-type-body view-description">
             {content.emptyCopy}
           </p>
         </div>
@@ -400,7 +400,7 @@ function ResourceLibraryDetail({ row }: { row: { id: string; saved_at: string; r
             <img src={resource.cover_url} alt={resource.title} />
             <div className="view-hero-overlay">
               <div className="os-type-eyebrow" style={{ opacity: 0.72, marginBottom: 10 }}>{resource.resource_type}</div>
-              <h1 className="os-type-display" style={{ color: '#fff' }}>{resource.title}</h1>
+              <h1 className="os-type-display">{resource.title}</h1>
             </div>
           </>
         ) : (
@@ -429,7 +429,7 @@ function ResourceLibraryDetail({ row }: { row: { id: string; saved_at: string; r
 
       <div className="view-section">
         <h2 className="view-section-title">About</h2>
-        <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', lineHeight: 1.72, maxWidth: 720 }}>{infoCopy}</p>
+        <p className="os-type-body view-description">{infoCopy}</p>
       </div>
 
       {resource.long_description && (
@@ -437,7 +437,7 @@ function ResourceLibraryDetail({ row }: { row: { id: string; saved_at: string; r
           <h2 className="view-section-title">Content</h2>
           <div style={{ display: 'grid', gap: 16, maxWidth: 720 }}>
             {resource.long_description.split('\n').filter(Boolean).map((paragraph, i) => (
-              <p key={i} className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', lineHeight: 1.72 }}>{paragraph}</p>
+              <p key={i} className="os-type-body view-description-line">{paragraph}</p>
             ))}
           </div>
         </div>
@@ -461,7 +461,7 @@ function ServiceLibraryDetail({ row }: { row: ServiceRequest }) {
             <img src={service.cover_url} alt={service.title} />
             <div className="view-hero-overlay">
               <div className="os-type-eyebrow" style={{ opacity: 0.72, marginBottom: 10 }}>{service.categories?.name ?? 'Service'}</div>
-              <h1 className="os-type-display" style={{ color: '#fff' }}>{service.title}</h1>
+              <h1 className="os-type-display">{service.title}</h1>
             </div>
           </>
         ) : (
@@ -489,12 +489,12 @@ function ServiceLibraryDetail({ row }: { row: ServiceRequest }) {
 
       <div className="view-section">
         <h2 className="view-section-title">About</h2>
-        <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', lineHeight: 1.72, maxWidth: 720 }}>{infoCopy}</p>
+        <p className="os-type-body view-description">{infoCopy}</p>
       </div>
 
       <div className="view-section">
         <h2 className="view-section-title">Your Note</h2>
-        <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', lineHeight: 1.72, maxWidth: 720 }}>
+        <p className="os-type-body view-description">
           {row.message || 'No request note added yet.'}
         </p>
       </div>

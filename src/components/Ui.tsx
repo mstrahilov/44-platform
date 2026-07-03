@@ -112,7 +112,7 @@ export function ServiceCard({ service }: { service: Service }) {
   const creator = service.creators?.name || '44 Creator';
   return (
     <Link className="product-tile" href={serviceHref(service)}>
-      <div className="product-tile-art product-tile-art-wide">
+      <div className="product-tile-art product-tile-art-square">
         {service.cover_url && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={service.cover_url} alt="" />
@@ -139,7 +139,7 @@ export function ResourceCard({
   const creator = resource.creators?.name || '44 Community';
   return (
     <Link className="product-tile" href={resourceHref(resource)}>
-      <div className="product-tile-art product-tile-art-wide">
+      <div className="product-tile-art product-tile-art-square">
         {resource.cover_url && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={resource.cover_url} alt="" />
@@ -227,12 +227,23 @@ export function CategoryCard({ label, href, icon }: { label: string; href: strin
   );
 }
 
-export function HubHero({ title, copy }: { title: string; copy?: string }) {
+export function HubHero({
+  title,
+  copy,
+  actions,
+}: {
+  title: string;
+  copy?: string;
+  actions?: ReactNode;
+}) {
   return (
-    <section className="app-hero">
-      <h1 className="app-hero-title os-type-display">{title}</h1>
-      {copy && <p className="app-hero-copy os-type-body">{copy}</p>}
-    </section>
+    <header className="dashboard-header">
+      <div className="dashboard-header-copy">
+        <h1 className="os-type-display">{title}</h1>
+        {copy && <p className="os-type-body">{copy}</p>}
+      </div>
+      {actions}
+    </header>
   );
 }
 

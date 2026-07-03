@@ -1110,74 +1110,9 @@ body.theme-light .app-environment-image { opacity: 0.6; }
 
 /* ---------- SHARED NON-PRODUCT CARD TEXT ---------- */
 
-/* ── Input / select / textarea — Apple-clean ── */
-.input {
-  width: 100%;
-  background: var(--os-color-surface);
-  border: 1px solid var(--os-color-hairline);
-  border-radius: 10px;
-  padding: 11px 14px;
-  font-family: var(--os-font-app, 'Inter', system-ui, sans-serif);
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 1.35;
-  color: var(--os-color-ink);
-  outline: none;
-  transition:
-    border-color 140ms ease,
-    box-shadow 140ms ease,
-    background 140ms ease;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
-}
-
-.input::placeholder {
-  color: var(--os-color-ink-muted);
-  font-weight: 500;
-}
-
-.input:hover:not(:disabled):not(:focus) {
-  border-color: color-mix(in srgb, var(--os-color-ink) 20%, var(--os-color-hairline));
-}
-
-.input:focus,
-.input:focus-visible {
-  border-color: color-mix(in srgb, var(--os-color-accent) 44%, rgba(0, 0, 0, 0.12));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--os-color-accent) 18%, transparent);
-}
-
-.input:disabled,
-.input[readonly] {
-  color: var(--os-color-ink-secondary);
-  background: color-mix(in srgb, var(--os-color-ink) 4%, var(--os-color-surface));
-  cursor: default;
-}
-
-/* Textarea */
-textarea.input {
-  min-height: 96px;
-  line-height: 1.55;
-  resize: vertical;
-  padding-top: 12px;
-  padding-bottom: 12px;
-  font-family: inherit;
-}
-
-/* Select — hide native chevron, add our own */
-select.input {
-  padding-right: 40px;
-  cursor: pointer;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%2360646c' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/></svg>");
-  background-repeat: no-repeat;
-  background-position: right 14px center;
-  background-size: 12px 8px;
-}
-
-select.input::-ms-expand { display: none; }
-
 /* Small helper: an input+label group used in dashboard forms */
-.dashboard-field .input { width: 100%; }
+.dashboard-field .os-input-field,
+.dashboard-field .os-input-textarea { width: 100%; }
 
 /* ── progress bar ── */
 .progress-track {
@@ -1906,6 +1841,11 @@ select.input::-ms-expand { display: none; }
   --os-type-card-title-weight: 730;
   --os-type-card-title-track: -0.038em;
 
+  --os-type-field-title-size: 19px;
+  --os-type-field-title-line: 1.15;
+  --os-type-field-title-weight: 720;
+  --os-type-field-title-track: -0.032em;
+
   --os-type-sidebar-row-size: 16px;
   --os-type-sidebar-row-line: 1.2;
   --os-type-sidebar-row-weight: 740;
@@ -1998,6 +1938,14 @@ select.input::-ms-expand { display: none; }
   letter-spacing: var(--os-type-card-title-track);
 }
 
+.os-type-field-title {
+  font-size: var(--os-type-field-title-size);
+  line-height: var(--os-type-field-title-line);
+  font-weight: var(--os-type-field-title-weight);
+  letter-spacing: var(--os-type-field-title-track);
+  color: var(--os-color-ink);
+}
+
 .os-type-sidebar-row {
   font-size: var(--os-type-sidebar-row-size);
   line-height: var(--os-type-sidebar-row-line);
@@ -2073,7 +2021,7 @@ select.input::-ms-expand { display: none; }
   --os-color-frosted-panel: rgba(82, 92, 78, 0.42);
   --os-color-frosted-border: rgba(255, 255, 255, 0.28);
 
-  --os-color-paper: #fbfaf6;
+  --os-color-paper: #ffffff;
   --os-color-paper-border: rgba(0, 0, 0, 0.08);
 
   --os-color-accent: #7cff4f;
@@ -2271,7 +2219,7 @@ select.input::-ms-expand { display: none; }
 /* 44OS MATERIAL SYSTEM — PAPER */
 
 :root {
-  --os-paper-bg: #fbfaf6;
+  --os-paper-bg: #ffffff;
   --os-paper-bg-soft: #f6f4ee;
   --os-paper-bg-warm: #fff8ec;
 
@@ -2484,6 +2432,29 @@ select.input::-ms-expand { display: none; }
 .os-input-field::placeholder {
   color: var(--os-input-placeholder);
 }
+
+.os-input-field:disabled,
+.os-input-field[readonly],
+.os-input-textarea:disabled,
+.os-input-textarea[readonly] {
+  color: var(--os-color-ink-secondary);
+  background: color-mix(in srgb, var(--os-color-ink) 4%, var(--os-input-bg));
+  cursor: default;
+}
+
+select.os-input-field {
+  padding-right: 40px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'><path d='M1 1.5L6 6.5L11 1.5' stroke='%2360646c' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 12px 8px;
+}
+
+select.os-input-field::-ms-expand { display: none; }
 
 .os-input-compact {
   min-height: var(--os-input-compact-height);
@@ -3875,21 +3846,6 @@ body.theme-dark .product-tile:hover .product-tile-art {
   gap: var(--os-space-2);
 }
 
-/* ── Hub hero (Store, Services, Resources, Community) ── */
-.app-hero {
-  padding: 44px 0 32px;
-  color: var(--os-color-ink);
-  border-bottom: 1px solid var(--os-color-hairline);
-}
-
-.app-hero-title { margin: 0; color: var(--os-color-ink); }
-
-.app-hero-copy {
-  max-width: min(100%, 980px);
-  margin: var(--os-space-3) 0 0;
-  color: var(--os-color-ink-secondary);
-}
-
 /* ── View section heading — title alone separates sections, no hairline ── */
 .view-section-title {
   font-family: var(--os-font-app);
@@ -4231,6 +4187,7 @@ body.theme-dark .product-tile:hover .product-tile-art {
 }
 
 /* ── Popover — used for user menu + notifications ── */
+/* Paper material: solid, opaque, readable above the app shell. */
 .os-popover {
   position: absolute;
   top: 58px;
@@ -4238,11 +4195,9 @@ body.theme-dark .product-tile:hover .product-tile-art {
   min-width: 236px;
   padding: 10px;
   border-radius: 18px;
-  background: var(--os-glass-panel-bg);
-  border: 1px solid var(--os-glass-panel-border);
+  background: var(--os-paper-bg);
+  border: 1px solid var(--os-paper-border);
   box-shadow: var(--os-shadow-4);
-  backdrop-filter: blur(32px) saturate(1.6);
-  -webkit-backdrop-filter: blur(32px) saturate(1.6);
   z-index: 60;
   display: flex;
   flex-direction: column;
@@ -4405,9 +4360,8 @@ body.theme-dark .product-tile:hover .product-tile-art {
   gap: var(--os-space-8);
 }
 
-/* Unified with HubHero (app-hero) — same padding + hairline so dashboard
-   list pages match the hub pages. Layout stays flex to preserve
-   right-aligned action buttons that some list pages put here. */
+/* Shared header for all hub and dashboard pages (via HubHero and inline usage).
+   Flex row so pages can put a right-aligned action button next to the title. */
 .dashboard-header {
   display: flex;
   align-items: flex-end;
@@ -4545,19 +4499,8 @@ body.theme-dark .product-tile:hover .product-tile-art {
   gap: 28px;
 }
 
-/* Legacy floating panel — kept for pages not yet migrated. New dashboard editor
-   pages use `.dashboard-flat` (form directly on the page background). */
 .dashboard-form-panel {
   width: 100%;
-}
-
-/* Flat dashboard form container — no shadow, no border, full width */
-.dashboard-flat {
-  width: 100%;
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-  padding: 0;
 }
 
 .dashboard-form {
@@ -4813,6 +4756,24 @@ body.theme-dark .product-tile:hover .product-tile-art {
   margin-top: 8px;
 }
 
+.view-album-meta-strong {
+  font-weight: 700;
+  color: #fff;
+}
+
+.view-album-meta-accent {
+  color: var(--os-color-accent);
+}
+
+.view-description {
+  color: var(--os-color-ink-secondary);
+  max-width: 720px;
+}
+
+.view-description-line {
+  color: var(--os-color-ink-secondary);
+}
+
 .view-album-meta-sep {
   width: 3px;
   height: 3px;
@@ -4834,14 +4795,14 @@ body.theme-dark .product-tile:hover .product-tile-art {
   border-color: transparent;
 }
 .view-album-actions .os-button-secondary {
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.22);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: var(--os-paper-bg);
+  color: var(--os-color-ink);
+  border-color: var(--os-paper-border);
+  box-shadow: var(--os-shadow-paper), var(--os-paper-highlight);
 }
 .view-album-actions .os-button-secondary:hover {
-  background: rgba(255, 255, 255, 0.22);
+  background: var(--os-color-ink);
+  color: var(--os-paper-bg);
 }
 
 @media (max-width: 780px) {
@@ -5017,7 +4978,6 @@ body.theme-dark .product-tile:hover .product-tile-art {
   margin: 0 auto;
   display: grid;
   gap: 28px;
-  padding-top: 44px;
 }
 
 .social-shell-wide {
@@ -5050,6 +5010,33 @@ body.theme-dark .product-tile:hover .product-tile-art {
   display: grid;
 }
 
+/* Thread reply list — sits in a paper list surface with padded rows */
+.social-feed-list {
+  padding: 0 26px;
+}
+
+.social-feed-panel {
+  overflow: hidden;
+}
+
+.social-feed-list .social-row {
+  padding: 22px 0;
+  min-height: 0;
+}
+
+.social-feed-list .social-reply-child .social-row {
+  border-bottom: 1px solid var(--os-color-hairline);
+}
+
+.social-feed-list > :last-child .social-row:last-child,
+.social-feed-list > .social-row:last-child {
+  border-bottom: 0;
+}
+
+.social-feed-list > .social-composer-inline-surface:last-child {
+  border-bottom: 0;
+}
+
 .social-row {
   position: relative;
   display: grid;
@@ -5062,8 +5049,21 @@ body.theme-dark .product-tile:hover .product-tile-art {
   text-decoration: none;
 }
 
+.social-row-interactive {
+  cursor: pointer;
+}
+
 .social-row-main {
   padding-bottom: 2px;
+}
+
+.social-row-main-clickable {
+  border-radius: 18px;
+}
+
+.social-row-main-clickable:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--os-color-accent) 42%, white);
+  outline-offset: 4px;
 }
 
 .social-row-main .social-row-body {
@@ -5329,24 +5329,6 @@ body.theme-dark .product-tile:hover .product-tile-art {
   gap: 8px;
 }
 
-.social-inline-composer textarea {
-  min-height: 44px;
-  border: 1px solid var(--os-color-hairline);
-  border-radius: 12px;
-  background: var(--os-color-surface);
-  color: var(--os-color-ink);
-  padding: 10px 12px;
-  font: inherit;
-  font-size: 14px;
-  resize: vertical;
-  outline: none;
-  line-height: 1.45;
-}
-
-.social-inline-composer textarea:focus {
-  border-color: var(--os-color-ink-muted);
-}
-
 .social-inline-composer-actions {
   display: flex;
   justify-content: flex-end;
@@ -5606,30 +5588,17 @@ body.theme-dark .product-tile:hover .product-tile-art {
   gap: 12px;
 }
 
-.social-composer-input {
-  min-height: 76px;
-  border: 0;
-  border-bottom: 1px solid var(--os-color-hairline);
-  border-radius: 0;
-  background: transparent;
-  resize: vertical;
-  padding: 4px 0 14px;
-  color: var(--os-color-ink);
-  font: inherit;
-  line-height: 1.5;
-  outline: none;
-}
-
-.social-composer-input::placeholder {
-  color: var(--os-color-ink-muted);
-}
-
 .social-composer-actions {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 14px;
   flex-wrap: wrap;
+}
+
+.social-composer-inline-surface {
+  padding: 18px 0 22px;
+  border-bottom: 1px solid var(--os-color-hairline);
 }
 
 .social-note {
@@ -5972,17 +5941,16 @@ body.theme-dark .product-tile:hover .product-tile-art {
 
 /* ── Settings ── */
 .settings-section { display: grid; gap: var(--os-space-6); max-width: 660px; }
+.settings-section-wide { max-width: none; }
 .settings-block { display: grid; gap: var(--os-space-2); }
 .settings-block p { margin: 0; color: var(--os-color-ink-secondary); }
 
 .settings-field {
   display: grid;
   gap: var(--os-space-4);
-  padding: var(--os-space-6) 0;
-  border-top: 1px solid var(--os-color-hairline);
+  padding: var(--os-space-4) 0;
 }
-.settings-field:first-of-type { border-top: 0; padding-top: var(--os-space-2); }
-.settings-field-head { display: grid; gap: 3px; }
+.settings-field-head { display: grid; gap: 6px; }
 .settings-field-head p { margin: 0; color: var(--os-color-ink-secondary); }
 
 .settings-segment {
@@ -6014,10 +5982,6 @@ body.theme-dark .product-tile:hover .product-tile-art {
 
 .profile-edit-input:focus,
 .profile-edit-input:focus-visible,
-.social-inline-composer textarea:focus,
-.social-inline-composer textarea:focus-visible,
-.social-composer-input:focus,
-.social-composer-input:focus-visible,
 .os-topbar-search-input:focus,
 .os-topbar-search-input:focus-visible {
   border-color: color-mix(in srgb, var(--os-color-accent) 44%, rgba(0, 0, 0, 0.12));

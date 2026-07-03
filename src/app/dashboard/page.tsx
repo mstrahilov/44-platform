@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PageShell, GlassPanel } from '@/components/Ui';
+import { PageShell, GlassPanel, HubHero, HubSection } from '@/components/Ui';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
@@ -117,14 +117,10 @@ export default function DashboardPage() {
   return (
     <PageShell>
       <div className="dashboard-page">
-        <header className="dashboard-header">
-          <div className="dashboard-header-copy">
-            <h1 className="os-type-display">Overview</h1>
-            <p className="os-type-body">
-              Your creator workspace for catalog health, sales signals, and what should go live next.
-            </p>
-          </div>
-        </header>
+        <HubHero
+          title="Overview"
+          copy="Your creator workspace for catalog health, sales signals, and what should go live next."
+        />
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 18 }}>
           <OverviewCard
@@ -150,14 +146,7 @@ export default function DashboardPage() {
           />
         </div>
 
-        <section className="dashboard-section">
-          <div className="dashboard-header-copy">
-            <h2 className="os-type-panel-content">Recent Content</h2>
-            <p className="os-type-body-small">
-              The latest products, services, and resources in your workspace.
-            </p>
-          </div>
-
+        <HubSection title="Recent Content">
           {fetching ? (
             <div className="dashboard-empty">Loading overview…</div>
           ) : recentItems.length === 0 ? (
@@ -187,7 +176,7 @@ export default function DashboardPage() {
               ))}
             </div>
           )}
-        </section>
+        </HubSection>
       </div>
     </PageShell>
   );
@@ -211,7 +200,7 @@ function OverviewCard({
       <GlassPanel style={{ padding: 24 }}>
         <div style={{ display: 'grid', gap: 8 }}>
           <div className="os-type-meta" style={{ color: 'var(--os-color-ink-muted)', textTransform: 'uppercase' }}>{title}</div>
-          <div className="os-type-display" style={{ fontSize: 42 }}>{total}</div>
+          <div className="os-type-page-title">{total}</div>
           <div className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>
             {published} published, {drafts} draft
           </div>

@@ -72,7 +72,7 @@ export default function ResourcesBrowsePage() {
         {visible.length === 0 ? (
           <EmptyMessage>No resources here yet.</EmptyMessage>
         ) : (
-          <div className="app-grid app-grid-wide">
+          <div className="app-grid">
             {visible.map(resource => (
               <ResourceCard key={resource.id} resource={resource} />
             ))}

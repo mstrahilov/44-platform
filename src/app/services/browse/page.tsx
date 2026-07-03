@@ -72,7 +72,7 @@ export default function ServicesBrowsePage() {
         {visible.length === 0 ? (
           <EmptyMessage>No services here yet.</EmptyMessage>
         ) : (
-          <div className="app-grid app-grid-wide">
+          <div className="app-grid">
             {visible.map(service => (
               <ServiceCard key={service.id} service={service} />
             ))}

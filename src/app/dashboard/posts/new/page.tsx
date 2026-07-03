@@ -85,17 +85,17 @@ export default function NewPostPage() {
     <PageShell>
       <div className="dashboard-editor">
         <HubHero title="New Post" copy="Share a project update, announcement, or discussion starter." />
-        <div className="dashboard-flat">
+        <div className="dashboard-section">
           <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 22 }}>
-            <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Post Title</div><input className="input" value={title} onChange={e => setTitle(e.target.value)} placeholder="Example: New release this Friday" /></label>
+            <label className="dashboard-field"><div className="dashboard-field-label">Post Title</div><input className="os-input-field" value={title} onChange={e => setTitle(e.target.value)} placeholder="Example: New release this Friday" /></label>
             <div style={{ display: 'grid', gap: 22, gridTemplateColumns: '1fr 1fr' }}>
-              <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Category</div><select className="input" value={categoryId} onChange={e => setCategoryId(e.target.value)}>{categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
-              <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Type</div><input className="input" value={postType} onChange={e => setPostType(e.target.value)} placeholder="Update, News, Discussion…" /></label>
+              <label className="dashboard-field"><div className="dashboard-field-label">Category</div><select className="os-input-field" value={categoryId} onChange={e => setCategoryId(e.target.value)}>{categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
+              <label className="dashboard-field"><div className="dashboard-field-label">Type</div><input className="os-input-field" value={postType} onChange={e => setPostType(e.target.value)} placeholder="Update, News, Discussion…" /></label>
             </div>
-            <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Body</div><textarea className="input" rows={10} value={body} onChange={e => setBody(e.target.value)} placeholder="Write your post here." /></label>
-            {error && <p style={{ color: '#ff9b9b', fontSize: 14, fontWeight: 600 }}>{error}</p>}
+            <label className="dashboard-field"><div className="dashboard-field-label">Body</div><textarea className="os-input-textarea" rows={10} value={body} onChange={e => setBody(e.target.value)} placeholder="Write your post here." /></label>
+            {error && <p className="os-type-body-small" style={{ color: 'var(--os-color-danger)' }}>{error}</p>}
             {!isCreatorProfile(profile) && (
-              <p style={{ color: 'var(--os-color-ink-secondary)', fontSize: 14 }}>
+              <p className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>
                 This account is not marked as a creator yet. You can still save drafts, but switch your profile role to creator before publishing publicly.
               </p>
             )}

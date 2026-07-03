@@ -138,14 +138,14 @@ export default function EditResourcePage() {
     <PageShell>
       <div className="dashboard-editor">
         <HubHero title="Edit Resource" copy="Update the resource details stored in 44." />
-        <div className="dashboard-flat">
+        <div className="dashboard-section">
           <form onSubmit={handleSubmit} className="dashboard-form">
-            <label className="dashboard-field"><div className="dashboard-field-label">Resource Title</div><input className="input" value={title} onChange={e => setTitle(e.target.value)} /></label>
+            <label className="dashboard-field"><div className="dashboard-field-label">Resource Title</div><input className="os-input-field" value={title} onChange={e => setTitle(e.target.value)} /></label>
             <div className="dashboard-form-grid dashboard-form-grid-2">
-              <label className="dashboard-field"><div className="dashboard-field-label">Category</div><select className="input" value={categoryId} onChange={e => setCategoryId(e.target.value)}>{categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
-              <label className="dashboard-field"><div className="dashboard-field-label">Type</div><input className="input" value={resourceType} onChange={e => setResourceType(e.target.value)} /></label>
+              <label className="dashboard-field"><div className="dashboard-field-label">Category</div><select className="os-input-field" value={categoryId} onChange={e => setCategoryId(e.target.value)}>{categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
+              <label className="dashboard-field"><div className="dashboard-field-label">Type</div><input className="os-input-field" value={resourceType} onChange={e => setResourceType(e.target.value)} /></label>
             </div>
-            <label className="dashboard-field"><div className="dashboard-field-label">Short Description</div><textarea className="input" rows={3} value={shortDescription} onChange={e => setShortDescription(e.target.value)} /></label>
+            <label className="dashboard-field"><div className="dashboard-field-label">Short Description</div><textarea className="os-input-textarea" rows={3} value={shortDescription} onChange={e => setShortDescription(e.target.value)} /></label>
             <div className="dashboard-field">
               <div className="dashboard-field-label">Article Content</div>
               <RichEditor
@@ -173,7 +173,7 @@ export default function EditResourcePage() {
                 buttonLabel="Upload file"
                 onChange={setDownloadUrl}
               />
-              <label className="dashboard-field"><div className="dashboard-field-label">Creator</div><input className="input" value={creatorName} readOnly /></label>
+              <label className="dashboard-field"><div className="dashboard-field-label">Creator</div><input className="os-input-field" value={creatorName} readOnly /></label>
             </div>
             {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
             {success && <div className="dashboard-status dashboard-status-success">{success}</div>}

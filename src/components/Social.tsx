@@ -1,4 +1,7 @@
+'use client';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { authorDisplayName, authorHandle, authorHref, compactDate, initials, type SocialAuthor, type SocialLiker, type SocialPost } from '@/lib/social';
 import { communityThreadHref } from '@/lib/platform';
@@ -155,6 +158,9 @@ export function SocialPostRow({
   showTitle = true,
   titleSize = 'default',
   handleOnly = true,
+  meta,
+  onReplyClick,
+  rowClickable = true,
 }: {
   post: SocialPost;
   replyCount?: number;
@@ -169,30 +175,65 @@ export function SocialPostRow({
   showTitle?: boolean;
   titleSize?: 'default' | 'lg';
   handleOnly?: boolean;
+  meta?: ReactNode;
+  onReplyClick?: () => void;
+  rowClickable?: boolean;
 }) {
+  const router = useRouter();
   const body = post.body || '';
   const href = communityThreadHref(post);
+
+  function openThread() {
+    if (!rowClickable) return;
+    router.push(href);
+  }
+
+  function handleRowKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (!rowClickable) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openThread();
+    }
+  }
+
+  function stopRowNavigation(event: React.SyntheticEvent) {
+    event.stopPropagation();
+  }
+
   return (
-    <article className="social-row">
-      <Link href={authorHref(post.creators)} aria-label={authorDisplayName(post.creators)}>
+    <article className={rowClickable ? 'social-row social-row-interactive' : 'social-row'}>
+      <Link href={authorHref(post.creators)} aria-label={authorDisplayName(post.creators)} onClick={stopRowNavigation}>
         <SocialAvatar profile={post.creators} />
       </Link>
 
-      <div className="social-row-main">
-        <SocialAuthorLine author={post.creators} createdAt={post.created_at} handleOnly={handleOnly} />
-        <Link href={href} style={{ color: 'inherit', textDecoration: 'none', display: 'grid', gap: 6 }}>
+      <div
+        className={rowClickable ? 'social-row-main social-row-main-clickable' : 'social-row-main'}
+        role={rowClickable ? 'link' : undefined}
+        tabIndex={rowClickable ? 0 : undefined}
+        onClick={rowClickable ? openThread : undefined}
+        onKeyDown={rowClickable ? handleRowKeyDown : undefined}
+      >
+        <SocialAuthorLine author={post.creators} createdAt={post.created_at} handleOnly={handleOnly} meta={meta} />
+        <div style={{ color: 'inherit', textDecoration: 'none', display: 'grid', gap: 6 }}>
           {showTitle && (
             <h2 className={titleSize === 'lg' ? 'social-row-title social-row-title-lg' : 'social-row-title'}>
               {post.title}
             </h2>
           )}
           {body && <p className="social-row-body">{body}</p>}
-        </Link>
-        <div className="social-actions">
-          <Link href={href} className="social-action" aria-label={`${replyCount} replies`}>
-            <ChatBubbleIcon />
-            {replyCount > 0 && <span className="social-action-count">{replyCount}</span>}
-          </Link>
+        </div>
+        <div className="social-actions" onClick={stopRowNavigation}>
+          {onReplyClick ? (
+            <button type="button" className="social-action" onClick={onReplyClick} aria-label={`${replyCount} replies`}>
+              <ChatBubbleIcon />
+              {replyCount > 0 && <span className="social-action-count">{replyCount}</span>}
+            </button>
+          ) : (
+            <Link href={href} className="social-action" aria-label={`${replyCount} replies`} onClick={stopRowNavigation}>
+              <ChatBubbleIcon />
+              {replyCount > 0 && <span className="social-action-count">{replyCount}</span>}
+            </Link>
+          )}
           {onLike ? (
             <button
               type="button"

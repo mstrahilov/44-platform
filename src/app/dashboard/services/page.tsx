@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PageShell, GlassPanel } from '@/components/Ui';
+import { PageShell, GlassPanel, HubHero } from '@/components/Ui';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { serviceHref, type Service } from '@/lib/platform';
@@ -80,22 +80,19 @@ export default function DashboardServicesPage() {
   return (
     <PageShell>
       <div className="dashboard-page">
-        <header className="dashboard-header">
-          <div className="dashboard-header-copy">
-            <h1 className="os-type-display">Services</h1>
-            <p className="os-type-body">
-              Manage the services you offer through 44.
-            </p>
-          </div>
-
-          <Link className="os-button os-button-primary" href="/dashboard/services/new">
-            New Service
-          </Link>
-        </header>
+        <HubHero
+          title="Services"
+          copy="Manage the services you offer through 44."
+          actions={
+            <Link className="os-button os-button-primary" href="/dashboard/services/new">
+              New Service
+            </Link>
+          }
+        />
 
         {!isCreatorProfile(profile) && (
           <GlassPanel style={{ padding: 24, marginBottom: 18 }}>
-            <p style={{ color: 'var(--os-color-ink-secondary)', fontSize: 15 }}>
+            <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)' }}>
               This account is not marked as a creator yet. You can still save drafts, but switch your profile role to creator before publishing publicly.
             </p>
           </GlassPanel>

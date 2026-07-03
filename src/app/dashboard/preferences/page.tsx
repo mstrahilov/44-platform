@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PageShell, GlassPanel } from '@/components/Ui';
+import { PageShell, GlassPanel, HubHero } from '@/components/Ui';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { useDashboardTabs } from '@/lib/dashboardTabs';
@@ -118,72 +118,54 @@ export default function DashboardPreferencesPage() {
   return (
     <PageShell>
       <div className="dashboard-page">
-        <header className="dashboard-header">
-          <div className="dashboard-header-copy">
-            <h1 className="os-type-display">Preferences</h1>
-            <p className="os-type-body">
-              Choose how new products and services inherit pricing and market defaults.
-            </p>
-          </div>
-        </header>
+        <HubHero
+          title="Preferences"
+          copy="Choose how new products and services inherit pricing and market defaults."
+        />
 
-        <section className="dashboard-section">
-          <div className="dashboard-header-copy">
-            <h2 className="os-type-panel-content">Market Defaults</h2>
-            <p className="os-type-body-small">
-              Set the local market and pricing behavior used by new products and services.
-            </p>
-          </div>
-
-          <GlassPanel className="dashboard-form-panel" style={{ padding: 32 }}>
-            <div className="dashboard-form">
-              <div className="dashboard-form-grid dashboard-form-grid-2">
-                <label className="dashboard-field">
-                  <div className="dashboard-field-label">Local Market</div>
-                  <select
-                    className="input"
-                    value={preferences.homeCountryCode}
-                    onChange={event => updatePreferences({ homeCountryCode: event.target.value })}
-                  >
-                    {COUNTRIES.map(country => (
-                      <option key={country.code} value={country.code}>{country.name}</option>
-                    ))}
-                  </select>
-                  <p className="dashboard-form-note">Local currency is derived automatically: {currencyForCountry(preferences.homeCountryCode)}.</p>
-                </label>
-              </div>
-
-              <PreferenceSegment
-                title="Services"
-                description="Choose whether new services start with one global USD price or add a local market price."
-                value={preferences.serviceMarket}
-                onChange={value => updatePreferences({ serviceMarket: value })}
-              />
-
-              <PreferenceSegment
-                title="Products"
-                description="Choose whether new products start with one global USD price or add a local market price."
-                value={preferences.productMarket}
-                onChange={value => updatePreferences({ productMarket: value })}
-              />
-
-              {saved && <div className="dashboard-status dashboard-status-success">Preferences saved.</div>}
-              {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
-
-              <div className="dashboard-form-actions">
-                <div className="dashboard-form-actions-left" />
-                <div className="dashboard-form-actions-right">
-                  <button className="os-button os-button-secondary" type="button" onClick={() => setPreferences(defaultPreferences)}>
-                    Reset
-                  </button>
-                  <button className="os-button os-button-primary" type="button" onClick={() => void savePreferences()}>
-                    Save Preferences
-                  </button>
-                </div>
-              </div>
+        <div className="settings-section">
+          <div className="settings-field">
+            <div className="settings-field-head">
+              <div className="os-type-field-title">Local Market</div>
+              <p className="os-type-body-small">Set the market and currency used as the local baseline for your catalog. Local currency is derived automatically: {currencyForCountry(preferences.homeCountryCode)}.</p>
             </div>
-          </GlassPanel>
-        </section>
+            <select
+              className="os-input-field"
+              value={preferences.homeCountryCode}
+              onChange={event => updatePreferences({ homeCountryCode: event.target.value })}
+            >
+              {COUNTRIES.map(country => (
+                <option key={country.code} value={country.code}>{country.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <PreferenceSegment
+            title="Services"
+            description="Choose whether new services start with one global USD price or add a local market price."
+            value={preferences.serviceMarket}
+            onChange={value => updatePreferences({ serviceMarket: value })}
+          />
+
+          <PreferenceSegment
+            title="Products"
+            description="Choose whether new products start with one global USD price or add a local market price."
+            value={preferences.productMarket}
+            onChange={value => updatePreferences({ productMarket: value })}
+          />
+
+          {saved && <div className="dashboard-status dashboard-status-success">Preferences saved.</div>}
+          {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
+
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <button className="os-button os-button-primary" type="button" onClick={() => void savePreferences()}>
+              Save Preferences
+            </button>
+            <button className="os-button os-button-secondary" type="button" onClick={() => setPreferences(defaultPreferences)}>
+              Reset
+            </button>
+          </div>
+        </div>
       </div>
     </PageShell>
   );
@@ -208,7 +190,7 @@ function PreferenceSegment({
   return (
     <div className="settings-field">
       <div className="settings-field-head">
-        <div className="os-type-card-title">{title}</div>
+        <div className="os-type-field-title">{title}</div>
         <p className="os-type-body-small">{description}</p>
       </div>
       <div className="settings-segment" role="group" aria-label={`${title} market`}>

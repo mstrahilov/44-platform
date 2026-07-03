@@ -17,6 +17,15 @@ import { loadFriendRequests, otherFriendProfile } from '@/lib/friends';
 type PostLike = LikeRow;
 type FeedMode = 'feed' | 'friends' | 'local' | 'updates' | 'questions' | 'collaboration';
 
+const COMMUNITY_HERO: Record<FeedMode, { title: string; copy: string }> = {
+  feed: { title: 'Feed', copy: 'The 44 social feed for releases, questions, collaborations, and member updates.' },
+  friends: { title: 'Friends', copy: 'Posts from the creators you are connected with.' },
+  local: { title: 'Local', copy: 'Posts from creators in your country.' },
+  updates: { title: 'Updates', copy: 'Announcements and release notes from the 44 community.' },
+  questions: { title: 'Questions', copy: 'Ask the community — get answers from other creators.' },
+  collaboration: { title: 'Collaboration', copy: 'Find people to work with on your next project.' },
+};
+
 export default function CommunityPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -153,15 +162,17 @@ export default function CommunityPage() {
     setPosts(current => current.filter(p => p.id !== post.id));
   }
 
+  const heroContent = COMMUNITY_HERO[feedMode];
+
   return (
     <PageShell>
       <main className="social-shell">
         <header className="social-header">
           <div className="social-title-row">
             <div>
-              <h1 className="os-type-display">Community</h1>
+              <h1 className="os-type-display">{heroContent.title}</h1>
               <p className="social-title-copy os-type-body">
-                The 44 social feed for releases, questions, collaborations, and member updates.
+                {heroContent.copy}
               </p>
             </div>
             <Link href={user ? '/community/new' : '/login'} className="os-button os-button-primary os-button-compact">
@@ -172,9 +183,9 @@ export default function CommunityPage() {
 
         {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
 
-        <section className="social-feed" aria-label="Community feed">
+        <section className="dashboard-list-surface social-feed social-feed-list social-feed-panel" aria-label="Community feed">
           {visiblePosts.length === 0 ? (
-            <div className="app-empty-text">{feedMode === 'friends' ? 'No friend posts yet.' : feedMode === 'local' ? 'No local posts yet.' : 'No posts yet.'}</div>
+            <div className="dashboard-empty">{feedMode === 'friends' ? 'No friend posts yet.' : feedMode === 'local' ? 'No local posts yet.' : 'No posts yet.'}</div>
           ) : (
             visiblePosts.map(post => (
               <SocialPostRow

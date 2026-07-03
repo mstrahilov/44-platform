@@ -163,11 +163,11 @@ function AccountContent() {
             />
             <label className="dashboard-field">
               <div className="dashboard-field-label">Username</div>
-              <input className="input" value={username} onChange={event => setUsername(normalizeUsername(event.target.value))} placeholder="username" />
+              <input className="os-input-field" value={username} onChange={event => setUsername(normalizeUsername(event.target.value))} placeholder="username" />
             </label>
             <label className="dashboard-field">
               <div className="dashboard-field-label">Bio Optional</div>
-              <textarea className="input" rows={4} value={bio} onChange={event => setBio(event.target.value)} placeholder="A short note for your profile." />
+              <textarea className="os-input-textarea" rows={4} value={bio} onChange={event => setBio(event.target.value)} placeholder="A short note for your profile." />
             </label>
             {status && <div className={status === 'Community profile ready.' ? 'dashboard-status dashboard-status-success' : 'dashboard-status dashboard-status-error'}>{status}</div>}
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>

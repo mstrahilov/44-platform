@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { SystemPanel } from '@/components/SystemPanel';
+import { PageShell, HubHero, CenteredMessage } from '@/components/Ui';
 import { useAuth } from '@/lib/useAuth';
 import {
   ACHIEVEMENT_NOTIFICATIONS_UPDATED,
@@ -10,7 +10,9 @@ import {
   type AchievementNotification,
 } from '@/lib/achievementNotifications';
 
-const TABS = [
+type TabId = 'all' | 'mentions' | 'replies' | 'orders' | 'updates';
+
+const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'all', label: 'All' },
   { id: 'mentions', label: 'Mentions' },
   { id: 'replies', label: 'Replies' },
@@ -22,6 +24,7 @@ export default function NotificationsPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [notifications, setNotifications] = useState<AchievementNotification[]>([]);
+  const [activeTab, setActiveTab] = useState<TabId>('all');
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
@@ -53,71 +56,68 @@ export default function NotificationsPage() {
     return () => window.removeEventListener(ACHIEVEMENT_NOTIFICATIONS_UPDATED, onAchievementUpdate);
   }, [user]);
 
-  if (loading || !user) return <div className="panel-scroll" />;
+  if (loading || !user) {
+    return <PageShell><CenteredMessage>Loading…</CenteredMessage></PageShell>;
+  }
+
+  const visibleNotifications = notifications.filter(item => {
+    if (activeTab === 'all') return true;
+    if (activeTab === 'updates') return item.kind === 'achievement';
+    if (activeTab === 'replies') return item.kind === 'reply';
+    return false;
+  });
+  const emptyCopyByTab: Record<TabId, string> = {
+    all: 'Unlock achievements, get replies, or place orders to see activity here.',
+    updates: 'Unlock achievements, get replies, or place orders to see activity here.',
+    mentions: 'Posts and replies that mention you will appear here.',
+    replies: 'Replies to your posts and comments will appear here.',
+    orders: 'Order updates and receipts will appear here.',
+  };
 
   return (
-    <div className="panel-scroll">
-      <SystemPanel tabs={TABS}>
-        {tab => (
-          <>
-            {(tab === 'all' || tab === 'updates') && (
-              <div className="settings-section">
-                <div className="settings-block">
-                  <h2 className="os-type-panel-title">
-                    {tab === 'all' ? 'Notifications' : 'Updates'}
-                  </h2>
-                  <p className="os-type-body">Achievement unlocks and system activity.</p>
-                </div>
-
-                {notifications.length === 0 ? (
-                  <div className="app-empty">
-                    <div className="os-type-section-title">Nothing yet</div>
-                    <p className="os-type-body" style={{ marginTop: 'var(--os-space-2)', color: 'var(--os-color-ink-secondary)' }}>
-                      Unlock achievements, get replies, or place orders to see activity here.
-                    </p>
+    <PageShell>
+      <main className="dashboard-page">
+        <HubHero title="Notifications" copy="Achievement unlocks and system activity." />
+        <div className="settings-segment" role="tablist" aria-label="Notification sections">
+          {TABS.map(tab => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              className={`settings-segment-item${tab.id === activeTab ? ' settings-segment-item-active' : ''}`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <section className="dashboard-section">
+          {visibleNotifications.length > 0 ? (
+            <div className="dashboard-list-surface">
+              {visibleNotifications.map(item => (
+                <article key={item.id} className="dashboard-list-row" style={{ gridTemplateColumns: 'minmax(0, 1fr) auto' }}>
+                  <div className="dashboard-row-copy">
+                    <div className="os-type-eyebrow" style={{ color: item.kind === 'reply' ? 'var(--os-color-ink-secondary)' : 'var(--os-color-accent)' }}>
+                      {item.kind === 'reply' ? 'Reply' : 'Achievement Unlocked'}
+                    </div>
+                    <div className="dashboard-row-title">{item.title}</div>
+                    {item.description && (
+                      <div className="dashboard-row-subtitle">{item.description}</div>
+                    )}
                   </div>
-                ) : (
-                  <div style={{ display: 'grid', gap: 10 }}>
-                    {notifications.map(item => (
-                      <article key={item.id} className="app-panel" style={{ display: 'grid', gap: 6 }}>
-                        <div className="os-type-eyebrow" style={{ color: 'var(--os-color-accent)' }}>
-                          Achievement Unlocked
-                        </div>
-                        <strong className="os-type-card-title">{item.title}</strong>
-                        {item.description && (
-                          <p className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>
-                            {item.description}
-                          </p>
-                        )}
-                        <div className="os-type-meta" style={{ color: 'var(--os-color-ink-muted)' }}>
-                          {item.createdAt ? new Date(item.createdAt).toLocaleString() : 'Just now'}
-                        </div>
-                      </article>
-                    ))}
+                  <div className="dashboard-row-meta">
+                    {item.createdAt ? new Date(item.createdAt).toLocaleString() : 'Just now'}
                   </div>
-                )}
-              </div>
-            )}
-            {(tab === 'mentions' || tab === 'replies' || tab === 'orders') && (
-              <div className="settings-section">
-                <div className="settings-block">
-                  <h2 className="os-type-panel-title">
-                    {tab === 'mentions' ? 'Mentions' : tab === 'replies' ? 'Replies' : 'Orders'}
-                  </h2>
-                </div>
-                <div className="app-empty">
-                  <div className="os-type-section-title">Nothing yet</div>
-                  <p className="os-type-body" style={{ marginTop: 'var(--os-space-2)', color: 'var(--os-color-ink-secondary)' }}>
-                    {tab === 'mentions' && 'Posts and replies that mention you will appear here.'}
-                    {tab === 'replies' && 'Replies to your posts and comments will appear here.'}
-                    {tab === 'orders' && 'Order updates and receipts will appear here.'}
-                  </p>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </SystemPanel>
-    </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="dashboard-list-surface" style={{ padding: 24 }}>
+              <div className="app-empty-text">{emptyCopyByTab[activeTab]}</div>
+            </div>
+          )}
+        </section>
+      </main>
+    </PageShell>
   );
 }

@@ -5,7 +5,8 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
-import { SystemPanel } from '@/components/SystemPanel';
+import { PageShell, HubHero } from '@/components/Ui';
+import { useTopbarTabs } from '@/components/TopbarContext';
 import {
   ACCENTS,
   MODES,
@@ -63,17 +64,19 @@ function setStoredToggle(key: string, value: boolean) {
   window.localStorage.setItem(key, String(value));
 }
 
-const TABS = [
-  { id: 'system', label: 'System' },
-  { id: 'account', label: 'Account' },
-  { id: 'privacy', label: 'Privacy & Security' },
-  { id: 'billing', label: 'Billing & Orders' },
-  { id: 'notifications', label: 'Notifications' },
+type SettingsTabId = 'system' | 'account' | 'privacy' | 'billing' | 'notifications';
+
+const TABS: Array<{ id: SettingsTabId; label: string; copy: string }> = [
+  { id: 'system', label: 'System', copy: 'Adjust appearance, landing page, and regional browsing defaults.' },
+  { id: 'account', label: 'Account', copy: 'Manage your email, password, and account access.' },
+  { id: 'privacy', label: 'Privacy & Security', copy: 'Control visibility, messaging, and account protection.' },
+  { id: 'billing', label: 'Billing & Orders', copy: 'Review purchase history and payment details.' },
+  { id: 'notifications', label: 'Notifications', copy: 'Choose which activity should reach you.' },
 ];
 
 export default function SettingsPage() {
   return (
-    <Suspense fallback={<div className="panel-scroll" />}>
+    <Suspense fallback={<PageShell><div /></PageShell>}>
       <SettingsContent />
     </Suspense>
   );
@@ -83,23 +86,38 @@ function SettingsContent() {
   const { user } = useAuth();
   const tabs = user ? TABS : TABS.filter(tab => tab.id === 'system');
   const searchParams = useSearchParams();
-  const requestedTab = searchParams.get('tab') ?? undefined;
-  const defaultTab = tabs.some(tab => tab.id === requestedTab) ? requestedTab : tabs[0]?.id;
+  const requestedTab = searchParams.get('tab') as SettingsTabId | null;
+  const initialTab: SettingsTabId = tabs.some(tab => tab.id === requestedTab) ? (requestedTab as SettingsTabId) : tabs[0]?.id ?? 'system';
+  const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
+
+  useEffect(() => {
+    if (!tabs.some(tab => tab.id === activeTab)) {
+      setActiveTab(tabs[0]?.id ?? 'system');
+    }
+  }, [activeTab, tabs]);
+
+  useTopbarTabs(
+    tabs.map(tab => ({
+      id: tab.id,
+      label: tab.label,
+      onClick: () => setActiveTab(tab.id),
+      active: tab.id === activeTab,
+    })),
+  );
+
+  const activeMeta = tabs.find(tab => tab.id === activeTab) ?? tabs[0];
 
   return (
-    <div className="panel-scroll">
-      <SystemPanel tabs={tabs} defaultTab={defaultTab}>
-        {tab => (
-          <>
-            {tab === 'system' && <SystemSettings />}
-            {tab === 'account' && <AccountSettings />}
-            {tab === 'notifications' && <NotificationSettings />}
-            {tab === 'privacy' && <PrivacySecuritySettings />}
-            {tab === 'billing' && <BillingOrders />}
-          </>
-        )}
-      </SystemPanel>
-    </div>
+    <PageShell>
+      <main className="dashboard-page">
+        <HubHero title={activeMeta?.label ?? 'Settings'} copy={activeMeta?.copy} />
+        {activeTab === 'system' && <SystemSettings />}
+        {activeTab === 'account' && <AccountSettings />}
+        {activeTab === 'notifications' && <NotificationSettings />}
+        {activeTab === 'privacy' && <PrivacySecuritySettings />}
+        {activeTab === 'billing' && <BillingOrders />}
+      </main>
+    </PageShell>
   );
 }
 
@@ -132,19 +150,17 @@ function AccountSettings() {
 
   return (
     <div className="settings-section">
-      <div className="settings-block">
-        <h2 className="os-type-panel-title">Account</h2>
-        <p className="os-type-body">Manage your email, password, and account access.</p>
-        {user?.email && (
+      {user?.email && (
+        <div className="settings-block">
           <span className="os-type-body-small" style={{ color: 'var(--os-color-ink-muted)' }}>
             Signed in as {user.email}
           </span>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="settings-field">
         <div className="settings-field-head">
-          <div className="os-type-card-title">Public Profile</div>
+          <div className="os-type-field-title">Public Profile</div>
           <p className="os-type-body-small">Profile image, bio, header image, and friendship controls now live in your public profile editor.</p>
         </div>
         <div style={{ display: 'grid', gap: 12 }}>
@@ -166,7 +182,7 @@ function AccountSettings() {
 
       <div className="settings-field">
         <div className="settings-field-head">
-          <div className="os-type-card-title">Email</div>
+          <div className="os-type-field-title">Email</div>
           <p className="os-type-body-small">Your login and account recovery email.</p>
         </div>
         <div>
@@ -176,7 +192,7 @@ function AccountSettings() {
 
       <div className="settings-field">
         <div className="settings-field-head">
-          <div className="os-type-card-title">Password</div>
+          <div className="os-type-field-title">Password</div>
           <p className="os-type-body-small">Send yourself a password reset email.</p>
         </div>
         <div>
@@ -188,7 +204,7 @@ function AccountSettings() {
 
       <div className="settings-field">
         <div className="settings-field-head">
-          <div className="os-type-card-title">Security</div>
+          <div className="os-type-field-title">Security</div>
           <p className="os-type-body-small">Use Privacy & Security for message permissions, public visibility, and trusted-device controls.</p>
         </div>
         <div>
@@ -200,7 +216,7 @@ function AccountSettings() {
 
       <div className="settings-field">
         <div className="settings-field-head">
-          <div className="os-type-card-title">Clear History</div>
+          <div className="os-type-field-title">Clear History</div>
           <p className="os-type-body-small">Remove your browsing and search history from 44.</p>
         </div>
         <div>
@@ -210,7 +226,7 @@ function AccountSettings() {
 
       <div className="settings-field">
         <div className="settings-field-head">
-          <div className="os-type-card-title">Delete Account</div>
+          <div className="os-type-field-title">Delete Account</div>
           <p className="os-type-body-small">Permanently delete your account and all associated data. This cannot be undone.</p>
         </div>
         <div>
@@ -309,14 +325,9 @@ function SystemSettings() {
 
   return (
     <div className="settings-section">
-      <div className="settings-block">
-        <h2 className="os-type-panel-title">System</h2>
-        <p className="os-type-body">Adjust appearance, landing page, and regional browsing defaults.</p>
-      </div>
-
       <div className="settings-field">
         <div className="settings-field-head">
-          <div className="os-type-card-title">Theme</div>
+          <div className="os-type-field-title">Theme</div>
           <p className="os-type-body-small">Light, dark, or match your system.</p>
         </div>
         <div className="settings-segment" role="group" aria-label="Theme mode">
@@ -335,7 +346,7 @@ function SystemSettings() {
 
       <div className="settings-field">
         <div className="settings-field-head">
-          <div className="os-type-card-title">Accent</div>
+          <div className="os-type-field-title">Accent</div>
           <p className="os-type-body-small">The color of the glass and ambient background.</p>
         </div>
         <div className="settings-swatches" role="group" aria-label="Accent color">
@@ -356,7 +367,7 @@ function SystemSettings() {
 
       <div className="settings-field">
         <div className="settings-field-head">
-          <div className="os-type-card-title">Landing Page</div>
+          <div className="os-type-field-title">Landing Page</div>
           <p className="os-type-body-small">Choose where 44 opens after login.</p>
         </div>
         <div className="settings-segment" role="group" aria-label="Landing page">
@@ -375,11 +386,11 @@ function SystemSettings() {
 
       <div className="settings-field">
         <div className="settings-field-head">
-          <div className="os-type-card-title">Region</div>
+          <div className="os-type-field-title">Region</div>
           <p className="os-type-body-small">Choose the market you browse from so local pricing can appear when it fits.</p>
         </div>
         <select
-          className="input"
+          className="os-input-field"
           value={countryCode}
           onChange={event => {
             const nextCountry = event.target.value;
@@ -394,11 +405,11 @@ function SystemSettings() {
 
       <div className="settings-field">
         <div className="settings-field-head">
-          <div className="os-type-card-title">Display Currency</div>
+          <div className="os-type-field-title">Display Currency</div>
           <p className="os-type-body-small">Set the currency used when prices are shown outside local creator offers.</p>
         </div>
         <select
-          className="input"
+          className="os-input-field"
           value={displayCurrency}
           onChange={event => void saveMarketPreferences(countryCode, event.target.value)}
         >
@@ -478,11 +489,7 @@ function ToggleRow({
 
 function NotificationSettings() {
   return (
-    <div className="settings-section">
-      <div className="settings-block">
-        <h2 className="os-type-panel-title">Notifications</h2>
-        <p className="os-type-body">Choose which activity should reach you.</p>
-      </div>
+    <div className="settings-section settings-section-wide">
       <div>
         <ToggleRow storageKey={SETTINGS_KEYS.replies} title="Replies to your posts" desc="When someone replies in the community." defaultOn />
         <ToggleRow storageKey={SETTINGS_KEYS.likes} title="Likes" desc="When someone likes your post or reply." defaultOn />
@@ -496,11 +503,7 @@ function NotificationSettings() {
 
 function PrivacySecuritySettings() {
   return (
-    <div className="settings-section">
-      <div className="settings-block">
-        <h2 className="os-type-panel-title">Privacy & Security</h2>
-        <p className="os-type-body">Control visibility, messaging, and account protection.</p>
-      </div>
+    <div className="settings-section settings-section-wide">
       <div>
         <ToggleRow storageKey={SETTINGS_KEYS.publicProfile} title="Public profile" desc="Let others view your profile and activity." defaultOn />
         <ToggleRow storageKey={SETTINGS_KEYS.publicLibrary} title="Show library publicly" desc="Display items you own on your profile." />
@@ -517,14 +520,7 @@ function PrivacySecuritySettings() {
 function BillingOrders() {
   return (
     <div className="settings-section">
-      <div className="settings-block">
-        <h2 className="os-type-panel-title">Billing & Orders</h2>
-        <p className="os-type-body">Review purchase history and payment details.</p>
-      </div>
-      <div>
-        <h2 className="os-type-panel-title" style={{ marginBottom: 8 }}>Orders</h2>
-        <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)' }}>Your purchase history will appear here.</p>
-      </div>
+      <div className="app-empty-text">Your purchase history will appear here.</div>
     </div>
   );
 }

@@ -1,0 +1,317 @@
+-- ============================================================================
+-- 44 Platform Foundation Reference
+-- ============================================================================
+-- Purpose:
+--   This is the single living foundation reference for how 44 works under the
+--   hood in Supabase. It is documentation, not a migration. Do not run this
+--   file in Supabase. Keep functional migrations in their own files and update
+--   this reference when the app data model changes.
+--
+-- Functional SQL files currently kept in this folder:
+--   - supabase-author-content-rls.sql
+--   - supabase-library-foundation.sql
+--   - supabase-library-item-type-foundation.sql
+--   - supabase-local-global-pricing.sql
+--   - supabase-post-subjects.sql
+--   - supabase-social-foundation.sql
+--
+-- Deleted/retired SQL history included old reset, seed, import, taxonomy,
+-- one-off repair, and cleanup scripts. Do not infer current behavior from those.
+--
+-- UI/system companion:
+--   Read Other/44OS_UI_GUIDELINES.md for the visual and interaction system.
+--
+-- ============================================================================
+-- AUTH + PROFILES
+-- ============================================================================
+-- Auth users live in auth.users.
+-- Public user records live in public.profiles.
+--
+-- profiles expected fields used by the app:
+--   id uuid primary key, same as auth.users.id
+--   display_name text
+--   username text
+--   slug text
+--   avatar_url text
+--   hero_url text
+--   bio text
+--   role text: member | creator | admin
+--   creator_type text
+--   is_official boolean
+--   is_published boolean
+--   country_code text
+--   display_currency text
+--   home_country_code text
+--   home_currency text
+--   product_market_mode text
+--   service_market_mode text
+--
+-- App behavior:
+--   New profiles are created by src/lib/studioProfiles.ts.
+--   New users currently default to role = 'creator' so testers can access
+--   Dashboard immediately.
+--   Community setup completion is app-level: username + avatar_url.
+--
+-- ============================================================================
+-- TAXONOMY / CATEGORIES
+-- ============================================================================
+-- public.categories is shared by Store, Services, Resources, Community.
+--
+-- Expected fields:
+--   id uuid
+--   scope text: products | services | resources | posts | creators
+--   slug text
+--   name text
+--   sort_order integer
+--
+-- Community post categories:
+--   discussions or legacy discussion -> displayed as General in the app
+--   updates
+--   questions
+--   reviews
+--
+-- Important:
+--   General is the default regular social post bucket. It maps to the existing
+--   database discussion category instead of requiring a new category.
+--
+-- ============================================================================
+-- STORE / PRODUCTS
+-- ============================================================================
+-- public.products holds store items and releases.
+--
+-- Key fields used by the app:
+--   id uuid
+--   author_id uuid references profiles(id)
+--   category_id uuid references categories(id)
+--   slug text
+--   title text
+--   creator text
+--   product_type text
+--   category text
+--   short_description text
+--   long_description text
+--   description text
+--   cover_url text
+--   hero_url text
+--   price_cents integer
+--   currency text
+--   is_free boolean
+--   is_published boolean
+--   status text
+--   runtime_type text
+--   launch_url text
+--   read_url text
+--   download_url text
+--   local_price_cents integer
+--   local_currency text
+--   local_country_code text
+--   created_at timestamptz
+--   updated_at timestamptz
+--
+-- Music products can have public.tracks.
+-- tracks expected fields include:
+--   id uuid
+--   product_id uuid references products(id)
+--   title text
+--   track_number integer
+--   duration_seconds integer
+--   audio_url text
+--
+-- ============================================================================
+-- SERVICES
+-- ============================================================================
+-- public.services holds creator services.
+--
+-- Key fields used by the app:
+--   id uuid
+--   author_id uuid references profiles(id)
+--   category_id uuid references categories(id)
+--   slug text
+--   title text
+--   service_type text
+--   description text
+--   cover_url text
+--   starting_price_cents integer
+--   currency text
+--   local_price_cents integer
+--   local_currency text
+--   local_country_code text
+--   delivery_estimate text
+--   featured boolean
+--   status text
+--   created_at timestamptz
+--   updated_at timestamptz
+--
+-- ============================================================================
+-- RESOURCES
+-- ============================================================================
+-- public.resources holds guides, templates, articles, and downloadable resources.
+--
+-- Key fields used by the app:
+--   id uuid
+--   author_id uuid references profiles(id)
+--   category_id uuid references categories(id)
+--   slug text
+--   title text
+--   summary text
+--   body text
+--   resource_type text
+--   cover_url text
+--   download_url text
+--   status text
+--   created_at timestamptz
+--   updated_at timestamptz
+--
+-- ============================================================================
+-- LIBRARY
+-- ============================================================================
+-- Library is the canonical user-facing name. Collection is legacy wording.
+--
+-- public.library_items tracks owned/saved products:
+--   id uuid
+--   user_id uuid references auth.users(id)
+--   product_id uuid references products(id)
+--   acquisition_type text
+--   acquired_at timestamptz
+--   status text
+--
+-- public.saved_resources tracks saved resources:
+--   id uuid
+--   user_id uuid references auth.users(id)
+--   resource_id uuid references resources(id)
+--   saved_at timestamptz
+--
+-- public.service_requests tracks requested/saved services:
+--   id uuid
+--   user_id uuid references auth.users(id)
+--   service_id uuid references services(id)
+--   message text
+--   status text
+--   created_at timestamptz
+--
+-- Keep old Collection routes only for compatibility. Do not add new Collection
+-- user-facing copy.
+--
+-- ============================================================================
+-- COMMUNITY POSTS
+-- ============================================================================
+-- public.posts is the main community post table.
+--
+-- Key fields used by the app:
+--   id uuid
+--   author_id uuid references profiles(id)
+--   category_id uuid references categories(id)
+--   slug text
+--   title text
+--   body text
+--   post_type text
+--   status text
+--   created_at timestamptz
+--   updated_at timestamptz
+--
+-- public.post_replies:
+--   id uuid
+--   post_id uuid references posts(id)
+--   author_id uuid references profiles(id)
+--   parent_reply_id uuid references post_replies(id)
+--   body text
+--   status text
+--   created_at timestamptz
+--
+-- public.post_likes:
+--   post_id uuid references posts(id)
+--   profile_id uuid references profiles(id)
+--   created_at timestamptz
+--
+-- public.reply_likes:
+--   reply_id uuid references post_replies(id)
+--   profile_id uuid references profiles(id)
+--   created_at timestamptz
+--
+-- ============================================================================
+-- POST SUBJECTS / TAGGING
+-- ============================================================================
+-- public.post_subjects is the current tier-2 subject linking system.
+--
+-- Expected fields:
+--   id uuid
+--   post_id uuid references posts(id)
+--   subject_type text: product | service | resource | profile | library_item
+--   subject_id uuid
+--   created_at timestamptz
+--
+-- Important:
+--   Item-page composers must continue writing to posts + post_subjects.
+--   Do not rename post_subjects to post_tags.
+--   post_tags is reserved for future hashtag tagging and should remain unused.
+--
+-- ============================================================================
+-- FRIENDS + MESSAGES
+-- ============================================================================
+-- Friend system:
+--   public.friend_requests
+--     id uuid
+--     requester_id uuid references profiles(id)
+--     addressee_id uuid references profiles(id)
+--     status text: pending | accepted | declined | canceled
+--     created_at timestamptz
+--     responded_at timestamptz
+--
+-- Messaging system:
+--   public.conversations
+--     id uuid
+--     created_at timestamptz
+--     updated_at timestamptz
+--
+--   public.conversation_members
+--     id uuid
+--     conversation_id uuid references conversations(id)
+--     profile_id uuid references profiles(id)
+--     last_read_at timestamptz
+--     created_at timestamptz
+--
+--   public.messages
+--     id uuid
+--     conversation_id uuid references conversations(id)
+--     sender_id uuid references profiles(id)
+--     body text
+--     created_at timestamptz
+--
+-- App behavior:
+--   Messaging is friend-gated. A user must be friends with another profile before
+--   opening/sending a direct conversation.
+--
+-- ============================================================================
+-- PRICING
+-- ============================================================================
+-- Global/local pricing applies to products and services.
+--
+-- Profile preference fields:
+--   country_code
+--   display_currency
+--   home_country_code
+--   home_currency
+--   product_market_mode
+--   service_market_mode
+--
+-- Product/service item fields:
+--   currency
+--   price_cents or starting_price_cents
+--   local_price_cents
+--   local_currency
+--   local_country_code
+--
+-- App behavior:
+--   "Price" is the global/default price label.
+--   "Local Price" is optional local-market pricing.
+--
+-- ============================================================================
+-- RLS EXPECTATION
+-- ============================================================================
+-- Public browsing remains open for Store, Services, Resources, and Community.
+-- Authenticated users can create/update their own profile and own authored
+-- content. Dashboard content ownership is author_id -> profiles.id.
+--
+-- Keep supabase-author-content-rls.sql as the runnable source for author-owned
+-- content policies.
+--

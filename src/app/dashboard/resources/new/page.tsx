@@ -112,17 +112,17 @@ export default function NewResourcePage() {
           copy="Create guides, articles, lessons, templates, and downloadable resources from inside the app."
         />
 
-        <div className="dashboard-flat">
+        <div className="dashboard-section">
           <form onSubmit={handleSubmit} className="dashboard-form">
             <label className="dashboard-field">
               <div className="dashboard-field-label">Resource Title</div>
-              <input className="input" value={title} onChange={event => setTitle(event.target.value)} placeholder="Example: Publishing Your First Release" />
+              <input className="os-input-field" value={title} onChange={event => setTitle(event.target.value)} placeholder="Example: Publishing Your First Release" />
             </label>
 
             <div className="dashboard-form-grid dashboard-form-grid-2">
               <label className="dashboard-field">
                 <div className="dashboard-field-label">Category</div>
-                <select className="input" value={categoryId} onChange={event => setCategoryId(event.target.value)}>
+                <select className="os-input-field" value={categoryId} onChange={event => setCategoryId(event.target.value)}>
                   {categories.map(category => (
                     <option key={category.id} value={category.id}>{category.name}</option>
                   ))}
@@ -131,13 +131,13 @@ export default function NewResourcePage() {
 
               <label className="dashboard-field">
                 <div className="dashboard-field-label">Type</div>
-                <input className="input" value={resourceType} onChange={event => setResourceType(event.target.value)} placeholder="Guide, Template, Lesson, Download…" />
+                <input className="os-input-field" value={resourceType} onChange={event => setResourceType(event.target.value)} placeholder="Guide, Template, Lesson, Download…" />
               </label>
             </div>
 
             <label className="dashboard-field">
               <div className="dashboard-field-label">Short Description</div>
-              <textarea className="input" rows={3} value={shortDescription} onChange={event => setShortDescription(event.target.value)} placeholder="Short card copy for this resource." />
+              <textarea className="os-input-textarea" rows={3} value={shortDescription} onChange={event => setShortDescription(event.target.value)} placeholder="Short card copy for this resource." />
             </label>
 
             <div className="dashboard-field">
@@ -172,7 +172,7 @@ export default function NewResourcePage() {
 
               <label className="dashboard-field">
                 <div className="dashboard-field-label">Creator</div>
-                <input className="input" value={creatorName} readOnly />
+                <input className="os-input-field" value={creatorName} readOnly />
               </label>
             </div>
 

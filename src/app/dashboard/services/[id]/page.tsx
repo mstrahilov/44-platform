@@ -182,22 +182,22 @@ export default function EditServicePage() {
     <PageShell>
       <div className="dashboard-editor">
         <HubHero title="Edit Service" copy="Update the service details stored in 44." />
-        <div className="dashboard-flat">
+        <div className="dashboard-section">
           <form onSubmit={handleSubmit} className="dashboard-form">
-            <label className="dashboard-field"><div className="dashboard-field-label">Service Title</div><input className="input" value={title} onChange={e => setTitle(e.target.value)} /></label>
+            <label className="dashboard-field"><div className="dashboard-field-label">Service Title</div><input className="os-input-field" value={title} onChange={e => setTitle(e.target.value)} /></label>
             <div className="dashboard-form-grid dashboard-form-grid-2">
-              <label className="dashboard-field"><div className="dashboard-field-label">Category</div><select className="input" value={categoryId} onChange={e => setCategoryId(e.target.value)}>{categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
-              <label className="dashboard-field"><div className="dashboard-field-label">Type</div><input className="input" value={serviceType} onChange={e => setServiceType(e.target.value)} /></label>
+              <label className="dashboard-field"><div className="dashboard-field-label">Category</div><select className="os-input-field" value={categoryId} onChange={e => setCategoryId(e.target.value)}>{categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
+              <label className="dashboard-field"><div className="dashboard-field-label">Type</div><input className="os-input-field" value={serviceType} onChange={e => setServiceType(e.target.value)} /></label>
             </div>
-            <label className="dashboard-field"><div className="dashboard-field-label">Short Description</div><textarea className="input" rows={3} value={shortDescription} onChange={e => setShortDescription(e.target.value)} /></label>
-            <label className="dashboard-field"><div className="dashboard-field-label">Long Description</div><textarea className="input" rows={5} value={longDescription} onChange={e => setLongDescription(e.target.value)} /></label>
+            <label className="dashboard-field"><div className="dashboard-field-label">Short Description</div><textarea className="os-input-textarea" rows={3} value={shortDescription} onChange={e => setShortDescription(e.target.value)} /></label>
+            <label className="dashboard-field"><div className="dashboard-field-label">Long Description</div><textarea className="os-input-textarea" rows={5} value={longDescription} onChange={e => setLongDescription(e.target.value)} /></label>
             <div className="dashboard-form-grid dashboard-form-grid-3">
-              <label className="dashboard-field"><div className="dashboard-field-label">Starting Price (USD)</div><input className="input" value={startingPrice} onChange={e => setStartingPrice(formatPriceInput(e.target.value))} /></label>
+              <label className="dashboard-field"><div className="dashboard-field-label">Starting Price (USD)</div><input className="os-input-field" value={startingPrice} onChange={e => setStartingPrice(formatPriceInput(e.target.value))} /></label>
               {marketMode !== 'global' && (
-                <label className="dashboard-field"><div className="dashboard-field-label">Local Starting Price ({localCurrency})</div><input className="input" value={localPrice} onChange={e => setLocalPrice(formatPriceInput(e.target.value))} /></label>
+                <label className="dashboard-field"><div className="dashboard-field-label">Local Starting Price ({localCurrency})</div><input className="os-input-field" value={localPrice} onChange={e => setLocalPrice(formatPriceInput(e.target.value))} /></label>
               )}
-              <label className="dashboard-field"><div className="dashboard-field-label">Delivery Estimate</div><input className="input" value={deliveryEstimate} onChange={e => setDeliveryEstimate(e.target.value)} /></label>
-              <label className="dashboard-field"><div className="dashboard-field-label">Creator</div><input className="input" value={creatorName} readOnly /></label>
+              <label className="dashboard-field"><div className="dashboard-field-label">Delivery Estimate</div><input className="os-input-field" value={deliveryEstimate} onChange={e => setDeliveryEstimate(e.target.value)} /></label>
+              <label className="dashboard-field"><div className="dashboard-field-label">Creator</div><input className="os-input-field" value={creatorName} readOnly /></label>
             </div>
             <div className="settings-field">
               <div className="settings-field-head">

@@ -62,7 +62,7 @@ export default function ResourcesPage() {
             <HubSection key={category.slug} title={`Explore ${category.name}`} href={`/resources/browse/${category.slug}`}>
               <Shelf>
                 {categoryResources.map(resource => (
-                  <div key={resource.id} className="app-shelf-item app-shelf-item-wide">
+                  <div key={resource.id} className="app-shelf-item">
                     <ResourceCard resource={resource} />
                   </div>
                 ))}

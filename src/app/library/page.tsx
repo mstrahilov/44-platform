@@ -4,7 +4,8 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { SystemPanel } from '@/components/SystemPanel';
+import { PageShell, HubHero, CenteredMessage } from '@/components/Ui';
+import { useTopbarTabs } from '@/components/TopbarContext';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
@@ -75,6 +76,7 @@ export default function LibraryPage() {
   const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<LibraryEntry['tab'] | 'all'>('all');
 
   useEffect(() => {
     if (authLoading) return;
@@ -180,71 +182,75 @@ export default function LibraryPage() {
     return [...products, ...resources, ...services];
   }, [libraryItems, savedResources, serviceRequests]);
 
-  const tabs = useMemo(() => {
+  const availableTabs = useMemo<Array<LibraryEntry['tab'] | 'all'>>(() => {
     const order: LibraryEntry['tab'][] = ['music', 'books', 'games', 'products', 'resources', 'services'];
     const filtered = order.filter(tab => entries.some(entry => entry.tab === tab));
     if (filtered.length === 0) return [];
-    return [
-      { id: 'all', label: TAB_LABELS.all },
-      ...filtered.map(tab => ({ id: tab, label: TAB_LABELS[tab] })),
-    ];
+    return ['all', ...filtered];
   }, [entries]);
 
+  useEffect(() => {
+    if (availableTabs.length > 0 && !availableTabs.includes(activeTab)) {
+      setActiveTab(availableTabs[0]);
+    }
+  }, [activeTab, availableTabs]);
+
+  useTopbarTabs(
+    availableTabs.length > 0
+      ? availableTabs.map(tab => ({
+          id: tab,
+          label: TAB_LABELS[tab],
+          onClick: () => setActiveTab(tab),
+          active: tab === activeTab,
+        }))
+      : undefined,
+  );
+
   if (authLoading || loading) {
-    return <CenteredMessage>Loading...</CenteredMessage>;
+    return <PageShell><CenteredMessage>Loading…</CenteredMessage></PageShell>;
   }
 
   if (!user) {
-    return <CenteredMessage>Sign in to view your library</CenteredMessage>;
+    return <PageShell><CenteredMessage>Sign in to view your library</CenteredMessage></PageShell>;
   }
 
   if (error) {
-    return <CenteredMessage>{error}</CenteredMessage>;
+    return <PageShell><CenteredMessage>{error}</CenteredMessage></PageShell>;
   }
 
-  if (entries.length === 0 || tabs.length === 0) {
+  if (entries.length === 0 || availableTabs.length === 0) {
     return (
-      <div className="panel-scroll">
-        <SystemPanel tabs={[{ id: 'empty', label: 'Library' }]} avatar={<LibraryAddButton />}>
-          {() => (
-            <div className="library-empty-panel">
-              <div>
-                <h1>Your library is empty</h1>
-                <p>Add products, save resources, or request services to start building your 44 library.</p>
-                <Link className="os-button os-button-primary" href="/">Browse Store</Link>
-              </div>
-            </div>
-          )}
-        </SystemPanel>
-      </div>
+      <PageShell>
+        <div className="app-page">
+          <HubHero title="Library" copy={LIBRARY_HERO_COPY} />
+          <div className="app-empty-text">
+            Your library is empty. Add products, save resources, or request services to start building your 44 library.
+          </div>
+          <div style={{ marginTop: 16 }}>
+            <Link className="os-button os-button-primary" href="/store">Browse Store</Link>
+          </div>
+        </div>
+      </PageShell>
     );
   }
 
-  return (
-    <div className="panel-scroll">
-      <SystemPanel tabs={tabs} defaultTab="all">
-        {activeTab => {
-          const activeEntries = activeTab === 'all'
-            ? entries
-            : entries.filter(entry => entry.tab === activeTab);
-          const label = TAB_LABELS[activeTab as LibraryEntry['tab'] | 'all'];
+  const activeEntries = activeTab === 'all'
+    ? entries
+    : entries.filter(entry => entry.tab === activeTab);
 
-          return (
-            <div className="library-system-section">
-              <div className="library-system-heading">
-                <h1>{label}</h1>
-                <p>{activeEntries.length} item{activeEntries.length === 1 ? '' : 's'}</p>
-              </div>
-              <div className="library-grid">
-                {activeEntries.map(entry => <LibraryCard key={entry.id} entry={entry} />)}
-              </div>
-            </div>
-          );
-        }}
-      </SystemPanel>
-    </div>
+  return (
+    <PageShell>
+      <div className="app-page">
+        <HubHero title="Library" copy={LIBRARY_HERO_COPY} />
+        <div className="app-grid">
+          {activeEntries.map(entry => <LibraryCard key={entry.id} entry={entry} />)}
+        </div>
+      </div>
+    </PageShell>
   );
 }
+
+const LIBRARY_HERO_COPY = 'Products, resources, and services you own or saved on 44.';
 
 function productTab(product: Product): LibraryTabId {
   const runtimeKind = getProductRuntimeKind(product);
@@ -255,13 +261,9 @@ function productTab(product: Product): LibraryTabId {
 }
 
 function LibraryCard({ entry }: { entry: LibraryEntry }) {
-  const artShape = entry.kind === 'product'
-    ? productArtShape(entry.product)
-    : 'wide';
-
   return (
     <Link className="product-tile" href={entry.href}>
-      <span className={`product-tile-art product-tile-art-${artShape}`}>
+      <span className="product-tile-art product-tile-art-square">
         {entry.image && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={entry.image} alt="" />
@@ -272,29 +274,5 @@ function LibraryCard({ entry }: { entry: LibraryEntry }) {
         <span className="product-tile-subtitle">{entry.subtitle}</span>
       </span>
     </Link>
-  );
-}
-
-function productArtShape(product: Product): 'square' | 'portrait' | 'book' | 'landscape' {
-  const category = (product.category || '').toLowerCase();
-  if (category === 'books') return 'book';
-  if (category === 'assets') return 'landscape';
-  if (category === 'apparel' || category === 'merch' || category === 'games') return 'portrait';
-  return 'square';
-}
-
-function LibraryAddButton() {
-  return (
-    <button className="library-add-button" type="button" aria-label="Create library">
-      +
-    </button>
-  );
-}
-
-function CenteredMessage({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'var(--os-color-ink-muted)', fontSize: 13, fontWeight: 500, textAlign: 'center', padding: 24 }}>
-      {children}
-    </div>
   );
 }

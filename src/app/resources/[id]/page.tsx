@@ -90,14 +90,19 @@ export default function ResourcePage() {
             </>
           )}
           <span style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
-            <button
-              type="button"
-              className="os-button os-button-secondary os-button-compact"
-              onClick={saveResource}
-              disabled={saved}
-            >
-              {saved ? 'Saved' : 'Save'}
-            </button>
+            {saved ? (
+              <Link href="/library" className="os-button os-button-secondary os-button-compact">
+                View in Library
+              </Link>
+            ) : (
+              <button
+                type="button"
+                className="os-button os-button-secondary os-button-compact"
+                onClick={saveResource}
+              >
+                Save
+              </button>
+            )}
           </span>
         </div>
 

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PageShell, GlassPanel } from '@/components/Ui';
+import { PageShell, GlassPanel, HubHero } from '@/components/Ui';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { communityThreadHref, type CommunityPost } from '@/lib/platform';
@@ -59,17 +59,15 @@ export default function DashboardPostsPage() {
   return (
     <PageShell>
       <div className="dashboard-page">
-        <header className="dashboard-header">
-          <div className="dashboard-header-copy">
-            <h1 className="os-type-display">Posts</h1>
-            <p className="os-type-body">Write updates, announcements, and conversation starters for the community.</p>
-          </div>
-          <Link className="os-button os-button-primary" href="/dashboard/posts/new">New Post</Link>
-        </header>
+        <HubHero
+          title="Posts"
+          copy="Write updates, announcements, and conversation starters for the community."
+          actions={<Link className="os-button os-button-primary" href="/dashboard/posts/new">New Post</Link>}
+        />
 
         {!isCreatorProfile(profile) && (
           <GlassPanel style={{ padding: 24, marginBottom: 18 }}>
-            <p style={{ color: 'var(--os-color-ink-secondary)', fontSize: 15 }}>
+            <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)' }}>
               This account is not marked as a creator yet. You can still save drafts, but switch your profile role to creator before publishing publicly.
             </p>
           </GlassPanel>

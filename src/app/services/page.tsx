@@ -112,7 +112,7 @@ export default function ServicesPage() {
             <HubSection key={category.slug} title={`Explore ${category.name}`} href={`/services/browse/${category.slug}`}>
               <Shelf>
                 {categoryServices.map(service => (
-                  <div key={service.id} className="app-shelf-item app-shelf-item-wide">
+                  <div key={service.id} className="app-shelf-item">
                     <ServiceCard service={service} />
                   </div>
                 ))}

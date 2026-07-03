@@ -47,6 +47,8 @@ export default function ResourcesCategoryPage({ params }: { params: Promise<{ ca
 
   const cat = categoryCatalog.find(c => c.slug === category || c.name.toLowerCase() === category);
   const label = cat?.name ?? category.charAt(0).toUpperCase() + category.slice(1);
+  const description = RESOURCE_CATEGORY_DESCRIPTIONS[category.toLowerCase()]
+    ?? `Guides, articles, and downloads about ${label}.`;
 
   const visible = useMemo(() => {
     return resourceCatalog.filter(r => matchesCategory(r, cat));
@@ -55,11 +57,11 @@ export default function ResourcesCategoryPage({ params }: { params: Promise<{ ca
   return (
     <PageShell>
       <div className="app-page">
-        <HubHero title={label} />
+        <HubHero title={label} copy={description} />
         {visible.length === 0 ? (
           <EmptyMessage>No resources here yet.</EmptyMessage>
         ) : (
-          <div className="app-grid app-grid-wide">
+          <div className="app-grid">
             {visible.map(resource => (
               <ResourceCard key={resource.id} resource={resource} />
             ))}
@@ -69,3 +71,11 @@ export default function ResourcesCategoryPage({ params }: { params: Promise<{ ca
     </PageShell>
   );
 }
+
+const RESOURCE_CATEGORY_DESCRIPTIONS: Record<string, string> = {
+  guides: 'Step-by-step guides and reference material from 44 creators.',
+  articles: 'Essays and long-form writing from the 44 community.',
+  templates: 'Reusable templates and starter files for your own projects.',
+  downloads: 'Files, packs, and assets to grab and use.',
+  lessons: 'Structured lessons that teach a specific skill or process.',
+};

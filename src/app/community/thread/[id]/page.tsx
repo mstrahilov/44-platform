@@ -7,12 +7,14 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { PageShell, CenteredMessage } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
+import { createReplyNotification } from '@/lib/achievementNotifications';
 import {
   SocialAuthorLine,
   SocialAvatar,
   SocialChatBubbleIcon,
   SocialEngagementRow,
   SocialHeartIcon,
+  SocialPostRow,
   SocialTrashIcon,
 } from '@/components/Social';
 import { useTopbarBack } from '@/components/TopbarContext';
@@ -46,6 +48,7 @@ export default function CommunityThreadPage() {
   const [replyLikes, setReplyLikes] = useState<ReplyLikeRow[]>([]);
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [replyBody, setReplyBody] = useState('');
+  const [replyComposerOpen, setReplyComposerOpen] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [inlineBody, setInlineBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -297,11 +300,12 @@ export default function CommunityThreadPage() {
 
   async function insertReply(body: string, parentReplyId: string | null) {
     if (!thread || !user) return null;
+    const trimmedBody = body.trim();
     const payload = {
       post_id: thread.id,
       author_id: user.id,
       parent_reply_id: parentReplyId,
-      body: body.trim(),
+      body: trimmedBody,
       status: 'published',
     };
     const { data, error: insertError } = await supabase
@@ -313,7 +317,28 @@ export default function CommunityThreadPage() {
       setError(insertError.message);
       return null;
     }
-    return data as SocialReply;
+    const createdReply = data as SocialReply;
+    const parentReply = parentReplyId ? replies.find(reply => reply.id === parentReplyId) ?? null : null;
+    const recipientUserId = parentReply?.author_id || thread.author_id || null;
+    const actorName =
+      profile?.display_name?.trim()
+      || profile?.username?.trim()
+      || user.email?.split('@')[0]
+      || 'Someone';
+
+    await createReplyNotification({
+      recipientUserId: recipientUserId ?? '',
+      actorUserId: user.id,
+      actorName,
+      postId: thread.id,
+      postSlug: thread.slug ?? null,
+      postTitle: thread.title,
+      replyId: createdReply.id,
+      replyBody: trimmedBody,
+      parentReplyId,
+    });
+
+    return createdReply;
   }
 
   async function submitReply(event: React.FormEvent<HTMLFormElement>) {
@@ -329,6 +354,7 @@ export default function CommunityThreadPage() {
     if (created) {
       setReplies(current => [...current, created]);
       setReplyBody('');
+      setReplyComposerOpen(false);
     }
     setSubmitting(false);
   }
@@ -393,92 +419,72 @@ export default function CommunityThreadPage() {
   return (
     <PageShell>
       <main className="social-shell">
-        <article className="social-thread-hero">
-          <Link href={authorHref(thread.creators)} aria-label={authorDisplayName(thread.creators)}>
-            <SocialAvatar profile={thread.creators} />
-          </Link>
-
-          <div className="social-row-main">
-            <SocialAuthorLine author={thread.creators} createdAt={thread.created_at} meta={thread.categories?.name ?? thread.post_type} />
-            <h1 className="social-row-title social-row-title-lg">{thread.title}</h1>
-            {thread.body && <p className="social-row-body">{thread.body}</p>}
-            <div className="social-actions">
-              <span className="social-action" aria-label={`${replies.length} replies`}>
-                <SocialChatBubbleIcon />
-                {replies.length > 0 && <span className="social-action-count">{replies.length}</span>}
-              </span>
-              <button
-                type="button"
-                className="social-action social-action-like"
-                data-liked={likedByUser ? 'true' : 'false'}
-                onClick={toggleLike}
-                disabled={liking}
-                aria-label={likedByUser ? 'Unlike' : 'Like'}
-              >
-                <SocialHeartIcon filled={likedByUser} />
-              </button>
-              <SocialEngagementRow
-                likers={threadLikers}
-                likeCount={likes.length}
-                repliers={repliers}
-                replyCount={replies.length}
-              />
-              {isThreadAuthor && (
-                <button
-                  type="button"
-                  className="social-action social-action-danger"
-                  onClick={deleteThread}
-                  aria-label="Delete post"
-                >
-                  <SocialTrashIcon />
-                </button>
-              )}
-            </div>
-          </div>
-        </article>
-
         <section aria-label="Replies">
-          {user && canInteract ? (
-            <form className="social-composer" onSubmit={submitReply}>
-              <SocialAvatar profile={profile} />
-              <div className="social-composer-box">
-                <textarea
-                  className="social-composer-input"
-                  value={replyBody}
-                  onChange={event => setReplyBody(event.target.value)}
-                  placeholder="Write your reply..."
-                />
-                <div className="social-composer-actions">
-                  <div className="social-note os-type-meta">Reply publicly to this conversation.</div>
-                  <button className="os-button os-button-primary os-button-compact" type="submit" disabled={submitting || !replyBody.trim()}>
-                    {submitting ? 'Posting...' : 'Reply'}
-                  </button>
-                </div>
-              </div>
-            </form>
-          ) : user ? (
-            <div className="social-composer">
-              <SocialAvatar profile={profile} />
-              <div className="social-composer-actions">
-                <div className="social-note os-type-body">Finish your community profile to reply and like posts.</div>
-                <button type="button" className="os-button os-button-primary os-button-compact" onClick={() => setSetupGateOpen(true)}>Finish Setup</button>
-              </div>
-            </div>
-          ) : (
-            <div className="social-composer">
-              <SocialAvatar profile={null} />
-              <div className="social-composer-actions">
-                <div className="social-note os-type-body">Sign in to join this conversation.</div>
-                <Link href="/login" className="os-button os-button-primary os-button-compact">Sign In</Link>
-              </div>
-            </div>
-          )}
-
           {error && <div className="dashboard-status dashboard-status-error" style={{ marginTop: 14 }}>{error}</div>}
 
-          <div className="social-feed" aria-label="Thread replies">
+          <div className="dashboard-list-surface social-feed social-feed-list" aria-label="Thread replies">
+            <SocialPostRow
+              post={thread}
+              replyCount={replies.length}
+              likeCount={likes.length}
+              liked={likedByUser}
+              likers={threadLikers}
+              repliers={repliers}
+              onLike={toggleLike}
+              onReplyClick={() => requireCommunityInteraction(() => setReplyComposerOpen(open => !open))}
+              canDelete={isThreadAuthor}
+              onDelete={deleteThread}
+              disabled={liking}
+              titleSize="lg"
+              handleOnly={false}
+              meta={thread.categories?.name ?? thread.post_type}
+              rowClickable={false}
+            />
+            {replyComposerOpen && (
+              user && canInteract ? (
+                <form className="social-composer social-composer-inline-surface" onSubmit={submitReply}>
+                  <SocialAvatar profile={profile} />
+                  <div className="social-composer-box">
+                    <textarea
+                      className="os-input-textarea"
+                      value={replyBody}
+                      onChange={event => setReplyBody(event.target.value)}
+                      placeholder="Write your reply..."
+                      autoFocus
+                    />
+                    <div className="social-composer-actions">
+                      <div className="social-note os-type-meta">Reply publicly to this conversation.</div>
+                      <div className="social-inline-composer-actions">
+                        <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => { setReplyComposerOpen(false); setReplyBody(''); }}>
+                          Cancel
+                        </button>
+                        <button className="os-button os-button-primary os-button-compact" type="submit" disabled={submitting || !replyBody.trim()}>
+                          {submitting ? 'Posting...' : 'Reply'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </form>
+              ) : user ? (
+                <div className="social-composer social-composer-inline-surface">
+                  <SocialAvatar profile={profile} />
+                  <div className="social-composer-actions">
+                    <div className="social-note os-type-body">Finish your community profile to reply and like posts.</div>
+                    <button type="button" className="os-button os-button-primary os-button-compact" onClick={() => setSetupGateOpen(true)}>Finish Setup</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="social-composer social-composer-inline-surface">
+                  <SocialAvatar profile={null} />
+                  <div className="social-composer-actions">
+                    <div className="social-note os-type-body">Sign in to join this conversation.</div>
+                    <Link href="/login" className="os-button os-button-primary os-button-compact">Sign In</Link>
+                  </div>
+                </div>
+              )
+            )}
             {replyTree.length === 0 ? (
-              <div className="app-empty-text">No replies yet.</div>
+              <div className="dashboard-empty">No replies yet.</div>
             ) : (
               replyTree.map(({ top, children }) => (
                 <ReplyBranch
@@ -660,7 +666,7 @@ function ReplyRow({
             <SocialHeartIcon filled={liked} />
           </button>
           <SocialEngagementRow likers={likers} likeCount={likeCount} />
-          <span className="social-time" style={{ fontSize: 13, marginLeft: 'auto' }}>{compactDate(reply.created_at)}</span>
+          <span className="social-time" style={{ marginLeft: 'auto' }}>{compactDate(reply.created_at)}</span>
           {canDelete && (
             <button
               type="button"
@@ -704,6 +710,7 @@ function InlineReplyForm({
       <SocialAvatar profile={currentProfile} />
       <div className="social-inline-composer-box">
         <textarea
+          className="os-input-textarea"
           value={value}
           onChange={event => onChange(event.target.value)}
           placeholder="Write a reply..."

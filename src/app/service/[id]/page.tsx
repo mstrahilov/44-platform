@@ -65,7 +65,7 @@ export default function ServicePage() {
           <div className="view-album-eyebrow">{service.categories?.name ?? 'Service'}</div>
           <h1 className="view-album-title">{service.title}</h1>
           <div className="view-album-meta">
-            {service.creators && <span style={{ fontWeight: 700 }}>{service.creators.name}</span>}
+            {service.creators && <span className="view-album-meta-strong">{service.creators.name}</span>}
             <span className="view-album-meta-sep" />
             <span>{formatServicePrice(service)}</span>
             {service.delivery_estimate && (<><span className="view-album-meta-sep" /><span>{service.delivery_estimate}</span></>)}
@@ -86,7 +86,7 @@ export default function ServicePage() {
       {/* Description */}
       {description.length > 40 && (
         <div className="view-section">
-          <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', lineHeight: 1.72, maxWidth: 720, fontSize: 16 }}>
+          <p className="os-type-body view-description">
             {description}
           </p>
         </div>

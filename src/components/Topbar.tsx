@@ -266,7 +266,7 @@ export function Topbar() {
                 ) : (
                   <div className="os-notification-list">
                     {notifications.map(item => (
-                      <Link key={item.id} href="/notifications" className="os-notification-item">
+                      <Link key={item.id} href={item.href || '/notifications'} className="os-notification-item">
                         <div className="os-notification-title">{item.title}</div>
                         {item.description && <div className="os-notification-body">{item.description}</div>}
                         <div className="os-notification-time">

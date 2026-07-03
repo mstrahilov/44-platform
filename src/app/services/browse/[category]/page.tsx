@@ -47,6 +47,8 @@ export default function ServicesCategoryPage({ params }: { params: Promise<{ cat
 
   const cat = categoryCatalog.find(c => c.slug === category || c.name.toLowerCase() === category);
   const label = cat?.name ?? category.charAt(0).toUpperCase() + category.slice(1);
+  const description = SERVICE_CATEGORY_DESCRIPTIONS[category.toLowerCase()]
+    ?? `Services from 44 creators in ${label}.`;
 
   const visible = useMemo(() => {
     return serviceCatalog.filter(s => matchesCategory(s, cat));
@@ -55,11 +57,11 @@ export default function ServicesCategoryPage({ params }: { params: Promise<{ cat
   return (
     <PageShell>
       <div className="app-page">
-        <HubHero title={label} />
+        <HubHero title={label} copy={description} />
         {visible.length === 0 ? (
           <EmptyMessage>No services here yet.</EmptyMessage>
         ) : (
-          <div className="app-grid app-grid-wide">
+          <div className="app-grid">
             {visible.map(service => (
               <ServiceCard key={service.id} service={service} />
             ))}
@@ -69,3 +71,11 @@ export default function ServicesCategoryPage({ params }: { params: Promise<{ cat
     </PageShell>
   );
 }
+
+const SERVICE_CATEGORY_DESCRIPTIONS: Record<string, string> = {
+  audio: 'Mixing, mastering, recording, and audio production from 44 creators.',
+  video: 'Editing, motion, color, and video production from 44 creators.',
+  design: 'Brand, graphic, web, and product design from 44 creators.',
+  development: 'Web, app, and software engineering from 44 creators.',
+  business: 'Strategy, marketing, and operations help from 44 creators.',
+};
