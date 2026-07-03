@@ -4,6 +4,7 @@ import { useTopbarTabs, type TopbarTab } from '@/components/TopbarContext';
 
 export const DASHBOARD_TABS: Array<{ id: string; label: string; href: string }> = [
   { id: 'overview', label: 'Overview', href: '/dashboard' },
+  { id: 'updates', label: 'Updates', href: '/dashboard/posts' },
   { id: 'products', label: 'Products', href: '/dashboard/products' },
   { id: 'services', label: 'Services', href: '/dashboard/services' },
   { id: 'resources', label: 'Resources', href: '/dashboard/resources' },

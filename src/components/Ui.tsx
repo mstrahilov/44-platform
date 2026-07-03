@@ -4,6 +4,7 @@ import type { Service, Resource, CommunityPost } from '@/lib/platform';
 import { communityThreadHref, resourceHref, serviceHref } from '@/lib/platform';
 import type { Product } from '@/lib/products';
 import { formatProductPrice } from '@/lib/products';
+import { getPostMetaLabel } from '@/lib/social';
 
 export function PageShell({ children }: { children: ReactNode }) {
   return <div className="view-hub">{children}</div>;
@@ -157,7 +158,7 @@ export function PostCard({ post }: { post: CommunityPost }) {
   return (
     <Link href={communityThreadHref(post)} className="app-card">
       <div className="app-card-body">
-        <span className="os-pill os-type-pill app-card-chip">{post.categories?.name ?? post.post_type}</span>
+        <span className="os-pill os-type-pill app-card-chip">{getPostMetaLabel(post)}</span>
         <div className="app-card-title os-type-card-title">{post.title}</div>
         <div className="app-card-creator os-type-meta">by {post.creators?.name ?? '44 Community'}</div>
         <div className="app-card-desc os-type-body-small">{post.body}</div>
@@ -178,7 +179,7 @@ export function ThreadRow({
   pinned?: boolean;
 }) {
   const author = post.creators?.name ?? '44 Community';
-  const meta = post.categories?.name ?? post.post_type ?? 'Discussion';
+  const meta = getPostMetaLabel(post);
 
   return (
     <Link href={communityThreadHref(post)} className="thread-row">

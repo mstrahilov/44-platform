@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { formatServicePrice, type Profile, type Resource, type Service } from '@/lib/platform';
@@ -12,9 +12,9 @@ import { formatProductPrice } from '@/lib/products';
 import { PageShell, CenteredMessage } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
 import { SocialArtifactCard, SocialAvatar, SocialPostRow } from '@/components/Social';
-import { getOwnershipKeys, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
+import { getOwnershipKeys, isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { useTopbarBack } from '@/components/TopbarContext';
-import { authorHandle, countById, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type ReplyEngagerRow, type SocialPost } from '@/lib/social';
+import { authorHandle, countById, isGeneralPost, isUpdatePost, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type ReplyEngagerRow, type SocialPost } from '@/lib/social';
 import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { isMissingRelationError } from '@/lib/schemaCompat';
 import { createOrOpenConversation } from '@/lib/messages';
@@ -28,11 +28,24 @@ import {
   type FriendshipState,
 } from '@/lib/friends';
 
-type ProfileTab = 'posts' | 'products' | 'services' | 'resources';
+type ProfileTab = 'posts' | 'updates' | 'products' | 'services' | 'resources';
+
+function parseProfileTab(value: string | null, isCreator: boolean): ProfileTab | null {
+  if (!value) return null;
+  const normalized = value.toLowerCase();
+  if (normalized === 'posts') return 'posts';
+  if (!isCreator) return null;
+  if (normalized === 'releases' || normalized === 'products') return 'products';
+  if (normalized === 'services') return 'services';
+  if (normalized === 'resources') return 'resources';
+  if (normalized === 'updates') return 'updates';
+  return null;
+}
 
 export default function PublicProfilePage() {
   const { username } = useParams<{ username: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   useTopbarBack({ href: '/community', label: 'Community' });
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -171,16 +184,6 @@ export default function PublicProfilePage() {
   }, [profile, user]);
 
   const isOwn = user?.id === profile?.id;
-  const tabs = useMemo(
-    () => [
-      { id: 'posts' as const, label: 'Posts' },
-      { id: 'products' as const, label: 'Releases' },
-      { id: 'services' as const, label: 'Services' },
-      { id: 'resources' as const, label: 'Resources' },
-    ],
-    [],
-  );
-
   async function handleFriendAction() {
     if (!profile || isOwn || busy) return;
     if (!user) {
@@ -255,6 +258,63 @@ export default function PublicProfilePage() {
     setBusy('');
   }
 
+  const profileForRoleCheck = profile ? {
+    id: profile.id,
+    display_name: profile.display_name ?? null,
+    username: profile.username ?? null,
+    role: profile.role ?? null,
+    slug: profile.slug ?? null,
+    avatar_url: profile.avatar_url ?? null,
+    bio: profile.bio ?? null,
+    creator_type: profile.creator_type ?? null,
+    country_code: profile.country_code ?? null,
+    display_currency: profile.display_currency ?? null,
+    home_country_code: profile.home_country_code ?? null,
+    home_currency: profile.home_currency ?? null,
+    product_market_mode: profile.product_market_mode ?? null,
+    service_market_mode: profile.service_market_mode ?? null,
+  } : null;
+  const isCreator = Boolean(profileForRoleCheck && isCreatorProfile(profileForRoleCheck));
+  const tabs = useMemo(
+    () => (
+      isCreator
+        ? [
+            { id: 'posts' as const, label: 'Posts' },
+            { id: 'products' as const, label: 'Releases' },
+            { id: 'services' as const, label: 'Services' },
+            { id: 'resources' as const, label: 'Resources' },
+            { id: 'updates' as const, label: 'Updates' },
+          ]
+        : [
+            { id: 'posts' as const, label: 'Posts' },
+          ]
+    ),
+    [isCreator],
+  );
+
+  useEffect(() => {
+    const requestedTab = parseProfileTab(searchParams.get('tab'), isCreator);
+    if (requestedTab && requestedTab !== tab) {
+      setTab(requestedTab);
+      return;
+    }
+    if (!isCreator && tab !== 'posts') {
+      setTab('posts');
+    }
+  }, [isCreator, searchParams, tab]);
+
+  const displayName = profile?.display_name ?? profile?.username ?? 'Member';
+  const handle = authorHandle(profile ?? undefined);
+  const generalPosts = useMemo(() => posts.filter(post => isGeneralPost(post)), [posts]);
+  const updatePosts = useMemo(() => posts.filter(post => isUpdatePost(post)), [posts]);
+  const friendButtonLabel = friendshipState === 'friends'
+    ? 'Friends'
+    : friendshipState === 'incoming'
+      ? 'Accept Friend'
+      : friendshipState === 'outgoing'
+      ? 'Request Sent'
+        : 'Add Friend';
+
   if (loading) {
     return <PageShell><CenteredMessage>Loading...</CenteredMessage></PageShell>;
   }
@@ -262,16 +322,6 @@ export default function PublicProfilePage() {
   if (!profile) {
     return <PageShell><CenteredMessage>Profile not found</CenteredMessage></PageShell>;
   }
-
-  const displayName = profile.display_name ?? profile.username ?? 'Member';
-  const handle = authorHandle(profile);
-  const friendButtonLabel = friendshipState === 'friends'
-    ? 'Friends'
-    : friendshipState === 'incoming'
-      ? 'Accept Friend'
-      : friendshipState === 'outgoing'
-        ? 'Request Sent'
-        : 'Add Friend';
 
   return (
     <PageShell>
@@ -332,8 +382,8 @@ export default function PublicProfilePage() {
 
         {tab === 'posts' && (
           <section className="social-feed" aria-label="Posts">
-            {posts.length ? (
-              posts.map(post => (
+            {generalPosts.length ? (
+              generalPosts.map(post => (
                 <SocialPostRow
                   key={post.id}
                   post={post}
@@ -353,6 +403,34 @@ export default function PublicProfilePage() {
               ))
             ) : (
               <div className="app-empty-text">No posts yet.</div>
+            )}
+          </section>
+        )}
+
+        {tab === 'updates' && (
+          <section className="social-feed" aria-label="Updates">
+            {updatePosts.length ? (
+              updatePosts.map(post => (
+                <SocialPostRow
+                  key={post.id}
+                  post={post}
+                  replyCount={replyCounts[post.id] ?? 0}
+                  likeCount={likeCounts[post.id] ?? 0}
+                  likers={likersMap[post.id] ?? []}
+                  repliers={repliersMap[post.id] ?? []}
+                  onDelete={async () => {
+                    if (!user || post.author_id !== user.id) return;
+                    if (!window.confirm('Delete this post? This cannot be undone.')) return;
+                    const { error: deleteError } = await supabase.from('posts').delete().eq('id', post.id);
+                    if (deleteError) { setError(deleteError.message); return; }
+                    setPosts(current => current.filter(p => p.id !== post.id));
+                  }}
+                  canDelete={Boolean(user && post.author_id === user.id)}
+                  meta="Update"
+                />
+              ))
+            ) : (
+              <div className="app-empty-text">No updates yet.</div>
             )}
           </section>
         )}

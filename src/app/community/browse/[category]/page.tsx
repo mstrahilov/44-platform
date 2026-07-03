@@ -9,7 +9,7 @@ import { PageShell, EmptyMessage } from '@/components/Ui';
 import { SocialPostRow } from '@/components/Social';
 import { useAuth } from '@/lib/useAuth';
 import { useTopbarTabs } from '@/components/TopbarContext';
-import { countById, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type ReplyEngagerRow, type SocialPost } from '@/lib/social';
+import { countById, isGeneralPost, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type ReplyEngagerRow, type SocialPost } from '@/lib/social';
 
 export default function CommunityBrowseCategoryPage({ params }: { params: Promise<{ category: string }> }) {
   const { category } = use(params);
@@ -41,8 +41,8 @@ export default function CommunityBrowseCategoryPage({ params }: { params: Promis
           .select('post_id, profile_id, profiles:profiles!profile_id(id, display_name, username, avatar_url)')
           .order('created_at', { ascending: false }),
       ]);
-      setPosts((postRows as SocialPost[] | null) ?? []);
-      setCategories((categoryRows as Category[] | null) ?? []);
+      setPosts(((postRows as SocialPost[] | null) ?? []).filter(post => isGeneralPost(post)));
+      setCategories(((categoryRows as Category[] | null) ?? []).filter(c => c.slug !== 'updates' && c.slug !== 'reviews'));
       const replies = (replyRows as ReplyEngagerRow[] | null) ?? [];
       setReplyCounts(countById(replies, 'post_id'));
       setRepliersMap(repliersByPost(replies));

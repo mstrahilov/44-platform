@@ -8,7 +8,7 @@ export interface AchievementNotification extends AchievementToastData {
   createdAt?: string;
   productId?: string | null;
   href?: string | null;
-  kind?: 'achievement' | 'reply';
+  kind?: 'achievement' | 'reply' | 'mention';
 }
 
 function broadcastAchievementNotification(notification: AchievementNotification) {
@@ -110,6 +110,54 @@ export async function createReplyNotification(params: {
   });
 }
 
+export async function createMentionNotifications(params: {
+  authorUserId: string;
+  authorName: string;
+  postId: string;
+  postSlug?: string | null;
+  postTitle: string;
+  body: string;
+}) {
+  const { authorUserId, authorName, postId, postSlug, postTitle, body } = params;
+  const usernames = Array.from(
+    new Set(
+      Array.from(body.matchAll(/(^|\s)@([a-z0-9_]{2,32})\b/gi))
+        .map(match => match[2]?.toLowerCase())
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+
+  if (usernames.length === 0) return;
+
+  const { data: profileRows } = await supabase
+    .from('profiles')
+    .select('id, username')
+    .in('username', usernames);
+
+  const recipients = ((profileRows as Array<{ id: string; username: string | null }> | null) ?? [])
+    .filter(profile => profile.id !== authorUserId && profile.username);
+
+  if (recipients.length === 0) return;
+
+  await supabase.from('achievement_events').insert(
+    recipients.map(profile => ({
+      user_id: profile.id,
+      product_id: null,
+      achievement_id: null,
+      event_type: 'mention_received',
+      metadata: {
+        actor_user_id: authorUserId,
+        actor_name: authorName,
+        username: profile.username,
+        post_id: postId,
+        post_slug: postSlug ?? null,
+        post_title: postTitle,
+        post_body: body,
+      },
+    })),
+  );
+}
+
 export async function loadAchievementNotifications(userId: string): Promise<AchievementNotification[]> {
   const { data, error } = await supabase
     .from('achievement_events')
@@ -176,6 +224,25 @@ export async function loadAchievementNotifications(userId: string): Promise<Achi
         productId: null,
         href: postSlug || postId ? `/community/thread/${postSlug || postId}` : '/notifications',
         kind: 'reply',
+      });
+      continue;
+    }
+
+    if (event.event_type === 'mention_received') {
+      const actorName = typeof event.metadata?.actor_name === 'string' ? event.metadata.actor_name : 'Someone';
+      const postTitle = typeof event.metadata?.post_title === 'string' ? event.metadata.post_title : 'a post';
+      const postBody = typeof event.metadata?.post_body === 'string' ? event.metadata.post_body : '';
+      const postId = typeof event.metadata?.post_id === 'string' ? event.metadata.post_id : null;
+      const postSlug = typeof event.metadata?.post_slug === 'string' ? event.metadata.post_slug : null;
+
+      notifications.push({
+        id: event.id,
+        title: `${actorName} mentioned you`,
+        description: postBody || `You were mentioned in ${postTitle}.`,
+        createdAt: event.created_at,
+        productId: null,
+        href: postSlug || postId ? `/community/thread/${postSlug || postId}` : '/notifications',
+        kind: 'mention',
       });
     }
   }

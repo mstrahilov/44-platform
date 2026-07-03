@@ -44,7 +44,7 @@ export default function ProductPage() {
           .select('*, creators:profiles!author_id(*)')
           .eq('is_published', true)
           .neq('id', data.id)
-          .limit(8);
+          .limit(4);
 
         const relatedScope = data.author_id
           ? relatedQuery.eq('author_id', data.author_id)
@@ -84,6 +84,7 @@ export default function ProductPage() {
   const primaryAction = canClaimToLibrary ? 'Add to Library' : 'Add to Cart';
   const accessLabel = getProductStoreAccessLabel(product);
   const creatorLink = creatorHref(product.creators ?? product.creator);
+  const creatorReleasesLink = `${creatorLink}?tab=releases`;
 
   const hasDescription = Boolean(product.long_description || product.short_description);
   const description = product.long_description || product.short_description || '';
@@ -119,7 +120,7 @@ export default function ProductPage() {
             ) : (
               <button className="os-button os-button-primary" onClick={addToLibrary}>{primaryAction}</button>
             )}
-            <Link className="os-button os-button-secondary" href={creatorLink}>View Creator</Link>
+            <Link className="os-button os-button-secondary" href={creatorReleasesLink}>View Creator</Link>
           </div>
         </div>
       </div>
@@ -166,19 +167,24 @@ export default function ProductPage() {
       <ItemCommunitySection
         subjectType="product"
         subjectId={product.id}
-        subjectLabel={product.title}
-        categorySlugs={['reviews']}
+        intent="review"
         sectionTitle="Reviews"
         actionLabel="Post Review"
         titlePlaceholder={`Reviewing "${product.title}"`}
         composerPlaceholder="What did you think of it?"
         emptyMessage="No reviews yet — be the first."
+        canPost={owned}
       />
 
       {/* Related */}
       {related.length > 0 && (
         <div className="view-section">
-          <h2 className="view-section-title">More from {product.creators?.display_name || product.creator}</h2>
+          <div className="item-community-header" style={{ marginBottom: 16 }}>
+            <h2 className="view-section-title" style={{ margin: 0 }}>More from {product.creators?.display_name || product.creator}</h2>
+            <Link className="os-button os-button-secondary os-button-compact" href={creatorReleasesLink}>
+              View All
+            </Link>
+          </div>
           <ProductGrid>
             {related.map(item => <ProductCard key={item.id} product={item} />)}
           </ProductGrid>
@@ -189,4 +195,3 @@ export default function ProductPage() {
     </div>
   );
 }
-

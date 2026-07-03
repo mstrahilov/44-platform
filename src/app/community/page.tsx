@@ -11,20 +11,16 @@ import { useTopbarTabs } from '@/components/TopbarContext';
 import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { useAuth } from '@/lib/useAuth';
-import { countById, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type ReplyEngagerRow, type SocialPost } from '@/lib/social';
+import { countById, isGeneralPost, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type ReplyEngagerRow, type SocialPost } from '@/lib/social';
 import { loadFriendRequests, otherFriendProfile } from '@/lib/friends';
 
 type PostLike = LikeRow;
-type FeedMode = 'feed' | 'friends' | 'local' | 'updates' | 'questions' | 'collaboration';
+type FeedTabId = 'feed' | 'friends';
 
-const COMMUNITY_HERO: Record<FeedMode, { title: string; copy: string }> = {
-  feed: { title: 'Feed', copy: 'The 44 social feed for releases, questions, collaborations, and member updates.' },
-  friends: { title: 'Friends', copy: 'Posts from the creators you are connected with.' },
-  local: { title: 'Local', copy: 'Posts from creators in your country.' },
-  updates: { title: 'Updates', copy: 'Announcements and release notes from the 44 community.' },
-  questions: { title: 'Questions', copy: 'Ask the community — get answers from other creators.' },
-  collaboration: { title: 'Collaboration', copy: 'Find people to work with on your next project.' },
-};
+const COMMUNITY_HERO = {
+  feed: { title: 'Feed', copy: 'General posts from the 44 community.' },
+  friends: { title: 'Friends', copy: 'General posts from the creators you are connected with.' },
+} as const;
 
 export default function CommunityPage() {
   const router = useRouter();
@@ -35,7 +31,7 @@ export default function CommunityPage() {
   const [likes, setLikes] = useState<PostLike[]>([]);
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
-  const [feedMode, setFeedMode] = useState<FeedMode>('feed');
+  const [activeTab, setActiveTab] = useState<FeedTabId>('feed');
   const [likingId, setLikingId] = useState('');
   const [error, setError] = useState('');
   const [setupGateOpen, setSetupGateOpen] = useState(false);
@@ -72,7 +68,7 @@ export default function CommunityPage() {
     if (!user) {
       setProfile(null);
       setFriendIds(new Set());
-      setFeedMode('feed');
+      setActiveTab('feed');
       return;
     }
     loadStudioProfile(user.id).then(result => setProfile(result.profile));
@@ -87,12 +83,8 @@ export default function CommunityPage() {
 
   useTopbarTabs(
     [
-      { id: 'feed', label: 'Feed', onClick: () => setFeedMode('feed'), active: feedMode === 'feed' },
-      ...(user ? [{ id: 'friends', label: 'Friends', onClick: () => setFeedMode('friends'), active: feedMode === 'friends' }] : []),
-      { id: 'local', label: 'Local', onClick: () => setFeedMode('local'), active: feedMode === 'local' },
-      { id: 'updates', label: 'Updates', onClick: () => setFeedMode('updates'), active: feedMode === 'updates' },
-      { id: 'questions', label: 'Questions', onClick: () => setFeedMode('questions'), active: feedMode === 'questions' },
-      { id: 'collaboration', label: 'Collaboration', onClick: () => setFeedMode('collaboration'), active: feedMode === 'collaboration' },
+      { id: 'feed', label: 'Feed', onClick: () => setActiveTab('feed'), active: activeTab === 'feed' },
+      ...(user ? [{ id: 'friends', label: 'Friends', onClick: () => setActiveTab('friends'), active: activeTab === 'friends' }] : []),
     ],
   );
 
@@ -103,18 +95,13 @@ export default function CommunityPage() {
     return new Set(likes.filter(like => like.profile_id === user.id).map(like => like.post_id));
   }, [likes, user]);
   const canInteract = hasCommunityIdentity(profile);
-  const viewerCountry = profile?.country_code || profile?.home_country_code || null;
-  const visiblePosts = posts.filter(post => {
-    if (feedMode === 'friends') return Boolean(post.author_id && friendIds.has(post.author_id));
-    if (feedMode === 'local') {
-      const authorCountry = post.creators?.country_code || post.creators?.home_country_code || null;
-      return Boolean(viewerCountry && authorCountry && viewerCountry === authorCountry);
-    }
-    if (feedMode === 'updates') return post.categories?.slug === 'updates' || post.post_type === 'updates' || post.post_type === 'update';
-    if (feedMode === 'questions') return post.categories?.slug === 'questions' || post.post_type === 'questions' || post.post_type === 'question';
-    if (feedMode === 'collaboration') return post.post_type === 'collaboration' || post.categories?.slug === 'collaboration' || post.categories?.name?.toLowerCase() === 'collaboration';
+  const generalPosts = useMemo(() => posts.filter(post => isGeneralPost(post)), [posts]);
+  const visiblePosts = useMemo(() => generalPosts.filter(post => {
+    if (activeTab === 'friends') return Boolean(post.author_id && friendIds.has(post.author_id));
     return true;
-  });
+  }), [activeTab, friendIds, generalPosts]);
+
+  const heroContent = COMMUNITY_HERO[activeTab];
 
   async function toggleLike(post: SocialPost) {
     if (likingId) return;
@@ -162,8 +149,6 @@ export default function CommunityPage() {
     setPosts(current => current.filter(p => p.id !== post.id));
   }
 
-  const heroContent = COMMUNITY_HERO[feedMode];
-
   return (
     <PageShell>
       <main className="social-shell">
@@ -185,7 +170,7 @@ export default function CommunityPage() {
 
         <section className="dashboard-list-surface social-feed social-feed-list social-feed-panel" aria-label="Community feed">
           {visiblePosts.length === 0 ? (
-            <div className="dashboard-empty">{feedMode === 'friends' ? 'No friend posts yet.' : feedMode === 'local' ? 'No local posts yet.' : 'No posts yet.'}</div>
+            <div className="dashboard-empty">{activeTab === 'friends' ? 'No friend posts yet.' : 'No posts yet.'}</div>
           ) : (
             visiblePosts.map(post => (
               <SocialPostRow

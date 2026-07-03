@@ -11,7 +11,7 @@ import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
 import { formatProductPrice } from '@/lib/products';
 import { getProductRuntimeKind } from '@/lib/libraryContent';
-import { formatServicePrice, type Resource, type SavedResource, type ServiceRequest } from '@/lib/platform';
+import { formatServicePrice, type ServiceRequest } from '@/lib/platform';
 
 interface LibraryItem {
   id: string;
@@ -36,17 +36,6 @@ type LibraryEntry =
     }
   | {
       id: string;
-      kind: 'resource';
-      tab: 'resources';
-      title: string;
-      subtitle: string;
-      meta: string;
-      image: string | null;
-      href: string;
-      resource: Resource;
-    }
-  | {
-      id: string;
       kind: 'service';
       tab: 'services';
       title: string;
@@ -65,14 +54,12 @@ const TAB_LABELS: Record<LibraryEntry['tab'] | 'all', string> = {
   books: 'Books',
   games: 'Games',
   products: 'Products',
-  resources: 'Resources',
   services: 'Services',
 };
 
 export default function LibraryPage() {
   const { user, loading: authLoading } = useAuth();
   const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
-  const [savedResources, setSavedResources] = useState<SavedResource[]>([]);
   const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -84,7 +71,6 @@ export default function LibraryPage() {
     if (!user) {
       Promise.resolve().then(() => {
         setLibraryItems([]);
-        setSavedResources([]);
         setServiceRequests([]);
         setLoading(false);
         setError(null);
@@ -96,7 +82,7 @@ export default function LibraryPage() {
       setLoading(true);
       setError(null);
 
-      const [{ data: products, error: productsError }, { data: resources }, { data: requests }] = await Promise.all([
+      const [{ data: products, error: productsError }, { data: requests }] = await Promise.all([
         supabase
           .from('library_items')
           .select('id,product_id,acquisition_type,acquired_at,status,products(*)')
@@ -104,11 +90,6 @@ export default function LibraryPage() {
           .neq('status', 'archived')
           .neq('status', 'hidden')
           .order('acquired_at', { ascending: false }),
-        supabase
-          .from('saved_resources')
-          .select('id,resource_id,saved_at,resources(*, creators:profiles!author_id(*, name:display_name), categories(id, slug, name))')
-          .eq('user_id', userId)
-          .order('saved_at', { ascending: false }),
         supabase
           .from('service_requests')
           .select('id,service_id,message,status,created_at,services(*, creators:profiles!author_id(*, name:display_name), categories(id, slug, name))')
@@ -121,7 +102,6 @@ export default function LibraryPage() {
       }
 
       setLibraryItems((products as LibraryItem[] | null) ?? []);
-      setSavedResources((resources as SavedResource[] | null) ?? []);
       setServiceRequests((requests as ServiceRequest[] | null) ?? []);
       setLoading(false);
     }
@@ -147,22 +127,6 @@ export default function LibraryPage() {
       }];
     });
 
-    const resources = savedResources.flatMap(item => {
-      if (!item.resources) return [];
-
-      return [{
-        id: item.id,
-        kind: 'resource' as const,
-        tab: 'resources' as const,
-        title: item.resources.title,
-        subtitle: item.resources.creators?.name ?? '44 Community',
-        meta: item.resources.categories?.name ?? item.resources.resource_type,
-        image: item.resources.cover_url,
-        href: `/library/item/resource/${item.id}`,
-        resource: item.resources,
-      }];
-    });
-
     const services = serviceRequests.flatMap(item => {
       if (!item.services) return [];
 
@@ -179,11 +143,11 @@ export default function LibraryPage() {
       }];
     });
 
-    return [...products, ...resources, ...services];
-  }, [libraryItems, savedResources, serviceRequests]);
+    return [...products, ...services];
+  }, [libraryItems, serviceRequests]);
 
   const availableTabs = useMemo<Array<LibraryEntry['tab'] | 'all'>>(() => {
-    const order: LibraryEntry['tab'][] = ['music', 'books', 'games', 'products', 'resources', 'services'];
+    const order: LibraryEntry['tab'][] = ['music', 'books', 'games', 'products', 'services'];
     const filtered = order.filter(tab => entries.some(entry => entry.tab === tab));
     if (filtered.length === 0) return [];
     return ['all', ...filtered];
@@ -224,7 +188,7 @@ export default function LibraryPage() {
         <div className="app-page">
           <HubHero title="Library" copy={LIBRARY_HERO_COPY} />
           <div className="app-empty-text">
-            Your library is empty. Add products, save resources, or request services to start building your 44 library.
+            Your library is empty. Add products or request services to start building your 44 library.
           </div>
           <div style={{ marginTop: 16 }}>
             <Link className="os-button os-button-primary" href="/store">Browse Store</Link>
@@ -250,7 +214,7 @@ export default function LibraryPage() {
   );
 }
 
-const LIBRARY_HERO_COPY = 'Products, resources, and services you own or saved on 44.';
+const LIBRARY_HERO_COPY = 'Products you own and services you have in progress on 44.';
 
 function productTab(product: Product): LibraryTabId {
   const runtimeKind = getProductRuntimeKind(product);

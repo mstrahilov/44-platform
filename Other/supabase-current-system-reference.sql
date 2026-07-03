@@ -12,6 +12,7 @@
 --   - supabase-library-foundation.sql
 --   - supabase-library-item-type-foundation.sql
 --   - supabase-local-global-pricing.sql
+--   - supabase-post-intent-topics.sql
 --   - supabase-post-subjects.sql
 --   - supabase-social-foundation.sql
 --
@@ -66,9 +67,8 @@
 --
 -- Community post categories:
 --   discussions or legacy discussion -> displayed as General in the app
---   updates
 --   questions
---   reviews
+--   collaboration
 --
 -- Important:
 --   General is the default regular social post bucket. It maps to the existing
@@ -208,6 +208,20 @@
 --   status text
 --   created_at timestamptz
 --   updated_at timestamptz
+--
+-- Current intent model:
+--   post_type = 'general' -> regular community post, created only from Community
+--   post_type = 'review'  -> product review, created only from product pages
+--   post_type = 'update'  -> creator product update, created only from Dashboard
+--
+-- Topic model:
+--   category_id is used only for general posts.
+--   Current supported topics are General, Questions, and Collaboration
+--   (Collaboration requires supabase-post-intent-topics.sql).
+--
+-- Attachment model:
+--   General posts do not use post_subjects.
+--   Reviews and updates attach to products through public.post_subjects.
 --
 -- public.post_replies:
 --   id uuid

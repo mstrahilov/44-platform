@@ -130,24 +130,29 @@ export default function DashboardProductsPage() {
                 key={product.id}
                 className="dashboard-list-row"
                 style={{
-                  gridTemplateColumns: 'minmax(0, 1fr) 160px minmax(360px, auto)',
+                  gridTemplateColumns: 'minmax(0, 1fr) minmax(360px, auto)',
                   borderTop: index === 0 ? 'none' : undefined,
                 }}
               >
                 <div className="dashboard-row-copy">
-                  <div className="dashboard-row-title">{product.title}</div>
+                  <div className="dashboard-row-title-wrap">
+                    <span className={product.is_published || product.status === 'published' ? 'dashboard-status-dot dashboard-status-dot-published' : 'dashboard-status-dot dashboard-status-dot-draft'} aria-hidden="true" />
+                    <div className="dashboard-row-title">{product.title}</div>
+                  </div>
                   <div className="dashboard-row-subtitle">{product.product_type || 'Product'}</div>
                 </div>
 
-                <div className="dashboard-row-meta">{product.category || 'Uncategorized'}</div>
-
                 <div className="dashboard-row-actions">
-                  <div className="dashboard-status-pill">{product.status || (product.is_published ? 'published' : 'draft')}</div>
+                  {(product.is_published || product.status === 'published') && (
+                    <Link
+                      href={`/dashboard/posts/new?subject_id=${encodeURIComponent(product.id)}`}
+                      className="os-button os-button-ghost os-button-compact"
+                    >
+                      Post Update
+                    </Link>
+                  )}
                   <Link href={`/dashboard/products/${product.id}`} className="os-button os-button-ghost os-button-compact">
                     Edit
-                  </Link>
-                  <Link href={productHref(product)} className="os-button os-button-ghost os-button-compact">
-                    Open
                   </Link>
                   <button
                     className="os-button os-button-secondary os-button-compact"

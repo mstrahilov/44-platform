@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { PageShell, GlassPanel, HubHero } from '@/components/Ui';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
-import { serviceHref, type Service } from '@/lib/platform';
+import type { Service } from '@/lib/platform';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { useDashboardTabs } from '@/lib/dashboardTabs';
 
@@ -119,24 +119,21 @@ export default function DashboardServicesPage() {
                 key={service.id}
                 className="dashboard-list-row"
                 style={{
-                  gridTemplateColumns: 'minmax(0, 1fr) 180px minmax(360px, auto)',
+                  gridTemplateColumns: 'minmax(0, 1fr) minmax(360px, auto)',
                   borderTop: index === 0 ? 'none' : undefined,
                 }}
               >
                 <div className="dashboard-row-copy">
-                  <div className="dashboard-row-title">{service.title}</div>
+                  <div className="dashboard-row-title-wrap">
+                    <span className={service.status === 'published' ? 'dashboard-status-dot dashboard-status-dot-published' : 'dashboard-status-dot dashboard-status-dot-draft'} aria-hidden="true" />
+                    <div className="dashboard-row-title">{service.title}</div>
+                  </div>
                   <div className="dashboard-row-subtitle">{service.service_type || 'Service'}</div>
                 </div>
 
-                <div className="dashboard-row-meta">{service.categories?.name || 'Uncategorized'}</div>
-
                 <div className="dashboard-row-actions">
-                  <div className="dashboard-status-pill">{service.status || 'draft'}</div>
                   <Link href={`/dashboard/services/${service.id}`} className="os-button os-button-ghost os-button-compact">
                     Edit
-                  </Link>
-                  <Link href={serviceHref(service)} className="os-button os-button-ghost os-button-compact">
-                    Open
                   </Link>
                   <button
                     className="os-button os-button-secondary os-button-compact"

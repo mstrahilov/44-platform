@@ -8,7 +8,6 @@ import { useAuth } from '@/lib/useAuth';
 import type { Service } from '@/lib/platform';
 import { creatorHref, formatServicePrice } from '@/lib/platform';
 import { useTopbarBack } from '@/components/TopbarContext';
-import { ItemCommunitySection } from '@/components/ItemCommunitySection';
 
 export default function ServicePage() {
   const { id } = useParams<{ id: string }>();
@@ -75,8 +74,8 @@ export default function ServicePage() {
               {requested ? 'Request Sent' : 'Send Request'}
             </button>
             {service.creators && (
-              <Link className="os-button os-button-secondary" href={creatorHref(service.creators)}>
-                View {service.creators.name}
+              <Link className="os-button os-button-secondary" href={`${creatorHref(service.creators)}?tab=services`}>
+                View Creator
               </Link>
             )}
           </div>
@@ -122,18 +121,6 @@ export default function ServicePage() {
           Send a short note about what you need. Checkout, milestones, files, and project management can be layered in once the conversation starts.
         </p>
       </div>
-
-      <ItemCommunitySection
-        subjectType="service"
-        subjectId={service.id}
-        subjectLabel={service.title}
-        categorySlugs={['reviews']}
-        sectionTitle="Reviews"
-        actionLabel="Post Review"
-        titlePlaceholder={`Reviewing "${service.title}"`}
-        composerPlaceholder="How was working with this creator?"
-        emptyMessage="No reviews yet — be the first."
-      />
     </div>
   );
 }

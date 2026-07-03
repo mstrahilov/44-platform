@@ -4,20 +4,16 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/lib/useAuth';
 import type { Resource } from '@/lib/platform';
 import { creatorHref } from '@/lib/platform';
 import { useTopbarBack } from '@/components/TopbarContext';
-import { ItemCommunitySection } from '@/components/ItemCommunitySection';
 import { ArticleContent } from '@/components/ArticleContent';
 import { SocialAvatar } from '@/components/Social';
 import { estimateReadTime } from '@/lib/articles';
 
 export default function ResourcePage() {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
   const [resource, setResource] = useState<Resource | null>(null);
-  const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useTopbarBack({ href: '/resources', label: 'Resources' });
@@ -36,23 +32,6 @@ export default function ResourcePage() {
     }
     fetchResource();
   }, [id]);
-
-  useEffect(() => {
-    async function fetchSaved(userId: string, resourceId: string) {
-      const { data } = await supabase.from('saved_resources').select('resource_id').eq('user_id', userId).eq('resource_id', resourceId).maybeSingle();
-      setSaved(Boolean(data));
-    }
-    if (user && resource) fetchSaved(user.id, resource.id);
-    else Promise.resolve().then(() => setSaved(false));
-  }, [resource, user]);
-
-  async function saveResource() {
-    if (!resource) return;
-    if (!user) { alert('Sign in first, then save this resource to your library.'); return; }
-    const { error } = await supabase.from('saved_resources').upsert({ user_id: user.id, resource_id: resource.id }, { onConflict: 'user_id,resource_id' });
-    if (error) { alert(error.message); return; }
-    setSaved(true);
-  }
 
   if (loading) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Loading…</div>;
   if (!resource) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Resource not found</div>;
@@ -89,39 +68,10 @@ export default function ResourcePage() {
               <span>{readTime} min read</span>
             </>
           )}
-          <span style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
-            {saved ? (
-              <Link href="/library" className="os-button os-button-secondary os-button-compact">
-                View in Library
-              </Link>
-            ) : (
-              <button
-                type="button"
-                className="os-button os-button-secondary os-button-compact"
-                onClick={saveResource}
-              >
-                Save
-              </button>
-            )}
-          </span>
         </div>
 
         <ArticleContent html={resource.long_description ?? resource.short_description ?? ''} />
       </article>
-
-      <div style={{ maxWidth: 720, margin: '0 auto', padding: '0 4px', width: '100%' }}>
-        <ItemCommunitySection
-          subjectType="resource"
-          subjectId={resource.id}
-          subjectLabel={resource.title}
-          categorySlugs={['questions']}
-          sectionTitle="Questions"
-          actionLabel="Ask a Question"
-          titlePlaceholder="What do you want to know?"
-          composerPlaceholder="Add the details of your question…"
-          emptyMessage="No questions yet — be the first to ask."
-        />
-      </div>
     </div>
   );
 }

@@ -2,66 +2,19 @@
 
 import Link from 'next/link';
 import { Suspense, useEffect, useMemo, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { PageShell } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
-import type { Category } from '@/lib/platform';
 import { normalizeTaxonomyValue } from '@/lib/taxonomy';
 import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
-import type { SubjectType } from '@/lib/social';
-
-// The composer keeps DB slugs intact while presenting the cleaner 44OS labels.
-const NEW_POST_CATEGORY_SLUGS = ['discussions', 'discussion', 'updates', 'reviews', 'questions'] as const;
-const NEW_POST_CATEGORY_ORDER = ['discussions', 'discussion', 'updates', 'questions', 'reviews'] as const;
-type PickableSlug = (typeof NEW_POST_CATEGORY_SLUGS)[number] | 'collaboration';
-
-type ComposerCategory = {
-  id: string;
-  label: string;
-  categoryId: string;
-  slug: PickableSlug;
-  postType: string;
-};
-
-// Which subject types are allowed for each category.
-const SUBJECT_TYPES_FOR_CATEGORY: Record<PickableSlug, SubjectType[]> = {
-  discussions: ['product', 'service', 'resource', 'profile'],
-  discussion:  ['product', 'service', 'resource', 'profile'],
-  updates:     ['product'],
-  reviews:     ['product', 'service'],
-  questions:   ['resource', 'product'],
-  collaboration: ['product', 'service', 'resource', 'profile'],
-};
-
-type SubjectResult = {
-  type: SubjectType;
-  id: string;
-  label: string;
-};
+import { createMentionNotifications } from '@/lib/achievementNotifications';
 
 function buildSlug(title: string) {
   const base = normalizeTaxonomyValue(title) || 'thread';
   return `${base}-${crypto.randomUUID().slice(0, 8)}`;
-}
-
-function subjectTypeLabel(type: SubjectType | null) {
-  switch (type) {
-    case 'product': return 'Product';
-    case 'service': return 'Service';
-    case 'resource': return 'Resource';
-    case 'profile': return 'Member';
-    case 'library_item': return 'Library item';
-    default: return 'Item';
-  }
-}
-
-function displayCategoryName(slug: string, dbName: string) {
-  // Display override: the DB discussion category shows as "General".
-  if (slug === 'discussions' || slug === 'discussion') return 'General';
-  return dbName;
 }
 
 export default function NewCommunityThreadPage() {
@@ -74,33 +27,13 @@ export default function NewCommunityThreadPage() {
 
 function NewCommunityThreadContent() {
   const router = useRouter();
-  const search = useSearchParams();
   const { user, loading } = useAuth();
-  const [categories, setCategories] = useState<Category[]>([]);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [categoryId, setCategoryId] = useState('');
-  const [postType, setPostType] = useState('discussion');
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [setupGateOpen, setSetupGateOpen] = useState(false);
-
-  // URL params
-  const initialSubjectType = (search.get('subject_type') as SubjectType | null) ?? null;
-  const initialSubjectId = search.get('subject_id') ?? null;
-  const initialSubjectLabel = search.get('subject_label') ?? null;
-  const initialCategorySlug = search.get('category');
-  const categoryLocked = Boolean(initialCategorySlug);
-
-  const [attachType, setAttachType] = useState<SubjectType | null>(initialSubjectType);
-  const [attachId, setAttachId] = useState<string | null>(initialSubjectId);
-  const [attachLabel, setAttachLabel] = useState<string | null>(initialSubjectLabel);
-
-  // Typeahead
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SubjectResult[]>([]);
-  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
@@ -111,123 +44,10 @@ function NewCommunityThreadContent() {
     loadStudioProfile(user.id).then(result => setProfile(result.profile));
   }, [user]);
 
-  const isCreator = Boolean(profile && (profile.role === 'creator' || profile.creator_type));
-
-  useEffect(() => {
-    async function loadCategories() {
-      const { data } = await supabase.from('categories').select('*').eq('scope', 'posts').order('sort_order');
-      const rows = ((data as Category[] | null) ?? [])
-        .filter(c => (NEW_POST_CATEGORY_SLUGS as readonly string[]).includes(c.slug))
-        // Hide 'updates' from non-creators — updates are creator-to-owner communications
-        .filter(c => c.slug !== 'updates' || isCreator || categoryLocked)
-        .sort((a, b) => {
-          const aIndex = (NEW_POST_CATEGORY_ORDER as readonly string[]).indexOf(a.slug);
-          const bIndex = (NEW_POST_CATEGORY_ORDER as readonly string[]).indexOf(b.slug);
-          return (aIndex === -1 ? 99 : aIndex) - (bIndex === -1 ? 99 : bIndex);
-        });
-      setCategories(rows);
-    }
-    loadCategories();
-  }, [isCreator, categoryLocked]);
-
-  // When categories load, set initial selection: URL locked category > match to subject type > default 'discussions'
-  useEffect(() => {
-    if (categories.length === 0 || categoryId) return;
-    let targetSlug: string | null = null;
-    if (initialCategorySlug) {
-      targetSlug = initialCategorySlug;
-    } else if (initialSubjectType) {
-      // Subject-only pre-fill (rare) — pick a sensible default
-      targetSlug = initialSubjectType === 'resource' ? 'questions' : 'reviews';
-    } else {
-      targetSlug = 'discussions';
-    }
-    const target = categories.find(c => c.slug === targetSlug)
-      ?? (targetSlug === 'discussions' ? categories.find(c => c.slug === 'discussion') : null)
-      ?? categories[0];
-    if (target) {
-      setCategoryId(target.id);
-      setPostType(target.slug);
-    }
-  }, [categories, categoryId, initialCategorySlug, initialSubjectType]);
-
-  const categoryOptions = useMemo<ComposerCategory[]>(() => {
-    const base = categories.map(category => ({
-      id: category.slug,
-      label: displayCategoryName(category.slug, category.name),
-      categoryId: category.id,
-      slug: category.slug as PickableSlug,
-      postType: category.slug,
-    }));
-    const general = categories.find(category => category.slug === 'discussions' || category.slug === 'discussion');
-    if (general) {
-      base.push({
-        id: 'collaboration',
-        label: 'Collaboration',
-        categoryId: general.id,
-        slug: 'collaboration',
-        postType: 'collaboration',
-      });
-    }
-    return base;
-  }, [categories]);
-  const activeOption = useMemo(
-    () => categoryOptions.find(option => option.categoryId === categoryId && option.postType === postType) ?? categoryOptions.find(option => option.categoryId === categoryId) ?? null,
-    [categoryOptions, categoryId, postType],
+  const bodyHint = useMemo(
+    () => 'Use @username in the message when you want to mention someone.',
+    [],
   );
-  const allowedSubjectTypes: SubjectType[] = useMemo(() => {
-    if (!activeOption) return [];
-    const slug = activeOption.slug;
-    return SUBJECT_TYPES_FOR_CATEGORY[slug] ?? [];
-  }, [activeOption]);
-
-  // When the user changes category and their attached subject is no longer compatible, clear it.
-  useEffect(() => {
-    if (!attachType) return;
-    if (allowedSubjectTypes.length === 0) return;
-    if (!allowedSubjectTypes.includes(attachType)) {
-      setAttachType(null);
-      setAttachId(null);
-      setAttachLabel(null);
-    }
-  }, [allowedSubjectTypes, attachType]);
-
-  // Subject typeahead — filtered by category-allowed subject types
-  useEffect(() => {
-    if (attachId) { setResults([]); return; }
-    const q = query.trim();
-    if (q.length < 2) { setResults([]); return; }
-    setSearching(true);
-    const timeout = setTimeout(async () => {
-      const queries: Promise<{ data: unknown[] | null; type: SubjectType }>[] = [];
-      if (allowedSubjectTypes.includes('product')) {
-        queries.push(Promise.resolve(supabase.from('products').select('id, title').ilike('title', `%${q}%`).limit(4)).then(r => ({ data: r.data as unknown[] | null, type: 'product' as SubjectType })));
-      }
-      if (allowedSubjectTypes.includes('service')) {
-        queries.push(Promise.resolve(supabase.from('services').select('id, title').ilike('title', `%${q}%`).limit(4)).then(r => ({ data: r.data as unknown[] | null, type: 'service' as SubjectType })));
-      }
-      if (allowedSubjectTypes.includes('resource')) {
-        queries.push(Promise.resolve(supabase.from('resources').select('id, title').ilike('title', `%${q}%`).limit(4)).then(r => ({ data: r.data as unknown[] | null, type: 'resource' as SubjectType })));
-      }
-      if (allowedSubjectTypes.includes('profile')) {
-        queries.push(Promise.resolve(supabase.from('profiles').select('id, display_name, username').or(`display_name.ilike.%${q}%,username.ilike.%${q}%`).limit(4)).then(r => ({ data: r.data as unknown[] | null, type: 'profile' as SubjectType })));
-      }
-      const responses = await Promise.all(queries);
-      const merged: SubjectResult[] = [];
-      responses.forEach(({ data, type }) => {
-        (data ?? []).forEach(row => {
-          const item = row as { id: string; title?: string; display_name?: string | null; username?: string | null };
-          const label = type === 'profile'
-            ? (item.display_name || item.username || 'Member')
-            : (item.title || 'Item');
-          merged.push({ type, id: item.id, label });
-        });
-      });
-      setResults(merged);
-      setSearching(false);
-    }, 200);
-    return () => clearTimeout(timeout);
-  }, [query, attachId, allowedSubjectTypes]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -248,11 +68,11 @@ function NewCommunityThreadContent() {
       .from('posts')
       .insert({
         author_id: user.id,
-        category_id: categoryId || null,
+        category_id: null,
         slug: buildSlug(title),
         title: title.trim(),
         body: body.trim(),
-        post_type: postType || 'discussion',
+        post_type: 'general',
         status: 'published',
       })
       .select('id, slug')
@@ -264,49 +84,23 @@ function NewCommunityThreadContent() {
       return;
     }
 
-    const created = data as { id: string; slug: string | null } | null;
-    if (created && attachType && attachId) {
-      const { error: tagError } = await supabase.from('post_subjects').insert({
-        post_id: created.id,
-        subject_type: attachType,
-        subject_id: attachId,
-      });
-      if (tagError) {
-        setSaving(false);
-        setError(`Post saved, but tagging failed: ${tagError.message}`);
-        return;
-      }
-    }
+    await createMentionNotifications({
+      authorUserId: user.id,
+      authorName: profile?.display_name || profile?.username || 'Someone',
+      postId: data.id,
+      postSlug: data.slug,
+      postTitle: title.trim(),
+      body: body.trim(),
+    });
 
     setSaving(false);
-    const nextSlug = created?.slug ?? created?.id;
-    router.push(`/community/thread/${nextSlug}`);
-  }
-
-  function pickResult(result: SubjectResult) {
-    setAttachType(result.type);
-    setAttachId(result.id);
-    setAttachLabel(result.label);
-    setQuery('');
-    setResults([]);
-  }
-
-  function clearAttachment() {
-    if (categoryLocked) return; // Don't allow clearing pre-attached subject when arrived from an item page
-    setAttachType(null);
-    setAttachId(null);
-    setAttachLabel(null);
+    const created = data as { id: string; slug: string | null } | null;
+    router.push(`/community/thread/${created?.slug ?? created?.id}`);
   }
 
   if (loading || !user) {
     return <PageShell><div style={{ minHeight: '40vh' }} /></PageShell>;
   }
-
-  const attachHint = attachType
-    ? `Will show on this ${subjectTypeLabel(attachType).toLowerCase()}'s page.`
-    : allowedSubjectTypes.length > 0
-      ? `Optional — attach to a ${allowedSubjectTypes.map(t => subjectTypeLabel(t).toLowerCase()).join(', ')}.`
-      : 'This post will only show in the community feed.';
 
   return (
     <PageShell>
@@ -314,39 +108,13 @@ function NewCommunityThreadContent() {
         <div className="dashboard-header">
           <div className="dashboard-header-copy">
             <h1 className="os-type-display">New Post</h1>
-            <p className="os-type-body">Pick a category and tag a related item when the post belongs somewhere specific.</p>
+            <p className="os-type-body">Community posts are for general conversation. Reviews happen on product pages. Creator updates happen from Dashboard.</p>
           </div>
           <Link href="/community" className="os-button os-button-secondary os-button-compact">Back</Link>
         </div>
 
         <div className="dashboard-list-surface" style={{ padding: 'var(--os-space-6, 28px)' }}>
           <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 20 }}>
-            <div>
-              <div className="os-type-card-title" style={{ marginBottom: 8 }}>Category</div>
-              {categoryLocked && activeOption ? (
-                <div className="post-attach-chip">
-                  <span className="post-attach-chip-type">Locked</span>
-                  <span className="post-attach-chip-label">{activeOption.label}</span>
-                </div>
-              ) : (
-                <div className="settings-segment" role="group" aria-label="Post category">
-                  {categoryOptions.map(category => (
-                    <button
-                      key={category.id}
-                      type="button"
-                      className={category.categoryId === categoryId && category.postType === postType ? 'settings-segment-item settings-segment-item-active' : 'settings-segment-item'}
-                      onClick={() => {
-                        setCategoryId(category.categoryId);
-                        setPostType(category.postType);
-                      }}
-                    >
-                      {category.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
             <label>
               <div className="os-type-card-title" style={{ marginBottom: 8 }}>Title</div>
               <input
@@ -358,49 +126,6 @@ function NewCommunityThreadContent() {
               />
             </label>
 
-            <div>
-              <div className="os-type-card-title" style={{ marginBottom: 8 }}>Tag</div>
-              {attachId ? (
-                <div className="post-attach-chip">
-                  <span className="post-attach-chip-type">{subjectTypeLabel(attachType)}</span>
-                  <span className="post-attach-chip-label">{attachLabel}</span>
-                  {!categoryLocked && (
-                    <button type="button" className="post-attach-chip-clear" onClick={clearAttachment} aria-label="Remove attachment">×</button>
-                  )}
-                </div>
-              ) : (
-                <div style={{ position: 'relative' }}>
-                  <input
-                    className="os-input-field os-input-large"
-                    value={query}
-                    onChange={event => setQuery(event.target.value)}
-                    placeholder={allowedSubjectTypes.length > 0 ? `Search ${allowedSubjectTypes.map(t => subjectTypeLabel(t).toLowerCase() + 's').join(', ')}…` : ''}
-                    disabled={allowedSubjectTypes.length === 0}
-                    style={{ width: '100%' }}
-                  />
-                  {(results.length > 0 || searching) && (
-                    <div className="post-attach-results">
-                      {searching && <div className="post-attach-result-empty">Searching…</div>}
-                      {results.map(result => (
-                        <button
-                          key={`${result.type}-${result.id}`}
-                          type="button"
-                          className="post-attach-result"
-                          onClick={() => pickResult(result)}
-                        >
-                          <span className="post-attach-result-type">{subjectTypeLabel(result.type)}</span>
-                          <span className="post-attach-result-label">{result.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-              <div className="os-type-meta" style={{ color: 'var(--os-color-ink-muted)', marginTop: 8 }}>
-                {attachHint}
-              </div>
-            </div>
-
             <label>
               <div className="os-type-card-title" style={{ marginBottom: 8 }}>Message</div>
               <textarea
@@ -408,10 +133,13 @@ function NewCommunityThreadContent() {
                 rows={10}
                 value={body}
                 onChange={event => setBody(event.target.value)}
-                placeholder="Share the context, the question, or the update."
+                placeholder="Share the thought, question, or idea."
                 style={{ minHeight: 200 }}
               />
             </label>
+            <div className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>
+              {bodyHint}
+            </div>
 
             {error && (
               <div className="dashboard-status dashboard-status-error">
@@ -419,11 +147,11 @@ function NewCommunityThreadContent() {
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-              <Link className="os-button os-button-ghost" href="/community">Cancel</Link>
+            <div style={{ display: 'flex', gap: 12, justifySelf: 'start' }}>
               <button className="os-button os-button-primary" type="submit" disabled={saving}>
-                {saving ? 'Publishing…' : 'Publish'}
+                {saving ? 'Posting…' : 'Publish Post'}
               </button>
+              <Link className="os-button os-button-ghost" href="/community">Cancel</Link>
             </div>
           </form>
         </div>

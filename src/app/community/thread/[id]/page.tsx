@@ -24,6 +24,7 @@ import {
   authorDisplayName,
   authorHref,
   compactDate,
+  getPostMetaLabel,
   likersByPost,
   type LikeRow,
   type SocialLiker,
@@ -437,7 +438,7 @@ export default function CommunityThreadPage() {
               disabled={liking}
               titleSize="lg"
               handleOnly={false}
-              meta={thread.categories?.name ?? thread.post_type}
+              meta={getPostMetaLabel(thread)}
               rowClickable={false}
             />
             {replyComposerOpen && (

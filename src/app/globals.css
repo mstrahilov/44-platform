@@ -4417,10 +4417,33 @@ body.theme-dark .product-tile:hover .product-tile-art {
   min-width: 0;
 }
 
+.dashboard-row-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
 .dashboard-row-title {
   font-size: 18px;
   font-weight: 720;
   line-height: 1.15;
+}
+
+.dashboard-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.72);
+}
+
+.dashboard-status-dot-published {
+  background: #1ea672;
+}
+
+.dashboard-status-dot-draft {
+  background: #d2a449;
 }
 
 .dashboard-row-subtitle,
@@ -5502,6 +5525,126 @@ body.theme-dark .product-tile:hover .product-tile-art {
   font-size: 13px;
 }
 
+.update-subject-picker {
+  position: relative;
+}
+
+.update-subject-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid var(--os-color-hairline);
+  background: rgba(255, 255, 255, 0.66);
+  color: var(--os-color-ink);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+}
+
+.update-subject-trigger:disabled {
+  cursor: not-allowed;
+  color: var(--os-color-ink-muted);
+}
+
+.update-subject-artwork {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  overflow: hidden;
+  flex: 0 0 auto;
+  background: rgba(15, 23, 42, 0.08);
+  display: grid;
+  place-items: center;
+  color: var(--os-color-ink-muted);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.update-subject-artwork img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.update-subject-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.update-subject-title {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--os-color-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.update-subject-meta,
+.update-subject-placeholder {
+  font-size: 13px;
+  color: var(--os-color-ink-muted);
+}
+
+.update-subject-chevron {
+  flex: 0 0 auto;
+  color: var(--os-color-ink-muted);
+  font-size: 14px;
+}
+
+.update-subject-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow:
+    0 28px 64px rgba(15, 23, 42, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(22px) saturate(1.05);
+  -webkit-backdrop-filter: blur(22px) saturate(1.05);
+  overflow: hidden;
+}
+
+.update-subject-menu-list {
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.update-subject-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 0;
+  border-bottom: 1px solid rgba(17, 24, 39, 0.08);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.update-subject-option:last-child {
+  border-bottom: 0;
+}
+
+.update-subject-option:hover,
+.update-subject-option-active {
+  background: rgba(15, 23, 42, 0.05);
+}
+
 /* Item-page community section */
 .item-community-section {
   display: grid;
@@ -5524,6 +5667,37 @@ body.theme-dark .product-tile:hover .product-tile-art {
   border-radius: 14px;
   background: var(--os-color-surface);
   margin-bottom: 8px;
+}
+
+.item-community-surface {
+  overflow: hidden;
+}
+
+body.theme-dark .dashboard-list-surface,
+body.theme-dark .social-feed-panel,
+body.theme-dark .item-community-surface {
+  border: 1px solid var(--os-card-border);
+  background: var(--os-card-bg);
+  box-shadow: var(--os-card-shadow);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+body.theme-dark .dashboard-list-row + .dashboard-list-row {
+  border-top-color: var(--os-color-hairline);
+}
+
+body.theme-dark .dashboard-status-dot {
+  box-shadow: 0 0 0 3px rgba(15, 17, 16, 0.92);
+}
+
+.item-community-composer-surface {
+  margin-bottom: 0;
+  padding: 22px 24px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .item-community-composer-title {

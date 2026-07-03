@@ -370,14 +370,14 @@ function ProductLibraryDetail({
       <ItemCommunitySection
         subjectType="product"
         subjectId={product.id}
-        subjectLabel={product.title}
-        categorySlugs={['updates']}
-        sectionTitle="Updates"
+        intent="update"
+        sectionTitle="Creator Updates"
         actionLabel="Post Update"
         titlePlaceholder="Update headline"
         composerPlaceholder="Share what's new with owners of this release."
         emptyMessage="No updates from the creator yet."
         canPost={userId === product.author_id}
+        showAction={false}
       />
 
       <AchievementToast toast={toast} onDone={() => setToast(null)} />

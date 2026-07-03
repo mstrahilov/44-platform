@@ -8,7 +8,7 @@ import { matchesCategory, matchesQuery } from '@/lib/taxonomy';
 import { PageShell, EmptyMessage } from '@/components/Ui';
 import { SocialPostRow } from '@/components/Social';
 import { useTopbarTabs } from '@/components/TopbarContext';
-import { countById, type CountMap, type SocialPost } from '@/lib/social';
+import { countById, isGeneralPost, type CountMap, type SocialPost } from '@/lib/social';
 
 export default function CommunityBrowsePage() {
   const [posts, setPosts] = useState<SocialPost[]>([]);
@@ -38,8 +38,8 @@ export default function CommunityBrowsePage() {
         supabase.from('post_replies').select('post_id').eq('status', 'published'),
         supabase.from('post_likes').select('post_id'),
       ]);
-      setPosts((postRows as SocialPost[] | null) ?? []);
-      setCategories((categoryRows as Category[] | null) ?? []);
+      setPosts(((postRows as SocialPost[] | null) ?? []).filter(post => isGeneralPost(post)));
+      setCategories(((categoryRows as Category[] | null) ?? []).filter(category => category.slug !== 'updates' && category.slug !== 'reviews'));
       setReplyCounts(countById((replyRows as Array<{ post_id: string }> | null) ?? [], 'post_id'));
       setLikeCounts(countById((likeRows as Array<{ post_id: string }> | null) ?? [], 'post_id'));
     }

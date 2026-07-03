@@ -10,14 +10,14 @@ import {
   type AchievementNotification,
 } from '@/lib/achievementNotifications';
 
-type TabId = 'all' | 'mentions' | 'replies' | 'orders' | 'updates';
+type TabId = 'all' | 'mentions' | 'replies' | 'orders' | 'achievements';
 
 const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'all', label: 'All' },
   { id: 'mentions', label: 'Mentions' },
   { id: 'replies', label: 'Replies' },
   { id: 'orders', label: 'Orders' },
-  { id: 'updates', label: 'Updates' },
+  { id: 'achievements', label: 'Achievements' },
 ];
 
 export default function NotificationsPage() {
@@ -62,13 +62,14 @@ export default function NotificationsPage() {
 
   const visibleNotifications = notifications.filter(item => {
     if (activeTab === 'all') return true;
-    if (activeTab === 'updates') return item.kind === 'achievement';
+    if (activeTab === 'achievements') return item.kind === 'achievement';
     if (activeTab === 'replies') return item.kind === 'reply';
+    if (activeTab === 'mentions') return item.kind === 'mention';
     return false;
   });
   const emptyCopyByTab: Record<TabId, string> = {
     all: 'Unlock achievements, get replies, or place orders to see activity here.',
-    updates: 'Unlock achievements, get replies, or place orders to see activity here.',
+    achievements: 'Achievements you unlock across the platform will appear here.',
     mentions: 'Posts and replies that mention you will appear here.',
     replies: 'Replies to your posts and comments will appear here.',
     orders: 'Order updates and receipts will appear here.',
@@ -77,7 +78,7 @@ export default function NotificationsPage() {
   return (
     <PageShell>
       <main className="dashboard-page">
-        <HubHero title="Notifications" copy="Achievement unlocks and system activity." />
+        <HubHero title="Notifications" copy="Mentions, replies, achievements, and other account activity." />
         <div className="settings-segment" role="tablist" aria-label="Notification sections">
           {TABS.map(tab => (
             <button
@@ -95,10 +96,17 @@ export default function NotificationsPage() {
           {visibleNotifications.length > 0 ? (
             <div className="dashboard-list-surface">
               {visibleNotifications.map(item => (
-                <article key={item.id} className="dashboard-list-row" style={{ gridTemplateColumns: 'minmax(0, 1fr) auto' }}>
+                <article
+                  key={item.id}
+                  className="dashboard-list-row"
+                  style={{ gridTemplateColumns: 'minmax(0, 1fr) auto', cursor: item.href ? 'pointer' : 'default' }}
+                  onClick={() => {
+                    if (item.href) router.push(item.href);
+                  }}
+                >
                   <div className="dashboard-row-copy">
                     <div className="os-type-eyebrow" style={{ color: item.kind === 'reply' ? 'var(--os-color-ink-secondary)' : 'var(--os-color-accent)' }}>
-                      {item.kind === 'reply' ? 'Reply' : 'Achievement Unlocked'}
+                      {item.kind === 'reply' ? 'Reply' : item.kind === 'mention' ? 'Mention' : 'Achievement Unlocked'}
                     </div>
                     <div className="dashboard-row-title">{item.title}</div>
                     {item.description && (
