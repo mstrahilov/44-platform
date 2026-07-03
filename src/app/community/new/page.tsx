@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageShell } from '@/components/Ui';
 import { supabase } from '@/lib/supabase';
@@ -54,6 +54,14 @@ function displayCategoryName(slug: string, dbName: string) {
 }
 
 export default function NewCommunityThreadPage() {
+  return (
+    <Suspense fallback={<PageShell><div style={{ minHeight: '40vh' }} /></PageShell>}>
+      <NewCommunityThreadContent />
+    </Suspense>
+  );
+}
+
+function NewCommunityThreadContent() {
   const router = useRouter();
   const search = useSearchParams();
   const { user, loading } = useAuth();
