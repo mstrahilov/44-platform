@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -11,8 +11,10 @@ import type { Product } from '@/lib/products';
 import { getProductCollectionContent, getProductCollectionPrimaryAction, getProductRuntimeKind } from '@/lib/collectionContent';
 import { creatorHref, type ProductAchievement, type Resource, type ServiceRequest, type Track, type UserAchievement } from '@/lib/platform';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
+import { ItemCommunitySection } from '@/components/ItemCommunitySection';
 import { unlockAchievementForUser } from '@/lib/achievementNotifications';
 import { useTopbarBack } from '@/components/TopbarContext';
+import { useMusicPlayer, type MusicQueueTrack } from '@/components/MusicPlayer';
 
 type CollectionKind = 'product' | 'resource' | 'service';
 
@@ -56,7 +58,7 @@ export default function CollectionItemPage() {
       if (kind === 'product') {
         const { data, error: itemError } = await supabase
           .from('collection_items')
-          .select('id,product_id,acquisition_type,acquired_at,status,products(*, creators:profiles!author_id(id, slug, username, display_name, avatar_url))')
+          .select('id,product_id,acquisition_type,acquired_at,status,products(*, creators:profiles!author_id(*))')
           .eq('id', id)
           .eq('user_id', userId)
           .maybeSingle();
@@ -98,7 +100,7 @@ export default function CollectionItemPage() {
       if (kind === 'resource') {
         const { data, error: itemError } = await supabase
           .from('saved_resources')
-          .select('id,saved_at,resources(*, creators:profiles!author_id(id, slug, name:display_name, avatar_url), categories(id, slug, name))')
+          .select('id,saved_at,resources(*, creators:profiles!author_id(*, name:display_name), categories(id, slug, name))')
           .eq('id', id)
           .eq('user_id', userId)
           .maybeSingle();
@@ -110,7 +112,7 @@ export default function CollectionItemPage() {
       if (kind === 'service') {
         const { data, error: itemError } = await supabase
           .from('service_requests')
-          .select('id,service_id,message,status,created_at,services(*, creators:profiles!author_id(id, slug, name:display_name, avatar_url), categories(id, slug, name))')
+          .select('id,service_id,message,status,created_at,services(*, creators:profiles!author_id(*, name:display_name), categories(id, slug, name))')
           .eq('id', id)
           .eq('user_id', userId)
           .maybeSingle();
@@ -162,25 +164,54 @@ function ProductCollectionDetail({
   const content = getProductCollectionContent(product);
   const isMusic = getProductRuntimeKind(product) === 'music';
   const creatorLink = creatorHref(product.creators ?? product.creator);
+  const { currentTrack, isPlaying, playQueue, toggleTrack: togglePlayerTrack } = useMusicPlayer();
   const [localUnlockedAchievementIds, setLocalUnlockedAchievementIds] = useState(unlockedAchievementIds);
   const unlocked = achievements.filter(item => localUnlockedAchievementIds.has(item.id));
   const locked = achievements.filter(item => !localUnlockedAchievementIds.has(item.id));
-  const [activeTrackId, setActiveTrackId] = useState<string | null>(null);
   const [playedTrackIds, setPlayedTrackIds] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<AchievementToastData | null>(null);
 
-  useEffect(() => { setActiveTrackId(null); setPlayedTrackIds(new Set()); }, [product.id]);
+  useEffect(() => { setPlayedTrackIds(new Set()); }, [product.id]);
   useEffect(() => { setLocalUnlockedAchievementIds(unlockedAchievementIds); }, [unlockedAchievementIds]);
 
+  const musicQueue = useMemo<MusicQueueTrack[]>(() => (
+    tracks
+      .filter(track => Boolean(track.audio_url))
+      .map(track => ({
+        id: track.id,
+        title: track.title,
+        artist: product.creators?.display_name || product.creator || '44 Creator',
+        releaseTitle: product.title,
+        artworkUrl: product.cover_url || product.hero_url,
+        audioUrl: track.audio_url!,
+        durationSeconds: track.duration_seconds,
+        productId: product.id,
+      }))
+  ), [product.cover_url, product.creator, product.creators?.display_name, product.hero_url, product.id, product.title, tracks]);
+
   async function toggleTrack(track: Track) {
-    setActiveTrackId(current => {
-      if (!track.audio_url) return track.id;
-      const next = current === track.id ? null : track.id;
-      return next;
-    });
+    if (!track.audio_url) return;
+    const trackIndex = musicQueue.findIndex(item => item.id === track.id);
+    if (trackIndex < 0) return;
+
+    togglePlayerTrack(musicQueue, trackIndex);
     setPlayedTrackIds(current => {
       const next = new Set(current);
       next.add(track.id);
+      return next;
+    });
+  }
+
+  function playRelease() {
+    if (!musicQueue.length) {
+      runProductAction(action);
+      return;
+    }
+
+    playQueue(musicQueue, 0);
+    setPlayedTrackIds(current => {
+      const next = new Set(current);
+      next.add(musicQueue[0].id);
       return next;
     });
   }
@@ -244,7 +275,7 @@ function ProductCollectionDetail({
             )}
           </div>
           <div className="view-album-actions">
-            <button className="os-button os-button-primary" type="button" onClick={() => runProductAction(action)}>{action.label}</button>
+            <button className="os-button os-button-primary" type="button" onClick={isMusic ? playRelease : () => runProductAction(action)}>{action.label}</button>
             <Link className="os-button os-button-secondary" href={creatorLink}>View Creator</Link>
           </div>
         </div>
@@ -270,10 +301,11 @@ function ProductCollectionDetail({
                 <button
                   type="button"
                   className="view-track-play"
-                  aria-label={`${activeTrackId === track.id ? 'Pause' : 'Play'} ${track.title}`}
+                  aria-label={`${currentTrack?.id === track.id && isPlaying ? 'Pause' : 'Play'} ${track.title}`}
                   onClick={() => toggleTrack(track)}
+                  disabled={!track.audio_url}
                 >
-                  {activeTrackId === track.id ? '❚❚' : '▶'}
+                  {currentTrack?.id === track.id && isPlaying ? 'II' : '>'}
                 </button>
                 <span className="view-track-title">{track.title}</span>
                 <span className="view-track-duration">{formatDuration(track.duration_seconds)}</span>
@@ -334,6 +366,19 @@ function ProductCollectionDetail({
           )}
         </div>
       )}
+
+      <ItemCommunitySection
+        subjectType="product"
+        subjectId={product.id}
+        subjectLabel={product.title}
+        categorySlugs={['updates']}
+        sectionTitle="Updates"
+        actionLabel="Post Update"
+        titlePlaceholder="Update headline"
+        composerPlaceholder="Share what's new with owners of this release."
+        emptyMessage="No updates from the creator yet."
+        canPost={userId === product.author_id}
+      />
 
       <AchievementToast toast={toast} onDone={() => setToast(null)} />
     </div>

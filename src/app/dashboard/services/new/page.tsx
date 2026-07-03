@@ -4,10 +4,13 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageShell, GlassPanel } from '@/components/Ui';
+import { useTopbarBack } from '@/components/TopbarContext';
 import { UploadField } from '@/components/UploadField';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Category } from '@/lib/platform';
+import { currencyForCountry, normalizeMarketMode, type MarketMode } from '@/lib/marketPreferences';
+import { isMissingColumnError } from '@/lib/schemaCompat';
 import { getStudioDisplayName, isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { normalizeTaxonomyValue } from '@/lib/taxonomy';
 
@@ -23,6 +26,7 @@ function formatPriceInput(value: string) {
 }
 
 export default function NewServicePage() {
+  useTopbarBack({ href: '/dashboard/services', label: 'Services' });
   const router = useRouter();
   const { user, loading } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
@@ -34,6 +38,10 @@ export default function NewServicePage() {
   const [shortDescription, setShortDescription] = useState('');
   const [longDescription, setLongDescription] = useState('');
   const [startingPrice, setStartingPrice] = useState('0.00');
+  const [marketMode, setMarketMode] = useState<MarketMode>('global');
+  const [localPrice, setLocalPrice] = useState('0.00');
+  const [localCurrency, setLocalCurrency] = useState('USD');
+  const [availableLocallyOnly, setAvailableLocallyOnly] = useState(false);
   const [deliveryEstimate, setDeliveryEstimate] = useState('');
   const [coverUrl, setCoverUrl] = useState('');
   const [saving, setSaving] = useState(false);
@@ -59,6 +67,8 @@ export default function NewServicePage() {
       setCategoryId(resolvedCategories[0]?.id ?? '');
       setProfile(profileResult.profile);
       setCreatorName(getStudioDisplayName(profileResult.profile, user.email));
+      setMarketMode(normalizeMarketMode(profileResult.profile?.service_market_mode));
+      setLocalCurrency(profileResult.profile?.home_currency || currencyForCountry(profileResult.profile?.home_country_code));
     }
 
     loadFormData();
@@ -88,8 +98,10 @@ export default function NewServicePage() {
 
     const priceNumber = Number(startingPrice || '0');
     const startingPriceCents = Number.isFinite(priceNumber) ? Math.max(0, Math.round(priceNumber * 100)) : 0;
+    const localPriceNumber = Number(localPrice || '0');
+    const localPriceCents = Number.isFinite(localPriceNumber) ? Math.max(0, Math.round(localPriceNumber * 100)) : 0;
 
-    const { error: insertError } = await supabase.from('services').insert({
+    const insertPayload = {
       author_id: profile?.id ?? user.id,
       category_id: categoryId,
       slug: buildSlug(cleanTitle),
@@ -98,6 +110,10 @@ export default function NewServicePage() {
       long_description: cleanLongDescription,
       service_type: cleanType,
       starting_price_cents: startingPriceCents,
+      market_mode: marketMode,
+      local_price_cents: marketMode === 'global' ? null : localPriceCents,
+      local_currency: marketMode === 'global' ? null : localCurrency,
+      available_locally_only: availableLocallyOnly,
       delivery_estimate: deliveryEstimate.trim() || null,
       cover_url: coverUrl.trim() || null,
       featured: false,
@@ -105,7 +121,21 @@ export default function NewServicePage() {
       feature_description: selectedCategory?.name
         ? `Professional ${cleanType.toLowerCase()} under ${selectedCategory.name}.`
         : null,
-    });
+    };
+
+    let { error: insertError } = await supabase.from('services').insert(insertPayload);
+
+    if (isMissingColumnError(insertError)) {
+      const {
+        market_mode: _marketMode,
+        local_price_cents: _localPriceCents,
+        local_currency: _localCurrency,
+        available_locally_only: _availableLocallyOnly,
+        ...legacyPayload
+      } = insertPayload;
+      const retry = await supabase.from('services').insert(legacyPayload);
+      insertError = retry.error;
+    }
 
     setSaving(false);
 
@@ -123,33 +153,26 @@ export default function NewServicePage() {
 
   return (
     <PageShell>
-      <div style={{ maxWidth: 980, margin: '0 auto', padding: '64px 0' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20, alignItems: 'flex-start', marginBottom: 32 }}>
-          <div>
-            <h1 style={{ fontSize: 48, fontWeight: 780, letterSpacing: '-0.04em', marginBottom: 10 }}>
-              New Service
-            </h1>
-
-            <p style={{ color: 'var(--os-color-ink-secondary)', fontSize: 18 }}>
+      <div className="dashboard-editor">
+        <header className="dashboard-header">
+          <div className="dashboard-header-copy">
+            <h1 className="os-type-display">New Service</h1>
+            <p className="os-type-body">
               Create a service offering directly from inside the app.
             </p>
           </div>
+        </header>
 
-          <Link href="/dashboard/services" className="os-button os-button-ghost os-button-compact">
-            Back to Services
-          </Link>
-        </div>
-
-        <GlassPanel style={{ padding: 32 }}>
-          <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 22 }}>
-            <label>
-              <div style={{ marginBottom: 8, fontWeight: 700 }}>Service Title</div>
+        <GlassPanel className="dashboard-form-panel" style={{ padding: 32 }}>
+          <form onSubmit={handleSubmit} className="dashboard-form">
+            <label className="dashboard-field">
+              <div className="dashboard-field-label">Service Title</div>
               <input className="input" value={title} onChange={event => setTitle(event.target.value)} placeholder="Example: Bass Guitar Recording" />
             </label>
 
-            <div style={{ display: 'grid', gap: 22, gridTemplateColumns: '1fr 1fr' }}>
-              <label>
-                <div style={{ marginBottom: 8, fontWeight: 700 }}>Category</div>
+            <div className="dashboard-form-grid dashboard-form-grid-2">
+              <label className="dashboard-field">
+                <div className="dashboard-field-label">Category</div>
                 <select className="input" value={categoryId} onChange={event => setCategoryId(event.target.value)}>
                   {categories.map(category => (
                     <option key={category.id} value={category.id}>{category.name}</option>
@@ -157,36 +180,76 @@ export default function NewServicePage() {
                 </select>
               </label>
 
-              <label>
-                <div style={{ marginBottom: 8, fontWeight: 700 }}>Type</div>
+              <label className="dashboard-field">
+                <div className="dashboard-field-label">Type</div>
                 <input className="input" value={serviceType} onChange={event => setServiceType(event.target.value)} placeholder="Mixing, Web Design, Strategy…" />
               </label>
             </div>
 
-            <label>
-              <div style={{ marginBottom: 8, fontWeight: 700 }}>Short Description</div>
+            <label className="dashboard-field">
+              <div className="dashboard-field-label">Short Description</div>
               <textarea className="input" rows={3} value={shortDescription} onChange={event => setShortDescription(event.target.value)} placeholder="Short card copy for this service." />
             </label>
 
-            <label>
-              <div style={{ marginBottom: 8, fontWeight: 700 }}>Long Description</div>
+            <label className="dashboard-field">
+              <div className="dashboard-field-label">Long Description</div>
               <textarea className="input" rows={5} value={longDescription} onChange={event => setLongDescription(event.target.value)} placeholder="Full service description used on detail pages." />
             </label>
 
-            <div style={{ display: 'grid', gap: 22, gridTemplateColumns: '1fr 1fr 1fr' }}>
-              <label>
-                <div style={{ marginBottom: 8, fontWeight: 700 }}>Starting Price</div>
+            <div className="dashboard-form-grid dashboard-form-grid-3">
+              <label className="dashboard-field">
+                <div className="dashboard-field-label">Global Starting Price (USD)</div>
                 <input className="input" value={startingPrice} onChange={event => setStartingPrice(formatPriceInput(event.target.value))} placeholder="299.00" />
               </label>
 
-              <label>
-                <div style={{ marginBottom: 8, fontWeight: 700 }}>Delivery Estimate</div>
+              {marketMode !== 'global' && (
+                <label className="dashboard-field">
+                  <div className="dashboard-field-label">Local Starting Price ({localCurrency})</div>
+                  <input className="input" value={localPrice} onChange={event => setLocalPrice(formatPriceInput(event.target.value))} placeholder="0.00" />
+                </label>
+              )}
+
+              <label className="dashboard-field">
+                <div className="dashboard-field-label">Delivery Estimate</div>
                 <input className="input" value={deliveryEstimate} onChange={event => setDeliveryEstimate(event.target.value)} placeholder="3–5 days" />
               </label>
 
-              <label>
-                <div style={{ marginBottom: 8, fontWeight: 700 }}>Creator</div>
+              <label className="dashboard-field">
+                <div className="dashboard-field-label">Creator</div>
                 <input className="input" value={creatorName} readOnly />
+              </label>
+            </div>
+
+            <div className="settings-field">
+              <div className="settings-field-head">
+                <div className="os-type-card-title">Market</div>
+                <p className="os-type-body-small">Choose whether this service uses one global USD price or adds a local market price.</p>
+              </div>
+              <div className="settings-segment" role="group" aria-label="Service market">
+                {[
+                  { id: 'global', label: 'Global' },
+                  { id: 'global_plus_local', label: 'Global + Local' },
+                ].map(option => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className={option.id === marketMode ? 'settings-segment-item settings-segment-item-active' : 'settings-segment-item'}
+                    onClick={() => setMarketMode(option.id as MarketMode)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <label className="dashboard-field" style={{ marginTop: 14 }}>
+                <span style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={availableLocallyOnly}
+                    onChange={event => setAvailableLocallyOnly(event.target.checked)}
+                  />
+                  <span className="dashboard-field-label">Item available locally only</span>
+                </span>
+                <p className="dashboard-form-note">You can change your local market in Preferences.</p>
               </label>
             </div>
 
@@ -200,25 +263,24 @@ export default function NewServicePage() {
               onChange={setCoverUrl}
             />
 
-            {error && (
-              <p style={{ color: '#ff9b9b', fontSize: 14, fontWeight: 600 }}>
-                {error}
-              </p>
-            )}
+            {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
 
             {!isCreatorProfile(profile) && (
-              <p style={{ color: 'var(--os-color-ink-secondary)', fontSize: 14 }}>
+              <p className="dashboard-form-note">
                 This account is not marked as a creator yet. You can still save drafts, but switch your profile role to creator before publishing publicly.
               </p>
             )}
 
-            <div style={{ display: 'flex', gap: 12, justifySelf: 'start' }}>
-              <button className="os-button os-button-primary" type="submit" disabled={saving}>
-                {saving ? 'Saving…' : 'Save Draft'}
-              </button>
-              <Link className="os-button os-button-ghost" href="/dashboard/services">
-                Cancel
-              </Link>
+            <div className="dashboard-form-actions">
+              <div className="dashboard-form-actions-left" />
+              <div className="dashboard-form-actions-right">
+                <Link className="os-button os-button-secondary" href="/dashboard/services">
+                  Cancel
+                </Link>
+                <button className="os-button os-button-primary" type="submit" disabled={saving}>
+                  {saving ? 'Saving…' : 'Save Draft'}
+                </button>
+              </div>
             </div>
           </form>
         </GlassPanel>

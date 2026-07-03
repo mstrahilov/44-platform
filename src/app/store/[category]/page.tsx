@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Product } from '@/lib/products';
-import { PageShell, ProductGrid, ProductCard, EmptyPanel } from '@/components/Ui';
+import { PageShell, ProductGrid, ProductCard, HubHero, EmptyMessage } from '@/components/Ui';
 import { useTopbarTabs } from '@/components/TopbarContext';
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -13,6 +13,15 @@ const CATEGORY_LABEL: Record<string, string> = {
   apparel: 'Apparel',
   merch: 'Merch',
   assets: 'Assets',
+};
+
+const CATEGORY_DESCRIPTION: Record<string, string> = {
+  music: 'Records, singles, EPs, and albums from independent artists on 44.',
+  books: 'Titles from independent writers, publishers, and thinkers.',
+  games: 'Indie games, playful software, and interactive experiences.',
+  apparel: 'Clothing and wearables from creators building their own brands.',
+  merch: 'Clothing and wearables from creators building their own brands.',
+  assets: 'Samples, textures, presets, and templates for creators.',
 };
 
 const STORE_CATEGORIES = [
@@ -38,7 +47,7 @@ export default function StoreCategoryPage({ params }: { params: Promise<{ catego
     async function load() {
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select('*, creators:profiles!author_id(*)')
         .eq('is_published', true)
         .order('created_at', { ascending: false })
         .limit(120);
@@ -57,20 +66,24 @@ export default function StoreCategoryPage({ params }: { params: Promise<{ catego
     load();
   }, [category]);
 
+  const description = CATEGORY_DESCRIPTION[category.toLowerCase()];
+
   return (
     <PageShell>
-      <h1 className="browse-page-title os-type-display">{label}</h1>
-      {loading ? (
-        <EmptyPanel title="Loading…" />
-      ) : products.length === 0 ? (
-        <EmptyPanel title={`No ${label.toLowerCase()} yet.`} body="Check back soon for new releases in this category." />
-      ) : (
-        <ProductGrid>
-          {products.map(product => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </ProductGrid>
-      )}
+      <div className="app-page">
+        <HubHero title={label} copy={description} />
+        {loading ? (
+          <EmptyMessage>Loading…</EmptyMessage>
+        ) : products.length === 0 ? (
+          <EmptyMessage>No {label.toLowerCase()} yet. Check back soon for new releases in this category.</EmptyMessage>
+        ) : (
+          <ProductGrid>
+            {products.map(product => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </ProductGrid>
+        )}
+      </div>
     </PageShell>
   );
 }

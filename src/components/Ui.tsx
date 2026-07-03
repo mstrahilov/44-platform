@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
 import type { Service, Resource, CommunityPost } from '@/lib/platform';
-import { communityThreadHref, formatServicePrice, resourceHref, serviceHref } from '@/lib/platform';
+import { communityThreadHref, resourceHref, serviceHref } from '@/lib/platform';
 import type { Product } from '@/lib/products';
 import { formatProductPrice } from '@/lib/products';
 
@@ -69,90 +69,87 @@ export function PanelListItem({
   );
 }
 
-export function ProductCard({ product, owned }: { product: Product; owned?: boolean }) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function ProductCard({ product, owned: _owned }: { product: Product; owned?: boolean }) {
   const href = `/product/${product.slug || product.id}`;
   const image = product.cover_url || product.hero_url;
+  const shape = getProductTileShape(product);
+  const subtitle = getProductTileSubtitle(product);
   return (
-    <Link href={href} className="app-card">
-      <div className="app-card-art">
+    <Link href={href} className="product-tile">
+      <div className={`product-tile-art product-tile-art-${shape}`}>
         {image && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={image} alt="" />
         )}
       </div>
-      <div className="app-card-body">
-        <div className="app-card-title os-type-card-title">{product.title}</div>
-        <div className="app-card-creator os-type-meta">{product.creator || '44 Creator'}</div>
-      </div>
-      <div className="app-card-footer">
-        {owned ? (
-          <span className="os-pill os-status-owned">Owned</span>
-        ) : (
-          <span className="app-card-price os-type-section-title">{formatProductPrice(product)}</span>
-        )}
-        <span className="os-button os-button-primary os-button-compact">View</span>
+      <div className="product-tile-info">
+        <div className="product-tile-title">{product.title}</div>
+        <div className="product-tile-subtitle">{subtitle}</div>
       </div>
     </Link>
   );
 }
 
+function getProductTileShape(product: Product): 'square' | 'portrait' | 'book' | 'landscape' {
+  const category = (product.category || '').toLowerCase();
+  if (category === 'books') return 'book';
+  if (category === 'assets') return 'landscape';
+  if (category === 'apparel' || category === 'merch' || category === 'games') return 'portrait';
+  return 'square'; // music (and any unknown category)
+}
+
+// Merch, apparel, assets → price. Music, games, books → creator/author.
+function getProductTileSubtitle(product: Product): string {
+  const category = (product.category || '').toLowerCase();
+  if (category === 'apparel' || category === 'merch' || category === 'assets') {
+    return formatProductPrice(product);
+  }
+  return product.creator || '44 Creator';
+}
+
 export function ServiceCard({ service }: { service: Service }) {
+  const creator = service.creators?.name || '44 Creator';
   return (
-    <Link className="app-card" href={serviceHref(service)}>
-      <div className="app-card-art app-card-art-wide">
+    <Link className="product-tile" href={serviceHref(service)}>
+      <div className="product-tile-art product-tile-art-wide">
         {service.cover_url && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={service.cover_url} alt="" />
         )}
       </div>
-      <div className="app-card-body">
-        <span className="os-pill os-type-pill app-card-chip">{service.categories?.name ?? 'Service'}</span>
-        <div className="app-card-title os-type-card-title">{service.title}</div>
-        <div className="app-card-desc os-type-body-small">{service.short_description}</div>
-      </div>
-      <div className="app-card-footer">
-        <div>
-          <div className="app-card-price os-type-card-title">{formatServicePrice(service)}</div>
-          <div className="os-type-meta" style={{ color: 'var(--os-color-ink-muted)' }}>{service.delivery_estimate}</div>
-        </div>
-        <span className="os-button os-button-secondary os-button-compact">Learn More</span>
+      <div className="product-tile-info">
+        <div className="product-tile-title">{service.title}</div>
+        <div className="product-tile-subtitle">{creator}</div>
       </div>
     </Link>
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function ResourceCard({
   resource,
-  saved,
-  onSave,
+  saved: _saved,
+  onSave: _onSave,
 }: {
   resource: Resource;
   saved?: boolean;
   onSave?: (resource: Resource) => void;
 }) {
+  const creator = resource.creators?.name || '44 Community';
   return (
-    <article className="app-card">
-      <div className="app-card-art app-card-art-wide">
+    <Link className="product-tile" href={resourceHref(resource)}>
+      <div className="product-tile-art product-tile-art-wide">
         {resource.cover_url && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={resource.cover_url} alt="" />
         )}
       </div>
-      <div className="app-card-body">
-        <span className="os-pill os-type-pill app-card-chip">{resource.categories?.name ?? resource.resource_type}</span>
-        <div className="app-card-title os-type-card-title">{resource.title}</div>
-        <div className="app-card-creator os-type-meta">by {resource.creators?.name ?? '44 Community'}</div>
-        <div className="app-card-desc os-type-body-small">{resource.short_description}</div>
+      <div className="product-tile-info">
+        <div className="product-tile-title">{resource.title}</div>
+        <div className="product-tile-subtitle">{creator}</div>
       </div>
-      <div className="app-card-footer">
-        {onSave ? (
-          <button className="os-button os-button-ghost os-button-compact" onClick={() => onSave(resource)}>{saved ? 'Saved' : 'Save'}</button>
-        ) : (
-          <span />
-        )}
-        <Link className="os-button os-button-secondary os-button-compact" href={resourceHref(resource)}>Read</Link>
-      </div>
-    </article>
+    </Link>
   );
 }
 
@@ -244,7 +241,7 @@ export function HubSection({ title, href, children }: { title: string; href?: st
     <section className="app-section">
       <div className="hub-section-head">
         <h2 className="hub-section-title">{title}</h2>
-        {href && <Link href={href} className="hub-view-all">View All →</Link>}
+        {href && <Link href={href} className="os-button os-button-primary">View All</Link>}
       </div>
       {children}
     </section>
@@ -268,6 +265,12 @@ export function EmptyPanel({ title, body }: { title: string; body?: string }) {
       )}
     </div>
   );
+}
+
+/* Plain text empty state — no panel, no shadow, no card. Cards are for
+   clickable stuff; empty pages should just be quiet copy. */
+export function EmptyMessage({ children }: { children: ReactNode }) {
+  return <div className="app-empty-text">{children}</div>;
 }
 
 export function DetailLayout({ children, inspector }: { children: ReactNode; inspector: ReactNode }) {

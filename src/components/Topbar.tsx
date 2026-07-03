@@ -15,19 +15,9 @@ import { useTopbar } from './TopbarContext';
 
 export type { TopbarTab } from './TopbarContext';
 
-const IconSearch = () => (
-  <svg width="20" height="20" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="10" cy="10" r="6"/>
-    <path d="M14.5 14.5L19 19"/>
-  </svg>
-);
-
-const IconBell = () => (
-  <svg width="20" height="20" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M16 10a5 5 0 0 0-10 0c0 6-2.5 7-2.5 7h15S16 16 16 10"/>
-    <path d="M9 19a2 2 0 0 0 4 0"/>
-  </svg>
-);
+const IconSearch = () => <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />;
+const IconBell = () => <span className="os-icon os-icon-notifications os-icon-sm" aria-hidden="true" />;
+const IconUser = () => <span className="os-icon os-icon-user os-icon-sm" aria-hidden="true" />;
 
 const IconProfile = () => (
   <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -141,7 +131,6 @@ export function Topbar() {
   }, [userMenuOpen, notifMenuOpen]);
 
   const displayName = profile?.display_name || profile?.username || user?.email?.split('@')[0] || 'You';
-  const avatarInitial = displayName.charAt(0).toUpperCase();
   const avatarUrl = profile?.avatar_url ?? null;
   const profileHref = profile?.username ? `/community/profile/${profile.username}` : '/profile';
   const hasNewNotifications = notifications.some(n => !seenIds.has(n.id));
@@ -234,17 +223,22 @@ export function Topbar() {
               {avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={avatarUrl} alt={displayName} />
-              ) : avatarInitial}
+              ) : (
+                <IconUser />
+              )}
             </button>
             {userMenuOpen && (
               <div className="os-popover" role="menu">
+                <Link href="/account" className="os-popover-item" role="menuitem">
+                  <IconUser /> Account
+                </Link>
                 <Link href={profileHref} className="os-popover-item" role="menuitem">
                   <IconProfile /> Profile
                 </Link>
                 <Link href="/inbox" className="os-popover-item" role="menuitem">
                   <IconMessages /> Messages
                 </Link>
-                <Link href="/inbox" className="os-popover-item" role="menuitem">
+                <Link href="/friends" className="os-popover-item" role="menuitem">
                   <IconFriends /> Friends
                 </Link>
                 <div className="os-popover-divider" />

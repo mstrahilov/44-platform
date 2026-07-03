@@ -3,15 +3,15 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { Category, CommunityPost } from '@/lib/platform';
+import type { Category } from '@/lib/platform';
 import { matchesCategory, matchesQuery } from '@/lib/taxonomy';
-import { ThreadRow, PageShell } from '@/components/Ui';
+import { PageShell } from '@/components/Ui';
+import { SocialPostRow } from '@/components/Social';
 import { useTopbarTabs } from '@/components/TopbarContext';
-
-type CountMap = Record<string, number>;
+import { countById, type CountMap, type SocialPost } from '@/lib/social';
 
 export default function CommunityBrowsePage() {
-  const [posts, setPosts] = useState<CommunityPost[]>([]);
+  const [posts, setPosts] = useState<SocialPost[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [replyCounts, setReplyCounts] = useState<CountMap>({});
   const [likeCounts, setLikeCounts] = useState<CountMap>({});
@@ -31,27 +31,17 @@ export default function CommunityBrowsePage() {
       const [{ data: postRows }, { data: categoryRows }, { data: replyRows }, { data: likeRows }] = await Promise.all([
         supabase
           .from('posts')
-          .select('*, creators:profiles!author_id(id, slug, name:display_name, avatar_url), categories(id, slug, name)')
+          .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type), categories(id, slug, name)')
           .eq('status', 'published')
           .order('created_at', { ascending: false }),
         supabase.from('categories').select('*').eq('scope', 'posts').order('sort_order'),
         supabase.from('post_replies').select('post_id').eq('status', 'published'),
         supabase.from('post_likes').select('post_id'),
       ]);
-      setPosts((postRows as CommunityPost[] | null) ?? []);
+      setPosts((postRows as SocialPost[] | null) ?? []);
       setCategories((categoryRows as Category[] | null) ?? []);
-      setReplyCounts(
-        ((replyRows as Array<{ post_id: string }> | null) ?? []).reduce<CountMap>((acc, row) => {
-          acc[row.post_id] = (acc[row.post_id] ?? 0) + 1;
-          return acc;
-        }, {})
-      );
-      setLikeCounts(
-        ((likeRows as Array<{ post_id: string }> | null) ?? []).reduce<CountMap>((acc, row) => {
-          acc[row.post_id] = (acc[row.post_id] ?? 0) + 1;
-          return acc;
-        }, {})
-      );
+      setReplyCounts(countById((replyRows as Array<{ post_id: string }> | null) ?? [], 'post_id'));
+      setLikeCounts(countById((likeRows as Array<{ post_id: string }> | null) ?? [], 'post_id'));
     }
     fetchData();
   }, []);
@@ -89,19 +79,18 @@ export default function CommunityBrowsePage() {
   return (
     <PageShell>
       <style>{`
-        .browse-page { display: flex; flex-direction: column; gap: 20px; }
-        .thread-list { display: grid; gap: 12px; }
+        .browse-page { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
       `}</style>
       <div className="browse-page">
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
           <h1 className="browse-page-title os-type-display">{label}</h1>
           <Link href="/community/new" className="os-button os-button-primary os-button-compact">
-            Start Discussion
+            New Post
           </Link>
         </div>
-        <div className="thread-list">
+        <div className="social-feed">
           {visible.map(post => (
-            <ThreadRow
+            <SocialPostRow
               key={post.id}
               post={post}
               replyCount={replyCounts[post.id] ?? 0}

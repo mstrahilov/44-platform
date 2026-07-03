@@ -11,13 +11,26 @@ export function useAuth() {
 
   useEffect(() => {
     let mounted = true;
+    let settled = false;
+    const fallback = window.setTimeout(() => {
+      if (!mounted || settled) return;
+      setLoading(false);
+    }, 3500);
 
     supabase.auth.getUser().then(async ({ data }) => {
       if (!mounted) return;
+      settled = true;
+      window.clearTimeout(fallback);
       if (data.user) {
         await ensureProfileForUser(data.user);
       }
       setUser(data.user);
+      setLoading(false);
+    }).catch(() => {
+      if (!mounted) return;
+      settled = true;
+      window.clearTimeout(fallback);
+      setUser(null);
       setLoading(false);
     });
 
@@ -31,6 +44,7 @@ export function useAuth() {
 
     return () => {
       mounted = false;
+      window.clearTimeout(fallback);
       listener.subscription.unsubscribe();
     };
   }, []);

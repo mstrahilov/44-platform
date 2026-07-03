@@ -1,0 +1,217 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/useAuth';
+import { PageShell, CenteredMessage } from '@/components/Ui';
+import { SocialAvatar } from '@/components/Social';
+import { useTopbarBack } from '@/components/TopbarContext';
+import type { Profile } from '@/lib/platform';
+import { authorHandle } from '@/lib/social';
+
+export default function EditProfilePage() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+  useTopbarBack({ href: '/community', label: 'Community' });
+
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [displayName, setDisplayName] = useState('');
+  const [username, setUsername] = useState('');
+  const [bio, setBio] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [heroUrl, setHeroUrl] = useState('');
+  const [creatorType, setCreatorType] = useState('');
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    async function load() {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user!.id)
+        .maybeSingle();
+      const p = (data as Profile | null) ?? null;
+      setProfile(p);
+      if (p) {
+        setDisplayName(p.display_name ?? '');
+        setUsername(p.username ?? '');
+        setBio(p.bio ?? '');
+        setAvatarUrl(p.avatar_url ?? '');
+        setHeroUrl(p.hero_url ?? '');
+        setCreatorType(p.creator_type ?? '');
+      }
+      setLoading(false);
+    }
+    load();
+  }, [user, authLoading]);
+
+  async function save() {
+    if (!user || saving) return;
+    setSaving(true);
+    setError('');
+    const payload: Partial<Profile> = {
+      display_name: displayName.trim() || null,
+      username: username.trim() || null,
+      bio: bio.trim() || null,
+      avatar_url: avatarUrl.trim() || null,
+      hero_url: heroUrl.trim() || null,
+      creator_type: creatorType.trim() || null,
+    };
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update(payload)
+      .eq('id', user.id);
+    setSaving(false);
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+    const targetHandle = username.trim() || authorHandle(profile) || '';
+    router.push(targetHandle ? `/community/profile/${targetHandle}` : '/community');
+  }
+
+  if (authLoading || loading) {
+    return <PageShell><CenteredMessage>Loading profile...</CenteredMessage></PageShell>;
+  }
+
+  if (!user) {
+    return (
+      <PageShell>
+        <CenteredMessage>
+          Sign in to edit your profile.{' '}
+          <Link href="/login" className="os-button os-button-primary os-button-compact" style={{ marginLeft: 8 }}>Sign In</Link>
+        </CenteredMessage>
+      </PageShell>
+    );
+  }
+
+  const previewProfile = {
+    id: user.id,
+    display_name: displayName,
+    username,
+    avatar_url: avatarUrl,
+    role: profile?.role ?? null,
+    slug: profile?.slug ?? null,
+    creator_type: creatorType,
+  };
+  const eyebrow = creatorType || (profile?.role === 'creator' ? 'Creator' : 'Member');
+
+  return (
+    <PageShell>
+      <main className="social-shell social-shell-wide">
+        <section
+          className="social-profile-cover"
+          style={{ backgroundImage: heroUrl ? `url(${heroUrl})` : undefined }}
+          aria-label="Cover preview"
+        />
+
+        <section className="social-profile-head">
+          <div className="social-profile-main">
+            <div className="social-profile-identity">
+              <SocialAvatar profile={previewProfile} size="large" />
+              <div className="social-profile-text">
+                <div className="app-detail-eyebrow os-type-eyebrow">{eyebrow}</div>
+                <h1 className="social-profile-name">{displayName || 'Your name'}</h1>
+                {username && <div className="social-handle">@{username}</div>}
+              </div>
+            </div>
+
+            <div className="social-profile-actions">
+              <Link href={authorHandle(profile) ? `/community/profile/${authorHandle(profile)}` : '/community'} className="os-button os-button-secondary">
+                Cancel
+              </Link>
+              <button
+                type="button"
+                className="os-button os-button-primary"
+                onClick={save}
+                disabled={saving}
+              >
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+
+          {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
+
+          <div className="profile-edit-fields">
+            <label className="profile-edit-field">
+              <span className="profile-edit-label">Display name</span>
+              <input
+                type="text"
+                value={displayName}
+                onChange={event => setDisplayName(event.target.value)}
+                className="profile-edit-input"
+                placeholder="Your public name"
+              />
+            </label>
+
+            <label className="profile-edit-field">
+              <span className="profile-edit-label">Username</span>
+              <input
+                type="text"
+                value={username}
+                onChange={event => setUsername(event.target.value.replace(/\s+/g, '').toLowerCase())}
+                className="profile-edit-input"
+                placeholder="username"
+              />
+            </label>
+
+            <label className="profile-edit-field profile-edit-field-full">
+              <span className="profile-edit-label">Bio</span>
+              <textarea
+                value={bio}
+                onChange={event => setBio(event.target.value)}
+                className="profile-edit-input profile-edit-textarea"
+                placeholder="Tell people what you make."
+                rows={4}
+              />
+            </label>
+
+            <label className="profile-edit-field">
+              <span className="profile-edit-label">Avatar URL</span>
+              <input
+                type="url"
+                value={avatarUrl}
+                onChange={event => setAvatarUrl(event.target.value)}
+                className="profile-edit-input"
+                placeholder="https://..."
+              />
+            </label>
+
+            <label className="profile-edit-field">
+              <span className="profile-edit-label">Cover image URL</span>
+              <input
+                type="url"
+                value={heroUrl}
+                onChange={event => setHeroUrl(event.target.value)}
+                className="profile-edit-input"
+                placeholder="https://..."
+              />
+            </label>
+
+            <label className="profile-edit-field">
+              <span className="profile-edit-label">Role tag</span>
+              <input
+                type="text"
+                value={creatorType}
+                onChange={event => setCreatorType(event.target.value)}
+                className="profile-edit-input"
+                placeholder="Creator, Producer, Designer..."
+              />
+            </label>
+          </div>
+        </section>
+      </main>
+    </PageShell>
+  );
+}

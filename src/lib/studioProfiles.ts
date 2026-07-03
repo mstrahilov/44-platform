@@ -1,11 +1,49 @@
 import type { User } from '@supabase/supabase-js';
 import type { Profile } from '@/lib/platform';
+import { DEFAULT_CREATOR_COUNTRY, DEFAULT_CREATOR_CURRENCY, DEFAULT_MARKET_MODE } from '@/lib/marketPreferences';
+import { isMissingColumnError } from '@/lib/schemaCompat';
 import { supabase } from '@/lib/supabase';
 
 export type StudioProfile = Pick<
   Profile,
-  'id' | 'display_name' | 'username' | 'role' | 'slug' | 'avatar_url' | 'bio' | 'creator_type'
+  | 'id'
+  | 'display_name'
+  | 'username'
+  | 'role'
+  | 'slug'
+  | 'avatar_url'
+  | 'bio'
+  | 'creator_type'
+  | 'country_code'
+  | 'display_currency'
+  | 'home_country_code'
+  | 'home_currency'
+  | 'product_market_mode'
+  | 'service_market_mode'
 >;
+
+const LEGACY_PROFILE_SELECT = 'id, display_name, username, role, slug, avatar_url, bio, creator_type';
+const EXTENDED_PROFILE_SELECT = `${LEGACY_PROFILE_SELECT}, country_code, display_currency, home_country_code, home_currency, product_market_mode, service_market_mode`;
+
+function normalizeStudioProfile(data: Partial<StudioProfile> | null): StudioProfile | null {
+  if (!data?.id) return null;
+  return {
+    id: data.id,
+    display_name: data.display_name ?? null,
+    username: data.username ?? null,
+    role: data.role ?? null,
+    slug: data.slug ?? null,
+    avatar_url: data.avatar_url ?? null,
+    bio: data.bio ?? null,
+    creator_type: data.creator_type ?? null,
+    country_code: data.country_code ?? null,
+    display_currency: data.display_currency ?? null,
+    home_country_code: data.home_country_code ?? DEFAULT_CREATOR_COUNTRY,
+    home_currency: data.home_currency ?? DEFAULT_CREATOR_CURRENCY,
+    product_market_mode: data.product_market_mode ?? DEFAULT_MARKET_MODE,
+    service_market_mode: data.service_market_mode ?? DEFAULT_MARKET_MODE,
+  };
+}
 
 function slugify(value: string) {
   return value
@@ -83,16 +121,46 @@ export async function ensureProfileForUser(user: Pick<User, 'id' | 'email' | 'us
     avatar_url: existingProfile?.avatar_url ?? null,
     bio: existingProfile?.bio ?? null,
     creator_type: existingProfile?.creator_type ?? null,
+    country_code: existingProfile?.country_code ?? null,
+    display_currency: existingProfile?.display_currency ?? null,
+    home_country_code: existingProfile?.home_country_code ?? null,
+    home_currency: existingProfile?.home_currency ?? null,
+    product_market_mode: existingProfile?.product_market_mode ?? null,
+    service_market_mode: existingProfile?.service_market_mode ?? null,
   };
 
   const { data, error } = await supabase
     .from('profiles')
     .upsert(payload, { onConflict: 'id' })
-    .select('id, display_name, username, role, slug, avatar_url, bio, creator_type')
+    .select(EXTENDED_PROFILE_SELECT)
     .single();
 
+  if (isMissingColumnError(error)) {
+    const legacyPayload = {
+      id: payload.id,
+      display_name: payload.display_name,
+      username: payload.username,
+      slug: payload.slug,
+      role: payload.role,
+      avatar_url: payload.avatar_url,
+      bio: payload.bio,
+      creator_type: payload.creator_type,
+    };
+
+    const { data: legacyData, error: legacyError } = await supabase
+      .from('profiles')
+      .upsert(legacyPayload, { onConflict: 'id' })
+      .select(LEGACY_PROFILE_SELECT)
+      .single();
+
+    return {
+      profile: normalizeStudioProfile(legacyData as StudioProfile | null),
+      error: legacyError,
+    };
+  }
+
   return {
-    profile: (data as StudioProfile | null) ?? null,
+    profile: normalizeStudioProfile(data as StudioProfile | null),
     error,
   };
 }
@@ -100,12 +168,25 @@ export async function ensureProfileForUser(user: Pick<User, 'id' | 'email' | 'us
 export async function loadStudioProfile(userId: string) {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, display_name, username, role, slug, avatar_url, bio, creator_type')
+    .select(EXTENDED_PROFILE_SELECT)
     .eq('id', userId)
     .maybeSingle();
 
+  if (isMissingColumnError(error)) {
+    const { data: legacyData, error: legacyError } = await supabase
+      .from('profiles')
+      .select(LEGACY_PROFILE_SELECT)
+      .eq('id', userId)
+      .maybeSingle();
+
+    return {
+      profile: normalizeStudioProfile(legacyData as StudioProfile | null),
+      error: legacyError,
+    };
+  }
+
   return {
-    profile: (data as StudioProfile | null) ?? null,
+    profile: normalizeStudioProfile(data as StudioProfile | null),
     error,
   };
 }

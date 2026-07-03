@@ -3,6 +3,7 @@ import './globals.css';
 import Sidebar from '@/components/Sidebar';
 import { Topbar } from '@/components/Topbar';
 import { TopbarProvider } from '@/components/TopbarContext';
+import { MusicPlayerBar, MusicPlayerProvider } from '@/components/MusicPlayer';
 import ThemeSync from '@/components/ThemeSync';
 
 // Applies the saved theme before first paint to avoid a flash of the wrong theme.
@@ -34,19 +35,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="app-environment-noise" />
         </div>
 
-        <TopbarProvider>
-          <div className="app-frame">
-            <div className="app-shell">
-              <Sidebar />
-              <main className="app-main">
-                <Topbar />
-                <div className="app-main-content">
-                  {children}
-                </div>
-              </main>
+        <MusicPlayerProvider>
+          <TopbarProvider>
+            <div className="app-frame">
+              <div className="app-shell">
+                <Sidebar />
+                <main className="app-main">
+                  <Topbar />
+                  <div className="app-main-content">
+                    {children}
+                  </div>
+                  <MusicPlayerBar />
+                </main>
+              </div>
             </div>
-          </div>
-        </TopbarProvider>
+          </TopbarProvider>
+        </MusicPlayerProvider>
 
       </body>
     </html>

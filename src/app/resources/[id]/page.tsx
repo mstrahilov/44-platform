@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/useAuth';
 import type { Resource } from '@/lib/platform';
 import { creatorHref } from '@/lib/platform';
 import { useTopbarBack } from '@/components/TopbarContext';
+import { ItemCommunitySection } from '@/components/ItemCommunitySection';
 
 export default function ResourcePage() {
   const { id } = useParams<{ id: string }>();
@@ -121,6 +122,18 @@ export default function ResourcePage() {
           </div>
         </div>
       </div>
+
+      <ItemCommunitySection
+        subjectType="resource"
+        subjectId={resource.id}
+        subjectLabel={resource.title}
+        categorySlugs={['questions']}
+        sectionTitle="Questions"
+        actionLabel="Ask a Question"
+        titlePlaceholder="What do you want to know?"
+        composerPlaceholder="Add the details of your question…"
+        emptyMessage="No questions yet — be the first to ask."
+      />
     </div>
   );
 }

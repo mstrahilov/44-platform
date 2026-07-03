@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/useAuth';
 import type { Service } from '@/lib/platform';
 import { creatorHref, formatServicePrice } from '@/lib/platform';
 import { useTopbarBack } from '@/components/TopbarContext';
+import { ItemCommunitySection } from '@/components/ItemCommunitySection';
 
 export default function ServicePage() {
   const { id } = useParams<{ id: string }>();
@@ -22,7 +23,7 @@ export default function ServicePage() {
     async function fetchService() {
       const { data } = await supabase
         .from('services')
-        .select('*, creators:profiles!author_id(id, slug, name:display_name, avatar_url), categories(id, slug, name)')
+        .select('*, creators:profiles!author_id(*, name:display_name), categories(id, slug, name)')
         .eq('slug', id)
         .maybeSingle();
       setService(data as Service | null);
@@ -121,6 +122,18 @@ export default function ServicePage() {
           Send a short note about what you need. Checkout, milestones, files, and project management can be layered in once the conversation starts.
         </p>
       </div>
+
+      <ItemCommunitySection
+        subjectType="service"
+        subjectId={service.id}
+        subjectLabel={service.title}
+        categorySlugs={['reviews']}
+        sectionTitle="Reviews"
+        actionLabel="Post Review"
+        titlePlaceholder={`Reviewing "${service.title}"`}
+        composerPlaceholder="How was working with this creator?"
+        emptyMessage="No reviews yet — be the first."
+      />
     </div>
   );
 }

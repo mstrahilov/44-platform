@@ -10,7 +10,7 @@ import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
 import { formatProductPrice } from '@/lib/products';
 import { getProductRuntimeKind } from '@/lib/collectionContent';
-import type { Resource, SavedResource, ServiceRequest } from '@/lib/platform';
+import { formatServicePrice, type Resource, type SavedResource, type ServiceRequest } from '@/lib/platform';
 
 interface CollectionItem {
   id: string;
@@ -104,12 +104,12 @@ export default function CollectionPage() {
           .order('acquired_at', { ascending: false }),
         supabase
           .from('saved_resources')
-          .select('id,resource_id,saved_at,resources(*, creators:profiles!author_id(id, slug, name:display_name, avatar_url), categories(id, slug, name))')
+          .select('id,resource_id,saved_at,resources(*, creators:profiles!author_id(*, name:display_name), categories(id, slug, name))')
           .eq('user_id', userId)
           .order('saved_at', { ascending: false }),
         supabase
           .from('service_requests')
-          .select('id,service_id,message,status,created_at,services(*, creators:profiles!author_id(id, slug, name:display_name, avatar_url), categories(id, slug, name))')
+          .select('id,service_id,message,status,created_at,services(*, creators:profiles!author_id(*, name:display_name), categories(id, slug, name))')
           .eq('user_id', userId)
           .order('created_at', { ascending: false }),
       ]);
@@ -170,7 +170,7 @@ export default function CollectionPage() {
         tab: 'services' as const,
         title: item.services.title,
         subtitle: item.services.creators?.name ?? '44 Creator',
-        meta: item.status,
+        meta: `${formatServicePrice(item.services)} · ${item.status}`,
         image: item.services.cover_url,
         href: `/collection/item/service/${item.id}`,
         request: item,

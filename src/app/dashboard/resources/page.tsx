@@ -17,6 +17,8 @@ export default function DashboardResourcesPage() {
   const [resources, setResources] = useState<Resource[]>([]);
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [fetching, setFetching] = useState(true);
+  const [status, setStatus] = useState('');
+  const [statusKind, setStatusKind] = useState<'success' | 'error'>('success');
 
   useEffect(() => {
     if (!loading && !user) {
@@ -55,7 +57,8 @@ export default function DashboardResourcesPage() {
       .eq('author_id', profileId);
 
     if (error) {
-      alert(error.message);
+      setStatusKind('error');
+      setStatus(error.message);
       return;
     }
 
@@ -66,6 +69,8 @@ export default function DashboardResourcesPage() {
           : entry,
       ),
     );
+    setStatusKind('success');
+    setStatus(nextStatus === 'published' ? 'Resource published.' : 'Resource moved back to draft.');
   }
 
   if (loading || !user) {
@@ -74,29 +79,11 @@ export default function DashboardResourcesPage() {
 
   return (
     <PageShell>
-      <div style={{ maxWidth: 1180, margin: '0 auto', padding: '64px 0' }}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-end',
-            gap: 24,
-            marginBottom: 32,
-          }}
-        >
-          <div>
-            <h1
-              style={{
-                fontSize: 48,
-                fontWeight: 780,
-                letterSpacing: '-0.04em',
-                marginBottom: 10,
-              }}
-            >
-              Resources
-            </h1>
-
-            <p style={{ color: 'var(--os-color-ink-secondary)', fontSize: 18 }}>
+      <div className="dashboard-page">
+        <header className="dashboard-header">
+          <div className="dashboard-header-copy">
+            <h1 className="os-type-display">Resources</h1>
+            <p className="os-type-body">
               Manage guides, articles, and creator documentation.
             </p>
           </div>
@@ -104,7 +91,7 @@ export default function DashboardResourcesPage() {
           <Link className="os-button os-button-primary" href="/dashboard/resources/new">
             New Resource
           </Link>
-        </div>
+        </header>
 
         {!isCreatorProfile(profile) && (
           <GlassPanel style={{ padding: 24, marginBottom: 18 }}>
@@ -114,27 +101,29 @@ export default function DashboardResourcesPage() {
           </GlassPanel>
         )}
 
-        <GlassPanel style={{ padding: 0, overflow: 'hidden' }}>
+        {status ? (
+          <div className={statusKind === 'success' ? 'dashboard-status dashboard-status-success' : 'dashboard-status dashboard-status-error'}>
+            {status}
+          </div>
+        ) : null}
+
+        <div className="dashboard-list-surface">
           {fetching ? (
-            <div style={{ padding: '24px 26px', color: 'var(--os-color-ink-secondary)' }}>
+            <div className="dashboard-empty">
               Loading resources…
             </div>
           ) : resources.length === 0 ? (
-            <div style={{ padding: '24px 26px', color: 'var(--os-color-ink-secondary)' }}>
+            <div className="dashboard-empty">
               No resources yet. Create your first one from inside Dashboard.
             </div>
           ) : (
             resources.map((resource, index) => (
               <div
                 key={resource.id}
+                className="dashboard-list-row"
                 style={{
-                  padding: '22px 26px',
-                  display: 'grid',
                   gridTemplateColumns: '1fr 180px 240px',
-                  gap: 20,
-                  alignItems: 'center',
-                  borderTop:
-                    index === 0 ? 'none' : '1px solid rgba(255,255,255,0.08)',
+                  borderTop: index === 0 ? 'none' : '1px solid rgba(17, 24, 39, 0.08)',
                 }}
               >
                 <div>
@@ -184,7 +173,7 @@ export default function DashboardResourcesPage() {
               </div>
             ))
           )}
-        </GlassPanel>
+        </div>
       </div>
     </PageShell>
   );

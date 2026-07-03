@@ -16,7 +16,7 @@ export default function StorePage() {
     async function fetchProducts() {
       const { data } = await supabase
         .from('products')
-        .select('*')
+        .select('*, creators:profiles!author_id(*)')
         .eq('is_published', true)
         .order('featured', { ascending: false })
         .order('year', { ascending: false, nullsFirst: false })
@@ -45,10 +45,10 @@ export default function StorePage() {
     }
   }, [user]);
 
-  const musicProducts = products.filter(p => p.category === 'Music').slice(0, 10);
+  const musicProducts = products.filter(p => p.category === 'Music').slice(0, 4);
   const merchProducts = products
     .filter(p => p.category === 'Apparel' || p.category === 'Merch')
-    .slice(0, 10);
+    .slice(0, 4);
 
   useTopbarTabs([
     { id: 'all',     label: 'All',      href: '/',              active: true },

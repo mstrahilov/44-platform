@@ -3,50 +3,65 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { Category, CommunityPost } from '@/lib/platform';
-import { PageShell, HubHero, HubSection, ThreadRow } from '@/components/Ui';
+import type { Category } from '@/lib/platform';
+import { PageShell } from '@/components/Ui';
+import { SocialPostRow } from '@/components/Social';
 import { useTopbarTabs } from '@/components/TopbarContext';
+import { hasCommunityIdentity, communityIdentityMessage } from '@/lib/communityProfile';
+import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
+import { useAuth } from '@/lib/useAuth';
+import { countById, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type ReplyEngagerRow, type SocialPost } from '@/lib/social';
 
-type CountMap = Record<string, number>;
+type PostLike = LikeRow;
 
 export default function CommunityPage() {
-  const [posts, setPosts] = useState<CommunityPost[]>([]);
+  const { user } = useAuth();
+  const [posts, setPosts] = useState<SocialPost[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [replyCounts, setReplyCounts] = useState<CountMap>({});
-  const [likeCounts, setLikeCounts] = useState<CountMap>({});
+  const [repliersMap, setRepliersMap] = useState<LikersMap>({});
+  const [likes, setLikes] = useState<PostLike[]>([]);
+  const [profile, setProfile] = useState<StudioProfile | null>(null);
+  const [likingId, setLikingId] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     async function fetchCommunity() {
       const [{ data: postRows }, { data: categoryRows }, { data: replyRows }, { data: likeRows }] = await Promise.all([
         supabase
           .from('posts')
-          .select('*, creators:profiles!author_id(id, slug, name:display_name, avatar_url), categories(id, slug, name)')
+          .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type), categories(id, slug, name)')
           .eq('status', 'published')
           .order('created_at', { ascending: false })
-          .limit(60),
+          .limit(80),
         supabase.from('categories').select('*').eq('scope', 'posts').order('sort_order'),
-        supabase.from('post_replies').select('post_id').eq('status', 'published'),
-        supabase.from('post_likes').select('post_id'),
+        supabase
+          .from('post_replies')
+          .select('post_id, author_id, authors:profiles!author_id(id, display_name, username, avatar_url)')
+          .eq('status', 'published')
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('post_likes')
+          .select('post_id, profile_id, profiles:profiles!profile_id(id, display_name, username, avatar_url)')
+          .order('created_at', { ascending: false }),
       ]);
-      setPosts((postRows as CommunityPost[] | null) ?? []);
+      setPosts((postRows as SocialPost[] | null) ?? []);
       setCategories((categoryRows as Category[] | null) ?? []);
-      setReplyCounts(
-        ((replyRows as Array<{ post_id: string }> | null) ?? []).reduce<CountMap>((acc, row) => {
-          acc[row.post_id] = (acc[row.post_id] ?? 0) + 1;
-          return acc;
-        }, {})
-      );
-      setLikeCounts(
-        ((likeRows as Array<{ post_id: string }> | null) ?? []).reduce<CountMap>((acc, row) => {
-          acc[row.post_id] = (acc[row.post_id] ?? 0) + 1;
-          return acc;
-        }, {})
-      );
+      const replies = (replyRows as ReplyEngagerRow[] | null) ?? [];
+      setReplyCounts(countById(replies, 'post_id'));
+      setRepliersMap(repliersByPost(replies));
+      setLikes((likeRows as PostLike[] | null) ?? []);
     }
     fetchCommunity();
   }, []);
 
-  const communityPosts = posts;
+  useEffect(() => {
+    if (!user) {
+      setProfile(null);
+      return;
+    }
+    loadStudioProfile(user.id).then(result => setProfile(result.profile));
+  }, [user]);
 
   const categoryList = useMemo(() => {
     return categories
@@ -57,7 +72,7 @@ export default function CommunityPage() {
   useTopbarTabs(
     categoryList.length > 0
       ? [
-          { id: 'all', label: 'All', href: '/community', active: true },
+          { id: 'all', label: 'For You', href: '/community', active: true },
           ...categoryList.slice(0, 5).map(c => ({
             id: c.slug,
             label: c.name,
@@ -67,48 +82,97 @@ export default function CommunityPage() {
       : undefined,
   );
 
+  const likeCounts = useMemo(() => countById(likes, 'post_id'), [likes]);
+  const likersMap: LikersMap = useMemo(() => likersByPost(likes), [likes]);
+  const likedIds = useMemo(() => {
+    if (!user) return new Set<string>();
+    return new Set(likes.filter(like => like.profile_id === user.id).map(like => like.post_id));
+  }, [likes, user]);
+  const canInteract = hasCommunityIdentity(profile);
+
+  async function toggleLike(post: SocialPost) {
+    if (!user || likingId) return;
+    if (!canInteract) {
+      setError(communityIdentityMessage());
+      return;
+    }
+
+    setLikingId(post.id);
+    setError('');
+    const liked = likedIds.has(post.id);
+    if (liked) {
+      const { error: deleteError } = await supabase
+        .from('post_likes')
+        .delete()
+        .eq('post_id', post.id)
+        .eq('profile_id', user.id);
+      if (deleteError) setError(deleteError.message);
+      else setLikes(current => current.filter(like => !(like.post_id === post.id && like.profile_id === user.id)));
+    } else {
+      const nextLike: PostLike = {
+        post_id: post.id,
+        profile_id: user.id,
+        profiles: profile ? { id: profile.id, display_name: profile.display_name, username: profile.username, avatar_url: profile.avatar_url } : null,
+      };
+      const { error: insertError } = await supabase.from('post_likes').insert({ post_id: post.id, profile_id: user.id });
+      if (insertError) setError(insertError.message);
+      else setLikes(current => [...current, nextLike]);
+    }
+    setLikingId('');
+  }
+
+  async function deletePost(post: SocialPost) {
+    if (!user || post.author_id !== user.id) return;
+    if (!window.confirm('Delete this post? This cannot be undone.')) return;
+    const { error: deleteError } = await supabase.from('posts').delete().eq('id', post.id);
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
+    setPosts(current => current.filter(p => p.id !== post.id));
+  }
+
   return (
     <PageShell>
-      <div className="app-page">
-        <HubHero
-          title="Community"
-          copy="Share work, ask questions, find collaborators, follow updates, and discuss the creative ecosystem around 44."
-        />
-
-        {categoryList.map(category => {
-          const categoryPosts = communityPosts
-            .filter(p =>
-              p.category_id === category.id ||
-              p.categories?.slug === category.slug ||
-              p.post_type === category.slug
-            )
-            .slice(0, 6);
-          if (categoryPosts.length === 0) return null;
-          return (
-            <HubSection key={category.slug} title={`Explore ${category.name}`} href={`/community/browse/${category.slug}`}>
-              <div style={{ display: 'grid', gap: 12 }}>
-                {categoryPosts.map(post => (
-                  <ThreadRow
-                    key={post.id}
-                    post={post}
-                    replyCount={replyCounts[post.id] ?? 0}
-                    likeCount={likeCounts[post.id] ?? 0}
-                  />
-                ))}
-              </div>
-            </HubSection>
-          );
-        })}
-
-        <section className="app-section">
-          <div className="hub-section-head">
-            <h2 className="hub-section-title os-type-section-title">Start a conversation</h2>
+      <main className="social-shell">
+        <header className="social-header">
+          <div className="social-title-row">
+            <div>
+              <h1 className="os-type-display">Community</h1>
+              <p className="social-title-copy os-type-body">
+                The 44 social feed for releases, questions, collaborations, and member updates.
+              </p>
+            </div>
+            <Link href="/community/new" className="os-button os-button-primary os-button-compact">
+              New Post
+            </Link>
           </div>
-          <Link href="/community/new" className="os-button os-button-primary">
-            New Discussion
-          </Link>
+        </header>
+
+        {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
+
+        <section className="social-feed" aria-label="Community feed">
+          {posts.length === 0 ? (
+            <div className="app-empty-text">No posts yet.</div>
+          ) : (
+            posts.map(post => (
+              <SocialPostRow
+                key={post.id}
+                post={post}
+                replyCount={replyCounts[post.id] ?? 0}
+                likeCount={likeCounts[post.id] ?? 0}
+                likers={likersMap[post.id] ?? []}
+                repliers={repliersMap[post.id] ?? []}
+                liked={likedIds.has(post.id)}
+                onLike={() => toggleLike(post)}
+                onDelete={() => deletePost(post)}
+                canDelete={Boolean(user && post.author_id === user.id)}
+                disabled={!user || !canInteract || likingId === post.id}
+              />
+            ))
+          )}
         </section>
-      </div>
+      </main>
     </PageShell>
   );
 }

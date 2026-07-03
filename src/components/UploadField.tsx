@@ -46,8 +46,8 @@ export function UploadField({
   }
 
   return (
-    <div style={{ display: 'grid', gap: 10 }}>
-      <div style={{ fontWeight: 700 }}>{label}</div>
+    <div className="dashboard-field">
+      <div className="dashboard-field-label">{label}</div>
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         <label htmlFor={inputId} className="os-button os-button-secondary os-button-compact" style={{ cursor: uploading ? 'progress' : 'pointer' }}>
           {uploading ? 'Uploading…' : buttonLabel}
@@ -65,7 +65,7 @@ export function UploadField({
         </span>
       </div>
       {message ? (
-        <div style={{ color: message === 'Upload complete.' ? 'var(--os-color-owned)' : '#ff9b9b', fontSize: 13, fontWeight: 600 }}>
+        <div className={message === 'Upload complete.' ? 'dashboard-status dashboard-status-success' : 'dashboard-status dashboard-status-error'}>
           {message}
         </div>
       ) : null}

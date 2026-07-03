@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { SystemPanel } from '@/components/SystemPanel';
+import { UploadField } from '@/components/UploadField';
 import {
   ACCENTS,
   MODES,
@@ -14,6 +15,18 @@ import {
   type ThemeAccent,
   type ThemeMode,
 } from '@/lib/theme';
+import {
+  COUNTRIES,
+  CURRENCIES,
+  DEFAULT_VIEWER_COUNTRY,
+  DEFAULT_VIEWER_CURRENCY,
+  currencyForCountry,
+  getStoredViewerCountry,
+  getStoredViewerCurrency,
+  setStoredViewerPreferences,
+} from '@/lib/marketPreferences';
+import { isMissingColumnError } from '@/lib/schemaCompat';
+import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 
 const SETTINGS_KEYS = {
   replies: '44-setting-replies',
@@ -49,11 +62,11 @@ function setStoredToggle(key: string, value: boolean) {
 }
 
 const TABS = [
+  { id: 'system', label: 'System' },
   { id: 'account', label: 'Account' },
-  { id: 'appearance', label: 'Appearance' },
-  { id: 'notifications', label: 'Notifications' },
   { id: 'privacy', label: 'Privacy & Security' },
   { id: 'billing', label: 'Billing & Orders' },
+  { id: 'notifications', label: 'Notifications' },
 ];
 
 export default function SettingsPage() {
@@ -62,8 +75,8 @@ export default function SettingsPage() {
       <SystemPanel tabs={TABS}>
         {tab => (
           <>
+            {tab === 'system' && <SystemSettings />}
             {tab === 'account' && <AccountSettings />}
-            {tab === 'appearance' && <AppearanceSettings />}
             {tab === 'notifications' && <NotificationSettings />}
             {tab === 'privacy' && <PrivacySecuritySettings />}
             {tab === 'billing' && <BillingOrders />}
@@ -76,8 +89,87 @@ export default function SettingsPage() {
 
 function AccountSettings() {
   const { user } = useAuth();
+  const [profile, setProfile] = useState<StudioProfile | null>(null);
+  const [displayName, setDisplayName] = useState('');
+  const [username, setUsername] = useState('');
+  const [bio, setBio] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
   const [status, setStatus] = useState('');
+
+  useEffect(() => {
+    async function loadProfile() {
+      if (!user) return;
+      const result = await loadStudioProfile(user.id);
+      const nextProfile = result.profile;
+      setProfile(nextProfile);
+      setDisplayName(nextProfile?.display_name ?? '');
+      setUsername(nextProfile?.username ?? '');
+      setBio(nextProfile?.bio ?? '');
+      setAvatarUrl(nextProfile?.avatar_url ?? '');
+    }
+
+    loadProfile();
+  }, [user]);
+
+  function normalizeUsername(value: string) {
+    return value
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9_]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .slice(0, 32);
+  }
+
+  function slugify(value: string) {
+    return value
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 48);
+  }
+
+  async function saveProfile() {
+    if (!user || savingProfile) return;
+
+    const cleanDisplayName = displayName.trim() || user.email?.split('@')[0] || '44 Member';
+    const cleanUsername = normalizeUsername(username || cleanDisplayName || user.id.slice(0, 8));
+    if (!cleanUsername) {
+      setStatus('Choose a username with letters or numbers.');
+      return;
+    }
+
+    setSavingProfile(true);
+    setStatus('');
+
+    const payload = {
+      display_name: cleanDisplayName,
+      username: cleanUsername,
+      slug: slugify(profile?.slug || cleanUsername) || cleanUsername.replace(/_/g, '-'),
+      bio: bio.trim() || null,
+      avatar_url: avatarUrl.trim() || null,
+    };
+
+    const { error } = await supabase
+      .from('profiles')
+      .update(payload)
+      .eq('id', user.id);
+
+    setSavingProfile(false);
+
+    if (error) {
+      setStatus(error.message.includes('duplicate') ? 'That username is already taken.' : error.message);
+      return;
+    }
+
+    setUsername(cleanUsername);
+    setProfile(current => current ? { ...current, ...payload } : current);
+    setStatus('Profile saved.');
+  }
 
   async function sendPasswordReset() {
     if (!user?.email || sendingReset) return;
@@ -104,6 +196,48 @@ function AccountSettings() {
 
       <div className="settings-field">
         <div className="settings-field-head">
+          <div className="os-type-card-title">Profile</div>
+          <p className="os-type-body-small">This is the public profile created in `profiles` for your account.</p>
+        </div>
+        <div style={{ display: 'grid', gap: 14 }}>
+          {user && (
+            <UploadField
+              label="Avatar"
+              folder="profiles/avatars"
+              userId={user.id}
+              value={avatarUrl}
+              accept="image/*"
+              buttonLabel="Upload avatar"
+              onChange={setAvatarUrl}
+            />
+          )}
+          <label className="dashboard-field">
+            <div className="dashboard-field-label">Display Name</div>
+            <input className="input" value={displayName} onChange={event => setDisplayName(event.target.value)} placeholder="Your name" />
+          </label>
+          <label className="dashboard-field">
+            <div className="dashboard-field-label">Username</div>
+            <input className="input" value={username} onChange={event => setUsername(normalizeUsername(event.target.value))} placeholder="username" />
+          </label>
+          <label className="dashboard-field">
+            <div className="dashboard-field-label">Bio</div>
+            <textarea className="input" rows={4} value={bio} onChange={event => setBio(event.target.value)} placeholder="A short note for your public profile." />
+          </label>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button className="os-button os-button-primary" type="button" onClick={() => void saveProfile()} disabled={savingProfile || !user}>
+              {savingProfile ? 'Saving…' : 'Save Profile'}
+            </button>
+            {username && (
+              <a className="os-button os-button-secondary" href={`/community/profile/${username}`}>
+                View Public Profile
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="settings-field">
+        <div className="settings-field-head">
           <div className="os-type-card-title">Password</div>
           <p className="os-type-body-small">Send yourself a password reset email.</p>
         </div>
@@ -111,16 +245,6 @@ function AccountSettings() {
           <button className="os-button os-button-secondary" type="button" onClick={sendPasswordReset} disabled={sendingReset}>
             {sendingReset ? 'Sending…' : 'Send Password Reset'}
           </button>
-        </div>
-      </div>
-
-      <div className="settings-field">
-        <div className="settings-field-head">
-          <div className="os-type-card-title">Export Data</div>
-          <p className="os-type-body-small">Download a copy of your profile, collection, and activity.</p>
-        </div>
-        <div>
-          <button className="os-button os-button-secondary" type="button" disabled>Request Export</button>
         </div>
       </div>
 
@@ -153,9 +277,36 @@ function AccountSettings() {
   );
 }
 
-function AppearanceSettings() {
+function SystemSettings() {
+  const { user } = useAuth();
   const [mode, setModeState] = useState<ThemeMode>(() => getStoredMode());
   const [accent, setAccentState] = useState<ThemeAccent>(() => getStoredAccent());
+  const [countryCode, setCountryCode] = useState(() => getStoredViewerCountry());
+  const [displayCurrency, setDisplayCurrency] = useState(() => getStoredViewerCurrency());
+  const [marketStatus, setMarketStatus] = useState('');
+
+  useEffect(() => {
+    async function loadSystemPreferences() {
+      if (!user) return;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('country_code, display_currency')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const nextCountry = !isMissingColumnError(error) && data?.country_code
+        ? data.country_code
+        : getStoredViewerCountry() || DEFAULT_VIEWER_COUNTRY;
+      const nextCurrency = !isMissingColumnError(error) && data?.display_currency
+        ? data.display_currency
+        : getStoredViewerCurrency() || DEFAULT_VIEWER_CURRENCY;
+      setCountryCode(nextCountry);
+      setDisplayCurrency(nextCurrency);
+      setStoredViewerPreferences(nextCountry, nextCurrency);
+    }
+
+    loadSystemPreferences();
+  }, [user]);
 
   function chooseMode(m: ThemeMode) {
     setModeState(m);
@@ -166,10 +317,37 @@ function AppearanceSettings() {
     setAccent(a);
   }
 
+  async function saveMarketPreferences(nextCountry: string, nextCurrency: string) {
+    setCountryCode(nextCountry);
+    setDisplayCurrency(nextCurrency);
+    setStoredViewerPreferences(nextCountry, nextCurrency);
+    setMarketStatus('');
+
+    if (!user) {
+      setMarketStatus('Saved on this device.');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        country_code: nextCountry,
+        display_currency: nextCurrency,
+      })
+      .eq('id', user.id);
+
+    if (isMissingColumnError(error)) {
+      setMarketStatus('Saved on this device.');
+      return;
+    }
+
+    setMarketStatus(error ? error.message : 'System preferences saved.');
+  }
+
   return (
     <div className="settings-section">
       <div className="settings-block">
-        <h2 className="os-type-panel-title">Appearance</h2>
+        <h2 className="os-type-panel-title">System</h2>
         <p className="os-type-body">Choose how 44 looks. Changes apply instantly and are saved to this device.</p>
       </div>
 
@@ -212,6 +390,49 @@ function AppearanceSettings() {
           ))}
         </div>
       </div>
+
+      <div className="settings-field">
+        <div className="settings-field-head">
+          <div className="os-type-card-title">Region</div>
+          <p className="os-type-body-small">Tell 44 which market you browse from so local creator pricing can appear when it applies.</p>
+        </div>
+        <select
+          className="input"
+          value={countryCode}
+          onChange={event => {
+            const nextCountry = event.target.value;
+            void saveMarketPreferences(nextCountry, currencyForCountry(nextCountry));
+          }}
+        >
+          {COUNTRIES.map(country => (
+            <option key={country.code} value={country.code}>{country.name}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="settings-field">
+        <div className="settings-field-head">
+          <div className="os-type-card-title">Display Currency</div>
+          <p className="os-type-body-small">Prices outside local creator offers are converted from USD into this currency.</p>
+        </div>
+        <select
+          className="input"
+          value={displayCurrency}
+          onChange={event => void saveMarketPreferences(countryCode, event.target.value)}
+        >
+          {CURRENCIES.map(currency => (
+            <option key={currency.code} value={currency.code}>
+              {currency.code} - {currency.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {marketStatus && (
+        <span className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>
+          {marketStatus}
+        </span>
+      )}
     </div>
   );
 }

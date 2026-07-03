@@ -34,7 +34,7 @@ export default function BrowsePage() {
     async function fetchProducts() {
       const { data } = await supabase
         .from('products')
-        .select('*')
+        .select('*, creators:profiles!author_id(*)')
         .eq('is_published', true)
         .order('created_at', { ascending: false });
 

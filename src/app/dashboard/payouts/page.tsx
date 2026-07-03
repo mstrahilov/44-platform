@@ -1,27 +1,61 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageShell, GlassPanel } from '@/components/Ui';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { useDashboardTabs } from '@/lib/dashboardTabs';
+import { formatProductPrice, type Product } from '@/lib/products';
+import { formatServicePrice, type Service } from '@/lib/platform';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 
-export default function DashboardPlaceholder() {
+export default function DashboardPayoutsPage() {
   useDashboardTabs('payouts');
   const router = useRouter();
   const { user, loading } = useAuth();
   const [profile, setProfile] = useState<StudioProfile | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [fetching, setFetching] = useState(true);
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
   }, [loading, router, user]);
 
   useEffect(() => {
-    if (!user) return;
-    loadStudioProfile(user.id).then(result => setProfile(result.profile));
+    async function loadData() {
+      if (!user) return;
+      const profileResult = await loadStudioProfile(user.id);
+      setProfile(profileResult.profile);
+      const profileId = profileResult.profile?.id ?? user.id;
+
+      const [productsResult, servicesResult] = await Promise.all([
+        supabase.from('products').select('*').eq('author_id', profileId).order('created_at', { ascending: false }),
+        supabase.from('services').select('*').eq('author_id', profileId).order('created_at', { ascending: false }),
+      ]);
+
+      setProducts((productsResult.data as Product[] | null) ?? []);
+      setServices((servicesResult.data as Service[] | null) ?? []);
+      setFetching(false);
+    }
+
+    loadData();
   }, [user]);
+
+  const paidProducts = useMemo(
+    () => products.filter(item => (item.is_published || item.status === 'published') && !item.is_free && (item.price_cents ?? 0) > 0),
+    [products],
+  );
+  const paidServices = useMemo(
+    () => services.filter(item => item.status === 'published' && (item.starting_price_cents ?? 0) > 0),
+    [services],
+  );
+  const projectedCatalogValue = useMemo(
+    () => paidProducts.reduce((sum, item) => sum + (item.price_cents ?? 0), 0) + paidServices.reduce((sum, item) => sum + (item.starting_price_cents ?? 0), 0),
+    [paidProducts, paidServices],
+  );
 
   if (loading || !user) {
     return <PageShell><div style={{ minHeight: '40vh' }} /></PageShell>;
@@ -30,10 +64,10 @@ export default function DashboardPlaceholder() {
   if (profile && !isCreatorProfile(profile)) {
     return (
       <PageShell>
-        <div style={{ maxWidth: 1000, margin: '0 auto', padding: '64px 0' }}>
+        <div className="dashboard-page">
           <GlassPanel style={{ padding: 40 }}>
-            <h1 style={{ fontSize: 42, fontWeight: 780, marginBottom: 12, letterSpacing: '-0.04em' }}>Creator Access Required</h1>
-            <p style={{ color: 'var(--os-color-ink-secondary)', fontSize: 18, marginBottom: 18 }}>
+            <h1 className="os-type-panel-title" style={{ marginBottom: 8 }}>Creator Access Required</h1>
+            <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', marginBottom: 18 }}>
               Dashboard is for creator accounts.
             </p>
             <Link href="/profile" className="os-button os-button-primary">Open Public Profile</Link>
@@ -45,38 +79,79 @@ export default function DashboardPlaceholder() {
 
   return (
     <PageShell>
-      <div
-        style={{
-          maxWidth: 1000,
-          margin: '0 auto',
-          padding: '64px 0',
-        }}
-      >
-        <GlassPanel
-          style={{
-            padding: 40,
-          }}
-        >
-          <h1
-            style={{
-              fontSize: 42,
-              fontWeight: 780,
-              marginBottom: 12,
-              letterSpacing: '-0.04em',
-            }}
-          >
-            Payouts
-          </h1>
+      <div className="dashboard-page">
+        <header className="dashboard-header">
+          <div className="dashboard-header-copy">
+            <h1 className="os-type-display">Payouts</h1>
+            <p className="os-type-body">
+              Review the commercial value currently live in your catalog and which offers are positioned to generate future payouts.
+            </p>
+          </div>
+        </header>
 
-          <p
-            style={{
-              color: 'var(--os-color-ink-secondary)',
-              fontSize: 18,
-            }}
-          >
-            This page is ready to be built.
-          </p>
-        </GlassPanel>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 18 }}>
+          <GlassPanel style={{ padding: 24 }}>
+            <div className="os-type-meta" style={{ color: 'var(--os-color-ink-muted)', textTransform: 'uppercase' }}>Paid Products</div>
+            <div className="os-type-display" style={{ fontSize: 42 }}>{paidProducts.length}</div>
+            <div className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>
+              published items with direct pricing
+            </div>
+          </GlassPanel>
+          <GlassPanel style={{ padding: 24 }}>
+            <div className="os-type-meta" style={{ color: 'var(--os-color-ink-muted)', textTransform: 'uppercase' }}>Paid Services</div>
+            <div className="os-type-display" style={{ fontSize: 42 }}>{paidServices.length}</div>
+            <div className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>
+              live offers with starting rates
+            </div>
+          </GlassPanel>
+          <GlassPanel style={{ padding: 24 }}>
+            <div className="os-type-meta" style={{ color: 'var(--os-color-ink-muted)', textTransform: 'uppercase' }}>Catalog Value</div>
+            <div className="os-type-display" style={{ fontSize: 42 }}>${(projectedCatalogValue / 100).toFixed(2)}</div>
+            <div className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>
+              combined live product prices and service entry points
+            </div>
+          </GlassPanel>
+        </div>
+
+        <section className="dashboard-section">
+          <div className="dashboard-header-copy">
+            <h2 className="os-type-panel-content">Monetized Catalog</h2>
+            <p className="os-type-body-small">
+              These are the offers currently configured to create revenue on 44.
+            </p>
+          </div>
+
+          {fetching ? (
+            <div className="dashboard-empty">Loading payout overview…</div>
+          ) : paidProducts.length + paidServices.length === 0 ? (
+            <div className="dashboard-empty">No priced items are published yet. Publish a paid product or service to start shaping payouts.</div>
+          ) : (
+            <div>
+              {[...paidProducts.map(item => ({
+                id: item.id,
+                title: item.title,
+                type: item.product_type || 'Product',
+                price: formatProductPrice(item),
+                href: `/dashboard/products/${item.id}`,
+              })), ...paidServices.map(item => ({
+                id: item.id,
+                title: item.title,
+                type: item.service_type || 'Service',
+                price: formatServicePrice(item),
+                href: `/dashboard/services/${item.id}`,
+              }))].map(item => (
+                <div key={`${item.type}-${item.id}`} className="dashboard-list-row" style={{ gridTemplateColumns: '1fr 180px 160px 120px' }}>
+                  <div style={{ fontSize: 17, fontWeight: 720 }}>{item.title}</div>
+                  <div style={{ color: 'var(--os-color-ink-secondary)', fontSize: 14 }}>{item.type}</div>
+                  <div style={{ color: 'var(--os-color-ink-secondary)', fontSize: 14 }}>{item.price}</div>
+                  <div style={{ justifySelf: 'end' }}>
+                    <Link href={item.href} className="os-button os-button-ghost os-button-compact">Open</Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </PageShell>
   );

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageShell, GlassPanel } from '@/components/Ui';
+import { useTopbarBack } from '@/components/TopbarContext';
 import { UploadField } from '@/components/UploadField';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
@@ -17,6 +18,7 @@ function buildSlug(title: string) {
 }
 
 export default function NewResourcePage() {
+  useTopbarBack({ href: '/dashboard/resources', label: 'Resources' });
   const router = useRouter();
   const { user, loading } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
@@ -103,33 +105,26 @@ export default function NewResourcePage() {
 
   return (
     <PageShell>
-      <div style={{ maxWidth: 980, margin: '0 auto', padding: '64px 0' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20, alignItems: 'flex-start', marginBottom: 32 }}>
-          <div>
-            <h1 style={{ fontSize: 48, fontWeight: 780, letterSpacing: '-0.04em', marginBottom: 10 }}>
-              New Resource
-            </h1>
-
-            <p style={{ color: 'var(--os-color-ink-secondary)', fontSize: 18 }}>
+      <div className="dashboard-editor">
+        <header className="dashboard-header">
+          <div className="dashboard-header-copy">
+            <h1 className="os-type-display">New Resource</h1>
+            <p className="os-type-body">
               Create guides, articles, lessons, templates, and downloadable resources from inside the app.
             </p>
           </div>
+        </header>
 
-          <Link href="/dashboard/resources" className="os-button os-button-ghost os-button-compact">
-            Back to Resources
-          </Link>
-        </div>
-
-        <GlassPanel style={{ padding: 32 }}>
-          <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 22 }}>
-            <label>
-              <div style={{ marginBottom: 8, fontWeight: 700 }}>Resource Title</div>
+        <GlassPanel className="dashboard-form-panel" style={{ padding: 32 }}>
+          <form onSubmit={handleSubmit} className="dashboard-form">
+            <label className="dashboard-field">
+              <div className="dashboard-field-label">Resource Title</div>
               <input className="input" value={title} onChange={event => setTitle(event.target.value)} placeholder="Example: Publishing Your First Release" />
             </label>
 
-            <div style={{ display: 'grid', gap: 22, gridTemplateColumns: '1fr 1fr' }}>
-              <label>
-                <div style={{ marginBottom: 8, fontWeight: 700 }}>Category</div>
+            <div className="dashboard-form-grid dashboard-form-grid-2">
+              <label className="dashboard-field">
+                <div className="dashboard-field-label">Category</div>
                 <select className="input" value={categoryId} onChange={event => setCategoryId(event.target.value)}>
                   {categories.map(category => (
                     <option key={category.id} value={category.id}>{category.name}</option>
@@ -137,23 +132,23 @@ export default function NewResourcePage() {
                 </select>
               </label>
 
-              <label>
-                <div style={{ marginBottom: 8, fontWeight: 700 }}>Type</div>
+              <label className="dashboard-field">
+                <div className="dashboard-field-label">Type</div>
                 <input className="input" value={resourceType} onChange={event => setResourceType(event.target.value)} placeholder="Guide, Template, Lesson, Download…" />
               </label>
             </div>
 
-            <label>
-              <div style={{ marginBottom: 8, fontWeight: 700 }}>Short Description</div>
+            <label className="dashboard-field">
+              <div className="dashboard-field-label">Short Description</div>
               <textarea className="input" rows={3} value={shortDescription} onChange={event => setShortDescription(event.target.value)} placeholder="Short card copy for this resource." />
             </label>
 
-            <label>
-              <div style={{ marginBottom: 8, fontWeight: 700 }}>Long Description</div>
+            <label className="dashboard-field">
+              <div className="dashboard-field-label">Long Description</div>
               <textarea className="input" rows={8} value={longDescription} onChange={event => setLongDescription(event.target.value)} placeholder="Write the full resource content or in-app reading copy here." />
             </label>
 
-            <div style={{ display: 'grid', gap: 22, gridTemplateColumns: '1fr 1fr 1fr' }}>
+            <div className="dashboard-form-grid dashboard-form-grid-3">
               <UploadField
                 label="Cover Image"
                 folder="resources/covers"
@@ -173,31 +168,30 @@ export default function NewResourcePage() {
                 onChange={setDownloadUrl}
               />
 
-              <label>
-                <div style={{ marginBottom: 8, fontWeight: 700 }}>Creator</div>
+              <label className="dashboard-field">
+                <div className="dashboard-field-label">Creator</div>
                 <input className="input" value={creatorName} readOnly />
               </label>
             </div>
 
-            {error && (
-              <p style={{ color: '#ff9b9b', fontSize: 14, fontWeight: 600 }}>
-                {error}
-              </p>
-            )}
+            {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
 
             {!isCreatorProfile(profile) && (
-              <p style={{ color: 'var(--os-color-ink-secondary)', fontSize: 14 }}>
+              <p className="dashboard-form-note">
                 This account is not marked as a creator yet. You can still save drafts, but switch your profile role to creator before publishing publicly.
               </p>
             )}
 
-            <div style={{ display: 'flex', gap: 12, justifySelf: 'start' }}>
-              <button className="os-button os-button-primary" type="submit" disabled={saving}>
-                {saving ? 'Saving…' : 'Save Draft'}
-              </button>
-              <Link className="os-button os-button-ghost" href="/dashboard/resources">
-                Cancel
-              </Link>
+            <div className="dashboard-form-actions">
+              <div className="dashboard-form-actions-left" />
+              <div className="dashboard-form-actions-right">
+                <Link className="os-button os-button-secondary" href="/dashboard/resources">
+                  Cancel
+                </Link>
+                <button className="os-button os-button-primary" type="submit" disabled={saving}>
+                  {saving ? 'Saving…' : 'Save Draft'}
+                </button>
+              </div>
             </div>
           </form>
         </GlassPanel>

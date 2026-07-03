@@ -3,83 +3,127 @@
 import Link from 'next/link';
 import { use, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { Category, CommunityPost } from '@/lib/platform';
+import type { Category } from '@/lib/platform';
 import { matchesCategory } from '@/lib/taxonomy';
-import { ThreadRow, PageShell } from '@/components/Ui';
-
-type CountMap = Record<string, number>;
+import { PageShell } from '@/components/Ui';
+import { SocialPostRow } from '@/components/Social';
+import { useAuth } from '@/lib/useAuth';
+import { useTopbarTabs } from '@/components/TopbarContext';
+import { countById, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type ReplyEngagerRow, type SocialPost } from '@/lib/social';
 
 export default function CommunityBrowseCategoryPage({ params }: { params: Promise<{ category: string }> }) {
   const { category } = use(params);
-  const [posts, setPosts] = useState<CommunityPost[]>([]);
+  const { user } = useAuth();
+  const [posts, setPosts] = useState<SocialPost[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [replyCounts, setReplyCounts] = useState<CountMap>({});
+  const [repliersMap, setRepliersMap] = useState<LikersMap>({});
   const [likeCounts, setLikeCounts] = useState<CountMap>({});
+  const [likersMap, setLikersMap] = useState<LikersMap>({});
+  const [error, setError] = useState('');
 
   useEffect(() => {
     async function fetchData() {
       const [{ data: postRows }, { data: categoryRows }, { data: replyRows }, { data: likeRows }] = await Promise.all([
         supabase
           .from('posts')
-          .select('*, creators:profiles!author_id(id, slug, name:display_name, avatar_url), categories(id, slug, name)')
+          .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type), categories(id, slug, name)')
           .eq('status', 'published')
           .order('created_at', { ascending: false }),
         supabase.from('categories').select('*').eq('scope', 'posts').order('sort_order'),
-        supabase.from('post_replies').select('post_id').eq('status', 'published'),
-        supabase.from('post_likes').select('post_id'),
+        supabase
+          .from('post_replies')
+          .select('post_id, author_id, authors:profiles!author_id(id, display_name, username, avatar_url)')
+          .eq('status', 'published')
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('post_likes')
+          .select('post_id, profile_id, profiles:profiles!profile_id(id, display_name, username, avatar_url)')
+          .order('created_at', { ascending: false }),
       ]);
-      setPosts((postRows as CommunityPost[] | null) ?? []);
+      setPosts((postRows as SocialPost[] | null) ?? []);
       setCategories((categoryRows as Category[] | null) ?? []);
-      setReplyCounts(
-        ((replyRows as Array<{ post_id: string }> | null) ?? []).reduce<CountMap>((acc, row) => {
-          acc[row.post_id] = (acc[row.post_id] ?? 0) + 1;
-          return acc;
-        }, {})
-      );
-      setLikeCounts(
-        ((likeRows as Array<{ post_id: string }> | null) ?? []).reduce<CountMap>((acc, row) => {
-          acc[row.post_id] = (acc[row.post_id] ?? 0) + 1;
-          return acc;
-        }, {})
-      );
+      const replies = (replyRows as ReplyEngagerRow[] | null) ?? [];
+      setReplyCounts(countById(replies, 'post_id'));
+      setRepliersMap(repliersByPost(replies));
+      const likes = (likeRows as LikeRow[] | null) ?? [];
+      setLikeCounts(countById(likes, 'post_id'));
+      setLikersMap(likersByPost(likes));
     }
     fetchData();
   }, []);
 
-  const postCatalog = posts;
-  const categoryCatalog = categories;
+  const categoryList = useMemo(() => {
+    return categories
+      .filter(c => c.scope === 'posts')
+      .sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999));
+  }, [categories]);
 
-  const cat = categoryCatalog.find(c => c.slug === category || c.name.toLowerCase() === category);
+  const cat = categoryList.find(c => c.slug === category || c.name.toLowerCase() === category);
   const label = cat?.name ?? category.charAt(0).toUpperCase() + category.slice(1);
 
+  useTopbarTabs(
+    categoryList.length > 0
+      ? [
+          { id: 'all', label: 'For You', href: '/community' },
+          ...categoryList.slice(0, 5).map(c => ({
+            id: c.slug,
+            label: c.name,
+            href: `/community/browse/${c.slug}`,
+            active: c.slug === cat?.slug,
+          })),
+        ]
+      : undefined,
+  );
+
   const visible = useMemo(() => {
-    return postCatalog.filter(p => matchesCategory(p, cat));
-  }, [postCatalog, cat]);
+    return posts.filter(p => matchesCategory(p, cat));
+  }, [posts, cat]);
+
+  async function deletePost(post: SocialPost) {
+    if (!user || post.author_id !== user.id) return;
+    if (!window.confirm('Delete this post? This cannot be undone.')) return;
+    const { error: deleteError } = await supabase.from('posts').delete().eq('id', post.id);
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
+    setPosts(current => current.filter(p => p.id !== post.id));
+  }
 
   return (
     <PageShell>
-      <style>{`
-        .browse-page { display: flex; flex-direction: column; gap: 20px; }
-        .thread-list { display: grid; gap: 12px; }
-      `}</style>
-      <div className="browse-page">
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-          <h1 className="browse-page-title os-type-display">{label}</h1>
-          <Link href="/community/new" className="os-button os-button-primary os-button-compact">
-            Start Discussion
-          </Link>
-        </div>
-        <div className="thread-list">
-          {visible.map(post => (
-            <ThreadRow
-              key={post.id}
-              post={post}
-              replyCount={replyCounts[post.id] ?? 0}
-              likeCount={likeCounts[post.id] ?? 0}
-            />
-          ))}
-        </div>
-      </div>
+      <main className="social-shell">
+        <header className="social-header">
+          <div className="social-title-row">
+            <h1 className="os-type-display">{label}</h1>
+            <Link href="/community/new" className="os-button os-button-primary os-button-compact">
+              New Post
+            </Link>
+          </div>
+        </header>
+
+        {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
+
+        <section className="social-feed" aria-label={`${label} posts`}>
+          {visible.length === 0 ? (
+            <div className="app-empty-text">No posts in {label} yet.</div>
+          ) : (
+            visible.map(post => (
+              <SocialPostRow
+                key={post.id}
+                post={post}
+                replyCount={replyCounts[post.id] ?? 0}
+                likeCount={likeCounts[post.id] ?? 0}
+                likers={likersMap[post.id] ?? []}
+                repliers={repliersMap[post.id] ?? []}
+                onDelete={() => deletePost(post)}
+                canDelete={Boolean(user && post.author_id === user.id)}
+              />
+            ))
+          )}
+        </section>
+      </main>
     </PageShell>
   );
 }

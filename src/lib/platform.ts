@@ -1,3 +1,5 @@
+import { formatStartingPrice } from '@/lib/pricing';
+
 export type PlatformScope = 'products' | 'services' | 'resources' | 'posts' | 'creators';
 
 export interface Category {
@@ -32,6 +34,12 @@ export interface Profile {
   creator_type?: string | null;
   is_official?: boolean | null;
   is_published?: boolean | null;
+  country_code?: string | null;
+  display_currency?: string | null;
+  home_country_code?: string | null;
+  home_currency?: string | null;
+  product_market_mode?: string | null;
+  service_market_mode?: string | null;
 }
 
 export interface Creator {
@@ -45,6 +53,12 @@ export interface Creator {
   hero_url: string | null;
   avatar_url: string | null;
   is_published: boolean;
+  country_code?: string | null;
+  display_currency?: string | null;
+  home_country_code?: string | null;
+  home_currency?: string | null;
+  product_market_mode?: string | null;
+  service_market_mode?: string | null;
   categories?: Pick<Category, 'id' | 'slug' | 'name'> | null;
 }
 
@@ -60,13 +74,17 @@ export interface Service {
   long_description: string | null;
   service_type?: string | null;
   starting_price_cents: number;
+  market_mode?: string | null;
+  local_price_cents?: number | null;
+  local_currency?: string | null;
+  available_locally_only?: boolean | null;
   delivery_estimate: string | null;
   cover_url: string | null;
   feature_description?: string | null;
   featured: boolean;
   status: string;
   created_at: string;
-  creators?: Pick<Creator, 'id' | 'slug' | 'name' | 'avatar_url'> | null;
+  creators?: Pick<Creator, 'id' | 'slug' | 'name' | 'avatar_url' | 'country_code' | 'display_currency' | 'home_country_code' | 'home_currency'> | null;
   categories?: Pick<Category, 'id' | 'slug' | 'name'> | null;
 }
 
@@ -173,13 +191,8 @@ export interface ServiceRequest {
   services: Service | null;
 }
 
-export function formatServicePrice(service: Pick<Service, 'starting_price_cents'>) {
-  if (service.starting_price_cents === 0) return 'Free inquiry';
-
-  return `From ${new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(service.starting_price_cents / 100)}`;
+export function formatServicePrice(service: Pick<Service, 'starting_price_cents'> & Partial<Service>) {
+  return formatStartingPrice(service);
 }
 
 export function serviceHref(service: Pick<Service, 'id' | 'slug'>) {

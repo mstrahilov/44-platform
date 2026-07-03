@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { PageShell, GlassPanel } from '@/components/Ui';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { useTopbarBack } from '@/components/TopbarContext';
 import { UploadField } from '@/components/UploadField';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
@@ -11,6 +13,7 @@ import type { Category } from '@/lib/platform';
 import { getStudioDisplayName, loadStudioProfile } from '@/lib/studioProfiles';
 
 export default function EditResourcePage() {
+  useTopbarBack({ href: '/dashboard/resources', label: 'Resources' });
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { user, loading } = useAuth();
@@ -24,8 +27,11 @@ export default function EditResourcePage() {
   const [coverUrl, setCoverUrl] = useState('');
   const [downloadUrl, setDownloadUrl] = useState('');
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
@@ -73,6 +79,7 @@ export default function EditResourcePage() {
     if (!user) return;
     setSaving(true);
     setError('');
+    setSuccess('');
     const profileResult = await loadStudioProfile(user.id);
     const profileId = profileResult.profile?.id ?? user.id;
 
@@ -95,6 +102,7 @@ export default function EditResourcePage() {
       setError(updateError.message);
       return;
     }
+    setSuccess('Changes saved.');
     router.push('/dashboard/resources');
   }
 
@@ -102,8 +110,9 @@ export default function EditResourcePage() {
 
   async function handleDelete() {
     if (!user) return;
-    const confirmed = window.confirm('Delete this resource?');
-    if (!confirmed) return;
+    setDeleting(true);
+    setError('');
+    setSuccess('');
 
     const profileResult = await loadStudioProfile(user.id);
     const profileId = profileResult.profile?.id ?? user.id;
@@ -115,33 +124,34 @@ export default function EditResourcePage() {
       .eq('author_id', profileId);
 
     if (deleteError) {
+      setDeleting(false);
       setError(deleteError.message);
       return;
     }
 
+    setDeleting(false);
     router.push('/dashboard/resources');
   }
 
   return (
     <PageShell>
-      <div style={{ maxWidth: 980, margin: '0 auto', padding: '64px 0' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20, alignItems: 'flex-start', marginBottom: 32 }}>
-          <div>
-            <h1 style={{ fontSize: 48, fontWeight: 780, letterSpacing: '-0.04em', marginBottom: 10 }}>Edit Resource</h1>
-            <p style={{ color: 'var(--os-color-ink-secondary)', fontSize: 18 }}>Update the resource details stored in 44.</p>
+      <div className="dashboard-editor">
+        <header className="dashboard-header">
+          <div className="dashboard-header-copy">
+            <h1 className="os-type-display">Edit Resource</h1>
+            <p className="os-type-body">Update the resource details stored in 44.</p>
           </div>
-          <Link href="/dashboard/resources" className="os-button os-button-ghost os-button-compact">Back to Resources</Link>
-        </div>
-        <GlassPanel style={{ padding: 32 }}>
-          <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 22 }}>
-            <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Resource Title</div><input className="input" value={title} onChange={e => setTitle(e.target.value)} /></label>
-            <div style={{ display: 'grid', gap: 22, gridTemplateColumns: '1fr 1fr' }}>
-              <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Category</div><select className="input" value={categoryId} onChange={e => setCategoryId(e.target.value)}>{categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
-              <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Type</div><input className="input" value={resourceType} onChange={e => setResourceType(e.target.value)} /></label>
+        </header>
+        <GlassPanel className="dashboard-form-panel" style={{ padding: 32 }}>
+          <form onSubmit={handleSubmit} className="dashboard-form">
+            <label className="dashboard-field"><div className="dashboard-field-label">Resource Title</div><input className="input" value={title} onChange={e => setTitle(e.target.value)} /></label>
+            <div className="dashboard-form-grid dashboard-form-grid-2">
+              <label className="dashboard-field"><div className="dashboard-field-label">Category</div><select className="input" value={categoryId} onChange={e => setCategoryId(e.target.value)}>{categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
+              <label className="dashboard-field"><div className="dashboard-field-label">Type</div><input className="input" value={resourceType} onChange={e => setResourceType(e.target.value)} /></label>
             </div>
-            <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Short Description</div><textarea className="input" rows={3} value={shortDescription} onChange={e => setShortDescription(e.target.value)} /></label>
-            <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Long Description</div><textarea className="input" rows={8} value={longDescription} onChange={e => setLongDescription(e.target.value)} /></label>
-            <div style={{ display: 'grid', gap: 22, gridTemplateColumns: '1fr 1fr 1fr' }}>
+            <label className="dashboard-field"><div className="dashboard-field-label">Short Description</div><textarea className="input" rows={3} value={shortDescription} onChange={e => setShortDescription(e.target.value)} /></label>
+            <label className="dashboard-field"><div className="dashboard-field-label">Long Description</div><textarea className="input" rows={8} value={longDescription} onChange={e => setLongDescription(e.target.value)} /></label>
+            <div className="dashboard-form-grid dashboard-form-grid-3">
               <UploadField
                 label="Cover Image"
                 folder="resources/covers"
@@ -159,16 +169,34 @@ export default function EditResourcePage() {
                 buttonLabel="Upload file"
                 onChange={setDownloadUrl}
               />
-              <label><div style={{ marginBottom: 8, fontWeight: 700 }}>Creator</div><input className="input" value={creatorName} readOnly /></label>
+              <label className="dashboard-field"><div className="dashboard-field-label">Creator</div><input className="input" value={creatorName} readOnly /></label>
             </div>
-            {error && <p style={{ color: '#ff9b9b', fontSize: 14, fontWeight: 600 }}>{error}</p>}
-            <div style={{ display: 'flex', gap: 12, justifySelf: 'start' }}>
-              <button className="os-button os-button-primary" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>
-              <Link className="os-button os-button-ghost" href="/dashboard/resources">Cancel</Link>
-              <button className="os-button os-button-secondary" type="button" onClick={handleDelete}>Delete Resource</button>
+            {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
+            {success && <div className="dashboard-status dashboard-status-success">{success}</div>}
+            <div className="dashboard-form-actions">
+              <div className="dashboard-form-actions-left">
+                <button className="os-button os-button-primary" type="button" onClick={() => setShowDeleteConfirm(true)}>Delete Resource</button>
+              </div>
+              <div className="dashboard-form-actions-right">
+                <Link className="os-button os-button-secondary" href="/dashboard/resources">Cancel</Link>
+                <button className="os-button os-button-primary" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>
+              </div>
             </div>
           </form>
         </GlassPanel>
+        <ConfirmDialog
+          open={showDeleteConfirm}
+          title="Delete Resource"
+          description="Delete this resource? This will permanently remove it from 44."
+          confirmLabel="Delete Resource"
+          destructive
+          busy={deleting}
+          onCancel={() => setShowDeleteConfirm(false)}
+          onConfirm={async () => {
+            setShowDeleteConfirm(false);
+            await handleDelete();
+          }}
+        />
       </div>
     </PageShell>
   );

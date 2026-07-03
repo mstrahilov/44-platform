@@ -1,4 +1,5 @@
 import type { Profile } from '@/lib/platform';
+import { formatPrice } from '@/lib/pricing';
 
 export interface Product {
   id: string;
@@ -12,6 +13,10 @@ export interface Product {
   short_description: string | null;
   long_description: string | null;
   price_cents: number;
+  market_mode?: string | null;
+  local_price_cents?: number | null;
+  local_currency?: string | null;
+  available_locally_only?: boolean | null;
   is_free: boolean;
   is_published: boolean;
   featured: boolean;
@@ -26,16 +31,22 @@ export interface Product {
   status?: string | null;
   year?: number | null;
   created_at: string;
-  creators?: Pick<Profile, 'id' | 'slug' | 'username' | 'display_name' | 'avatar_url'> | null;
+  creators?: Pick<
+    Profile,
+    | 'id'
+    | 'slug'
+    | 'username'
+    | 'display_name'
+    | 'avatar_url'
+    | 'country_code'
+    | 'display_currency'
+    | 'home_country_code'
+    | 'home_currency'
+  > | null;
 }
 
-export function formatProductPrice(product: Pick<Product, 'is_free' | 'price_cents'>) {
-  if (product.is_free || product.price_cents === 0) return 'Free';
-
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(product.price_cents / 100);
+export function formatProductPrice(product: Pick<Product, 'is_free' | 'price_cents'> & Partial<Product>) {
+  return formatPrice(product);
 }
 
 export function productMeta(product: Pick<Product, 'product_type' | 'category'>) {
