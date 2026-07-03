@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useTopbarTabs } from './TopbarContext';
 
@@ -18,12 +17,8 @@ export function SystemPanel({ tabs, defaultTab, children }: Props) {
 
   useEffect(() => {
     const fallback = defaultTab ?? tabs[0]?.id ?? '';
-    if (!tabs.some(tab => tab.id === activeTab)) {
+    if (!tabs.some(tab => tab.id === activeTab) || !activeTab) {
       setActiveTab(fallback);
-      return;
-    }
-    if (defaultTab && defaultTab !== activeTab) {
-      setActiveTab(defaultTab);
     }
   }, [activeTab, defaultTab, tabs]);
 

@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
 import { browseHref, formatProductPrice, productMeta } from '@/lib/products';
-import { getProductStoreAccessLabel, isFreeCollectionClaim } from '@/lib/collectionContent';
+import { getProductStoreAccessLabel, isFreeLibraryClaim } from '@/lib/libraryContent';
 import { creatorHref } from '@/lib/platform';
 import { ProductGrid, ProductCard } from '@/components/Ui';
 import { ItemCommunitySection } from '@/components/ItemCommunitySection';
@@ -60,18 +60,18 @@ export default function ProductPage() {
   useEffect(() => {
     async function fetchOwnership(userId: string) {
       if (!product) return;
-      const { data } = await supabase.from('collection_items').select('product_id').eq('user_id', userId).eq('product_id', product.id).maybeSingle();
+      const { data } = await supabase.from('library_items').select('product_id').eq('user_id', userId).eq('product_id', product.id).maybeSingle();
       setOwned(Boolean(data));
     }
     if (user) fetchOwnership(user.id);
     else Promise.resolve().then(() => setOwned(false));
   }, [product, user]);
 
-  async function addToCollection() {
+  async function addToLibrary() {
     if (!product) return;
-    if (!user) { alert('Sign in first, then add this to your collection.'); return; }
-    if (!isFreeCollectionClaim(product)) { alert('Cart is coming soon. Free items can be added to your collection now.'); return; }
-    const { error } = await supabase.from('collection_items').upsert({ user_id: user.id, product_id: product.id, acquisition_type: 'free' }, { onConflict: 'user_id,product_id' });
+    if (!user) { alert('Sign in first, then add this to your library.'); return; }
+    if (!isFreeLibraryClaim(product)) { alert('Cart is coming soon. Free items can be added to your library now.'); return; }
+    const { error } = await supabase.from('library_items').upsert({ user_id: user.id, product_id: product.id, acquisition_type: 'free' }, { onConflict: 'user_id,product_id' });
     if (error) { alert(error.message); return; }
     setOwned(true);
   }
@@ -80,8 +80,8 @@ export default function ProductPage() {
   if (!product) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Product not found</div>;
 
   const heroImage = product.hero_url || product.cover_url;
-  const canClaimToCollection = isFreeCollectionClaim(product);
-  const primaryAction = owned ? 'Owned' : canClaimToCollection ? 'Add to Collection' : 'Add to Cart';
+  const canClaimToLibrary = isFreeLibraryClaim(product);
+  const primaryAction = owned ? 'Owned' : canClaimToLibrary ? 'Add to Library' : 'Add to Cart';
   const accessLabel = getProductStoreAccessLabel(product);
   const creatorLink = creatorHref(product.creators ?? product.creator);
 
@@ -109,12 +109,12 @@ export default function ProductPage() {
             <span style={{ fontWeight: 700 }}>{product.creators?.display_name || product.creator}</span>
             {product.year && (<><span className="view-album-meta-sep" /><span>{product.year}</span></>)}
             <span className="view-album-meta-sep" />
-            <span style={{ color: canClaimToCollection ? '#7cff4f' : '#fff', fontWeight: 700 }}>
+            <span style={{ color: canClaimToLibrary ? '#7cff4f' : '#fff', fontWeight: 700 }}>
               {formatProductPrice(product)}
             </span>
           </div>
           <div className="view-album-actions">
-            <button className="os-button os-button-primary" onClick={addToCollection} disabled={owned}>{primaryAction}</button>
+            <button className="os-button os-button-primary" onClick={addToLibrary} disabled={owned}>{primaryAction}</button>
             <Link className="os-button os-button-secondary" href={creatorLink}>View Creator</Link>
           </div>
         </div>

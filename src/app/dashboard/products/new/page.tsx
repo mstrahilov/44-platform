@@ -289,7 +289,7 @@ export default function NewProductPage() {
 
             <label className="dashboard-field">
               <div className="dashboard-field-label">Long Description</div>
-              <textarea className="input" rows={5} value={longDescription} onChange={event => setLongDescription(event.target.value)} placeholder="Full item description used across detail and collection views." />
+              <textarea className="input" rows={5} value={longDescription} onChange={event => setLongDescription(event.target.value)} placeholder="Full item description used across detail and library views." />
             </label>
 
             <div className="dashboard-form-grid dashboard-form-grid-3">

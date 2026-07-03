@@ -27,6 +27,7 @@ import {
   getStoredViewerCurrency,
   setStoredViewerPreferences,
 } from '@/lib/marketPreferences';
+import { LANDING_PAGES, getLandingPageId, setLandingPageId, type LandingPageId } from '@/lib/landingPage';
 import { isMissingColumnError } from '@/lib/schemaCompat';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 
@@ -37,7 +38,7 @@ const SETTINGS_KEYS = {
   orders: '44-setting-orders',
   emails: '44-setting-emails',
   publicProfile: '44-setting-public-profile',
-  publicCollection: '44-setting-public-collection',
+  publicLibrary: '44-setting-public-library',
   directMessages: '44-setting-direct-messages',
   recommendations: '44-setting-recommendations',
   discord: '44-setting-discord',
@@ -295,11 +296,20 @@ function AccountSettings() {
 
 function SystemSettings() {
   const { user } = useAuth();
-  const [mode, setModeState] = useState<ThemeMode>(() => getStoredMode());
-  const [accent, setAccentState] = useState<ThemeAccent>(() => getStoredAccent());
-  const [countryCode, setCountryCode] = useState(() => getStoredViewerCountry());
-  const [displayCurrency, setDisplayCurrency] = useState(() => getStoredViewerCurrency());
+  const [mode, setModeState] = useState<ThemeMode>('dark');
+  const [accent, setAccentState] = useState<ThemeAccent>('amber');
+  const [landingPage, setLandingPage] = useState<LandingPageId>('store');
+  const [countryCode, setCountryCode] = useState(DEFAULT_VIEWER_COUNTRY);
+  const [displayCurrency, setDisplayCurrency] = useState(DEFAULT_VIEWER_CURRENCY);
   const [marketStatus, setMarketStatus] = useState('');
+
+  useEffect(() => {
+    setModeState(getStoredMode());
+    setAccentState(getStoredAccent());
+    setLandingPage(getLandingPageId());
+    setCountryCode(getStoredViewerCountry());
+    setDisplayCurrency(getStoredViewerCurrency());
+  }, []);
 
   useEffect(() => {
     async function loadSystemPreferences() {
@@ -331,6 +341,10 @@ function SystemSettings() {
   function chooseAccent(a: ThemeAccent) {
     setAccentState(a);
     setAccent(a);
+  }
+  function chooseLandingPage(id: LandingPageId) {
+    setLandingPage(id);
+    setLandingPageId(id);
   }
 
   async function saveMarketPreferences(nextCountry: string, nextCurrency: string) {
@@ -402,6 +416,25 @@ function SystemSettings() {
             >
               <span className="settings-swatch-dot" style={{ background: a.swatch }} />
               {a.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="settings-field">
+        <div className="settings-field-head">
+          <div className="os-type-card-title">Landing Page</div>
+          <p className="os-type-body-small">Choose where 44 opens after login.</p>
+        </div>
+        <div className="settings-segment" role="group" aria-label="Landing page">
+          {LANDING_PAGES.map(page => (
+            <button
+              key={page.id}
+              type="button"
+              className={page.id === landingPage ? 'settings-segment-item settings-segment-item-active' : 'settings-segment-item'}
+              onClick={() => chooseLandingPage(page.id)}
+            >
+              {page.label}
             </button>
           ))}
         </div>
@@ -537,7 +570,7 @@ function PrivacySecuritySettings() {
       </div>
       <div>
         <ToggleRow storageKey={SETTINGS_KEYS.publicProfile} title="Public profile" desc="Let others view your profile and activity." defaultOn />
-        <ToggleRow storageKey={SETTINGS_KEYS.publicCollection} title="Show collection publicly" desc="Display items you own on your profile." />
+        <ToggleRow storageKey={SETTINGS_KEYS.publicLibrary} title="Show library publicly" desc="Display items you own on your profile." />
         <ToggleRow storageKey={SETTINGS_KEYS.directMessages} title="Allow direct messages" desc="Let members message you directly." defaultOn />
         <ToggleRow storageKey={SETTINGS_KEYS.recommendations} title="Personalized recommendations" desc="Use your activity to tailor what you see." defaultOn />
         <ToggleRow storageKey="44-setting-2fa" title="Two-factor authentication" desc="Add an extra layer of security with a verification code." />

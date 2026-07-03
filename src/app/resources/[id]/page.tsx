@@ -45,7 +45,7 @@ export default function ResourcePage() {
 
   async function saveResource() {
     if (!resource) return;
-    if (!user) { alert('Sign in first, then save this resource to your collection.'); return; }
+    if (!user) { alert('Sign in first, then save this resource to your library.'); return; }
     const { error } = await supabase.from('saved_resources').upsert({ user_id: user.id, resource_id: resource.id }, { onConflict: 'user_id,resource_id' });
     if (error) { alert(error.message); return; }
     setSaved(true);

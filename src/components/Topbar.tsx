@@ -248,9 +248,7 @@ export function Topbar() {
               </div>
             )}
           </div>
-        ) : (
-          <Link href="/login" className="os-topbar-signin">Sign In</Link>
-        )}
+        ) : null}
       </div>
     </div>
   );

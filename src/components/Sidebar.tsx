@@ -18,7 +18,7 @@ function getActiveSectionId(pathname: string): string {
   if (pathname.startsWith('/services') || pathname.startsWith('/service')) return 'services';
   if (pathname.startsWith('/resources')) return 'resources';
   if (pathname.startsWith('/community')) return 'community';
-  if (pathname.startsWith('/collection')) return 'collection';
+  if (pathname.startsWith('/library')) return 'library';
   if (pathname.startsWith('/dashboard') || pathname.startsWith('/studio')) return 'dashboard';
   if (pathname.startsWith('/settings')) return 'settings';
   return '';
@@ -86,26 +86,25 @@ export default function Sidebar() {
           <>
             <div className="sidebar-divider" />
             <Link
-              href="/collection"
-              className={activeSectionId === 'collection' ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}
+              href="/library"
+              className={activeSectionId === 'library' ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}
             >
-              <span className="os-icon os-icon-collection" aria-hidden="true" />
-              <span className="sidebar-item-label">Collection</span>
+              <span className="os-icon os-icon-library" aria-hidden="true" />
+              <span className="sidebar-item-label">Library</span>
             </Link>
+            {isCreatorProfile(profile) && (
+              <Link
+                href="/dashboard"
+                className={activeSectionId === 'dashboard' ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}
+              >
+                <span className="os-icon os-icon-dashboard" aria-hidden="true" />
+                <span className="sidebar-item-label">Dashboard</span>
+              </Link>
+            )}
           </>
         )}
 
         <div className="sidebar-spacer" />
-
-        {user && isCreatorProfile(profile) && (
-          <Link
-            href="/dashboard"
-            className={activeSectionId === 'dashboard' ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}
-          >
-            <span className="os-icon os-icon-dashboard" aria-hidden="true" />
-            <span className="sidebar-item-label">Dashboard</span>
-          </Link>
-        )}
 
         {!user && (
           <Link

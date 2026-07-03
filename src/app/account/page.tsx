@@ -179,7 +179,7 @@ function AccountContent() {
                   Cancel
                 </button>
               ) : (
-                <Link className="os-button os-button-secondary" href="/collection">
+                <Link className="os-button os-button-secondary" href="/library">
                   Skip for now
                 </Link>
               )}
@@ -194,8 +194,8 @@ function AccountContent() {
           <Link className="os-button os-button-secondary" href={publicProfileHref}>
             View Public Profile
           </Link>
-          <Link className="os-button os-button-secondary" href="/collection">
-            Open Collection
+          <Link className="os-button os-button-secondary" href="/library">
+            Open Library
           </Link>
         </div>
       </div>

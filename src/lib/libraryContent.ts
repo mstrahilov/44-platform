@@ -2,14 +2,14 @@ import type { Product } from './products';
 
 export type ProductRuntimeKind = 'music' | 'book' | 'sample_pack' | 'interactive' | 'product';
 
-export interface CollectionPrimaryAction {
+export interface LibraryPrimaryAction {
   label: string;
   href: string | null;
   activityType: 'open' | 'play' | 'read' | 'download' | 'launch';
   missingMessage: string;
 }
 
-export interface ProductCollectionContent {
+export interface ProductLibraryContent {
   runtimeKind: ProductRuntimeKind;
   detailsTitle: string;
   contentTitle: string;
@@ -18,7 +18,7 @@ export interface ProductCollectionContent {
   notes: string[];
 }
 
-export function isFreeCollectionClaim(product: Pick<Product, 'is_free' | 'price_cents'>) {
+export function isFreeLibraryClaim(product: Pick<Product, 'is_free' | 'price_cents'>) {
   return product.is_free || product.price_cents === 0;
 }
 
@@ -35,7 +35,7 @@ export function getProductRuntimeKind(product: Product): ProductRuntimeKind {
   return 'product';
 }
 
-export function getProductCollectionPrimaryAction(product: Product): CollectionPrimaryAction {
+export function getProductLibraryPrimaryAction(product: Product): LibraryPrimaryAction {
   const runtimeKind = getProductRuntimeKind(product);
 
   if (runtimeKind === 'music') {
@@ -82,7 +82,7 @@ export function getProductCollectionPrimaryAction(product: Product): CollectionP
   };
 }
 
-export function getProductCollectionContent(product: Product): ProductCollectionContent {
+export function getProductLibraryContent(product: Product): ProductLibraryContent {
   const runtimeKind = getProductRuntimeKind(product);
 
   if (runtimeKind === 'music') {
@@ -133,14 +133,14 @@ export function getProductCollectionContent(product: Product): ProductCollection
     runtimeKind,
     detailsTitle: 'Product',
     contentTitle: 'About',
-    accessLabel: 'Collection item',
+    accessLabel: 'Library item',
     emptyCopy: 'No description yet.',
     notes: ['Owned product', 'Product-specific actions can be configured in Supabase'],
   };
 }
 
 export function getProductStoreAccessLabel(product: Pick<Product, 'is_free' | 'price_cents'>) {
-  return isFreeCollectionClaim(product) ? 'Collection item' : 'Cart coming soon';
+  return isFreeLibraryClaim(product) ? 'Library item' : 'Cart coming soon';
 }
 
 function normalize(value: string) {

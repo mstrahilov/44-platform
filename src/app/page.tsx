@@ -31,7 +31,7 @@ export default function StorePage() {
   useEffect(() => {
     async function fetchOwnedItems(userId: string) {
       const { data } = await supabase
-        .from('collection_items')
+        .from('library_items')
         .select('product_id')
         .eq('user_id', userId);
 

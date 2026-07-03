@@ -43,7 +43,7 @@ function subjectTypeLabel(type: SubjectType | null) {
     case 'service': return 'Service';
     case 'resource': return 'Resource';
     case 'profile': return 'Member';
-    case 'collection_item': return 'Library item';
+    case 'library_item': return 'Library item';
     default: return 'Item';
   }
 }

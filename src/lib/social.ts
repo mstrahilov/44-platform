@@ -54,14 +54,14 @@ export function repliersByPost(rows: ReplyEngagerRow[]): LikersMap {
   }, {});
 }
 
-export type SubjectType = 'product' | 'service' | 'resource' | 'collection_item' | 'profile';
+export type SubjectType = 'product' | 'service' | 'resource' | 'library_item' | 'profile';
 
 export function defaultCategoryForSubject(subjectType: SubjectType): string {
   switch (subjectType) {
     case 'product': return 'reviews';
     case 'service': return 'reviews';
     case 'resource': return 'questions';
-    case 'collection_item': return 'updates';
+    case 'library_item': return 'updates';
     case 'profile': return 'discussions';
   }
 }

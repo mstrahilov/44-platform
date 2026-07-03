@@ -6,7 +6,7 @@
 
 - Content first. Artwork, titles, creators, descriptions, and user-owned items should carry the experience. Controls stay quiet until needed.
 - Glass is a material, not decoration. Use translucent panels, soft borders, and blur to separate layers without making the interface noisy.
-- Cards navigate. Store and Browse cards open detail pages. Get, Save, Request, Checkout, and Collection actions belong on detail pages or in personal Collection/resource flows.
+- Cards navigate. Store and Browse cards open detail pages. Get, Save, Request, Checkout, and Library actions belong on detail pages or in personal Library/resource flows.
 - Systems over one-offs. New pages should reuse the same shells, panels, cards, grids, buttons, and tabs before creating a custom layout.
 - No scoreboards by default. Avoid follower counts, like counts, download counts, and social comparison metrics unless there is a clear product reason later.
 
@@ -52,7 +52,7 @@
 
 ## Navigation And Actions
 
-- Global nav: Store, Services, Community, Collection when logged in.
+- Global nav: Store, Services, Community, Library when logged in.
 - Profile, settings, creator dashboard, and sign out live in the user menu.
 - Page-specific filters live inside the page, not the global nav.
 - Store cards do not perform ownership actions. Product pages do.
@@ -63,5 +63,5 @@
 - Browse: sidebar filters with Category -> Tags, fixed-width product grid.
 - Services: hero, service categories, service cards, service browse.
 - Community: feed, resources, creators, and discussion surfaces.
-- Collection: personal vault tabs for Products, Resources, and Services.
+- Library: personal vault tabs for Products, Resources, and Services.
 - Dashboard: future creator/admin tools should still use the same panels, tabs, spacing, and controls.
