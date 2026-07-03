@@ -49,14 +49,17 @@ export default function StorePage() {
   const merchProducts = products
     .filter(p => p.category === 'Apparel' || p.category === 'Merch')
     .slice(0, 4);
+  const storeTabs = [
+    { id: 'music', label: 'Music', href: '/store/music', match: (p: Product) => p.category === 'Music' },
+    { id: 'apparel', label: 'Apparel', href: '/store/apparel', match: (p: Product) => p.category === 'Apparel' || p.category === 'Merch' },
+    { id: 'books', label: 'Books', href: '/store/books', match: (p: Product) => p.category === 'Books' },
+    { id: 'games', label: 'Games', href: '/store/games', match: (p: Product) => p.category === 'Games' },
+    { id: 'assets', label: 'Assets', href: '/store/assets', match: (p: Product) => p.category === 'Assets' },
+  ].filter(tab => products.some(tab.match));
 
   useTopbarTabs([
     { id: 'all',     label: 'All',      href: '/',              active: true },
-    { id: 'music',   label: 'Music',    href: '/store/music' },
-    { id: 'apparel', label: 'Apparel',  href: '/store/apparel' },
-    { id: 'books',   label: 'Books',    href: '/store/books' },
-    { id: 'games',   label: 'Games',    href: '/store/games' },
-    { id: 'assets',  label: 'Assets',   href: '/store/assets' },
+    ...storeTabs.map(({ match: _match, ...tab }) => tab),
   ]);
 
   return (

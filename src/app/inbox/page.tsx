@@ -5,6 +5,7 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageShell } from '@/components/Ui';
+import { CommunitySetupGate } from '@/components/CommunitySetupGate';
 import { SocialAvatar, SocialProfileRow } from '@/components/Social';
 import { useAuth } from '@/lib/useAuth';
 import { createOrOpenConversation } from '@/lib/messages';
@@ -56,6 +57,7 @@ function InboxContent() {
   const [schemaReady, setSchemaReady] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+  const [setupGateOpen, setSetupGateOpen] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -158,7 +160,7 @@ function InboxContent() {
     event.preventDefault();
     if (!activeConversation || !user || !body.trim() || sending) return;
     if (!canInteract) {
-      setError(communityIdentityMessage());
+      setSetupGateOpen(true);
       return;
     }
 
@@ -288,10 +290,10 @@ function InboxContent() {
                       value={body}
                       onChange={event => setBody(event.target.value)}
                       placeholder={canInteract ? 'Write a message...' : 'Finish your profile to message.'}
-                      disabled={!canInteract}
+                      disabled={sending}
                       style={{ minHeight: 54, flex: 1 }}
                     />
-                    <button className="os-button os-button-primary os-button-compact" type="submit" disabled={!body.trim() || sending || !canInteract}>
+                    <button className="os-button os-button-primary os-button-compact" type="submit" disabled={!body.trim() || sending}>
                       Send
                     </button>
                   </form>
@@ -304,6 +306,7 @@ function InboxContent() {
           </section>
         )}
       </main>
+      <CommunitySetupGate open={setupGateOpen} onClose={() => setSetupGateOpen(false)} />
     </PageShell>
   );
 }

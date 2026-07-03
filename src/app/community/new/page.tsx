@@ -4,11 +4,12 @@ import Link from 'next/link';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageShell } from '@/components/Ui';
+import { CommunitySetupGate } from '@/components/CommunitySetupGate';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Category } from '@/lib/platform';
 import { normalizeTaxonomyValue } from '@/lib/taxonomy';
-import { hasCommunityIdentity, communityIdentityMessage } from '@/lib/communityProfile';
+import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import type { SubjectType } from '@/lib/social';
 
@@ -73,6 +74,7 @@ function NewCommunityThreadContent() {
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [setupGateOpen, setSetupGateOpen] = useState(false);
 
   // URL params
   const initialSubjectType = (search.get('subject_type') as SubjectType | null) ?? null;
@@ -191,7 +193,7 @@ function NewCommunityThreadContent() {
     event.preventDefault();
     if (!user) return;
     if (!hasCommunityIdentity(profile)) {
-      setError(communityIdentityMessage());
+      setSetupGateOpen(true);
       return;
     }
     if (!title.trim() || !body.trim()) {
@@ -375,19 +377,20 @@ function NewCommunityThreadContent() {
 
             {error && (
               <div className="dashboard-status dashboard-status-error">
-                {error} {!hasCommunityIdentity(profile) && <Link href="/account" style={{ color: 'inherit', fontWeight: 800 }}>Finish setup</Link>}
+                {error}
               </div>
             )}
 
             <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
               <Link className="os-button os-button-ghost" href="/community">Cancel</Link>
-              <button className="os-button os-button-primary" type="submit" disabled={saving || !hasCommunityIdentity(profile)}>
+              <button className="os-button os-button-primary" type="submit" disabled={saving}>
                 {saving ? 'Publishing…' : 'Publish'}
               </button>
             </div>
           </form>
         </div>
       </div>
+      <CommunitySetupGate open={setupGateOpen} onClose={() => setSetupGateOpen(false)} />
     </PageShell>
   );
 }

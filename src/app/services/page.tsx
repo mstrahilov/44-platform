@@ -63,8 +63,15 @@ export default function ServicesPage() {
       const bOrder = b.sort_order ?? 999;
       if (aOrder !== bOrder) return aOrder - bOrder;
       return a.name.localeCompare(b.name);
-    });
-  }, [categories]);
+    }).filter(category => services.some(service => {
+      const svc = service.categories;
+      return (
+        service.category_id === category.id ||
+        svc?.slug === category.slug ||
+        svc?.name === category.name
+      );
+    }));
+  }, [categories, services]);
 
   useTopbarTabs(
     orderedCategories.length > 0

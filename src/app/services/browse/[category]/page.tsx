@@ -4,7 +4,7 @@ import { use, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Category, Service } from '@/lib/platform';
 import { matchesCategory } from '@/lib/taxonomy';
-import { ServiceCard, PageShell } from '@/components/Ui';
+import { ServiceCard, PageShell, HubHero, EmptyMessage } from '@/components/Ui';
 import { useTopbarTabs } from '@/components/TopbarContext';
 
 export default function ServicesCategoryPage({ params }: { params: Promise<{ category: string }> }) {
@@ -16,7 +16,7 @@ export default function ServicesCategoryPage({ params }: { params: Promise<{ cat
     categories.length > 0
       ? [
           { id: 'all', label: 'All', href: '/services' },
-          ...categories.slice(0, 5).map(c => ({
+          ...categories.filter(c => services.some(service => matchesCategory(service, c))).slice(0, 5).map(c => ({
             id: c.slug,
             label: c.name,
             href: `/services/browse/${c.slug}`,
@@ -54,16 +54,17 @@ export default function ServicesCategoryPage({ params }: { params: Promise<{ cat
 
   return (
     <PageShell>
-      <style>{`
-        .browse-page { display: flex; flex-direction: column; gap: var(--os-space-7); }
-      `}</style>
-      <div className="browse-page">
-        <h1 className="browse-page-title os-type-display">{label}</h1>
-        <div className="service-grid">
-          {visible.map(service => (
-            <ServiceCard key={service.id} service={service} />
-          ))}
-        </div>
+      <div className="app-page">
+        <HubHero title={label} />
+        {visible.length === 0 ? (
+          <EmptyMessage>No services here yet.</EmptyMessage>
+        ) : (
+          <div className="app-grid app-grid-wide">
+            {visible.map(service => (
+              <ServiceCard key={service.id} service={service} />
+            ))}
+          </div>
+        )}
       </div>
     </PageShell>
   );

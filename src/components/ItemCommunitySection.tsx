@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
-import { hasCommunityIdentity, communityIdentityMessage } from '@/lib/communityProfile';
+import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { normalizeTaxonomyValue } from '@/lib/taxonomy';
+import { CommunitySetupGate } from '@/components/CommunitySetupGate';
 import { SocialPostRow } from '@/components/Social';
 import {
   countById,
@@ -50,6 +52,7 @@ export function ItemCommunitySection({
   canPost = true,
   showAction = true,
 }: Props) {
+  const router = useRouter();
   const { user } = useAuth();
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [posts, setPosts] = useState<SocialPost[]>([]);
@@ -59,6 +62,7 @@ export function ItemCommunitySection({
   const [categoryId, setCategoryId] = useState<string>('');
   const [postType, setPostType] = useState<string>(categorySlugs[0] ?? 'discussion');
   const [error, setError] = useState('');
+  const [setupGateOpen, setSetupGateOpen] = useState(false);
 
   // Composer state
   const [title, setTitle] = useState('');
@@ -138,8 +142,9 @@ export function ItemCommunitySection({
 
   async function submitInline(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!user || saving) return;
-    if (!canInteract) { setError(communityIdentityMessage()); return; }
+    if (saving) return;
+    if (!user) { router.push('/login'); return; }
+    if (!canInteract) { setSetupGateOpen(true); return; }
     if (!title.trim() || !body.trim()) { setError('Add a headline and a message.'); return; }
     if (!categoryId) { setError('Category not loaded yet — try again.'); return; }
 
@@ -187,7 +192,8 @@ export function ItemCommunitySection({
   }
 
   async function toggleLike(post: SocialPost) {
-    if (!user) return;
+    if (!user) { router.push('/login'); return; }
+    if (!canInteract) { setSetupGateOpen(true); return; }
     const liked = likedIds.has(post.id);
     if (liked) {
       const { error: deleteError } = await supabase
@@ -226,7 +232,7 @@ export function ItemCommunitySection({
             onChange={event => setTitle(event.target.value)}
             placeholder={titlePlaceholder}
             className="item-community-composer-title"
-            disabled={!canInteract || saving}
+            disabled={saving}
           />
           <textarea
             value={body}
@@ -234,7 +240,7 @@ export function ItemCommunitySection({
             placeholder={composerPlaceholder}
             className="item-community-composer-body"
             rows={3}
-            disabled={!canInteract || saving}
+            disabled={saving}
           />
           <div className="item-community-composer-actions">
             <div className="os-type-meta" style={{ color: 'var(--os-color-ink-muted)' }}>
@@ -243,7 +249,7 @@ export function ItemCommunitySection({
             <button
               type="submit"
               className="os-button os-button-primary os-button-compact"
-              disabled={!canInteract || saving || !title.trim() || !body.trim()}
+              disabled={saving || !title.trim() || !body.trim()}
             >
               {saving ? 'Posting…' : actionLabel}
             </button>
@@ -273,6 +279,7 @@ export function ItemCommunitySection({
           ))}
         </div>
       )}
+      <CommunitySetupGate open={setupGateOpen} onClose={() => setSetupGateOpen(false)} />
     </div>
   );
 }

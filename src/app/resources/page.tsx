@@ -28,7 +28,9 @@ export default function ResourcesPage() {
   }, []);
 
   const resourceCatalog = resources;
-  const categoryCatalog = categories;
+  const categoryCatalog = categories.filter(category => resources.some(resource => (
+    resource.category_id === category.id || resource.categories?.slug === category.slug
+  )));
 
   useTopbarTabs(
     categoryCatalog.length > 0

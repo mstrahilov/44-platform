@@ -2,12 +2,14 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import type { Category } from '@/lib/platform';
 import { PageShell } from '@/components/Ui';
+import { CommunitySetupGate } from '@/components/CommunitySetupGate';
 import { SocialPostRow } from '@/components/Social';
 import { useTopbarTabs } from '@/components/TopbarContext';
-import { hasCommunityIdentity, communityIdentityMessage } from '@/lib/communityProfile';
+import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { useAuth } from '@/lib/useAuth';
 import { countById, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type ReplyEngagerRow, type SocialPost } from '@/lib/social';
@@ -15,6 +17,7 @@ import { countById, likersByPost, repliersByPost, type CountMap, type LikeRow, t
 type PostLike = LikeRow;
 
 export default function CommunityPage() {
+  const router = useRouter();
   const { user } = useAuth();
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -24,6 +27,7 @@ export default function CommunityPage() {
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [likingId, setLikingId] = useState('');
   const [error, setError] = useState('');
+  const [setupGateOpen, setSetupGateOpen] = useState(false);
 
   useEffect(() => {
     async function fetchCommunity() {
@@ -91,9 +95,13 @@ export default function CommunityPage() {
   const canInteract = hasCommunityIdentity(profile);
 
   async function toggleLike(post: SocialPost) {
-    if (!user || likingId) return;
+    if (likingId) return;
+    if (!user) {
+      router.push('/login');
+      return;
+    }
     if (!canInteract) {
-      setError(communityIdentityMessage());
+      setSetupGateOpen(true);
       return;
     }
 
@@ -143,7 +151,7 @@ export default function CommunityPage() {
                 The 44 social feed for releases, questions, collaborations, and member updates.
               </p>
             </div>
-            <Link href="/community/new" className="os-button os-button-primary os-button-compact">
+            <Link href={user ? '/community/new' : '/login'} className="os-button os-button-primary os-button-compact">
               New Post
             </Link>
           </div>
@@ -167,12 +175,13 @@ export default function CommunityPage() {
                 onLike={() => toggleLike(post)}
                 onDelete={() => deletePost(post)}
                 canDelete={Boolean(user && post.author_id === user.id)}
-                disabled={!user || !canInteract || likingId === post.id}
+                disabled={likingId === post.id}
               />
             ))
           )}
         </section>
       </main>
+      <CommunitySetupGate open={setupGateOpen} onClose={() => setSetupGateOpen(false)} />
     </PageShell>
   );
 }

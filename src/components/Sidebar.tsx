@@ -107,6 +107,16 @@ export default function Sidebar() {
           </Link>
         )}
 
+        {!user && (
+          <Link
+            href="/login"
+            className={pathname.startsWith('/login') ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}
+          >
+            <span className="os-icon os-icon-user" aria-hidden="true" />
+            <span className="sidebar-item-label">Log In</span>
+          </Link>
+        )}
+
         <div className="sidebar-divider" />
 
         <Link

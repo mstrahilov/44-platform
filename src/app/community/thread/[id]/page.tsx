@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { PageShell, CenteredMessage } from '@/components/Ui';
+import { CommunitySetupGate } from '@/components/CommunitySetupGate';
 import {
   SocialAuthorLine,
   SocialAvatar,
@@ -15,7 +16,7 @@ import {
   SocialTrashIcon,
 } from '@/components/Social';
 import { useTopbarBack } from '@/components/TopbarContext';
-import { hasCommunityIdentity, communityIdentityMessage } from '@/lib/communityProfile';
+import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import {
   authorDisplayName,
@@ -52,6 +53,7 @@ export default function CommunityThreadPage() {
   const [replyLiking, setReplyLiking] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [setupGateOpen, setSetupGateOpen] = useState(false);
 
   useEffect(() => {
     async function loadThread() {
@@ -199,10 +201,26 @@ export default function CommunityThreadPage() {
   const canInteract = hasCommunityIdentity(profile);
   const isThreadAuthor = Boolean(user && thread && thread.author_id === user.id);
 
-  async function toggleLike() {
-    if (!thread || !user || liking) return;
+  function requireCommunityInteraction(action: () => void) {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
     if (!canInteract) {
-      setError(communityIdentityMessage());
+      setSetupGateOpen(true);
+      return;
+    }
+    action();
+  }
+
+  async function toggleLike() {
+    if (!thread || liking) return;
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    if (!canInteract) {
+      setSetupGateOpen(true);
       return;
     }
 
@@ -239,9 +257,13 @@ export default function CommunityThreadPage() {
   }
 
   async function toggleReplyLike(reply: SocialReply) {
-    if (!user || replyLiking) return;
+    if (replyLiking) return;
+    if (!user) {
+      router.push('/login');
+      return;
+    }
     if (!canInteract) {
-      setError(communityIdentityMessage());
+      setSetupGateOpen(true);
       return;
     }
     setReplyLiking(reply.id);
@@ -298,7 +320,7 @@ export default function CommunityThreadPage() {
     event.preventDefault();
     if (!thread || !user || !replyBody.trim() || submitting) return;
     if (!canInteract) {
-      setError(communityIdentityMessage());
+      setSetupGateOpen(true);
       return;
     }
     setSubmitting(true);
@@ -315,7 +337,7 @@ export default function CommunityThreadPage() {
     event.preventDefault();
     if (!thread || !user || !inlineBody.trim() || submitting) return;
     if (!canInteract) {
-      setError(communityIdentityMessage());
+      setSetupGateOpen(true);
       return;
     }
     setSubmitting(true);
@@ -390,7 +412,7 @@ export default function CommunityThreadPage() {
                 className="social-action social-action-like"
                 data-liked={likedByUser ? 'true' : 'false'}
                 onClick={toggleLike}
-                disabled={!user || liking || !canInteract}
+                disabled={liking}
                 aria-label={likedByUser ? 'Unlike' : 'Like'}
               >
                 <SocialHeartIcon filled={likedByUser} />
@@ -439,7 +461,7 @@ export default function CommunityThreadPage() {
               <SocialAvatar profile={profile} />
               <div className="social-composer-actions">
                 <div className="social-note os-type-body">Finish your community profile to reply and like posts.</div>
-                <Link href="/account" className="os-button os-button-primary os-button-compact">Finish Setup</Link>
+                <button type="button" className="os-button os-button-primary os-button-compact" onClick={() => setSetupGateOpen(true)}>Finish Setup</button>
               </div>
             </div>
           ) : (
@@ -467,7 +489,7 @@ export default function CommunityThreadPage() {
                   currentProfile={profile}
                   canInteract={canInteract}
                   replyingTo={replyingTo}
-                  onOpenReply={id => { setReplyingTo(id); setInlineBody(''); }}
+                  onOpenReply={id => requireCommunityInteraction(() => { setReplyingTo(id); setInlineBody(''); })}
                   onCancelReply={() => { setReplyingTo(null); setInlineBody(''); }}
                   inlineBody={inlineBody}
                   onInlineChange={setInlineBody}
@@ -479,12 +501,14 @@ export default function CommunityThreadPage() {
                   onLikeReply={toggleReplyLike}
                   replyLiking={replyLiking}
                   onDeleteReply={deleteReply}
+                  onBlockedInteraction={() => requireCommunityInteraction(() => {})}
                 />
               ))
             )}
           </div>
         </section>
       </main>
+      <CommunitySetupGate open={setupGateOpen} onClose={() => setSetupGateOpen(false)} />
     </PageShell>
   );
 }
@@ -508,6 +532,7 @@ function ReplyBranch({
   onLikeReply,
   replyLiking,
   onDeleteReply,
+  onBlockedInteraction,
 }: {
   top: SocialReply;
   children: SocialReply[];
@@ -527,13 +552,14 @@ function ReplyBranch({
   onLikeReply: (reply: SocialReply) => void;
   replyLiking: string;
   onDeleteReply: (reply: SocialReply) => void;
+  onBlockedInteraction: () => void;
 }) {
   return (
     <>
       <ReplyRow
         reply={top}
         canInteract={canInteract}
-        onReplyClick={() => onOpenReply(top.id)}
+        onReplyClick={() => (currentUserId && canInteract ? onOpenReply(top.id) : onBlockedInteraction())}
         likers={replyLikersMap[top.id] ?? []}
         likeCount={replyLikeCounts[top.id] ?? 0}
         liked={replyLikedByUser.has(top.id)}
@@ -558,7 +584,7 @@ function ReplyBranch({
           <ReplyRow
             reply={child}
             canInteract={canInteract}
-            onReplyClick={() => onOpenReply(child.id)}
+            onReplyClick={() => (currentUserId && canInteract ? onOpenReply(child.id) : onBlockedInteraction())}
             likers={replyLikersMap[child.id] ?? []}
             likeCount={replyLikeCounts[child.id] ?? 0}
             liked={replyLikedByUser.has(child.id)}
@@ -619,7 +645,6 @@ function ReplyRow({
             type="button"
             className="social-action"
             onClick={onReplyClick}
-            disabled={!canInteract}
             aria-label="Reply"
           >
             <SocialChatBubbleIcon />
@@ -629,7 +654,7 @@ function ReplyRow({
             className="social-action social-action-like"
             data-liked={liked ? 'true' : 'false'}
             onClick={onLike}
-            disabled={!canInteract || likeDisabled}
+            disabled={likeDisabled}
             aria-label={liked ? 'Unlike' : 'Like'}
           >
             <SocialHeartIcon filled={liked} />

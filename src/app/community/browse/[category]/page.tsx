@@ -5,7 +5,7 @@ import { use, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Category } from '@/lib/platform';
 import { matchesCategory } from '@/lib/taxonomy';
-import { PageShell } from '@/components/Ui';
+import { PageShell, EmptyMessage } from '@/components/Ui';
 import { SocialPostRow } from '@/components/Social';
 import { useAuth } from '@/lib/useAuth';
 import { useTopbarTabs } from '@/components/TopbarContext';
@@ -96,7 +96,12 @@ export default function CommunityBrowseCategoryPage({ params }: { params: Promis
       <main className="social-shell">
         <header className="social-header">
           <div className="social-title-row">
-            <h1 className="os-type-display">{label}</h1>
+            <div>
+              <h1 className="os-type-display">{label}</h1>
+              <p className="social-title-copy os-type-body">
+                Browse {label.toLowerCase()} posts from the 44 community.
+              </p>
+            </div>
             <Link href="/community/new" className="os-button os-button-primary os-button-compact">
               New Post
             </Link>
@@ -107,7 +112,7 @@ export default function CommunityBrowseCategoryPage({ params }: { params: Promis
 
         <section className="social-feed" aria-label={`${label} posts`}>
           {visible.length === 0 ? (
-            <div className="app-empty-text">No posts in {label} yet.</div>
+            <EmptyMessage>No posts in {label} yet.</EmptyMessage>
           ) : (
             visible.map(post => (
               <SocialPostRow

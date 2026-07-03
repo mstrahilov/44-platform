@@ -22,11 +22,13 @@ function authMessage(message?: string) {
 export default function LoginPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const [mode, setMode] = useState<'signup' | 'signin' | 'link'>('signup');
+  const [mode, setMode] = useState<'signup' | 'signin'>('signup');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [linkSubmitting, setLinkSubmitting] = useState(false);
 
   useEffect(() => {
     if (!loading && user) {
@@ -36,9 +38,14 @@ export default function LoginPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const cleanName = name.trim();
     const cleanEmail = email.trim();
     if (!cleanEmail) return;
-    if (mode !== 'link' && password.length < 8) {
+    if (mode === 'signup' && !cleanName) {
+      setStatus('Add your name to create your account.');
+      return;
+    }
+    if (password.length < 8) {
       setStatus('Use at least 8 characters for your password.');
       return;
     }
@@ -52,6 +59,10 @@ export default function LoginPage() {
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/account`,
+          data: {
+            name: cleanName,
+            display_name: cleanName,
+          },
         },
       });
       setSubmitting(false);
@@ -72,7 +83,14 @@ export default function LoginPage() {
       router.push('/account');
       return;
     }
+  }
 
+  async function sendEmailLink() {
+    const cleanEmail = email.trim();
+    if (!cleanEmail || linkSubmitting) return;
+
+    setLinkSubmitting(true);
+    setStatus(null);
     const { error } = await supabase.auth.signInWithOtp({
       email: cleanEmail,
       options: {
@@ -80,7 +98,7 @@ export default function LoginPage() {
       },
     });
 
-    setSubmitting(false);
+    setLinkSubmitting(false);
     setStatus(error ? authMessage(error.message) : 'Check your email for the account link.');
   }
 
@@ -104,29 +122,26 @@ export default function LoginPage() {
           </p>
 
           <h1 className="os-type-page-title" style={{ marginBottom: 10 }}>
-            {mode === 'signup' ? 'Create your account' : mode === 'signin' ? 'Sign in' : 'Email me a link'}
+            {mode === 'signup' ? 'Create your account' : 'Log in'}
           </h1>
 
           <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', marginBottom: 32, maxWidth: 380 }}>
             {mode === 'signup'
-              ? 'Use your email and password to create access to 44. After verification, you will choose a username and profile photo for community.'
-              : mode === 'signin'
-                ? 'Sign in to use your collection, community identity, and creator tools.'
-                : 'Enter your email and we will send a secure one-tap account link.'}
+              ? 'Use your name, email, and password to create access to 44. After verification, you will choose a username and profile photo for community.'
+              : 'Log in to use your collection, community identity, and creator tools.'}
           </p>
 
           <div className="settings-segment" role="group" aria-label="Account mode" style={{ marginBottom: 16 }}>
             {[
               { id: 'signup', label: 'Sign Up' },
-              { id: 'signin', label: 'Sign In' },
-              { id: 'link', label: 'Email Link' },
+              { id: 'signin', label: 'Log In' },
             ].map(item => (
               <button
                 key={item.id}
                 type="button"
                 className={mode === item.id ? 'settings-segment-item settings-segment-item-active' : 'settings-segment-item'}
                 onClick={() => {
-                  setMode(item.id as 'signup' | 'signin' | 'link');
+                  setMode(item.id as 'signup' | 'signin');
                   setStatus(null);
                 }}
               >
@@ -136,6 +151,17 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 12 }}>
+            {mode === 'signup' && (
+              <input
+                className="os-input-large"
+                type="text"
+                value={name}
+                placeholder="Your name"
+                autoComplete="name"
+                onChange={event => setName(event.target.value)}
+                style={{ width: '100%' }}
+              />
+            )}
             <input
               className="os-input-large"
               type="email"
@@ -145,25 +171,34 @@ export default function LoginPage() {
               onChange={event => setEmail(event.target.value)}
               style={{ width: '100%' }}
             />
-            {mode !== 'link' && (
-              <input
-                className="os-input-large"
-                type="password"
-                value={password}
-                placeholder="Password"
-                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-                onChange={event => setPassword(event.target.value)}
-                style={{ width: '100%' }}
-              />
-            )}
+            <input
+              className="os-input-large"
+              type="password"
+              value={password}
+              placeholder="Password"
+              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+              onChange={event => setPassword(event.target.value)}
+              style={{ width: '100%' }}
+            />
             <button
               className="os-button os-button-primary os-button-large"
               type="submit"
               disabled={submitting}
               style={{ width: '100%' }}
             >
-              {submitting ? 'Working…' : mode === 'signup' ? 'Create Account' : mode === 'signin' ? 'Sign In' : 'Send Account Link'}
+              {submitting ? 'Working…' : mode === 'signup' ? 'Create Account' : 'Log In'}
             </button>
+            {mode === 'signin' && (
+              <button
+                className="os-button os-button-secondary os-button-large"
+                type="button"
+                onClick={() => void sendEmailLink()}
+                disabled={linkSubmitting || submitting}
+                style={{ width: '100%' }}
+              >
+                {linkSubmitting ? 'Sending…' : 'Sign in with email link'}
+              </button>
+            )}
           </form>
 
           {status && (

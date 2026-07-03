@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Category } from '@/lib/platform';
 import { matchesCategory, matchesQuery } from '@/lib/taxonomy';
-import { PageShell } from '@/components/Ui';
+import { PageShell, EmptyMessage } from '@/components/Ui';
 import { SocialPostRow } from '@/components/Social';
 import { useTopbarTabs } from '@/components/TopbarContext';
 import { countById, type CountMap, type SocialPost } from '@/lib/social';
@@ -78,18 +78,24 @@ export default function CommunityBrowsePage() {
 
   return (
     <PageShell>
-      <style>{`
-        .browse-page { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
-      `}</style>
-      <div className="browse-page">
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-          <h1 className="browse-page-title os-type-display">{label}</h1>
-          <Link href="/community/new" className="os-button os-button-primary os-button-compact">
-            New Post
-          </Link>
-        </div>
-        <div className="social-feed">
-          {visible.map(post => (
+      <main className="social-shell">
+        <header className="social-header">
+          <div className="social-title-row">
+            <div>
+              <h1 className="os-type-display">{label}</h1>
+              <p className="social-title-copy os-type-body">
+                Browse community posts from 44 members.
+              </p>
+            </div>
+            <Link href="/community/new" className="os-button os-button-primary os-button-compact">
+              New Post
+            </Link>
+          </div>
+        </header>
+        <section className="social-feed" aria-label={`${label} posts`}>
+          {visible.length === 0 ? (
+            <EmptyMessage>No posts here yet.</EmptyMessage>
+          ) : visible.map(post => (
             <SocialPostRow
               key={post.id}
               post={post}
@@ -97,8 +103,8 @@ export default function CommunityBrowsePage() {
               likeCount={likeCounts[post.id] ?? 0}
             />
           ))}
-        </div>
-      </div>
+        </section>
+      </main>
     </PageShell>
   );
 }

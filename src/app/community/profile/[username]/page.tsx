@@ -10,11 +10,12 @@ import { formatServicePrice, type Profile, type Resource, type Service } from '@
 import type { Product } from '@/lib/products';
 import { formatProductPrice } from '@/lib/products';
 import { PageShell, CenteredMessage } from '@/components/Ui';
+import { CommunitySetupGate } from '@/components/CommunitySetupGate';
 import { SocialArtifactCard, SocialAvatar, SocialPostRow } from '@/components/Social';
 import { getOwnershipKeys, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { authorHandle, countById, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type ReplyEngagerRow, type SocialPost, type SocialReply } from '@/lib/social';
-import { hasCommunityIdentity, communityIdentityMessage } from '@/lib/communityProfile';
+import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { isMissingRelationError } from '@/lib/schemaCompat';
 import { createOrOpenConversation } from '@/lib/messages';
 
@@ -46,6 +47,7 @@ export default function PublicProfilePage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
+  const [setupGateOpen, setSetupGateOpen] = useState(false);
 
   useEffect(() => {
     async function loadProfilePage() {
@@ -178,9 +180,13 @@ export default function PublicProfilePage() {
   );
 
   async function toggleFollow() {
-    if (!user || !profile || isOwn || busy) return;
+    if (!profile || isOwn || busy) return;
+    if (!user) {
+      router.push('/login');
+      return;
+    }
     if (!hasCommunityIdentity(currentProfile)) {
-      setError(communityIdentityMessage());
+      setSetupGateOpen(true);
       return;
     }
 
@@ -206,9 +212,13 @@ export default function PublicProfilePage() {
   }
 
   async function openMessage() {
-    if (!user || !profile || isOwn || busy) return;
+    if (!profile || isOwn || busy) return;
+    if (!user) {
+      router.push('/login');
+      return;
+    }
     if (!hasCommunityIdentity(currentProfile)) {
-      setError(communityIdentityMessage());
+      setSetupGateOpen(true);
       return;
     }
     setBusy('message');
@@ -258,10 +268,10 @@ export default function PublicProfilePage() {
                 <Link href="/community/profile/edit" className="os-button os-button-primary">Edit Profile</Link>
               ) : (
                 <>
-                  <button type="button" className="os-button os-button-secondary" onClick={openMessage} disabled={!user || busy === 'message'}>
+                  <button type="button" className="os-button os-button-secondary" onClick={openMessage} disabled={busy === 'message'}>
                     Message
                   </button>
-                  <button type="button" className="os-button os-button-primary" onClick={toggleFollow} disabled={!user || busy === 'follow'}>
+                  <button type="button" className="os-button os-button-primary" onClick={toggleFollow} disabled={busy === 'follow'}>
                     {isFollowing ? 'Following' : 'Follow'}
                   </button>
                 </>
@@ -277,7 +287,7 @@ export default function PublicProfilePage() {
             <span><strong>{posts.length}</strong>posts</span>
           </div>
 
-          {error && <div className="dashboard-status dashboard-status-error">{error} <Link href="/account" style={{ color: 'inherit', fontWeight: 800 }}>Finish setup</Link></div>}
+          {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
 
           <nav className="social-profile-tabs" aria-label="Profile sections" role="tablist">
             {tabs.map(item => (
@@ -394,6 +404,7 @@ export default function PublicProfilePage() {
           </ArtifactGrid>
         )}
       </main>
+      <CommunitySetupGate open={setupGateOpen} onClose={() => setSetupGateOpen(false)} />
     </PageShell>
   );
 }

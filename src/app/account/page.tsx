@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/useAuth';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { UploadField } from '@/components/UploadField';
@@ -10,7 +10,16 @@ import { supabase } from '@/lib/supabase';
 import { hasCommunityIdentity } from '@/lib/communityProfile';
 
 export default function AccountPage() {
+  return (
+    <Suspense fallback={<div className="panel-scroll" />}>
+      <AccountContent />
+    </Suspense>
+  );
+}
+
+function AccountContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading } = useAuth();
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -109,28 +118,36 @@ export default function AccountPage() {
   const publicName = profile?.display_name || profile?.username || user.email?.split('@')[0] || '44 Member';
   const publicProfileHref = profile?.username ? `/community/profile/${profile.username}` : '/profile';
   const communityReady = hasCommunityIdentity(profile);
-  const checklist = [
-    { label: 'Signed in', complete: Boolean(user.id), detail: user.email || 'Active session' },
-    { label: 'Profile row created', complete: Boolean(profile?.id), detail: profile?.id ? 'Connected to profiles' : 'Missing profile row' },
-    { label: 'Username selected', complete: Boolean(profile?.username), detail: profile?.username ? `@${profile.username}` : 'Choose a username' },
-    { label: 'Profile photo added', complete: Boolean(profile?.avatar_url), detail: profile?.avatar_url ? 'Ready for community' : 'Required to post, reply, and like' },
-  ];
+  const isGatedReturn = searchParams.get('setup') === 'community';
+  const introCopy = isGatedReturn
+    ? 'Finish your community profile to post, review, reply, and interact on 44.'
+    : 'Your account is created. Now let’s set up your community profile.';
+
+  function cancelSetup() {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+      return;
+    }
+    router.push('/community');
+  }
 
   return (
     <div className="panel-scroll">
       <div className="settings-section" style={{ maxWidth: 760, margin: '0 auto', padding: '64px 24px' }}>
         <div className="settings-block">
           <p className="os-type-eyebrow" style={{ color: 'var(--os-color-ink-muted)' }}>Account</p>
-          <h1 className="os-type-page-title">Welcome, {publicName}</h1>
+          <h1 className="os-type-page-title">{communityReady ? `Welcome, ${publicName}` : 'Welcome to 44.'}</h1>
           <p className="os-type-body">
-            Your account is created. Finish your community profile to post, reply, like, message, and use your username across 44.
+            {communityReady
+              ? 'Your community profile is ready. You can post, reply, like, review, follow, and message across 44.'
+              : introCopy}
           </p>
         </div>
 
         {!communityReady && (
           <div className="os-panel-surface" style={{ padding: 24, display: 'grid', gap: 18 }}>
             <div className="settings-block">
-              <h2 className="os-type-panel-title">Join the Community</h2>
+              <h2 className="os-type-panel-title">{isGatedReturn ? 'Finish your community profile' : 'Set up your community profile'}</h2>
               <p className="os-type-body">
                 Choose a username and add a profile photo. Bio is optional, but it helps other members know who they are talking to.
               </p>
@@ -153,30 +170,25 @@ export default function AccountPage() {
               <textarea className="input" rows={4} value={bio} onChange={event => setBio(event.target.value)} placeholder="A short note for your profile." />
             </label>
             {status && <div className={status === 'Community profile ready.' ? 'dashboard-status dashboard-status-success' : 'dashboard-status dashboard-status-error'}>{status}</div>}
-            <div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <button className="os-button os-button-primary" type="button" onClick={() => void saveCommunityProfile()} disabled={saving}>
-                {saving ? 'Saving…' : 'Finish Community Profile'}
+                {saving ? 'Saving…' : 'Create Community Profile'}
               </button>
+              {isGatedReturn ? (
+                <button className="os-button os-button-secondary" type="button" onClick={cancelSetup}>
+                  Cancel
+                </button>
+              ) : (
+                <Link className="os-button os-button-secondary" href="/collection">
+                  Skip for now
+                </Link>
+              )}
             </div>
           </div>
         )}
 
-        <div className="os-panel-surface" style={{ padding: 24, display: 'grid', gap: 16 }}>
-          {checklist.map(item => (
-            <div key={item.label} className="settings-row">
-              <div className="settings-row-copy">
-                <div className="os-type-card-title">{item.label}</div>
-                <p className="os-type-body-small">{item.detail}</p>
-              </div>
-              <span className={item.complete ? 'os-pill os-status-owned' : 'os-pill os-status-locked'}>
-                {item.complete ? 'Ready' : 'Needs Setup'}
-              </span>
-            </div>
-          ))}
-        </div>
-
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <Link className="os-button os-button-primary" href={communityReady ? '/community' : '/settings'}>
+          <Link className="os-button os-button-primary" href={communityReady ? '/community' : '/settings?tab=account'}>
             {communityReady ? 'Open Community' : 'Edit Account Settings'}
           </Link>
           <Link className="os-button os-button-secondary" href={publicProfileHref}>

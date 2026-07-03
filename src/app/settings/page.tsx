@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { SystemPanel } from '@/components/SystemPanel';
@@ -71,8 +73,22 @@ const TABS = [
 
 export default function SettingsPage() {
   return (
+    <Suspense fallback={<div className="panel-scroll" />}>
+      <SettingsContent />
+    </Suspense>
+  );
+}
+
+function SettingsContent() {
+  const { user } = useAuth();
+  const tabs = user ? TABS : TABS.filter(tab => tab.id === 'system');
+  const searchParams = useSearchParams();
+  const requestedTab = searchParams.get('tab') ?? undefined;
+  const defaultTab = tabs.some(tab => tab.id === requestedTab) ? requestedTab : tabs[0]?.id;
+
+  return (
     <div className="panel-scroll">
-      <SystemPanel tabs={TABS}>
+      <SystemPanel tabs={tabs} defaultTab={defaultTab}>
         {tab => (
           <>
             {tab === 'system' && <SystemSettings />}
@@ -432,6 +448,20 @@ function SystemSettings() {
         <span className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>
           {marketStatus}
         </span>
+      )}
+
+      {!user && (
+        <div className="settings-field">
+          <div className="settings-field-head">
+            <div className="os-type-card-title">Account settings</div>
+            <p className="os-type-body-small">Log in to manage your profile, password, privacy, notifications, billing, and orders.</p>
+          </div>
+          <div>
+            <Link href="/login" className="os-button os-button-primary">
+              Log In
+            </Link>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Category, Resource } from '@/lib/platform';
 import { matchesCategory, matchesQuery } from '@/lib/taxonomy';
-import { ResourceCard, PageShell } from '@/components/Ui';
+import { ResourceCard, PageShell, HubHero, EmptyMessage } from '@/components/Ui';
 import { useTopbarTabs } from '@/components/TopbarContext';
 
 export default function ResourcesBrowsePage() {
@@ -55,7 +55,7 @@ export default function ResourcesBrowsePage() {
     categoryCatalog.length > 0
       ? [
           { id: 'all', label: 'All', href: '/resources', active: activeCategory === 'all' },
-          ...categoryCatalog.slice(0, 5).map(category => ({
+          ...categoryCatalog.filter(category => resourceCatalog.some(resource => matchesCategory(resource, category))).slice(0, 5).map(category => ({
             id: category.slug,
             label: category.name,
             href: `/resources/browse/${category.slug}`,
@@ -67,16 +67,17 @@ export default function ResourcesBrowsePage() {
 
   return (
     <PageShell>
-      <style>{`
-        .browse-page { display: flex; flex-direction: column; gap: var(--os-space-7); }
-      `}</style>
-      <div className="browse-page">
-        <h1 className="browse-page-title os-type-display">{label}</h1>
-        <div className="resource-grid">
-          {visible.map(resource => (
-            <ResourceCard key={resource.id} resource={resource} />
-          ))}
-        </div>
+      <div className="app-page">
+        <HubHero title={label} />
+        {visible.length === 0 ? (
+          <EmptyMessage>No resources here yet.</EmptyMessage>
+        ) : (
+          <div className="app-grid app-grid-wide">
+            {visible.map(resource => (
+              <ResourceCard key={resource.id} resource={resource} />
+            ))}
+          </div>
+        )}
       </div>
     </PageShell>
   );

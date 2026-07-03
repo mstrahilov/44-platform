@@ -4,7 +4,7 @@ import { use, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Category, Resource } from '@/lib/platform';
 import { matchesCategory } from '@/lib/taxonomy';
-import { ResourceCard, PageShell } from '@/components/Ui';
+import { ResourceCard, PageShell, HubHero, EmptyMessage } from '@/components/Ui';
 import { useTopbarTabs } from '@/components/TopbarContext';
 
 export default function ResourcesCategoryPage({ params }: { params: Promise<{ category: string }> }) {
@@ -16,7 +16,7 @@ export default function ResourcesCategoryPage({ params }: { params: Promise<{ ca
     categories.length > 0
       ? [
           { id: 'all', label: 'All', href: '/resources' },
-          ...categories.slice(0, 5).map(c => ({
+          ...categories.filter(c => resources.some(resource => matchesCategory(resource, c))).slice(0, 5).map(c => ({
             id: c.slug,
             label: c.name,
             href: `/resources/browse/${c.slug}`,
@@ -54,16 +54,17 @@ export default function ResourcesCategoryPage({ params }: { params: Promise<{ ca
 
   return (
     <PageShell>
-      <style>{`
-        .browse-page { display: flex; flex-direction: column; gap: var(--os-space-7); }
-      `}</style>
-      <div className="browse-page">
-        <h1 className="browse-page-title os-type-display">{label}</h1>
-        <div className="resource-grid">
-          {visible.map(resource => (
-            <ResourceCard key={resource.id} resource={resource} />
-          ))}
-        </div>
+      <div className="app-page">
+        <HubHero title={label} />
+        {visible.length === 0 ? (
+          <EmptyMessage>No resources here yet.</EmptyMessage>
+        ) : (
+          <div className="app-grid app-grid-wide">
+            {visible.map(resource => (
+              <ResourceCard key={resource.id} resource={resource} />
+            ))}
+          </div>
+        )}
       </div>
     </PageShell>
   );

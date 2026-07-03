@@ -32,16 +32,17 @@ const STORE_CATEGORIES = [
   { id: 'assets', label: 'Assets', href: '/store/assets' },
 ];
 
+function matchesStoreCategory(product: Product, slug: string) {
+  const category = (product.category ?? '').toLowerCase();
+  if (slug === 'apparel' || slug === 'merch') return category === 'apparel' || category === 'merch';
+  return category === slug;
+}
+
 export default function StoreCategoryPage({ params }: { params: Promise<{ category: string }> }) {
   const { category } = use(params);
   const label = CATEGORY_LABEL[category] ?? (category.charAt(0).toUpperCase() + category.slice(1));
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-
-  useTopbarTabs([
-    { id: 'all', label: 'All', href: '/' },
-    ...STORE_CATEGORIES.map(c => ({ ...c, active: c.id === category.toLowerCase() })),
-  ]);
 
   useEffect(() => {
     async function load() {
@@ -58,13 +59,22 @@ export default function StoreCategoryPage({ params }: { params: Promise<{ catego
         return;
       }
 
-      const all = (data ?? []) as Product[];
-      const filtered = all.filter(p => (p.category ?? '').toLowerCase() === category.toLowerCase());
-      setProducts(filtered);
+      setProducts((data ?? []) as Product[]);
       setLoading(false);
     }
     load();
-  }, [category]);
+  }, []);
+
+  const visibleCategories = STORE_CATEGORIES.filter(c => {
+    return products.some(product => matchesStoreCategory(product, c.id));
+  });
+  const activeTopbarCategory = category.toLowerCase() === 'merch' ? 'apparel' : category.toLowerCase();
+  const visibleProducts = products.filter(p => matchesStoreCategory(p, category.toLowerCase()));
+
+  useTopbarTabs([
+    { id: 'all', label: 'All', href: '/' },
+    ...visibleCategories.map(c => ({ ...c, active: c.id === activeTopbarCategory })),
+  ]);
 
   const description = CATEGORY_DESCRIPTION[category.toLowerCase()];
 
@@ -74,11 +84,11 @@ export default function StoreCategoryPage({ params }: { params: Promise<{ catego
         <HubHero title={label} copy={description} />
         {loading ? (
           <EmptyMessage>Loading…</EmptyMessage>
-        ) : products.length === 0 ? (
+        ) : visibleProducts.length === 0 ? (
           <EmptyMessage>No {label.toLowerCase()} yet. Check back soon for new releases in this category.</EmptyMessage>
         ) : (
           <ProductGrid>
-            {products.map(product => (
+            {visibleProducts.map(product => (
               <ProductCard key={product.id} product={product} />
             ))}
           </ProductGrid>
