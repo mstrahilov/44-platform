@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState, type ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
@@ -10,6 +10,7 @@ import { SocialAvatar } from '@/components/Social';
 import { useTopbarBack } from '@/components/TopbarContext';
 import type { Profile } from '@/lib/platform';
 import { authorHandle } from '@/lib/social';
+import { getUploadErrorMessage, uploadPublicFile } from '@/lib/uploads';
 
 export default function EditProfilePage() {
   const router = useRouter();
@@ -22,11 +23,13 @@ export default function EditProfilePage() {
   const [bio, setBio] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [heroUrl, setHeroUrl] = useState('');
-  const [creatorType, setCreatorType] = useState('');
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState('');
   const [error, setError] = useState('');
+  const avatarInputId = useId();
+  const heroInputId = useId();
 
   useEffect(() => {
     if (authLoading) return;
@@ -48,7 +51,6 @@ export default function EditProfilePage() {
         setBio(p.bio ?? '');
         setAvatarUrl(p.avatar_url ?? '');
         setHeroUrl(p.hero_url ?? '');
-        setCreatorType(p.creator_type ?? '');
       }
       setLoading(false);
     }
@@ -65,7 +67,6 @@ export default function EditProfilePage() {
       bio: bio.trim() || null,
       avatar_url: avatarUrl.trim() || null,
       hero_url: heroUrl.trim() || null,
-      creator_type: creatorType.trim() || null,
     };
     const { error: updateError } = await supabase
       .from('profiles')
@@ -78,6 +79,29 @@ export default function EditProfilePage() {
     }
     const targetHandle = username.trim() || authorHandle(profile) || '';
     router.push(targetHandle ? `/community/profile/${targetHandle}` : '/community');
+  }
+
+  async function uploadImage(event: ChangeEvent<HTMLInputElement>, target: 'avatar' | 'hero') {
+    if (!user) return;
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploading(target);
+    setError('');
+    try {
+      const result = await uploadPublicFile({
+        file,
+        folder: target === 'avatar' ? 'profiles/avatars' : 'profiles/covers',
+        userId: user.id,
+      });
+      if (target === 'avatar') setAvatarUrl(result.publicUrl);
+      else setHeroUrl(result.publicUrl);
+    } catch (uploadError) {
+      setError(getUploadErrorMessage(uploadError));
+    } finally {
+      setUploading('');
+      event.target.value = '';
+    }
   }
 
   if (authLoading || loading) {
@@ -102,9 +126,7 @@ export default function EditProfilePage() {
     avatar_url: avatarUrl,
     role: profile?.role ?? null,
     slug: profile?.slug ?? null,
-    creator_type: creatorType,
   };
-  const eyebrow = creatorType || (profile?.role === 'creator' ? 'Creator' : 'Member');
 
   return (
     <PageShell>
@@ -113,16 +135,43 @@ export default function EditProfilePage() {
           className="social-profile-cover"
           style={{ backgroundImage: heroUrl ? `url(${heroUrl})` : undefined }}
           aria-label="Cover preview"
-        />
+        >
+          <label htmlFor={heroInputId} className="profile-image-edit-button profile-image-edit-button-cover">
+            {uploading === 'hero' ? 'Uploading...' : 'Change Cover'}
+          </label>
+          <input
+            id={heroInputId}
+            type="file"
+            accept="image/*"
+            onChange={event => uploadImage(event, 'hero')}
+            disabled={Boolean(uploading)}
+            className="profile-image-input"
+          />
+        </section>
 
         <section className="social-profile-head">
           <div className="social-profile-main">
             <div className="social-profile-identity">
-              <SocialAvatar profile={previewProfile} size="large" />
+              <div className="profile-avatar-edit-wrap">
+                <SocialAvatar profile={previewProfile} size="large" />
+                <label htmlFor={avatarInputId} className="profile-image-edit-button profile-image-edit-button-avatar">
+                  {uploading === 'avatar' ? '...' : 'Change'}
+                </label>
+                <input
+                  id={avatarInputId}
+                  type="file"
+                  accept="image/*"
+                  onChange={event => uploadImage(event, 'avatar')}
+                  disabled={Boolean(uploading)}
+                  className="profile-image-input"
+                />
+              </div>
               <div className="social-profile-text">
-                <div className="app-detail-eyebrow os-type-eyebrow">{eyebrow}</div>
                 <h1 className="social-profile-name">{displayName || 'Your name'}</h1>
                 {username && <div className="social-handle">@{username}</div>}
+                <p className="social-profile-bio">
+                  {bio || 'Add a short bio for your public profile.'}
+                </p>
               </div>
             </div>
 
@@ -177,38 +226,6 @@ export default function EditProfilePage() {
               />
             </label>
 
-            <label className="profile-edit-field">
-              <span className="profile-edit-label">Avatar URL</span>
-              <input
-                type="url"
-                value={avatarUrl}
-                onChange={event => setAvatarUrl(event.target.value)}
-                className="profile-edit-input"
-                placeholder="https://..."
-              />
-            </label>
-
-            <label className="profile-edit-field">
-              <span className="profile-edit-label">Cover image URL</span>
-              <input
-                type="url"
-                value={heroUrl}
-                onChange={event => setHeroUrl(event.target.value)}
-                className="profile-edit-input"
-                placeholder="https://..."
-              />
-            </label>
-
-            <label className="profile-edit-field">
-              <span className="profile-edit-label">Role tag</span>
-              <input
-                type="text"
-                value={creatorType}
-                onChange={event => setCreatorType(event.target.value)}
-                className="profile-edit-input"
-                placeholder="Creator, Producer, Designer..."
-              />
-            </label>
           </div>
         </section>
       </main>

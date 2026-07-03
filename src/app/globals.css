@@ -4828,13 +4828,6 @@ body.theme-dark .product-tile:hover .product-tile-art {
   min-height: 28px;
 }
 
-.social-row:hover .social-row-title,
-.social-row:hover .social-author-name {
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
-}
-
 .social-avatar {
   width: 48px;
   height: 48px;
@@ -5397,6 +5390,7 @@ body.theme-dark .product-tile:hover .product-tile-art {
 }
 
 .social-profile-cover {
+  position: relative;
   min-height: clamp(140px, 18vw, 220px);
   border-radius: 14px;
   background:
@@ -5404,6 +5398,48 @@ body.theme-dark .product-tile:hover .product-tile-art {
     linear-gradient(135deg, color-mix(in srgb, var(--os-color-ink) 6%, transparent), transparent);
   background-size: cover;
   background-position: center;
+}
+
+.profile-image-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.profile-avatar-edit-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.profile-image-edit-button {
+  cursor: pointer;
+  border: 1px solid var(--os-glass-control-border);
+  border-radius: var(--os-radius-pill);
+  background: color-mix(in srgb, var(--os-color-bg) 84%, transparent);
+  color: var(--os-color-ink);
+  box-shadow: var(--os-shadow-card);
+  font-size: 12px;
+  font-weight: 720;
+  line-height: 1;
+  text-decoration: none;
+  backdrop-filter: blur(18px) saturate(1.25);
+  -webkit-backdrop-filter: blur(18px) saturate(1.25);
+}
+
+.profile-image-edit-button-cover {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  padding: 10px 14px;
+}
+
+.profile-image-edit-button-avatar {
+  position: absolute;
+  right: -2px;
+  bottom: 8px;
+  padding: 8px 10px;
 }
 
 .social-profile-head {
@@ -5416,7 +5452,7 @@ body.theme-dark .product-tile:hover .product-tile-art {
   display: flex;
   justify-content: space-between;
   gap: 22px;
-  align-items: flex-end;
+  align-items: flex-start;
   flex-wrap: wrap;
   margin-top: -68px;
   padding: 0 4px;
@@ -5425,7 +5461,7 @@ body.theme-dark .product-tile:hover .product-tile-art {
 .social-profile-identity {
   display: flex;
   gap: 20px;
-  align-items: flex-end;
+  align-items: flex-start;
   min-width: 0;
 }
 
@@ -5435,9 +5471,8 @@ body.theme-dark .product-tile:hover .product-tile-art {
 
 .social-profile-text {
   min-width: 0;
-  padding-bottom: 6px;
   display: grid;
-  gap: 4px;
+  gap: 10px;
 }
 
 .social-profile-text .app-detail-eyebrow,
@@ -5459,7 +5494,6 @@ body.theme-dark .product-tile:hover .product-tile-art {
 
 .social-profile-text .social-handle {
   font-size: 15px;
-  margin-top: 6px !important;
   color: var(--os-color-ink-muted);
 }
 
@@ -5467,14 +5501,13 @@ body.theme-dark .product-tile:hover .product-tile-art {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-  align-items: center;
-  padding-bottom: 8px;
+  align-items: flex-start;
+  padding-top: 10px;
 }
 
 .social-profile-bio {
   max-width: 620px;
-  margin: 2px 0 0;
-  padding: 0 4px;
+  margin: 0;
   color: var(--os-color-ink-secondary);
   font-size: 15px;
   line-height: 1.55;
@@ -5513,6 +5546,13 @@ body.theme-dark .product-tile:hover .product-tile-art {
   align-items: center;
   overflow-x: auto;
   padding-bottom: 2px;
+}
+
+.social-inline-actions {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .social-profile-tabs {

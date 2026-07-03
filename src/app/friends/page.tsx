@@ -8,25 +8,24 @@ import { useAuth } from '@/lib/useAuth';
 import { hasCommunityIdentity, communityIdentityMessage } from '@/lib/communityProfile';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { isMissingRelationError } from '@/lib/schemaCompat';
-import { supabase } from '@/lib/supabase';
-import type { SocialAuthor } from '@/lib/social';
+import {
+  acceptFriendRequest,
+  cancelFriendRequest,
+  loadFriendRequests,
+  otherFriendProfile,
+  removeFriend,
+  type FriendRequestRow,
+} from '@/lib/friends';
 
-type FollowWithProfiles = {
-  follower_id: string;
-  following_id: string;
-  follower?: SocialAuthor | null;
-  following?: SocialAuthor | null;
-};
-
-type FriendsTab = 'mutuals' | 'following' | 'followers';
+type FriendsTab = 'friends' | 'requests' | 'sent';
 
 export default function FriendsPage() {
   const { user, loading } = useAuth();
   const [profile, setProfile] = useState<StudioProfile | null>(null);
-  const [following, setFollowing] = useState<FollowWithProfiles[]>([]);
-  const [followers, setFollowers] = useState<FollowWithProfiles[]>([]);
-  const [tab, setTab] = useState<FriendsTab>('mutuals');
+  const [requests, setRequests] = useState<FriendRequestRow[]>([]);
+  const [tab, setTab] = useState<FriendsTab>('friends');
   const [schemaReady, setSchemaReady] = useState(true);
+  const [busyId, setBusyId] = useState('');
 
   useEffect(() => {
     if (!user) {
@@ -40,35 +39,42 @@ export default function FriendsPage() {
     if (!user) return;
     const userId = user.id;
     async function loadFriends() {
-      const [followingResult, followerResult] = await Promise.all([
-        supabase
-          .from('profile_follows')
-          .select('follower_id, following_id, following:profiles!profile_follows_following_id_fkey(id, slug, username, display_name, avatar_url, role, creator_type)')
-          .eq('follower_id', userId)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('profile_follows')
-          .select('follower_id, following_id, follower:profiles!profile_follows_follower_id_fkey(id, slug, username, display_name, avatar_url, role, creator_type)')
-          .eq('following_id', userId)
-          .order('created_at', { ascending: false }),
-      ]);
-
-      if (isMissingRelationError(followingResult.error) || isMissingRelationError(followerResult.error)) {
+      const result = await loadFriendRequests(userId);
+      if (!result.schemaReady || isMissingRelationError(result.error)) {
         setSchemaReady(false);
         return;
       }
 
-      setFollowing((followingResult.data as FollowWithProfiles[] | null) ?? []);
-      setFollowers((followerResult.data as FollowWithProfiles[] | null) ?? []);
+      setRequests(result.rows);
       setSchemaReady(true);
     }
     loadFriends();
   }, [user]);
 
-  const mutuals = useMemo(() => {
-    const followingIds = new Set(following.map(row => row.following_id));
-    return followers.filter(row => followingIds.has(row.follower_id));
-  }, [followers, following]);
+  const friends = useMemo(() => requests.filter(row => row.status === 'accepted'), [requests]);
+  const incoming = useMemo(() => requests.filter(row => row.status === 'pending' && row.addressee_id === user?.id), [requests, user]);
+  const sent = useMemo(() => requests.filter(row => row.status === 'pending' && row.requester_id === user?.id), [requests, user]);
+
+  async function acceptRequest(row: FriendRequestRow) {
+    setBusyId(row.id);
+    const { data } = await acceptFriendRequest(row.id);
+    setRequests(current => current.map(item => item.id === row.id ? { ...item, ...((data as FriendRequestRow | null) ?? {}), status: 'accepted' } : item));
+    setBusyId('');
+  }
+
+  async function cancelRequest(row: FriendRequestRow) {
+    setBusyId(row.id);
+    await cancelFriendRequest(row.id);
+    setRequests(current => current.filter(item => item.id !== row.id));
+    setBusyId('');
+  }
+
+  async function removeRequest(row: FriendRequestRow) {
+    setBusyId(row.id);
+    await removeFriend(row.id);
+    setRequests(current => current.filter(item => item.id !== row.id));
+    setBusyId('');
+  }
 
   if (loading) {
     return (
@@ -84,7 +90,7 @@ export default function FriendsPage() {
       <PageShell>
         <main className="social-shell">
           <div className="app-empty-text">
-            Sign in to see friends, followers, and mutual connections.
+            Sign in to see friends and friend requests.
             <div style={{ marginTop: 18 }}>
               <Link href="/login" className="os-button os-button-primary os-button-compact">Sign In</Link>
             </div>
@@ -95,11 +101,11 @@ export default function FriendsPage() {
   }
 
   const tabs = [
-    { id: 'mutuals' as const, label: 'Friends', count: mutuals.length },
-    { id: 'following' as const, label: 'Following', count: following.length },
-    { id: 'followers' as const, label: 'Followers', count: followers.length },
+    { id: 'friends' as const, label: 'Friends', count: friends.length },
+    { id: 'requests' as const, label: 'Requests', count: incoming.length },
+    { id: 'sent' as const, label: 'Sent', count: sent.length },
   ];
-  const visible = tab === 'mutuals' ? mutuals : tab === 'following' ? following : followers;
+  const visible = tab === 'friends' ? friends : tab === 'requests' ? incoming : sent;
 
   return (
     <PageShell>
@@ -109,7 +115,7 @@ export default function FriendsPage() {
             <div>
               <h1 className="os-type-display">Friends</h1>
               <p className="social-title-copy os-type-body">
-                Follow members, build mutual connections, and keep your 44 social graph close.
+                Manage private 44 friendships and requests.
               </p>
             </div>
           </div>
@@ -134,20 +140,32 @@ export default function FriendsPage() {
         )}
 
         {!schemaReady ? (
-          <div className="app-empty-text">Friends are ready in the app. Run the social SQL to enable follows in Supabase.</div>
+          <div className="app-empty-text">Friends are ready in the app. Run the social SQL to enable friend requests in Supabase.</div>
         ) : (
           <section className="social-feed" aria-label={tab}>
             {visible.length === 0 ? (
-              <div className="app-empty-text">No {tab === 'mutuals' ? 'friends' : tab} yet.</div>
+              <div className="app-empty-text">No {tab === 'friends' ? 'friends' : tab === 'requests' ? 'friend requests' : 'sent requests'} yet.</div>
             ) : (
               visible.map(row => {
-                const person = tab === 'following' ? row.following : row.follower;
+                const person = otherFriendProfile(row, user.id);
                 if (!person) return null;
                 return (
                   <SocialProfileRow
-                    key={`${row.follower_id}-${row.following_id}`}
+                    key={row.id}
                     profile={person}
-                    subtitle={tab === 'mutuals' ? 'Mutual connection' : tab === 'following' ? 'You follow this member' : 'Follows you'}
+                    subtitle={tab === 'friends' ? 'Friend' : tab === 'requests' ? 'Wants to be friends' : 'Request sent'}
+                    aside={
+                      tab === 'requests' ? (
+                        <div className="social-inline-actions">
+                          <button className="os-button os-button-primary os-button-compact" type="button" onClick={() => acceptRequest(row)} disabled={busyId === row.id}>Accept</button>
+                          <button className="os-button os-button-secondary os-button-compact" type="button" onClick={() => cancelRequest(row)} disabled={busyId === row.id}>Dismiss</button>
+                        </div>
+                      ) : tab === 'sent' ? (
+                        <button className="os-button os-button-secondary os-button-compact" type="button" onClick={() => cancelRequest(row)} disabled={busyId === row.id}>Cancel</button>
+                      ) : (
+                        <button className="os-button os-button-secondary os-button-compact" type="button" onClick={() => removeRequest(row)} disabled={busyId === row.id}>Remove</button>
+                      )
+                    }
                   />
                 );
               })

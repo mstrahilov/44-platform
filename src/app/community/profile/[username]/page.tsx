@@ -18,12 +18,17 @@ import { authorHandle, countById, likersByPost, repliersByPost, type CountMap, t
 import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { isMissingRelationError } from '@/lib/schemaCompat';
 import { createOrOpenConversation } from '@/lib/messages';
+import {
+  acceptFriendRequest,
+  cancelFriendRequest,
+  loadFriendshipState,
+  removeFriend,
+  sendFriendRequest,
+  type FriendRequestRow,
+  type FriendshipState,
+} from '@/lib/friends';
 
 type ProfileTab = 'posts' | 'replies' | 'products' | 'services' | 'resources';
-type FollowRow = {
-  follower_id: string;
-  following_id: string;
-};
 
 export default function PublicProfilePage() {
   const { username } = useParams<{ username: string }>();
@@ -40,8 +45,8 @@ export default function PublicProfilePage() {
   const [repliersMap, setRepliersMap] = useState<LikersMap>({});
   const [likeCounts, setLikeCounts] = useState<CountMap>({});
   const [likersMap, setLikersMap] = useState<LikersMap>({});
-  const [followers, setFollowers] = useState<FollowRow[]>([]);
-  const [following, setFollowing] = useState<FollowRow[]>([]);
+  const [friendshipState, setFriendshipState] = useState<FriendshipState>('none');
+  const [friendRequest, setFriendRequest] = useState<FriendRequestRow | null>(null);
   const [currentProfile, setCurrentProfile] = useState<StudioProfile | null>(null);
   const [tab, setTab] = useState<ProfileTab>('posts');
   const [loading, setLoading] = useState(true);
@@ -69,8 +74,8 @@ export default function PublicProfilePage() {
         setResources([]);
         setPosts([]);
         setReplies([]);
-        setFollowers([]);
-        setFollowing([]);
+        setFriendshipState('none');
+        setFriendRequest(null);
         setLoading(false);
         return;
       }
@@ -96,8 +101,6 @@ export default function PublicProfilePage() {
         replyResult,
         replyCountResult,
         likeResult,
-        followerResult,
-        followingResult,
       ] = await Promise.all([
         supabase
           .from('products')
@@ -135,8 +138,6 @@ export default function PublicProfilePage() {
           .from('post_likes')
           .select('post_id, profile_id, profiles:profiles!profile_id(id, display_name, username, avatar_url)')
           .order('created_at', { ascending: false }),
-        supabase.from('profile_follows').select('follower_id, following_id').eq('following_id', profileId),
-        supabase.from('profile_follows').select('follower_id, following_id').eq('follower_id', profileId),
       ]);
 
       setProducts(((productResult.data as Product[] | null) ?? []).filter(Boolean));
@@ -150,8 +151,6 @@ export default function PublicProfilePage() {
       const likeRows = (likeResult.data as LikeRow[] | null) ?? [];
       setLikeCounts(countById(likeRows, 'post_id'));
       setLikersMap(likersByPost(likeRows));
-      setFollowers(isMissingRelationError(followerResult.error) ? [] : ((followerResult.data as FollowRow[] | null) ?? []));
-      setFollowing(isMissingRelationError(followingResult.error) ? [] : ((followingResult.data as FollowRow[] | null) ?? []));
       setLoading(false);
     }
 
@@ -166,8 +165,22 @@ export default function PublicProfilePage() {
     loadStudioProfile(user.id).then(result => setCurrentProfile(result.profile));
   }, [user]);
 
+  useEffect(() => {
+    if (!user || !profile || user.id === profile.id) {
+      setFriendshipState('none');
+      setFriendRequest(null);
+      return;
+    }
+
+    loadFriendshipState(user.id, profile.id).then(result => {
+      setFriendshipState(result.state);
+      setFriendRequest(result.request);
+      if (!result.schemaReady) setError('Friends are ready in the app. Run the social SQL to enable friend requests in Supabase.');
+      else if (result.error) setError(result.error.message ?? 'Could not load friendship state.');
+    });
+  }, [profile, user]);
+
   const isOwn = user?.id === profile?.id;
-  const isFollowing = Boolean(user && followers.some(row => row.follower_id === user.id));
   const tabs = useMemo(
     () => [
       { id: 'posts' as const, label: 'Posts' },
@@ -179,7 +192,7 @@ export default function PublicProfilePage() {
     [],
   );
 
-  async function toggleFollow() {
+  async function handleFriendAction() {
     if (!profile || isOwn || busy) return;
     if (!user) {
       router.push('/login');
@@ -190,23 +203,41 @@ export default function PublicProfilePage() {
       return;
     }
 
-    setBusy('follow');
+    setBusy('friend');
     setError('');
-    if (isFollowing) {
-      const { error: deleteError } = await supabase
-        .from('profile_follows')
-        .delete()
-        .eq('follower_id', user.id)
-        .eq('following_id', profile.id);
-      if (isMissingRelationError(deleteError)) setError('Follows are ready in the app. Run the social SQL to enable them in Supabase.');
-      else if (deleteError) setError(deleteError.message);
-      else setFollowers(current => current.filter(row => row.follower_id !== user.id));
+
+    if (friendshipState === 'incoming' && friendRequest) {
+      const { data, error: acceptError } = await acceptFriendRequest(friendRequest.id);
+      if (isMissingRelationError(acceptError)) setError('Friends are ready in the app. Run the social SQL to enable friend requests in Supabase.');
+      else if (acceptError) setError(acceptError.message);
+      else {
+        setFriendshipState('friends');
+        setFriendRequest((data as FriendRequestRow | null) ?? friendRequest);
+      }
+    } else if (friendshipState === 'outgoing' && friendRequest) {
+      const { error: cancelError } = await cancelFriendRequest(friendRequest.id);
+      if (isMissingRelationError(cancelError)) setError('Friends are ready in the app. Run the social SQL to enable friend requests in Supabase.');
+      else if (cancelError) setError(cancelError.message);
+      else {
+        setFriendshipState('none');
+        setFriendRequest(null);
+      }
+    } else if (friendshipState === 'friends' && friendRequest) {
+      const { error: removeError } = await removeFriend(friendRequest.id);
+      if (isMissingRelationError(removeError)) setError('Friends are ready in the app. Run the social SQL to enable friend requests in Supabase.');
+      else if (removeError) setError(removeError.message);
+      else {
+        setFriendshipState('none');
+        setFriendRequest(null);
+      }
     } else {
-      const nextFollow = { follower_id: user.id, following_id: profile.id };
-      const { error: insertError } = await supabase.from('profile_follows').insert(nextFollow);
-      if (isMissingRelationError(insertError)) setError('Follows are ready in the app. Run the social SQL to enable them in Supabase.');
-      else if (insertError) setError(insertError.message);
-      else setFollowers(current => [...current, nextFollow]);
+      const { data, error: requestError } = await sendFriendRequest(user.id, profile.id);
+      if (isMissingRelationError(requestError)) setError('Friends are ready in the app. Run the social SQL to enable friend requests in Supabase.');
+      else if (requestError) setError(requestError.message);
+      else {
+        setFriendshipState('outgoing');
+        setFriendRequest((data as FriendRequestRow | null) ?? null);
+      }
     }
     setBusy('');
   }
@@ -219,6 +250,10 @@ export default function PublicProfilePage() {
     }
     if (!hasCommunityIdentity(currentProfile)) {
       setSetupGateOpen(true);
+      return;
+    }
+    if (friendshipState !== 'friends') {
+      setError('Add this member as a friend before sending a message.');
       return;
     }
     setBusy('message');
@@ -241,7 +276,13 @@ export default function PublicProfilePage() {
 
   const displayName = profile.display_name ?? profile.username ?? 'Member';
   const handle = authorHandle(profile);
-  const eyebrow = profile.creator_type ?? (profile.role === 'creator' ? 'Creator' : 'Member');
+  const friendButtonLabel = friendshipState === 'friends'
+    ? 'Friends'
+    : friendshipState === 'incoming'
+      ? 'Accept Friend'
+      : friendshipState === 'outgoing'
+        ? 'Request Sent'
+        : 'Add Friend';
 
   return (
     <PageShell>
@@ -257,9 +298,11 @@ export default function PublicProfilePage() {
             <div className="social-profile-identity">
               <SocialAvatar profile={profile} size="large" />
               <div className="social-profile-text">
-                <div className="app-detail-eyebrow os-type-eyebrow">{eyebrow}</div>
                 <h1 className="social-profile-name">{displayName}</h1>
                 {handle && <div className="social-handle">@{handle}</div>}
+                <p className="social-profile-bio">
+                  {profile.bio || 'This member has not added a bio yet.'}
+                </p>
               </div>
             </div>
 
@@ -268,23 +311,17 @@ export default function PublicProfilePage() {
                 <Link href="/community/profile/edit" className="os-button os-button-primary">Edit Profile</Link>
               ) : (
                 <>
-                  <button type="button" className="os-button os-button-secondary" onClick={openMessage} disabled={busy === 'message'}>
-                    Message
-                  </button>
-                  <button type="button" className="os-button os-button-primary" onClick={toggleFollow} disabled={busy === 'follow'}>
-                    {isFollowing ? 'Following' : 'Follow'}
+                  {friendshipState === 'friends' && (
+                    <button type="button" className="os-button os-button-secondary" onClick={openMessage} disabled={busy === 'message'}>
+                      Message
+                    </button>
+                  )}
+                  <button type="button" className="os-button os-button-primary" onClick={handleFriendAction} disabled={busy === 'friend'}>
+                    {friendButtonLabel}
                   </button>
                 </>
               )}
             </div>
-          </div>
-
-          <p className="social-profile-bio">
-            {profile.bio || 'This member has not added a bio yet.'}
-          </p>
-
-          <div className="social-profile-stats">
-            <span><strong>{posts.length}</strong>posts</span>
           </div>
 
           {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
@@ -341,8 +378,7 @@ export default function PublicProfilePage() {
                     <SocialAvatar profile={profile} />
                     <div className="social-row-main">
                       <div className="social-row-meta">
-                        <span className="social-author-name">{displayName}</span>
-                        {handle && <span className="social-handle">@{handle}</span>}
+                        {handle && <span className="social-author-name">@{handle}</span>}
                         <span className="social-dot" />
                         <span className="social-time">replied</span>
                       </div>

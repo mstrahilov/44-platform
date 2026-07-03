@@ -13,6 +13,7 @@ import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { useAuth } from '@/lib/useAuth';
 import { countById, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type ReplyEngagerRow, type SocialPost } from '@/lib/social';
+import { loadFriendRequests, otherFriendProfile } from '@/lib/friends';
 
 type PostLike = LikeRow;
 
@@ -25,6 +26,8 @@ export default function CommunityPage() {
   const [repliersMap, setRepliersMap] = useState<LikersMap>({});
   const [likes, setLikes] = useState<PostLike[]>([]);
   const [profile, setProfile] = useState<StudioProfile | null>(null);
+  const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
+  const [feedMode, setFeedMode] = useState<'all' | 'friends'>('all');
   const [likingId, setLikingId] = useState('');
   const [error, setError] = useState('');
   const [setupGateOpen, setSetupGateOpen] = useState(false);
@@ -62,9 +65,18 @@ export default function CommunityPage() {
   useEffect(() => {
     if (!user) {
       setProfile(null);
+      setFriendIds(new Set());
+      setFeedMode('all');
       return;
     }
     loadStudioProfile(user.id).then(result => setProfile(result.profile));
+    loadFriendRequests(user.id).then(result => {
+      const ids = result.rows
+        .filter(row => row.status === 'accepted')
+        .map(row => otherFriendProfile(row, user.id)?.id)
+        .filter((id): id is string => Boolean(id));
+      setFriendIds(new Set(ids));
+    });
   }, [user]);
 
   const categoryList = useMemo(() => {
@@ -76,7 +88,8 @@ export default function CommunityPage() {
   useTopbarTabs(
     categoryList.length > 0
       ? [
-          { id: 'all', label: 'For You', href: '/community', active: true },
+          { id: 'all', label: 'For You', onClick: () => setFeedMode('all'), active: feedMode === 'all' },
+          ...(user ? [{ id: 'friends', label: 'Friends', onClick: () => setFeedMode('friends'), active: feedMode === 'friends' }] : []),
           ...categoryList.slice(0, 5).map(c => ({
             id: c.slug,
             label: c.name,
@@ -93,6 +106,9 @@ export default function CommunityPage() {
     return new Set(likes.filter(like => like.profile_id === user.id).map(like => like.post_id));
   }, [likes, user]);
   const canInteract = hasCommunityIdentity(profile);
+  const visiblePosts = feedMode === 'friends'
+    ? posts.filter(post => Boolean(post.author_id && friendIds.has(post.author_id)))
+    : posts;
 
   async function toggleLike(post: SocialPost) {
     if (likingId) return;
@@ -160,10 +176,10 @@ export default function CommunityPage() {
         {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
 
         <section className="social-feed" aria-label="Community feed">
-          {posts.length === 0 ? (
-            <div className="app-empty-text">No posts yet.</div>
+          {visiblePosts.length === 0 ? (
+            <div className="app-empty-text">{feedMode === 'friends' ? 'No friend posts yet.' : 'No posts yet.'}</div>
           ) : (
-            posts.map(post => (
+            visiblePosts.map(post => (
               <SocialPostRow
                 key={post.id}
                 post={post}

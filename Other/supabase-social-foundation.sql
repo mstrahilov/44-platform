@@ -1,5 +1,5 @@
 -- ============================================================================
--- 44OS — SOCIAL FOUNDATION: follows + direct messages
+-- 44OS — SOCIAL FOUNDATION: friends + direct messages
 -- Run in the Supabase SQL editor. Safe to re-run.
 -- ============================================================================
 
@@ -8,8 +8,42 @@ begin;
 create extension if not exists pgcrypto with schema extensions;
 
 -- ----------------------------------------------------------------------------
--- Follows / friends graph
+-- Friend requests / accepted friendships
 -- ----------------------------------------------------------------------------
+create table if not exists public.friend_requests (
+  id uuid primary key default gen_random_uuid(),
+  requester_id uuid not null references public.profiles(id) on delete cascade,
+  addressee_id uuid not null references public.profiles(id) on delete cascade,
+  status text not null default 'pending' check (status in ('pending', 'accepted', 'declined', 'canceled')),
+  created_at timestamptz not null default now(),
+  responded_at timestamptz,
+  constraint friend_requests_no_self check (requester_id <> addressee_id)
+);
+
+create unique index if not exists friend_requests_pair_active_idx
+on public.friend_requests (
+  least(requester_id, addressee_id),
+  greatest(requester_id, addressee_id)
+)
+where status in ('pending', 'accepted');
+
+create index if not exists friend_requests_requester_idx on public.friend_requests(requester_id, created_at desc);
+create index if not exists friend_requests_addressee_idx on public.friend_requests(addressee_id, created_at desc);
+
+alter table public.friend_requests enable row level security;
+
+drop policy if exists "friend_requests_read_involved" on public.friend_requests;
+drop policy if exists "friend_requests_insert_own" on public.friend_requests;
+drop policy if exists "friend_requests_update_involved" on public.friend_requests;
+create policy "friend_requests_read_involved" on public.friend_requests
+  for select to authenticated using (requester_id = auth.uid() or addressee_id = auth.uid());
+create policy "friend_requests_insert_own" on public.friend_requests
+  for insert to authenticated with check (requester_id = auth.uid());
+create policy "friend_requests_update_involved" on public.friend_requests
+  for update to authenticated using (requester_id = auth.uid() or addressee_id = auth.uid())
+  with check (requester_id = auth.uid() or addressee_id = auth.uid());
+
+-- Legacy follow table is kept only as migration input for older installs.
 create table if not exists public.profile_follows (
   follower_id uuid not null references public.profiles(id) on delete cascade,
   following_id uuid not null references public.profiles(id) on delete cascade,
@@ -31,6 +65,25 @@ create policy "profile_follows_insert_own" on public.profile_follows
   for insert to authenticated with check (follower_id = auth.uid());
 create policy "profile_follows_delete_own" on public.profile_follows
   for delete to authenticated using (follower_id = auth.uid());
+
+insert into public.friend_requests (requester_id, addressee_id, status, created_at, responded_at)
+select
+  least(a.follower_id, a.following_id),
+  greatest(a.follower_id, a.following_id),
+  'accepted',
+  min(a.created_at),
+  now()
+from public.profile_follows a
+join public.profile_follows b
+  on b.follower_id = a.following_id
+ and b.following_id = a.follower_id
+group by least(a.follower_id, a.following_id), greatest(a.follower_id, a.following_id)
+on conflict do nothing;
+
+insert into public.friend_requests (requester_id, addressee_id, status, created_at)
+select follower_id, following_id, 'pending', created_at
+from public.profile_follows
+on conflict do nothing;
 
 -- ----------------------------------------------------------------------------
 -- One-to-one conversations

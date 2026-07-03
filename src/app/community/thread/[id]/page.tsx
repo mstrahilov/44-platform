@@ -638,7 +638,7 @@ function ReplyRow({
         <SocialAvatar profile={reply.authors} />
       </Link>
       <div className="social-row-main">
-        <SocialAuthorLine author={reply.authors} createdAt={reply.created_at} />
+        <SocialAuthorLine author={reply.authors} createdAt={reply.created_at} handleOnly />
         <p className="social-row-body">{reply.body}</p>
         <div className="social-actions">
           <button

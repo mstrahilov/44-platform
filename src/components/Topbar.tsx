@@ -229,17 +229,14 @@ export function Topbar() {
             </button>
             {userMenuOpen && (
               <div className="os-popover" role="menu">
-                <Link href="/account" className="os-popover-item" role="menuitem">
-                  <IconUser /> Account
-                </Link>
                 <Link href={profileHref} className="os-popover-item" role="menuitem">
                   <IconProfile /> Profile
                 </Link>
-                <Link href="/inbox" className="os-popover-item" role="menuitem">
-                  <IconMessages /> Messages
-                </Link>
                 <Link href="/friends" className="os-popover-item" role="menuitem">
                   <IconFriends /> Friends
+                </Link>
+                <Link href="/inbox" className="os-popover-item" role="menuitem">
+                  <IconMessages /> Messages
                 </Link>
                 <div className="os-popover-divider" />
                 <button type="button" className="os-popover-item" role="menuitem" onClick={handleSignOut}>

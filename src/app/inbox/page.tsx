@@ -14,6 +14,7 @@ import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { isMissingRelationError } from '@/lib/schemaCompat';
 import { authorDisplayName, compactDate, type SocialAuthor } from '@/lib/social';
 import { supabase } from '@/lib/supabase';
+import { loadFriendshipState } from '@/lib/friends';
 
 type Conversation = {
   id: string;
@@ -130,6 +131,12 @@ function InboxContent() {
     const targetProfileId = withProfile;
 
     async function openRequestedConversation() {
+      const friendship = await loadFriendshipState(userId, targetProfileId);
+      if (friendship.schemaReady && friendship.state !== 'friends') {
+        setError('Add this member as a friend before sending a message.');
+        await loadInbox();
+        return;
+      }
       const result = await createOrOpenConversation(userId, targetProfileId);
       if (result.error && isMissingRelationError(result.error)) {
         setSchemaReady(false);

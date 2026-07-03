@@ -6,7 +6,6 @@ import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { SystemPanel } from '@/components/SystemPanel';
-import { UploadField } from '@/components/UploadField';
 import {
   ACCENTS,
   MODES,
@@ -107,11 +106,6 @@ function SettingsContent() {
 function AccountSettings() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<StudioProfile | null>(null);
-  const [displayName, setDisplayName] = useState('');
-  const [username, setUsername] = useState('');
-  const [bio, setBio] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState('');
-  const [savingProfile, setSavingProfile] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
   const [status, setStatus] = useState('');
 
@@ -119,74 +113,11 @@ function AccountSettings() {
     async function loadProfile() {
       if (!user) return;
       const result = await loadStudioProfile(user.id);
-      const nextProfile = result.profile;
-      setProfile(nextProfile);
-      setDisplayName(nextProfile?.display_name ?? '');
-      setUsername(nextProfile?.username ?? '');
-      setBio(nextProfile?.bio ?? '');
-      setAvatarUrl(nextProfile?.avatar_url ?? '');
+      setProfile(result.profile);
     }
 
     loadProfile();
   }, [user]);
-
-  function normalizeUsername(value: string) {
-    return value
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9_]+/g, '_')
-      .replace(/^_+|_+$/g, '')
-      .slice(0, 32);
-  }
-
-  function slugify(value: string) {
-    return value
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 48);
-  }
-
-  async function saveProfile() {
-    if (!user || savingProfile) return;
-
-    const cleanDisplayName = displayName.trim() || user.email?.split('@')[0] || '44 Member';
-    const cleanUsername = normalizeUsername(username || cleanDisplayName || user.id.slice(0, 8));
-    if (!cleanUsername) {
-      setStatus('Choose a username with letters or numbers.');
-      return;
-    }
-
-    setSavingProfile(true);
-    setStatus('');
-
-    const payload = {
-      display_name: cleanDisplayName,
-      username: cleanUsername,
-      slug: slugify(profile?.slug || cleanUsername) || cleanUsername.replace(/_/g, '-'),
-      bio: bio.trim() || null,
-      avatar_url: avatarUrl.trim() || null,
-    };
-
-    const { error } = await supabase
-      .from('profiles')
-      .update(payload)
-      .eq('id', user.id);
-
-    setSavingProfile(false);
-
-    if (error) {
-      setStatus(error.message.includes('duplicate') ? 'That username is already taken.' : error.message);
-      return;
-    }
-
-    setUsername(cleanUsername);
-    setProfile(current => current ? { ...current, ...payload } : current);
-    setStatus('Profile saved.');
-  }
 
   async function sendPasswordReset() {
     if (!user?.email || sendingReset) return;
@@ -213,43 +144,33 @@ function AccountSettings() {
 
       <div className="settings-field">
         <div className="settings-field-head">
-          <div className="os-type-card-title">Profile</div>
-          <p className="os-type-body-small">This is the public profile created in `profiles` for your account.</p>
+          <div className="os-type-card-title">Public Profile</div>
+          <p className="os-type-body-small">Profile image, bio, header image, and friendship controls now live in your public profile editor.</p>
         </div>
-        <div style={{ display: 'grid', gap: 14 }}>
-          {user && (
-            <UploadField
-              label="Avatar"
-              folder="profiles/avatars"
-              userId={user.id}
-              value={avatarUrl}
-              accept="image/*"
-              buttonLabel="Upload avatar"
-              onChange={setAvatarUrl}
-            />
-          )}
-          <label className="dashboard-field">
-            <div className="dashboard-field-label">Display Name</div>
-            <input className="input" value={displayName} onChange={event => setDisplayName(event.target.value)} placeholder="Your name" />
-          </label>
-          <label className="dashboard-field">
-            <div className="dashboard-field-label">Username</div>
-            <input className="input" value={username} onChange={event => setUsername(normalizeUsername(event.target.value))} placeholder="username" />
-          </label>
-          <label className="dashboard-field">
-            <div className="dashboard-field-label">Bio</div>
-            <textarea className="input" rows={4} value={bio} onChange={event => setBio(event.target.value)} placeholder="A short note for your public profile." />
-          </label>
+        <div style={{ display: 'grid', gap: 12 }}>
+          <span className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>
+            {profile?.username ? `@${profile.username}` : 'Your community profile is ready.'}
+          </span>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <button className="os-button os-button-primary" type="button" onClick={() => void saveProfile()} disabled={savingProfile || !user}>
-              {savingProfile ? 'Saving…' : 'Save Profile'}
-            </button>
-            {username && (
-              <a className="os-button os-button-secondary" href={`/community/profile/${username}`}>
+            <Link className="os-button os-button-primary" href="/community/profile/edit">
+              Edit Profile
+            </Link>
+            {profile?.username && (
+              <a className="os-button os-button-secondary" href={`/community/profile/${profile.username}`}>
                 View Public Profile
               </a>
             )}
           </div>
+        </div>
+      </div>
+
+      <div className="settings-field">
+        <div className="settings-field-head">
+          <div className="os-type-card-title">Email</div>
+          <p className="os-type-body-small">Your login and account recovery email.</p>
+        </div>
+        <div>
+          <span className="os-type-body">{user?.email ?? 'No email on file.'}</span>
         </div>
       </div>
 
@@ -262,6 +183,18 @@ function AccountSettings() {
           <button className="os-button os-button-secondary" type="button" onClick={sendPasswordReset} disabled={sendingReset}>
             {sendingReset ? 'Sending…' : 'Send Password Reset'}
           </button>
+        </div>
+      </div>
+
+      <div className="settings-field">
+        <div className="settings-field-head">
+          <div className="os-type-card-title">Security</div>
+          <p className="os-type-body-small">Use Privacy & Security for message permissions, public visibility, and trusted-device controls.</p>
+        </div>
+        <div>
+          <Link className="os-button os-button-secondary" href="/settings?tab=privacy">
+            Open Privacy & Security
+          </Link>
         </div>
       </div>
 
