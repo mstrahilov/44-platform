@@ -11,9 +11,11 @@
 --   - supabase-author-content-rls.sql
 --   - supabase-library-foundation.sql
 --   - supabase-library-item-type-foundation.sql
+--   - supabase-live-testing-setup.sql
 --   - supabase-local-global-pricing.sql
 --   - supabase-post-intent-topics.sql
 --   - supabase-post-subjects.sql
+--   - supabase-service-projects.sql
 --   - supabase-social-foundation.sql
 --
 -- Deleted/retired SQL history included old reset, seed, import, taxonomy,
@@ -50,7 +52,8 @@
 -- App behavior:
 --   New profiles are created by src/lib/studioProfiles.ts.
 --   New users currently default to role = 'creator' so testers can access
---   Dashboard immediately.
+--   Dashboard immediately. Run supabase-live-testing-setup.sql in Supabase to
+--   apply the same default/repair to live data.
 --   Community setup completion is app-level: username + avatar_url.
 --
 -- ============================================================================
@@ -181,13 +184,50 @@
 --   resource_id uuid references resources(id)
 --   saved_at timestamptz
 --
--- public.service_requests tracks requested/saved services:
+-- public.service_requests is the project-workspace record for a client + creator
+-- pair. It starts as a brief, transitions through accept/decline/quote/pay flows,
+-- and lives on the client's Library and the creator's Dashboard Requests tab.
+--
+-- Expected fields:
 --   id uuid
---   user_id uuid references auth.users(id)
+--   user_id uuid references auth.users(id)         -- the client requesting
 --   service_id uuid references services(id)
---   message text
---   status text
+--   message text                                    -- legacy free-form brief
+--   status text                                     -- inquiry|pending|accepted|
+--                                                      declined|in_progress|
+--                                                      awaiting_payment|
+--                                                      completed|canceled
+--   brief_title text
+--   brief_body text
+--   budget_cents integer
+--   timeline text
+--   agreed_price_cents integer                      -- creator sets on accept/quote
+--   agreed_currency text
+--   responded_at timestamptz
+--   paid_at timestamptz
+--   completed_at timestamptz
+--   updated_at timestamptz
 --   created_at timestamptz
+--
+-- RLS: client (user_id) and creator (services.author_id) can read + update.
+-- Only the client can insert.
+--
+-- public.project_messages is the shared thread inside a project workspace.
+--   id uuid
+--   request_id uuid references service_requests(id)
+--   author_id uuid references profiles(id)
+--   body text
+--   created_at timestamptz
+--
+-- RLS: readable/insertable by the client (service_requests.user_id) or the
+-- creator (services.author_id).
+--
+-- App behavior:
+--   Submitting a brief inserts a service_requests row with status='pending' and
+--   redirects to /projects/[id]. The workspace surfaces the brief, a project
+--   message thread, and side-panel actions. The Library "Services" tab links
+--   each row to /projects/[id]. The Dashboard "Requests" tab lists incoming
+--   requests where services.author_id = auth.uid().
 --
 -- Keep old Collection routes only for compatibility. Do not add new Collection
 -- user-facing copy.

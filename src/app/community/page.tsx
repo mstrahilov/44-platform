@@ -7,20 +7,13 @@ import { supabase } from '@/lib/supabase';
 import { PageShell } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
 import { SocialPostRow } from '@/components/Social';
-import { useTopbarTabs } from '@/components/TopbarContext';
+import { useCommunityTopbarTabs } from '@/components/CommunityTopbarTabs';
 import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { useAuth } from '@/lib/useAuth';
 import { countById, isGeneralPost, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type ReplyEngagerRow, type SocialPost } from '@/lib/social';
-import { loadFriendRequests, otherFriendProfile } from '@/lib/friends';
 
 type PostLike = LikeRow;
-type FeedTabId = 'feed' | 'friends';
-
-const COMMUNITY_HERO = {
-  feed: { title: 'Feed', copy: 'General posts from the 44 community.' },
-  friends: { title: 'Friends', copy: 'General posts from the creators you are connected with.' },
-} as const;
 
 export default function CommunityPage() {
   const router = useRouter();
@@ -30,11 +23,11 @@ export default function CommunityPage() {
   const [repliersMap, setRepliersMap] = useState<LikersMap>({});
   const [likes, setLikes] = useState<PostLike[]>([]);
   const [profile, setProfile] = useState<StudioProfile | null>(null);
-  const [friendIds, setFriendIds] = useState<Set<string>>(new Set());
-  const [activeTab, setActiveTab] = useState<FeedTabId>('feed');
   const [likingId, setLikingId] = useState('');
   const [error, setError] = useState('');
   const [setupGateOpen, setSetupGateOpen] = useState(false);
+
+  useCommunityTopbarTabs('feed');
 
   useEffect(() => {
     async function fetchCommunity() {
@@ -67,26 +60,10 @@ export default function CommunityPage() {
   useEffect(() => {
     if (!user) {
       setProfile(null);
-      setFriendIds(new Set());
-      setActiveTab('feed');
       return;
     }
     loadStudioProfile(user.id).then(result => setProfile(result.profile));
-    loadFriendRequests(user.id).then(result => {
-      const ids = result.rows
-        .filter(row => row.status === 'accepted')
-        .map(row => otherFriendProfile(row, user.id)?.id)
-        .filter((id): id is string => Boolean(id));
-      setFriendIds(new Set(ids));
-    });
   }, [user]);
-
-  useTopbarTabs(
-    [
-      { id: 'feed', label: 'Feed', onClick: () => setActiveTab('feed'), active: activeTab === 'feed' },
-      ...(user ? [{ id: 'friends', label: 'Friends', onClick: () => setActiveTab('friends'), active: activeTab === 'friends' }] : []),
-    ],
-  );
 
   const likeCounts = useMemo(() => countById(likes, 'post_id'), [likes]);
   const likersMap: LikersMap = useMemo(() => likersByPost(likes), [likes]);
@@ -96,12 +73,6 @@ export default function CommunityPage() {
   }, [likes, user]);
   const canInteract = hasCommunityIdentity(profile);
   const generalPosts = useMemo(() => posts.filter(post => isGeneralPost(post)), [posts]);
-  const visiblePosts = useMemo(() => generalPosts.filter(post => {
-    if (activeTab === 'friends') return Boolean(post.author_id && friendIds.has(post.author_id));
-    return true;
-  }), [activeTab, friendIds, generalPosts]);
-
-  const heroContent = COMMUNITY_HERO[activeTab];
 
   async function toggleLike(post: SocialPost) {
     if (likingId) return;
@@ -155,9 +126,9 @@ export default function CommunityPage() {
         <header className="social-header">
           <div className="social-title-row">
             <div>
-              <h1 className="os-type-display">{heroContent.title}</h1>
+              <h1 className="os-type-display">Community</h1>
               <p className="social-title-copy os-type-body">
-                {heroContent.copy}
+                General posts from the 44 community.
               </p>
             </div>
             <Link href={user ? '/community/new' : '/login'} className="os-button os-button-primary os-button-compact">
@@ -169,10 +140,10 @@ export default function CommunityPage() {
         {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
 
         <section className="dashboard-list-surface social-feed social-feed-list social-feed-panel" aria-label="Community feed">
-          {visiblePosts.length === 0 ? (
-            <div className="dashboard-empty">{activeTab === 'friends' ? 'No friend posts yet.' : 'No posts yet.'}</div>
+          {generalPosts.length === 0 ? (
+            <div className="dashboard-empty">No posts yet.</div>
           ) : (
-            visiblePosts.map(post => (
+            generalPosts.map(post => (
               <SocialPostRow
                 key={post.id}
                 post={post}

@@ -5,11 +5,11 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { PageShell, HubHero, CenteredMessage } from '@/components/Ui';
-import { useTopbarTabs } from '@/components/TopbarContext';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
 import { formatProductPrice } from '@/lib/products';
+import { productLibraryHref } from '@/lib/experience';
 import { getProductRuntimeKind } from '@/lib/libraryContent';
 import { formatServicePrice, type ServiceRequest } from '@/lib/platform';
 
@@ -48,22 +48,12 @@ type LibraryEntry =
 
 type LibraryTabId = 'music' | 'books' | 'games' | 'products';
 
-const TAB_LABELS: Record<LibraryEntry['tab'] | 'all', string> = {
-  all: 'All Items',
-  music: 'Music',
-  books: 'Books',
-  games: 'Games',
-  products: 'Products',
-  services: 'Services',
-};
-
 export default function LibraryPage() {
   const { user, loading: authLoading } = useAuth();
   const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
   const [serviceRequests, setServiceRequests] = useState<ServiceRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<LibraryEntry['tab'] | 'all'>('all');
 
   useEffect(() => {
     if (authLoading) return;
@@ -122,7 +112,7 @@ export default function LibraryPage() {
         subtitle: item.products.creator,
         meta: formatProductPrice(item.products),
         image: item.products.cover_url,
-        href: `/library/item/product/${item.id}`,
+        href: productLibraryHref(item.products, item.id),
         product: item.products,
       }];
     });
@@ -138,37 +128,13 @@ export default function LibraryPage() {
         subtitle: item.services.creators?.name ?? '44 Creator',
         meta: `${formatServicePrice(item.services)} · ${item.status}`,
         image: item.services.cover_url,
-        href: `/library/item/service/${item.id}`,
+        href: `/projects/${item.id}`,
         request: item,
       }];
     });
 
     return [...products, ...services];
   }, [libraryItems, serviceRequests]);
-
-  const availableTabs = useMemo<Array<LibraryEntry['tab'] | 'all'>>(() => {
-    const order: LibraryEntry['tab'][] = ['music', 'books', 'games', 'products', 'services'];
-    const filtered = order.filter(tab => entries.some(entry => entry.tab === tab));
-    if (filtered.length === 0) return [];
-    return ['all', ...filtered];
-  }, [entries]);
-
-  useEffect(() => {
-    if (availableTabs.length > 0 && !availableTabs.includes(activeTab)) {
-      setActiveTab(availableTabs[0]);
-    }
-  }, [activeTab, availableTabs]);
-
-  useTopbarTabs(
-    availableTabs.length > 0
-      ? availableTabs.map(tab => ({
-          id: tab,
-          label: TAB_LABELS[tab],
-          onClick: () => setActiveTab(tab),
-          active: tab === activeTab,
-        }))
-      : undefined,
-  );
 
   if (authLoading || loading) {
     return <PageShell><CenteredMessage>Loading…</CenteredMessage></PageShell>;
@@ -182,39 +148,35 @@ export default function LibraryPage() {
     return <PageShell><CenteredMessage>{error}</CenteredMessage></PageShell>;
   }
 
-  if (entries.length === 0 || availableTabs.length === 0) {
+  if (entries.length === 0) {
     return (
       <PageShell>
         <div className="app-page">
           <HubHero title="Library" copy={LIBRARY_HERO_COPY} />
           <div className="app-empty-text">
-            Your library is empty. Add products or request services to start building your 44 library.
+            Your library is empty. Explore Music, Books, and Assets to start building your 44 library.
           </div>
           <div style={{ marginTop: 16 }}>
-            <Link className="os-button os-button-primary" href="/store">Browse Store</Link>
+            <Link className="os-button os-button-primary" href="/music/store">Explore Music</Link>
           </div>
         </div>
       </PageShell>
     );
   }
 
-  const activeEntries = activeTab === 'all'
-    ? entries
-    : entries.filter(entry => entry.tab === activeTab);
-
   return (
     <PageShell>
       <div className="app-page">
         <HubHero title="Library" copy={LIBRARY_HERO_COPY} />
         <div className="app-grid">
-          {activeEntries.map(entry => <LibraryCard key={entry.id} entry={entry} />)}
+          {entries.map(entry => <LibraryCard key={entry.id} entry={entry} />)}
         </div>
       </div>
     </PageShell>
   );
 }
 
-const LIBRARY_HERO_COPY = 'Products you own and services you have in progress on 44.';
+const LIBRARY_HERO_COPY = 'Everything you own and services you have in progress on 44.';
 
 function productTab(product: Product): LibraryTabId {
   const runtimeKind = getProductRuntimeKind(product);

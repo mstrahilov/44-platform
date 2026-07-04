@@ -1,10 +1,136 @@
-import { PageShell, EmptyPanel } from '@/components/Ui';
+'use client';
+
+import Link from 'next/link';
+import { PageShell, HubHero } from '@/components/Ui';
+import { useTopbarBack } from '@/components/TopbarContext';
+import {
+  removeFromCart,
+  updateCartQuantity,
+  useCart,
+} from '@/lib/cart';
+
+function formatMoney(cents: number, currency: string) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100);
+}
 
 export default function CartPage() {
+  const { items, count, subtotalCents } = useCart();
+  const currency = items[0]?.currency ?? 'USD';
+
+  // Cart is a system surface owned by Merch — give it an OS back path.
+  useTopbarBack({ href: '/merch/store', label: 'Merch' });
+
+  if (items.length === 0) {
+    return (
+      <PageShell>
+        <main className="dashboard-page">
+          <HubHero title="Cart" copy="Items you have added while browsing 44." />
+          <div className="dashboard-list-surface">
+            <div className="dashboard-empty">
+              Your cart is empty. Browse Merch or an app Store to add items.
+              <div style={{ marginTop: 'var(--os-space-4)' }}>
+                <Link className="os-button os-button-primary os-button-compact" href="/merch/store">Browse Merch</Link>
+              </div>
+            </div>
+          </div>
+        </main>
+      </PageShell>
+    );
+  }
+
   return (
     <PageShell>
-      <h1 className="browse-page-title os-type-display">Cart</h1>
-      <EmptyPanel title="Your cart is empty" body="Browse the store and add items — checkout is coming soon." />
+      <main className="dashboard-page">
+        <HubHero
+          title="Cart"
+          copy={`${count} item${count === 1 ? '' : 's'} ready to check out.`}
+          actions={
+            <Link className="os-button os-button-primary" href="/checkout">
+              Continue to Checkout
+            </Link>
+          }
+        />
+
+        <div className="dashboard-list-surface">
+          {items.map(item => (
+            <div key={item.product_id} className="dashboard-list-row cart-row">
+              <div className="cart-row-item">
+                <div className="cart-row-art">
+                  {item.cover_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={item.cover_url} alt="" />
+                  )}
+                </div>
+                <div className="dashboard-row-copy">
+                  <div className="dashboard-row-title">
+                    <Link
+                      href={item.href || `/product/${item.slug || item.product_id}`}
+                      style={{ color: 'inherit', textDecoration: 'none' }}
+                    >
+                      {item.title}
+                    </Link>
+                  </div>
+                  <div className="dashboard-row-subtitle">{item.creator}</div>
+                </div>
+              </div>
+
+              <div className="cart-row-qty" role="group" aria-label="Quantity">
+                <button
+                  type="button"
+                  className="os-button os-button-secondary os-button-compact"
+                  onClick={() => updateCartQuantity(item.product_id, item.quantity - 1)}
+                  aria-label="Decrease quantity"
+                >
+                  −
+                </button>
+                <span className="cart-row-qty-value">{item.quantity}</span>
+                <button
+                  type="button"
+                  className="os-button os-button-secondary os-button-compact"
+                  onClick={() => updateCartQuantity(item.product_id, item.quantity + 1)}
+                  aria-label="Increase quantity"
+                >
+                  +
+                </button>
+              </div>
+
+              <div className="cart-row-price">
+                {formatMoney(item.price_cents * item.quantity, item.currency)}
+              </div>
+
+              <div className="dashboard-row-actions">
+                <button
+                  type="button"
+                  className="os-button os-button-ghost os-button-compact"
+                  onClick={() => removeFromCart(item.product_id)}
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="cart-summary">
+          <div className="cart-summary-row">
+            <span className="os-type-body">Subtotal</span>
+            <span className="os-type-field-title">{formatMoney(subtotalCents, currency)}</span>
+          </div>
+          <div className="cart-summary-row cart-summary-note">
+            <span className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>
+              Taxes and any local fees are calculated at checkout.
+            </span>
+          </div>
+          <div className="cart-summary-actions">
+            <Link className="os-button os-button-secondary" href="/merch/store">
+              Keep Browsing
+            </Link>
+            <Link className="os-button os-button-primary" href="/checkout">
+              Continue to Checkout
+            </Link>
+          </div>
+        </div>
+      </main>
     </PageShell>
   );
 }

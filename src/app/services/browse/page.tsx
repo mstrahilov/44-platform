@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import type { Category, Service } from '@/lib/platform';
 import { matchesCategory, matchesQuery } from '@/lib/taxonomy';
 import { ServiceCard, PageShell, HubHero, EmptyMessage } from '@/components/Ui';
-import { useTopbarTabs } from '@/components/TopbarContext';
+import { useServicesTopbarTabs } from '@/components/ServicesTopbarTabs';
 
 export default function ServicesBrowsePage() {
   const [services, setServices] = useState<Service[]>([]);
@@ -51,19 +51,7 @@ export default function ServicesBrowsePage() {
     ? 'All Services'
     : (categoryCatalog.find(c => c.slug === activeCategory)?.name ?? activeCategory);
 
-  useTopbarTabs(
-    categoryCatalog.length > 0
-      ? [
-          { id: 'all', label: 'All', href: '/services', active: activeCategory === 'all' },
-          ...categoryCatalog.filter(category => serviceCatalog.some(service => matchesCategory(service, category))).slice(0, 5).map(category => ({
-            id: category.slug,
-            label: category.name,
-            href: `/services/browse/${category.slug}`,
-            active: category.slug === activeCategory,
-          })),
-        ]
-      : undefined,
-  );
+  useServicesTopbarTabs('services');
 
   return (
     <PageShell>

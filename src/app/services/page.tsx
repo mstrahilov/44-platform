@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Service } from '@/lib/platform';
 import { PageShell, HubHero, HubSection, Shelf, ServiceCard } from '@/components/Ui';
-import { useTopbarTabs } from '@/components/TopbarContext';
+import { useServicesTopbarTabs } from '@/components/ServicesTopbarTabs';
 
 type Category = {
   id: string;
@@ -73,25 +73,14 @@ export default function ServicesPage() {
     }));
   }, [categories, services]);
 
-  useTopbarTabs(
-    orderedCategories.length > 0
-      ? [
-          { id: 'all', label: 'All', href: '/services', active: true },
-          ...orderedCategories.slice(0, 5).map(c => ({
-            id: c.slug,
-            label: c.name,
-            href: `/services/browse/${c.slug}`,
-          })),
-        ]
-      : undefined,
-  );
+  useServicesTopbarTabs('services');
 
   return (
     <PageShell>
       <div className="app-page">
         <HubHero
           title="Services"
-          copy="Find people who can help with audio, video, design, development, and business work."
+          copy="Start a project with 44-operated creative services for audio, video, design, development, and campaign work."
         />
 
         {orderedCategories.map(category => {

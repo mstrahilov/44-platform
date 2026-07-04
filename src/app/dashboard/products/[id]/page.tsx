@@ -14,15 +14,23 @@ import type { Product } from '@/lib/products';
 import { currencyForCountry, normalizeMarketMode, type MarketMode } from '@/lib/marketPreferences';
 import { isMissingColumnError } from '@/lib/schemaCompat';
 import { getStudioDisplayName, loadStudioProfile } from '@/lib/studioProfiles';
+import { getDashboardCatalogSectionForProduct, type DashboardCatalogSectionId } from '@/lib/dashboardCatalog';
 
 function formatPriceInput(value: string) {
   const digits = value.replace(/\D/g, '').slice(0, 9);
-  if (!digits) return '0.00';
+  if (!digits) return '';
 
   const cents = digits.padStart(3, '0');
   const whole = cents.slice(0, -2).replace(/^0+(?=\d)/, '') || '0';
   const decimals = cents.slice(-2);
   return `${whole}.${decimals}`;
+}
+
+function currencySymbol(currency: string) {
+  const symbol = new Intl.NumberFormat(undefined, { style: 'currency', currency, currencyDisplay: 'narrowSymbol' })
+    .formatToParts(0)
+    .find(part => part.type === 'currency')?.value;
+  return symbol ?? currency;
 }
 
 type DraftTrack = {
@@ -48,22 +56,30 @@ function ensureTrackCount(current: DraftTrack[], nextCount: number) {
   return [...current, ...Array.from({ length: clamped - current.length }, createDraftTrack)];
 }
 
-function isMusicDraft(category: Category | null, productType: string) {
-  const categoryName = category?.name?.toLowerCase() ?? '';
-  const categorySlug = category?.slug?.toLowerCase() ?? '';
-  const type = productType.toLowerCase();
-
-  return categoryName.includes('music')
-    || categorySlug.includes('music')
-    || type.includes('album')
-    || type.includes('single')
-    || type.includes('ep')
-    || type.includes('track')
-    || type.includes('song');
+function runtimeTypeForSection(sectionId: DashboardCatalogSectionId) {
+  if (sectionId === 'books') return 'book';
+  if (sectionId === 'assets') return 'sample_pack';
+  return 'music';
 }
 
+function experienceTypeForSection(sectionId: DashboardCatalogSectionId) {
+  if (sectionId === 'books') return 'book';
+  if (sectionId === 'assets') return 'asset';
+  return 'music';
+}
+
+function productAssetTypeForSection(sectionId: DashboardCatalogSectionId) {
+  if (sectionId === 'books') return 'book';
+  if (sectionId === 'assets') return 'sample_pack';
+  return 'music';
+}
+
+type ProductAssetRow = {
+  file_url: string | null;
+  asset_type: string | null;
+};
+
 export default function EditProductPage() {
-  useTopbarBack({ href: '/dashboard/products', label: 'Products' });
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { user, loading } = useAuth();
@@ -72,15 +88,13 @@ export default function EditProductPage() {
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [productType, setProductType] = useState('');
-  const [shortDescription, setShortDescription] = useState('');
-  const [longDescription, setLongDescription] = useState('');
-  const [price, setPrice] = useState('0.00');
+  const [description, setDescription] = useState('');
+  const [price, setPrice] = useState('');
   const [marketMode, setMarketMode] = useState<MarketMode>('global');
-  const [localPrice, setLocalPrice] = useState('0.00');
+  const [localPrice, setLocalPrice] = useState('');
   const [localCurrency, setLocalCurrency] = useState('USD');
-  const [availableLocallyOnly, setAvailableLocallyOnly] = useState(false);
   const [coverUrl, setCoverUrl] = useState('');
-  const [heroUrl, setHeroUrl] = useState('');
+  const [itemFileUrl, setItemFileUrl] = useState('');
   const [year, setYear] = useState('');
   const [trackCount, setTrackCount] = useState('1');
   const [tracks, setTracks] = useState<DraftTrack[]>([createDraftTrack()]);
@@ -120,25 +134,26 @@ export default function EditProductPage() {
 
       const product = (productRow as Product | null) ?? null;
       if (!product) {
-        setError('Product not found.');
+        setError('Item not found.');
         setFetching(false);
         return;
       }
 
-      const { data: trackRows } = await supabase.from('tracks').select('*').eq('product_id', id).order('number');
+      const [{ data: trackRows }, { data: assetRows }] = await Promise.all([
+        supabase.from('tracks').select('*').eq('product_id', id).order('number'),
+        supabase.from('product_assets').select('asset_type,file_url').eq('product_id', id).order('sort_order'),
+      ]);
 
       setTitle(product.title ?? '');
       setCategoryId(product.category_id ?? '');
       setProductType(product.product_type ?? '');
-      setShortDescription(product.short_description ?? '');
-      setLongDescription(product.long_description ?? '');
-      setPrice(((product.price_cents ?? 0) / 100).toFixed(2));
-      setMarketMode(normalizeMarketMode(product.market_mode || profileResult.profile?.product_market_mode));
-      setLocalPrice(((product.local_price_cents ?? 0) / 100).toFixed(2));
+      setDescription(product.long_description || product.short_description || '');
+      setPrice(product.price_cents ? (product.price_cents / 100).toFixed(2) : '');
+      setMarketMode(normalizeMarketMode(product.market_mode));
+      setLocalPrice(product.local_price_cents ? (product.local_price_cents / 100).toFixed(2) : '');
       setLocalCurrency(product.local_currency || fallbackLocalCurrency);
-      setAvailableLocallyOnly(Boolean(product.available_locally_only));
       setCoverUrl(product.cover_url ?? '');
-      setHeroUrl(product.hero_url ?? '');
+      setItemFileUrl(product.read_url || product.download_url || ((assetRows as ProductAssetRow[] | null) ?? [])[0]?.file_url || '');
       setYear(product.year ? String(product.year) : '');
 
       const resolvedTracks = ((trackRows as Track[] | null) ?? []).map(track => ({
@@ -161,7 +176,24 @@ export default function EditProductPage() {
     [categories, categoryId],
   );
 
-  const isMusicProduct = isMusicDraft(selectedCategory, productType);
+  const section = useMemo(
+    () => getDashboardCatalogSectionForProduct({
+      category: selectedCategory?.name ?? '',
+      product_type: productType,
+      runtime_type: null,
+      experience_type: null,
+      fulfillment_type: null,
+    }),
+    [productType, selectedCategory],
+  );
+  const deleteLabel = `Delete ${section.itemLabel.replace(/\b\w/g, char => char.toUpperCase())}`;
+  const isMusicProduct = section.id === 'music';
+  const needsDigitalFile = section.id === 'books' || section.id === 'assets';
+  const typeOptions = section.typeOptions.includes(productType) || !productType
+    ? section.typeOptions
+    : [productType, ...section.typeOptions];
+
+  useTopbarBack({ href: section.href, label: section.label });
 
   useEffect(() => {
     if (!isMusicProduct) return;
@@ -186,9 +218,13 @@ export default function EditProductPage() {
     if (isMusicProduct) {
       const hasInvalidTrack = visibleTracks.some(track => !track.title.trim() || !track.audioUrl.trim());
       if (!visibleTracks.length || hasInvalidTrack) {
-        setError('Music products need track titles and uploaded audio for each track.');
+        setError('Music releases need track titles and uploaded audio for each track.');
         return;
       }
+    }
+    if (needsDigitalFile && !itemFileUrl.trim()) {
+      setError(section.id === 'books' ? 'Books need an uploaded file before saving.' : 'Assets need an uploaded pack file before saving.');
+      return;
     }
 
     setSaving(true);
@@ -199,23 +235,27 @@ export default function EditProductPage() {
     const isFree = !Number.isFinite(priceNumber) || priceNumber <= 0;
     const priceCents = isFree ? 0 : Math.round(priceNumber * 100);
     const localPriceNumber = Number(localPrice || '0');
-    const localPriceCents = Number.isFinite(localPriceNumber) ? Math.max(0, Math.round(localPriceNumber * 100)) : 0;
+    const localPriceCents = localPrice.trim() && Number.isFinite(localPriceNumber) ? Math.max(0, Math.round(localPriceNumber * 100)) : null;
 
     const updatePayload = {
       title: title.trim(),
       category_id: categoryId,
-      category: selectedCategory?.name ?? 'Products',
+      category: selectedCategory?.name ?? section.label,
       product_type: productType.trim(),
-      short_description: shortDescription.trim(),
-      long_description: longDescription.trim(),
+      short_description: null,
+      long_description: description.trim(),
       price_cents: priceCents,
       market_mode: marketMode,
       local_price_cents: marketMode === 'global' ? null : localPriceCents,
       local_currency: marketMode === 'global' ? null : localCurrency,
-      available_locally_only: availableLocallyOnly,
+      available_locally_only: false,
       is_free: isFree,
       cover_url: coverUrl.trim() || null,
-      hero_url: heroUrl.trim() || null,
+      runtime_type: runtimeTypeForSection(section.id),
+      experience_type: experienceTypeForSection(section.id),
+      fulfillment_type: 'digital',
+      read_url: section.id === 'books' ? itemFileUrl.trim() : null,
+      download_url: needsDigitalFile ? itemFileUrl.trim() : null,
       year: year ? Number(year) : null,
       creator: creatorName,
     };
@@ -232,6 +272,8 @@ export default function EditProductPage() {
         local_price_cents: _localPriceCents,
         local_currency: _localCurrency,
         available_locally_only: _availableLocallyOnly,
+        experience_type: _experienceType,
+        fulfillment_type: _fulfillmentType,
         ...legacyPayload
       } = updatePayload;
       const retry = await supabase
@@ -290,9 +332,40 @@ export default function EditProductPage() {
       }
     }
 
+    if (needsDigitalFile) {
+      const assetType = productAssetTypeForSection(section.id);
+      const { error: deleteAssetError } = await supabase
+        .from('product_assets')
+        .delete()
+        .eq('product_id', id)
+        .eq('asset_type', assetType);
+
+      if (deleteAssetError) {
+        setSaving(false);
+        setError(deleteAssetError.message);
+        return;
+      }
+
+      const { error: insertAssetError } = await supabase.from('product_assets').insert({
+        product_id: id,
+        asset_type: assetType,
+        title: productType.trim() || title.trim(),
+        file_url: itemFileUrl.trim(),
+        storage_path: null,
+        is_downloadable: true,
+        sort_order: 0,
+      });
+
+      if (insertAssetError) {
+        setSaving(false);
+        setError(insertAssetError.message);
+        return;
+      }
+    }
+
     setSaving(false);
     setSuccess('Changes saved.');
-    router.push('/dashboard/products');
+    router.push(section.href);
   }
 
   if (loading || !user || fetching) return <PageShell><div style={{ minHeight: '40vh' }} /></PageShell>;
@@ -315,7 +388,7 @@ export default function EditProductPage() {
 
     if (ownershipError || !ownedProduct) {
       setDeleting(false);
-      setError(ownershipError?.message || 'Product not found.');
+      setError(ownershipError?.message || 'Item not found.');
       return;
     }
 
@@ -339,45 +412,62 @@ export default function EditProductPage() {
     }
 
     setDeleting(false);
-    router.push('/dashboard/products');
+    router.push(section.href);
   }
 
   const hasTracks = tracks.some(track => track.title.trim() || track.audioUrl.trim());
   const deleteDescription = hasTracks || isMusicProduct
-    ? 'Delete this product? This will permanently remove the release and its tracklist from 44.'
-    : 'Delete this product? This will permanently remove it from 44.';
+    ? 'Delete this release? This will permanently remove the release and its tracklist from 44.'
+    : `Delete this ${section.itemLabel}? This will permanently remove it from 44.`;
 
   return (
     <PageShell>
       <div className="dashboard-editor">
-        <HubHero title="Edit Product" copy="Update the product details stored in 44." />
+        <HubHero title={section.editTitle} copy={`Update this ${section.itemLabel} inside 44.`} />
         <div className="dashboard-section">
           <form onSubmit={handleSubmit} className="dashboard-form">
-            <label className="dashboard-field"><div className="dashboard-field-label">Product Title</div><input className="os-input-field" value={title} onChange={e => setTitle(e.target.value)} /></label>
+            <label className="dashboard-field"><div className="dashboard-field-label">Title</div><input className="os-input-field" value={title} onChange={e => setTitle(e.target.value)} /></label>
 
-            <div className="dashboard-form-grid dashboard-form-grid-2">
-              <label className="dashboard-field"><div className="dashboard-field-label">Category</div><select className="os-input-field" value={categoryId} onChange={e => setCategoryId(e.target.value)}>{categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
-              <label className="dashboard-field"><div className="dashboard-field-label">Type</div><input className="os-input-field" value={productType} onChange={e => setProductType(e.target.value)} /></label>
-            </div>
+            <label className="dashboard-field">
+              <div className="dashboard-field-label">{section.typeLabel}</div>
+              <select className="os-input-field" value={productType} onChange={event => setProductType(event.target.value)}>
+                {typeOptions.map(option => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </label>
 
-            <label className="dashboard-field"><div className="dashboard-field-label">Short Description</div><textarea className="os-input-textarea" rows={3} value={shortDescription} onChange={e => setShortDescription(e.target.value)} /></label>
-            <label className="dashboard-field"><div className="dashboard-field-label">Long Description</div><textarea className="os-input-textarea" rows={5} value={longDescription} onChange={e => setLongDescription(e.target.value)} /></label>
+            <label className="dashboard-field">
+              <div className="dashboard-field-label">Description</div>
+              <textarea className="os-input-textarea" rows={6} value={description} onChange={event => setDescription(event.target.value)} />
+            </label>
 
             <div className="dashboard-form-grid dashboard-form-grid-3">
-              <label className="dashboard-field"><div className="dashboard-field-label">Price (USD)</div><input className="os-input-field" value={price} onChange={e => setPrice(formatPriceInput(e.target.value))} /></label>
+              <label className="dashboard-field">
+                <div className="dashboard-field-label">Price</div>
+                <span className="dashboard-price-input">
+                  <span>{currencySymbol('USD')}</span>
+                  <input className="os-input-field" value={price} onChange={e => setPrice(formatPriceInput(e.target.value))} />
+                </span>
+              </label>
               {marketMode !== 'global' && (
-                <label className="dashboard-field"><div className="dashboard-field-label">Local Price ({localCurrency})</div><input className="os-input-field" value={localPrice} onChange={e => setLocalPrice(formatPriceInput(e.target.value))} /></label>
+                <label className="dashboard-field">
+                  <div className="dashboard-field-label">Local Price ({localCurrency})</div>
+                  <span className="dashboard-price-input">
+                    <span>{currencySymbol(localCurrency)}</span>
+                    <input className="os-input-field" value={localPrice} onChange={e => setLocalPrice(formatPriceInput(e.target.value))} />
+                  </span>
+                </label>
               )}
               <label className="dashboard-field"><div className="dashboard-field-label">Release Year</div><input className="os-input-field" value={year} onChange={e => setYear(e.target.value.replace(/\D/g, '').slice(0, 4))} /></label>
-              <label className="dashboard-field"><div className="dashboard-field-label">Creator</div><input className="os-input-field" value={creatorName} readOnly /></label>
             </div>
 
             <div className="settings-field">
               <div className="settings-field-head">
                 <div className="os-type-card-title">Market</div>
-                <p className="os-type-body-small">Choose whether this product uses one global USD price or adds a local market price.</p>
+                <p className="os-type-body-small">Choose one global price, or add a price for your local market. Your local market comes from Settings &gt; Region.</p>
               </div>
-              <div className="settings-segment" role="group" aria-label="Product market">
+              <div className="settings-segment" role="group" aria-label={`${section.label} market`}>
                 {[
                   { id: 'global', label: 'Global' },
                   { id: 'global_plus_local', label: 'Global + Local' },
@@ -392,39 +482,30 @@ export default function EditProductPage() {
                   </button>
                 ))}
               </div>
-              <label className="dashboard-field" style={{ marginTop: 14 }}>
-                <span style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                  <input
-                    type="checkbox"
-                    checked={availableLocallyOnly}
-                    onChange={event => setAvailableLocallyOnly(event.target.checked)}
-                  />
-                  <span className="dashboard-field-label">Item available locally only</span>
-                </span>
-                <p className="dashboard-form-note">You can change your local market in Preferences.</p>
-              </label>
+              <p className="dashboard-form-note">Leave Local Price blank to use the global price everywhere.</p>
             </div>
 
-            <div className="dashboard-form-grid dashboard-form-grid-2">
+            <UploadField
+              label="Artwork"
+              folder="products/covers"
+              userId={user.id}
+              value={coverUrl}
+              accept="image/*"
+              buttonLabel="Upload artwork"
+              onChange={setCoverUrl}
+            />
+
+            {needsDigitalFile ? (
               <UploadField
-                label="Cover Image"
-                folder="products/covers"
+                label={section.id === 'books' ? 'Book File' : 'Asset File'}
+                folder={section.id === 'books' ? 'products/books' : 'products/assets'}
                 userId={user.id}
-                value={coverUrl}
-                accept="image/*"
-                buttonLabel="Upload cover"
-                onChange={setCoverUrl}
+                value={itemFileUrl}
+                accept={section.id === 'books' ? 'application/pdf,.pdf,.epub' : 'application/zip,.zip,audio/*'}
+                buttonLabel={section.id === 'books' ? 'Upload book file' : 'Upload asset file'}
+                onChange={setItemFileUrl}
               />
-              <UploadField
-                label="Hero Image"
-                folder="products/heroes"
-                userId={user.id}
-                value={heroUrl}
-                accept="image/*"
-                buttonLabel="Upload hero"
-                onChange={setHeroUrl}
-              />
-            </div>
+            ) : null}
 
             {isMusicProduct ? (
               <div className="dashboard-form-section">
@@ -495,10 +576,10 @@ export default function EditProductPage() {
 
             <div className="dashboard-form-actions">
               <div className="dashboard-form-actions-left">
-                <button className="os-button os-button-danger" type="button" onClick={() => setShowDeleteConfirm(true)}>Delete Product</button>
+                <button className="os-button os-button-danger" type="button" onClick={() => setShowDeleteConfirm(true)}>{deleteLabel}</button>
               </div>
               <div className="dashboard-form-actions-right">
-                <Link className="os-button os-button-secondary" href="/dashboard/products">Cancel</Link>
+                <Link className="os-button os-button-secondary" href={section.href}>Cancel</Link>
                 <button className="os-button os-button-primary" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>
               </div>
             </div>
@@ -506,9 +587,9 @@ export default function EditProductPage() {
         </div>
         <ConfirmDialog
           open={showDeleteConfirm}
-          title="Delete Product"
+          title={deleteLabel}
           description={deleteDescription}
-          confirmLabel="Delete Product"
+          confirmLabel={deleteLabel}
           destructive
           busy={deleting}
           onCancel={() => setShowDeleteConfirm(false)}

@@ -8,7 +8,7 @@ import { matchesCategory } from '@/lib/taxonomy';
 import { PageShell, EmptyMessage } from '@/components/Ui';
 import { SocialPostRow } from '@/components/Social';
 import { useAuth } from '@/lib/useAuth';
-import { useTopbarTabs } from '@/components/TopbarContext';
+import { useCommunityTopbarTabs } from '@/components/CommunityTopbarTabs';
 import { countById, isGeneralPost, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type ReplyEngagerRow, type SocialPost } from '@/lib/social';
 
 export default function CommunityBrowseCategoryPage({ params }: { params: Promise<{ category: string }> }) {
@@ -62,19 +62,7 @@ export default function CommunityBrowseCategoryPage({ params }: { params: Promis
   const cat = categoryList.find(c => c.slug === category || c.name.toLowerCase() === category);
   const label = cat?.name ?? category.charAt(0).toUpperCase() + category.slice(1);
 
-  useTopbarTabs(
-    categoryList.length > 0
-      ? [
-          { id: 'all', label: 'For You', href: '/community' },
-          ...categoryList.slice(0, 5).map(c => ({
-            id: c.slug,
-            label: c.name,
-            href: `/community/browse/${c.slug}`,
-            active: c.slug === cat?.slug,
-          })),
-        ]
-      : undefined,
-  );
+  useCommunityTopbarTabs('feed');
 
   const visible = useMemo(() => {
     return posts.filter(p => matchesCategory(p, cat));

@@ -1,9 +1,13 @@
+'use client';
+
 import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
 import type { Service, Resource, CommunityPost } from '@/lib/platform';
-import { communityThreadHref, resourceHref, serviceHref } from '@/lib/platform';
+import { communityThreadHref, creatorHref, resourceHref, serviceHref } from '@/lib/platform';
+import { useContextMenu } from '@/components/ContextMenu';
 import type { Product } from '@/lib/products';
 import { formatProductPrice } from '@/lib/products';
+import { productStoreHref } from '@/lib/experience';
 import { getPostMetaLabel } from '@/lib/social';
 
 export function PageShell({ children }: { children: ReactNode }) {
@@ -72,12 +76,22 @@ export function PanelListItem({
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function ProductCard({ product, owned: _owned }: { product: Product; owned?: boolean }) {
-  const href = `/product/${product.slug || product.id}`;
+  const { openContextMenu } = useContextMenu();
+  const href = productStoreHref(product);
   const image = product.cover_url || product.hero_url;
   const shape = getProductTileShape(product);
   const subtitle = getProductTileSubtitle(product);
   return (
-    <Link href={href} className="product-tile">
+    <Link
+      href={href}
+      className="product-tile"
+      onContextMenu={event =>
+        openContextMenu(event, [
+          { id: 'open', label: 'View Item', href },
+          { id: 'creator', label: 'View Creator', href: creatorHref(product.creators ?? product.creator) },
+        ])
+      }
+    >
       <div className={`product-tile-art product-tile-art-${shape}`}>
         {image && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -130,16 +144,28 @@ export function ServiceCard({ service }: { service: Service }) {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function ResourceCard({
   resource,
-  saved: _saved,
-  onSave: _onSave,
+  saved,
+  onSave,
 }: {
   resource: Resource;
   saved?: boolean;
   onSave?: (resource: Resource) => void;
 }) {
+  const { openContextMenu } = useContextMenu();
   const creator = resource.creators?.name || '44 Community';
+  const href = resourceHref(resource);
   return (
-    <Link className="product-tile" href={resourceHref(resource)}>
+    <Link
+      className="product-tile"
+      href={href}
+      onContextMenu={event =>
+        openContextMenu(event, [
+          { id: 'open', label: 'Open Resource', href },
+          ...(onSave ? [{ id: 'save', label: saved ? 'Saved' : 'Save Resource', onSelect: () => onSave(resource), disabled: saved }] : []),
+          { id: 'creator', label: 'View Creator', href: creatorHref(resource.creators ?? creator) },
+        ])
+      }
+    >
       <div className="product-tile-art product-tile-art-square">
         {resource.cover_url && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -155,8 +181,19 @@ export function ResourceCard({
 }
 
 export function PostCard({ post }: { post: CommunityPost }) {
+  const { openContextMenu } = useContextMenu();
+  const href = communityThreadHref(post);
   return (
-    <Link href={communityThreadHref(post)} className="app-card">
+    <Link
+      href={href}
+      className="app-card"
+      onContextMenu={event =>
+        openContextMenu(event, [
+          { id: 'open', label: 'Open Post', href },
+          { id: 'author', label: 'View Author', href: creatorHref(post.creators ?? '44 Community') },
+        ])
+      }
+    >
       <div className="app-card-body">
         <span className="os-pill os-type-pill app-card-chip">{getPostMetaLabel(post)}</span>
         <div className="app-card-title os-type-card-title">{post.title}</div>

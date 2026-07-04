@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { PageShell, CenteredMessage } from '@/components/Ui';
 import { SocialAvatar } from '@/components/Social';
-import { useTopbarBack } from '@/components/TopbarContext';
+import { useCommunityTopbarTabs } from '@/components/CommunityTopbarTabs';
 import type { Profile } from '@/lib/platform';
 import { authorHandle } from '@/lib/social';
 import { getUploadErrorMessage, uploadPublicFile } from '@/lib/uploads';
@@ -15,7 +15,7 @@ import { getUploadErrorMessage, uploadPublicFile } from '@/lib/uploads';
 export default function EditProfilePage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  useTopbarBack({ href: '/community', label: 'Community' });
+  useCommunityTopbarTabs('profile');
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [displayName, setDisplayName] = useState('');

@@ -5,10 +5,12 @@ import { Topbar } from '@/components/Topbar';
 import { TopbarProvider } from '@/components/TopbarContext';
 import { MusicPlayerBar, MusicPlayerProvider } from '@/components/MusicPlayer';
 import ThemeSync from '@/components/ThemeSync';
+import SystemShell from '@/components/SystemShell';
+import { ContextMenuProvider } from '@/components/ContextMenu';
 
 // Applies the saved theme before first paint to avoid a flash of the wrong theme.
 const THEME_BOOTSTRAP = `(function(){try{
-  var m = localStorage.getItem('44-theme-mode') || 'dark';
+  var m = localStorage.getItem('44-theme-mode') || 'light';
   var a = localStorage.getItem('44-theme-accent') || 'amber';
   var resolved = m === 'system' ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : m;
   document.body.className = 'theme-' + resolved + ' accent-' + a;
@@ -25,7 +27,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="theme-dark accent-amber" suppressHydrationWarning>
+      <body className="theme-light accent-amber" suppressHydrationWarning>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
         <ThemeSync />
 
@@ -37,6 +39,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <MusicPlayerProvider>
           <TopbarProvider>
+           <ContextMenuProvider>
+            <SystemShell />
             <div className="app-frame">
               <div className="app-shell">
                 <Sidebar />
@@ -49,6 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 </main>
               </div>
             </div>
+           </ContextMenuProvider>
           </TopbarProvider>
         </MusicPlayerProvider>
 

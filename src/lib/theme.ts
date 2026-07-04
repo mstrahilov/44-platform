@@ -22,7 +22,7 @@ export const MODES: { id: ThemeMode; label: string }[] = [
 
 const MODE_KEY = '44-theme-mode';
 const ACCENT_KEY = '44-theme-accent';
-const DEFAULT_MODE: ThemeMode = 'dark';
+const DEFAULT_MODE: ThemeMode = 'light';
 const DEFAULT_ACCENT: ThemeAccent = 'amber';
 
 export function getStoredMode(): ThemeMode {

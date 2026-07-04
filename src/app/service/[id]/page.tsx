@@ -8,12 +8,13 @@ import { useAuth } from '@/lib/useAuth';
 import type { Service } from '@/lib/platform';
 import { creatorHref, formatServicePrice } from '@/lib/platform';
 import { useTopbarBack } from '@/components/TopbarContext';
+import { isOpenProjectStatus, projectHref } from '@/lib/projects';
 
 export default function ServicePage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const [service, setService] = useState<Service | null>(null);
-  const [requested, setRequested] = useState(false);
+  const [existingRequestId, setExistingRequestId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useTopbarBack({ href: '/services', label: 'Services' });
@@ -31,20 +32,41 @@ export default function ServicePage() {
     fetchService();
   }, [id]);
 
-  async function submitRequest() {
-    if (!service) return;
-    if (!user) { alert('Sign in first, then send this service request.'); return; }
-    const { error } = await supabase.from('service_requests').insert({ user_id: user.id, service_id: service.id, message: null, status: 'inquiry' });
-    if (error) { alert(error.message); return; }
-    setRequested(true);
-  }
+  useEffect(() => {
+    async function fetchExisting(userId: string, serviceId: string) {
+      const { data } = await supabase
+        .from('service_requests')
+        .select('id, status')
+        .eq('user_id', userId)
+        .eq('service_id', serviceId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      const row = (data ?? [])[0] as { id: string; status: string } | undefined;
+      if (row && isOpenProjectStatus(row.status)) {
+        setExistingRequestId(row.id);
+      } else {
+        setExistingRequestId(null);
+      }
+    }
+    if (user && service) fetchExisting(user.id, service.id);
+    else Promise.resolve().then(() => setExistingRequestId(null));
+  }, [service, user]);
 
   if (loading) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Loading…</div>;
   if (!service) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Service not found</div>;
 
   const hasCover = Boolean(service.cover_url);
-
   const description = service.long_description || service.short_description || '';
+  const primaryHref = user
+    ? existingRequestId
+      ? projectHref(existingRequestId)
+      : `/service/${service.slug || service.id}/request`
+    : '/login';
+  const primaryLabel = user
+    ? existingRequestId
+      ? 'Open Project'
+      : 'Request Service'
+    : 'Sign In to Request';
 
   return (
     <div className="view-detail-single">
@@ -70,9 +92,9 @@ export default function ServicePage() {
             {service.delivery_estimate && (<><span className="view-album-meta-sep" /><span>{service.delivery_estimate}</span></>)}
           </div>
           <div className="view-album-actions">
-            <button className="os-button os-button-primary" onClick={submitRequest} disabled={requested}>
-              {requested ? 'Request Sent' : 'Send Request'}
-            </button>
+            <Link className="os-button os-button-primary" href={primaryHref}>
+              {primaryLabel}
+            </Link>
             {service.creators && (
               <Link className="os-button os-button-secondary" href={`${creatorHref(service.creators)}?tab=services`}>
                 View Creator
@@ -109,7 +131,7 @@ export default function ServicePage() {
           </div>
           <div className="view-row">
             <span className="view-row-label">Engagement</span>
-            <span className="view-row-value">Inquiry first</span>
+            <span className="view-row-value">Brief · Accept · Deliver</span>
           </div>
         </div>
       </div>
@@ -117,8 +139,8 @@ export default function ServicePage() {
       {/* Next Steps */}
       <div className="view-section">
         <h2 className="view-section-title">Next Steps</h2>
-        <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', lineHeight: 1.72, maxWidth: 720 }}>
-          Send a short note about what you need. Checkout, milestones, files, and project management can be layered in once the conversation starts.
+        <p className="os-type-body view-description">
+          Send a short brief describing what you need. The creator reviews and can accept, decline, or ask questions. Once accepted, you have a shared project workspace with messages, an agreed price, and payment — all in one place.
         </p>
       </div>
     </div>

@@ -7,7 +7,7 @@ import type { Category } from '@/lib/platform';
 import { matchesCategory, matchesQuery } from '@/lib/taxonomy';
 import { PageShell, EmptyMessage } from '@/components/Ui';
 import { SocialPostRow } from '@/components/Social';
-import { useTopbarTabs } from '@/components/TopbarContext';
+import { useCommunityTopbarTabs } from '@/components/CommunityTopbarTabs';
 import { countById, isGeneralPost, type CountMap, type SocialPost } from '@/lib/social';
 
 export default function CommunityBrowsePage() {
@@ -62,19 +62,7 @@ export default function CommunityBrowsePage() {
     ? 'Community'
     : (categoryCatalog.find(c => c.slug === activeCategory)?.name ?? activeCategory);
 
-  useTopbarTabs(
-    categoryCatalog.length > 0
-      ? [
-          { id: 'all', label: 'All', href: '/community', active: activeCategory === 'all' },
-          ...categoryCatalog.slice(0, 5).map(category => ({
-            id: category.slug,
-            label: category.name,
-            href: `/community/browse/${category.slug}`,
-            active: category.slug === activeCategory,
-          })),
-        ]
-      : undefined,
-  );
+  useCommunityTopbarTabs('feed');
 
   return (
     <PageShell>

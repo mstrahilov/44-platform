@@ -1,21 +1,31 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { PageShell, GlassPanel, HubHero } from '@/components/Ui';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { PageShell, GlassPanel, HubHero, CenteredMessage } from '@/components/Ui';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { useDashboardTabs } from '@/lib/dashboardTabs';
-
-function productHref(product: Pick<Product, 'id' | 'slug'>) {
-  return `/product/${product.slug || product.id}`;
-}
+import {
+  getDashboardCatalogSection,
+  productBelongsToDashboardSection,
+} from '@/lib/dashboardCatalog';
 
 export default function DashboardProductsPage() {
-  useDashboardTabs('products');
+  return (
+    <Suspense fallback={<PageShell><CenteredMessage>Loading...</CenteredMessage></PageShell>}>
+      <DashboardProductsContent />
+    </Suspense>
+  );
+}
+
+function DashboardProductsContent() {
+  const searchParams = useSearchParams();
+  const section = getDashboardCatalogSection(searchParams.get('section'));
+  useDashboardTabs(section.id);
   const router = useRouter();
   const { user, loading } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
@@ -81,8 +91,13 @@ export default function DashboardProductsPage() {
       ),
     );
     setStatusKind('success');
-    setStatus(nextPublished ? 'Product published.' : 'Product moved back to draft.');
+    setStatus(nextPublished ? `${section.itemLabel.charAt(0).toUpperCase()}${section.itemLabel.slice(1)} published.` : `${section.itemLabel.charAt(0).toUpperCase()}${section.itemLabel.slice(1)} moved back to draft.`);
   }
+
+  const visibleProducts = useMemo(
+    () => products.filter(product => productBelongsToDashboardSection(product, section.id)),
+    [products, section.id],
+  );
 
   if (loading || !user) {
     return <PageShell><div style={{ minHeight: '40vh' }} /></PageShell>;
@@ -92,11 +107,11 @@ export default function DashboardProductsPage() {
     <PageShell>
       <div className="dashboard-page">
         <HubHero
-          title="Products"
-          copy="Manage releases, products, assets, and experiences."
+          title={section.label}
+          copy={`Manage your ${section.itemLabelPlural} for 44OS.`}
           actions={
-            <Link className="os-button os-button-primary" href="/dashboard/products/new">
-              New Product
+            <Link className="os-button os-button-primary" href={`/dashboard/products/new?section=${section.id}`}>
+              {section.newLabel}
             </Link>
           }
         />
@@ -118,14 +133,14 @@ export default function DashboardProductsPage() {
         <div className="dashboard-list-surface">
           {fetching ? (
             <div className="dashboard-empty">
-              Loading products…
+              Loading {section.itemLabelPlural}…
             </div>
-          ) : products.length === 0 ? (
+          ) : visibleProducts.length === 0 ? (
             <div className="dashboard-empty">
-              No products yet. Create your first one from inside Dashboard.
+              No {section.itemLabelPlural} yet. Create your first {section.itemLabel} from inside Dashboard.
             </div>
           ) : (
-            products.map((product, index) => (
+            visibleProducts.map((product, index) => (
               <div
                 key={product.id}
                 className="dashboard-list-row"
@@ -139,18 +154,10 @@ export default function DashboardProductsPage() {
                     <span className={product.is_published || product.status === 'published' ? 'dashboard-status-dot dashboard-status-dot-published' : 'dashboard-status-dot dashboard-status-dot-draft'} aria-hidden="true" />
                     <div className="dashboard-row-title">{product.title}</div>
                   </div>
-                  <div className="dashboard-row-subtitle">{product.product_type || 'Product'}</div>
+                  <div className="dashboard-row-subtitle">{product.product_type || section.itemLabel}</div>
                 </div>
 
                 <div className="dashboard-row-actions">
-                  {(product.is_published || product.status === 'published') && (
-                    <Link
-                      href={`/dashboard/posts/new?subject_id=${encodeURIComponent(product.id)}`}
-                      className="os-button os-button-ghost os-button-compact"
-                    >
-                      Post Update
-                    </Link>
-                  )}
                   <Link href={`/dashboard/products/${product.id}`} className="os-button os-button-ghost os-button-compact">
                     Edit
                   </Link>

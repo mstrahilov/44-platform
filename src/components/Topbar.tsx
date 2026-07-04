@@ -12,12 +12,21 @@ import {
 } from '@/lib/achievementNotifications';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTopbar } from './TopbarContext';
+import { useCart } from '@/lib/cart';
 
 export type { TopbarTab } from './TopbarContext';
 
 const IconSearch = () => <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />;
 const IconBell = () => <span className="os-icon os-icon-notifications os-icon-sm" aria-hidden="true" />;
 const IconUser = () => <span className="os-icon os-icon-user os-icon-sm" aria-hidden="true" />;
+
+const IconCart = () => (
+  <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 4h2.4l2.2 10.2a1.6 1.6 0 0 0 1.6 1.3h7.2a1.6 1.6 0 0 0 1.6-1.2L19.5 7H6.2" />
+    <circle cx="9.2" cy="18.4" r="1.2" />
+    <circle cx="16.8" cy="18.4" r="1.2" />
+  </svg>
+);
 
 const IconProfile = () => (
   <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -69,6 +78,7 @@ export function Topbar() {
   const router = useRouter();
   const { user } = useAuth();
   const { tabs, back } = useTopbar();
+  const { count: cartCount } = useCart();
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [notifications, setNotifications] = useState<AchievementNotification[]>([]);
   const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
@@ -142,7 +152,7 @@ export function Topbar() {
     e.preventDefault();
     const q = searchQuery.trim();
     if (!q) return;
-    router.push(`/store?q=${encodeURIComponent(q)}`);
+    router.push(`/search?q=${encodeURIComponent(q)}`);
     setSearchOpen(false);
     setSearchQuery('');
   }
@@ -243,6 +253,13 @@ export function Topbar() {
           )}
         </div>
 
+        <Link href="/cart" className="os-topbar-icon-button" aria-label={cartCount > 0 ? `Cart · ${cartCount} item${cartCount === 1 ? '' : 's'}` : 'Cart'}>
+          <span className="os-topbar-icon-wrapper">
+            <IconCart />
+            {cartCount > 0 && <span className="os-topbar-badge">{cartCount}</span>}
+          </span>
+        </Link>
+
         {user && (
           <div ref={notifWrapRef} style={{ position: 'relative' }}>
             <button
@@ -304,10 +321,10 @@ export function Topbar() {
                 <Link href={profileHref} className="os-popover-item" role="menuitem">
                   <IconProfile /> Profile
                 </Link>
-                <Link href="/friends" className="os-popover-item" role="menuitem">
+                <Link href="/community/friends" className="os-popover-item" role="menuitem">
                   <IconFriends /> Friends
                 </Link>
-                <Link href="/inbox" className="os-popover-item" role="menuitem">
+                <Link href="/community/messages" className="os-popover-item" role="menuitem">
                   <IconMessages /> Messages
                 </Link>
                 <div className="os-popover-divider" />

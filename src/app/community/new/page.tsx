@@ -108,7 +108,7 @@ function NewCommunityThreadContent() {
         <div className="dashboard-header">
           <div className="dashboard-header-copy">
             <h1 className="os-type-display">New Post</h1>
-            <p className="os-type-body">Community posts are for general conversation. Reviews happen on product pages. Creator updates happen from Dashboard.</p>
+            <p className="os-type-body">Community posts are for general conversation. Reviews happen on release and item pages. Creator updates happen in release context.</p>
           </div>
           <Link href="/community" className="os-button os-button-secondary os-button-compact">Back</Link>
         </div>

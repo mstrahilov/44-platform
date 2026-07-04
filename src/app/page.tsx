@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
 import { PageShell, HubHero, HubSection, Shelf, ProductCard } from '@/components/Ui';
-import { useTopbarTabs } from '@/components/TopbarContext';
 
 export default function StorePage() {
   const { user } = useAuth();
@@ -49,19 +48,6 @@ export default function StorePage() {
   const merchProducts = products
     .filter(p => p.category === 'Apparel' || p.category === 'Merch')
     .slice(0, 4);
-  const storeTabs = [
-    { id: 'music', label: 'Music', href: '/store/music', match: (p: Product) => p.category === 'Music' },
-    { id: 'apparel', label: 'Apparel', href: '/store/apparel', match: (p: Product) => p.category === 'Apparel' || p.category === 'Merch' },
-    { id: 'books', label: 'Books', href: '/store/books', match: (p: Product) => p.category === 'Books' },
-    { id: 'games', label: 'Games', href: '/store/games', match: (p: Product) => p.category === 'Games' },
-    { id: 'assets', label: 'Assets', href: '/store/assets', match: (p: Product) => p.category === 'Assets' },
-  ].filter(tab => products.some(tab.match));
-
-  useTopbarTabs([
-    { id: 'all',     label: 'All',      href: '/',              active: true },
-    ...storeTabs.map(({ match: _match, ...tab }) => tab),
-  ]);
-
   return (
     <PageShell>
       <div className="app-page">
@@ -71,7 +57,7 @@ export default function StorePage() {
         />
 
         {musicProducts.length > 0 && (
-          <HubSection title="Explore Music" href="/store/music">
+          <HubSection title="Explore Music" href="/music/store">
             <Shelf>
               {musicProducts.map(product => (
                 <div key={product.id} className="app-shelf-item">
@@ -83,7 +69,7 @@ export default function StorePage() {
         )}
 
         {merchProducts.length > 0 && (
-          <HubSection title="Explore Merch" href="/store/merch">
+          <HubSection title="Explore Merch" href="/merch/store">
             <Shelf>
               {merchProducts.map(product => (
                 <div key={product.id} className="app-shelf-item">

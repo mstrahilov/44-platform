@@ -1,0 +1,58 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import type { Product } from '@/lib/products';
+import { getProductExperience } from '@/lib/experience';
+import { PageShell, HubHero, ProductGrid, ProductCard, EmptyMessage } from '@/components/Ui';
+import { useTopbarTabs } from '@/components/TopbarContext';
+
+type MerchRoute = 'store';
+
+export function MerchApp({ route }: { route: MerchRoute }) {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(route === 'store');
+
+  useTopbarTabs([
+    { id: 'store', label: 'Store', href: '/merch/store', active: route === 'store' },
+  ]);
+
+  useEffect(() => {
+    if (route !== 'store') return;
+
+    async function load() {
+      setLoading(true);
+      const { data } = await supabase
+        .from('products')
+        .select('*, creators:profiles!author_id(*)')
+        .eq('is_published', true)
+        .order('created_at', { ascending: false })
+        .limit(120);
+
+      setProducts(((data ?? []) as Product[]).filter(product => getProductExperience(product) === 'physical'));
+      setLoading(false);
+    }
+
+    load();
+  }, [route]);
+
+  return (
+    <PageShell>
+      <main className="app-page">
+        <HubHero title="Merch Store" copy="Physical goods from 44 and creators: apparel, merch, and shipped items." />
+
+        {loading ? (
+          <EmptyMessage>Loading...</EmptyMessage>
+        ) : products.length === 0 ? (
+          <EmptyMessage>No merch is published yet.</EmptyMessage>
+        ) : (
+          <ProductGrid>
+            {products.map(product => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </ProductGrid>
+        )}
+      </main>
+    </PageShell>
+  );
+}

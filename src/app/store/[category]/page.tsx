@@ -1,10 +1,10 @@
 'use client';
 
 import { use, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import type { Product } from '@/lib/products';
-import { PageShell, ProductGrid, ProductCard, HubHero, EmptyMessage } from '@/components/Ui';
-import { useTopbarTabs } from '@/components/TopbarContext';
+import { PageShell, ProductGrid, ProductCard, HubHero, EmptyMessage, CenteredMessage } from '@/components/Ui';
 
 const CATEGORY_LABEL: Record<string, string> = {
   music: 'Music',
@@ -24,27 +24,34 @@ const CATEGORY_DESCRIPTION: Record<string, string> = {
   assets: 'Samples, textures, presets, and templates for creators.',
 };
 
-const STORE_CATEGORIES = [
-  { id: 'music', label: 'Music', href: '/store/music' },
-  { id: 'apparel', label: 'Apparel', href: '/store/apparel' },
-  { id: 'books', label: 'Books', href: '/store/books' },
-  { id: 'games', label: 'Games', href: '/store/games' },
-  { id: 'assets', label: 'Assets', href: '/store/assets' },
-];
-
 function matchesStoreCategory(product: Product, slug: string) {
   const category = (product.category ?? '').toLowerCase();
   if (slug === 'apparel' || slug === 'merch') return category === 'apparel' || category === 'merch';
   return category === slug;
 }
 
+function legacyCategoryRedirect(slug: string) {
+  if (slug === 'music') return '/music/store';
+  if (slug === 'books') return '/books/store';
+  if (slug === 'assets') return '/assets/store';
+  if (slug === 'apparel' || slug === 'merch') return '/merch/store';
+  return '';
+}
+
 export default function StoreCategoryPage({ params }: { params: Promise<{ category: string }> }) {
   const { category } = use(params);
+  const router = useRouter();
+  const legacyRedirect = legacyCategoryRedirect(category.toLowerCase());
   const label = CATEGORY_LABEL[category] ?? (category.charAt(0).toUpperCase() + category.slice(1));
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (legacyRedirect) router.replace(legacyRedirect);
+  }, [legacyRedirect, router]);
+
+  useEffect(() => {
+    if (legacyRedirect) return;
     async function load() {
       const { data, error } = await supabase
         .from('products')
@@ -63,20 +70,15 @@ export default function StoreCategoryPage({ params }: { params: Promise<{ catego
       setLoading(false);
     }
     load();
-  }, []);
+  }, [legacyRedirect]);
 
-  const visibleCategories = STORE_CATEGORIES.filter(c => {
-    return products.some(product => matchesStoreCategory(product, c.id));
-  });
-  const activeTopbarCategory = category.toLowerCase() === 'merch' ? 'apparel' : category.toLowerCase();
   const visibleProducts = products.filter(p => matchesStoreCategory(p, category.toLowerCase()));
 
-  useTopbarTabs([
-    { id: 'all', label: 'All', href: '/' },
-    ...visibleCategories.map(c => ({ ...c, active: c.id === activeTopbarCategory })),
-  ]);
-
   const description = CATEGORY_DESCRIPTION[category.toLowerCase()];
+
+  if (legacyRedirect) {
+    return <PageShell><CenteredMessage>Opening the new 44OS app...</CenteredMessage></PageShell>;
+  }
 
   return (
     <PageShell>

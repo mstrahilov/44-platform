@@ -1,65 +1,170 @@
 'use client';
 
+/**
+ * The 44OS Dock. Renders from the app registry (src/lib/osApps.ts) —
+ * do not add nav items here; register them in the registry instead.
+ * The file keeps its Sidebar name for compatibility; product language
+ * for this surface is "Dock".
+ *
+ * OS behaviors owned here:
+ * - Right-click on a Dock item → context menu (Open / Hide from Dock /
+ *   Dock mode / Dock Settings). Right-click on empty Dock → mode + settings.
+ * - Horizontal drag on the Dock (≈56px) toggles full ↔ compact mode;
+ *   the drag never resizes the Dock freely, it snaps between the two modes.
+ */
+
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
+import { getActiveOSAppId, getAvailableDockApps, type OSApp } from '@/lib/osApps';
+import { setDockAppHidden, setDockMode, useDockPreferences } from '@/lib/dockPreferences';
+import { useContextMenu, type ContextMenuEntry } from '@/components/ContextMenu';
 
-type NavSection = {
-  id: string;
-  label: string;
-  href: string;
-  iconClass: string;
-};
-
-function getActiveSectionId(pathname: string): string {
-  if (pathname === '/' || pathname.startsWith('/store') || pathname.startsWith('/product')) return 'store';
-  if (pathname.startsWith('/services') || pathname.startsWith('/service')) return 'services';
-  if (pathname.startsWith('/resources')) return 'resources';
-  if (pathname.startsWith('/community')) return 'community';
-  if (pathname.startsWith('/library')) return 'library';
-  if (pathname.startsWith('/dashboard') || pathname.startsWith('/studio')) return 'dashboard';
-  if (pathname.startsWith('/settings')) return 'settings';
-  return '';
-}
+const DRAG_TOGGLE_DISTANCE = 56;
+const DRAG_START_DISTANCE = 12;
 
 function useNow() {
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
-    setNow(new Date());
+    Promise.resolve().then(() => setNow(new Date()));
     const id = setInterval(() => setNow(new Date()), 15_000);
     return () => clearInterval(id);
   }, []);
   return now;
 }
 
+function dockModeEntries(compact: boolean): ContextMenuEntry[] {
+  return [
+    {
+      id: 'dock-mode',
+      label: compact ? 'Expand Dock' : 'Compact Dock',
+      onSelect: () => setDockMode(compact ? 'full' : 'compact'),
+    },
+    { id: 'dock-settings', label: 'Dock Settings', href: '/settings?tab=dock' },
+  ];
+}
+
+function DockItem({ app, active, compact }: { app: OSApp; active: boolean; compact: boolean }) {
+  const { openContextMenu } = useContextMenu();
+
+  const entries: ContextMenuEntry[] = [
+    { id: 'open', label: `Open ${app.label}`, href: app.href },
+    { kind: 'divider', id: 'divider-1' },
+    ...(app.locked
+      ? []
+      : ([{ id: 'hide', label: 'Hide from Dock', onSelect: () => setDockAppHidden(app.id, true) }] as ContextMenuEntry[])),
+    ...dockModeEntries(compact),
+  ];
+
+  return (
+    <Link
+      href={app.href}
+      className={active ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}
+      title={compact ? app.label : undefined}
+      aria-label={app.label}
+      onContextMenu={event => openContextMenu(event, entries)}
+    >
+      <span className={`os-icon ${app.iconClass}`} aria-hidden="true" />
+      <span className="sidebar-item-label">{app.label}</span>
+    </Link>
+  );
+}
+
 export default function Sidebar() {
   const pathname = usePathname();
   const { user } = useAuth();
   const [profile, setProfile] = useState<StudioProfile | null>(null);
+  const { mode, hiddenIds } = useDockPreferences();
   const now = useNow();
-  const activeSectionId = getActiveSectionId(pathname);
+  const activeAppId = getActiveOSAppId(pathname);
+  const { openContextMenu } = useContextMenu();
+
+  const compact = mode === 'compact';
+
+  // Drag-to-toggle: track a horizontal pointer drag anywhere on the Dock.
+  const dragRef = useRef<{ startX: number } | null>(null);
+  const suppressClickRef = useRef(false);
+  const compactRef = useRef(compact);
+  compactRef.current = compact;
+
+  function onPointerDown(event: React.PointerEvent<HTMLElement>) {
+    if (event.button !== 0) return;
+    dragRef.current = { startX: event.clientX };
+    suppressClickRef.current = false;
+  }
+
+  function onPointerMove(event: React.PointerEvent<HTMLElement>) {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const dx = event.clientX - drag.startX;
+    if (Math.abs(dx) > DRAG_START_DISTANCE && !suppressClickRef.current) {
+      // A real drag has started: capture the pointer so the gesture
+      // completes even if it leaves the Dock, and swallow the click.
+      suppressClickRef.current = true;
+      try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* pointer already gone */ }
+    }
+    if (!compactRef.current && dx < -DRAG_TOGGLE_DISTANCE) {
+      setDockMode('compact');
+      dragRef.current = null;
+    } else if (compactRef.current && dx > DRAG_TOGGLE_DISTANCE) {
+      setDockMode('full');
+      dragRef.current = null;
+    }
+  }
+
+  function onPointerEnd() {
+    dragRef.current = null;
+  }
+
+  // After a drag, swallow the click that would otherwise open the item under the pointer.
+  function onClickCapture(event: React.MouseEvent<HTMLElement>) {
+    if (!suppressClickRef.current) return;
+    suppressClickRef.current = false;
+    event.preventDefault();
+    event.stopPropagation();
+  }
 
   useEffect(() => {
-    if (!user) { setProfile(null); return; }
+    if (!user) { Promise.resolve().then(() => setProfile(null)); return; }
     loadStudioProfile(user.id).then(r => setProfile(r.profile));
   }, [user]);
 
-  const NAV: NavSection[] = [
-    { id: 'store',     label: 'Store',     href: '/',          iconClass: 'os-icon-store' },
-    { id: 'services',  label: 'Services',  href: '/services',  iconClass: 'os-icon-services' },
-    { id: 'resources', label: 'Resources', href: '/resources', iconClass: 'os-icon-resources' },
-    { id: 'community', label: 'Community', href: '/community', iconClass: 'os-icon-community' },
-  ];
+  const availableApps = getAvailableDockApps({
+    signedIn: Boolean(user),
+    isCreator: isCreatorProfile(profile),
+  });
+  const dockApps = availableApps.filter(app => app.locked || !hiddenIds.includes(app.id));
 
-  const settingsActive = pathname.startsWith('/settings');
+  const mediaApps = dockApps.filter(app => app.group === 'media');
+  const communityApps = dockApps.filter(app => app.group === 'community');
+  const studioOrder = ['dashboard'];
+  const studioApps = dockApps
+    .filter(app => app.group === 'studio')
+    .sort((a, b) => studioOrder.indexOf(a.id) - studioOrder.indexOf(b.id));
+  const accountApps = dockApps.filter(app => app.group === 'account');
+  const systemApps = dockApps.filter(app => app.group === 'system');
+
   const time = now
     ? now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
     : '';
 
   return (
-    <aside className="app-sidebar">
+    <aside
+      className={compact ? 'app-sidebar app-sidebar-compact' : 'app-sidebar'}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerEnd}
+      onPointerCancel={onPointerEnd}
+      onClickCapture={onClickCapture}
+      onDragStart={event => event.preventDefault()}
+      onContextMenu={event => {
+        // Items open their own menus; this handles the Dock background.
+        if ((event.target as HTMLElement).closest('.sidebar-item, .sidebar-logo')) return;
+        openContextMenu(event, dockModeEntries(compact));
+      }}
+    >
       <div className="sidebar-top">
         <Link href="/" className="sidebar-logo" aria-label="44 Home">
           <span className="os-logo-44" aria-hidden="true" />
@@ -67,64 +172,48 @@ export default function Sidebar() {
         <span className="sidebar-clock" aria-live="polite">{time}</span>
       </div>
 
-      <nav className="sidebar-nav" aria-label="Primary">
-        {NAV.map(section => {
-          const isActive = activeSectionId === section.id;
-          return (
-            <Link
-              key={section.id}
-              href={section.href}
-              className={isActive ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}
-            >
-              <span className={`os-icon ${section.iconClass}`} aria-hidden="true" />
-              <span className="sidebar-item-label">{section.label}</span>
-            </Link>
-          );
-        })}
+      <nav className="sidebar-nav" aria-label="Dock">
+        {mediaApps.map(app => (
+          <DockItem key={app.id} app={app} active={activeAppId === app.id} compact={compact} />
+        ))}
 
-        {user && (
-          <>
-            <div className="sidebar-divider" />
-            <Link
-              href="/library"
-              className={activeSectionId === 'library' ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}
-            >
-              <span className="os-icon os-icon-library" aria-hidden="true" />
-              <span className="sidebar-item-label">Library</span>
-            </Link>
-            {isCreatorProfile(profile) && (
-              <Link
-                href="/dashboard"
-                className={activeSectionId === 'dashboard' ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}
-              >
-                <span className="os-icon os-icon-dashboard" aria-hidden="true" />
-                <span className="sidebar-item-label">Dashboard</span>
-              </Link>
-            )}
-          </>
-        )}
+        {mediaApps.length > 0 && communityApps.length > 0 && <div className="sidebar-divider" />}
+
+        {communityApps.map(app => (
+          <DockItem key={app.id} app={app} active={activeAppId === app.id} compact={compact} />
+        ))}
+
+        {communityApps.length > 0 && studioApps.length > 0 && <div className="sidebar-divider" />}
+
+        {studioApps.map(app => (
+          <DockItem key={app.id} app={app} active={activeAppId === app.id} compact={compact} />
+        ))}
 
         <div className="sidebar-spacer" />
 
         {!user && (
-          <Link
-            href="/login"
-            className={pathname.startsWith('/login') ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}
-          >
-            <span className="os-icon os-icon-user" aria-hidden="true" />
-            <span className="sidebar-item-label">Log In</span>
-          </Link>
+          <>
+            <Link
+              href="/login"
+              className={pathname.startsWith('/login') ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}
+              title={compact ? 'Log In' : undefined}
+              aria-label="Log In"
+            >
+              <span className="os-icon os-icon-user" aria-hidden="true" />
+              <span className="sidebar-item-label">Log In</span>
+            </Link>
+          </>
         )}
+
+        {accountApps.map(app => (
+          <DockItem key={app.id} app={app} active={activeAppId === app.id} compact={compact} />
+        ))}
 
         <div className="sidebar-divider" />
 
-        <Link
-          href="/settings"
-          className={settingsActive ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}
-        >
-          <span className="os-icon os-icon-settings" aria-hidden="true" />
-          <span className="sidebar-item-label">Settings</span>
-        </Link>
+        {systemApps.map(app => (
+          <DockItem key={app.id} app={app} active={activeAppId === app.id} compact={compact} />
+        ))}
       </nav>
     </aside>
   );

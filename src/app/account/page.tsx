@@ -1,17 +1,70 @@
 'use client';
 
-import Link from 'next/link';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
+import { PageShell, HubHero, CenteredMessage } from '@/components/Ui';
+import { useTopbarTabs } from '@/components/TopbarContext';
 import { UploadField } from '@/components/UploadField';
-import { supabase } from '@/lib/supabase';
-import { hasCommunityIdentity } from '@/lib/communityProfile';
+
+const ACCOUNT_KEYS = {
+  replies: '44-setting-replies',
+  likes: '44-setting-likes',
+  releases: '44-setting-releases',
+  orders: '44-setting-orders',
+  emails: '44-setting-emails',
+  publicProfile: '44-setting-public-profile',
+  publicLibrary: '44-setting-public-library',
+  directMessages: '44-setting-direct-messages',
+  recommendations: '44-setting-recommendations',
+} as const;
+
+type AccountTabId = 'account' | 'privacy' | 'orders' | 'notifications';
+
+const ACCOUNT_TABS: Array<{ id: AccountTabId; label: string; copy: string }> = [
+  { id: 'account', label: 'Account', copy: 'Manage your profile, email, password, and account access.' },
+  { id: 'privacy', label: 'Privacy & Security', copy: 'Control visibility, messaging, and account protection.' },
+  { id: 'orders', label: 'Orders', copy: 'Purchase history, billing records, albums, books, assets, and merch orders.' },
+  { id: 'notifications', label: 'Notifications', copy: 'Choose which account activity should reach you.' },
+];
+
+function getStoredToggle(key: string, fallback = false) {
+  if (typeof window === 'undefined') return fallback;
+  const value = window.localStorage.getItem(key);
+  if (value === null) return fallback;
+  return value === 'true';
+}
+
+function setStoredToggle(key: string, value: boolean) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(key, String(value));
+}
+
+function normalizeUsername(value: string) {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9_]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 32);
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48);
+}
 
 export default function AccountPage() {
   return (
-    <Suspense fallback={<div className="panel-scroll" />}>
+    <Suspense fallback={<PageShell><CenteredMessage>Loading...</CenteredMessage></PageShell>}>
       <AccountContent />
     </Suspense>
   );
@@ -20,6 +73,9 @@ export default function AccountPage() {
 function AccountContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const requestedTab = searchParams.get('tab') as AccountTabId | null;
+  const initialTab = ACCOUNT_TABS.some(tab => tab.id === requestedTab) ? requestedTab! : 'account';
+  const [activeTab, setActiveTab] = useState<AccountTabId>(initialTab);
   const { user, loading } = useAuth();
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -28,17 +84,26 @@ function AccountContent() {
   const [bio, setBio] = useState('');
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState('');
+  const [sendingReset, setSendingReset] = useState(false);
+
+  useEffect(() => {
+    if (ACCOUNT_TABS.some(tab => tab.id === requestedTab)) {
+      setActiveTab(requestedTab!);
+    } else {
+      setActiveTab('account');
+    }
+  }, [requestedTab]);
 
   useEffect(() => {
     if (loading) return;
-
     if (!user) {
       router.replace('/login');
       return;
     }
 
-    async function loadAccount() {
-      const { profile: nextProfile } = await loadStudioProfile(user!.id);
+    async function loadAccount(userId: string) {
+      setProfileLoading(true);
+      const { profile: nextProfile } = await loadStudioProfile(userId);
       setProfile(nextProfile);
       setUsername(nextProfile?.username ?? '');
       setAvatarUrl(nextProfile?.avatar_url ?? '');
@@ -46,36 +111,27 @@ function AccountContent() {
       setProfileLoading(false);
     }
 
-    loadAccount();
+    loadAccount(user.id);
   }, [loading, router, user]);
 
+  useTopbarTabs(
+    ACCOUNT_TABS.map(tab => ({
+      id: tab.id,
+      label: tab.label,
+      href: tab.id === 'account' ? '/account' : `/account?tab=${tab.id}`,
+      active: tab.id === activeTab,
+    })),
+  );
+
   if (loading || profileLoading) {
-    return <div className="panel-scroll" />;
+    return <PageShell><CenteredMessage>Loading...</CenteredMessage></PageShell>;
   }
 
   if (!user) {
-    return <div className="panel-scroll" />;
+    return <PageShell><CenteredMessage>Opening login...</CenteredMessage></PageShell>;
   }
 
-  function normalizeUsername(value: string) {
-    return value
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9_]+/g, '_')
-      .replace(/^_+|_+$/g, '')
-      .slice(0, 32);
-  }
-
-  function slugify(value: string) {
-    return value
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 48);
-  }
+  const activeMeta = ACCOUNT_TABS.find(tab => tab.id === activeTab) ?? ACCOUNT_TABS[0];
 
   async function saveCommunityProfile() {
     if (!user || saving) return;
@@ -112,92 +168,168 @@ function AccountContent() {
 
     const { profile: nextProfile } = await loadStudioProfile(user.id);
     setProfile(nextProfile);
-    setStatus('Community profile ready.');
+    setStatus('Account profile saved.');
   }
 
-  const publicName = profile?.display_name || profile?.username || user.email?.split('@')[0] || '44 Member';
-  const publicProfileHref = profile?.username ? `/community/profile/${profile.username}` : '/profile';
-  const communityReady = hasCommunityIdentity(profile);
-  const isGatedReturn = searchParams.get('setup') === 'community';
-  const introCopy = isGatedReturn
-    ? 'Finish your community profile to post, review, reply, and interact on 44.'
-    : 'Your account is created. Now let’s set up your community profile.';
-
-  function cancelSetup() {
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      router.back();
-      return;
-    }
-    router.push('/community');
+  async function sendPasswordReset() {
+    if (!user?.email || sendingReset) return;
+    setSendingReset(true);
+    setStatus('');
+    const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+      redirectTo: `${window.location.origin}/account`,
+    });
+    setSendingReset(false);
+    setStatus(error ? error.message : 'Password reset email sent.');
   }
 
   return (
-    <div className="panel-scroll">
-      <div className="settings-section" style={{ maxWidth: 760, margin: '0 auto', padding: '64px 24px' }}>
-        <div className="settings-block">
-          <p className="os-type-eyebrow" style={{ color: 'var(--os-color-ink-muted)' }}>Account</p>
-          <h1 className="os-type-page-title">{communityReady ? `Welcome, ${publicName}` : 'Welcome to 44.'}</h1>
-          <p className="os-type-body">
-            {communityReady
-              ? 'Your community profile is ready. You can post, reply, like, review, follow, and message across 44.'
-              : introCopy}
-          </p>
-        </div>
+    <PageShell>
+      <main className="dashboard-page">
+        <HubHero title="Account" copy={activeMeta.copy} />
 
-        {!communityReady && (
-          <div className="os-panel-surface" style={{ padding: 24, display: 'grid', gap: 18 }}>
-            <div className="settings-block">
-              <h2 className="os-type-panel-title">{isGatedReturn ? 'Finish your community profile' : 'Set up your community profile'}</h2>
-              <p className="os-type-body">
-                Choose a username and add a profile photo. Bio is optional, but it helps other members know who they are talking to.
-              </p>
-            </div>
-            <UploadField
-              label="Profile Photo"
-              folder="profiles/avatars"
-              userId={user.id}
-              value={avatarUrl}
-              accept="image/*"
-              buttonLabel="Upload photo"
-              onChange={setAvatarUrl}
-            />
-            <label className="dashboard-field">
-              <div className="dashboard-field-label">Username</div>
-              <input className="os-input-field" value={username} onChange={event => setUsername(normalizeUsername(event.target.value))} placeholder="username" />
-            </label>
-            <label className="dashboard-field">
-              <div className="dashboard-field-label">Bio Optional</div>
-              <textarea className="os-input-textarea" rows={4} value={bio} onChange={event => setBio(event.target.value)} placeholder="A short note for your profile." />
-            </label>
-            {status && <div className={status === 'Community profile ready.' ? 'dashboard-status dashboard-status-success' : 'dashboard-status dashboard-status-error'}>{status}</div>}
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <button className="os-button os-button-primary" type="button" onClick={() => void saveCommunityProfile()} disabled={saving}>
-                {saving ? 'Saving…' : 'Create Community Profile'}
-              </button>
-              {isGatedReturn ? (
-                <button className="os-button os-button-secondary" type="button" onClick={cancelSetup}>
-                  Cancel
+        {activeTab === 'account' && (
+          <div className="settings-section">
+            <div className="settings-field">
+              <div className="settings-field-head">
+                <div className="os-type-field-title">Profile</div>
+                <p className="os-type-body-small">Your account identity across 44OS.</p>
+              </div>
+              <UploadField
+                label="Profile Photo"
+                folder="profiles/avatars"
+                userId={user.id}
+                value={avatarUrl}
+                accept="image/*"
+                buttonLabel="Upload photo"
+                onChange={setAvatarUrl}
+              />
+              <label className="dashboard-field">
+                <div className="dashboard-field-label">Username</div>
+                <input className="os-input-field" value={username} onChange={event => setUsername(normalizeUsername(event.target.value))} placeholder="username" />
+              </label>
+              <label className="dashboard-field">
+                <div className="dashboard-field-label">Bio</div>
+                <textarea className="os-input-textarea" rows={4} value={bio} onChange={event => setBio(event.target.value)} placeholder="A short note for your profile." />
+              </label>
+              <div>
+                <button className="os-button os-button-primary" type="button" onClick={() => void saveCommunityProfile()} disabled={saving}>
+                  {saving ? 'Saving...' : 'Save Profile'}
                 </button>
-              ) : (
-                <Link className="os-button os-button-secondary" href="/library">
-                  Skip for now
-                </Link>
-              )}
+              </div>
             </div>
+
+            <div className="settings-field">
+              <div className="settings-field-head">
+                <div className="os-type-field-title">Email</div>
+                <p className="os-type-body-small">Your login and account recovery email.</p>
+              </div>
+              <span className="os-type-body">{user.email ?? 'No email on file.'}</span>
+            </div>
+
+            <div className="settings-field">
+              <div className="settings-field-head">
+                <div className="os-type-field-title">Password</div>
+                <p className="os-type-body-small">Send yourself a password reset email.</p>
+              </div>
+              <button className="os-button os-button-secondary" type="button" onClick={sendPasswordReset} disabled={sendingReset}>
+                {sendingReset ? 'Sending...' : 'Send Password Reset'}
+              </button>
+            </div>
+
+            {status && (
+              <span className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>
+                {status}
+              </span>
+            )}
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <Link className="os-button os-button-primary" href={communityReady ? '/community' : '/settings?tab=account'}>
-            {communityReady ? 'Open Community' : 'Edit Account Settings'}
-          </Link>
-          <Link className="os-button os-button-secondary" href={publicProfileHref}>
-            View Public Profile
-          </Link>
-          <Link className="os-button os-button-secondary" href="/library">
-            Open Library
-          </Link>
-        </div>
+        {activeTab === 'privacy' && <PrivacySecuritySettings />}
+        {activeTab === 'orders' && <OrdersSettings />}
+        {activeTab === 'notifications' && <NotificationSettings />}
+      </main>
+    </PageShell>
+  );
+}
+
+function ToggleRow({
+  title,
+  desc,
+  storageKey,
+  defaultOn = false,
+}: {
+  title: string;
+  desc: string;
+  storageKey: string;
+  defaultOn?: boolean;
+}) {
+  const [on, setOn] = useState(defaultOn);
+
+  useEffect(() => {
+    Promise.resolve().then(() => setOn(getStoredToggle(storageKey, defaultOn)));
+  }, [storageKey, defaultOn]);
+
+  function toggle() {
+    setOn(current => {
+      const next = !current;
+      setStoredToggle(storageKey, next);
+      return next;
+    });
+  }
+
+  return (
+    <div className="settings-row">
+      <div className="settings-row-copy">
+        <div className="os-type-card-title">{title}</div>
+        <p className="os-type-body-small">{desc}</p>
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label={title}
+        className={on ? 'settings-toggle settings-toggle-on' : 'settings-toggle'}
+        onClick={toggle}
+      />
+    </div>
+  );
+}
+
+function PrivacySecuritySettings() {
+  return (
+    <div className="settings-section settings-section-wide">
+      <div>
+        <ToggleRow storageKey={ACCOUNT_KEYS.publicProfile} title="Public profile" desc="Let others view your profile and activity." defaultOn />
+        <ToggleRow storageKey={ACCOUNT_KEYS.publicLibrary} title="Show library publicly" desc="Display items you own on your profile." />
+        <ToggleRow storageKey={ACCOUNT_KEYS.directMessages} title="Allow direct messages" desc="Let members message you directly." defaultOn />
+        <ToggleRow storageKey={ACCOUNT_KEYS.recommendations} title="Personalized recommendations" desc="Use your activity to tailor what you see." defaultOn />
+        <ToggleRow storageKey="44-setting-2fa" title="Two-factor authentication" desc="Add an extra layer of security with a verification code." />
+        <ToggleRow storageKey="44-setting-sessions" title="Active sessions" desc="Manage devices that are currently signed in." />
+        <ToggleRow storageKey="44-setting-trusted" title="Trusted devices" desc="Skip 2FA on devices you trust." />
+      </div>
+    </div>
+  );
+}
+
+function OrdersSettings() {
+  return (
+    <div className="settings-section">
+      <section className="dashboard-list-surface" style={{ padding: 'var(--os-space-6)' }}>
+        <div className="app-empty-text">Order and billing history will appear here.</div>
+      </section>
+    </div>
+  );
+}
+
+function NotificationSettings() {
+  return (
+    <div className="settings-section settings-section-wide">
+      <div>
+        <ToggleRow storageKey={ACCOUNT_KEYS.replies} title="Replies to your posts" desc="When someone replies in the community." defaultOn />
+        <ToggleRow storageKey={ACCOUNT_KEYS.likes} title="Likes" desc="When someone likes your post or reply." defaultOn />
+        <ToggleRow storageKey={ACCOUNT_KEYS.releases} title="New releases from creators you follow" desc="Music, books, assets, resources, and merch drops." defaultOn />
+        <ToggleRow storageKey={ACCOUNT_KEYS.orders} title="Order updates" desc="Receipts, downloads, and delivery status." defaultOn />
+        <ToggleRow storageKey={ACCOUNT_KEYS.emails} title="44 emails" desc="Occasional news about 44." />
       </div>
     </div>
   );

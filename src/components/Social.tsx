@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
+import { useContextMenu, type ContextMenuEntry } from '@/components/ContextMenu';
 import { authorDisplayName, authorHandle, authorHref, compactDate, initials, type SocialAuthor, type SocialLiker, type SocialPost } from '@/lib/social';
 import { communityThreadHref } from '@/lib/platform';
 
@@ -180,8 +181,10 @@ export function SocialPostRow({
   rowClickable?: boolean;
 }) {
   const router = useRouter();
+  const { openContextMenu } = useContextMenu();
   const body = post.body || '';
   const href = communityThreadHref(post);
+  const authorLink = authorHref(post.creators);
 
   function openThread() {
     if (!rowClickable) return;
@@ -200,8 +203,26 @@ export function SocialPostRow({
     event.stopPropagation();
   }
 
+  function postMenuEntries(): ContextMenuEntry[] {
+    return [
+      { id: 'open', label: 'Open Post', href },
+      { id: 'author', label: 'View Author', href: authorLink },
+      { id: 'reply', label: 'Reply', href },
+      ...(onLike ? [{ id: 'like', label: liked ? 'Unlike' : 'Like', onSelect: onLike, disabled }] as ContextMenuEntry[] : []),
+      ...(canDelete && onDelete
+        ? [
+            { kind: 'divider', id: 'post-actions' },
+            { id: 'delete', label: 'Delete Post', onSelect: onDelete, danger: true },
+          ] as ContextMenuEntry[]
+        : []),
+    ];
+  }
+
   return (
-    <article className={rowClickable ? 'social-row social-row-interactive' : 'social-row'}>
+    <article
+      className={rowClickable ? 'social-row social-row-interactive' : 'social-row'}
+      onContextMenu={event => openContextMenu(event, postMenuEntries())}
+    >
       <Link href={authorHref(post.creators)} aria-label={authorDisplayName(post.creators)} onClick={stopRowNavigation}>
         <SocialAvatar profile={post.creators} />
       </Link>

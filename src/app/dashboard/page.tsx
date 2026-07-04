@@ -7,14 +7,12 @@ import { PageShell, GlassPanel, HubHero, HubSection } from '@/components/Ui';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
-import type { Resource, Service } from '@/lib/platform';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { useDashboardTabs } from '@/lib/dashboardTabs';
+import { DASHBOARD_CATALOG_SECTIONS, productBelongsToDashboardSection } from '@/lib/dashboardCatalog';
 
 type OverviewState = {
   products: Product[];
-  services: Service[];
-  resources: Resource[];
 };
 
 export default function DashboardPage() {
@@ -24,8 +22,6 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [overview, setOverview] = useState<OverviewState>({
     products: [],
-    services: [],
-    resources: [],
   });
   const [fetching, setFetching] = useState(true);
 
@@ -43,16 +39,14 @@ export default function DashboardPage() {
       setProfile(profileResult.profile);
       const profileId = profileResult.profile?.id ?? user.id;
 
-      const [productsResult, servicesResult, resourcesResult] = await Promise.all([
-        supabase.from('products').select('*').eq('author_id', profileId).order('created_at', { ascending: false }),
-        supabase.from('services').select('*').eq('author_id', profileId).order('created_at', { ascending: false }),
-        supabase.from('resources').select('*').eq('author_id', profileId).order('created_at', { ascending: false }),
-      ]);
+      const productsResult = await supabase
+        .from('products')
+        .select('*')
+        .eq('author_id', profileId)
+        .order('created_at', { ascending: false });
 
       setOverview({
         products: (productsResult.data as Product[] | null) ?? [],
-        services: (servicesResult.data as Service[] | null) ?? [],
-        resources: (resourcesResult.data as Resource[] | null) ?? [],
       });
       setFetching(false);
     }
@@ -83,97 +77,43 @@ export default function DashboardPage() {
     );
   }
 
-  const publishedProducts = overview.products.filter(item => item.is_published || item.status === 'published').length;
-  const draftProducts = overview.products.length - publishedProducts;
-  const publishedServices = overview.services.filter(item => item.status === 'published').length;
-  const draftServices = overview.services.length - publishedServices;
-  const publishedResources = overview.resources.filter(item => item.status === 'published').length;
-  const draftResources = overview.resources.length - publishedResources;
-
-  const recentItems = [
-    ...overview.products.slice(0, 3).map(item => ({
-      id: item.id,
-      title: item.title,
-      type: item.product_type || 'Product',
-      status: item.status || (item.is_published ? 'published' : 'draft'),
-      href: `/dashboard/products/${item.id}`,
-    })),
-    ...overview.services.slice(0, 2).map(item => ({
-      id: item.id,
-      title: item.title,
-      type: item.service_type || 'Service',
-      status: item.status || 'draft',
-      href: `/dashboard/services/${item.id}`,
-    })),
-    ...overview.resources.slice(0, 2).map(item => ({
-      id: item.id,
-      title: item.title,
-      type: item.resource_type || 'Resource',
-      status: item.status || 'draft',
-      href: `/dashboard/resources/${item.id}`,
-    })),
-  ].slice(0, 6);
-
+  const catalogCards = DASHBOARD_CATALOG_SECTIONS.map(section => {
+    const items = overview.products.filter(item => productBelongsToDashboardSection(item, section.id));
+    const published = items.filter(item => item.is_published || item.status === 'published').length;
+    return {
+      section,
+      total: items.length,
+      published,
+      drafts: items.length - published,
+    };
+  });
   return (
     <PageShell>
       <div className="dashboard-page">
         <HubHero
-          title="Overview"
+          title="Dashboard"
           copy="Your creator workspace for catalog health, sales signals, and what should go live next."
         />
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 18 }}>
-          <OverviewCard
-            title="Products"
-            total={overview.products.length}
-            published={publishedProducts}
-            drafts={draftProducts}
-            href="/dashboard/products"
-          />
-          <OverviewCard
-            title="Services"
-            total={overview.services.length}
-            published={publishedServices}
-            drafts={draftServices}
-            href="/dashboard/services"
-          />
-          <OverviewCard
-            title="Resources"
-            total={overview.resources.length}
-            published={publishedResources}
-            drafts={draftResources}
-            href="/dashboard/resources"
-          />
+        <div className="dashboard-overview-grid">
+          {catalogCards.map(card => (
+            <OverviewCard
+              key={card.section.id}
+              title={card.section.label}
+              total={card.total}
+              published={card.published}
+              drafts={card.drafts}
+              href={card.section.href}
+            />
+          ))}
         </div>
 
-        <HubSection title="Recent Content">
+        <HubSection title="Earnings">
           {fetching ? (
-            <div className="dashboard-empty">Loading overview…</div>
-          ) : recentItems.length === 0 ? (
-            <div className="dashboard-empty">
-              No content yet. Start with a product, service, or resource.
-            </div>
+            <div className="dashboard-empty">Loading earnings…</div>
           ) : (
             <div className="dashboard-list-surface">
-              {recentItems.map((item, index) => (
-                <div
-                  key={`${item.type}-${item.id}`}
-                  className="dashboard-list-row"
-                  style={{
-                    gridTemplateColumns: '1fr 180px 120px',
-                    borderTop: index === 0 ? 'none' : undefined,
-                  }}
-                >
-                  <div className="dashboard-row-copy">
-                    <div className="dashboard-row-title">{item.title}</div>
-                  </div>
-                  <div className="dashboard-row-meta">{item.type}</div>
-                  <div className="dashboard-row-actions">
-                    <div className="dashboard-status-pill">{item.status}</div>
-                    <Link href={item.href} className="os-button os-button-ghost os-button-compact">Open</Link>
-                  </div>
-                </div>
-              ))}
+              <div className="dashboard-empty">No sold items yet.</div>
             </div>
           )}
         </HubSection>

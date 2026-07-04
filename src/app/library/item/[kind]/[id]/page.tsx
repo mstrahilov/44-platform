@@ -4,14 +4,15 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
+import { productLibraryHref } from '@/lib/experience';
 import { getProductLibraryContent, getProductLibraryPrimaryAction, getProductRuntimeKind } from '@/lib/libraryContent';
 import { creatorHref, type ProductAchievement, type Resource, type ServiceRequest, type Track, type UserAchievement } from '@/lib/platform';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
-import { ItemCommunitySection } from '@/components/ItemCommunitySection';
+import { ProductUpdatesSection } from '@/components/ProductUpdatesSection';
 import { unlockAchievementForUser } from '@/lib/achievementNotifications';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { useMusicPlayer, type MusicQueueTrack } from '@/components/MusicPlayer';
@@ -29,8 +30,25 @@ interface LibraryItemRow {
 
 export default function LibraryItemPage() {
   const { kind, id } = useParams<{ kind: LibraryKind; id: string }>();
+  return <LibraryItemDetail kind={kind} id={id} legacyRedirect />;
+}
+
+export function LibraryItemDetail({
+  kind,
+  id,
+  backHref = '/music/library',
+  backLabel = 'Library',
+  legacyRedirect = false,
+}: {
+  kind: LibraryKind;
+  id: string;
+  backHref?: string;
+  backLabel?: string;
+  legacyRedirect?: boolean;
+}) {
   const { user, loading: authLoading } = useAuth();
-  useTopbarBack({ href: '/library', label: 'Library' });
+  const router = useRouter();
+  useTopbarBack({ href: backHref, label: backLabel });
   const [productRow, setProductRow] = useState<LibraryItemRow | null>(null);
   const [resourceRow, setResourceRow] = useState<{ id: string; saved_at: string; resources: Resource | null } | null>(null);
   const [serviceRow, setServiceRow] = useState<ServiceRequest | null>(null);
@@ -71,6 +89,11 @@ export default function LibraryItemPage() {
 
         const row = data as unknown as LibraryItemRow;
         setProductRow(row);
+
+        if (legacyRedirect && row.products) {
+          router.replace(productLibraryHref(row.products, row.id));
+          return;
+        }
 
         if (row.product_id) {
           const [{ data: trackRows }, { data: achievementRows }, { data: unlockedRows }] = await Promise.all([
@@ -125,7 +148,7 @@ export default function LibraryItemPage() {
     }
 
     fetchItem(user.id);
-  }, [authLoading, id, kind, user]);
+  }, [authLoading, id, kind, legacyRedirect, router, user]);
 
   if (authLoading || loading) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Loading…</div>;
   if (error) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>{error}</div>;
@@ -171,8 +194,8 @@ function ProductLibraryDetail({
   const [playedTrackIds, setPlayedTrackIds] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<AchievementToastData | null>(null);
 
-  useEffect(() => { setPlayedTrackIds(new Set()); }, [product.id]);
-  useEffect(() => { setLocalUnlockedAchievementIds(unlockedAchievementIds); }, [unlockedAchievementIds]);
+  useEffect(() => { Promise.resolve().then(() => setPlayedTrackIds(new Set())); }, [product.id]);
+  useEffect(() => { Promise.resolve().then(() => setLocalUnlockedAchievementIds(unlockedAchievementIds)); }, [unlockedAchievementIds]);
 
   const musicQueue = useMemo<MusicQueueTrack[]>(() => (
     tracks
@@ -243,7 +266,7 @@ function ProductLibraryDetail({
       setToast(unlockedAchievement);
     }
     maybeUnlockCasualListener();
-  }, [achievements, isMusic, localUnlockedAchievementIds, playedTrackIds, row.product_id, tracks.length, userId]);
+  }, [achievements, isMusic, localUnlockedAchievementIds, playedTrackIds, row.product_id, tracks, userId]);
 
   const heroImage = product.hero_url || product.cover_url;
   const description = product.long_description || product.short_description || '';
@@ -367,18 +390,7 @@ function ProductLibraryDetail({
         </div>
       )}
 
-      <ItemCommunitySection
-        subjectType="product"
-        subjectId={product.id}
-        intent="update"
-        sectionTitle="Creator Updates"
-        actionLabel="Post Update"
-        titlePlaceholder="Update headline"
-        composerPlaceholder="Share what's new with owners of this release."
-        emptyMessage="No updates from the creator yet."
-        canPost={userId === product.author_id}
-        showAction={false}
-      />
+      <ProductUpdatesSection productId={product.id} emptyMessage="No updates from the creator yet." />
 
       <AchievementToast toast={toast} onDone={() => setToast(null)} />
     </div>

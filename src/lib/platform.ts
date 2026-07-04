@@ -184,12 +184,47 @@ export interface SavedResource {
 
 export interface ServiceRequest {
   id: string;
+  user_id?: string | null;
   service_id: string;
   message: string | null;
   status: string;
   created_at: string;
+  brief_title?: string | null;
+  brief_body?: string | null;
+  budget_cents?: number | null;
+  timeline?: string | null;
+  agreed_price_cents?: number | null;
+  agreed_currency?: string | null;
+  responded_at?: string | null;
+  paid_at?: string | null;
+  completed_at?: string | null;
+  updated_at?: string | null;
   services: Service | null;
 }
+
+export interface ProjectMessage {
+  id: string;
+  request_id: string;
+  author_id: string;
+  body: string;
+  created_at: string;
+  authors?: {
+    id: string;
+    display_name?: string | null;
+    username?: string | null;
+    avatar_url?: string | null;
+  } | null;
+}
+
+export type ProjectStatus =
+  | 'inquiry'
+  | 'pending'
+  | 'accepted'
+  | 'declined'
+  | 'in_progress'
+  | 'awaiting_payment'
+  | 'completed'
+  | 'canceled';
 
 export function formatServicePrice(service: Pick<Service, 'starting_price_cents'> & Partial<Service>) {
   return formatStartingPrice(service);

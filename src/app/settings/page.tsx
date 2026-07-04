@@ -1,7 +1,6 @@
 'use client';
 
-import Link from 'next/link';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
@@ -27,51 +26,21 @@ import {
   getStoredViewerCurrency,
   setStoredViewerPreferences,
 } from '@/lib/marketPreferences';
-import { LANDING_PAGES, getLandingPageId, setLandingPageId, type LandingPageId } from '@/lib/landingPage';
+import { getLandingPageId, setLandingPageId, type LandingPageId } from '@/lib/landingPage';
 import { isMissingColumnError } from '@/lib/schemaCompat';
-import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
+import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
+import { getAvailableDockApps } from '@/lib/osApps';
+import { setDockAppHidden, setDockMode, useDockPreferences, type DockMode } from '@/lib/dockPreferences';
 
-const SETTINGS_KEYS = {
-  replies: '44-setting-replies',
-  likes: '44-setting-likes',
-  releases: '44-setting-releases',
-  orders: '44-setting-orders',
-  emails: '44-setting-emails',
-  publicProfile: '44-setting-public-profile',
-  publicLibrary: '44-setting-public-library',
-  directMessages: '44-setting-direct-messages',
-  recommendations: '44-setting-recommendations',
-  discord: '44-setting-discord',
-  spotify: '44-setting-spotify',
-  stripe: '44-setting-stripe',
-  paypal: '44-setting-paypal',
-  google: '44-setting-google-drive',
-  dropbox: '44-setting-dropbox',
-  github: '44-setting-github',
-  figma: '44-setting-figma',
-  youtube: '44-setting-youtube',
-} as const;
-
-function getStoredToggle(key: string, fallback = false) {
-  if (typeof window === 'undefined') return fallback;
-  const value = window.localStorage.getItem(key);
-  if (value === null) return fallback;
-  return value === 'true';
-}
-
-function setStoredToggle(key: string, value: boolean) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(key, String(value));
-}
-
-type SettingsTabId = 'system' | 'account' | 'privacy' | 'billing' | 'notifications';
+type SettingsTabId = 'appearance' | 'dock' | 'region' | 'clock' | 'accessibility' | 'advanced';
 
 const TABS: Array<{ id: SettingsTabId; label: string; copy: string }> = [
-  { id: 'system', label: 'System', copy: 'Adjust appearance, landing page, and regional browsing defaults.' },
-  { id: 'account', label: 'Account', copy: 'Manage your email, password, and account access.' },
-  { id: 'privacy', label: 'Privacy & Security', copy: 'Control visibility, messaging, and account protection.' },
-  { id: 'billing', label: 'Billing & Orders', copy: 'Review purchase history and payment details.' },
-  { id: 'notifications', label: 'Notifications', copy: 'Choose which activity should reach you.' },
+  { id: 'appearance', label: 'Appearance', copy: 'Theme, accent, typography, and visual comfort for 44OS.' },
+  { id: 'dock', label: 'Dock', copy: 'Control Dock layout, visible apps, and where 44OS opens.' },
+  { id: 'region', label: 'Region', copy: 'Region, currency, language, and local pricing defaults.' },
+  { id: 'clock', label: 'Clock', copy: 'Time display and system clock preferences.' },
+  { id: 'accessibility', label: 'Accessibility', copy: 'Motion, contrast, readability, and input preferences.' },
+  { id: 'advanced', label: 'Advanced', copy: 'Storage, reset tools, integrations, and future OS-level controls.' },
 ];
 
 export default function SettingsPage() {
@@ -83,16 +52,23 @@ export default function SettingsPage() {
 }
 
 function SettingsContent() {
-  const { user } = useAuth();
-  const tabs = user ? TABS : TABS.filter(tab => tab.id === 'system');
+  const tabs = TABS;
   const searchParams = useSearchParams();
   const requestedTab = searchParams.get('tab') as SettingsTabId | null;
-  const initialTab: SettingsTabId = tabs.some(tab => tab.id === requestedTab) ? (requestedTab as SettingsTabId) : tabs[0]?.id ?? 'system';
+  const initialTab: SettingsTabId = tabs.some(tab => tab.id === requestedTab) ? (requestedTab as SettingsTabId) : tabs[0]?.id ?? 'appearance';
   const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
 
   useEffect(() => {
+    if (tabs.some(tab => tab.id === requestedTab)) {
+      setActiveTab(requestedTab as SettingsTabId);
+      return;
+    }
+    setActiveTab(tabs[0]?.id ?? 'appearance');
+  }, [requestedTab, tabs]);
+
+  useEffect(() => {
     if (!tabs.some(tab => tab.id === activeTab)) {
-      setActiveTab(tabs[0]?.id ?? 'system');
+      Promise.resolve().then(() => setActiveTab(tabs[0]?.id ?? 'appearance'));
     }
   }, [activeTab, tabs]);
 
@@ -100,7 +76,7 @@ function SettingsContent() {
     tabs.map(tab => ({
       id: tab.id,
       label: tab.label,
-      onClick: () => setActiveTab(tab.id),
+      href: tab.id === 'appearance' ? '/settings' : `/settings?tab=${tab.id}`,
       active: tab.id === activeTab,
     })),
   );
@@ -110,178 +86,28 @@ function SettingsContent() {
   return (
     <PageShell>
       <main className="dashboard-page">
-        <HubHero title={activeMeta?.label ?? 'Settings'} copy={activeMeta?.copy} />
-        {activeTab === 'system' && <SystemSettings />}
-        {activeTab === 'account' && <AccountSettings />}
-        {activeTab === 'notifications' && <NotificationSettings />}
-        {activeTab === 'privacy' && <PrivacySecuritySettings />}
-        {activeTab === 'billing' && <BillingOrders />}
+        <HubHero title="Settings" copy={activeMeta?.copy} />
+        {activeTab === 'appearance' && <AppearanceSettings />}
+        {activeTab === 'dock' && <DockSettings />}
+        {activeTab === 'region' && <RegionSettings />}
+        {activeTab === 'clock' && <ClockSettings />}
+        {activeTab === 'accessibility' && <AccessibilitySettings />}
+        {activeTab === 'advanced' && <AdvancedSettings />}
       </main>
     </PageShell>
   );
 }
 
-function AccountSettings() {
-  const { user } = useAuth();
-  const [profile, setProfile] = useState<StudioProfile | null>(null);
-  const [sendingReset, setSendingReset] = useState(false);
-  const [status, setStatus] = useState('');
-
-  useEffect(() => {
-    async function loadProfile() {
-      if (!user) return;
-      const result = await loadStudioProfile(user.id);
-      setProfile(result.profile);
-    }
-
-    loadProfile();
-  }, [user]);
-
-  async function sendPasswordReset() {
-    if (!user?.email || sendingReset) return;
-    setSendingReset(true);
-    setStatus('');
-    const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-      redirectTo: `${window.location.origin}/settings`,
-    });
-    setSendingReset(false);
-    setStatus(error ? error.message : 'Password reset email sent.');
-  }
-
-  return (
-    <div className="settings-section">
-      {user?.email && (
-        <div className="settings-block">
-          <span className="os-type-body-small" style={{ color: 'var(--os-color-ink-muted)' }}>
-            Signed in as {user.email}
-          </span>
-        </div>
-      )}
-
-      <div className="settings-field">
-        <div className="settings-field-head">
-          <div className="os-type-field-title">Public Profile</div>
-          <p className="os-type-body-small">Profile image, bio, header image, and friendship controls now live in your public profile editor.</p>
-        </div>
-        <div style={{ display: 'grid', gap: 12 }}>
-          <span className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>
-            {profile?.username ? `@${profile.username}` : 'Your community profile is ready.'}
-          </span>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <Link className="os-button os-button-primary" href="/community/profile/edit">
-              Edit Profile
-            </Link>
-            {profile?.username && (
-              <a className="os-button os-button-secondary" href={`/community/profile/${profile.username}`}>
-                View Public Profile
-              </a>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="settings-field">
-        <div className="settings-field-head">
-          <div className="os-type-field-title">Email</div>
-          <p className="os-type-body-small">Your login and account recovery email.</p>
-        </div>
-        <div>
-          <span className="os-type-body">{user?.email ?? 'No email on file.'}</span>
-        </div>
-      </div>
-
-      <div className="settings-field">
-        <div className="settings-field-head">
-          <div className="os-type-field-title">Password</div>
-          <p className="os-type-body-small">Send yourself a password reset email.</p>
-        </div>
-        <div>
-          <button className="os-button os-button-secondary" type="button" onClick={sendPasswordReset} disabled={sendingReset}>
-            {sendingReset ? 'Sending…' : 'Send Password Reset'}
-          </button>
-        </div>
-      </div>
-
-      <div className="settings-field">
-        <div className="settings-field-head">
-          <div className="os-type-field-title">Security</div>
-          <p className="os-type-body-small">Use Privacy & Security for message permissions, public visibility, and trusted-device controls.</p>
-        </div>
-        <div>
-          <Link className="os-button os-button-secondary" href="/settings?tab=privacy">
-            Open Privacy & Security
-          </Link>
-        </div>
-      </div>
-
-      <div className="settings-field">
-        <div className="settings-field-head">
-          <div className="os-type-field-title">Clear History</div>
-          <p className="os-type-body-small">Remove your browsing and search history from 44.</p>
-        </div>
-        <div>
-          <button className="os-button os-button-ghost" type="button" disabled>Clear History</button>
-        </div>
-      </div>
-
-      <div className="settings-field">
-        <div className="settings-field-head">
-          <div className="os-type-field-title">Delete Account</div>
-          <p className="os-type-body-small">Permanently delete your account and all associated data. This cannot be undone.</p>
-        </div>
-        <div>
-          <button className="os-button os-button-danger" type="button" disabled>Delete Account</button>
-        </div>
-      </div>
-
-      {status && (
-        <span className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>
-          {status}
-        </span>
-      )}
-    </div>
-  );
-}
-
-function SystemSettings() {
-  const { user } = useAuth();
-  const [mode, setModeState] = useState<ThemeMode>('dark');
+function AppearanceSettings() {
+  const [mode, setModeState] = useState<ThemeMode>('light');
   const [accent, setAccentState] = useState<ThemeAccent>('amber');
-  const [landingPage, setLandingPage] = useState<LandingPageId>('store');
-  const [countryCode, setCountryCode] = useState(DEFAULT_VIEWER_COUNTRY);
-  const [displayCurrency, setDisplayCurrency] = useState(DEFAULT_VIEWER_CURRENCY);
-  const [marketStatus, setMarketStatus] = useState('');
 
   useEffect(() => {
-    setModeState(getStoredMode());
-    setAccentState(getStoredAccent());
-    setLandingPage(getLandingPageId());
-    setCountryCode(getStoredViewerCountry());
-    setDisplayCurrency(getStoredViewerCurrency());
+    Promise.resolve().then(() => {
+      setModeState(getStoredMode());
+      setAccentState(getStoredAccent());
+    });
   }, []);
-
-  useEffect(() => {
-    async function loadSystemPreferences() {
-      if (!user) return;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('country_code, display_currency')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      const nextCountry = !isMissingColumnError(error) && data?.country_code
-        ? data.country_code
-        : getStoredViewerCountry() || DEFAULT_VIEWER_COUNTRY;
-      const nextCurrency = !isMissingColumnError(error) && data?.display_currency
-        ? data.display_currency
-        : getStoredViewerCurrency() || DEFAULT_VIEWER_CURRENCY;
-      setCountryCode(nextCountry);
-      setDisplayCurrency(nextCurrency);
-      setStoredViewerPreferences(nextCountry, nextCurrency);
-    }
-
-    loadSystemPreferences();
-  }, [user]);
 
   function chooseMode(m: ThemeMode) {
     setModeState(m);
@@ -290,37 +116,6 @@ function SystemSettings() {
   function chooseAccent(a: ThemeAccent) {
     setAccentState(a);
     setAccent(a);
-  }
-  function chooseLandingPage(id: LandingPageId) {
-    setLandingPage(id);
-    setLandingPageId(id);
-  }
-
-  async function saveMarketPreferences(nextCountry: string, nextCurrency: string) {
-    setCountryCode(nextCountry);
-    setDisplayCurrency(nextCurrency);
-    setStoredViewerPreferences(nextCountry, nextCurrency);
-    setMarketStatus('');
-
-    if (!user) {
-      setMarketStatus('Saved on this device.');
-      return;
-    }
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        country_code: nextCountry,
-        display_currency: nextCurrency,
-      })
-      .eq('id', user.id);
-
-    if (isMissingColumnError(error)) {
-      setMarketStatus('Saved on this device.');
-      return;
-    }
-
-    setMarketStatus(error ? error.message : 'System preferences saved.');
   }
 
   return (
@@ -365,29 +160,90 @@ function SystemSettings() {
         </div>
       </div>
 
-      <div className="settings-field">
-        <div className="settings-field-head">
-          <div className="os-type-field-title">Landing Page</div>
-          <p className="os-type-body-small">Choose where 44 opens after login.</p>
-        </div>
-        <div className="settings-segment" role="group" aria-label="Landing page">
-          {LANDING_PAGES.map(page => (
-            <button
-              key={page.id}
-              type="button"
-              className={page.id === landingPage ? 'settings-segment-item settings-segment-item-active' : 'settings-segment-item'}
-              onClick={() => chooseLandingPage(page.id)}
-            >
-              {page.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <PlaceholderField
+        title="Typography"
+        desc="Font family, reader font, and interface scale controls will live here."
+        items={['System font', 'Reader font', 'Interface density']}
+      />
 
+      <PlaceholderField
+        title="Wallpaper"
+        desc="Environment image and glass intensity controls can be added here later."
+        items={['Environment style', 'Glass intensity', 'Noise texture']}
+      />
+    </div>
+  );
+}
+
+function RegionSettings() {
+  const { user } = useAuth();
+  const [countryCode, setCountryCode] = useState(DEFAULT_VIEWER_COUNTRY);
+  const [displayCurrency, setDisplayCurrency] = useState(DEFAULT_VIEWER_CURRENCY);
+  const [marketStatus, setMarketStatus] = useState('');
+
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      setCountryCode(getStoredViewerCountry());
+      setDisplayCurrency(getStoredViewerCurrency());
+    });
+  }, []);
+
+  useEffect(() => {
+    async function loadSystemPreferences() {
+      if (!user) return;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('country_code, display_currency')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const nextCountry = !isMissingColumnError(error) && data?.country_code
+        ? data.country_code
+        : getStoredViewerCountry() || DEFAULT_VIEWER_COUNTRY;
+      const nextCurrency = !isMissingColumnError(error) && data?.display_currency
+        ? data.display_currency
+        : getStoredViewerCurrency() || DEFAULT_VIEWER_CURRENCY;
+      setCountryCode(nextCountry);
+      setDisplayCurrency(nextCurrency);
+      setStoredViewerPreferences(nextCountry, nextCurrency);
+    }
+
+    loadSystemPreferences();
+  }, [user]);
+
+  async function saveMarketPreferences(nextCountry: string, nextCurrency: string) {
+    setCountryCode(nextCountry);
+    setDisplayCurrency(nextCurrency);
+    setStoredViewerPreferences(nextCountry, nextCurrency);
+    setMarketStatus('');
+
+    if (!user) {
+      setMarketStatus('Saved on this device.');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        country_code: nextCountry,
+        display_currency: nextCurrency,
+      })
+      .eq('id', user.id);
+
+    if (isMissingColumnError(error)) {
+      setMarketStatus('Saved on this device.');
+      return;
+    }
+
+    setMarketStatus(error ? error.message : 'System preferences saved.');
+  }
+
+  return (
+    <div className="settings-section">
       <div className="settings-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Region</div>
-          <p className="os-type-body-small">Choose the market you browse from so local pricing can appear when it fits.</p>
+          <p className="os-type-body-small">Choose your local market. Creator item forms use this region when you add a local price.</p>
         </div>
         <select
           className="os-input-field"
@@ -406,7 +262,7 @@ function SystemSettings() {
       <div className="settings-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Display Currency</div>
-          <p className="os-type-body-small">Set the currency used when prices are shown outside local creator offers.</p>
+          <p className="os-type-body-small">Set the currency used for browsing and for local-price defaults when your region does not provide one automatically.</p>
         </div>
         <select
           className="os-input-field"
@@ -421,54 +277,212 @@ function SystemSettings() {
         </select>
       </div>
 
+      <PlaceholderField
+        title="Language"
+        desc="Interface language and content translation preferences can live here when localization lands."
+        items={['Interface language', 'Content translation', 'Measurement units']}
+      />
+
       {marketStatus && (
         <span className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>
           {marketStatus}
         </span>
       )}
-
-      {!user && (
-        <div className="settings-field">
-          <div className="settings-field-head">
-            <div className="os-type-card-title">Account settings</div>
-            <p className="os-type-body-small">Log in to manage your profile, password, privacy, notifications, billing, and orders.</p>
-          </div>
-          <div>
-            <Link href="/login" className="os-button os-button-primary">
-              Log In
-            </Link>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
-function ToggleRow({
-  title,
-  desc,
-  storageKey,
-  defaultOn = false,
-}: {
-  title: string;
-  desc: string;
-  storageKey: string;
-  defaultOn?: boolean;
-}) {
-  const [on, setOn] = useState(defaultOn);
+const DOCK_MODES: Array<{ id: DockMode; label: string }> = [
+  { id: 'full', label: 'Full' },
+  { id: 'compact', label: 'Compact' },
+];
+
+function DockSettings() {
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<StudioProfile | null>(null);
+  const [landingPage, setLandingPage] = useState<LandingPageId>('music');
+  const { mode, hiddenIds } = useDockPreferences();
 
   useEffect(() => {
-    setOn(getStoredToggle(storageKey, defaultOn));
-  }, [storageKey, defaultOn]);
+    if (!user) { Promise.resolve().then(() => setProfile(null)); return; }
+    loadStudioProfile(user.id).then(r => setProfile(r.profile));
+  }, [user]);
 
-  function toggle() {
-    setOn(current => {
-      const next = !current;
-      setStoredToggle(storageKey, next);
-      return next;
-    });
+  useEffect(() => {
+    Promise.resolve().then(() => setLandingPage(getLandingPageId()));
+  }, []);
+
+  const availableApps = getAvailableDockApps({
+    signedIn: Boolean(user),
+    isCreator: isCreatorProfile(profile),
+  });
+  const dockApps = useMemo(
+    () => availableApps.filter(app => app.locked || !hiddenIds.includes(app.id)),
+    [availableApps, hiddenIds],
+  );
+  const hideableApps = availableApps.filter(app => !app.locked);
+  const landingApps = dockApps.filter(app => app.id !== 'notifications' && app.id !== 'home');
+
+  function chooseLandingPage(id: LandingPageId) {
+    setLandingPage(id);
+    setLandingPageId(id);
   }
 
+  return (
+    <>
+      <div className="settings-field">
+        <div className="settings-field-head">
+          <div className="os-type-field-title">Landing App</div>
+          <p className="os-type-body-small">Choose which visible Dock app opens after login.</p>
+        </div>
+        <div className="settings-segment" role="group" aria-label="Landing app">
+          {landingApps.map(app => (
+            <button
+              key={app.id}
+              type="button"
+              className={app.id === landingPage ? 'settings-segment-item settings-segment-item-active' : 'settings-segment-item'}
+              onClick={() => chooseLandingPage(app.id as LandingPageId)}
+            >
+              {app.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="settings-field">
+        <div className="settings-field-head">
+          <div className="os-type-field-title">Dock</div>
+          <p className="os-type-body-small">Full shows icons and labels. Compact shows icons only.</p>
+        </div>
+        <div className="settings-segment" role="group" aria-label="Dock mode">
+          {DOCK_MODES.map(m => (
+            <button
+              key={m.id}
+              type="button"
+              className={m.id === mode ? 'settings-segment-item settings-segment-item-active' : 'settings-segment-item'}
+              onClick={() => setDockMode(m.id)}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="settings-field">
+        <div className="settings-field-head">
+          <div className="os-type-field-title">Dock Apps</div>
+          <p className="os-type-body-small">Choose which apps appear in your Dock. Settings always stays available.</p>
+        </div>
+        <div>
+          {hideableApps.map(app => {
+            const visible = !hiddenIds.includes(app.id);
+            return (
+              <div key={app.id} className="settings-row">
+                <div className="settings-row-copy">
+                  <div className="os-type-card-title">{app.label}</div>
+                  <p className="os-type-body-small">{app.description}</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={visible}
+                  aria-label={`Show ${app.label} in Dock`}
+                  className={visible ? 'settings-toggle settings-toggle-on' : 'settings-toggle'}
+                  onClick={() => setDockAppHidden(app.id, visible)}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <PlaceholderField
+        title="Dock Behavior"
+        desc="Future controls for sorting, pinning, badges, and app presets will live here."
+        items={['Reorder apps', 'Badge visibility', 'Reset Dock preset']}
+      />
+    </>
+  );
+}
+
+function ClockSettings() {
+  return (
+    <div className="settings-section">
+      <PlaceholderField
+        title="Clock Format"
+        desc="Choose how the Dock clock displays time."
+        items={['12-hour clock', '24-hour clock', 'Hide clock in full Dock']}
+      />
+
+      <PlaceholderField
+        title="Time Zone"
+        desc="Use your system time zone or choose a fixed 44OS time zone."
+        items={['Use device time zone', 'Manual time zone', 'Show secondary time zone']}
+      />
+
+      <PlaceholderField
+        title="Date Display"
+        desc="Optional date and calendar display controls can live here."
+        items={['Show date in Dock', 'Calendar week starts on', 'Relative timestamps']}
+      />
+    </div>
+  );
+}
+
+function AccessibilitySettings() {
+  return (
+    <div className="settings-section settings-section-wide">
+      <PlaceholderToggle title="Reduce motion" desc="Limit transitions, popovers, and route movement." />
+      <PlaceholderToggle title="Increase contrast" desc="Strengthen text, dividers, and control outlines." />
+      <PlaceholderToggle title="Larger interface text" desc="Use a larger fixed type scale across 44OS." />
+      <PlaceholderToggle title="Keyboard focus mode" desc="Make focus rings and keyboard navigation more prominent." />
+    </div>
+  );
+}
+
+function AdvancedSettings() {
+  return (
+    <div className="settings-section">
+      <PlaceholderField
+        title="Storage"
+        desc="Downloaded files, cached artwork, and offline data controls can live here."
+        items={['Clear cache', 'Offline storage', 'Download location']}
+      />
+
+      <PlaceholderField
+        title="System Reset"
+        desc="Reset local OS preferences without touching your account data."
+        items={['Reset theme', 'Reset Dock', 'Reset all local preferences']}
+      />
+
+      <PlaceholderField
+        title="Integrations"
+        desc="Future desktop wrapper, deep links, and connected app controls can live here."
+        items={['Desktop app links', 'Protocol handlers', 'Connected services']}
+      />
+    </div>
+  );
+}
+
+function PlaceholderField({ title, desc, items }: { title: string; desc: string; items: string[] }) {
+  return (
+    <div className="settings-field">
+      <div className="settings-field-head">
+        <div className="os-type-field-title">{title}</div>
+        <p className="os-type-body-small">{desc}</p>
+      </div>
+      <div className="settings-segment" role="group" aria-label={title}>
+        {items.map(item => (
+          <button key={item} className="settings-segment-item" type="button" disabled>
+            {item}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PlaceholderToggle({ title, desc }: { title: string; desc: string }) {
   return (
     <div className="settings-row">
       <div className="settings-row-copy">
@@ -478,49 +492,11 @@ function ToggleRow({
       <button
         type="button"
         role="switch"
-        aria-checked={on}
+        aria-checked={false}
         aria-label={title}
-        className={on ? 'settings-toggle settings-toggle-on' : 'settings-toggle'}
-        onClick={toggle}
+        className="settings-toggle"
+        disabled
       />
-    </div>
-  );
-}
-
-function NotificationSettings() {
-  return (
-    <div className="settings-section settings-section-wide">
-      <div>
-        <ToggleRow storageKey={SETTINGS_KEYS.replies} title="Replies to your posts" desc="When someone replies in the community." defaultOn />
-        <ToggleRow storageKey={SETTINGS_KEYS.likes} title="Likes" desc="When someone likes your post or reply." defaultOn />
-        <ToggleRow storageKey={SETTINGS_KEYS.releases} title="New releases from creators you follow" desc="Product, service, and resource drops." defaultOn />
-        <ToggleRow storageKey={SETTINGS_KEYS.orders} title="Order updates" desc="Receipts, downloads, and delivery status." defaultOn />
-        <ToggleRow storageKey={SETTINGS_KEYS.emails} title="Product emails" desc="Occasional news about 44." />
-      </div>
-    </div>
-  );
-}
-
-function PrivacySecuritySettings() {
-  return (
-    <div className="settings-section settings-section-wide">
-      <div>
-        <ToggleRow storageKey={SETTINGS_KEYS.publicProfile} title="Public profile" desc="Let others view your profile and activity." defaultOn />
-        <ToggleRow storageKey={SETTINGS_KEYS.publicLibrary} title="Show library publicly" desc="Display items you own on your profile." />
-        <ToggleRow storageKey={SETTINGS_KEYS.directMessages} title="Allow direct messages" desc="Let members message you directly." defaultOn />
-        <ToggleRow storageKey={SETTINGS_KEYS.recommendations} title="Personalized recommendations" desc="Use your activity to tailor what you see." defaultOn />
-        <ToggleRow storageKey="44-setting-2fa" title="Two-factor authentication" desc="Add an extra layer of security with a verification code." />
-        <ToggleRow storageKey="44-setting-sessions" title="Active sessions" desc="Manage devices that are currently signed in." />
-        <ToggleRow storageKey="44-setting-trusted" title="Trusted devices" desc="Skip 2FA on devices you trust." />
-      </div>
-    </div>
-  );
-}
-
-function BillingOrders() {
-  return (
-    <div className="settings-section">
-      <div className="app-empty-text">Your purchase history will appear here.</div>
     </div>
   );
 }

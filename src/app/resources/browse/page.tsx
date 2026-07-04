@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import type { Category, Resource } from '@/lib/platform';
 import { matchesCategory, matchesQuery } from '@/lib/taxonomy';
 import { ResourceCard, PageShell, HubHero, EmptyMessage } from '@/components/Ui';
-import { useTopbarTabs } from '@/components/TopbarContext';
+import { useResourcesTopbarTabs } from '@/components/ResourcesTopbarTabs';
 
 export default function ResourcesBrowsePage() {
   const [resources, setResources] = useState<Resource[]>([]);
@@ -51,19 +51,7 @@ export default function ResourcesBrowsePage() {
     ? 'All Resources'
     : (categoryCatalog.find(c => c.slug === activeCategory)?.name ?? activeCategory);
 
-  useTopbarTabs(
-    categoryCatalog.length > 0
-      ? [
-          { id: 'all', label: 'All', href: '/resources', active: activeCategory === 'all' },
-          ...categoryCatalog.filter(category => resourceCatalog.some(resource => matchesCategory(resource, category))).slice(0, 5).map(category => ({
-            id: category.slug,
-            label: category.name,
-            href: `/resources/browse/${category.slug}`,
-            active: category.slug === activeCategory,
-          })),
-        ]
-      : undefined,
-  );
+  useResourcesTopbarTabs('resources');
 
   return (
     <PageShell>

@@ -6,15 +6,16 @@ import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
-import { formatServicePrice, type Profile, type Resource, type Service } from '@/lib/platform';
+import { formatServicePrice, type Profile, type Service } from '@/lib/platform';
 import type { Product } from '@/lib/products';
 import { formatProductPrice } from '@/lib/products';
+import { getProductExperience, productStoreHref } from '@/lib/experience';
 import { PageShell, CenteredMessage } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
 import { SocialArtifactCard, SocialAvatar, SocialPostRow } from '@/components/Social';
 import { getOwnershipKeys, isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
-import { useTopbarBack } from '@/components/TopbarContext';
-import { authorHandle, countById, isGeneralPost, isUpdatePost, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type ReplyEngagerRow, type SocialPost } from '@/lib/social';
+import { useTopbarBack, useTopbarTabs } from '@/components/TopbarContext';
+import { authorHandle, countById, isGeneralPost, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type ReplyEngagerRow, type SocialPost } from '@/lib/social';
 import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { isMissingRelationError } from '@/lib/schemaCompat';
 import { createOrOpenConversation } from '@/lib/messages';
@@ -28,17 +29,17 @@ import {
   type FriendshipState,
 } from '@/lib/friends';
 
-type ProfileTab = 'posts' | 'updates' | 'products' | 'services' | 'resources';
+type ProfileTab = 'posts' | 'music' | 'books' | 'assets' | 'services';
 
 function parseProfileTab(value: string | null, isCreator: boolean): ProfileTab | null {
   if (!value) return null;
   const normalized = value.toLowerCase();
   if (normalized === 'posts') return 'posts';
   if (!isCreator) return null;
-  if (normalized === 'releases' || normalized === 'products') return 'products';
+  if (normalized === 'music' || normalized === 'releases' || normalized === 'products') return 'music';
+  if (normalized === 'books') return 'books';
+  if (normalized === 'assets') return 'assets';
   if (normalized === 'services') return 'services';
-  if (normalized === 'resources') return 'resources';
-  if (normalized === 'updates') return 'updates';
   return null;
 }
 
@@ -47,11 +48,9 @@ export default function PublicProfilePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
-  useTopbarBack({ href: '/community', label: 'Community' });
   const [profile, setProfile] = useState<Profile | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [services, setServices] = useState<Service[]>([]);
-  const [resources, setResources] = useState<Resource[]>([]);
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [replyCounts, setReplyCounts] = useState<CountMap>({});
   const [repliersMap, setRepliersMap] = useState<LikersMap>({});
@@ -83,7 +82,6 @@ export default function PublicProfilePage() {
       if (!resolvedProfile) {
         setProducts([]);
         setServices([]);
-        setResources([]);
         setPosts([]);
         setFriendshipState('none');
         setFriendRequest(null);
@@ -107,7 +105,6 @@ export default function PublicProfilePage() {
       const [
         productResult,
         serviceResult,
-        resourceResult,
         postResult,
         replyCountResult,
         likeResult,
@@ -120,11 +117,6 @@ export default function PublicProfilePage() {
         supabase
           .from('services')
           .select('*, creators:profiles!author_id(id, slug, username, name:display_name, avatar_url, country_code, display_currency, home_country_code, home_currency)')
-          .eq('author_id', profileId)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('resources')
-          .select('*, creators:profiles!author_id(id, slug, username, name:display_name, avatar_url)')
           .eq('author_id', profileId)
           .order('created_at', { ascending: false }),
         supabase
@@ -146,7 +138,6 @@ export default function PublicProfilePage() {
 
       setProducts(((productResult.data as Product[] | null) ?? []).filter(Boolean));
       setServices(((serviceResult.data as Service[] | null) ?? []).filter(Boolean));
-      setResources(((resourceResult.data as Resource[] | null) ?? []).filter(Boolean));
       setPosts(((postResult.data as SocialPost[] | null) ?? []).filter(Boolean));
       const replyRowsData = (replyCountResult.data as ReplyEngagerRow[] | null) ?? [];
       setReplyCounts(countById(replyRowsData, 'post_id'));
@@ -184,6 +175,16 @@ export default function PublicProfilePage() {
   }, [profile, user]);
 
   const isOwn = user?.id === profile?.id;
+  useTopbarTabs(isOwn
+    ? [
+        { id: 'feed', label: 'Feed', href: '/community/feed', active: false },
+        { id: 'profile', label: 'Profile', href: '/community/profile', active: true },
+        { id: 'friends', label: 'Friends', href: '/community/friends', active: false },
+        { id: 'messages', label: 'Messages', href: '/community/messages', active: false },
+      ]
+    : undefined);
+  useTopbarBack(isOwn ? undefined : { href: '/community/feed', label: 'Community' });
+
   async function handleFriendAction() {
     if (!profile || isOwn || busy) return;
     if (!user) {
@@ -275,38 +276,55 @@ export default function PublicProfilePage() {
     service_market_mode: profile.service_market_mode ?? null,
   } : null;
   const isCreator = Boolean(profileForRoleCheck && isCreatorProfile(profileForRoleCheck));
+  const publishedProducts = useMemo(
+    () => products.filter(product => product.is_published || product.status === 'published'),
+    [products],
+  );
+  const musicProducts = useMemo(
+    () => publishedProducts.filter(product => getProductExperience(product) === 'music'),
+    [publishedProducts],
+  );
+  const bookProducts = useMemo(
+    () => publishedProducts.filter(product => getProductExperience(product) === 'book'),
+    [publishedProducts],
+  );
+  const assetProducts = useMemo(
+    () => publishedProducts.filter(product => getProductExperience(product) === 'asset'),
+    [publishedProducts],
+  );
+  const publishedServices = useMemo(
+    () => services.filter(service => service.status === 'published' || service.status === 'active'),
+    [services],
+  );
+  const generalPosts = useMemo(() => posts.filter(post => isGeneralPost(post)), [posts]);
   const tabs = useMemo(
-    () => (
-      isCreator
-        ? [
-            { id: 'posts' as const, label: 'Posts' },
-            { id: 'products' as const, label: 'Releases' },
-            { id: 'services' as const, label: 'Services' },
-            { id: 'resources' as const, label: 'Resources' },
-            { id: 'updates' as const, label: 'Updates' },
-          ]
-        : [
-            { id: 'posts' as const, label: 'Posts' },
-          ]
-    ),
-    [isCreator],
+    () => {
+      const next: Array<{ id: ProfileTab; label: string }> = [];
+      if (generalPosts.length > 0 || !isCreator) next.push({ id: 'posts', label: 'Posts' });
+      if (isCreator && musicProducts.length > 0) next.push({ id: 'music', label: 'Music' });
+      if (isCreator && bookProducts.length > 0) next.push({ id: 'books', label: 'Books' });
+      if (isCreator && assetProducts.length > 0) next.push({ id: 'assets', label: 'Assets' });
+      if (isCreator && publishedServices.length > 0) next.push({ id: 'services', label: 'Services' });
+      return next;
+    },
+    [assetProducts.length, bookProducts.length, generalPosts.length, isCreator, musicProducts.length, publishedServices.length],
   );
 
   useEffect(() => {
     const requestedTab = parseProfileTab(searchParams.get('tab'), isCreator);
-    if (requestedTab && requestedTab !== tab) {
+    const requestedIsVisible = requestedTab && tabs.some(item => item.id === requestedTab);
+    if (requestedIsVisible && requestedTab !== tab) {
       setTab(requestedTab);
       return;
     }
-    if (!isCreator && tab !== 'posts') {
-      setTab('posts');
+    const currentIsVisible = tabs.some(item => item.id === tab);
+    if (!currentIsVisible && tabs[0]) {
+      setTab(tabs[0].id);
     }
-  }, [isCreator, searchParams, tab]);
+  }, [isCreator, searchParams, tab, tabs]);
 
   const displayName = profile?.display_name ?? profile?.username ?? 'Member';
   const handle = authorHandle(profile ?? undefined);
-  const generalPosts = useMemo(() => posts.filter(post => isGeneralPost(post)), [posts]);
-  const updatePosts = useMemo(() => posts.filter(post => isUpdatePost(post)), [posts]);
   const friendButtonLabel = friendshipState === 'friends'
     ? 'Friends'
     : friendshipState === 'incoming'
@@ -365,22 +383,28 @@ export default function PublicProfilePage() {
 
           {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
 
-          <nav className="social-profile-tabs" aria-label="Profile sections" role="tablist">
-            {tabs.map(item => (
-              <button
-                key={item.id}
-                type="button"
-                role="tab"
-                aria-selected={tab === item.id}
-                onClick={() => setTab(item.id)}
-              >
-                {item.label}
-              </button>
-            ))}
-          </nav>
+          {tabs.length > 0 && (
+            <nav className="social-profile-tabs" aria-label="Profile sections" role="tablist">
+              {tabs.map(item => (
+                <button
+                  key={item.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === item.id}
+                  onClick={() => setTab(item.id)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+          )}
         </section>
 
-        {tab === 'posts' && (
+        {tabs.length === 0 && (
+          <div className="app-empty-text">No posts or published items yet.</div>
+        )}
+
+        {tab === 'posts' && tabs.some(item => item.id === 'posts') && (
           <section className="social-feed" aria-label="Posts">
             {generalPosts.length ? (
               generalPosts.map(post => (
@@ -407,42 +431,42 @@ export default function PublicProfilePage() {
           </section>
         )}
 
-        {tab === 'updates' && (
-          <section className="social-feed" aria-label="Updates">
-            {updatePosts.length ? (
-              updatePosts.map(post => (
-                <SocialPostRow
-                  key={post.id}
-                  post={post}
-                  replyCount={replyCounts[post.id] ?? 0}
-                  likeCount={likeCounts[post.id] ?? 0}
-                  likers={likersMap[post.id] ?? []}
-                  repliers={repliersMap[post.id] ?? []}
-                  onDelete={async () => {
-                    if (!user || post.author_id !== user.id) return;
-                    if (!window.confirm('Delete this post? This cannot be undone.')) return;
-                    const { error: deleteError } = await supabase.from('posts').delete().eq('id', post.id);
-                    if (deleteError) { setError(deleteError.message); return; }
-                    setPosts(current => current.filter(p => p.id !== post.id));
-                  }}
-                  canDelete={Boolean(user && post.author_id === user.id)}
-                  meta="Update"
-                />
-              ))
-            ) : (
-              <div className="app-empty-text">No updates yet.</div>
-            )}
-          </section>
-        )}
-
-        {tab === 'products' && (
-          <ArtifactGrid empty="No releases published yet.">
-            {products.map(product => (
+        {tab === 'music' && (
+          <ArtifactGrid empty="No music published yet.">
+            {musicProducts.map(product => (
               <SocialArtifactCard
                 key={product.id}
-                href={`/product/${product.slug || product.id}`}
+                href={productStoreHref(product)}
                 title={product.title}
-                meta={`${product.product_type || product.category || 'Product'} · ${formatProductPrice(product)}`}
+                meta={`${product.product_type || product.category || 'Release'} · ${formatProductPrice(product)}`}
+                image={product.cover_url}
+              />
+            ))}
+          </ArtifactGrid>
+        )}
+
+        {tab === 'books' && (
+          <ArtifactGrid empty="No books published yet.">
+            {bookProducts.map(product => (
+              <SocialArtifactCard
+                key={product.id}
+                href={productStoreHref(product)}
+                title={product.title}
+                meta={`${product.product_type || 'Book'} · ${formatProductPrice(product)}`}
+                image={product.cover_url}
+              />
+            ))}
+          </ArtifactGrid>
+        )}
+
+        {tab === 'assets' && (
+          <ArtifactGrid empty="No assets published yet.">
+            {assetProducts.map(product => (
+              <SocialArtifactCard
+                key={product.id}
+                href={productStoreHref(product)}
+                title={product.title}
+                meta={`${product.product_type || 'Asset'} · ${formatProductPrice(product)}`}
                 image={product.cover_url}
               />
             ))}
@@ -451,27 +475,13 @@ export default function PublicProfilePage() {
 
         {tab === 'services' && (
           <ArtifactGrid empty="No services published yet.">
-            {services.map(service => (
+            {publishedServices.map(service => (
               <SocialArtifactCard
                 key={service.id}
                 href={`/service/${service.slug || service.id}`}
                 title={service.title}
                 meta={`${service.service_type || 'Service'} · ${formatServicePrice(service)}`}
                 image={service.cover_url}
-              />
-            ))}
-          </ArtifactGrid>
-        )}
-
-        {tab === 'resources' && (
-          <ArtifactGrid empty="No resources published yet.">
-            {resources.map(resource => (
-              <SocialArtifactCard
-                key={resource.id}
-                href={`/resources/${resource.slug || resource.id}`}
-                title={resource.title}
-                meta={resource.resource_type || 'Resource'}
-                image={resource.cover_url}
               />
             ))}
           </ArtifactGrid>

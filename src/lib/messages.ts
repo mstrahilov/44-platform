@@ -12,11 +12,11 @@ export async function createOrOpenConversation(currentUserId: string, otherProfi
     .maybeSingle();
 
   if (isMissingRelationError(existingError)) {
-    return { href: `/inbox?with=${otherProfileId}`, error: existingError };
+    return { href: `/community/messages?with=${otherProfileId}`, error: existingError };
   }
 
   if (existing?.id) {
-    return { href: `/inbox?conversation=${existing.id}`, error: null };
+    return { href: `/community/messages?conversation=${existing.id}`, error: null };
   }
 
   const { data: created, error: createError } = await supabase
@@ -29,11 +29,11 @@ export async function createOrOpenConversation(currentUserId: string, otherProfi
     .single();
 
   if (isMissingRelationError(createError)) {
-    return { href: `/inbox?with=${otherProfileId}`, error: createError };
+    return { href: `/community/messages?with=${otherProfileId}`, error: createError };
   }
 
   if (createError || !created?.id) {
-    return { href: '/inbox', error: createError };
+    return { href: '/community/messages', error: createError };
   }
 
   const conversationId = (created as { id: string }).id;
@@ -45,7 +45,7 @@ export async function createOrOpenConversation(currentUserId: string, otherProfi
     ], { onConflict: 'conversation_id,profile_id' });
 
   return {
-    href: `/inbox?conversation=${conversationId}`,
+    href: `/community/messages?conversation=${conversationId}`,
     error: memberError,
   };
 }

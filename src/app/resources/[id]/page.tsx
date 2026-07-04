@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import type { Resource } from '@/lib/platform';
 import { creatorHref } from '@/lib/platform';
@@ -10,11 +10,18 @@ import { useTopbarBack } from '@/components/TopbarContext';
 import { ArticleContent } from '@/components/ArticleContent';
 import { SocialAvatar } from '@/components/Social';
 import { estimateReadTime } from '@/lib/articles';
+import { useAuth } from '@/lib/useAuth';
+import { isMissingRelationError } from '@/lib/schemaCompat';
 
 export default function ResourcePage() {
+  const router = useRouter();
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const [resource, setResource] = useState<Resource | null>(null);
   const [loading, setLoading] = useState(true);
+  const [savedId, setSavedId] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState('');
 
   useTopbarBack({ href: '/resources', label: 'Resources' });
 
@@ -32,6 +39,74 @@ export default function ResourcePage() {
     }
     fetchResource();
   }, [id]);
+
+  useEffect(() => {
+    if (!user || !resource?.id) {
+      setSavedId('');
+      return;
+    }
+
+    async function checkSaved() {
+      const { data, error } = await supabase
+        .from('saved_resources')
+        .select('id')
+        .eq('user_id', user!.id)
+        .eq('resource_id', resource!.id)
+        .maybeSingle();
+
+      if (isMissingRelationError(error)) {
+        setSaveStatus('Saved resources are ready in the app. Run the library SQL to enable saved resources in Supabase.');
+        return;
+      }
+
+      setSavedId((data as { id: string } | null)?.id ?? '');
+    }
+
+    checkSaved();
+  }, [resource, user]);
+
+  async function toggleSaved() {
+    if (!resource || saving) return;
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+
+    setSaving(true);
+    setSaveStatus('');
+
+    if (savedId) {
+      const { error } = await supabase
+        .from('saved_resources')
+        .delete()
+        .eq('id', savedId)
+        .eq('user_id', user.id);
+
+      if (error) setSaveStatus(error.message);
+      else {
+        setSavedId('');
+        setSaveStatus('Removed from saved resources.');
+      }
+      setSaving(false);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('saved_resources')
+      .insert({ user_id: user.id, resource_id: resource.id })
+      .select('id')
+      .single();
+
+    if (isMissingRelationError(error)) {
+      setSaveStatus('Saved resources are ready in the app. Run the library SQL to enable saved resources in Supabase.');
+    } else if (error) {
+      setSaveStatus(error.message);
+    } else {
+      setSavedId((data as { id: string }).id);
+      setSaveStatus('Saved to resources.');
+    }
+    setSaving(false);
+  }
 
   if (loading) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Loading…</div>;
   if (!resource) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Resource not found</div>;
@@ -69,6 +144,16 @@ export default function ResourcePage() {
             </>
           )}
         </div>
+
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', margin: '28px 0' }}>
+          <button className="os-button os-button-primary os-button-compact" type="button" onClick={toggleSaved} disabled={saving}>
+            {savedId ? 'Saved' : saving ? 'Saving...' : 'Save Resource'}
+          </button>
+          <Link href="/resources/collection" className="os-button os-button-secondary os-button-compact">
+            View Saved
+          </Link>
+        </div>
+        {saveStatus && <div className="dashboard-status">{saveStatus}</div>}
 
         <ArticleContent html={resource.long_description ?? resource.short_description ?? ''} />
       </article>
