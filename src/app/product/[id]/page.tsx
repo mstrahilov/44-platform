@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { notFound, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useContextMenu, COPY_TO_CLIPBOARD_TOAST_EVENT } from '@/components/ContextMenu';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
 import { browseHref, formatProductPrice, productMeta } from '@/lib/products';
-import { getProductStoreAccessLabel, isFreeLibraryClaim } from '@/lib/libraryContent';
+import { isFreeLibraryClaim } from '@/lib/libraryContent';
 import { getProductExperience, productLibraryHref, productStoreHref, storeIndexHref } from '@/lib/experience';
 import { creatorHref } from '@/lib/platform';
 import { ProductGrid, ProductCard } from '@/components/Ui';
@@ -52,6 +53,7 @@ export function ProductStoreDetail({
   const searchParams = useSearchParams();
   const cart = useCart();
   const { currentTrack, isPlaying, playQueue, toggleTrack } = useMusicPlayer();
+  const { openContextMenu } = useContextMenu();
   const [product, setProduct] = useState<Product | null>(null);
   const [tracks, setTracks] = useState<ProductTrack[]>([]);
   const [related, setRelated] = useState<Product[]>([]);
@@ -59,6 +61,8 @@ export function ProductStoreDetail({
   const [owned, setOwned] = useState(false);
   const [ownedLibraryItemId, setOwnedLibraryItemId] = useState<string | null>(null);
   const [ownedAcquisitionType, setOwnedAcquisitionType] = useState<string | null>(null);
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
+  const [inferredTrackDurations, setInferredTrackDurations] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   useTopbarBack({ href: backHref ?? '/', label: backLabel ?? 'Store' });
@@ -93,8 +97,9 @@ export function ProductStoreDetail({
         if (releasePage || getProductExperience(data) === 'music') {
           const { data: trackRows } = await supabase
             .from('tracks')
-            .select('*')
-            .eq('product_id', data.id);
+            .select('id,product_id,number,title,duration_seconds,audio_url,download_url')
+            .eq('product_id', data.id)
+            .order('number');
           setTracks(((trackRows as ProductTrack[] | null) ?? []).sort((a, b) => trackOrder(a) - trackOrder(b)));
         }
 
@@ -137,6 +142,11 @@ export function ProductStoreDetail({
       setOwnedAcquisitionType(null);
     });
   }, [product, user]);
+
+  useEffect(() => {
+    const highlightedTrackId = searchParams.get('track');
+    setSelectedTrackId(highlightedTrackId);
+  }, [searchParams]);
 
   useEffect(() => {
     async function recordSharedVisit() {
@@ -183,6 +193,39 @@ export function ProductStoreDetail({
     });
   }
 
+  const trackNumbers = useMemo(
+    () => new Map(tracks.map((track, index) => [track.id, trackOrder(track) || index + 1])),
+    [tracks],
+  );
+
+  useEffect(() => {
+    const missingDurationTracks = tracks.filter(track => track.audio_url && (!track.duration_seconds || track.duration_seconds <= 0));
+    if (missingDurationTracks.length === 0) return;
+
+    let alive = true;
+    const audioElements = missingDurationTracks.map(track => {
+      const audio = new Audio();
+      audio.preload = 'metadata';
+      audio.src = track.audio_url!;
+      audio.addEventListener('loadedmetadata', () => {
+        if (!alive || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
+        setInferredTrackDurations(current => ({
+          ...current,
+          [track.id]: Math.round(audio.duration),
+        }));
+      });
+      return audio;
+    });
+
+    return () => {
+      alive = false;
+      audioElements.forEach(audio => {
+        audio.removeAttribute('src');
+        audio.load();
+      });
+    };
+  }, [tracks]);
+
   if (loading) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Loading…</div>;
   if (!product) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Item not found</div>;
 
@@ -192,14 +235,9 @@ export function ProductStoreDetail({
   const isPhysicalMerch = productExperience === 'physical';
   const canClaimToLibrary = canSaveProductToLibrary(product);
   const hasDownloadUnlock = ownedAcquisitionType === 'purchase';
-  const accessLabel = isPhysicalMerch
-    ? 'Physical merch'
-    : isReleasePage
-      ? 'Free streaming · purchase unlocks downloads'
-      : getProductStoreAccessLabel(product);
   const creatorLink = creatorHref(product.creators ?? product.creator);
-  const creatorReleasesLink = `${creatorLink}?tab=releases`;
-  const creatorProductLink = `${creatorLink}${creatorLink.includes('?') ? '&' : '?'}fromProduct=${encodeURIComponent(product.id)}`;
+  const creatorTabLink = `${creatorLink}${creatorLink.includes('?') ? '&' : '?'}tab=${creatorProfileTab(productExperience)}${product.id ? `&fromProduct=${encodeURIComponent(product.id)}` : ''}`;
+  const creatorMoreLink = `${creatorLink}${creatorLink.includes('?') ? '&' : '?'}tab=${creatorProfileTab(productExperience)}`;
   const libraryHref = ownedLibraryItemId ? productLibraryHref(product, ownedLibraryItemId) : storeIndexHref(product).replace('/store', '/library');
 
   const hasDescription = Boolean(product.long_description || product.short_description);
@@ -214,20 +252,55 @@ export function ProductStoreDetail({
         releaseTitle: product.title,
         artworkUrl: product.cover_url || product.hero_url || null,
         audioUrl: track.audio_url as string,
-        durationSeconds: track.duration_seconds ?? null,
+        durationSeconds: getTrackDurationSeconds(track, inferredTrackDurations),
         productId: product.id,
       }))
   );
 
   function playRelease() {
-    if (playableTracks.length > 0) playQueue(playableTracks);
+    if (playableTracks.length > 0) {
+      playQueue(playableTracks);
+      setSelectedTrackId(playableTracks[0]?.id ?? null);
+    }
   }
 
   function toggleReleaseTrack(track: ProductTrack) {
     if (!track.audio_url) return;
     const index = playableTracks.findIndex(item => item.id === track.id);
-    if (index >= 0) toggleTrack(playableTracks, index);
+    if (index >= 0) {
+      setSelectedTrackId(track.id);
+      toggleTrack(playableTracks, index);
+    }
   }
+
+  function shareTrackLink(track: ProductTrack) {
+    if (!product) return;
+    const url = typeof window !== 'undefined' ? new URL(productStoreHref(product), window.location.origin) : null;
+    if (!url) return;
+    url.searchParams.set('track', track.id);
+    if (user?.id) url.searchParams.set('ref', user.id);
+    void navigator.clipboard?.writeText(url.toString());
+    window.dispatchEvent(new CustomEvent(COPY_TO_CLIPBOARD_TOAST_EVENT, {
+      detail: { message: 'Link copied to clipboard' },
+    }));
+  }
+
+  const heroCopy = getStoreHeroCopy(productExperience);
+  const primaryActions = resolveStoreActions({
+    product,
+    userSignedIn: Boolean(user),
+    owned,
+    canClaimToLibrary,
+    hasDownloadUnlock,
+    libraryHref,
+    cartHasItem: cart.has(product.id),
+    onAddToLibrary: addToLibrary,
+    onAddToCart: addProductToCart,
+  });
+  const aboutHeading = getAboutHeading(product);
+  const contentHeading = getContentHeading(product);
+  const productDetails = buildProductDetails(product, tracks, inferredTrackDurations);
+  const creatorDisplayName = product.creators?.display_name || product.creator || '44 Creator';
 
   return (
     <div className="view-detail-single">
@@ -235,126 +308,129 @@ export function ProductStoreDetail({
       {/* Album-style header */}
       <div
         className={heroImage ? 'view-album-header' : 'view-album-header view-album-header-fallback'}
-        style={heroImage ? { backgroundImage: `url(${heroImage})` } as React.CSSProperties : undefined}
+        style={heroImage ? { backgroundImage: `url(${heroImage})` } as CSSProperties : undefined}
       >
-        <div className="view-album-cover">
+        <div className={`view-album-cover view-album-cover-${productExperience}`}>
           {heroImage && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={heroImage} alt={product.title} />
           )}
         </div>
         <div className="view-album-copy">
-          <div className="view-album-eyebrow">{isReleasePage ? 'Release' : isPhysicalMerch ? 'Physical Merch' : productMeta(product)}</div>
-          <h1 className="view-album-title">{product.title}</h1>
-          <div className="view-album-meta">
-            <span className="view-album-meta-strong">{product.creators?.display_name || product.creator}</span>
+          <div className="view-album-eyebrow view-product-meta-line">
+            <span>{(product.product_type || productMeta(product)).toUpperCase()}</span>
             {product.year && (<><span className="view-album-meta-sep" /><span>{product.year}</span></>)}
             <span className="view-album-meta-sep" />
-            <span className={`view-album-meta-strong${canClaimToLibrary ? ' view-album-meta-accent' : ''}`}>
-              {formatProductPrice(product)}
-            </span>
-            {isPhysicalMerch && (<><span className="view-album-meta-sep" /><span>Ships from 44</span></>)}
+            <span className="view-album-meta-strong view-album-meta-accent">{formatProductPrice(product)}</span>
           </div>
-          <div className="view-album-actions">
-            {isReleasePage && playableTracks.length > 0 && (
-              <button className="os-button os-button-primary" type="button" onClick={playRelease}>
-                Play Release
-              </button>
-            )}
-            {owned ? (
-              <Link className={isReleasePage && playableTracks.length > 0 ? 'os-button os-button-secondary' : 'os-button os-button-primary'} href={libraryHref}>In Library</Link>
-            ) : canClaimToLibrary ? (
-              <button className={isReleasePage && playableTracks.length > 0 ? 'os-button os-button-secondary' : 'os-button os-button-primary'} onClick={addToLibrary}>Add to Library</button>
-            ) : isReleasePage && !user ? (
-              <Link className={isReleasePage && playableTracks.length > 0 ? 'os-button os-button-secondary' : 'os-button os-button-primary'} href="/login">Sign In to Save</Link>
-            ) : cart.has(product.id) ? (
-              <Link className={isReleasePage && playableTracks.length > 0 ? 'os-button os-button-secondary' : 'os-button os-button-primary'} href="/cart">View Cart</Link>
-            ) : (
-              <button className={isReleasePage && playableTracks.length > 0 ? 'os-button os-button-secondary' : 'os-button os-button-primary'} onClick={addProductToCart}>Add to Cart</button>
-            )}
-            {isReleasePage && (
-              hasDownloadUnlock ? (
-                <Link className="os-button os-button-secondary" href={libraryHref}>Download</Link>
-              ) : cart.has(product.id) ? (
-                <Link className="os-button os-button-secondary" href="/cart">View Cart</Link>
+          <h1 className="view-album-title">{product.title}</h1>
+          <Link className="library-creator-chip" href={creatorTabLink}>
+            <span className="library-creator-avatar">
+              {product.creators?.avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={product.creators.avatar_url} alt="" />
               ) : (
-                <button className="os-button os-button-secondary" type="button" onClick={addProductToCart}>Buy Download</button>
-              )
+                <span>{creatorDisplayName.slice(0, 2).toUpperCase()}</span>
+              )}
+            </span>
+            <span>{creatorDisplayName}</span>
+          </Link>
+          <p className="view-description view-store-hero-copy">{heroCopy}</p>
+          <div className="view-album-actions">
+            {primaryActions.map(action =>
+              action.href ? (
+                <Link key={action.label} className={action.secondary ? 'os-button os-button-secondary' : 'os-button os-button-primary'} href={action.href}>
+                  {action.label}
+                </Link>
+              ) : (
+                <button key={action.label} className={action.secondary ? 'os-button os-button-secondary' : 'os-button os-button-primary'} type="button" onClick={action.onClick}>
+                  {action.label}
+                </button>
+              ),
             )}
-            <Link className="os-button os-button-secondary" href={creatorProductLink}>View Creator</Link>
           </div>
         </div>
       </div>
 
-      {/* Description — only if it's long enough to matter */}
-      {hasDescription && description.length > 40 && (
-        <div className="view-section">
-          <p className="os-type-body view-description">
-            {description}
-          </p>
-        </div>
-      )}
+      <div className="view-section">
+        <h2 className="view-section-title">{aboutHeading}</h2>
+        <p className="os-type-body view-description">
+          {hasDescription && description.length > 0 ? description : heroCopy}
+        </p>
+      </div>
 
-      {isReleasePage && (
-        <div className="view-section">
-          <div className="item-community-header" style={{ marginBottom: 16 }}>
-            <h2 className="view-section-title" style={{ margin: 0 }}>Tracklist</h2>
-            {playableTracks.length > 0 && (
-              <button className="os-button os-button-secondary os-button-compact" type="button" onClick={playRelease}>
-                Play All
-              </button>
-            )}
-          </div>
-          {tracks.length === 0 ? (
-            <div className="dashboard-list-surface">
-              <div className="dashboard-empty">No tracks are published for this release yet.</div>
-            </div>
+      <div className="view-section">
+        <div className="item-community-header" style={{ marginBottom: 28 }}>
+          <h2 className="view-section-title" style={{ margin: 0 }}>{contentHeading}</h2>
+        </div>
+        {isReleasePage ? (
+          tracks.length === 0 ? (
+            <p className="os-type-body view-description view-content-empty">No tracks are published for this release yet.</p>
           ) : (
             <div className="view-tracklist">
               {tracks.map((track, index) => {
                 const active = currentTrack?.id === track.id;
+                const selected = selectedTrackId === track.id;
                 return (
-                  <div className="view-track-row" key={track.id}>
-                    <div className="view-track-number">{trackOrder(track) || index + 1}</div>
-                    <button
-                      className="view-track-play"
-                      type="button"
-                      disabled={!track.audio_url}
-                      aria-label={`${active && isPlaying ? 'Pause' : 'Play'} ${track.title}`}
-                      onClick={() => toggleReleaseTrack(track)}
-                    >
-                      {active && isPlaying ? 'II' : '>'}
-                    </button>
-                    <div className="view-track-title">{track.title}</div>
-                    <div className="view-track-duration">{formatTrackDuration(track.duration_seconds)}</div>
+                  <div
+                    className={selected ? 'view-track-row view-track-row-selected' : 'view-track-row'}
+                    key={track.id}
+                    onClick={() => setSelectedTrackId(track.id)}
+                    onContextMenu={event => openContextMenu(event, [
+                      { id: 'creator', label: 'View Creator', href: creatorTabLink },
+                      { id: 'share', label: 'Share Link', onSelect: () => shareTrackLink(track) },
+                    ])}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={event => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setSelectedTrackId(track.id);
+                      }
+                    }}
+                  >
+                    <div className="view-track-leading">
+                      <span className="view-track-number">{trackNumbers.get(track.id) ?? index + 1}</span>
+                      <button
+                        className="view-track-play"
+                        type="button"
+                        disabled={!track.audio_url}
+                        aria-label={`${active && isPlaying ? 'Pause' : 'Play'} ${track.title}`}
+                        onClick={event => {
+                          event.stopPropagation();
+                          toggleReleaseTrack(track);
+                        }}
+                      >
+                        <span className={active && isPlaying ? 'view-track-icon view-track-icon-pause' : 'view-track-icon view-track-icon-play'} aria-hidden="true" />
+                      </button>
+                    </div>
+                    <div className={active && isPlaying ? 'view-track-title view-track-title-active' : 'view-track-title'}>{track.title}</div>
+                    <div className="view-track-duration">{formatTrackDuration(getTrackDurationSeconds(track, inferredTrackDurations))}</div>
                   </div>
                 );
               })}
             </div>
-          )}
-        </div>
-      )}
+          )
+        ) : (
+          <p className="os-type-body view-description view-content-empty">
+            {productExperience === 'book'
+              ? 'Book sample support is the next product upload pass.'
+              : productExperience === 'asset'
+                ? 'Sample preview support is the next asset upload pass.'
+                : 'Product gallery support is the next merch upload pass.'}
+          </p>
+        )}
+      </div>
 
-      {/* Details */}
       <div className="view-section">
-        <h2 className="view-section-title">Details</h2>
+        <h2 className="view-section-title">Product Details</h2>
         <div>
-          <div className="view-row">
-            <span className="view-row-label">Creator</span>
-            <span className="view-row-value">{product.creators?.display_name || product.creator}</span>
-          </div>
-          <div className="view-row">
-            <span className="view-row-label">Type</span>
-            <span className="view-row-value">{product.product_type}</span>
-          </div>
-          <div className="view-row">
-            <span className="view-row-label">Access</span>
-            <span className="view-row-value">{accessLabel}</span>
-          </div>
-          <div className="view-row">
-            <span className="view-row-label">Status</span>
-            <span className="view-row-value">{owned ? 'Owned' : product.is_published ? 'Published' : 'Hidden'}</span>
-          </div>
+          {productDetails.map(detail => (
+            <div className="view-row" key={detail.label}>
+              <span className="view-row-label">{detail.label}</span>
+              <span className="view-row-value">{detail.value}</span>
+            </div>
+          ))}
         </div>
         {(product.tags ?? []).length > 0 && (
           <div className="app-tag-row" style={{ marginTop: 24 }}>
@@ -365,15 +441,12 @@ export function ProductStoreDetail({
         )}
       </div>
 
-      <ProductReviewsSection productId={product.id} canPost={owned} />
-
-      {/* Related */}
       {related.length > 0 && (
         <div className="view-section">
-          <div className="item-community-header" style={{ marginBottom: 16 }}>
-            <h2 className="view-section-title" style={{ margin: 0 }}>{isPhysicalMerch ? 'Related Merch' : `More from ${product.creators?.display_name || product.creator}`}</h2>
-            <Link className="os-button os-button-secondary os-button-compact" href={creatorReleasesLink}>
-              View All
+          <div className="item-community-header" style={{ marginBottom: 28 }}>
+            <h2 className="view-section-title" style={{ margin: 0 }}>More from {creatorDisplayName}</h2>
+            <Link className="os-button os-button-secondary os-button-compact" href={creatorMoreLink}>
+              View More
             </Link>
           </div>
           <ProductGrid>
@@ -381,6 +454,8 @@ export function ProductStoreDetail({
           </ProductGrid>
         </div>
       )}
+
+      <ProductReviewsSection productId={product.id} canPost={owned} />
 
       <AchievementToast toast={toast} onDone={() => setToast(null)} />
     </div>
@@ -399,8 +474,151 @@ function canSaveProductToLibrary(product: Product) {
 }
 
 function formatTrackDuration(seconds: number | null | undefined) {
-  if (!seconds || seconds <= 0) return '--:--';
+  if (!seconds || seconds <= 0) return '-:--';
   const minutes = Math.floor(seconds / 60);
   const remaining = Math.floor(seconds % 60).toString().padStart(2, '0');
   return `${minutes}:${remaining}`;
+}
+
+function getTrackDurationSeconds(track: ProductTrack, inferredDurations: Record<string, number>) {
+  return track.duration_seconds && track.duration_seconds > 0
+    ? track.duration_seconds
+    : inferredDurations[track.id] ?? null;
+}
+
+function getStoreHeroCopy(experience: ReturnType<typeof getProductExperience>) {
+  if (experience === 'music') {
+    return 'Add this release to your library for free or support the creator by purchasing a digital copy that includes unlimited high-quality downloads.';
+  }
+  if (experience === 'book') {
+    return 'Purchase a copy of this book to add it to your library. All purchases include unlimited downloads in ePub or PDF.';
+  }
+  if (experience === 'asset') {
+    return 'Purchase this asset pack to unlock the full download and keep it in your creative library.';
+  }
+  return 'Purchase this item to support the creator and keep it with your 44 collection.';
+}
+
+function resolveStoreActions({
+  product,
+  userSignedIn,
+  owned,
+  canClaimToLibrary,
+  hasDownloadUnlock,
+  libraryHref,
+  cartHasItem,
+  onAddToLibrary,
+  onAddToCart,
+}: {
+  product: Product;
+  userSignedIn: boolean;
+  owned: boolean;
+  canClaimToLibrary: boolean;
+  hasDownloadUnlock: boolean;
+  libraryHref: string;
+  cartHasItem: boolean;
+  onAddToLibrary: () => void;
+  onAddToCart: () => void;
+}) {
+  const experience = getProductExperience(product);
+  if (experience === 'music') {
+    return [
+      owned
+        ? { label: 'View in Library', href: libraryHref }
+        : userSignedIn
+          ? { label: 'Add to Library', onClick: onAddToLibrary }
+          : { label: 'Sign In to Save', href: '/login' },
+      hasDownloadUnlock
+        ? { label: 'View in Library', href: libraryHref, secondary: true }
+        : { label: 'Add to Cart', onClick: onAddToCart, secondary: true },
+    ];
+  }
+
+  if (experience === 'book') {
+    return [
+      { label: 'Read Sample', href: product.read_url || productStoreHref(product) },
+      canClaimToLibrary
+        ? owned
+          ? { label: 'View in Library', href: libraryHref, secondary: true }
+          : userSignedIn
+            ? { label: 'Add to Library', onClick: onAddToLibrary, secondary: true }
+            : { label: 'Sign In to Save', href: '/login', secondary: true }
+        : cartHasItem
+          ? { label: 'View Cart', href: '/cart', secondary: true }
+          : { label: 'Add to Cart', onClick: onAddToCart, secondary: true },
+    ];
+  }
+
+  return [
+    cartHasItem
+      ? { label: 'View Cart', href: '/cart' }
+      : { label: 'Add to Cart', onClick: onAddToCart },
+  ];
+}
+
+function getAboutHeading(product: Product) {
+  return 'Description';
+}
+
+function getContentHeading(product: Product) {
+  const experience = getProductExperience(product);
+  if (experience === 'music') return 'Tracklist';
+  if (experience === 'book') return 'Book Sample';
+  if (experience === 'asset') return product.product_type?.toLowerCase().includes('stem') ? 'Original Track' : 'Sample Preview';
+  return 'Product Gallery';
+}
+
+function buildProductDetails(product: Product, tracks: ProductTrack[], inferredDurations: Record<string, number> = {}) {
+  const experience = getProductExperience(product);
+  const creator = product.creators?.display_name || product.creator || '44 Creator';
+  const uploadDate = new Date(product.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  if (experience === 'music') {
+    const totalLengthSeconds = tracks.reduce((sum, track) => sum + (getTrackDurationSeconds(track, inferredDurations) ?? 0), 0);
+    return [
+      { label: 'Creator', value: creator },
+      { label: 'Product Type', value: product.product_type || 'Release' },
+      { label: 'Release Year', value: String(product.year ?? 'N/A') },
+      { label: 'Total Tracks', value: String(tracks.length) },
+      { label: 'Total Length', value: formatTrackDuration(totalLengthSeconds) },
+      { label: 'Download Size', value: 'Coming soon' },
+      { label: 'Upload Date', value: uploadDate },
+    ];
+  }
+  if (experience === 'book') {
+    return [
+      { label: 'Creator', value: creator },
+      { label: 'Book Type', value: product.product_type || 'Book' },
+      { label: 'Publication Year', value: String(product.year ?? 'N/A') },
+      { label: 'Total Pages', value: 'Coming soon' },
+      { label: 'Language', value: 'Coming soon' },
+      { label: 'Download Size', value: 'Coming soon' },
+      { label: 'Upload Date', value: uploadDate },
+    ];
+  }
+  if (experience === 'asset') {
+    return [
+      { label: 'Creator', value: creator },
+      { label: 'Asset Type', value: product.product_type || 'Asset' },
+      { label: 'Year', value: String(product.year ?? 'N/A') },
+      { label: 'Total Samples', value: 'Coming soon' },
+      { label: 'Sample Format', value: 'Coming soon' },
+      { label: 'Download Size', value: 'Coming soon' },
+      { label: 'Upload Date', value: uploadDate },
+    ];
+  }
+  return [
+    { label: 'Creator', value: creator },
+    { label: 'Product Type', value: product.product_type || 'Product' },
+    { label: 'Release Year', value: String(product.year ?? 'N/A') },
+    { label: 'Color', value: 'Coming soon' },
+    { label: 'Available Sizes', value: 'Coming soon' },
+    { label: 'Materials', value: 'Coming soon' },
+    { label: 'Upload Date', value: uploadDate },
+  ];
+}
+
+function creatorProfileTab(experience: ReturnType<typeof getProductExperience>) {
+  if (experience === 'book') return 'books';
+  if (experience === 'asset') return 'assets';
+  return 'music';
 }

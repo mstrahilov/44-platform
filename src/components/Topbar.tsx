@@ -52,6 +52,26 @@ const IconSignOut = () => (
 );
 
 const SEEN_NOTIF_KEY = '44-seen-notification-ids';
+const CURRENT_PATH_KEY = '44-current-path';
+const PREVIOUS_PATH_KEY = '44-previous-path';
+const SCROLL_PREFIX = '44-scroll:';
+
+function labelForPath(path: string | null | undefined) {
+  if (!path) return null;
+  if (path.startsWith('/library')) return 'Library';
+  if (path.startsWith('/store') || path.startsWith('/product') || path.startsWith('/cart')) return 'Store';
+  if (path.startsWith('/community')) return 'Community';
+  if (path.startsWith('/dashboard')) return 'Dashboard';
+  if (path.startsWith('/profile')) return 'Profile';
+  if (path.startsWith('/music')) return 'Music';
+  if (path.startsWith('/books')) return 'Books';
+  if (path.startsWith('/assets')) return 'Assets';
+  if (path.startsWith('/merch') || path.startsWith('/shop')) return 'Merch';
+  if (path.startsWith('/resources')) return 'Resources';
+  if (path.startsWith('/services') || path.startsWith('/service')) return 'Services';
+  if (path === '/' || path.startsWith('/home')) return 'Home';
+  return null;
+}
 
 function loadSeenIds(): Set<string> {
   if (typeof window === 'undefined') return new Set();
@@ -79,6 +99,7 @@ export function Topbar() {
   const [notifMenuOpen, setNotifMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [previousPath, setPreviousPath] = useState<string | null>(null);
   const userWrapRef = useRef<HTMLDivElement | null>(null);
   const notifWrapRef = useRef<HTMLDivElement | null>(null);
   const searchWrapRef = useRef<HTMLDivElement | null>(null);
@@ -114,6 +135,47 @@ export function Topbar() {
   useEffect(() => { setSeenIds(loadSeenIds()); }, []);
 
   useEffect(() => { setUserMenuOpen(false); setNotifMenuOpen(false); setSearchOpen(false); }, [pathname]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const pathWithQuery = `${pathname}${window.location.search}`;
+    const current = window.sessionStorage.getItem(CURRENT_PATH_KEY);
+    if (current && current !== pathWithQuery) {
+      window.sessionStorage.setItem(PREVIOUS_PATH_KEY, current);
+      setPreviousPath(current);
+    } else {
+      setPreviousPath(window.sessionStorage.getItem(PREVIOUS_PATH_KEY));
+    }
+    window.sessionStorage.setItem(CURRENT_PATH_KEY, pathWithQuery);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const pathWithQuery = `${pathname}${window.location.search}`;
+    const saved = window.sessionStorage.getItem(`${SCROLL_PREFIX}${pathWithQuery}`);
+    if (saved) {
+      const y = Number(saved);
+      if (Number.isFinite(y) && y > 0) {
+        window.requestAnimationFrame(() => window.scrollTo({ top: y, left: 0, behavior: 'auto' }));
+      }
+    }
+
+    let frame = 0;
+    function saveScroll() {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        window.sessionStorage.setItem(`${SCROLL_PREFIX}${pathWithQuery}`, String(window.scrollY));
+      });
+    }
+    window.addEventListener('scroll', saveScroll, { passive: true });
+    window.addEventListener('pagehide', saveScroll);
+    return () => {
+      saveScroll();
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', saveScroll);
+      window.removeEventListener('pagehide', saveScroll);
+    };
+  }, [pathname]);
 
   useEffect(() => {
     if (!searchOpen) return;
@@ -176,6 +238,7 @@ export function Topbar() {
   const avatarUrl = profile?.avatar_url ?? null;
   const profileHref = profile?.username ? `/profile/${profile.username}` : '/profile';
   const hasNewNotifications = notifications.some(n => !seenIds.has(n.id));
+  const backLabel = labelForPath(previousPath?.split('?')[0]) ?? back?.label ?? 'Back';
 
   async function handleSignOut() {
     setUserMenuOpen(false);
@@ -188,12 +251,22 @@ export function Topbar() {
     <div className="os-topbar">
       <div className="os-topbar-left">
         {!tabs && back && (
-          <Link href={back.href} className="os-topbar-back">
+          <button
+            type="button"
+            className="os-topbar-back"
+            onClick={() => {
+              if (typeof window !== 'undefined' && window.history.length > 1) {
+                router.back();
+                return;
+              }
+              router.push(back.href);
+            }}
+          >
             <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M13 5l-6 6 6 6"/>
             </svg>
-            {back.label ?? 'Back'}
-          </Link>
+            {backLabel}
+          </button>
         )}
         {tabs?.map(tab => {
           const className = tab.active ? 'os-topbar-tab os-topbar-tab-active' : 'os-topbar-tab';

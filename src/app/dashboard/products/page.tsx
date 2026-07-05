@@ -33,6 +33,8 @@ function DashboardProductsContent() {
   const [fetching, setFetching] = useState(true);
   const [status, setStatus] = useState('');
   const [statusKind, setStatusKind] = useState<'success' | 'error'>('success');
+  const [sortDrafts, setSortDrafts] = useState<Record<string, string>>({});
+  const [savingSortId, setSavingSortId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -52,8 +54,16 @@ function DashboardProductsContent() {
         .from('products')
         .select('*')
         .eq('author_id', profileId)
+        .order('sort_order', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false });
-      setProducts((productRows as Product[] | null) ?? []);
+      const nextProducts = (productRows as Product[] | null) ?? [];
+      setProducts(nextProducts);
+      setSortDrafts(
+        nextProducts.reduce<Record<string, string>>((acc, product) => {
+          acc[product.id] = String(product.sort_order ?? '');
+          return acc;
+        }, {}),
+      );
       setFetching(false);
     }
 
@@ -92,6 +102,40 @@ function DashboardProductsContent() {
     );
     setStatusKind('success');
     setStatus(nextPublished ? `${section.itemLabel.charAt(0).toUpperCase()}${section.itemLabel.slice(1)} published.` : `${section.itemLabel.charAt(0).toUpperCase()}${section.itemLabel.slice(1)} moved back to draft.`);
+  }
+
+  async function saveSortOrder(product: Product) {
+    if (!user) return;
+    const profileId = profile?.id ?? user.id;
+    const draftValue = sortDrafts[product.id] ?? '';
+    const parsedValue = draftValue.trim() === '' ? null : Number(draftValue);
+    if (draftValue.trim() !== '' && !Number.isFinite(parsedValue)) {
+      setStatusKind('error');
+      setStatus('Sort order must be a number.');
+      return;
+    }
+
+    setSavingSortId(product.id);
+    const { error } = await supabase
+      .from('products')
+      .update({ sort_order: parsedValue })
+      .eq('id', product.id)
+      .eq('author_id', profileId);
+
+    setSavingSortId(null);
+
+    if (error) {
+      setStatusKind('error');
+      setStatus(error.message);
+      return;
+    }
+
+    const nextProducts = products
+      .map(entry => (entry.id === product.id ? { ...entry, sort_order: parsedValue } : entry))
+      .sort((left, right) => (right.sort_order ?? Number.NEGATIVE_INFINITY) - (left.sort_order ?? Number.NEGATIVE_INFINITY));
+    setProducts(nextProducts);
+    setStatusKind('success');
+    setStatus('Sort order updated.');
   }
 
   const visibleProducts = useMemo(
@@ -158,6 +202,24 @@ function DashboardProductsContent() {
                 </div>
 
                 <div className="dashboard-row-actions">
+                  <label className="dashboard-field" style={{ minWidth: 120 }}>
+                    <div className="dashboard-field-label">Sort Order</div>
+                    <input
+                      className="os-input-field"
+                      value={sortDrafts[product.id] ?? ''}
+                      inputMode="numeric"
+                      onChange={event => setSortDrafts(current => ({ ...current, [product.id]: event.target.value.replace(/[^\d-]/g, '') }))}
+                      placeholder="Auto"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="os-button os-button-ghost os-button-compact"
+                    onClick={() => saveSortOrder(product)}
+                    disabled={savingSortId === product.id}
+                  >
+                    {savingSortId === product.id ? 'Saving…' : 'Save Order'}
+                  </button>
                   <Link href={`/dashboard/products/${product.id}`} className="os-button os-button-ghost os-button-compact">
                     Edit
                   </Link>

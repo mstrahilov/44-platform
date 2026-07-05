@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import type { CSSProperties, ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import type { Service, Resource, CommunityPost } from '@/lib/platform';
 import { communityThreadHref, creatorHref, resourceHref, serviceHref } from '@/lib/platform';
 import { useContextMenu } from '@/components/ContextMenu';
@@ -10,6 +10,10 @@ import { formatProductPrice } from '@/lib/products';
 import { getProductExperience, productStoreHref } from '@/lib/experience';
 import { getPostMetaLabel } from '@/lib/social';
 import { useAuth } from '@/lib/useAuth';
+import { COPY_TO_CLIPBOARD_TOAST_EVENT } from '@/components/ContextMenu';
+import { addToCart, removeFromCart, useCart } from '@/lib/cart';
+import { supabase } from '@/lib/supabase';
+import { isFreeLibraryClaim } from '@/lib/libraryContent';
 
 export function PageShell({ children }: { children: ReactNode }) {
   return <div className="view-hub">{children}</div>;
@@ -79,31 +83,84 @@ export function PanelListItem({
 export function ProductCard({ product, owned: _owned }: { product: Product; owned?: boolean }) {
   const { openContextMenu } = useContextMenu();
   const { user } = useAuth();
+  const cart = useCart();
   const href = productStoreHref(product);
   const image = product.cover_url || product.hero_url;
   const shape = getProductTileShape(product);
   const subtitle = getProductTileSubtitle(product);
+  const experience = getProductExperience(product);
+  const [owned, setOwned] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    async function loadOwned() {
+      if (!user) {
+        setOwned(false);
+        return;
+      }
+      const { data } = await supabase
+        .from('library_items')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('product_id', product.id)
+        .maybeSingle();
+      if (alive) setOwned(Boolean(data));
+    }
+    loadOwned();
+    return () => { alive = false; };
+  }, [product.id, user]);
+
+  async function addProductToLibrary() {
+    if (!user) return;
+    await supabase.from('library_items').upsert({
+      user_id: user.id,
+      product_id: product.id,
+      acquisition_type: 'free',
+    }, { onConflict: 'user_id,product_id' });
+    setOwned(true);
+  }
+
+  function copyShareLink() {
+    const url = typeof window !== 'undefined' ? new URL(href, window.location.origin) : null;
+    if (url && user?.id) url.searchParams.set('ref', user.id);
+    navigator.clipboard?.writeText(url?.toString() ?? href);
+    window.dispatchEvent(new CustomEvent(COPY_TO_CLIPBOARD_TOAST_EVENT, {
+      detail: { message: 'Link copied to clipboard' },
+    }));
+  }
+
+  const entries = [
+    { id: 'open', label: 'View Item', href },
+    { id: 'creator', label: 'View Creator', href: creatorHref(product.creators ?? product.creator) },
+    ...resolveProductActionEntries({
+      product,
+      experience,
+      userId: user?.id ?? null,
+      owned,
+      inCart: cart.has(product.id),
+      onAddToLibrary: addProductToLibrary,
+      onToggleCart: () => {
+        if (cart.has(product.id)) removeFromCart(product.id);
+        else addToCart({
+          product_id: product.id,
+          title: product.title,
+          creator: product.creators?.display_name || product.creator || '44 Creator',
+          cover_url: product.cover_url,
+          price_cents: product.price_cents,
+          currency: 'USD',
+          slug: product.slug ?? null,
+          href,
+        });
+      },
+    }),
+    { id: 'share', label: 'Share Link', onSelect: copyShareLink },
+  ];
+
   return (
     <Link
       href={href}
       className="product-tile"
-      onContextMenu={event =>
-        openContextMenu(event, [
-          { id: 'open', label: 'View Item', href },
-          ...(getProductExperience(product) === 'music'
-            ? [{
-                id: 'share',
-                label: 'Copy Share Link',
-                onSelect: () => {
-                  const url = typeof window !== 'undefined' ? new URL(href, window.location.origin) : null;
-                  if (url && user?.id) url.searchParams.set('ref', user.id);
-                  navigator.clipboard?.writeText(url?.toString() ?? href);
-                },
-              }]
-            : []),
-          { id: 'creator', label: 'View Creator', href: creatorHref(product.creators ?? product.creator) },
-        ])
-      }
+      onContextMenu={event => openContextMenu(event, entries)}
     >
       <div className={`product-tile-art product-tile-art-${shape}`}>
         {image && (
@@ -117,6 +174,63 @@ export function ProductCard({ product, owned: _owned }: { product: Product; owne
       </div>
     </Link>
   );
+}
+
+function resolveProductActionEntries({
+  product,
+  experience,
+  userId,
+  owned,
+  inCart,
+  onAddToLibrary,
+  onToggleCart,
+}: {
+  product: Product;
+  experience: ReturnType<typeof getProductExperience>;
+  userId: string | null;
+  owned: boolean;
+  inCart: boolean;
+  onAddToLibrary: () => Promise<void>;
+  onToggleCart: () => void;
+}) {
+  if (experience === 'music') {
+    if (owned) return [];
+    return [
+      {
+        id: 'library',
+        label: 'Add to Library',
+        onSelect: () => {
+          if (!userId) return;
+          void onAddToLibrary();
+        },
+        disabled: !userId,
+      },
+    ];
+  }
+
+  if (experience === 'physical' || (!product.is_free && !isFreeLibraryClaim(product))) {
+    return [
+      {
+        id: 'cart',
+        label: inCart ? 'Remove from Cart' : 'Add to Cart',
+        onSelect: onToggleCart,
+      },
+    ];
+  }
+
+  if (owned) return [];
+
+  return [
+    {
+      id: 'library',
+      label: 'Add to Library',
+      onSelect: () => {
+        if (!userId) return;
+        void onAddToLibrary();
+      },
+      disabled: !userId,
+    },
+  ];
 }
 
 function getProductTileShape(product: Product): 'square' | 'portrait' | 'book' | 'landscape' {
@@ -209,7 +323,6 @@ export function PostCard({ post }: { post: CommunityPost }) {
     >
       <div className="app-card-body">
         <span className="os-pill os-type-pill app-card-chip">{getPostMetaLabel(post)}</span>
-        <div className="app-card-title os-type-card-title">{post.title}</div>
         <div className="app-card-creator os-type-meta">by {post.creators?.name ?? '44 Community'}</div>
         <div className="app-card-desc os-type-body-small">{post.body}</div>
       </div>
@@ -242,7 +355,6 @@ export function ThreadRow({
           )}
           <span className="os-pill os-type-pill">{meta}</span>
         </div>
-        <div className="os-type-section-title" style={{ marginBottom: 8, fontSize: 'clamp(1.1rem, 1.2vw + 0.8rem, 1.7rem)' }}>{post.title}</div>
         <div className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', marginBottom: 10, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
           {post.body}
         </div>

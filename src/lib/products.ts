@@ -34,6 +34,7 @@ export interface Product {
   download_url?: string | null;
   status?: string | null;
   year?: number | null;
+  sort_order?: number | null;
   created_at: string;
   creators?: Pick<
     Profile,

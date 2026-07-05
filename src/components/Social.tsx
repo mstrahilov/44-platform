@@ -156,11 +156,12 @@ export function SocialPostRow({
   onDelete,
   canDelete = false,
   disabled,
-  showTitle = true,
+  showTitle = false,
   titleSize = 'default',
   handleOnly = true,
   meta,
   onReplyClick,
+  repliesOpen = false,
   rowClickable = true,
 }: {
   post: SocialPost;
@@ -178,6 +179,7 @@ export function SocialPostRow({
   handleOnly?: boolean;
   meta?: ReactNode;
   onReplyClick?: () => void;
+  repliesOpen?: boolean;
   rowClickable?: boolean;
 }) {
   const router = useRouter();
@@ -245,7 +247,13 @@ export function SocialPostRow({
         </div>
         <div className="social-actions" onClick={stopRowNavigation}>
           {onReplyClick ? (
-            <button type="button" className="social-action" onClick={onReplyClick} aria-label={`${replyCount} replies`}>
+            <button
+              type="button"
+              className={repliesOpen ? 'social-action social-action-open' : 'social-action'}
+              onClick={onReplyClick}
+              aria-label={`${replyCount} replies`}
+              aria-expanded={repliesOpen}
+            >
               <ChatBubbleIcon />
               {replyCount > 0 && <span className="social-action-count">{replyCount}</span>}
             </button>

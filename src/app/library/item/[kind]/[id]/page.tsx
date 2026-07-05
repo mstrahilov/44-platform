@@ -190,6 +190,7 @@ function ProductLibraryDetail({
   const [localUnlockedAchievementIds, setLocalUnlockedAchievementIds] = useState(unlockedAchievementIds);
   const [playedTrackIds, setPlayedTrackIds] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<AchievementToastData | null>(null);
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
 
   useEffect(() => { Promise.resolve().then(() => setPlayedTrackIds(new Set())); }, [product.id]);
   useEffect(() => { Promise.resolve().then(() => setLocalUnlockedAchievementIds(unlockedAchievementIds)); }, [unlockedAchievementIds]);
@@ -229,6 +230,7 @@ function ProductLibraryDetail({
     }
 
     playQueue(musicQueue, 0);
+    setSelectedTrackId(musicQueue[0]?.id ?? null);
     setPlayedTrackIds(current => {
       const next = new Set(current);
       next.add(musicQueue[0].id);
@@ -268,6 +270,10 @@ function ProductLibraryDetail({
   const heroImage = product.hero_url || product.cover_url;
   const description = product.long_description || product.short_description || '';
   const content = getProductLibraryContent(product);
+  const trackNumbers = useMemo(
+    () => new Map(tracks.map((track, index) => [track.id, track.number ?? index + 1])),
+    [tracks],
+  );
 
   return (
     <div className="view-detail-single library-detail-page">
@@ -318,18 +324,36 @@ function ProductLibraryDetail({
           <h2 className="view-section-title">Tracklist</h2>
           <div className="view-tracklist">
             {tracks.map((track, index) => (
-              <div className="view-track-row" key={track.id}>
-                <span className="view-track-number">{String(index + 1).padStart(2, '0')}</span>
-                <button
-                  type="button"
-                  className="view-track-play"
-                  aria-label={`${currentTrack?.id === track.id && isPlaying ? 'Pause' : 'Play'} ${track.title}`}
-                  onClick={() => toggleTrack(track)}
-                  disabled={!track.audio_url}
-                >
-                  <span className={currentTrack?.id === track.id && isPlaying ? 'view-track-icon view-track-icon-pause' : 'view-track-icon view-track-icon-play'} aria-hidden="true" />
-                </button>
-                <span className="view-track-title">{track.title}</span>
+              <div
+                className={selectedTrackId === track.id ? 'view-track-row view-track-row-selected' : 'view-track-row'}
+                key={track.id}
+                onClick={() => setSelectedTrackId(track.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={event => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    setSelectedTrackId(track.id);
+                  }
+                }}
+              >
+                <div className="view-track-leading">
+                  <span className="view-track-number">{String(trackNumbers.get(track.id) ?? index + 1).padStart(2, '0')}</span>
+                  <button
+                    type="button"
+                    className="view-track-play"
+                    aria-label={`${currentTrack?.id === track.id && isPlaying ? 'Pause' : 'Play'} ${track.title}`}
+                    onClick={event => {
+                      event.stopPropagation();
+                      setSelectedTrackId(track.id);
+                      void toggleTrack(track);
+                    }}
+                    disabled={!track.audio_url}
+                  >
+                    <span className={currentTrack?.id === track.id && isPlaying ? 'view-track-icon view-track-icon-pause' : 'view-track-icon view-track-icon-play'} aria-hidden="true" />
+                  </button>
+                </div>
+                <span className={currentTrack?.id === track.id && isPlaying ? 'view-track-title view-track-title-active' : 'view-track-title'}>{track.title}</span>
                 <span className="view-track-duration">{formatDuration(track.duration_seconds)}</span>
               </div>
             ))}

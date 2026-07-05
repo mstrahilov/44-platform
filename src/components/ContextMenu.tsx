@@ -21,6 +21,8 @@ import {
   type ReactNode,
 } from 'react';
 
+export const COPY_TO_CLIPBOARD_TOAST_EVENT = '44:copy-to-clipboard-toast';
+
 export type ContextMenuEntry =
   | {
       kind?: 'item';
@@ -41,6 +43,7 @@ type ContextMenuValue = {
     entries: ContextMenuEntry[],
   ) => void;
   closeContextMenu: () => void;
+  showCopiedToast: (message?: string) => void;
 };
 
 const ContextMenuContext = createContext<ContextMenuValue | null>(null);
@@ -53,10 +56,14 @@ export function useContextMenu(): ContextMenuValue {
 
 export function ContextMenuProvider({ children }: { children: ReactNode }) {
   const [menu, setMenu] = useState<MenuState | null>(null);
+  const [copiedToast, setCopiedToast] = useState('');
   const menuRef = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
 
   const closeContextMenu = useCallback(() => setMenu(null), []);
+  const showCopiedToast = useCallback((message = 'Link copied to clipboard') => {
+    setCopiedToast(message);
+  }, []);
 
   const openContextMenu = useCallback<ContextMenuValue['openContextMenu']>((event, entries) => {
     event.preventDefault();
@@ -105,8 +112,23 @@ export function ContextMenuProvider({ children }: { children: ReactNode }) {
     if (x !== menu.x || y !== menu.y) setMenu(current => (current ? { ...current, x, y } : current));
   }, [menu]);
 
+  useEffect(() => {
+    if (!copiedToast) return;
+    const timeout = window.setTimeout(() => setCopiedToast(''), 1600);
+    return () => window.clearTimeout(timeout);
+  }, [copiedToast]);
+
+  useEffect(() => {
+    function onToast(event: Event) {
+      const detail = (event as CustomEvent<{ message?: string }>).detail;
+      showCopiedToast(detail?.message);
+    }
+    window.addEventListener(COPY_TO_CLIPBOARD_TOAST_EVENT, onToast);
+    return () => window.removeEventListener(COPY_TO_CLIPBOARD_TOAST_EVENT, onToast);
+  }, [showCopiedToast]);
+
   return (
-    <ContextMenuContext.Provider value={{ openContextMenu, closeContextMenu }}>
+    <ContextMenuContext.Provider value={{ openContextMenu, closeContextMenu, showCopiedToast }}>
       {children}
       {menu && (
         <div
@@ -142,6 +164,11 @@ export function ContextMenuProvider({ children }: { children: ReactNode }) {
               </button>
             ),
           )}
+        </div>
+      )}
+      {copiedToast && (
+        <div className="os-popover os-copy-toast" role="status" aria-live="polite">
+          {copiedToast}
         </div>
       )}
     </ContextMenuContext.Provider>

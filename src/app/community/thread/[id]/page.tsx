@@ -23,7 +23,6 @@ import {
   authorDisplayName,
   authorHref,
   compactDate,
-  getPostMetaLabel,
   likersByPost,
   type LikeRow,
   type SocialLiker,
@@ -101,7 +100,7 @@ export default function CommunityThreadPage() {
           .select('*, authors:profiles!author_id(id, slug, display_name, username, avatar_url)')
           .eq('post_id', post.id)
           .eq('status', 'published')
-          .order('created_at', { ascending: true }),
+          .order('created_at', { ascending: false }),
         supabase
           .from('post_likes')
           .select('post_id, profile_id, profiles:profiles!profile_id(id, display_name, username, avatar_url)')
@@ -198,7 +197,10 @@ export default function CommunityThreadPage() {
       if (!childrenMap.has(ancestor.id)) childrenMap.set(ancestor.id, []);
       childrenMap.get(ancestor.id)!.push(r);
     });
-    return tops.map(top => ({ top, children: childrenMap.get(top.id) ?? [] }));
+    const byNewest = (a: SocialReply, b: SocialReply) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    return tops
+      .sort(byNewest)
+      .map(top => ({ top, children: (childrenMap.get(top.id) ?? []).sort(byNewest) }));
   }, [replies]);
 
   const canInteract = hasCommunityIdentity(profile);
@@ -418,13 +420,11 @@ export default function CommunityThreadPage() {
               disabled={liking}
               titleSize="lg"
               handleOnly={false}
-              meta={getPostMetaLabel(thread)}
               rowClickable={false}
             />
             {replyComposerOpen && (
               user && canInteract ? (
                 <form className="social-composer social-composer-inline-surface" onSubmit={submitReply}>
-                  <SocialAvatar profile={profile} />
                   <div className="social-composer-box">
                     <textarea
                       className="os-input-textarea"
@@ -448,7 +448,6 @@ export default function CommunityThreadPage() {
                 </form>
               ) : user ? (
                 <div className="social-composer social-composer-inline-surface">
-                  <SocialAvatar profile={profile} />
                   <div className="social-composer-actions">
                     <div className="social-note os-type-body">Finish your community profile to reply and like posts.</div>
                     <button type="button" className="os-button os-button-primary os-button-compact" onClick={() => setSetupGateOpen(true)}>Finish Setup</button>
@@ -456,7 +455,6 @@ export default function CommunityThreadPage() {
                 </div>
               ) : (
                 <div className="social-composer social-composer-inline-surface">
-                  <SocialAvatar profile={null} />
                   <div className="social-composer-actions">
                     <div className="social-note os-type-body">Sign in to join this conversation.</div>
                     <Link href="/login" className="os-button os-button-primary os-button-compact">Sign In</Link>
@@ -473,7 +471,6 @@ export default function CommunityThreadPage() {
                   top={top}
                   children={children}
                   currentUserId={user?.id ?? null}
-                  currentProfile={profile}
                   canInteract={canInteract}
                   replyingTo={replyingTo}
                   onOpenReply={id => requireCommunityInteraction(() => { setReplyingTo(id); setInlineBody(''); })}
@@ -504,7 +501,6 @@ function ReplyBranch({
   top,
   children,
   currentUserId,
-  currentProfile,
   canInteract,
   replyingTo,
   onOpenReply,
@@ -524,7 +520,6 @@ function ReplyBranch({
   top: SocialReply;
   children: SocialReply[];
   currentUserId: string | null;
-  currentProfile: StudioProfile | null;
   canInteract: boolean;
   replyingTo: string | null;
   onOpenReply: (id: string) => void;
@@ -542,7 +537,7 @@ function ReplyBranch({
   onBlockedInteraction: () => void;
 }) {
   return (
-    <>
+    <div className="social-reply-branch">
       <ReplyRow
         reply={top}
         canInteract={canInteract}
@@ -557,7 +552,6 @@ function ReplyBranch({
       />
       {replyingTo === top.id && (
         <InlineReplyForm
-          currentProfile={currentProfile}
           value={inlineBody}
           onChange={onInlineChange}
           onCancel={onCancelReply}
@@ -582,7 +576,6 @@ function ReplyBranch({
           />
           {replyingTo === child.id && (
             <InlineReplyForm
-              currentProfile={currentProfile}
               value={inlineBody}
               onChange={onInlineChange}
               onCancel={onCancelReply}
@@ -592,7 +585,7 @@ function ReplyBranch({
           )}
         </div>
       ))}
-    </>
+    </div>
   );
 }
 
@@ -666,7 +659,6 @@ function ReplyRow({
 }
 
 function InlineReplyForm({
-  currentProfile,
   value,
   onChange,
   onCancel,
@@ -674,7 +666,6 @@ function InlineReplyForm({
   submitting,
   nested,
 }: {
-  currentProfile: StudioProfile | null;
   value: string;
   onChange: (value: string) => void;
   onCancel: () => void;
@@ -688,7 +679,6 @@ function InlineReplyForm({
       onSubmit={onSubmit}
       style={nested ? { marginLeft: 62 } : undefined}
     >
-      <SocialAvatar profile={currentProfile} />
       <div className="social-inline-composer-box">
         <textarea
           className="os-input-textarea"

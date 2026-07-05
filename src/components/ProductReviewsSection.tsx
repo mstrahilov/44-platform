@@ -37,7 +37,6 @@ export function ProductReviewsSection({
   const { user } = useAuth();
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [composerOpen, setComposerOpen] = useState(false);
-  const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -70,7 +69,6 @@ export function ProductReviewsSection({
 
   useEffect(() => {
     if (!ownReview || composerOpen) return;
-    setTitle(ownReview.title ?? '');
     setBody(ownReview.body ?? '');
   }, [composerOpen, ownReview]);
 
@@ -90,7 +88,7 @@ export function ProductReviewsSection({
       .upsert({
         user_id: user.id,
         product_id: productId,
-        title: title.trim() || null,
+        title: null,
         body: body.trim(),
         sentiment: 'recommended',
         status: 'published',
@@ -115,8 +113,8 @@ export function ProductReviewsSection({
 
   return (
     <div className="view-section">
-      <div className="item-community-header" style={{ marginBottom: 16 }}>
-        <h2 className="view-section-title" style={{ margin: 0 }}>Reviews</h2>
+      <div className="item-community-header" style={{ marginBottom: 28 }}>
+        <h2 className="view-section-title" style={{ margin: 0 }}>Community Reviews</h2>
         <button
           type="button"
           className="os-button os-button-secondary os-button-compact"
@@ -136,14 +134,6 @@ export function ProductReviewsSection({
       {composerOpen && canPost && (
         <div className="dashboard-list-surface item-community-surface" style={{ marginBottom: 16 }}>
           <form className="item-community-composer item-community-composer-surface" onSubmit={submitReview}>
-            <input
-              type="text"
-              value={title}
-              onChange={event => setTitle(event.target.value)}
-              placeholder="Review headline"
-              className="item-community-composer-title"
-              disabled={saving}
-            />
             <textarea
               value={body}
               onChange={event => setBody(event.target.value)}
@@ -166,29 +156,35 @@ export function ProductReviewsSection({
 
       {error && <div className="dashboard-status dashboard-status-error" style={{ marginBottom: 16 }}>{error}</div>}
 
-      <div className="dashboard-list-surface item-community-surface">
-        {reviews.length === 0 ? (
-          <div className="dashboard-empty">No reviews yet.</div>
-        ) : (
-          reviews.map(review => {
+      {reviews.length === 0 ? (
+        <p className="os-type-body view-description view-content-empty">No reviews yet.</p>
+      ) : (
+        <div className="dashboard-list-surface item-community-surface product-review-list-surface">
+          {reviews.map(review => {
             const reviewer = resolveReviewer(review);
             return (
             <article key={review.id} className="product-review-row">
               <div className="product-domain-head">
-                <div>
-                  <h3 className="os-type-card-title">{review.title || 'Recommended'}</h3>
-                  <Link href={creatorHref(reviewer ?? null)} className="os-type-meta product-domain-meta-link">
-                    {reviewer?.display_name || reviewer?.username || '44 Member'}
+                <div className="product-review-copy">
+                  <Link href={creatorHref(reviewer ?? null)} className="product-review-author">
+                    <span className="product-review-avatar">
+                      {reviewer?.avatar_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={reviewer.avatar_url} alt="" />
+                      ) : (
+                        <span>{(reviewer?.display_name || reviewer?.username || '44').slice(0, 2).toUpperCase()}</span>
+                      )}
+                    </span>
+                    <span>{reviewer?.display_name || reviewer?.username || '44 Member'}</span>
                   </Link>
                 </div>
-                <span className="os-pill os-status-owned">Recommended</span>
               </div>
               <p className="os-type-body product-domain-body">{review.body}</p>
             </article>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -9,7 +9,7 @@ import type { StoreCategory } from '@/lib/storeRoutes';
 import { supabase } from '@/lib/supabase';
 
 const STORE_TABS: Array<{ id: StoreCategory; label: string; href: string }> = [
-  { id: 'all', label: 'All', href: '/store' },
+  { id: 'all', label: 'Discover', href: '/store' },
   { id: 'music', label: 'Music', href: '/store/music' },
   { id: 'books', label: 'Books', href: '/store/books' },
   { id: 'assets', label: 'Assets', href: '/store/assets' },
@@ -25,28 +25,28 @@ const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
 
 const CATEGORY_COPY: Record<StoreCategory, { title: string; copy: string; empty: string }> = {
   all: {
-    title: 'Store',
-    copy: 'Browse music, books, assets, and merch from creators on 44.',
+    title: 'Discover',
+    copy: 'Explore music, books, assets, and merch from our community.',
     empty: 'No items are published yet.',
   },
   music: {
     title: 'Music',
-    copy: 'Stream releases for free. Buying music unlocks downloads.',
+    copy: 'Explore the latest music releases from our community.',
     empty: 'No music releases are published yet.',
   },
   books: {
     title: 'Books',
-    copy: 'Digital books, lyric books, novels, and artbooks from creators on 44.',
+    copy: 'Explore art books, poetry, and short stories from our community.',
     empty: 'No books are published yet.',
   },
   assets: {
     title: 'Assets',
-    copy: 'Sample packs, remix stems, templates, presets, and creative tools.',
+    copy: 'Explore sample packs, remix stems, and other creative tools from our community.',
     empty: 'No assets are published yet.',
   },
   merch: {
     title: 'Merch',
-    copy: 'Physical goods from creators and 44.',
+    copy: 'Explore apparel, accessories and other goods from our community.',
     empty: 'No merch is published yet.',
   },
 };
@@ -69,6 +69,7 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
         .from('products')
         .select('*, creators:profiles!author_id(*)')
         .eq('is_published', true)
+        .order('sort_order', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false })
         .limit(160);
 
@@ -98,6 +99,8 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
 
   if (category === 'all') {
     const musicProducts = products.filter(product => getProductExperience(product) === 'music').slice(0, 8);
+    const bookProducts = products.filter(product => getProductExperience(product) === 'book').slice(0, 8);
+    const assetProducts = products.filter(product => getProductExperience(product) === 'asset').slice(0, 8);
     const apparelProducts = products.filter(product => getProductExperience(product) === 'physical').slice(0, 8);
 
     return (
@@ -116,6 +119,28 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
                 ) : (
                   <ProductGrid>
                     {musicProducts.map(product => (
+                      <ProductCard key={product.id} product={product} />
+                    ))}
+                  </ProductGrid>
+                )}
+              </HubSection>
+              <HubSection title="Explore Books" href="/store/books">
+                {bookProducts.length === 0 ? (
+                  <EmptyMessage>No books are published yet.</EmptyMessage>
+                ) : (
+                  <ProductGrid>
+                    {bookProducts.map(product => (
+                      <ProductCard key={product.id} product={product} />
+                    ))}
+                  </ProductGrid>
+                )}
+              </HubSection>
+              <HubSection title="Explore Assets" href="/store/assets">
+                {assetProducts.length === 0 ? (
+                  <EmptyMessage>No assets are published yet.</EmptyMessage>
+                ) : (
+                  <ProductGrid>
+                    {assetProducts.map(product => (
                       <ProductCard key={product.id} product={product} />
                     ))}
                   </ProductGrid>

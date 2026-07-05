@@ -142,6 +142,7 @@ function OwnedMusicRelease({
   const [completedTrackIds, setCompletedTrackIds] = useState<Set<string>>(new Set());
   const [noSkipsEligible, setNoSkipsEligible] = useState(false);
   const [fullReleaseHandled, setFullReleaseHandled] = useState(false);
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [toast, setToast] = useState<AchievementToastData | null>(null);
   const downloadsUnlocked = row.acquisition_type === 'purchase';
 
@@ -180,6 +181,7 @@ function OwnedMusicRelease({
       setNoSkipsEligible(true);
       setFullReleaseHandled(false);
     }
+    setSelectedTrackId(track.id);
     togglePlayerTrack(musicQueue, trackIndex);
   }
 
@@ -190,6 +192,7 @@ function OwnedMusicRelease({
     }
 
     playQueue(musicQueue, 0);
+    setSelectedTrackId(musicQueue[0]?.id ?? null);
     setCompletedTrackIds(new Set());
     setNoSkipsEligible(true);
     setFullReleaseHandled(false);
@@ -322,18 +325,35 @@ function OwnedMusicRelease({
         {tracks.length > 0 ? (
           <div className="view-tracklist">
             {tracks.map((track, index) => (
-              <div className="view-track-row" key={track.id}>
-                <span className="view-track-number">{String(index + 1).padStart(2, '0')}</span>
-                <button
-                  type="button"
-                  className="view-track-play"
-                  aria-label={`${currentTrack?.id === track.id && isPlaying ? 'Pause' : 'Play'} ${track.title}`}
-                  onClick={() => toggleTrack(track)}
-                  disabled={!track.audio_url}
-                >
-                  <span className={currentTrack?.id === track.id && isPlaying ? 'view-track-icon view-track-icon-pause' : 'view-track-icon view-track-icon-play'} aria-hidden="true" />
-                </button>
-                <span className="view-track-title">{track.title}</span>
+              <div
+                className={selectedTrackId === track.id ? 'view-track-row view-track-row-selected' : 'view-track-row'}
+                key={track.id}
+                onClick={() => setSelectedTrackId(track.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={event => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    setSelectedTrackId(track.id);
+                  }
+                }}
+              >
+                <div className="view-track-leading">
+                  <span className="view-track-number">{String(index + 1).padStart(2, '0')}</span>
+                  <button
+                    type="button"
+                    className="view-track-play"
+                    aria-label={`${currentTrack?.id === track.id && isPlaying ? 'Pause' : 'Play'} ${track.title}`}
+                    onClick={event => {
+                      event.stopPropagation();
+                      toggleTrack(track);
+                    }}
+                    disabled={!track.audio_url}
+                  >
+                    <span className={currentTrack?.id === track.id && isPlaying ? 'view-track-icon view-track-icon-pause' : 'view-track-icon view-track-icon-play'} aria-hidden="true" />
+                  </button>
+                </div>
+                <span className={currentTrack?.id === track.id && isPlaying ? 'view-track-title view-track-title-active' : 'view-track-title'}>{track.title}</span>
                 <span className="view-track-duration">{formatDuration(track.duration_seconds)}</span>
               </div>
             ))}

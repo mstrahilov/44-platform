@@ -212,6 +212,7 @@ function NewProductContent() {
     const localPriceNumber = Number(localPrice || '0');
     const localPriceCents = localPrice.trim() && Number.isFinite(localPriceNumber) ? Math.max(0, Math.round(localPriceNumber * 100)) : null;
     const slug = buildSlug(cleanTitle);
+    const sortOrder = Date.now();
 
     const insertPayload = {
       author_id: profile?.id ?? user.id,
@@ -240,6 +241,7 @@ function NewProductContent() {
       status: 'draft',
       is_published: false,
       year: year ? Number(year) : null,
+      sort_order: sortOrder,
     };
 
     let { data: insertedProduct, error: insertError } = await supabase

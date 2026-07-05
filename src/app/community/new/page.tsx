@@ -11,8 +11,13 @@ import { normalizeTaxonomyValue } from '@/lib/taxonomy';
 import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 
-function buildSlug(title: string) {
-  const base = normalizeTaxonomyValue(title) || 'thread';
+function buildPostTitle(body: string) {
+  const cleanBody = body.trim().replace(/\s+/g, ' ');
+  return cleanBody.slice(0, 72) || 'New post';
+}
+
+function buildSlug(body: string) {
+  const base = normalizeTaxonomyValue(buildPostTitle(body)) || 'thread';
   return `${base}-${crypto.randomUUID().slice(0, 8)}`;
 }
 
@@ -27,7 +32,6 @@ export default function NewCommunityThreadPage() {
 function NewCommunityThreadContent() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [saving, setSaving] = useState(false);
@@ -55,8 +59,8 @@ function NewCommunityThreadContent() {
       setSetupGateOpen(true);
       return;
     }
-    if (!title.trim() || !body.trim()) {
-      setError('Please add both a title and a message.');
+    if (!body.trim()) {
+      setError('Please add a message.');
       return;
     }
 
@@ -68,8 +72,8 @@ function NewCommunityThreadContent() {
       .insert({
         author_id: user.id,
         category_id: null,
-        slug: buildSlug(title),
-        title: title.trim(),
+        slug: buildSlug(body),
+        title: buildPostTitle(body),
         body: body.trim(),
         post_type: 'general',
         status: 'published',
@@ -105,17 +109,6 @@ function NewCommunityThreadContent() {
 
         <div className="dashboard-list-surface" style={{ padding: 'var(--os-space-6, 28px)' }}>
           <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 20 }}>
-            <label>
-              <div className="os-type-card-title" style={{ marginBottom: 8 }}>Title</div>
-              <input
-                className="os-input-field os-input-large"
-                value={title}
-                onChange={event => setTitle(event.target.value)}
-                placeholder="What do you want to talk about?"
-                style={{ width: '100%' }}
-              />
-            </label>
-
             <label>
               <div className="os-type-card-title" style={{ marginBottom: 8 }}>Message</div>
               <textarea
