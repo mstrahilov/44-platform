@@ -16,6 +16,8 @@ import { SocialArtifactCard, SocialAvatar, SocialPostRow } from '@/components/So
 import { getOwnershipKeys, isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { useTopbarBack, useTopbarTabs } from '@/components/TopbarContext';
 import { authorHandle, countById, isGeneralPost, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type ReplyEngagerRow, type SocialPost } from '@/lib/social';
+import { useContextMenu } from '@/components/ContextMenu';
+import { pinDockItem } from '@/lib/dockPreferences';
 import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { isMissingRelationError } from '@/lib/schemaCompat';
 import { createOrOpenConversation } from '@/lib/messages';
@@ -55,6 +57,7 @@ export default function PublicProfilePage() {
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [setupGateOpen, setSetupGateOpen] = useState(false);
+  const { openContextMenu } = useContextMenu();
 
   useEffect(() => {
     async function loadProfilePage() {
@@ -300,6 +303,7 @@ export default function PublicProfilePage() {
 
   const displayName = profile?.display_name ?? profile?.username ?? 'Member';
   const handle = authorHandle(profile ?? undefined);
+  const profileHref = profile ? `/profile/${profile.slug || profile.username || profile.id}` : '/community';
   if (loading) {
     return <PageShell><CenteredMessage>Loading...</CenteredMessage></PageShell>;
   }
@@ -320,7 +324,24 @@ export default function PublicProfilePage() {
         <section className="social-profile-head">
           <div className="social-profile-main">
             <div className="social-profile-identity">
-              <SocialAvatar profile={profile} size="large" />
+              <button
+                type="button"
+                className="social-profile-avatar-button"
+                aria-label={`Pin or view ${displayName}`}
+                onContextMenu={event => openContextMenu(event, [
+                  { id: 'open-profile', label: 'View Creator', href: profileHref },
+                  { id: 'pin-profile', label: 'Pin to Dock', onSelect: () => pinDockItem({
+                    id: `profile:${profile.id}`,
+                    label: displayName,
+                    href: profileHref,
+                    iconClass: 'os-icon-user',
+                    kind: 'profile',
+                    imageUrl: profile.avatar_url ?? null,
+                  }) },
+                ])}
+              >
+                <SocialAvatar profile={profile} size="large" />
+              </button>
               <div className="social-profile-text">
                 <h1 className="social-profile-name">{displayName}</h1>
                 {handle && <div className="social-handle">@{handle}</div>}

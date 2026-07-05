@@ -14,6 +14,7 @@ import {
   SocialEngagementRow,
   SocialHeartIcon,
   SocialPostRow,
+  SocialRichText,
   SocialTrashIcon,
 } from '@/components/Social';
 import { useTopbarBack } from '@/components/TopbarContext';
@@ -619,7 +620,7 @@ function ReplyRow({
       </Link>
       <div className="social-row-main">
         <SocialAuthorLine author={reply.authors} createdAt={reply.created_at} handleOnly />
-        <p className="social-row-body">{reply.body}</p>
+        <p className="social-row-body"><SocialRichText text={reply.body} /></p>
         <div className="social-actions">
           <button
             type="button"

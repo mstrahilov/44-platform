@@ -36,6 +36,7 @@ type MusicPlayerContextValue = {
   playbackError: string;
   playQueue: (tracks: MusicQueueTrack[], index?: number) => void;
   toggleTrack: (tracks: MusicQueueTrack[], index: number) => void;
+  queueNext: (track: MusicQueueTrack) => void;
   togglePlayback: () => void;
   playNext: () => void;
   playPrevious: () => void;
@@ -197,6 +198,21 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     startTrack(nextQueue, index, 'manual');
   }
 
+  function queueNext(track: MusicQueueTrack) {
+    if (!track.audioUrl) return;
+    const currentQueue = queueRef.current;
+    if (currentIndexRef.current < 0 || currentQueue.length === 0) {
+      startTrack([track], 0, 'queue');
+      return;
+    }
+
+    const nextQueue = currentQueue.filter(item => item.id !== track.id);
+    nextQueue.splice(currentIndexRef.current + 1, 0, track);
+    queueRef.current = nextQueue;
+    setQueue(nextQueue);
+    setPlaybackError('');
+  }
+
   function togglePlayback() {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
@@ -273,6 +289,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     playbackError,
     playQueue,
     toggleTrack,
+    queueNext,
     togglePlayback,
     playNext,
     playPrevious,

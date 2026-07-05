@@ -52,7 +52,7 @@ export function ProductStoreDetail({
   const router = useRouter();
   const searchParams = useSearchParams();
   const cart = useCart();
-  const { currentTrack, isPlaying, playQueue, toggleTrack } = useMusicPlayer();
+  const { currentTrack, isPlaying, playQueue, toggleTrack, queueNext } = useMusicPlayer();
   const { openContextMenu } = useContextMenu();
   const [product, setProduct] = useState<Product | null>(null);
   const [tracks, setTracks] = useState<ProductTrack[]>([]);
@@ -273,6 +273,12 @@ export function ProductStoreDetail({
     }
   }
 
+  function queueReleaseTrackNext(track: ProductTrack) {
+    if (!track.audio_url) return;
+    const nextTrack = playableTracks.find(item => item.id === track.id);
+    if (nextTrack) queueNext(nextTrack);
+  }
+
   function shareTrackLink(track: ProductTrack) {
     if (!product) return;
     const url = typeof window !== 'undefined' ? new URL(productStoreHref(product), window.location.origin) : null;
@@ -377,6 +383,9 @@ export function ProductStoreDetail({
                     key={track.id}
                     onClick={() => setSelectedTrackId(track.id)}
                     onContextMenu={event => openContextMenu(event, [
+                      { id: 'play', label: 'Play', onSelect: () => toggleReleaseTrack(track), disabled: !track.audio_url },
+                      { id: 'play-next', label: 'Play Next', onSelect: () => queueReleaseTrackNext(track), disabled: !track.audio_url },
+                      { kind: 'divider', id: 'track-actions' },
                       { id: 'creator', label: 'View Creator', href: creatorTabLink },
                       { id: 'share', label: 'Share Link', onSelect: () => shareTrackLink(track) },
                     ])}
@@ -580,7 +589,6 @@ function buildProductDetails(product: Product, tracks: ProductTrack[], inferredD
       { label: 'Release Year', value: String(product.year ?? 'N/A') },
       { label: 'Total Tracks', value: String(tracks.length) },
       { label: 'Total Length', value: formatTrackDuration(totalLengthSeconds) },
-      { label: 'Download Size', value: 'Coming soon' },
       { label: 'Upload Date', value: uploadDate },
     ];
   }
@@ -591,7 +599,6 @@ function buildProductDetails(product: Product, tracks: ProductTrack[], inferredD
       { label: 'Publication Year', value: String(product.year ?? 'N/A') },
       { label: 'Total Pages', value: 'Coming soon' },
       { label: 'Language', value: 'Coming soon' },
-      { label: 'Download Size', value: 'Coming soon' },
       { label: 'Upload Date', value: uploadDate },
     ];
   }
@@ -602,7 +609,6 @@ function buildProductDetails(product: Product, tracks: ProductTrack[], inferredD
       { label: 'Year', value: String(product.year ?? 'N/A') },
       { label: 'Total Samples', value: 'Coming soon' },
       { label: 'Sample Format', value: 'Coming soon' },
-      { label: 'Download Size', value: 'Coming soon' },
       { label: 'Upload Date', value: uploadDate },
     ];
   }

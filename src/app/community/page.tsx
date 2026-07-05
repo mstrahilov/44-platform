@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { PageShell } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
@@ -12,6 +12,8 @@ import {
   SocialEngagementRow,
   SocialHeartIcon,
   SocialPostRow,
+  SocialRichText,
+  SocialTrashIcon,
 } from '@/components/Social';
 import { useCommunityTopbarTabs } from '@/components/CommunityTopbarTabs';
 import { hasCommunityIdentity } from '@/lib/communityProfile';
@@ -27,6 +29,40 @@ type ReplyLikeRow = {
   profile_id: string;
   profiles?: SocialLiker | null;
 };
+type MentionProfile = {
+  id: string;
+  username: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+};
+
+const COMMUNITY_COPY: Record<'feed' | 'following' | 'questions' | 'collaboration' | 'topic', { title: string; copy: string; empty: string }> = {
+  feed: {
+    title: 'Community',
+    copy: 'General posts from the 44 community.',
+    empty: 'No posts yet.',
+  },
+  following: {
+    title: 'Following',
+    copy: 'Posts from people you follow on 44.',
+    empty: 'No posts from people you follow yet.',
+  },
+  questions: {
+    title: 'Questions',
+    copy: 'Posts using #question. Add #question to a post when you want help from the community.',
+    empty: 'No #question posts yet.',
+  },
+  collaboration: {
+    title: 'Collaboration',
+    copy: 'Posts using #collaboration. Add #collaboration when you are looking for people to build with.',
+    empty: 'No #collaboration posts yet.',
+  },
+  topic: {
+    title: 'Topic',
+    copy: 'Posts using this hashtag.',
+    empty: 'No posts use this hashtag yet.',
+  },
+};
 
 function buildPostTitle(body: string) {
   return body.trim().replace(/\s+/g, ' ').slice(0, 72) || 'New post';
@@ -37,29 +73,94 @@ function buildSlug(body: string) {
   return `${base}-${crypto.randomUUID().slice(0, 8)}`;
 }
 
-export default function CommunityPage() {
+function extractHashtags(value?: string | null) {
+  const matches = value?.match(/#[a-zA-Z0-9_]+/g) ?? [];
+  return Array.from(new Set(matches.map(match => normalizeTaxonomyValue(match.slice(1))).filter(Boolean)));
+}
+
+function titleFromTopic(slug: string) {
+  if (slug === 'question') return 'Questions';
+  if (slug === 'collaboration') return 'Collaboration';
+  return `#${slug}`;
+}
+
+function lockedTopicSuffix(topic: string | null) {
+  return topic ? ` #${topic}` : '';
+}
+
+function composeLockedBody(value: string, topic: string | null) {
+  if (!topic) return value;
+  const trimmed = value.trimEnd();
+  return `${trimmed}${trimmed ? ' ' : ''}#${topic}`;
+}
+
+function parseLockedBody(value: string, topic: string | null) {
+  if (!topic) return value;
+  const suffixPattern = new RegExp(`\\s*#${topic}\\s*$`, 'i');
+  return value.replace(suffixPattern, '').trimEnd();
+}
+
+function extractMentionQuery(value: string, topic: string | null) {
+  const suffix = lockedTopicSuffix(topic).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = topic
+    ? new RegExp(`(?:^|\\s)@([a-zA-Z0-9_]{1,})(?=(?:${suffix})?$)`, 'i')
+    : /(?:^|\s)@([a-zA-Z0-9_]{1,})$/i;
+  const match = value.match(pattern);
+  return match?.[1]?.toLowerCase() ?? '';
+}
+
+function replaceTrailingMention(value: string, username: string, topic: string | null) {
+  const suffix = topic ? lockedTopicSuffix(topic) : '';
+  const base = topic && value.endsWith(suffix) ? value.slice(0, -suffix.length) : value;
+  const nextBase = base.replace(/(^|\s)@[a-zA-Z0-9_]*$/i, (_match, prefix: string) => `${prefix}@${username} `);
+  return topic ? composeLockedBody(parseLockedBody(nextBase, topic), topic) : nextBase;
+}
+
+function CommunityPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [replyCounts, setReplyCounts] = useState<CountMap>({});
   const [repliersMap, setRepliersMap] = useState<LikersMap>({});
   const [likes, setLikes] = useState<PostLike[]>([]);
+  const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [likingId, setLikingId] = useState('');
-  const [composerFocused, setComposerFocused] = useState(false);
+  const [postComposerOpen, setPostComposerOpen] = useState(false);
   const [postBody, setPostBody] = useState('');
   const [posting, setPosting] = useState(false);
   const [openRepliesPostId, setOpenRepliesPostId] = useState<string | null>(null);
+  const [replyComposerPostId, setReplyComposerPostId] = useState<string | null>(null);
   const [inlineReplies, setInlineReplies] = useState<Record<string, InlineReply[]>>({});
   const [inlineReplyLikes, setInlineReplyLikes] = useState<Record<string, ReplyLikeRow[]>>({});
   const [replyBody, setReplyBody] = useState('');
   const [replying, setReplying] = useState(false);
   const [replyingToReplyId, setReplyingToReplyId] = useState<string | null>(null);
   const [replyLikingId, setReplyLikingId] = useState('');
+  const [mentionOptions, setMentionOptions] = useState<MentionProfile[]>([]);
   const [error, setError] = useState('');
   const [setupGateOpen, setSetupGateOpen] = useState(false);
 
-  useCommunityTopbarTabs('feed');
+  const requestedView = searchParams.get('view');
+  const requestedTopic = normalizeTaxonomyValue(searchParams.get('topic') ?? '');
+  const activeCommunityTab = requestedView === 'following'
+    ? 'following'
+    : requestedTopic === 'question'
+      ? 'questions'
+      : requestedTopic === 'collaboration'
+        ? 'collaboration'
+        : 'feed';
+  const forcedTopic = requestedTopic === 'question' || requestedTopic === 'collaboration' ? requestedTopic : null;
+  const postComposerValue = composeLockedBody(postBody, forcedTopic);
+  const activeReplyComposer = replyComposerPostId !== null || replyingToReplyId !== null;
+  const activeMentionQuery = activeReplyComposer
+    ? extractMentionQuery(replyBody, null)
+    : postComposerOpen
+      ? extractMentionQuery(postComposerValue, forcedTopic)
+      : '';
+
+  useCommunityTopbarTabs(activeCommunityTab);
 
   useEffect(() => {
     async function fetchCommunity() {
@@ -92,10 +193,45 @@ export default function CommunityPage() {
   useEffect(() => {
     if (!user) {
       setProfile(null);
+      setFollowingIds(new Set());
       return;
     }
     loadStudioProfile(user.id).then(result => setProfile(result.profile));
+    supabase
+      .from('profile_follows')
+      .select('following_id')
+      .eq('follower_id', user.id)
+      .then(result => {
+        if (result.error) {
+          setError(result.error.message);
+          setFollowingIds(new Set());
+          return;
+        }
+        setFollowingIds(new Set(((result.data ?? []) as Array<{ following_id: string }>).map(row => row.following_id)));
+      });
   }, [user]);
+
+  useEffect(() => {
+    if (!activeMentionQuery) {
+      setMentionOptions([]);
+      return;
+    }
+    let alive = true;
+    supabase
+      .from('profiles')
+      .select('id, username, display_name, avatar_url')
+      .ilike('username', `${activeMentionQuery}%`)
+      .limit(6)
+      .then(result => {
+        if (!alive) return;
+        if (result.error) {
+          setMentionOptions([]);
+          return;
+        }
+        setMentionOptions((result.data as MentionProfile[] | null) ?? []);
+      });
+    return () => { alive = false; };
+  }, [activeMentionQuery]);
 
   const likeCounts = useMemo(() => countById(likes, 'post_id'), [likes]);
   const likersMap: LikersMap = useMemo(() => likersByPost(likes), [likes]);
@@ -105,6 +241,25 @@ export default function CommunityPage() {
   }, [likes, user]);
   const canInteract = hasCommunityIdentity(profile);
   const generalPosts = useMemo(() => posts.filter(post => isGeneralPost(post)), [posts]);
+  const visiblePosts = useMemo(() => {
+    let next = generalPosts;
+    if (requestedView === 'following') {
+      next = next.filter(post => typeof post.author_id === 'string' && followingIds.has(post.author_id));
+    }
+    if (requestedTopic) {
+      next = next.filter(post => extractHashtags(post.body).includes(requestedTopic));
+    }
+    return next;
+  }, [followingIds, generalPosts, requestedTopic, requestedView]);
+  const pageCopy = requestedView === 'following'
+    ? COMMUNITY_COPY.following
+    : requestedTopic === 'question'
+      ? COMMUNITY_COPY.questions
+      : requestedTopic === 'collaboration'
+        ? COMMUNITY_COPY.collaboration
+        : requestedTopic
+          ? { ...COMMUNITY_COPY.topic, title: titleFromTopic(requestedTopic), copy: `Posts using #${requestedTopic}.` }
+          : COMMUNITY_COPY.feed;
   const openReplyLikes = openRepliesPostId ? (inlineReplyLikes[openRepliesPostId] ?? []) : [];
   const inlineReplyLikedIds = useMemo(() => {
     const set = new Set<string>();
@@ -148,14 +303,15 @@ export default function CommunityPage() {
     setPosting(true);
     setError('');
     const body = postBody.trim();
+    const finalBody = forcedTopic ? composeLockedBody(body, forcedTopic).trim() : body;
     const { data, error: insertError } = await supabase
       .from('posts')
       .insert({
         author_id: user.id,
         category_id: null,
-        slug: buildSlug(body),
-        title: buildPostTitle(body),
-        body,
+        slug: buildSlug(finalBody),
+        title: buildPostTitle(finalBody),
+        body: finalBody,
         post_type: 'general',
         status: 'published',
       })
@@ -170,7 +326,7 @@ export default function CommunityPage() {
 
     setPosts(current => [data as SocialPost, ...current]);
     setPostBody('');
-    setComposerFocused(false);
+    setPostComposerOpen(false);
     setPosting(false);
   }
 
@@ -205,14 +361,27 @@ export default function CommunityPage() {
     setInlineReplyLikes(current => ({ ...current, [postId]: replyLikes }));
   }
 
-  async function openPostReply(post: SocialPost) {
+  async function openReplies(post: SocialPost) {
     setReplyBody('');
+    setReplyComposerPostId(null);
     setReplyingToReplyId(null);
+    setMentionOptions([]);
     if (openRepliesPostId !== post.id) {
       setOpenRepliesPostId(post.id);
       await loadReplies(post.id);
-    } else if (!replyingToReplyId) {
+    } else if (!replyComposerPostId && !replyingToReplyId) {
       setOpenRepliesPostId(null);
+    }
+  }
+
+  async function openPostReply(post: SocialPost) {
+    setReplyBody('');
+    setReplyComposerPostId(post.id);
+    setReplyingToReplyId(null);
+    setMentionOptions([]);
+    if (openRepliesPostId !== post.id) {
+      setOpenRepliesPostId(post.id);
+      await loadReplies(post.id);
     }
   }
 
@@ -246,7 +415,9 @@ export default function CommunityPage() {
     setReplyCounts(current => ({ ...current, [post.id]: (current[post.id] ?? 0) + 1 }));
     setRepliersMap(current => ({ ...current, [post.id]: [created.authors, ...(current[post.id] ?? [])].filter(Boolean) as NonNullable<InlineReply['authors']>[] }));
     setReplyBody('');
+    setReplyComposerPostId(null);
     setReplyingToReplyId(null);
+    setMentionOptions([]);
     setReplying(false);
   }
 
@@ -334,6 +505,45 @@ export default function CommunityPage() {
     setLikingId('');
   }
 
+  async function deleteInlineReply(reply: InlineReply, post: SocialPost) {
+    if (!user || reply.author_id !== user.id) return;
+    if (!window.confirm('Delete this reply? This cannot be undone.')) return;
+
+    const repliesForPost = inlineReplies[post.id] ?? [];
+    const idsToRemove = new Set([
+      reply.id,
+      ...repliesForPost.filter(item => item.parent_reply_id === reply.id).map(item => item.id),
+    ]);
+
+    const { error: deleteError } = await supabase
+      .from('post_replies')
+      .delete()
+      .eq('id', reply.id)
+      .eq('author_id', user.id);
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
+
+    setInlineReplies(current => ({
+      ...current,
+      [post.id]: (current[post.id] ?? []).filter(item => !idsToRemove.has(item.id)),
+    }));
+    setInlineReplyLikes(current => ({
+      ...current,
+      [post.id]: (current[post.id] ?? []).filter(like => !idsToRemove.has(like.reply_id)),
+    }));
+    setReplyCounts(current => ({
+      ...current,
+      [post.id]: Math.max(0, (current[post.id] ?? 0) - idsToRemove.size),
+    }));
+    if (replyingToReplyId && idsToRemove.has(replyingToReplyId)) {
+      setReplyingToReplyId(null);
+      setReplyBody('');
+      setMentionOptions([]);
+    }
+  }
+
   async function deletePost(post: SocialPost) {
     if (!user || post.author_id !== user.id) return;
     if (!window.confirm('Delete this post? This cannot be undone.')) return;
@@ -345,40 +555,79 @@ export default function CommunityPage() {
     setPosts(current => current.filter(p => p.id !== post.id));
   }
 
+  function applyMention(username: string) {
+    if (activeReplyComposer) {
+      setReplyBody(current => replaceTrailingMention(current, username, null));
+    } else {
+      setPostBody(current => parseLockedBody(replaceTrailingMention(composeLockedBody(current, forcedTopic), username, forcedTopic), forcedTopic));
+    }
+    setMentionOptions([]);
+  }
+
   return (
     <PageShell>
       <main className="social-shell">
         <header className="social-header">
           <div className="social-title-row">
             <div>
-              <h1 className="os-type-display">Community</h1>
+              <h1 className="os-type-display">{pageCopy.title}</h1>
               <p className="social-title-copy os-type-body">
-                General posts from the 44 community.
+                {pageCopy.copy}
               </p>
             </div>
+            <button
+              type="button"
+              className="os-button os-button-primary os-button-compact"
+              onClick={() => requireCommunityAction(() => {
+                setPostComposerOpen(true);
+                setPostBody('');
+                setMentionOptions([]);
+              })}
+            >
+              New Post
+            </button>
           </div>
         </header>
 
         {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
 
-        <form className={composerFocused || postBody ? 'social-feed-composer social-feed-composer-open' : 'social-feed-composer'} onSubmit={submitPost}>
-          <div className="social-feed-composer-box">
-            <textarea
-              value={postBody}
-              onFocus={() => requireCommunityAction(() => setComposerFocused(true))}
-              onChange={event => setPostBody(event.target.value)}
-              placeholder={user ? "What's happening on 44?" : 'Sign in to post to Community.'}
-              rows={composerFocused || postBody ? 3 : 1}
-              disabled={!user || posting}
-            />
-            {(composerFocused || postBody) && (
+        {postComposerOpen && (
+          <form className="social-feed-composer social-feed-composer-open" onSubmit={submitPost}>
+            <div className="social-feed-composer-box">
+              <textarea
+                value={postComposerValue}
+                onChange={event => setPostBody(parseLockedBody(event.target.value, forcedTopic))}
+                placeholder={user ? "What's happening on 44?" : 'Sign in to post to Community.'}
+                rows={3}
+                disabled={!user || posting}
+              />
+              {forcedTopic && <div className="social-composer-lock">This post will publish with #{forcedTopic}.</div>}
+              {mentionOptions.length > 0 && (
+                <div className="social-mention-list">
+                  {mentionOptions.map(option => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className="social-mention-option"
+                      onClick={() => applyMention(option.username || option.display_name || '')}
+                    >
+                      <SocialAvatar profile={option} />
+                      <span className="social-mention-copy">
+                        <span className="social-mention-name">{option.display_name || option.username || '44 Member'}</span>
+                        {option.username && <span className="social-mention-handle">@{option.username}</span>}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="social-feed-composer-actions">
                 <button
                   type="button"
                   className="os-button os-button-ghost os-button-compact"
                   onClick={() => {
-                    setComposerFocused(false);
+                    setPostComposerOpen(false);
                     setPostBody('');
+                    setMentionOptions([]);
                   }}
                 >
                   Cancel
@@ -387,15 +636,15 @@ export default function CommunityPage() {
                   {posting ? 'Posting...' : 'Post'}
                 </button>
               </div>
-            )}
-          </div>
-        </form>
+            </div>
+          </form>
+        )}
 
         <section className="dashboard-list-surface social-feed social-feed-list social-feed-panel" aria-label="Community feed">
-          {generalPosts.length === 0 ? (
-            <div className="dashboard-empty">No posts yet.</div>
+          {visiblePosts.length === 0 ? (
+            <div className="dashboard-empty">{pageCopy.empty}</div>
           ) : (
-            generalPosts.map(post => {
+            visiblePosts.map(post => {
               const repliesForPost = inlineReplies[post.id] ?? [];
               const replyTarget = repliesForPost.find(reply => reply.id === replyingToReplyId);
               const replyTargetHandle = replyTarget?.authors?.username ?? replyTarget?.authors?.display_name ?? '';
@@ -410,15 +659,15 @@ export default function CommunityPage() {
                   liked={likedIds.has(post.id)}
                   onLike={() => toggleLike(post)}
                   onReplyClick={() => requireCommunityAction(() => { void openPostReply(post); })}
+                  onOpenClick={() => { void openReplies(post); }}
                   repliesOpen={openRepliesPostId === post.id}
-                  rowClickable={false}
                   onDelete={() => deletePost(post)}
                   canDelete={Boolean(user && post.author_id === user.id)}
                   disabled={likingId === post.id}
                 />
                 {openRepliesPostId === post.id && (
                   <div className="social-reply-drawer">
-                    {!replyTarget && (
+                    {replyComposerPostId === post.id && !replyTarget && (
                       <form className="social-reply-drawer-form" onSubmit={event => submitInlineReply(event, post)}>
                         <textarea
                           value={replyBody}
@@ -426,9 +675,40 @@ export default function CommunityPage() {
                           placeholder="Write a reply..."
                           rows={2}
                         />
+                        {mentionOptions.length > 0 && (
+                          <div className="social-mention-list">
+                            {mentionOptions.map(option => (
+                              <button
+                                key={option.id}
+                                type="button"
+                                className="social-mention-option"
+                                onClick={() => applyMention(option.username || option.display_name || '')}
+                              >
+                                <SocialAvatar profile={option} />
+                                <span className="social-mention-copy">
+                                  <span className="social-mention-name">{option.display_name || option.username || '44 Member'}</span>
+                                  {option.username && <span className="social-mention-handle">@{option.username}</span>}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        <div className="social-reply-drawer-actions">
+                          <button
+                            type="button"
+                            className="os-button os-button-ghost os-button-compact"
+                            onClick={() => {
+                              setReplyComposerPostId(null);
+                              setReplyBody('');
+                              setMentionOptions([]);
+                            }}
+                          >
+                            Cancel
+                          </button>
                         <button className="os-button os-button-primary os-button-compact" type="submit" disabled={replying || !replyBody.trim()}>
                           {replying ? 'Replying...' : 'Reply'}
                         </button>
+                        </div>
                       </form>
                     )}
                     {repliesForPost.length === 0 ? (
@@ -441,14 +721,16 @@ export default function CommunityPage() {
                               <SocialAvatar profile={reply.authors} />
                               <div className="social-row-main">
                                 <SocialAuthorLine author={reply.authors} createdAt={reply.created_at} handleOnly />
-                                <p className="social-row-body">{reply.body}</p>
+                                <p className="social-row-body"><SocialRichText text={reply.body} /></p>
                                 <div className="social-actions">
                                   <button
                                     type="button"
                                     className="social-action"
                                     onClick={() => requireCommunityAction(() => {
+                                      setReplyComposerPostId(null);
                                       setReplyingToReplyId(reply.id);
                                       setReplyBody('');
+                                      setMentionOptions([]);
                                     })}
                                     aria-label="Reply"
                                   >
@@ -468,6 +750,16 @@ export default function CommunityPage() {
                                     likers={inlineReplyLikersMap[reply.id] ?? []}
                                     likeCount={inlineReplyLikeCounts[reply.id] ?? 0}
                                   />
+                                  {user && reply.author_id === user.id && (
+                                    <button
+                                      type="button"
+                                      className="social-action social-action-danger"
+                                      onClick={() => { void deleteInlineReply(reply, post); }}
+                                      aria-label="Delete reply"
+                                    >
+                                      <SocialTrashIcon />
+                                    </button>
+                                  )}
                                 </div>
                               </div>
                             </article>
@@ -480,16 +772,40 @@ export default function CommunityPage() {
                                   rows={2}
                                   autoFocus
                                 />
-                                <button
-                                  type="button"
-                                  className="os-button os-button-ghost os-button-compact"
-                                  onClick={() => setReplyingToReplyId(null)}
-                                >
-                                  Cancel
-                                </button>
-                                <button className="os-button os-button-primary os-button-compact" type="submit" disabled={replying || !replyBody.trim()}>
-                                  {replying ? 'Replying...' : 'Reply'}
-                                </button>
+                                {mentionOptions.length > 0 && (
+                                  <div className="social-mention-list">
+                                    {mentionOptions.map(option => (
+                                      <button
+                                        key={option.id}
+                                        type="button"
+                                        className="social-mention-option"
+                                        onClick={() => applyMention(option.username || option.display_name || '')}
+                                      >
+                                        <SocialAvatar profile={option} />
+                                        <span className="social-mention-copy">
+                                          <span className="social-mention-name">{option.display_name || option.username || '44 Member'}</span>
+                                          {option.username && <span className="social-mention-handle">@{option.username}</span>}
+                                        </span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                                <div className="social-reply-drawer-actions">
+                                  <button
+                                    type="button"
+                                    className="os-button os-button-ghost os-button-compact"
+                                    onClick={() => {
+                                      setReplyingToReplyId(null);
+                                      setReplyBody('');
+                                      setMentionOptions([]);
+                                    }}
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button className="os-button os-button-primary os-button-compact" type="submit" disabled={replying || !replyBody.trim()}>
+                                    {replying ? 'Replying...' : 'Reply'}
+                                  </button>
+                                </div>
                               </form>
                             )}
                           </div>
@@ -506,5 +822,21 @@ export default function CommunityPage() {
       </main>
       <CommunitySetupGate open={setupGateOpen} onClose={() => setSetupGateOpen(false)} />
     </PageShell>
+  );
+}
+
+export default function CommunityPage() {
+  return (
+    <Suspense
+      fallback={(
+        <PageShell>
+          <main className="social-shell">
+            <div className="dashboard-empty">Loading community...</div>
+          </main>
+        </PageShell>
+      )}
+    >
+      <CommunityPageContent />
+    </Suspense>
   );
 }

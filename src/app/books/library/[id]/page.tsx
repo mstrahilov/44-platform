@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { useParams } from 'next/navigation';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
-import { LibraryAchievementsSection, LibraryCreatorChip } from '@/components/LibraryDetailPrimitives';
+import { LibraryAchievementsSection, LibraryCreatorChip, LibraryProductDetailsSection } from '@/components/LibraryDetailPrimitives';
 import { ProductUpdatesSection } from '@/components/ProductUpdatesSection';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { trackProductAchievementTrigger } from '@/lib/achievementTracking';
@@ -113,6 +113,7 @@ function OwnedBook({
   const action = getProductLibraryPrimaryAction(product);
   const heroImage = product.hero_url || product.cover_url;
   const description = product.long_description || product.short_description || '';
+  const creatorDisplayName = product.creators?.display_name || product.creator || '44 Creator';
   const [page, setPage] = useState(1);
   const [localUnlockedAchievementIds, setLocalUnlockedAchievementIds] = useState(unlockedAchievementIds);
   const [toast, setToast] = useState<AchievementToastData | null>(null);
@@ -183,7 +184,7 @@ function OwnedBook({
   return (
     <div className="view-detail-single library-detail-page">
       <div
-        className={heroImage ? 'view-album-header book-release-header library-detail-header' : 'view-album-header view-album-header-fallback book-release-header library-detail-header'}
+        className={heroImage ? 'view-album-header book-release-header' : 'view-album-header view-album-header-fallback book-release-header'}
         style={heroImage ? { backgroundImage: `url(${heroImage})` } as CSSProperties : undefined}
       >
         <div className="view-album-cover book-release-cover">
@@ -193,21 +194,19 @@ function OwnedBook({
           )}
         </div>
         <div className="view-album-copy">
-          <h1 className="view-album-title">{product.title}</h1>
-          <div className="library-release-meta-row">
-            <LibraryCreatorChip creator={product.creators ?? null} fallbackName={product.creator} sourceProductId={product.id} />
-            <div className="view-album-meta">
-              <span>{product.product_type || 'Book'}</span>
-              {product.year && (
-                <>
-                  <span className="view-album-meta-sep" />
-                  <span>{product.year}</span>
-                </>
-              )}
-            </div>
+          <div className="view-album-eyebrow view-product-meta-line">
+            <span>{(product.product_type || 'Book').toUpperCase()}</span>
+            {product.year && (<><span className="view-album-meta-sep" /><span>{product.year}</span></>)}
+            <span className="view-album-meta-sep" />
+            <span className="view-album-meta-strong view-album-meta-accent">OWNED</span>
           </div>
+          <h1 className="view-album-title">{product.title}</h1>
+          <LibraryCreatorChip creator={product.creators ?? null} fallbackName={creatorDisplayName} sourceProductId={product.id} />
           <div className="view-album-actions">
             <button className="os-button os-button-primary" type="button" onClick={readBook}>{product.read_url ? 'Read' : action.label}</button>
+            {(product.download_url || product.read_url) && (
+              <a className="os-button os-button-secondary" href={product.download_url || product.read_url || '#'} target="_blank" rel="noreferrer">Download</a>
+            )}
           </div>
         </div>
       </div>
@@ -248,6 +247,7 @@ function OwnedBook({
         unlockedAchievementIds={localUnlockedAchievementIds}
         emptyMessage="Book achievements will appear here when the creator enables them."
       />
+      <LibraryProductDetailsSection product={product} />
 
       <ProductUpdatesSection productId={product.id} emptyMessage="No updates from the creator yet." />
       <AchievementToast toast={toast} onDone={() => setToast(null)} />

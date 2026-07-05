@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { useContextMenu } from '@/components/ContextMenu';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
@@ -12,7 +13,7 @@ import { productLibraryHref } from '@/lib/experience';
 import { getProductLibraryContent, getProductLibraryPrimaryAction, getProductRuntimeKind } from '@/lib/libraryContent';
 import { creatorHref, type ProductAchievement, type Resource, type ServiceRequest, type Track, type UserAchievement } from '@/lib/platform';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
-import { LibraryAchievementsSection, LibraryCreatorChip } from '@/components/LibraryDetailPrimitives';
+import { LibraryAchievementsSection, LibraryCreatorChip, LibraryProductDetailsSection } from '@/components/LibraryDetailPrimitives';
 import { ProductUpdatesSection } from '@/components/ProductUpdatesSection';
 import { unlockAchievementForUser } from '@/lib/achievementNotifications';
 import { useTopbarBack } from '@/components/TopbarContext';
@@ -185,8 +186,12 @@ function ProductLibraryDetail({
 }) {
   const product = row.products!;
   const action = getProductLibraryPrimaryAction(product);
-  const isMusic = getProductRuntimeKind(product) === 'music';
-  const { currentTrack, isPlaying, playQueue, toggleTrack: togglePlayerTrack } = useMusicPlayer();
+  const runtimeKind = getProductRuntimeKind(product);
+  const isMusic = runtimeKind === 'music';
+  const isBook = runtimeKind === 'book';
+  const isAsset = runtimeKind === 'sample_pack';
+  const { currentTrack, isPlaying, playQueue, toggleTrack: togglePlayerTrack, queueNext } = useMusicPlayer();
+  const { openContextMenu } = useContextMenu();
   const [localUnlockedAchievementIds, setLocalUnlockedAchievementIds] = useState(unlockedAchievementIds);
   const [playedTrackIds, setPlayedTrackIds] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<AchievementToastData | null>(null);
@@ -221,6 +226,13 @@ function ProductLibraryDetail({
       next.add(track.id);
       return next;
     });
+  }
+
+  function queueTrackNext(track: Track) {
+    if (!track.audio_url) return;
+    const trackIndex = musicQueue.findIndex(item => item.id === track.id);
+    if (trackIndex < 0) return;
+    queueNext(musicQueue[trackIndex]);
   }
 
   function playRelease() {
@@ -270,6 +282,8 @@ function ProductLibraryDetail({
   const heroImage = product.hero_url || product.cover_url;
   const description = product.long_description || product.short_description || '';
   const content = getProductLibraryContent(product);
+  const creatorDisplayName = product.creators?.display_name || product.creator || '44 Creator';
+  const canDownload = Boolean(product.download_url || product.read_url);
   const trackNumbers = useMemo(
     () => new Map(tracks.map((track, index) => [track.id, track.number ?? index + 1])),
     [tracks],
@@ -280,7 +294,7 @@ function ProductLibraryDetail({
 
       {/* Album header */}
       <div
-        className={heroImage ? 'view-album-header library-detail-header' : 'view-album-header view-album-header-fallback library-detail-header'}
+        className={heroImage ? 'view-album-header' : 'view-album-header view-album-header-fallback'}
         style={heroImage ? { backgroundImage: `url(${heroImage})` } as React.CSSProperties : undefined}
       >
         <div className="view-album-cover">
@@ -290,21 +304,23 @@ function ProductLibraryDetail({
           )}
         </div>
         <div className="view-album-copy">
-          <h1 className="view-album-title">{product.title}</h1>
-          <div className="library-release-meta-row">
-            <LibraryCreatorChip creator={product.creators ?? null} fallbackName={product.creator} sourceProductId={product.id} />
-            <div className="view-album-meta">
-              <span>{product.product_type || content.detailsTitle}</span>
-              {product.year && (
-                <>
-                  <span className="view-album-meta-sep" />
-                  <span>{product.year}</span>
-                </>
-              )}
-            </div>
+          <div className="view-album-eyebrow view-product-meta-line">
+            <span>{(product.product_type || content.detailsTitle).toUpperCase()}</span>
+            {product.year && (<><span className="view-album-meta-sep" /><span>{product.year}</span></>)}
+            <span className="view-album-meta-sep" />
+            <span className="view-album-meta-strong view-album-meta-accent">OWNED</span>
           </div>
+          <h1 className="view-album-title">{product.title}</h1>
+          <LibraryCreatorChip creator={product.creators ?? null} fallbackName={creatorDisplayName} sourceProductId={product.id} />
           <div className="view-album-actions">
-            <button className="os-button os-button-primary" type="button" onClick={isMusic ? playRelease : () => runProductAction(action)}>{action.label}</button>
+            <button className="os-button os-button-primary" type="button" onClick={isMusic ? playRelease : () => runProductAction(action)}>
+              {isBook ? 'Read' : action.label}
+            </button>
+            {(isBook || isAsset || (isMusic && row.acquisition_type === 'purchase')) && canDownload && (
+              <a className="os-button os-button-secondary" href={product.download_url || product.read_url || '#'} target="_blank" rel="noreferrer">
+                Download
+              </a>
+            )}
           </div>
         </div>
       </div>
@@ -328,6 +344,10 @@ function ProductLibraryDetail({
                 className={selectedTrackId === track.id ? 'view-track-row view-track-row-selected' : 'view-track-row'}
                 key={track.id}
                 onClick={() => setSelectedTrackId(track.id)}
+                onContextMenu={event => openContextMenu(event, [
+                  { id: 'play', label: 'Play', onSelect: () => { void toggleTrack(track); } },
+                  { id: 'play-next', label: 'Play Next', onSelect: () => queueTrackNext(track), disabled: !track.audio_url },
+                ])}
                 role="button"
                 tabIndex={0}
                 onKeyDown={event => {
@@ -371,6 +391,7 @@ function ProductLibraryDetail({
       )}
 
       {isMusic && <LibraryAchievementsSection achievements={achievements} unlockedAchievementIds={localUnlockedAchievementIds} />}
+      <LibraryProductDetailsSection product={product} tracks={tracks} />
 
       <ProductUpdatesSection productId={product.id} emptyMessage="No updates from the creator yet." />
 

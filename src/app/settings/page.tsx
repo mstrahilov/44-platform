@@ -19,9 +19,8 @@ import {
 import {
   COUNTRIES,
   CURRENCIES,
-  DEFAULT_VIEWER_COUNTRY,
-  DEFAULT_VIEWER_CURRENCY,
   currencyForCountry,
+  getDetectedViewerCountry,
   getStoredViewerCountry,
   getStoredViewerCurrency,
   setStoredViewerPreferences,
@@ -29,8 +28,8 @@ import {
 import { getLandingPageId, setLandingPageId, type LandingPageId } from '@/lib/landingPage';
 import { isMissingColumnError } from '@/lib/schemaCompat';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
-import { getAvailableDockApps } from '@/lib/osApps';
-import { setDockAppHidden, setDockMode, useDockPreferences, type DockMode } from '@/lib/dockPreferences';
+import { getAvailableDockApps, type OSAppId } from '@/lib/osApps';
+import { resetDockPreferences, setDockAppHidden, setDockMode, useDockPreferences, type DockMode } from '@/lib/dockPreferences';
 
 type SettingsTabId = 'system' | 'dock' | 'region' | 'account';
 
@@ -138,6 +137,11 @@ function SystemSettings() {
     setAccent(a);
   }
 
+  function resetSystemDefaults() {
+    chooseMode('light');
+    chooseAccent('amber');
+  }
+
   return (
     <div className="settings-section">
       <div className="settings-field">
@@ -179,14 +183,19 @@ function SystemSettings() {
           ))}
         </div>
       </div>
+      <div className="settings-section-actions">
+        <button className="os-button os-button-secondary os-button-compact" type="button" onClick={resetSystemDefaults}>
+          Reset Defaults
+        </button>
+      </div>
     </div>
   );
 }
 
 function RegionSettings() {
   const { user } = useAuth();
-  const [countryCode, setCountryCode] = useState(DEFAULT_VIEWER_COUNTRY);
-  const [displayCurrency, setDisplayCurrency] = useState(DEFAULT_VIEWER_CURRENCY);
+  const [countryCode, setCountryCode] = useState('US');
+  const [displayCurrency, setDisplayCurrency] = useState('USD');
   const [marketStatus, setMarketStatus] = useState('');
 
   useEffect(() => {
@@ -207,10 +216,10 @@ function RegionSettings() {
 
       const nextCountry = !isMissingColumnError(error) && data?.country_code
         ? data.country_code
-        : getStoredViewerCountry() || DEFAULT_VIEWER_COUNTRY;
+        : getStoredViewerCountry();
       const nextCurrency = !isMissingColumnError(error) && data?.display_currency
         ? data.display_currency
-        : getStoredViewerCurrency() || DEFAULT_VIEWER_CURRENCY;
+        : getStoredViewerCurrency();
       setCountryCode(nextCountry);
       setDisplayCurrency(nextCurrency);
       setStoredViewerPreferences(nextCountry, nextCurrency);
@@ -244,6 +253,11 @@ function RegionSettings() {
     }
 
     setMarketStatus(error ? error.message : 'System preferences saved.');
+  }
+
+  function resetRegionDefaults() {
+    const detectedCountry = getDetectedViewerCountry();
+    void saveMarketPreferences(detectedCountry, currencyForCountry(detectedCountry));
   }
 
   return (
@@ -290,6 +304,11 @@ function RegionSettings() {
           {marketStatus}
         </span>
       )}
+      <div className="settings-section-actions">
+        <button className="os-button os-button-secondary os-button-compact" type="button" onClick={resetRegionDefaults}>
+          Reset Defaults
+        </button>
+      </div>
     </div>
   );
 }
@@ -302,8 +321,8 @@ const DOCK_MODES: Array<{ id: DockMode; label: string }> = [
 function DockSettings() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<StudioProfile | null>(null);
-  const [landingPage, setLandingPage] = useState<LandingPageId>('music');
-  const { mode, hiddenIds } = useDockPreferences();
+  const [landingPage, setLandingPage] = useState<LandingPageId>('store');
+  const { mode, hiddenIds, order } = useDockPreferences();
 
   useEffect(() => {
     if (!user) { Promise.resolve().then(() => setProfile(null)); return; }
@@ -318,16 +337,22 @@ function DockSettings() {
     signedIn: Boolean(user),
     isCreator: isCreatorProfile(profile),
   });
-  const dockApps = useMemo(
-    () => availableApps.filter(app => app.locked || !hiddenIds.includes(app.id)),
-    [availableApps, hiddenIds],
-  );
-  const hideableApps = availableApps.filter(app => !app.locked);
-  const landingApps = dockApps.filter(app => app.id !== 'notifications' && app.id !== 'home');
+  const hideableApps = availableApps
+    .filter(app => !app.locked)
+    .sort((a, b) => orderIndex(order, a.id) - orderIndex(order, b.id));
+  const landingApps = availableApps
+    .filter(app => ['store', 'library', 'community', 'dashboard'].includes(app.id))
+    .sort((a, b) => orderIndex(order, a.id) - orderIndex(order, b.id));
 
   function chooseLandingPage(id: LandingPageId) {
     setLandingPage(id);
     setLandingPageId(id);
+  }
+
+  function resetDockDefaults() {
+    resetDockPreferences();
+    setLandingPage('store');
+    setLandingPageId('store');
   }
 
   return (
@@ -397,6 +422,11 @@ function DockSettings() {
           })}
         </div>
       </div>
+      <div className="settings-section-actions">
+        <button className="os-button os-button-secondary os-button-compact" type="button" onClick={resetDockDefaults}>
+          Reset Defaults
+        </button>
+      </div>
     </div>
   );
 }
@@ -405,6 +435,7 @@ function AccountSettings() {
   const { user } = useAuth();
   const [sendingReset, setSendingReset] = useState(false);
   const [status, setStatus] = useState('');
+  const [resetSignal, setResetSignal] = useState(0);
 
   async function sendPasswordReset() {
     if (!user?.email || sendingReset) return;
@@ -415,6 +446,14 @@ function AccountSettings() {
     });
     setSendingReset(false);
     setStatus(error ? error.message : 'Password reset email sent.');
+  }
+
+  function resetAccountDefaults() {
+    Object.entries(ACCOUNT_KEYS).forEach(([, key]) => {
+      window.localStorage.removeItem(key);
+    });
+    setStatus('Account preferences reset.');
+    setResetSignal(current => current + 1);
   }
 
   return (
@@ -443,9 +482,9 @@ function AccountSettings() {
           <div className="os-type-field-title">Privacy</div>
           <p className="os-type-body-small">Profile details live on your Profile page. These controls affect account-level visibility.</p>
         </div>
-        <ToggleRow storageKey={ACCOUNT_KEYS.publicProfile} title="Public profile" desc="Let others view your profile and creator/member activity." defaultOn />
-        <ToggleRow storageKey={ACCOUNT_KEYS.directMessages} title="Allow direct messages" desc="Let members message you directly." defaultOn />
-        <ToggleRow storageKey={ACCOUNT_KEYS.recommendations} title="Personalized recommendations" desc="Use your activity to tailor what you see." defaultOn />
+        <ToggleRow storageKey={ACCOUNT_KEYS.publicProfile} title="Public profile" desc="Let others view your profile and creator/member activity." defaultOn resetSignal={resetSignal} />
+        <ToggleRow storageKey={ACCOUNT_KEYS.directMessages} title="Allow direct messages" desc="Let members message you directly." defaultOn resetSignal={resetSignal} />
+        <ToggleRow storageKey={ACCOUNT_KEYS.recommendations} title="Personalized recommendations" desc="Use your activity to tailor what you see." defaultOn resetSignal={resetSignal} />
       </div>
 
       <div className="settings-field">
@@ -453,10 +492,15 @@ function AccountSettings() {
           <div className="os-type-field-title">Notifications</div>
           <p className="os-type-body-small">Choose which account activity should reach you.</p>
         </div>
-        <ToggleRow storageKey={ACCOUNT_KEYS.replies} title="Replies to your posts" desc="When someone replies in the community." defaultOn />
-        <ToggleRow storageKey={ACCOUNT_KEYS.likes} title="Likes" desc="When someone likes your post or reply." defaultOn />
-        <ToggleRow storageKey={ACCOUNT_KEYS.releases} title="New releases from creators you follow" desc="Music, books, assets, resources, and merch drops." defaultOn />
-        <ToggleRow storageKey={ACCOUNT_KEYS.emails} title="44 emails" desc="Occasional news about 44." />
+        <ToggleRow storageKey={ACCOUNT_KEYS.replies} title="Replies to your posts" desc="When someone replies in the community." defaultOn resetSignal={resetSignal} />
+        <ToggleRow storageKey={ACCOUNT_KEYS.likes} title="Likes" desc="When someone likes your post or reply." defaultOn resetSignal={resetSignal} />
+        <ToggleRow storageKey={ACCOUNT_KEYS.releases} title="New releases from creators you follow" desc="Music, books, assets, resources, and merch drops." defaultOn resetSignal={resetSignal} />
+        <ToggleRow storageKey={ACCOUNT_KEYS.emails} title="44 emails" desc="Occasional news about 44." resetSignal={resetSignal} />
+      </div>
+      <div className="settings-section-actions">
+        <button className="os-button os-button-secondary os-button-compact" type="button" onClick={resetAccountDefaults}>
+          Reset Defaults
+        </button>
       </div>
     </div>
   );
@@ -467,17 +511,19 @@ function ToggleRow({
   desc,
   storageKey,
   defaultOn = false,
+  resetSignal = 0,
 }: {
   title: string;
   desc: string;
   storageKey: string;
   defaultOn?: boolean;
+  resetSignal?: number;
 }) {
   const [on, setOn] = useState(defaultOn);
 
   useEffect(() => {
     Promise.resolve().then(() => setOn(getStoredToggle(storageKey, defaultOn)));
-  }, [storageKey, defaultOn]);
+  }, [storageKey, defaultOn, resetSignal]);
 
   function toggle() {
     setOn(current => {
@@ -503,4 +549,9 @@ function ToggleRow({
       />
     </div>
   );
+}
+
+function orderIndex(order: OSAppId[], id: string) {
+  const index = order.indexOf(id as OSAppId);
+  return index === -1 ? Number.MAX_SAFE_INTEGER : index;
 }

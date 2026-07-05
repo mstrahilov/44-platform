@@ -6,7 +6,8 @@ import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { useParams } from 'next/navigation';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
-import { LibraryAchievementsSection, LibraryCreatorChip } from '@/components/LibraryDetailPrimitives';
+import { useContextMenu } from '@/components/ContextMenu';
+import { LibraryAchievementsSection, LibraryCreatorChip, LibraryProductDetailsSection } from '@/components/LibraryDetailPrimitives';
 import {
   MUSIC_TRACK_COMPLETED_EVENT,
   MUSIC_TRACK_STARTED_EVENT,
@@ -137,7 +138,8 @@ function OwnedMusicRelease({
 }) {
   const product = row.products!;
   const action = getProductLibraryPrimaryAction(product);
-  const { currentTrack, isPlaying, playQueue, toggleTrack: togglePlayerTrack } = useMusicPlayer();
+  const { currentTrack, isPlaying, playQueue, toggleTrack: togglePlayerTrack, queueNext } = useMusicPlayer();
+  const { openContextMenu } = useContextMenu();
   const [localUnlockedAchievementIds, setLocalUnlockedAchievementIds] = useState(unlockedAchievementIds);
   const [completedTrackIds, setCompletedTrackIds] = useState<Set<string>>(new Set());
   const [noSkipsEligible, setNoSkipsEligible] = useState(false);
@@ -183,6 +185,13 @@ function OwnedMusicRelease({
     }
     setSelectedTrackId(track.id);
     togglePlayerTrack(musicQueue, trackIndex);
+  }
+
+  function queueTrackNext(track: MusicTrack) {
+    if (!track.audio_url) return;
+    const trackIndex = musicQueue.findIndex(item => item.id === track.id);
+    if (trackIndex < 0) return;
+    queueNext(musicQueue[trackIndex]);
   }
 
   function playRelease() {
@@ -283,11 +292,12 @@ function OwnedMusicRelease({
 
   const heroImage = product.hero_url || product.cover_url;
   const releaseType = product.product_type || 'Release';
+  const creatorDisplayName = product.creators?.display_name || product.creator || '44 Creator';
 
   return (
     <div className="view-detail-single library-detail-page">
       <div
-        className={heroImage ? 'view-album-header library-detail-header' : 'view-album-header view-album-header-fallback library-detail-header'}
+        className={heroImage ? 'view-album-header' : 'view-album-header view-album-header-fallback'}
         style={heroImage ? { backgroundImage: `url(${heroImage})` } as CSSProperties : undefined}
       >
         <div className="view-album-cover">
@@ -297,19 +307,13 @@ function OwnedMusicRelease({
           )}
         </div>
         <div className="view-album-copy">
-          <h1 className="view-album-title">{product.title}</h1>
-          <div className="library-release-meta-row">
-            <LibraryCreatorChip creator={product.creators ?? null} fallbackName={product.creator} sourceProductId={product.id} />
-            <div className="view-album-meta">
-              <span>{releaseType}</span>
-              {product.year && (
-                <>
-                  <span className="view-album-meta-sep" />
-                  <span>{product.year}</span>
-                </>
-              )}
-            </div>
+          <div className="view-album-eyebrow view-product-meta-line">
+            <span>{releaseType.toUpperCase()}</span>
+            {product.year && (<><span className="view-album-meta-sep" /><span>{product.year}</span></>)}
+            {downloadsUnlocked && (<><span className="view-album-meta-sep" /><span className="view-album-meta-strong view-album-meta-accent">OWNED</span></>)}
           </div>
+          <h1 className="view-album-title">{product.title}</h1>
+          <LibraryCreatorChip creator={product.creators ?? null} fallbackName={creatorDisplayName} sourceProductId={product.id} />
           <div className="view-album-actions">
             <button className="os-button os-button-primary" type="button" onClick={playRelease}>{musicQueue.length ? 'Play' : action.label}</button>
             {downloadsUnlocked && product.download_url && (
@@ -329,6 +333,10 @@ function OwnedMusicRelease({
                 className={selectedTrackId === track.id ? 'view-track-row view-track-row-selected' : 'view-track-row'}
                 key={track.id}
                 onClick={() => setSelectedTrackId(track.id)}
+                onContextMenu={event => openContextMenu(event, [
+                  { id: 'play', label: 'Play', onSelect: () => { void toggleTrack(track); } },
+                  { id: 'play-next', label: 'Play Next', onSelect: () => queueTrackNext(track), disabled: !track.audio_url },
+                ])}
                 role="button"
                 tabIndex={0}
                 onKeyDown={event => {
@@ -364,6 +372,7 @@ function OwnedMusicRelease({
       </div>
 
       <LibraryAchievementsSection achievements={achievements} unlockedAchievementIds={localUnlockedAchievementIds} />
+      <LibraryProductDetailsSection product={product} tracks={tracks} />
 
       <ProductUpdatesSection productId={product.id} emptyMessage="No updates from the creator yet." />
 

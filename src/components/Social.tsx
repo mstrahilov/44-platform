@@ -6,6 +6,37 @@ import type { ReactNode } from 'react';
 import { useContextMenu, type ContextMenuEntry } from '@/components/ContextMenu';
 import { authorDisplayName, authorHandle, authorHref, compactDate, initials, type SocialAuthor, type SocialLiker, type SocialPost } from '@/lib/social';
 import { communityThreadHref } from '@/lib/platform';
+import { pinDockItem } from '@/lib/dockPreferences';
+
+function socialTokenHref(token: string) {
+  if (token.startsWith('@')) return `/profile/${token.slice(1)}`;
+  if (token.startsWith('#')) return `/community?topic=${encodeURIComponent(token.slice(1).toLowerCase())}`;
+  return '';
+}
+
+export function SocialRichText({ text }: { text: string }) {
+  const parts = text.split(/([@#][a-zA-Z0-9_]+)/g);
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (!part) return null;
+        const href = socialTokenHref(part);
+        return href ? (
+          <Link
+            key={`${part}-${index}`}
+            href={href}
+            className="social-rich-link"
+            onClick={event => event.stopPropagation()}
+          >
+            {part}
+          </Link>
+        ) : (
+          <span key={`${part}-${index}`}>{part}</span>
+        );
+      })}
+    </>
+  );
+}
 
 export function SocialAvatar({
   profile,
@@ -160,6 +191,7 @@ export function SocialPostRow({
   titleSize = 'default',
   handleOnly = true,
   meta,
+  onOpenClick,
   onReplyClick,
   repliesOpen = false,
   rowClickable = true,
@@ -178,6 +210,7 @@ export function SocialPostRow({
   titleSize?: 'default' | 'lg';
   handleOnly?: boolean;
   meta?: ReactNode;
+  onOpenClick?: () => void;
   onReplyClick?: () => void;
   repliesOpen?: boolean;
   rowClickable?: boolean;
@@ -187,9 +220,14 @@ export function SocialPostRow({
   const body = post.body || '';
   const href = communityThreadHref(post);
   const authorLink = authorHref(post.creators);
+  const authorName = authorDisplayName(post.creators);
 
   function openThread() {
     if (!rowClickable) return;
+    if (onOpenClick) {
+      onOpenClick();
+      return;
+    }
     router.push(href);
   }
 
@@ -220,12 +258,31 @@ export function SocialPostRow({
     ];
   }
 
+  function authorMenuEntries(): ContextMenuEntry[] {
+    return [
+      { id: 'open-author', label: 'View Creator', href: authorLink },
+      { id: 'pin-author', label: 'Pin to Dock', onSelect: () => pinDockItem({
+        id: `profile:${post.creators?.id ?? authorLink}`,
+        label: authorName,
+        href: authorLink,
+        iconClass: 'os-icon-user',
+        kind: 'profile',
+        imageUrl: post.creators?.avatar_url ?? null,
+      }) },
+    ];
+  }
+
   return (
     <article
       className={rowClickable ? 'social-row social-row-interactive' : 'social-row'}
       onContextMenu={event => openContextMenu(event, postMenuEntries())}
     >
-      <Link href={authorHref(post.creators)} aria-label={authorDisplayName(post.creators)} onClick={stopRowNavigation}>
+      <Link
+        href={authorLink}
+        aria-label={authorName}
+        onClick={stopRowNavigation}
+        onContextMenu={event => openContextMenu(event, authorMenuEntries())}
+      >
         <SocialAvatar profile={post.creators} />
       </Link>
 
@@ -243,13 +300,13 @@ export function SocialPostRow({
               {post.title}
             </h2>
           )}
-          {body && <p className="social-row-body">{body}</p>}
+          {body && <p className="social-row-body"><SocialRichText text={body} /></p>}
         </div>
         <div className="social-actions" onClick={stopRowNavigation}>
           {onReplyClick ? (
             <button
               type="button"
-              className={repliesOpen ? 'social-action social-action-open' : 'social-action'}
+              className="social-action"
               onClick={onReplyClick}
               aria-label={`${replyCount} replies`}
               aria-expanded={repliesOpen}
@@ -306,9 +363,23 @@ export function SocialProfileRow({
   subtitle?: ReactNode;
 }) {
   const handle = authorHandle(profile);
+  const { openContextMenu } = useContextMenu();
+  const href = authorHref(profile);
+  const name = authorDisplayName(profile);
+  const entries: ContextMenuEntry[] = [
+    { id: 'open-profile', label: 'View Creator', href },
+    { id: 'pin-profile', label: 'Pin to Dock', onSelect: () => pinDockItem({
+      id: `profile:${profile.id ?? href}`,
+      label: name,
+      href,
+      iconClass: 'os-icon-user',
+      kind: 'profile',
+      imageUrl: profile.avatar_url ?? null,
+    }) },
+  ];
   return (
     <div className="social-row">
-      <Link href={authorHref(profile)} aria-label={authorDisplayName(profile)}>
+      <Link href={href} aria-label={name} onContextMenu={event => openContextMenu(event, entries)}>
         <SocialAvatar profile={profile} />
       </Link>
       <div className="social-row-main">

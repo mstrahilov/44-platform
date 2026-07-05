@@ -2,11 +2,14 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { useContextMenu, type ContextMenuEntry } from '@/components/ContextMenu';
 import { PageShell, HubHero, HubSection, CenteredMessage, EmptyMessage } from '@/components/Ui';
 import { useTopbarTabs } from '@/components/TopbarContext';
 import { getProductExperience, productLibraryHref, type ProductExperience } from '@/lib/experience';
+import { pinDockItem } from '@/lib/dockPreferences';
 import type { LibraryCategory } from '@/lib/libraryRoutes';
 import type { Product } from '@/lib/products';
+import { creatorHref } from '@/lib/platform';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 
@@ -143,6 +146,20 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
 
   const copy = CATEGORY_COPY[category];
 
+  async function removeLibraryRow(row: LibraryRow) {
+    if (!user) return;
+    const result = await supabase
+      .from('library_items')
+      .update({ status: 'hidden' })
+      .eq('id', row.id)
+      .eq('user_id', user.id);
+    if (result.error) {
+      setError(result.error.message);
+      return;
+    }
+    setRows(current => current.filter(item => item.id !== row.id));
+  }
+
   return (
     <PageShell>
       <main className="app-page">
@@ -150,21 +167,14 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
         {error ? (
           <EmptyMessage>{error}</EmptyMessage>
         ) : visibleRows.length === 0 ? (
-          <div className="dashboard-list-surface">
-            <div className="dashboard-empty">
-              {copy.empty}
-              <div style={{ marginTop: 'var(--os-space-4)' }}>
-                <Link className="os-button os-button-primary os-button-compact" href={copy.storeHref}>Open Store</Link>
-              </div>
-            </div>
-          </div>
+          <EmptyMessage>{copy.empty}</EmptyMessage>
         ) : category === 'all' ? (
           <>
             {groupedRows.map(group => (
               <HubSection key={group.id} title={group.title}>
                 <div className="app-grid">
                   {group.rows.map(row => (
-                    <LibraryCard key={row.id} row={row} />
+                    <LibraryCard key={row.id} row={row} onRemove={removeLibraryRow} />
                   ))}
                 </div>
               </HubSection>
@@ -173,7 +183,7 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
         ) : (
           <div className="app-grid">
             {visibleRows.map(row => (
-              <LibraryCard key={row.id} row={row} />
+              <LibraryCard key={row.id} row={row} onRemove={removeLibraryRow} />
             ))}
           </div>
         )}
@@ -182,14 +192,42 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
   );
 }
 
-function LibraryCard({ row }: { row: LibraryRow }) {
+function LibraryCard({ row, onRemove }: { row: LibraryRow; onRemove: (row: LibraryRow) => void }) {
+  const { openContextMenu } = useContextMenu();
   const product = row.products!;
   const image = product.cover_url || product.hero_url;
   const shape = getLibraryTileShape(product);
   const creatorName = product.creators?.display_name || product.creator || '44 Creator';
+  const href = productLibraryHref(product, row.id);
+  const experience = getProductExperience(product);
+  const label = getLibraryItemLabel(product);
+  const iconClass = getDockIconForProduct(product);
+  const creatorLink = creatorHref(product.creators ?? product.creator);
+  const entries: ContextMenuEntry[] = [
+    { id: 'open', label: `Open ${label}`, href },
+    { id: 'creator', label: 'View Creator', href: creatorLink },
+    { id: 'pin', label: 'Pin to Dock', onSelect: () => pinDockItem({
+      id: `library:${row.id}`,
+      label: product.title,
+      href,
+      iconClass,
+      kind: experience === 'music' ? 'music' : experience === 'book' ? 'book' : experience === 'asset' ? 'asset' : 'item',
+      imageUrl: image ?? null,
+    }) },
+    { id: 'pin-creator', label: 'Pin Creator to Dock', onSelect: () => pinDockItem({
+      id: `profile:${product.creators?.id ?? creatorLink}`,
+      label: creatorName,
+      href: creatorLink,
+      iconClass: 'os-icon-user',
+      kind: 'profile',
+      imageUrl: product.creators?.avatar_url ?? null,
+    }) },
+    { kind: 'divider', id: 'divider-1' },
+    { id: 'remove', label: 'Remove From Library', danger: true, onSelect: () => onRemove(row) },
+  ];
 
   return (
-    <Link className="product-tile" href={productLibraryHref(product, row.id)}>
+    <Link className="product-tile" href={href} onContextMenu={event => openContextMenu(event, entries)}>
       <span className={`product-tile-art product-tile-art-${shape}`}>
         {image && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -202,6 +240,22 @@ function LibraryCard({ row }: { row: LibraryRow }) {
       </span>
     </Link>
   );
+}
+
+function getLibraryItemLabel(product: Product) {
+  const experience = getProductExperience(product);
+  if (experience === 'music') return 'Release';
+  if (experience === 'book') return 'Book';
+  if (experience === 'asset') return 'Asset';
+  return 'Item';
+}
+
+function getDockIconForProduct(product: Product) {
+  const experience = getProductExperience(product);
+  if (experience === 'music') return 'os-icon-music';
+  if (experience === 'book') return 'os-icon-books';
+  if (experience === 'asset') return 'os-icon-assets';
+  return 'os-icon-store';
 }
 
 function getLibraryTileShape(product: Product): 'square' | 'book' | 'landscape' {

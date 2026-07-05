@@ -19,7 +19,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { getActiveOSAppId, getAvailableDockApps, type OSApp } from '@/lib/osApps';
-import { setDockAppHidden, setDockMode, useDockPreferences } from '@/lib/dockPreferences';
+import { setDockAppHidden, setDockMode, unpinDockItem, useDockPreferences, type PinnedDockItem } from '@/lib/dockPreferences';
 import { useContextMenu, type ContextMenuEntry } from '@/components/ContextMenu';
 
 const DRAG_TOGGLE_DISTANCE = 56;
@@ -46,7 +46,15 @@ function dockModeEntries(compact: boolean): ContextMenuEntry[] {
   ];
 }
 
-function DockItem({ app, active, compact }: { app: OSApp; active: boolean; compact: boolean }) {
+function DockItem({
+  app,
+  active,
+  compact,
+}: {
+  app: OSApp;
+  active: boolean;
+  compact: boolean;
+}) {
   const { openContextMenu } = useContextMenu();
 
   const entries: ContextMenuEntry[] = [
@@ -72,13 +80,40 @@ function DockItem({ app, active, compact }: { app: OSApp; active: boolean; compa
   );
 }
 
+function PinnedDockItemRow({ item, active, compact }: { item: PinnedDockItem; active: boolean; compact: boolean }) {
+  const { openContextMenu } = useContextMenu();
+  return (
+    <Link
+      href={item.href}
+      className={active ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}
+      title={compact ? item.label : undefined}
+      aria-label={item.label}
+      onContextMenu={event => openContextMenu(event, [
+        { id: 'open', label: `Open ${item.label}`, href: item.href },
+        { kind: 'divider', id: 'divider-1' },
+        { id: 'unpin', label: 'Unpin Item', onSelect: () => unpinDockItem(item.id) },
+      ])}
+    >
+      <span className="sidebar-pin-art" aria-hidden="true">
+        {item.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={item.imageUrl} alt="" />
+        ) : (
+          <span className={`os-icon ${item.iconClass}`} />
+        )}
+      </span>
+      <span className="sidebar-item-label">{item.label}</span>
+    </Link>
+  );
+}
+
 function DockSection({
   label,
   apps,
   activeAppId,
   compact,
 }: {
-  label: string;
+  label?: string;
   apps: OSApp[];
   activeAppId: string;
   compact: boolean;
@@ -87,7 +122,7 @@ function DockSection({
 
   return (
     <div className="sidebar-section" aria-label={label}>
-      <div className="sidebar-section-label">{label}</div>
+      {label && <div className="sidebar-section-label">{label}</div>}
       {apps.map(app => (
         <DockItem key={app.id} app={app} active={activeAppId === app.id} compact={compact} />
       ))}
@@ -99,7 +134,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { user } = useAuth();
   const [profile, setProfile] = useState<StudioProfile | null>(null);
-  const { mode, hiddenIds } = useDockPreferences();
+  const { mode, hiddenIds, order, pinnedItems } = useDockPreferences();
   const now = useNow();
   const activeAppId = getActiveOSAppId(pathname);
   const { openContextMenu } = useContextMenu();
@@ -159,15 +194,11 @@ export default function Sidebar() {
     isCreator: isCreatorProfile(profile),
   });
   const dockApps = availableApps.filter(app => app.locked || !hiddenIds.includes(app.id));
-
-  const primaryOrder = ['store', 'library', 'dashboard'];
-  const primaryApps = dockApps
-    .filter(app => primaryOrder.includes(app.id))
-    .sort((a, b) => primaryOrder.indexOf(a.id) - primaryOrder.indexOf(b.id));
-  const secondaryOrder = ['community', 'resources', 'services'];
-  const secondaryApps = dockApps
-    .filter(app => secondaryOrder.includes(app.id))
-    .sort((a, b) => secondaryOrder.indexOf(a.id) - secondaryOrder.indexOf(b.id));
+  const activePinnedItem = pinnedItems.find(item => isPinnedDockItemActive(pathname, item.href));
+  const mainActiveAppId = activePinnedItem ? '' : activeAppId;
+  const orderedMainApps = dockApps
+    .filter(app => app.group === 'media' || app.group === 'community' || app.group === 'studio')
+    .sort((a, b) => orderIndex(order, a.id) - orderIndex(order, b.id));
   const accountApps = dockApps.filter(app => app.group === 'account');
   const systemApps = dockApps.filter(app => app.group === 'system');
 
@@ -198,11 +229,15 @@ export default function Sidebar() {
       </div>
 
       <nav className="sidebar-nav" aria-label="Dock">
-        <DockSection label="44OS" apps={primaryApps} activeAppId={activeAppId} compact={compact} />
-        {primaryApps.length > 0 && secondaryApps.length > 0 && <div className="sidebar-divider" />}
-        {secondaryApps.map(app => (
-          <DockItem key={app.id} app={app} active={activeAppId === app.id} compact={compact} />
-        ))}
+        <DockSection apps={orderedMainApps} activeAppId={mainActiveAppId} compact={compact} />
+        {pinnedItems.length > 0 && (
+          <>
+            <div className="sidebar-divider" />
+            {pinnedItems.map(item => (
+              <PinnedDockItemRow key={item.id} item={item} active={activePinnedItem?.id === item.id} compact={compact} />
+            ))}
+          </>
+        )}
 
         <div className="sidebar-spacer" />
 
@@ -222,15 +257,25 @@ export default function Sidebar() {
 
         {/* Support (account group) sits at the bottom, directly above the system divider. */}
         {accountApps.map(app => (
-          <DockItem key={app.id} app={app} active={activeAppId === app.id} compact={compact} />
+          <DockItem key={app.id} app={app} active={mainActiveAppId === app.id} compact={compact} />
         ))}
 
         <div className="sidebar-divider" />
 
         {systemApps.map(app => (
-          <DockItem key={app.id} app={app} active={activeAppId === app.id} compact={compact} />
+          <DockItem key={app.id} app={app} active={mainActiveAppId === app.id} compact={compact} />
         ))}
       </nav>
     </aside>
   );
+}
+
+function orderIndex(order: string[], id: string) {
+  const index = order.indexOf(id);
+  return index === -1 ? Number.MAX_SAFE_INTEGER : index;
+}
+
+function isPinnedDockItemActive(pathname: string, href: string) {
+  const path = href.split('?')[0];
+  return pathname === path || pathname.startsWith(`${path}/`);
 }

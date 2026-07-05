@@ -1,10 +1,15 @@
 'use client';
 
 import Link from 'next/link';
+import { useContextMenu } from '@/components/ContextMenu';
+import { pinDockItem } from '@/lib/dockPreferences';
 import { creatorHref, type ProductAchievement } from '@/lib/platform';
 import type { Product } from '@/lib/products';
 
 type ProductCreator = Product['creators'];
+type ProductDetailTrack = {
+  duration_seconds?: number | null;
+};
 
 export function LibraryCreatorChip({
   creator,
@@ -15,12 +20,28 @@ export function LibraryCreatorChip({
   fallbackName?: string | null;
   sourceProductId?: string | null;
 }) {
+  const { openContextMenu } = useContextMenu();
   const name = creator?.display_name || creator?.username || fallbackName || '44 Creator';
   const avatarUrl = creator?.avatar_url;
   const href = withSourceProduct(creatorHref(creator ?? fallbackName ?? '44 Creator'), sourceProductId);
 
   return (
-    <Link className="library-creator-chip" href={href} aria-label={`View ${name}`}>
+    <Link
+      className="library-creator-chip"
+      href={href}
+      aria-label={`View ${name}`}
+      onContextMenu={event => openContextMenu(event, [
+        { id: 'open', label: 'View Creator', href },
+        { id: 'pin', label: 'Pin to Dock', onSelect: () => pinDockItem({
+          id: `profile:${creator?.id ?? href}`,
+          label: name,
+          href,
+          iconClass: 'os-icon-user',
+          kind: 'profile',
+          imageUrl: avatarUrl ?? null,
+        }) },
+      ])}
+    >
       <span className="library-creator-avatar">
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -93,6 +114,75 @@ export function LibraryAchievementsSection({
       )}
     </div>
   );
+}
+
+export function LibraryProductDetailsSection({
+  product,
+  tracks = [],
+}: {
+  product: Product;
+  tracks?: ProductDetailTrack[];
+}) {
+  const details = buildLibraryProductDetails(product, tracks);
+  if (details.length === 0) return null;
+
+  return (
+    <div className="view-section">
+      <h2 className="view-section-title">Product Details</h2>
+      <div>
+        {details.map(detail => (
+          <div className="view-row" key={detail.label}>
+            <span className="view-row-label">{detail.label}</span>
+            <span className="view-row-value">{detail.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function buildLibraryProductDetails(product: Product, tracks: ProductDetailTrack[]) {
+  const creator = product.creators?.display_name || product.creator || '44 Creator';
+  const uploadDate = product.created_at
+    ? new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(product.created_at))
+    : 'N/A';
+  const type = product.experience_type || product.category || product.product_type || '';
+  const normalizedType = type.toLowerCase();
+
+  if (normalizedType.includes('music') || ['album', 'ep', 'single'].some(value => product.product_type?.toLowerCase().includes(value))) {
+    const totalLength = tracks.reduce((sum, track) => sum + (track.duration_seconds || 0), 0);
+    return [
+      { label: 'Creator', value: creator },
+      { label: 'Product Type', value: product.product_type || 'Release' },
+      { label: 'Release Year', value: String(product.year ?? 'N/A') },
+      { label: 'Total Tracks', value: String(tracks.length) },
+      { label: 'Total Length', value: formatDuration(totalLength) },
+      { label: 'Upload Date', value: uploadDate },
+    ];
+  }
+
+  if (normalizedType.includes('book') || product.product_type?.toLowerCase().includes('book')) {
+    return [
+      { label: 'Creator', value: creator },
+      { label: 'Book Type', value: product.product_type || 'Book' },
+      { label: 'Publication Year', value: String(product.year ?? 'N/A') },
+      { label: 'Upload Date', value: uploadDate },
+    ];
+  }
+
+  return [
+    { label: 'Creator', value: creator },
+    { label: 'Product Type', value: product.product_type || 'Product' },
+    { label: 'Year', value: String(product.year ?? 'N/A') },
+    { label: 'Upload Date', value: uploadDate },
+  ];
+}
+
+function formatDuration(seconds: number) {
+  if (!seconds || seconds <= 0) return '-:--';
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60).toString().padStart(2, '0');
+  return `${minutes}:${remainingSeconds}`;
 }
 
 function initials(name: string) {

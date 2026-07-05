@@ -316,18 +316,33 @@ export function currencyForCountry(code?: string | null) {
   return COUNTRIES.find(country => country.code === code)?.currency ?? DEFAULT_CREATOR_CURRENCY;
 }
 
+export function getDetectedViewerCountry() {
+  if (typeof window === 'undefined') return DEFAULT_VIEWER_COUNTRY;
+  const candidates = [navigator.language, ...(navigator.languages ?? [])];
+  for (const locale of candidates) {
+    try {
+      const region = new Intl.Locale(locale).region?.toUpperCase();
+      if (region && COUNTRIES.some(country => country.code === region)) return region;
+    } catch {
+      const region = locale.split('-')[1]?.toUpperCase();
+      if (region && COUNTRIES.some(country => country.code === region)) return region;
+    }
+  }
+  return DEFAULT_VIEWER_COUNTRY;
+}
+
 export function normalizeMarketMode(value?: string | null): MarketMode {
   return value === 'global_plus_local' || value === 'both' || value === 'local' ? 'global_plus_local' : 'global';
 }
 
 export function getStoredViewerCountry() {
   if (typeof window === 'undefined') return DEFAULT_VIEWER_COUNTRY;
-  return window.localStorage.getItem(VIEWER_COUNTRY_STORAGE_KEY) || DEFAULT_VIEWER_COUNTRY;
+  return window.localStorage.getItem(VIEWER_COUNTRY_STORAGE_KEY) || getDetectedViewerCountry();
 }
 
 export function getStoredViewerCurrency() {
   if (typeof window === 'undefined') return DEFAULT_VIEWER_CURRENCY;
-  return window.localStorage.getItem(VIEWER_CURRENCY_STORAGE_KEY) || DEFAULT_VIEWER_CURRENCY;
+  return window.localStorage.getItem(VIEWER_CURRENCY_STORAGE_KEY) || currencyForCountry(getStoredViewerCountry());
 }
 
 export function setStoredViewerPreferences(countryCode: string, currency: string) {
