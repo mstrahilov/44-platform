@@ -7,12 +7,28 @@ import { PageShell, GlassPanel, HubHero, HubSection } from '@/components/Ui';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
+import { getProductExperience } from '@/lib/experience';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { useDashboardTabs } from '@/lib/dashboardTabs';
-import { DASHBOARD_CATALOG_SECTIONS, productBelongsToDashboardSection } from '@/lib/dashboardCatalog';
+import { DASHBOARD_CATALOG_SECTIONS } from '@/lib/dashboardCatalog';
+
+type LibraryMetricRow = {
+  id: string;
+  product_id: string | null;
+  acquisition_type: string | null;
+  acquired_at: string | null;
+};
 
 type OverviewState = {
   products: Product[];
+  libraryItems: LibraryMetricRow[];
+  metricsError: string;
+};
+
+const APPAREL_SECTION = {
+  id: 'apparel',
+  label: 'Apparel',
+  href: '/store/merch',
 };
 
 export default function DashboardPage() {
@@ -22,8 +38,9 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [overview, setOverview] = useState<OverviewState>({
     products: [],
+    libraryItems: [],
+    metricsError: '',
   });
-  const [fetching, setFetching] = useState(true);
 
   useEffect(() => {
     if (!loading && user === null) {
@@ -45,10 +62,29 @@ export default function DashboardPage() {
         .eq('author_id', profileId)
         .order('created_at', { ascending: false });
 
+      const productRows = (productsResult.data as Product[] | null) ?? [];
+      const productIds = productRows.map(product => product.id);
+      let libraryItems: LibraryMetricRow[] = [];
+      let metricsError = '';
+
+      if (productIds.length > 0) {
+        const libraryResult = await supabase
+          .from('library_items')
+          .select('id,product_id,acquisition_type,acquired_at')
+          .in('product_id', productIds);
+
+        if (libraryResult.error) {
+          metricsError = libraryResult.error.message;
+        } else {
+          libraryItems = (libraryResult.data as LibraryMetricRow[] | null) ?? [];
+        }
+      }
+
       setOverview({
-        products: (productsResult.data as Product[] | null) ?? [],
+        products: productRows,
+        libraryItems,
+        metricsError,
       });
-      setFetching(false);
     }
 
     fetchOverview();
@@ -77,16 +113,49 @@ export default function DashboardPage() {
     );
   }
 
-  const catalogCards = DASHBOARD_CATALOG_SECTIONS.map(section => {
-    const items = overview.products.filter(item => productBelongsToDashboardSection(item, section.id));
-    const published = items.filter(item => item.is_published || item.status === 'published').length;
-    return {
-      section,
-      total: items.length,
-      published,
-      drafts: items.length - published,
-    };
-  });
+  const productById = new Map(overview.products.map(product => [product.id, product]));
+
+  const catalogCards = [
+    ...DASHBOARD_CATALOG_SECTIONS.map(section => {
+      const items = overview.products.filter(item => {
+        const experience = getProductExperience(item);
+        if (section.id === 'music') return experience === 'music';
+        if (section.id === 'books') return experience === 'book';
+        return experience === 'asset';
+      });
+      const published = items.filter(item => item.is_published || item.status === 'published').length;
+      return {
+        id: section.id,
+        title: section.label,
+        total: items.length,
+        published,
+        drafts: items.length - published,
+        href: section.href,
+      };
+    }),
+    (() => {
+      const items = overview.products.filter(item => getProductExperience(item) === 'physical');
+      const published = items.filter(item => item.is_published || item.status === 'published').length;
+      return {
+        id: APPAREL_SECTION.id,
+        title: APPAREL_SECTION.label,
+        total: items.length,
+        published,
+        drafts: items.length - published,
+        href: APPAREL_SECTION.href,
+      };
+    })(),
+  ];
+
+  const librarySaves = overview.libraryItems.length;
+  const purchasedItems = overview.libraryItems.filter(item => item.acquisition_type === 'purchase');
+  const soldItems = purchasedItems.length;
+  const revenueCents = purchasedItems.reduce((total, item) => {
+    const product = item.product_id ? productById.get(item.product_id) : null;
+    return total + (product?.price_cents ?? 0);
+  }, 0);
+  const totalPlays = 0;
+
   return (
     <PageShell>
       <div className="dashboard-page">
@@ -98,27 +167,43 @@ export default function DashboardPage() {
         <div className="dashboard-overview-grid">
           {catalogCards.map(card => (
             <OverviewCard
-              key={card.section.id}
-              title={card.section.label}
+              key={card.id}
+              title={card.title}
               total={card.total}
               published={card.published}
               drafts={card.drafts}
-              href={card.section.href}
+              href={card.href}
             />
           ))}
         </div>
 
-        <HubSection title="Earnings">
-          {fetching ? (
-            <div className="dashboard-empty">Loading earnings…</div>
-          ) : (
-            <div className="dashboard-list-surface">
-              <div className="dashboard-empty">No sold items yet.</div>
+        <HubSection title="Analytics">
+          <div className="dashboard-metric-grid">
+            <MetricCard label="Library Saves" value={librarySaves} note="Items added to user Libraries." />
+            <MetricCard label="Total Plays" value={totalPlays} note="Plays across music releases." />
+            <MetricCard label="Products Sold" value={soldItems} note="Purchased items in this period." />
+            <MetricCard label="Revenue Earned" value={formatCurrency(revenueCents)} note="Gross revenue from purchases." />
+          </div>
+
+          {overview.metricsError && (
+            <div className="dashboard-status dashboard-status-error">
+              Some analytics could not be loaded: {overview.metricsError}
             </div>
           )}
         </HubSection>
+
       </div>
     </PageShell>
+  );
+}
+
+function MetricCard({ label, value, note }: { label: string; value: string | number; note: string }) {
+  return (
+    <GlassPanel className="dashboard-metric-card">
+      <div className="os-type-meta">{label}</div>
+      <div className="os-type-page-title">{value}</div>
+      <p className="os-type-body-small">{note}</p>
+    </GlassPanel>
   );
 }
 
@@ -148,4 +233,12 @@ function OverviewCard({
       </GlassPanel>
     </Link>
   );
+}
+
+function formatCurrency(cents: number) {
+  return new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(cents / 100);
 }

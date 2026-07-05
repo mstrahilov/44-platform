@@ -12,6 +12,7 @@ import { productLibraryHref } from '@/lib/experience';
 import { getProductLibraryContent, getProductLibraryPrimaryAction, getProductRuntimeKind } from '@/lib/libraryContent';
 import { creatorHref, type ProductAchievement, type Resource, type ServiceRequest, type Track, type UserAchievement } from '@/lib/platform';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
+import { LibraryAchievementsSection, LibraryCreatorChip } from '@/components/LibraryDetailPrimitives';
 import { ProductUpdatesSection } from '@/components/ProductUpdatesSection';
 import { unlockAchievementForUser } from '@/lib/achievementNotifications';
 import { useTopbarBack } from '@/components/TopbarContext';
@@ -184,13 +185,9 @@ function ProductLibraryDetail({
 }) {
   const product = row.products!;
   const action = getProductLibraryPrimaryAction(product);
-  const content = getProductLibraryContent(product);
   const isMusic = getProductRuntimeKind(product) === 'music';
-  const creatorLink = creatorHref(product.creators ?? product.creator);
   const { currentTrack, isPlaying, playQueue, toggleTrack: togglePlayerTrack } = useMusicPlayer();
   const [localUnlockedAchievementIds, setLocalUnlockedAchievementIds] = useState(unlockedAchievementIds);
-  const unlocked = achievements.filter(item => localUnlockedAchievementIds.has(item.id));
-  const locked = achievements.filter(item => !localUnlockedAchievementIds.has(item.id));
   const [playedTrackIds, setPlayedTrackIds] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<AchievementToastData | null>(null);
 
@@ -270,13 +267,14 @@ function ProductLibraryDetail({
 
   const heroImage = product.hero_url || product.cover_url;
   const description = product.long_description || product.short_description || '';
+  const content = getProductLibraryContent(product);
 
   return (
-    <div className="view-detail-single">
+    <div className="view-detail-single library-detail-page">
 
       {/* Album header */}
       <div
-        className={heroImage ? 'view-album-header' : 'view-album-header view-album-header-fallback'}
+        className={heroImage ? 'view-album-header library-detail-header' : 'view-album-header view-album-header-fallback library-detail-header'}
         style={heroImage ? { backgroundImage: `url(${heroImage})` } as React.CSSProperties : undefined}
       >
         <div className="view-album-cover">
@@ -286,20 +284,21 @@ function ProductLibraryDetail({
           )}
         </div>
         <div className="view-album-copy">
-          <div className="view-album-eyebrow">{product.product_type}</div>
           <h1 className="view-album-title">{product.title}</h1>
-          <div className="view-album-meta">
-            <span className="view-album-meta-strong">{product.creators?.display_name || product.creator}</span>
-            {isMusic && tracks.length > 0 && (
-              <>
-                <span className="view-album-meta-sep" />
-                <span>{tracks.length} track{tracks.length === 1 ? '' : 's'}</span>
-              </>
-            )}
+          <div className="library-release-meta-row">
+            <LibraryCreatorChip creator={product.creators ?? null} fallbackName={product.creator} sourceProductId={product.id} />
+            <div className="view-album-meta">
+              <span>{product.product_type || content.detailsTitle}</span>
+              {product.year && (
+                <>
+                  <span className="view-album-meta-sep" />
+                  <span>{product.year}</span>
+                </>
+              )}
+            </div>
           </div>
           <div className="view-album-actions">
             <button className="os-button os-button-primary" type="button" onClick={isMusic ? playRelease : () => runProductAction(action)}>{action.label}</button>
-            <Link className="os-button os-button-secondary" href={creatorLink}>View Creator</Link>
           </div>
         </div>
       </div>
@@ -328,7 +327,7 @@ function ProductLibraryDetail({
                   onClick={() => toggleTrack(track)}
                   disabled={!track.audio_url}
                 >
-                  {currentTrack?.id === track.id && isPlaying ? 'II' : '>'}
+                  <span className={currentTrack?.id === track.id && isPlaying ? 'view-track-icon view-track-icon-pause' : 'view-track-icon view-track-icon-play'} aria-hidden="true" />
                 </button>
                 <span className="view-track-title">{track.title}</span>
                 <span className="view-track-duration">{formatDuration(track.duration_seconds)}</span>
@@ -338,8 +337,7 @@ function ProductLibraryDetail({
         </div>
       )}
 
-      {/* Non-music content placeholder */}
-      {!isMusic && (
+      {!isMusic && description.length <= 40 && (
         <div className="view-section">
           <h2 className="view-section-title">{content.contentTitle}</h2>
           <p className="os-type-body view-description">
@@ -348,47 +346,7 @@ function ProductLibraryDetail({
         </div>
       )}
 
-      {/* Achievements — flat, no cards */}
-      {achievements.length > 0 && (
-        <div className="view-section">
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 20 }}>
-            <h2 className="view-section-title" style={{ margin: 0 }}>Achievements</h2>
-            <span className="os-type-body-small" style={{ color: 'var(--os-color-ink-muted)' }}>
-              {unlocked.length} of {achievements.length}
-            </span>
-          </div>
-
-          {unlocked.length > 0 && (
-            <div className="view-achievement-group">
-              <div className="os-type-eyebrow" style={{ color: 'var(--os-color-ink-muted)', marginBottom: 14 }}>Unlocked</div>
-              {unlocked.map(a => (
-                <div key={a.id} className="view-achievement-row view-achievement-row-unlocked">
-                  <div>
-                    <div className="os-type-card-title" style={{ marginBottom: 3 }}>{a.title}</div>
-                    <div className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>{a.description}</div>
-                  </div>
-                  <span className="os-pill os-status-owned">Unlocked</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {locked.length > 0 && (
-            <div className="view-achievement-group" style={{ marginTop: unlocked.length > 0 ? 28 : 0 }}>
-              <div className="os-type-eyebrow" style={{ color: 'var(--os-color-ink-muted)', marginBottom: 14 }}>Locked</div>
-              {locked.map(a => (
-                <div key={a.id} className="view-achievement-row">
-                  <div>
-                    <div className="os-type-card-title" style={{ marginBottom: 3 }}>{a.title}</div>
-                    <div className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>{a.description}</div>
-                  </div>
-                  <span className="os-pill os-status-locked">Locked</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {isMusic && <LibraryAchievementsSection achievements={achievements} unlockedAchievementIds={localUnlockedAchievementIds} />}
 
       <ProductUpdatesSection productId={product.id} emptyMessage="No updates from the creator yet." />
 

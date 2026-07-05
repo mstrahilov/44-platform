@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { PageShell, HubHero, CenteredMessage, EmptyMessage } from '@/components/Ui';
+import { PageShell, HubHero, HubSection, CenteredMessage, EmptyMessage } from '@/components/Ui';
 import { useTopbarTabs } from '@/components/TopbarContext';
 import { getProductExperience, productLibraryHref, type ProductExperience } from '@/lib/experience';
 import type { LibraryCategory } from '@/lib/libraryRoutes';
@@ -110,6 +110,15 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
     return productRows.filter(row => getProductExperience(row.products!) === expected);
   }, [category, rows]);
 
+  const groupedRows = useMemo(() => {
+    if (category !== 'all') return [];
+    return [
+      { id: 'music', title: 'Music', rows: visibleRows.filter(row => getProductExperience(row.products!) === 'music') },
+      { id: 'books', title: 'Books', rows: visibleRows.filter(row => getProductExperience(row.products!) === 'book') },
+      { id: 'assets', title: 'Assets', rows: visibleRows.filter(row => getProductExperience(row.products!) === 'asset') },
+    ].filter(group => group.rows.length > 0);
+  }, [category, visibleRows]);
+
   if (authLoading || loading) {
     return <PageShell><CenteredMessage>Loading...</CenteredMessage></PageShell>;
   }
@@ -149,6 +158,18 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
               </div>
             </div>
           </div>
+        ) : category === 'all' ? (
+          <>
+            {groupedRows.map(group => (
+              <HubSection key={group.id} title={group.title}>
+                <div className="app-grid">
+                  {group.rows.map(row => (
+                    <LibraryCard key={row.id} row={row} />
+                  ))}
+                </div>
+              </HubSection>
+            ))}
+          </>
         ) : (
           <div className="app-grid">
             {visibleRows.map(row => (
@@ -164,11 +185,12 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
 function LibraryCard({ row }: { row: LibraryRow }) {
   const product = row.products!;
   const image = product.cover_url || product.hero_url;
-  const status = row.acquisition_type === 'purchase' ? 'Purchased' : 'In Library';
+  const shape = getLibraryTileShape(product);
+  const creatorName = product.creators?.display_name || product.creator || '44 Creator';
 
   return (
     <Link className="product-tile" href={productLibraryHref(product, row.id)}>
-      <span className="product-tile-art product-tile-art-square">
+      <span className={`product-tile-art product-tile-art-${shape}`}>
         {image && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={image} alt="" />
@@ -176,8 +198,15 @@ function LibraryCard({ row }: { row: LibraryRow }) {
       </span>
       <span className="product-tile-info">
         <span className="product-tile-title">{product.title}</span>
-        <span className="product-tile-subtitle">{status} · {product.creators?.display_name || product.creator || '44 Creator'}</span>
+        <span className="product-tile-subtitle">{creatorName}</span>
       </span>
     </Link>
   );
+}
+
+function getLibraryTileShape(product: Product): 'square' | 'book' | 'landscape' {
+  const experience = getProductExperience(product);
+  if (experience === 'book') return 'book';
+  if (experience === 'asset') return 'landscape';
+  return 'square';
 }

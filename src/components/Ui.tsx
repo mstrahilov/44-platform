@@ -9,6 +9,7 @@ import type { Product } from '@/lib/products';
 import { formatProductPrice } from '@/lib/products';
 import { getProductExperience, productStoreHref } from '@/lib/experience';
 import { getPostMetaLabel } from '@/lib/social';
+import { useAuth } from '@/lib/useAuth';
 
 export function PageShell({ children }: { children: ReactNode }) {
   return <div className="view-hub">{children}</div>;
@@ -77,6 +78,7 @@ export function PanelListItem({
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function ProductCard({ product, owned: _owned }: { product: Product; owned?: boolean }) {
   const { openContextMenu } = useContextMenu();
+  const { user } = useAuth();
   const href = productStoreHref(product);
   const image = product.cover_url || product.hero_url;
   const shape = getProductTileShape(product);
@@ -93,8 +95,9 @@ export function ProductCard({ product, owned: _owned }: { product: Product; owne
                 id: 'share',
                 label: 'Copy Share Link',
                 onSelect: () => {
-                  const url = typeof window !== 'undefined' ? new URL(href, window.location.origin).toString() : href;
-                  navigator.clipboard?.writeText(url);
+                  const url = typeof window !== 'undefined' ? new URL(href, window.location.origin) : null;
+                  if (url && user?.id) url.searchParams.set('ref', user.id);
+                  navigator.clipboard?.writeText(url?.toString() ?? href);
                 },
               }]
             : []),

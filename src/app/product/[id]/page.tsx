@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { notFound, useRouter } from 'next/navigation';
+import { notFound, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
@@ -49,6 +49,7 @@ export function ProductStoreDetail({
 }) {
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const cart = useCart();
   const { currentTrack, isPlaying, playQueue, toggleTrack } = useMusicPlayer();
   const [product, setProduct] = useState<Product | null>(null);
@@ -137,6 +138,23 @@ export function ProductStoreDetail({
     });
   }, [product, user]);
 
+  useEffect(() => {
+    async function recordSharedVisit() {
+      if (!product) return;
+      const referrerId = searchParams.get('ref');
+      if (!referrerId || referrerId === user?.id) return;
+
+      await supabase.from('product_share_visits').insert({
+        product_id: product.id,
+        referrer_id: referrerId,
+        visitor_id: user?.id ?? null,
+      });
+
+    }
+
+    recordSharedVisit();
+  }, [product, searchParams, user?.id]);
+
   async function addToLibrary() {
     if (!product) return;
     if (!user) { alert('Sign in first, then add this to your library.'); return; }
@@ -181,6 +199,7 @@ export function ProductStoreDetail({
       : getProductStoreAccessLabel(product);
   const creatorLink = creatorHref(product.creators ?? product.creator);
   const creatorReleasesLink = `${creatorLink}?tab=releases`;
+  const creatorProductLink = `${creatorLink}${creatorLink.includes('?') ? '&' : '?'}fromProduct=${encodeURIComponent(product.id)}`;
   const libraryHref = ownedLibraryItemId ? productLibraryHref(product, ownedLibraryItemId) : storeIndexHref(product).replace('/store', '/library');
 
   const hasDescription = Boolean(product.long_description || product.short_description);
@@ -262,7 +281,7 @@ export function ProductStoreDetail({
                 <button className="os-button os-button-secondary" type="button" onClick={addProductToCart}>Buy Download</button>
               )
             )}
-            <Link className="os-button os-button-secondary" href={creatorReleasesLink}>View Creator</Link>
+            <Link className="os-button os-button-secondary" href={creatorProductLink}>View Creator</Link>
           </div>
         </div>
       </div>

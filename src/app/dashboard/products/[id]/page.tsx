@@ -7,6 +7,16 @@ import { PageShell, GlassPanel, HubHero } from '@/components/Ui';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { UploadField } from '@/components/UploadField';
+import {
+  DashboardReleaseFeatures,
+  createReleaseFeatureState,
+  featureAssetTypes,
+  hydrateReleaseFeatureState,
+  normalizeFeatureStateForSection,
+  saveReleaseFeatures,
+  validateReleaseFeatureState,
+  type SavedProductAchievement,
+} from '@/components/DashboardReleaseFeatures';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Category, Track } from '@/lib/platform';
@@ -75,6 +85,7 @@ function productAssetTypeForSection(sectionId: DashboardCatalogSectionId) {
 }
 
 type ProductAssetRow = {
+  title: string | null;
   file_url: string | null;
   asset_type: string | null;
 };
@@ -98,6 +109,8 @@ export default function EditProductPage() {
   const [year, setYear] = useState('');
   const [trackCount, setTrackCount] = useState('1');
   const [tracks, setTracks] = useState<DraftTrack[]>([createDraftTrack()]);
+  const [featureState, setFeatureState] = useState(() => createReleaseFeatureState('music'));
+  const [hasSavedFeatures, setHasSavedFeatures] = useState(false);
   const [ownerId, setOwnerId] = useState('');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -139,10 +152,18 @@ export default function EditProductPage() {
         return;
       }
 
-      const [{ data: trackRows }, { data: assetRows }] = await Promise.all([
+      const [{ data: trackRows }, { data: assetRows }, { data: achievementRows }] = await Promise.all([
         supabase.from('tracks').select('*').eq('product_id', id).order('number'),
-        supabase.from('product_assets').select('asset_type,file_url').eq('product_id', id).order('sort_order'),
+        supabase.from('product_assets').select('asset_type,title,file_url').eq('product_id', id).order('sort_order'),
+        supabase
+          .from('product_achievements')
+          .select('code,title,description,trigger_type,reward_config,is_secret')
+          .eq('product_id', id)
+          .order('sort_order'),
       ]);
+
+      const productSection = getDashboardCatalogSectionForProduct(product);
+      const featureAssets = ((assetRows as ProductAssetRow[] | null) ?? []).filter(asset => featureAssetTypes().includes(asset.asset_type ?? ''));
 
       setTitle(product.title ?? '');
       setCategoryId(product.category_id ?? '');
@@ -153,8 +174,30 @@ export default function EditProductPage() {
       setLocalPrice(product.local_price_cents ? (product.local_price_cents / 100).toFixed(2) : '');
       setLocalCurrency(product.local_currency || fallbackLocalCurrency);
       setCoverUrl(product.cover_url ?? '');
-      setItemFileUrl(product.read_url || product.download_url || ((assetRows as ProductAssetRow[] | null) ?? [])[0]?.file_url || '');
+      setItemFileUrl(product.read_url || product.download_url || ((assetRows as ProductAssetRow[] | null) ?? []).find(asset => !featureAssetTypes().includes(asset.asset_type ?? ''))?.file_url || '');
       setYear(product.year ? String(product.year) : '');
+      setFeatureState(hydrateReleaseFeatureState(
+        productSection.id,
+        ((achievementRows as Array<{
+          code: string;
+          title: string;
+          description: string | null;
+          trigger_type: string;
+          reward_config: Record<string, unknown> | null;
+          is_secret: boolean | null;
+        }> | null) ?? []).map(achievement => ({
+          code: achievement.code,
+          title: achievement.title,
+          description: achievement.description ?? '',
+          triggerType: achievement.trigger_type,
+          reward_config: achievement.reward_config,
+          is_secret: achievement.is_secret,
+          hidden: achievement.is_secret ?? false,
+          enabled: true,
+        })) satisfies SavedProductAchievement[],
+        featureAssets,
+      ));
+      setHasSavedFeatures(Boolean(((achievementRows as unknown[] | null) ?? []).length || featureAssets.length));
 
       const resolvedTracks = ((trackRows as Track[] | null) ?? []).map(track => ({
         id: track.id,
@@ -200,6 +243,10 @@ export default function EditProductPage() {
     setTracks(current => ensureTrackCount(current, Number(trackCount || '0')));
   }, [isMusicProduct, trackCount]);
 
+  useEffect(() => {
+    setFeatureState(current => normalizeFeatureStateForSection(current, section.id));
+  }, [section.id]);
+
   function updateTrack(index: number, patch: Partial<DraftTrack>) {
     setTracks(current => current.map((track, trackIndex) => (trackIndex === index ? { ...track, ...patch } : track)));
   }
@@ -225,6 +272,15 @@ export default function EditProductPage() {
     if (needsDigitalFile && !itemFileUrl.trim()) {
       setError(section.id === 'books' ? 'Books need an uploaded file before saving.' : 'Assets need an uploaded pack file before saving.');
       return;
+    }
+    const featureValidationError = validateReleaseFeatureState(featureState, section.id);
+    if (featureValidationError) {
+      setError(featureValidationError);
+      return;
+    }
+    if (hasSavedFeatures && typeof window !== 'undefined') {
+      const confirmed = window.confirm('Changing release features can affect users who already own this item. Continue?');
+      if (!confirmed) return;
     }
 
     setSaving(true);
@@ -361,6 +417,19 @@ export default function EditProductPage() {
         setError(insertAssetError.message);
         return;
       }
+    }
+
+    const featureError = await saveReleaseFeatures({
+      supabaseClient: supabase,
+      productId: id,
+      sectionId: section.id,
+      state: featureState,
+    });
+
+    if (featureError) {
+      setSaving(false);
+      setError(featureError);
+      return;
     }
 
     setSaving(false);
@@ -570,6 +639,13 @@ export default function EditProductPage() {
                 </div>
               </div>
             ) : null}
+
+            <DashboardReleaseFeatures
+              sectionId={section.id}
+              userId={user.id}
+              state={featureState}
+              onChange={setFeatureState}
+            />
 
             {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
             {success && <div className="dashboard-status dashboard-status-success">{success}</div>}

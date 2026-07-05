@@ -13,6 +13,17 @@ export type MusicQueueTrack = {
   productId?: string | null;
 };
 
+export const MUSIC_TRACK_STARTED_EVENT = '44:music-track-started';
+export const MUSIC_TRACK_COMPLETED_EVENT = '44:music-track-completed';
+
+export type MusicTrackPlaybackEventDetail = {
+  track: MusicQueueTrack;
+  trackId: string;
+  productId: string | null;
+  index: number;
+  reason: 'manual' | 'queue' | 'auto' | 'next' | 'previous';
+};
+
 type MusicPlayerContextValue = {
   queue: MusicQueueTrack[];
   currentTrack: MusicQueueTrack | null;
@@ -72,10 +83,13 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
     const handleEnded = () => {
+      const completedIndex = currentIndexRef.current;
+      const completedTrack = queueRef.current[completedIndex];
+      if (completedTrack) emitMusicTrackEvent(MUSIC_TRACK_COMPLETED_EVENT, completedTrack, completedIndex, 'auto');
       const nextIndex = currentIndexRef.current + 1;
       const nextTrack = queueRef.current[nextIndex];
       if (nextTrack) {
-        startTrack(queueRef.current, nextIndex);
+        startTrack(queueRef.current, nextIndex, 'auto');
         return;
       }
       setIsPlaying(false);
@@ -136,7 +150,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     }
   }, [currentTrack, isPlaying, muted, volume]);
 
-  function startTrack(nextQueue: MusicQueueTrack[], index: number) {
+  function startTrack(nextQueue: MusicQueueTrack[], index: number, reason: MusicTrackPlaybackEventDetail['reason'] = 'manual') {
     const playable = nextQueue.filter(track => track.audioUrl);
     if (!playable.length) return;
 
@@ -160,6 +174,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     setMuted(false);
     if (volume <= 0) setVolumeState(1);
     setIsPlaying(true);
+    emitMusicTrackEvent(MUSIC_TRACK_STARTED_EVENT, nextTrack, nextIndex, reason);
     void audio.play().catch(error => {
       setPlaybackError(error instanceof Error ? error.message : 'Playback failed.');
       setIsPlaying(false);
@@ -167,7 +182,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   }
 
   function playQueue(nextQueue: MusicQueueTrack[], index = 0) {
-    startTrack(nextQueue, index);
+    startTrack(nextQueue, index, 'queue');
   }
 
   function toggleTrack(nextQueue: MusicQueueTrack[], index: number) {
@@ -179,7 +194,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    startTrack(nextQueue, index);
+    startTrack(nextQueue, index, 'manual');
   }
 
   function togglePlayback() {
@@ -213,7 +228,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
 
   function playNext() {
     if (!queue.length) return;
-    startTrack(queue, Math.min(queue.length - 1, currentIndex + 1));
+    startTrack(queue, Math.min(queue.length - 1, currentIndex + 1), 'next');
   }
 
   function playPrevious() {
@@ -224,7 +239,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       setCurrentTime(0);
       return;
     }
-    startTrack(queue, Math.max(0, currentIndex - 1));
+    startTrack(queue, Math.max(0, currentIndex - 1), 'previous');
   }
 
   function seek(time: number) {
@@ -273,6 +288,24 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       <audio ref={audioRef} preload="auto" style={{ display: 'none' }} aria-hidden="true" />
     </MusicPlayerContext.Provider>
   );
+}
+
+function emitMusicTrackEvent(
+  name: typeof MUSIC_TRACK_STARTED_EVENT | typeof MUSIC_TRACK_COMPLETED_EVENT,
+  track: MusicQueueTrack,
+  index: number,
+  reason: MusicTrackPlaybackEventDetail['reason'],
+) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent<MusicTrackPlaybackEventDetail>(name, {
+    detail: {
+      track,
+      trackId: track.id,
+      productId: track.productId ?? null,
+      index,
+      reason,
+    },
+  }));
 }
 
 export function useMusicPlayer() {

@@ -7,6 +7,7 @@ export const DASHBOARD_TABS: Array<{ id: string; label: string; href: string }> 
   { id: 'music', label: 'Music', href: '/dashboard/products' },
   { id: 'books', label: 'Books', href: '/dashboard/products?section=books' },
   { id: 'assets', label: 'Assets', href: '/dashboard/products?section=assets' },
+  { id: 'earnings', label: 'Earnings', href: '/dashboard/earnings' },
 ];
 
 export function useDashboardTabs(activeId: string) {

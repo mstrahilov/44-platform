@@ -6,6 +6,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { PageShell, GlassPanel, HubHero, CenteredMessage } from '@/components/Ui';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { UploadField } from '@/components/UploadField';
+import {
+  DashboardReleaseFeatures,
+  createReleaseFeatureState,
+  normalizeFeatureStateForSection,
+  saveReleaseFeatures,
+} from '@/components/DashboardReleaseFeatures';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Category } from '@/lib/platform';
@@ -114,6 +120,7 @@ function NewProductContent() {
   const [year, setYear] = useState('');
   const [trackCount, setTrackCount] = useState('1');
   const [tracks, setTracks] = useState<DraftTrack[]>([createDraftTrack()]);
+  const [featureState, setFeatureState] = useState(() => createReleaseFeatureState(section.id));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -158,6 +165,10 @@ function NewProductContent() {
     if (!isMusicProduct) return;
     setTracks(current => ensureTrackCount(current, Number(trackCount || '0')));
   }, [isMusicProduct, trackCount]);
+
+  useEffect(() => {
+    setFeatureState(current => normalizeFeatureStateForSection(current, section.id));
+  }, [section.id]);
 
   function updateTrack(index: number, patch: Partial<DraftTrack>) {
     setTracks(current => current.map((track, trackIndex) => (trackIndex === index ? { ...track, ...patch } : track)));
@@ -294,6 +305,21 @@ function NewProductContent() {
       }
     }
 
+    if (insertedProduct?.id) {
+      const featureError = await saveReleaseFeatures({
+        supabaseClient: supabase,
+        productId: insertedProduct.id,
+        sectionId: section.id,
+        state: featureState,
+      });
+
+      if (featureError) {
+        setSaving(false);
+        setError(featureError);
+        return;
+      }
+    }
+
     setSaving(false);
     router.push(section.href);
   }
@@ -312,26 +338,34 @@ function NewProductContent() {
 
         <div className="dashboard-section">
           <form onSubmit={handleSubmit} className="dashboard-form">
-            <label className="dashboard-field">
-              <div className="dashboard-field-label">Title</div>
-              <input className="os-input-field" value={title} onChange={event => setTitle(event.target.value)} placeholder="Example: Here Comes The Feeling" />
-            </label>
+            <section className="dashboard-form-step">
+              <div className="dashboard-form-section-head">
+                <div className="dashboard-form-section-copy">
+                  <div className="dashboard-field-label">Release Information</div>
+                  <p>Set the core title, type, pricing, artwork, and main files for this item.</p>
+                </div>
+              </div>
 
-            <label className="dashboard-field">
+              <label className="dashboard-field">
+                <div className="dashboard-field-label">Title</div>
+                <input className="os-input-field" value={title} onChange={event => setTitle(event.target.value)} placeholder="Example: Here Comes The Feeling" />
+              </label>
+
+              <label className="dashboard-field">
               <div className="dashboard-field-label">{section.typeLabel}</div>
               <select className="os-input-field" value={productType} onChange={event => setProductType(event.target.value)}>
                 {section.typeOptions.map(option => (
                   <option key={option} value={option}>{option}</option>
                 ))}
               </select>
-            </label>
+              </label>
 
-            <label className="dashboard-field">
-              <div className="dashboard-field-label">Description</div>
-              <textarea className="os-input-textarea" rows={6} value={description} onChange={event => setDescription(event.target.value)} />
-            </label>
+              <label className="dashboard-field">
+                <div className="dashboard-field-label">Description</div>
+                <textarea className="os-input-textarea" rows={6} value={description} onChange={event => setDescription(event.target.value)} />
+              </label>
 
-            <div className="dashboard-form-grid dashboard-form-grid-3">
+              <div className="dashboard-form-grid dashboard-form-grid-3">
               <label className="dashboard-field">
                 <div className="dashboard-field-label">Price</div>
                 <span className="dashboard-price-input">
@@ -354,9 +388,9 @@ function NewProductContent() {
                 <div className="dashboard-field-label">Release Year</div>
                 <input className="os-input-field" value={year} onChange={event => setYear(event.target.value.replace(/[^0-9]/g, '').slice(0, 4))} placeholder="2026" />
               </label>
-            </div>
+              </div>
 
-            <div className="settings-field">
+              <div className="settings-field">
               <div className="settings-field-head">
                 <div className="os-type-card-title">Market</div>
                 <p className="os-type-body-small">Choose one global price, or add a price for your local market. Your local market comes from Settings &gt; Region.</p>
@@ -377,9 +411,9 @@ function NewProductContent() {
                 ))}
               </div>
               <p className="dashboard-form-note">Leave Local Price blank to use the global price everywhere.</p>
-            </div>
+              </div>
 
-            <UploadField
+              <UploadField
               label="Artwork"
               folder="products/covers"
               userId={user.id}
@@ -387,10 +421,10 @@ function NewProductContent() {
               accept="image/*"
               buttonLabel="Upload artwork"
               onChange={setCoverUrl}
-            />
+              />
 
-            {needsDigitalFile ? (
-              <UploadField
+              {needsDigitalFile ? (
+                <UploadField
                 label={section.id === 'books' ? 'Book File' : 'Asset File'}
                 folder={section.id === 'books' ? 'products/books' : 'products/assets'}
                 userId={user.id}
@@ -398,8 +432,9 @@ function NewProductContent() {
                 accept={section.id === 'books' ? 'application/pdf,.pdf,.epub' : 'application/zip,.zip,audio/*'}
                 buttonLabel={section.id === 'books' ? 'Upload book file' : 'Upload asset file'}
                 onChange={setItemFileUrl}
-              />
-            ) : null}
+                />
+              ) : null}
+            </section>
 
             {isMusicProduct ? (
               <div className="dashboard-form-section">
@@ -464,6 +499,13 @@ function NewProductContent() {
                 </div>
               </div>
             ) : null}
+
+            <DashboardReleaseFeatures
+              sectionId={section.id}
+              userId={user.id}
+              state={featureState}
+              onChange={setFeatureState}
+            />
 
             {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
 

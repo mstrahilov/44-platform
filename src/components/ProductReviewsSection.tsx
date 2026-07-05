@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { creatorHref, type Profile } from '@/lib/platform';
+import { trackProductAchievementTrigger } from '@/lib/achievementTracking';
 import Link from 'next/link';
 
 type ReviewProfile = Pick<Profile, 'id' | 'slug' | 'username' | 'display_name' | 'avatar_url'>;
@@ -103,6 +104,12 @@ export function ProductReviewsSection({
 
     setSaving(false);
     setComposerOpen(false);
+    await trackProductAchievementTrigger({
+      userId: user.id,
+      productId,
+      triggerType: 'review_created',
+      metadata: { source: 'product_review' },
+    });
     await loadReviews();
   }
 

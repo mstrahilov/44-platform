@@ -19,6 +19,7 @@ import { authorHandle, countById, isGeneralPost, likersByPost, repliersByPost, t
 import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { isMissingRelationError } from '@/lib/schemaCompat';
 import { createOrOpenConversation } from '@/lib/messages';
+import { trackProductAchievementTrigger } from '@/lib/achievementTracking';
 
 type ProfileTab = 'posts' | 'music' | 'books' | 'assets' | 'services';
 
@@ -167,6 +168,7 @@ export default function PublicProfilePage() {
   }, [profile, user]);
 
   const isOwn = user?.id === profile?.id;
+  const sourceProductId = searchParams.get('fromProduct');
   useTopbarTabs(undefined);
   useTopbarBack(isOwn ? undefined : { href: '/community', label: 'Community' });
 
@@ -197,7 +199,17 @@ export default function PublicProfilePage() {
         .from('profile_follows')
         .upsert({ follower_id: user.id, following_id: profile.id }, { onConflict: 'follower_id,following_id' });
       if (followError) setError(followError.message);
-      else setIsFollowing(true);
+      else {
+        setIsFollowing(true);
+        if (sourceProductId) {
+          await trackProductAchievementTrigger({
+            userId: user.id,
+            productId: sourceProductId,
+            triggerType: 'creator_followed_from_product',
+            metadata: { source: 'profile_follow', creator_profile_id: profile.id },
+          });
+        }
+      }
     }
     setBusy('');
   }

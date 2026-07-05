@@ -62,11 +62,11 @@ export function ProductUpdatesSection({
 
       {error && <div className="dashboard-status dashboard-status-error" style={{ marginBottom: 16 }}>{error}</div>}
 
-      <div className="dashboard-list-surface item-domain-surface">
-        {updates.length === 0 ? (
-          <div className="dashboard-empty">{emptyMessage}</div>
-        ) : (
-          updates.map(update => {
+      {updates.length === 0 ? (
+        <p className="library-empty-text">{emptyMessage}</p>
+      ) : (
+        <div className="dashboard-list-surface item-domain-surface">
+          {updates.map(update => {
             const author = resolveAuthor(update);
             return (
               <article key={update.id} className="product-update-row">
@@ -87,9 +87,9 @@ export function ProductUpdatesSection({
                 <p className="os-type-body product-domain-body">{update.body}</p>
               </article>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      )}
     </div>
   );
 }
