@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { notFound, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
@@ -25,11 +25,11 @@ type ProductTrack = {
   track_number?: number | null;
   duration_seconds?: number | null;
   audio_url?: string | null;
+  download_url?: string | null;
 };
 
 export default function ProductPage() {
-  const { id } = useParams<{ id: string }>();
-  return <ProductStoreDetail identifier={id} legacyRedirect />;
+  notFound();
 }
 
 export function ProductStoreDetail({
@@ -57,6 +57,7 @@ export function ProductStoreDetail({
   const [toast, setToast] = useState<AchievementToastData | null>(null);
   const [owned, setOwned] = useState(false);
   const [ownedLibraryItemId, setOwnedLibraryItemId] = useState<string | null>(null);
+  const [ownedAcquisitionType, setOwnedAcquisitionType] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useTopbarBack({ href: backHref ?? '/', label: backLabel ?? 'Store' });
@@ -83,11 +84,8 @@ export function ProductStoreDetail({
 
       if (data && legacyRedirect) {
         const target = productStoreHref(data);
-        // Unclassifiable items resolve back to /product/… — render here instead of self-redirecting.
-        if (!target.startsWith('/product/')) {
-          router.replace(target);
-          return;
-        }
+        router.replace(target);
+        return;
       }
 
       if (data) {
@@ -126,26 +124,30 @@ export function ProductStoreDetail({
   useEffect(() => {
     async function fetchOwnership(userId: string) {
       if (!product) return;
-      const { data } = await supabase.from('library_items').select('id, product_id').eq('user_id', userId).eq('product_id', product.id).maybeSingle();
+      const { data } = await supabase.from('library_items').select('id, product_id, acquisition_type').eq('user_id', userId).eq('product_id', product.id).maybeSingle();
       setOwned(Boolean(data));
       setOwnedLibraryItemId(data?.id ?? null);
+      setOwnedAcquisitionType(data?.acquisition_type ?? null);
     }
     if (user) fetchOwnership(user.id);
     else Promise.resolve().then(() => {
       setOwned(false);
       setOwnedLibraryItemId(null);
+      setOwnedAcquisitionType(null);
     });
   }, [product, user]);
 
   async function addToLibrary() {
     if (!product) return;
     if (!user) { alert('Sign in first, then add this to your library.'); return; }
-    if (!isFreeLibraryClaim(product)) return;
+    if (!canSaveProductToLibrary(product)) return;
     const { error } = await supabase.from('library_items').upsert({ user_id: user.id, product_id: product.id, acquisition_type: 'free' }, { onConflict: 'user_id,product_id' });
     if (error) { alert(error.message); return; }
     setOwned(true);
-    const { data } = await supabase.from('library_items').select('id').eq('user_id', user.id).eq('product_id', product.id).maybeSingle();
+    setOwnedAcquisitionType('free');
+    const { data } = await supabase.from('library_items').select('id, acquisition_type').eq('user_id', user.id).eq('product_id', product.id).maybeSingle();
     setOwnedLibraryItemId(data?.id ?? null);
+    setOwnedAcquisitionType(data?.acquisition_type ?? 'free');
   }
 
   function addProductToCart() {
@@ -170,8 +172,13 @@ export function ProductStoreDetail({
   const productExperience = getProductExperience(product);
   const isReleasePage = releasePage || productExperience === 'music';
   const isPhysicalMerch = productExperience === 'physical';
-  const canClaimToLibrary = !isPhysicalMerch && isFreeLibraryClaim(product);
-  const accessLabel = isPhysicalMerch ? 'Physical merch' : getProductStoreAccessLabel(product);
+  const canClaimToLibrary = canSaveProductToLibrary(product);
+  const hasDownloadUnlock = ownedAcquisitionType === 'purchase';
+  const accessLabel = isPhysicalMerch
+    ? 'Physical merch'
+    : isReleasePage
+      ? 'Free streaming · purchase unlocks downloads'
+      : getProductStoreAccessLabel(product);
   const creatorLink = creatorHref(product.creators ?? product.creator);
   const creatorReleasesLink = `${creatorLink}?tab=releases`;
   const libraryHref = ownedLibraryItemId ? productLibraryHref(product, ownedLibraryItemId) : storeIndexHref(product).replace('/store', '/library');
@@ -236,13 +243,24 @@ export function ProductStoreDetail({
               </button>
             )}
             {owned ? (
-              <Link className={isReleasePage && playableTracks.length > 0 ? 'os-button os-button-secondary' : 'os-button os-button-primary'} href={libraryHref}>View in Library</Link>
+              <Link className={isReleasePage && playableTracks.length > 0 ? 'os-button os-button-secondary' : 'os-button os-button-primary'} href={libraryHref}>In Library</Link>
             ) : canClaimToLibrary ? (
               <button className={isReleasePage && playableTracks.length > 0 ? 'os-button os-button-secondary' : 'os-button os-button-primary'} onClick={addToLibrary}>Add to Library</button>
+            ) : isReleasePage && !user ? (
+              <Link className={isReleasePage && playableTracks.length > 0 ? 'os-button os-button-secondary' : 'os-button os-button-primary'} href="/login">Sign In to Save</Link>
             ) : cart.has(product.id) ? (
               <Link className={isReleasePage && playableTracks.length > 0 ? 'os-button os-button-secondary' : 'os-button os-button-primary'} href="/cart">View Cart</Link>
             ) : (
               <button className={isReleasePage && playableTracks.length > 0 ? 'os-button os-button-secondary' : 'os-button os-button-primary'} onClick={addProductToCart}>Add to Cart</button>
+            )}
+            {isReleasePage && (
+              hasDownloadUnlock ? (
+                <Link className="os-button os-button-secondary" href={libraryHref}>Download</Link>
+              ) : cart.has(product.id) ? (
+                <Link className="os-button os-button-secondary" href="/cart">View Cart</Link>
+              ) : (
+                <button className="os-button os-button-secondary" type="button" onClick={addProductToCart}>Buy Download</button>
+              )
             )}
             <Link className="os-button os-button-secondary" href={creatorReleasesLink}>View Creator</Link>
           </div>
@@ -322,7 +340,7 @@ export function ProductStoreDetail({
         {(product.tags ?? []).length > 0 && (
           <div className="app-tag-row" style={{ marginTop: 24 }}>
             {(product.tags ?? []).map(tag => (
-              <Link key={tag} href={browseHref({ tag })} className="os-pill os-type-pill">{tag}</Link>
+              <Link key={tag} href={browseHref({ q: tag })} className="os-pill os-type-pill">{tag}</Link>
             ))}
           </div>
         )}
@@ -352,6 +370,13 @@ export function ProductStoreDetail({
 
 function trackOrder(track: ProductTrack) {
   return track.track_number ?? track.number ?? 0;
+}
+
+function canSaveProductToLibrary(product: Product) {
+  const experience = getProductExperience(product);
+  if (experience === 'physical') return false;
+  if (experience === 'music') return true;
+  return isFreeLibraryClaim(product);
 }
 
 function formatTrackDuration(seconds: number | null | undefined) {

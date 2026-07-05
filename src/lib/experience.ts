@@ -97,8 +97,8 @@ export function getExperienceAppSlug(product: Pick<Product, 'category' | 'produc
 export function productStoreHref(product: Pick<Product, 'id' | 'slug' | 'category' | 'product_type' | 'runtime_type' | 'experience_type' | 'fulfillment_type'>) {
   const app = getExperienceAppSlug(product);
   const identifier = product.slug || product.id;
-  if (getProductExperience(product) === 'physical') return `/merch/store/${identifier}`;
-  return app ? `/${app}/store/${identifier}` : `/product/${identifier}`;
+  if (getProductExperience(product) === 'physical') return `/store/merch/${identifier}`;
+  return app ? `/store/${app}/${identifier}` : `/store`;
 }
 
 export function productLibraryHref(
@@ -106,13 +106,13 @@ export function productLibraryHref(
   libraryItemId: string,
 ) {
   const app = getExperienceAppSlug(product);
-  if (getProductExperience(product) === 'physical') return '/account?tab=orders';
-  return app ? `/${app}/library/${libraryItemId}` : `/library/item/product/${libraryItemId}`;
+  if (getProductExperience(product) === 'physical') return '/store/merch';
+  return app ? `/library/${app}/${libraryItemId}` : `/library`;
 }
 
 export function storeIndexHref(product: Pick<Product, 'category' | 'product_type' | 'runtime_type' | 'experience_type' | 'fulfillment_type'>) {
   const app = getExperienceAppSlug(product);
-  if (app) return `/${app}/store`;
-  if (getProductExperience(product) === 'physical') return '/merch/store';
-  return '/merch/store';
+  if (app) return `/store/${app}`;
+  if (getProductExperience(product) === 'physical') return '/store/merch';
+  return '/store';
 }

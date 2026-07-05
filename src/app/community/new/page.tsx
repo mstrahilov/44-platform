@@ -10,7 +10,6 @@ import { useAuth } from '@/lib/useAuth';
 import { normalizeTaxonomyValue } from '@/lib/taxonomy';
 import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
-import { createMentionNotifications } from '@/lib/achievementNotifications';
 
 function buildSlug(title: string) {
   const base = normalizeTaxonomyValue(title) || 'thread';
@@ -83,15 +82,6 @@ function NewCommunityThreadContent() {
       setError(insertError.message);
       return;
     }
-
-    await createMentionNotifications({
-      authorUserId: user.id,
-      authorName: profile?.display_name || profile?.username || 'Someone',
-      postId: data.id,
-      postSlug: data.slug,
-      postTitle: title.trim(),
-      body: body.trim(),
-    });
 
     setSaving(false);
     const created = data as { id: string; slug: string | null } | null;

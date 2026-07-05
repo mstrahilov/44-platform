@@ -17,8 +17,7 @@ export default function CartPage() {
   const { items, count, subtotalCents } = useCart();
   const currency = items[0]?.currency ?? 'USD';
 
-  // Cart is a system surface owned by Merch — give it an OS back path.
-  useTopbarBack({ href: '/merch/store', label: 'Merch' });
+  useTopbarBack({ href: '/store', label: 'Store' });
 
   if (items.length === 0) {
     return (
@@ -29,7 +28,7 @@ export default function CartPage() {
             <div className="dashboard-empty">
               Your cart is empty. Browse Merch or an app Store to add items.
               <div style={{ marginTop: 'var(--os-space-4)' }}>
-                <Link className="os-button os-button-primary os-button-compact" href="/merch/store">Browse Merch</Link>
+                <Link className="os-button os-button-primary os-button-compact" href="/store">Open Store</Link>
               </div>
             </div>
           </div>
@@ -64,7 +63,7 @@ export default function CartPage() {
                 <div className="dashboard-row-copy">
                   <div className="dashboard-row-title">
                     <Link
-                      href={item.href || `/product/${item.slug || item.product_id}`}
+                      href={item.href || '/store'}
                       style={{ color: 'inherit', textDecoration: 'none' }}
                     >
                       {item.title}
@@ -122,7 +121,7 @@ export default function CartPage() {
             </span>
           </div>
           <div className="cart-summary-actions">
-            <Link className="os-button os-button-secondary" href="/merch/store">
+            <Link className="os-button os-button-secondary" href="/store">
               Keep Browsing
             </Link>
             <Link className="os-button os-button-primary" href="/checkout">

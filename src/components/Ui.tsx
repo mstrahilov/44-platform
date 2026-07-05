@@ -7,7 +7,7 @@ import { communityThreadHref, creatorHref, resourceHref, serviceHref } from '@/l
 import { useContextMenu } from '@/components/ContextMenu';
 import type { Product } from '@/lib/products';
 import { formatProductPrice } from '@/lib/products';
-import { productStoreHref } from '@/lib/experience';
+import { getProductExperience, productStoreHref } from '@/lib/experience';
 import { getPostMetaLabel } from '@/lib/social';
 
 export function PageShell({ children }: { children: ReactNode }) {
@@ -88,6 +88,16 @@ export function ProductCard({ product, owned: _owned }: { product: Product; owne
       onContextMenu={event =>
         openContextMenu(event, [
           { id: 'open', label: 'View Item', href },
+          ...(getProductExperience(product) === 'music'
+            ? [{
+                id: 'share',
+                label: 'Copy Share Link',
+                onSelect: () => {
+                  const url = typeof window !== 'undefined' ? new URL(href, window.location.origin).toString() : href;
+                  navigator.clipboard?.writeText(url);
+                },
+              }]
+            : []),
           { id: 'creator', label: 'View Creator', href: creatorHref(product.creators ?? product.creator) },
         ])
       }
@@ -107,17 +117,17 @@ export function ProductCard({ product, owned: _owned }: { product: Product; owne
 }
 
 function getProductTileShape(product: Product): 'square' | 'portrait' | 'book' | 'landscape' {
-  const category = (product.category || '').toLowerCase();
-  if (category === 'books') return 'book';
-  if (category === 'assets') return 'landscape';
-  if (category === 'apparel' || category === 'merch' || category === 'games') return 'portrait';
+  const experience = getProductExperience(product);
+  if (experience === 'book') return 'book';
+  if (experience === 'asset') return 'landscape';
+  if (experience === 'physical' || experience === 'interactive') return 'portrait';
   return 'square'; // music (and any unknown category)
 }
 
 // Merch, apparel, assets → price. Music, games, books → creator/author.
 function getProductTileSubtitle(product: Product): string {
-  const category = (product.category || '').toLowerCase();
-  if (category === 'apparel' || category === 'merch' || category === 'assets') {
+  const experience = getProductExperience(product);
+  if (experience === 'physical' || experience === 'asset') {
     return formatProductPrice(product);
   }
   return product.creator || '44 Creator';

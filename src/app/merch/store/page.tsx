@@ -1,5 +1,5 @@
-import { MerchApp } from '@/components/MerchApp';
+import { notFound } from 'next/navigation';
 
 export default function MerchStorePage() {
-  return <MerchApp route="store" />;
+  notFound();
 }

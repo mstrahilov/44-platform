@@ -8,7 +8,7 @@ export interface AchievementNotification extends AchievementToastData {
   createdAt?: string;
   productId?: string | null;
   href?: string | null;
-  kind?: 'achievement' | 'reply' | 'mention';
+  kind?: 'achievement' | 'reply' | 'mention' | 'like' | 'message';
 }
 
 function broadcastAchievementNotification(notification: AchievementNotification) {
@@ -67,96 +67,9 @@ export async function unlockAchievementForUser(
   return notification;
 }
 
-export async function createReplyNotification(params: {
-  recipientUserId: string;
-  actorUserId: string;
-  actorName: string;
-  postId: string;
-  postSlug?: string | null;
-  postTitle: string;
-  replyId: string;
-  replyBody: string;
-  parentReplyId?: string | null;
-}) {
-  const {
-    recipientUserId,
-    actorUserId,
-    actorName,
-    postId,
-    postSlug,
-    postTitle,
-    replyId,
-    replyBody,
-    parentReplyId,
-  } = params;
-
-  if (!recipientUserId || recipientUserId === actorUserId) return;
-
-  await supabase.from('achievement_events').insert({
-    user_id: recipientUserId,
-    product_id: null,
-    achievement_id: null,
-    event_type: 'reply_received',
-    metadata: {
-      actor_user_id: actorUserId,
-      actor_name: actorName,
-      post_id: postId,
-      post_slug: postSlug ?? null,
-      post_title: postTitle,
-      reply_id: replyId,
-      reply_body: replyBody,
-      parent_reply_id: parentReplyId ?? null,
-    },
-  });
-}
-
-export async function createMentionNotifications(params: {
-  authorUserId: string;
-  authorName: string;
-  postId: string;
-  postSlug?: string | null;
-  postTitle: string;
-  body: string;
-}) {
-  const { authorUserId, authorName, postId, postSlug, postTitle, body } = params;
-  const usernames = Array.from(
-    new Set(
-      Array.from(body.matchAll(/(^|\s)@([a-z0-9_]{2,32})\b/gi))
-        .map(match => match[2]?.toLowerCase())
-        .filter((value): value is string => Boolean(value)),
-    ),
-  );
-
-  if (usernames.length === 0) return;
-
-  const { data: profileRows } = await supabase
-    .from('profiles')
-    .select('id, username')
-    .in('username', usernames);
-
-  const recipients = ((profileRows as Array<{ id: string; username: string | null }> | null) ?? [])
-    .filter(profile => profile.id !== authorUserId && profile.username);
-
-  if (recipients.length === 0) return;
-
-  await supabase.from('achievement_events').insert(
-    recipients.map(profile => ({
-      user_id: profile.id,
-      product_id: null,
-      achievement_id: null,
-      event_type: 'mention_received',
-      metadata: {
-        actor_user_id: authorUserId,
-        actor_name: authorName,
-        username: profile.username,
-        post_id: postId,
-        post_slug: postSlug ?? null,
-        post_title: postTitle,
-        post_body: body,
-      },
-    })),
-  );
-}
+// Reply, mention, like, and message notifications are created by Supabase
+// triggers on post_replies, posts, post_likes, and messages
+// (Other/44os-functional-sweep.sql). The client only reads them.
 
 export async function loadAchievementNotifications(userId: string): Promise<AchievementNotification[]> {
   const { data, error } = await supabase
@@ -224,6 +137,41 @@ export async function loadAchievementNotifications(userId: string): Promise<Achi
         productId: null,
         href: postSlug || postId ? `/community/thread/${postSlug || postId}` : '/notifications',
         kind: 'reply',
+      });
+      continue;
+    }
+
+    if (event.event_type === 'like_received') {
+      const actorName = typeof event.metadata?.actor_name === 'string' ? event.metadata.actor_name : 'Someone';
+      const postTitle = typeof event.metadata?.post_title === 'string' ? event.metadata.post_title : 'your post';
+      const postId = typeof event.metadata?.post_id === 'string' ? event.metadata.post_id : null;
+      const postSlug = typeof event.metadata?.post_slug === 'string' ? event.metadata.post_slug : null;
+
+      notifications.push({
+        id: event.id,
+        title: `${actorName} liked your post`,
+        description: postTitle,
+        createdAt: event.created_at,
+        productId: null,
+        href: postSlug || postId ? `/community/thread/${postSlug || postId}` : '/notifications',
+        kind: 'like',
+      });
+      continue;
+    }
+
+    if (event.event_type === 'message_received') {
+      const actorName = typeof event.metadata?.actor_name === 'string' ? event.metadata.actor_name : 'Someone';
+      const messageBody = typeof event.metadata?.message_body === 'string' ? event.metadata.message_body : '';
+      const conversationId = typeof event.metadata?.conversation_id === 'string' ? event.metadata.conversation_id : null;
+
+      notifications.push({
+        id: event.id,
+        title: `${actorName} sent you a message`,
+        description: messageBody || 'New message in your inbox.',
+        createdAt: event.created_at,
+        productId: null,
+        href: conversationId ? `/inbox?conversation=${conversationId}` : '/inbox',
+        kind: 'message',
       });
       continue;
     }

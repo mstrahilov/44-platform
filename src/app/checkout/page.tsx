@@ -66,7 +66,7 @@ export default function CheckoutPage() {
             <div className="dashboard-empty">
               Add items to your cart to check out.
               <div style={{ marginTop: 'var(--os-space-4)' }}>
-                <Link className="os-button os-button-primary os-button-compact" href="/merch/store">Browse Merch</Link>
+                <Link className="os-button os-button-primary os-button-compact" href="/store/merch">Browse Merch</Link>
               </div>
             </div>
           </div>
@@ -115,10 +115,10 @@ export default function CheckoutPage() {
           <HubHero title="Order Placed" copy="Your items are ready in 44OS." />
           <div className="dashboard-list-surface">
             <div className="dashboard-empty">
-              A confirmation email will be sent to {email}. Digital items appear in their app Library; order history will live in Account Orders.
+              A confirmation email will be sent to {email}. Digital items appear in Library.
               <div style={{ marginTop: 'var(--os-space-4)', display: 'flex', gap: 'var(--os-space-3)' }}>
-                <Link className="os-button os-button-primary os-button-compact" href="/account?tab=orders">View Orders</Link>
-                <Link className="os-button os-button-secondary os-button-compact" href="/merch/store">Keep Browsing</Link>
+                <Link className="os-button os-button-primary os-button-compact" href="/store/merch">Back to Merch</Link>
+                <Link className="os-button os-button-secondary os-button-compact" href="/store/merch">Keep Browsing</Link>
               </div>
             </div>
           </div>

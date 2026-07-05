@@ -49,6 +49,7 @@
 .os-icon-radio { --os-icon-url: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 12a8 8 0 0 1 16 0'/%3E%3Cpath d='M8 12a4 4 0 0 1 8 0'/%3E%3Cpath d='M12 12v8'/%3E%3Cpath d='M8 20h8'/%3E%3Ccircle cx='12' cy='12' r='1.2'/%3E%3C/svg%3E"); }
 .os-icon-friends { --os-icon-url: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='8.5' cy='8.5' r='3.2'/%3E%3Cpath d='M2.8 20c0-3.4 2.6-5.8 5.7-5.8s5.7 2.4 5.7 5.8'/%3E%3Ccircle cx='16.5' cy='7.5' r='2.6'/%3E%3Cpath d='M15.4 13.5c3.1.2 5.8 2.4 5.8 5.5'/%3E%3C/svg%3E"); }
 .os-icon-account { --os-icon-url: url('/icons/top%20bar/USER.svg'); }
+.os-icon-support { --os-icon-url: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M9.4 9.2a2.7 2.7 0 1 1 4.3 2.2c-.8.6-1.5 1.1-1.5 2.2'/%3E%3Cpath d='M12.1 17.1h.01'/%3E%3C/svg%3E"); }
 
 /* Topbar icons */
 .os-icon-search        { --os-icon-url: url('/icons/top%20bar/SEARCH.svg'); }
@@ -371,7 +372,8 @@ body.theme-light .app-environment-image { opacity: 0.6; }
 }
 
 .app-sidebar-compact .sidebar-item-label,
-.app-sidebar-compact .sidebar-clock {
+.app-sidebar-compact .sidebar-clock,
+.app-sidebar-compact .sidebar-section-label {
   display: none;
 }
 
@@ -406,6 +408,17 @@ body.theme-light .app-environment-image { opacity: 0.6; }
 .sidebar-section {
   display: flex;
   flex-direction: column;
+}
+
+.sidebar-section-label {
+  padding: 10px 14px 5px;
+  color: var(--os-color-ink-muted);
+  font-family: var(--os-font-app);
+  font-size: 11px;
+  font-weight: 740;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 .sidebar-children {

@@ -5,17 +5,12 @@ import { supabase } from '@/lib/supabase';
 import type { Product } from '@/lib/products';
 import { getProductExperience } from '@/lib/experience';
 import { PageShell, HubHero, ProductGrid, ProductCard, EmptyMessage } from '@/components/Ui';
-import { useTopbarTabs } from '@/components/TopbarContext';
 
 type MerchRoute = 'store';
 
 export function MerchApp({ route }: { route: MerchRoute }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(route === 'store');
-
-  useTopbarTabs([
-    { id: 'store', label: 'Store', href: '/merch/store', active: route === 'store' },
-  ]);
 
   useEffect(() => {
     if (route !== 'store') return;

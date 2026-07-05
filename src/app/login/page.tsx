@@ -62,7 +62,7 @@ export default function LoginPage() {
         email: cleanEmail,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/account`,
+          emailRedirectTo: `${window.location.origin}/settings?tab=account`,
           data: {
             name: cleanName,
             display_name: cleanName,
@@ -101,7 +101,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOtp({
       email: cleanEmail,
       options: {
-        emailRedirectTo: `${window.location.origin}/account`,
+        emailRedirectTo: `${window.location.origin}/settings?tab=account`,
       },
     });
 
@@ -119,7 +119,7 @@ export default function LoginPage() {
       type: 'signup',
       email: cleanEmail,
       options: {
-        emailRedirectTo: `${window.location.origin}/account`,
+        emailRedirectTo: `${window.location.origin}/settings?tab=account`,
       },
     });
     setResendingConfirmation(false);

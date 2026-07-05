@@ -21,7 +21,7 @@ export function CommunitySetupGate({ open, onClose }: CommunitySetupGateProps) {
       onCancel={onClose}
       onConfirm={() => {
         onClose();
-        router.push('/account?setup=community');
+        router.push('/profile/edit');
       }}
     />
   );

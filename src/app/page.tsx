@@ -57,7 +57,7 @@ export default function StorePage() {
         />
 
         {musicProducts.length > 0 && (
-          <HubSection title="Explore Music" href="/music/store">
+          <HubSection title="Explore Music" href="/store/music">
             <Shelf>
               {musicProducts.map(product => (
                 <div key={product.id} className="app-shelf-item">
@@ -69,7 +69,7 @@ export default function StorePage() {
         )}
 
         {merchProducts.length > 0 && (
-          <HubSection title="Explore Merch" href="/merch/store">
+          <HubSection title="Explore Merch" href="/store/merch">
             <Shelf>
               {merchProducts.map(product => (
                 <div key={product.id} className="app-shelf-item">

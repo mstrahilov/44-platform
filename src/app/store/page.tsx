@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
+import StoreApp from '@/components/StoreApp';
 
-export default function LegacyStoreIndexRedirect() {
-  redirect('/');
+export default function StorePage() {
+  return <StoreApp category="all" />;
 }

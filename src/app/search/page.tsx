@@ -2,12 +2,12 @@
 
 import Link from 'next/link';
 import { Suspense, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { PageShell, ProductCard, ProductGrid, ResourceCard, PostCard, EmptyMessage, HubSection } from '@/components/Ui';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { PageShell, ProductCard, ProductGrid, PostCard, EmptyMessage, HubSection } from '@/components/Ui';
 import { SocialProfileRow } from '@/components/Social';
 import { productStoreHref } from '@/lib/experience';
 import type { Product } from '@/lib/products';
-import type { CommunityPost, Profile, Resource } from '@/lib/platform';
+import type { CommunityPost, Profile } from '@/lib/platform';
 import { creatorHref } from '@/lib/platform';
 import { supabase } from '@/lib/supabase';
 import { matchesQuery } from '@/lib/taxonomy';
@@ -24,9 +24,10 @@ export default function SearchPage() {
 
 function SearchContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const query = searchParams.get('q')?.trim() ?? '';
+  const [draft, setDraft] = useState(query);
   const [products, setProducts] = useState<Product[]>([]);
-  const [resources, setResources] = useState<Resource[]>([]);
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [profiles, setProfiles] = useState<SearchProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,19 +35,13 @@ function SearchContent() {
   useEffect(() => {
     async function loadSearchIndex() {
       setLoading(true);
-      const [productResult, resourceResult, postResult, profileResult] = await Promise.all([
+      const [productResult, postResult, profileResult] = await Promise.all([
         supabase
           .from('products')
           .select('*, creators:profiles!author_id(*)')
           .eq('is_published', true)
           .order('created_at', { ascending: false })
           .limit(120),
-        supabase
-          .from('resources')
-          .select('*, creators:profiles!author_id(*, name:display_name), categories(id, slug, name)')
-          .eq('status', 'published')
-          .order('created_at', { ascending: false })
-          .limit(80),
         supabase
           .from('posts')
           .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type), categories(id, slug, name)')
@@ -61,7 +56,6 @@ function SearchContent() {
       ]);
 
       setProducts((productResult.data as Product[] | null) ?? []);
-      setResources((resourceResult.data as Resource[] | null) ?? []);
       setPosts((postResult.data as CommunityPost[] | null) ?? []);
       setProfiles((profileResult.data as SearchProfile[] | null) ?? []);
       setLoading(false);
@@ -70,13 +64,17 @@ function SearchContent() {
     loadSearchIndex();
   }, []);
 
+  useEffect(() => { setDraft(query); }, [query]);
+
+  function submitSearch(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const value = draft.trim();
+    router.push(value ? `/search?q=${encodeURIComponent(value)}` : '/search');
+  }
+
   const productMatches = useMemo(
     () => products.filter(product => matchesQuery(product, query)).slice(0, 12),
     [products, query],
-  );
-  const resourceMatches = useMemo(
-    () => resources.filter(resource => matchesQuery(resource, query)).slice(0, 8),
-    [resources, query],
   );
   const postMatches = useMemo(
     () => posts.filter(post => matchesQuery(post, query)).slice(0, 8),
@@ -86,7 +84,7 @@ function SearchContent() {
     () => profiles.filter(profile => profileMatchesQuery(profile, query)).slice(0, 8),
     [profiles, query],
   );
-  const hasResults = productMatches.length + resourceMatches.length + postMatches.length + profileMatches.length > 0;
+  const hasResults = productMatches.length + postMatches.length + profileMatches.length > 0;
 
   return (
     <PageShell>
@@ -95,10 +93,27 @@ function SearchContent() {
           <div className="dashboard-header-copy">
             <h1 className="os-type-display">Search</h1>
             <p className="os-type-body">
-              {query ? `Results for "${query}" across 44OS.` : 'Search releases, books, assets, merch, resources, community posts, and creators.'}
+              {query ? `Results for "${query}" across 44OS.` : 'Search items, creators, and posts.'}
             </p>
           </div>
         </header>
+
+        <form className="settings-field" style={{ maxWidth: 720 }} onSubmit={submitSearch} role="search">
+          <div className="settings-field-head">
+            <div className="os-type-field-title">Search 44OS</div>
+            <p className="os-type-body-small">Find items, creators, and posts.</p>
+          </div>
+          <div style={{ display: 'flex', gap: 'var(--os-space-3)', alignItems: 'center' }}>
+            <input
+              className="os-input-field"
+              value={draft}
+              onChange={event => setDraft(event.target.value)}
+              placeholder="Search"
+              aria-label="Search"
+            />
+            <button className="os-button os-button-primary" type="submit">Search</button>
+          </div>
+        </form>
 
         {loading ? (
           <EmptyMessage>Searching...</EmptyMessage>
@@ -140,16 +155,6 @@ function SearchContent() {
                     <PostCard key={post.id} post={post} />
                   ))}
                 </div>
-              </HubSection>
-            )}
-
-            {resourceMatches.length > 0 && (
-              <HubSection title="Resources">
-                <ProductGrid>
-                  {resourceMatches.map(resource => (
-                    <ResourceCard key={resource.id} resource={resource} />
-                  ))}
-                </ProductGrid>
               </HubSection>
             )}
 

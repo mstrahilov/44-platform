@@ -32,16 +32,42 @@ import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/s
 import { getAvailableDockApps } from '@/lib/osApps';
 import { setDockAppHidden, setDockMode, useDockPreferences, type DockMode } from '@/lib/dockPreferences';
 
-type SettingsTabId = 'appearance' | 'dock' | 'region' | 'clock' | 'accessibility' | 'advanced';
+type SettingsTabId = 'system' | 'dock' | 'region' | 'account';
 
 const TABS: Array<{ id: SettingsTabId; label: string; copy: string }> = [
-  { id: 'appearance', label: 'Appearance', copy: 'Theme, accent, typography, and visual comfort for 44OS.' },
+  { id: 'system', label: 'System', copy: 'Theme, accent, and the way 44OS opens.' },
   { id: 'dock', label: 'Dock', copy: 'Control Dock layout, visible apps, and where 44OS opens.' },
-  { id: 'region', label: 'Region', copy: 'Region, currency, language, and local pricing defaults.' },
-  { id: 'clock', label: 'Clock', copy: 'Time display and system clock preferences.' },
-  { id: 'accessibility', label: 'Accessibility', copy: 'Motion, contrast, readability, and input preferences.' },
-  { id: 'advanced', label: 'Advanced', copy: 'Storage, reset tools, integrations, and future OS-level controls.' },
+  { id: 'region', label: 'Region', copy: 'Region, currency, and local pricing defaults.' },
+  { id: 'account', label: 'Account', copy: 'Email, password, privacy, and notifications.' },
 ];
+
+const ACCOUNT_KEYS = {
+  replies: '44-setting-replies',
+  likes: '44-setting-likes',
+  releases: '44-setting-releases',
+  emails: '44-setting-emails',
+  publicProfile: '44-setting-public-profile',
+  directMessages: '44-setting-direct-messages',
+  recommendations: '44-setting-recommendations',
+} as const;
+
+function getStoredToggle(key: string, fallback = false) {
+  if (typeof window === 'undefined') return fallback;
+  const value = window.localStorage.getItem(key);
+  if (value === null) return fallback;
+  return value === 'true';
+}
+
+function setStoredToggle(key: string, value: boolean) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(key, String(value));
+}
+
+function normalizeSettingsTab(value: string | null): SettingsTabId {
+  if (value === 'appearance' || value === 'clock' || value === 'accessibility' || value === 'advanced') return 'system';
+  if (value === 'privacy' || value === 'notifications' || value === 'orders') return 'account';
+  return TABS.some(tab => tab.id === value) ? (value as SettingsTabId) : 'system';
+}
 
 export default function SettingsPage() {
   return (
@@ -54,21 +80,17 @@ export default function SettingsPage() {
 function SettingsContent() {
   const tabs = TABS;
   const searchParams = useSearchParams();
-  const requestedTab = searchParams.get('tab') as SettingsTabId | null;
-  const initialTab: SettingsTabId = tabs.some(tab => tab.id === requestedTab) ? (requestedTab as SettingsTabId) : tabs[0]?.id ?? 'appearance';
+  const requestedTab = normalizeSettingsTab(searchParams.get('tab'));
+  const initialTab: SettingsTabId = requestedTab;
   const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
 
   useEffect(() => {
-    if (tabs.some(tab => tab.id === requestedTab)) {
-      setActiveTab(requestedTab as SettingsTabId);
-      return;
-    }
-    setActiveTab(tabs[0]?.id ?? 'appearance');
+    setActiveTab(requestedTab);
   }, [requestedTab, tabs]);
 
   useEffect(() => {
     if (!tabs.some(tab => tab.id === activeTab)) {
-      Promise.resolve().then(() => setActiveTab(tabs[0]?.id ?? 'appearance'));
+      Promise.resolve().then(() => setActiveTab(tabs[0]?.id ?? 'system'));
     }
   }, [activeTab, tabs]);
 
@@ -76,7 +98,7 @@ function SettingsContent() {
     tabs.map(tab => ({
       id: tab.id,
       label: tab.label,
-      href: tab.id === 'appearance' ? '/settings' : `/settings?tab=${tab.id}`,
+      href: tab.id === 'system' ? '/settings' : `/settings?tab=${tab.id}`,
       active: tab.id === activeTab,
     })),
   );
@@ -87,18 +109,16 @@ function SettingsContent() {
     <PageShell>
       <main className="dashboard-page">
         <HubHero title="Settings" copy={activeMeta?.copy} />
-        {activeTab === 'appearance' && <AppearanceSettings />}
+        {activeTab === 'system' && <SystemSettings />}
         {activeTab === 'dock' && <DockSettings />}
         {activeTab === 'region' && <RegionSettings />}
-        {activeTab === 'clock' && <ClockSettings />}
-        {activeTab === 'accessibility' && <AccessibilitySettings />}
-        {activeTab === 'advanced' && <AdvancedSettings />}
+        {activeTab === 'account' && <AccountSettings />}
       </main>
     </PageShell>
   );
 }
 
-function AppearanceSettings() {
+function SystemSettings() {
   const [mode, setModeState] = useState<ThemeMode>('light');
   const [accent, setAccentState] = useState<ThemeAccent>('amber');
 
@@ -159,18 +179,6 @@ function AppearanceSettings() {
           ))}
         </div>
       </div>
-
-      <PlaceholderField
-        title="Typography"
-        desc="Font family, reader font, and interface scale controls will live here."
-        items={['System font', 'Reader font', 'Interface density']}
-      />
-
-      <PlaceholderField
-        title="Wallpaper"
-        desc="Environment image and glass intensity controls can be added here later."
-        items={['Environment style', 'Glass intensity', 'Noise texture']}
-      />
     </div>
   );
 }
@@ -277,12 +285,6 @@ function RegionSettings() {
         </select>
       </div>
 
-      <PlaceholderField
-        title="Language"
-        desc="Interface language and content translation preferences can live here when localization lands."
-        items={['Interface language', 'Content translation', 'Measurement units']}
-      />
-
       {marketStatus && (
         <span className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>
           {marketStatus}
@@ -329,7 +331,7 @@ function DockSettings() {
   }
 
   return (
-    <>
+    <div className="settings-section settings-section-wide">
       <div className="settings-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Landing App</div>
@@ -395,94 +397,96 @@ function DockSettings() {
           })}
         </div>
       </div>
-
-      <PlaceholderField
-        title="Dock Behavior"
-        desc="Future controls for sorting, pinning, badges, and app presets will live here."
-        items={['Reorder apps', 'Badge visibility', 'Reset Dock preset']}
-      />
-    </>
-  );
-}
-
-function ClockSettings() {
-  return (
-    <div className="settings-section">
-      <PlaceholderField
-        title="Clock Format"
-        desc="Choose how the Dock clock displays time."
-        items={['12-hour clock', '24-hour clock', 'Hide clock in full Dock']}
-      />
-
-      <PlaceholderField
-        title="Time Zone"
-        desc="Use your system time zone or choose a fixed 44OS time zone."
-        items={['Use device time zone', 'Manual time zone', 'Show secondary time zone']}
-      />
-
-      <PlaceholderField
-        title="Date Display"
-        desc="Optional date and calendar display controls can live here."
-        items={['Show date in Dock', 'Calendar week starts on', 'Relative timestamps']}
-      />
     </div>
   );
 }
 
-function AccessibilitySettings() {
+function AccountSettings() {
+  const { user } = useAuth();
+  const [sendingReset, setSendingReset] = useState(false);
+  const [status, setStatus] = useState('');
+
+  async function sendPasswordReset() {
+    if (!user?.email || sendingReset) return;
+    setSendingReset(true);
+    setStatus('');
+    const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+      redirectTo: `${window.location.origin}/settings?tab=account`,
+    });
+    setSendingReset(false);
+    setStatus(error ? error.message : 'Password reset email sent.');
+  }
+
   return (
     <div className="settings-section settings-section-wide">
-      <PlaceholderToggle title="Reduce motion" desc="Limit transitions, popovers, and route movement." />
-      <PlaceholderToggle title="Increase contrast" desc="Strengthen text, dividers, and control outlines." />
-      <PlaceholderToggle title="Larger interface text" desc="Use a larger fixed type scale across 44OS." />
-      <PlaceholderToggle title="Keyboard focus mode" desc="Make focus rings and keyboard navigation more prominent." />
-    </div>
-  );
-}
-
-function AdvancedSettings() {
-  return (
-    <div className="settings-section">
-      <PlaceholderField
-        title="Storage"
-        desc="Downloaded files, cached artwork, and offline data controls can live here."
-        items={['Clear cache', 'Offline storage', 'Download location']}
-      />
-
-      <PlaceholderField
-        title="System Reset"
-        desc="Reset local OS preferences without touching your account data."
-        items={['Reset theme', 'Reset Dock', 'Reset all local preferences']}
-      />
-
-      <PlaceholderField
-        title="Integrations"
-        desc="Future desktop wrapper, deep links, and connected app controls can live here."
-        items={['Desktop app links', 'Protocol handlers', 'Connected services']}
-      />
-    </div>
-  );
-}
-
-function PlaceholderField({ title, desc, items }: { title: string; desc: string; items: string[] }) {
-  return (
-    <div className="settings-field">
-      <div className="settings-field-head">
-        <div className="os-type-field-title">{title}</div>
-        <p className="os-type-body-small">{desc}</p>
+      <div className="settings-field">
+        <div className="settings-field-head">
+          <div className="os-type-field-title">Email</div>
+          <p className="os-type-body-small">Your login and account recovery email.</p>
+        </div>
+        <span className="os-type-body">{user?.email ?? 'Sign in to manage your account.'}</span>
       </div>
-      <div className="settings-segment" role="group" aria-label={title}>
-        {items.map(item => (
-          <button key={item} className="settings-segment-item" type="button" disabled>
-            {item}
-          </button>
-        ))}
+
+      <div className="settings-field">
+        <div className="settings-field-head">
+          <div className="os-type-field-title">Password</div>
+          <p className="os-type-body-small">Send a password reset link to your email.</p>
+        </div>
+        <button className="os-button os-button-secondary" type="button" onClick={sendPasswordReset} disabled={!user?.email || sendingReset}>
+          {sendingReset ? 'Sending...' : 'Send Password Reset'}
+        </button>
+        {status && <p className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>{status}</p>}
+      </div>
+
+      <div className="settings-field">
+        <div className="settings-field-head">
+          <div className="os-type-field-title">Privacy</div>
+          <p className="os-type-body-small">Profile details live on your Profile page. These controls affect account-level visibility.</p>
+        </div>
+        <ToggleRow storageKey={ACCOUNT_KEYS.publicProfile} title="Public profile" desc="Let others view your profile and creator/member activity." defaultOn />
+        <ToggleRow storageKey={ACCOUNT_KEYS.directMessages} title="Allow direct messages" desc="Let members message you directly." defaultOn />
+        <ToggleRow storageKey={ACCOUNT_KEYS.recommendations} title="Personalized recommendations" desc="Use your activity to tailor what you see." defaultOn />
+      </div>
+
+      <div className="settings-field">
+        <div className="settings-field-head">
+          <div className="os-type-field-title">Notifications</div>
+          <p className="os-type-body-small">Choose which account activity should reach you.</p>
+        </div>
+        <ToggleRow storageKey={ACCOUNT_KEYS.replies} title="Replies to your posts" desc="When someone replies in the community." defaultOn />
+        <ToggleRow storageKey={ACCOUNT_KEYS.likes} title="Likes" desc="When someone likes your post or reply." defaultOn />
+        <ToggleRow storageKey={ACCOUNT_KEYS.releases} title="New releases from creators you follow" desc="Music, books, assets, resources, and merch drops." defaultOn />
+        <ToggleRow storageKey={ACCOUNT_KEYS.emails} title="44 emails" desc="Occasional news about 44." />
       </div>
     </div>
   );
 }
 
-function PlaceholderToggle({ title, desc }: { title: string; desc: string }) {
+function ToggleRow({
+  title,
+  desc,
+  storageKey,
+  defaultOn = false,
+}: {
+  title: string;
+  desc: string;
+  storageKey: string;
+  defaultOn?: boolean;
+}) {
+  const [on, setOn] = useState(defaultOn);
+
+  useEffect(() => {
+    Promise.resolve().then(() => setOn(getStoredToggle(storageKey, defaultOn)));
+  }, [storageKey, defaultOn]);
+
+  function toggle() {
+    setOn(current => {
+      const next = !current;
+      setStoredToggle(storageKey, next);
+      return next;
+    });
+  }
+
   return (
     <div className="settings-row">
       <div className="settings-row-copy">
@@ -492,10 +496,10 @@ function PlaceholderToggle({ title, desc }: { title: string; desc: string }) {
       <button
         type="button"
         role="switch"
-        aria-checked={false}
+        aria-checked={on}
         aria-label={title}
-        className="settings-toggle"
-        disabled
+        className={on ? 'settings-toggle settings-toggle-on' : 'settings-toggle'}
+        onClick={toggle}
       />
     </div>
   );

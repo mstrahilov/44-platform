@@ -77,7 +77,7 @@ export function authorHandle(author?: Partial<SocialAuthor> | null) {
 
 export function authorHref(author?: Partial<SocialAuthor> | null) {
   const handle = authorHandle(author);
-  return handle ? `/community/profile/${handle}` : '/community';
+  return handle ? `/profile/${handle}` : '/community';
 }
 
 export function initials(value?: string | null) {

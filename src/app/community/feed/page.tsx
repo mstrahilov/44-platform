@@ -1,1 +1,5 @@
-export { default } from '@/app/community/page';
+import { notFound } from 'next/navigation';
+
+export default function LegacyCommunityFeedPage() {
+  notFound();
+}

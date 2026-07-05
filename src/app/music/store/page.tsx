@@ -1,5 +1,5 @@
-import { ExperienceApp } from '@/components/ExperienceApp';
+import { notFound } from 'next/navigation';
 
 export default function MusicStorePage() {
-  return <ExperienceApp app="music" route="store" />;
+  notFound();
 }

@@ -34,7 +34,7 @@ type MusicTrack = Track & {
 export default function MusicLibraryItemPage() {
   const { id } = useParams<{ id: string }>();
   const { user, loading: authLoading } = useAuth();
-  useTopbarBack({ href: '/music/library', label: 'Music Library' });
+  useTopbarBack({ href: '/library/music', label: 'Music Library' });
   const [row, setRow] = useState<MusicLibraryRow | null>(null);
   const [tracks, setTracks] = useState<MusicTrack[]>([]);
   const [achievements, setAchievements] = useState<ProductAchievement[]>([]);
@@ -140,6 +140,7 @@ function OwnedMusicRelease({
   const [toast, setToast] = useState<AchievementToastData | null>(null);
   const unlocked = achievements.filter(item => localUnlockedAchievementIds.has(item.id));
   const locked = achievements.filter(item => !localUnlockedAchievementIds.has(item.id));
+  const downloadsUnlocked = row.acquisition_type === 'purchase';
 
   useEffect(() => { setPlayedTrackIds(new Set()); }, [product.id]);
   useEffect(() => { setLocalUnlockedAchievementIds(unlockedAchievementIds); }, [unlockedAchievementIds]);
@@ -245,6 +246,9 @@ function OwnedMusicRelease({
           </div>
           <div className="view-album-actions">
             <button className="os-button os-button-primary" type="button" onClick={playRelease}>{musicQueue.length ? 'Play Release' : action.label}</button>
+            {downloadsUnlocked && product.download_url && (
+              <a className="os-button os-button-secondary" href={product.download_url} target="_blank" rel="noreferrer">Download</a>
+            )}
             <Link className="os-button os-button-secondary" href={creatorLink}>View Creator</Link>
             <Link className="os-button os-button-secondary" href={storeHref}>Store Page</Link>
           </div>
@@ -280,6 +284,9 @@ function OwnedMusicRelease({
                   {currentTrack?.id === track.id && isPlaying ? 'II' : '>'}
                 </button>
                 <span className="view-track-title">{track.title}</span>
+                {downloadsUnlocked && track.download_url && (
+                  <a className="os-button os-button-secondary os-button-compact" href={track.download_url} target="_blank" rel="noreferrer">Download</a>
+                )}
                 <span className="view-track-duration">{formatDuration(track.duration_seconds)}</span>
               </div>
             ))}

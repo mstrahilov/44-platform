@@ -72,6 +72,29 @@ function DockItem({ app, active, compact }: { app: OSApp; active: boolean; compa
   );
 }
 
+function DockSection({
+  label,
+  apps,
+  activeAppId,
+  compact,
+}: {
+  label: string;
+  apps: OSApp[];
+  activeAppId: string;
+  compact: boolean;
+}) {
+  if (apps.length === 0) return null;
+
+  return (
+    <div className="sidebar-section" aria-label={label}>
+      <div className="sidebar-section-label">{label}</div>
+      {apps.map(app => (
+        <DockItem key={app.id} app={app} active={activeAppId === app.id} compact={compact} />
+      ))}
+    </div>
+  );
+}
+
 export default function Sidebar() {
   const pathname = usePathname();
   const { user } = useAuth();
@@ -137,12 +160,14 @@ export default function Sidebar() {
   });
   const dockApps = availableApps.filter(app => app.locked || !hiddenIds.includes(app.id));
 
-  const mediaApps = dockApps.filter(app => app.group === 'media');
-  const communityApps = dockApps.filter(app => app.group === 'community');
-  const studioOrder = ['dashboard'];
-  const studioApps = dockApps
-    .filter(app => app.group === 'studio')
-    .sort((a, b) => studioOrder.indexOf(a.id) - studioOrder.indexOf(b.id));
+  const primaryOrder = ['store', 'library', 'dashboard'];
+  const primaryApps = dockApps
+    .filter(app => primaryOrder.includes(app.id))
+    .sort((a, b) => primaryOrder.indexOf(a.id) - primaryOrder.indexOf(b.id));
+  const secondaryOrder = ['community', 'resources', 'services'];
+  const secondaryApps = dockApps
+    .filter(app => secondaryOrder.includes(app.id))
+    .sort((a, b) => secondaryOrder.indexOf(a.id) - secondaryOrder.indexOf(b.id));
   const accountApps = dockApps.filter(app => app.group === 'account');
   const systemApps = dockApps.filter(app => app.group === 'system');
 
@@ -173,19 +198,9 @@ export default function Sidebar() {
       </div>
 
       <nav className="sidebar-nav" aria-label="Dock">
-        {mediaApps.map(app => (
-          <DockItem key={app.id} app={app} active={activeAppId === app.id} compact={compact} />
-        ))}
-
-        {mediaApps.length > 0 && communityApps.length > 0 && <div className="sidebar-divider" />}
-
-        {communityApps.map(app => (
-          <DockItem key={app.id} app={app} active={activeAppId === app.id} compact={compact} />
-        ))}
-
-        {communityApps.length > 0 && studioApps.length > 0 && <div className="sidebar-divider" />}
-
-        {studioApps.map(app => (
+        <DockSection label="44OS" apps={primaryApps} activeAppId={activeAppId} compact={compact} />
+        {primaryApps.length > 0 && secondaryApps.length > 0 && <div className="sidebar-divider" />}
+        {secondaryApps.map(app => (
           <DockItem key={app.id} app={app} active={activeAppId === app.id} compact={compact} />
         ))}
 
@@ -205,6 +220,7 @@ export default function Sidebar() {
           </>
         )}
 
+        {/* Support (account group) sits at the bottom, directly above the system divider. */}
         {accountApps.map(app => (
           <DockItem key={app.id} app={app} active={activeAppId === app.id} compact={compact} />
         ))}

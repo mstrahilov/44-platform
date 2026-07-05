@@ -27,6 +27,8 @@ export interface Product {
   runtime_type?: string | null;
   experience_type?: string | null;
   fulfillment_type?: string | null;
+  streaming_enabled?: boolean | null;
+  download_purchase_enabled?: boolean | null;
   launch_url?: string | null;
   read_url?: string | null;
   download_url?: string | null;
@@ -63,5 +65,5 @@ export function browseHref(params: { category?: string; tag?: string; filter?: s
   });
 
   const query = searchParams.toString();
-  return query ? `/browse?${query}` : '/browse';
+  return query ? `/search?${query}` : '/search';
 }

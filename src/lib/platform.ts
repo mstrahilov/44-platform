@@ -239,10 +239,10 @@ export function resourceHref(resource: Pick<Resource, 'slug' | 'id'>) {
 }
 
 export function creatorHref(creator: ProfileLinkTarget | Pick<Creator, 'slug'> | string | null | undefined) {
-  if (!creator) return '/community/profile/member';
+  if (!creator) return '/profile/member';
   if (typeof creator !== 'string') {
     const handle = ('username' in creator ? creator.username : null) || creator.slug;
-    return `/community/profile/${handle || 'member'}`;
+    return `/profile/${handle || 'member'}`;
   }
 
   const slug = creator
@@ -253,7 +253,7 @@ export function creatorHref(creator: ProfileLinkTarget | Pick<Creator, 'slug'> |
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
-  return `/community/profile/${slug || 'member'}`;
+  return `/profile/${slug || 'member'}`;
 }
 
 export function communityThreadHref(post: Pick<CommunityPost, 'id' | 'slug'>) {

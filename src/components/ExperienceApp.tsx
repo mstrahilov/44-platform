@@ -10,7 +10,6 @@ import { getProductExperience, productLibraryHref, type ProductExperience } from
 import { isFreeLibraryClaim } from '@/lib/libraryContent';
 import { creatorHref } from '@/lib/platform';
 import { PageShell, HubHero, ProductCard, ProductGrid, CenteredMessage, EmptyMessage } from '@/components/Ui';
-import { useTopbarTabs } from '@/components/TopbarContext';
 import { useContextMenu, type ContextMenuEntry } from '@/components/ContextMenu';
 import { useMusicPlayer, type MusicQueueTrack } from '@/components/MusicPlayer';
 
@@ -87,11 +86,6 @@ export function ExperienceApp({ app, route }: { app: ExperienceConfig['id']; rou
   const [libraryItems, setLibraryItems] = useState<LibraryItemRow[]>([]);
   const [ownedProductIds, setOwnedProductIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-
-  useTopbarTabs([
-    { id: 'store', label: 'Store', href: `/${config.id}/store`, active: route === 'store' },
-    { id: 'library', label: 'Library', href: `/${config.id}/library`, active: route === 'library' },
-  ]);
 
   useEffect(() => {
     if (route !== 'store') return;

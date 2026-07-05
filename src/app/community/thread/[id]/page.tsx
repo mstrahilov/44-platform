@@ -7,7 +7,6 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { PageShell, CenteredMessage } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
-import { createReplyNotification } from '@/lib/achievementNotifications';
 import {
   SocialAuthorLine,
   SocialAvatar,
@@ -319,25 +318,6 @@ export default function CommunityThreadPage() {
       return null;
     }
     const createdReply = data as SocialReply;
-    const parentReply = parentReplyId ? replies.find(reply => reply.id === parentReplyId) ?? null : null;
-    const recipientUserId = parentReply?.author_id || thread.author_id || null;
-    const actorName =
-      profile?.display_name?.trim()
-      || profile?.username?.trim()
-      || user.email?.split('@')[0]
-      || 'Someone';
-
-    await createReplyNotification({
-      recipientUserId: recipientUserId ?? '',
-      actorUserId: user.id,
-      actorName,
-      postId: thread.id,
-      postSlug: thread.slug ?? null,
-      postTitle: thread.title,
-      replyId: createdReply.id,
-      replyBody: trimmedBody,
-      parentReplyId,
-    });
 
     return createdReply;
   }

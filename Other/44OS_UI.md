@@ -16,7 +16,7 @@ Architecture and product strategy: `Other/44OS_FOUNDATION.md`. Data model: `Othe
 1. **Environment** — ambient background: accent-tinted gradient image, veil, noise (`.app-environment`). Never place content here.
 2. **System window** — the glass shell (`.app-shell`): the entire OS lives inside one translucent window floating on the environment.
 3. **Dock** — the left rail (`.app-sidebar`). App navigation. Persistent.
-4. **Tab bar** — the top bar (`.os-topbar`). The active app's sections + system controls. Persistent.
+4. **Top bar** — system controls plus optional internal workspace sections/back links (`.os-topbar`). Persistent.
 5. **Workspace** — the scrollable content area (`.app-main-content`). The only region that changes between apps.
 6. **Player bar** — the music player (`.music-player-bar`), when active.
 
@@ -109,7 +109,7 @@ If a design wants a spacing that isn't on the scale, round it to the scale.
 The Dock is the OS taskbar. It renders **only** from the app registry — `src/lib/osApps.ts`. Never hardcode a nav item; register an app.
 
 - Registry entries define: id, label, description, href, icon, group (`media` / `community` / `studio` / `account` / `system` / `legacy`), auth/creator gating, `hidden` (registered, not shipped), `locked` (can't be hidden by the user).
-- Layout, top to bottom: logo + clock (60px band) → media group (Music, Books, Assets, Merch) → divider → community group (Community, Resources, Services) → divider → studio group (Dashboard when visible) → spacer → Log In (signed-out) or Account (signed-in) → divider → system group (Settings). Friends and Messages are tabs inside Community. Notifications stay in the topbar bell, not the Dock. Home and Radio are hidden from the Dock for now.
+- Layout, top to bottom: logo + clock (60px band) → **44OS** (Store, Library when signed in, Dashboard when creator) → divider → Community, Resources, Services → spacer → Log In (signed-out) → Support (directly above the divider) → divider → system group (Settings). Full Dock shows the section label; compact Dock hides labels and stays icon-only. Profile and Inbox live in the avatar menu. Account controls live inside Settings. Notifications stay in the topbar bell, and Search is the topbar search icon — neither is a Dock item. Home, Search, Radio, Friends, and format-specific Store apps are hidden from the Dock for now.
 - Item metrics: padding 10px 14px, radius 12px, icon 22px, icon-to-label gap 14px, label 15px/540. Active state: 13% ink wash, weight 620. Hover: 8% ink wash.
 - **Modes** (Settings > Dock): `full` (icon + label, 280px) and `compact` (icon only, 76px, items centered, clock hidden, `title` tooltip on items). Stored in localStorage (`44-dock-mode`, `44-dock-hidden`) via `src/lib/dockPreferences.ts` — always read/write through that module so the Dock and Settings stay in sync.
 - Users may hide any app except `locked` ones (Home, Settings).
@@ -119,11 +119,13 @@ The Dock is the OS taskbar. It renders **only** from the app registry — `src/l
 
 ---
 
-## 4. The Tab Bar
+## 4. The Top Bar
 
-The tab bar is the active app's section switcher. **It behaves identically in every app** — same position, same pills, same spacing. Only the labels change.
+The top bar is system chrome first. It holds search, cart, notifications, account, and optional internal workspace sections/back links.
 
-- Tabs are app sections, not category filters. Put categories, topics, and search inside the section workspace, not in the global tab bar.
+- Primary destinations belong in the Dock, not the top bar. Store, Library, Community, Resources, Services, Dashboard, Support, and Settings are the shipped primary destinations. Search lives in the topbar; Profile and Inbox are account-menu destinations because they are personal utilities, not platform browsing modes.
+- Tabs, when used, are internal sections for configuration/workspace surfaces such as Settings, Account, and Creator. They are not the discovery mechanism for core apps.
+- Tabs can also be used as local filters when the active page already has a clear destination, but never to hide where saved/owned items or messages live.
 - Registered from the page via `useTopbarTabs()` (`src/components/TopbarContext.tsx`); dashboard pages use the shared `useDashboardTabs()` from `src/lib/dashboardTabs.ts`. Tabs live in code beside the app, but always render through this one component.
 - Pills: 40px tall, min-width 70px, padding 0 18px, radius pill, 14px/680. Active: 13% ink wash. Hover: 8% wash.
 - The first pill's leading edge sits on the leading axis (section 1).
@@ -139,7 +141,7 @@ All app content renders inside `PageShell` (`.view-hub`): max-width 1440px, cent
 
 | Container | Use | Column |
 |---|---|---|
-| `.app-page` | browse/hub apps (Music, Books, Assets, Merch, Resources, Search, Home) | full 1440 |
+| `.app-page` | browse/hub apps (Search, Store, Library, Resources, Home) | full 1440 |
 | `.dashboard-page` | management tools (Dashboard, Settings) | full 1440 |
 | `.social-shell` | reading/feed surfaces (Community, Friends, Inbox, threads) | readable 1180, **left-aligned on the leading axis** (never self-centered) |
 
@@ -158,7 +160,7 @@ description      (.os-type-body, ink-secondary, one line)
 ```
 
 - Component: `HubHero` (`src/components/Ui.tsx`), class `.dashboard-header` / `.social-header` (same metrics: padding 48px 0 32px, hairline bottom border).
-- **The title is the app's name** — "Music", "Books", "Assets", "Merch", "Community", "Settings", "Dashboard", "Home". Tabs change the content, never the title. The description may be contextual (e.g. Settings describes the active tab).
+- **The title is the app's name** — "Search", "Library", "Store", "Community", "Support", "Inbox", "Profile", "Dashboard", "Settings", "Home". Store/Library filter tabs may title the filtered view ("Music", "Books", "Assets", "Merch") while remaining inside the Store/Library app. The description may be contextual (e.g. Settings describes the active tab).
 - Canonical labels/descriptions live in the app registry (`osApps.ts`); page copy should match them.
 - Optional actions (e.g. "New Post") sit at the header's trailing end, bottom-aligned with the title block.
 - Sub-pages (detail views, editors, composers) use `.os-type-page-title` (40px) or panel titles instead of display type; only an app's front screen uses display type.
@@ -296,9 +298,11 @@ Desktop-first; every screen must degrade cleanly.
 
 ## 17. App-Specific Rules (unchanged foundations)
 
-**Community** — Topbar tabs are Feed, Profile, Friends, Messages (in that order). Feed general posts map to the `discussions`/legacy `discussion` category. Creator/member profiles are Community item pages: your own profile keeps the Profile tab active; other profiles show a topbar back-link to Community instead. Creator profile tabs are Posts, Music, Books, Assets, Services, and empty tabs are hidden. In feeds, only avatars link to profiles; handles are display-only; title/body link to the thread.
+**Community** — The Dock exposes Feed, Messages, and Profile directly. Feed general posts map to the `discussions`/legacy `discussion` category. Creator/member profiles are Community item pages with a topbar back-link to Community when reached from another profile; profile-local tabs are Posts, Music, Books, Assets, Services, and empty tabs are hidden. Friends is hidden from primary navigation while following is reconsidered. In feeds, only avatars link to profiles; handles are display-only; title/body link to the thread.
 
 **Reviews / Updates** — Reviews are not Community posts visually or conceptually. They live only on Store item pages for Music, Books, Assets, and Merch. Updates live only on owned Library item pages for Music, Books, and Assets. Creator profiles do not show Reviews or Updates. Reviews use `product_reviews`; Updates use `product_updates`.
+
+**Store** — The Store front page (All tab) is two shelves: Explore Music and Explore Apparel, eight items each, each with a trailing View All action that opens the matching filter tab (Music / Merch). Filter tabs (Music, Books, Assets, Merch) title the filtered view in the app header; Library filter tabs do the same.
 
 **Music** — Store detail pages are public Release pages: release hero, primary release action, Library/Cart action, creator link, tracklist with stable playable rows, Reviews, details, and related creator items. Owned Library detail pages are owned Release pages: album header, Play Release / Play All, stable playable track rows, achievement rows, release details, creator/store links, and read-only Creator Updates. Tracklist rows use the shared `.view-tracklist` / `.view-track-row` anatomy; updates and reviews stay in release or Library context, not Community.
 
@@ -306,17 +310,19 @@ Desktop-first; every screen must degrade cleanly.
 
 **Merch** — Merch is physical goods only. Store and detail pages should use shipped-goods language, Cart/Checkout actions, and Related Merch strips filtered to physical goods. Merch must never behave like a digital Library item.
 
-**Resources** — Topbar tabs are Resources and Saved. Resources is public discovery/browse; Saved is saved resources backed by `saved_resources`. The compatibility route remains `/resources/collection`, but user-facing copy never says Collection. Do not call saved resources a Library.
+**Resources** — Resources is public discovery/browse. Saved resources are backed by `saved_resources`; the compatibility route remains `/resources/collection`, but user-facing copy never says Collection. Do not call saved resources a Library.
 
-**Search** — Topbar search opens `/search?q=`. Search is a hidden system surface, not a Dock app. Results group by Items, Creators, Posts, and Resources; old `/browse?q=` is legacy product browse only.
+**Search** — Search is reached from the topbar search icon, which opens `/search?q=`; it is not a Dock item. The Search app must include an in-page search field so the destination is usable without the topbar icon. Results group by Items, Creators, and Posts; `/browse` is not a shipped surface.
 
-**Services** — Topbar tabs are Services, Projects, Requests. Services is browsing/intake; Projects and Requests are section workspaces. Service categories stay inside the Services section, not in the tab bar.
+**Services** — Services is browsing/intake. Projects and Requests routes remain compatibility/future workspaces while Services is paused. Service categories stay inside the Services workspace, not in the top bar.
 
-**Profiles** — cover/header never overlaps avatar/name/bio/actions. No public follower/following counts. Friend actions: Add Friend / Request Sent / Friends / Accept Friend.
+**Profiles** — cover/header never overlaps avatar/name/bio/actions. No public follower/following counts yet. Existing friend actions may remain on profile pages during the transition, but Friends is not primary navigation while following is reconsidered.
 
-**Dashboard** — creator tooling for digital releases. Shipped topbar tabs are Overview, Music, Books, Assets. Music/Books/Assets are separate creator-catalog sections (compat route may stay `/dashboard/products`). Overview shows three digital catalog cards and an embedded Earnings section; there is no separate Earnings tab. Merch, Preferences, Services, Requests, Resources, and Updates stay out of Dashboard navigation until their workflows are redesigned. New/edit item forms expose Title, type selector, Description, Price, optional Local Price, year, Artwork, Music tracks, and Books/Assets file upload. Do not expose category dropdowns, creator fields, or hero-image fields. Payout language is Earnings / Sold Items. UI says Music/Books/Assets items by context — never "Products".
+**Settings** — Settings is the single control panel. Shipped topbar tabs are System, Dock, Region, Account. Only working controls appear: theme/accent, landing app, Dock mode, visible Dock apps, region/currency, email, password reset, privacy toggles, and notification toggles. Do not show placeholder-only sections such as Clock, Accessibility, Advanced, Orders, typography, wallpaper, integrations, sessions, or two-factor authentication until they work. Account profile identity fields do not live here; username, avatar, display name, and bio live on Profile/Edit Profile.
 
-**Library** — "Library" is the universal owned-items word inside apps (Music > Library, Books > Library, Assets > Library). The global `/library` route is legacy aggregate-only and should not appear in Dock copy. "Collection" is legacy-route-only and never appears in UI copy.
+**Dashboard** — creator tooling for digital releases at `/dashboard`; Dock copy says Dashboard and the item sits in the main 44OS group directly below Library (creators only), above the divider that separates Community/Resources/Services. Shipped topbar tabs are Overview, Music, Books, Assets. Music/Books/Assets are separate creator-catalog sections (compat route may stay `/dashboard/products`). Overview shows three digital catalog cards and an embedded Earnings section; there is no separate Earnings tab. Merch, Preferences, Services, Requests, Resources, and Updates stay out of Dashboard navigation until their workflows are redesigned. New/edit item forms expose Title, type selector, Description, Price, optional Local Price, year, Artwork, Music tracks, and Books/Assets file upload. Do not expose category dropdowns, creator fields, or hero-image fields. Payout language is Earnings / Sold Items. UI says Music/Books/Assets items by context — never "Products".
+
+**Library** — "Library" is the universal owned-items word and a visible Dock app. The global `/library` route is the aggregate entry point for everything a user has added or purchased; owned item detail routes may still live under Music/Books/Assets, but they should activate Library in the Dock. "Collection" is legacy-route-only and never appears in UI copy.
 
 ---
 

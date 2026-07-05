@@ -12,6 +12,7 @@
 
 export type OSAppId =
   | 'home'
+  | 'search'
   | 'music'
   | 'books'
   | 'assets'
@@ -21,6 +22,7 @@ export type OSAppId =
   | 'services'
   | 'resources'
   | 'community'
+  | 'profile'
   | 'friends'
   | 'notifications'
   | 'account'
@@ -29,6 +31,7 @@ export type OSAppId =
   | 'store'
   | 'dashboard'
   | 'settings'
+  | 'support'
   | 'projects';
 
 export type OSAppGroup = 'media' | 'community' | 'studio' | 'account' | 'system' | 'legacy';
@@ -64,36 +67,68 @@ export const OS_APPS: OSApp[] = [
     hidden: true,
   },
   {
+    id: 'library',
+    label: 'Library',
+    description: 'Everything you have added or purchased on 44.',
+    href: '/library',
+    iconClass: 'os-icon-library',
+    group: 'media',
+    requiresAuth: true,
+  },
+  {
+    id: 'search',
+    label: 'Search',
+    description: 'Find items, creators, and posts across 44OS.',
+    href: '/search',
+    iconClass: 'os-icon-search',
+    group: 'media',
+    // Search stays a real app (topbar search opens /search); it is just
+    // not a Dock destination anymore.
+    hidden: true,
+  },
+  {
+    id: 'store',
+    label: 'Store',
+    description: 'Browse music, books, assets, and merch from creators on 44.',
+    href: '/store',
+    iconClass: 'os-icon-store',
+    group: 'media',
+  },
+  {
     id: 'music',
     label: 'Music',
-    description: 'Your music library and new releases from creators on 44.',
-    href: '/music',
+    description: 'New releases from creators on 44.',
+    href: '/store/music',
     iconClass: 'os-icon-music',
-    group: 'media',
+    group: 'legacy',
+    hidden: true,
   },
   {
     id: 'books',
     label: 'Books',
-    description: 'Digital books and artbooks — read them right here.',
-    href: '/books',
+    description: 'Digital books and artbooks from creators on 44.',
+    href: '/store/books',
     iconClass: 'os-icon-books',
-    group: 'media',
+    group: 'legacy',
+    hidden: true,
   },
   {
     id: 'assets',
     label: 'Assets',
     description: 'Samples, templates, presets, and creative tools for your work.',
-    href: '/assets',
+    href: '/store/assets',
     iconClass: 'os-icon-assets',
-    group: 'media',
+    group: 'legacy',
+    hidden: true,
   },
   {
     id: 'merch',
     label: 'Merch',
     description: 'Physical goods from 44 and creators: apparel, merch, and shipped items.',
-    href: '/merch',
+    href: '/store/merch',
     iconClass: 'os-icon-merch',
-    group: 'media',
+    group: 'legacy',
+    hidden: true,
   },
   {
     id: 'radio',
@@ -107,10 +142,30 @@ export const OS_APPS: OSApp[] = [
   {
     id: 'community',
     label: 'Community',
-    description: 'Connect with creatives, share work, and find collaborators.',
-    href: '/community/feed',
+    description: 'Posts from creators and the 44 community.',
+    href: '/community',
     iconClass: 'os-icon-community',
     group: 'community',
+  },
+  {
+    id: 'inbox',
+    label: 'Inbox',
+    description: 'Direct messages and project communication.',
+    href: '/inbox',
+    iconClass: 'os-icon-inbox',
+    group: 'legacy',
+    requiresAuth: true,
+    hidden: true,
+  },
+  {
+    id: 'profile',
+    label: 'Profile',
+    description: 'Your public creator/member profile.',
+    href: '/profile',
+    iconClass: 'os-icon-user',
+    group: 'legacy',
+    requiresAuth: true,
+    hidden: true,
   },
   {
     id: 'resources',
@@ -118,7 +173,7 @@ export const OS_APPS: OSApp[] = [
     description: 'Guides, templates, and useful references for creatives.',
     href: '/resources',
     iconClass: 'os-icon-resources',
-    group: 'community',
+    group: 'media',
   },
   {
     id: 'services',
@@ -126,7 +181,7 @@ export const OS_APPS: OSApp[] = [
     description: 'Professional creative services, produced and delivered through 44.',
     href: '/services',
     iconClass: 'os-icon-services',
-    group: 'community',
+    group: 'media',
   },
   {
     id: 'friends',
@@ -151,16 +206,26 @@ export const OS_APPS: OSApp[] = [
   {
     id: 'account',
     label: 'Account',
-    description: 'Your profile, identity, and account setup.',
-    href: '/account',
+    description: 'Legacy account route. Account controls now live in Settings.',
+    href: '/settings?tab=account',
     iconClass: 'os-icon-account',
-    group: 'account',
+    group: 'legacy',
     requiresAuth: true,
+    hidden: true,
+  },
+  {
+    id: 'support',
+    label: 'Support',
+    description: 'Help with your account, library, and orders on 44.',
+    href: '/support',
+    iconClass: 'os-icon-support',
+    // Renders in the Dock's bottom cluster, directly above the system divider.
+    group: 'account',
   },
   {
     id: 'dashboard',
     label: 'Dashboard',
-    description: 'Your creator workspace — releases, resources, requests, and earnings.',
+    description: 'Your creator workspace — publish music, books, assets, and track earnings.',
     href: '/dashboard',
     iconClass: 'os-icon-dashboard',
     group: 'studio',
@@ -170,7 +235,7 @@ export const OS_APPS: OSApp[] = [
   {
     id: 'settings',
     label: 'Settings',
-    description: 'System settings — appearance, Dock, region, clock, accessibility, and advanced controls.',
+    description: 'System, Dock, region, and account controls.',
     href: '/settings',
     iconClass: 'os-icon-settings',
     group: 'system',
@@ -190,40 +255,11 @@ export const OS_APPS: OSApp[] = [
     hidden: true,
   },
   {
-    id: 'inbox',
-    label: 'Messages',
-    description: 'Direct messages and project communication.',
-    href: '/community/messages',
-    iconClass: 'os-icon-inbox',
-    group: 'legacy',
-    requiresAuth: true,
-    hidden: true,
-  },
-  {
-    id: 'library',
-    label: 'Library',
-    description: 'Legacy aggregate library.',
-    href: '/library',
-    iconClass: 'os-icon-library',
-    group: 'legacy',
-    requiresAuth: true,
-    hidden: true,
-  },
-  {
     id: 'shop',
     label: 'Shop',
     description: 'Legacy shop route.',
-    href: '/shop',
+    href: '/store/merch',
     iconClass: 'os-icon-shop',
-    group: 'legacy',
-    hidden: true,
-  },
-  {
-    id: 'store',
-    label: 'Store',
-    description: 'Legacy store route.',
-    href: '/',
-    iconClass: 'os-icon-store',
     group: 'legacy',
     hidden: true,
   },
@@ -239,30 +275,38 @@ export function getOSApp(id: OSAppId): OSApp | undefined {
  */
 export function getActiveOSAppId(pathname: string): OSAppId | '' {
   if (pathname === '/home' || pathname.startsWith('/home/')) return 'home';
-  if (pathname.startsWith('/music')) return 'music';
-  if (pathname.startsWith('/books')) return 'books';
-  if (pathname.startsWith('/assets')) return 'assets';
-  if (pathname.startsWith('/radio')) return 'radio';
-  if (pathname.startsWith('/merch') || pathname.startsWith('/shop')) return 'merch';
+  if (pathname.startsWith('/search')) return 'search';
+  if (
+    pathname.startsWith('/library') ||
+    pathname.startsWith('/collection') ||
+    pathname.startsWith('/music/library') ||
+    pathname.startsWith('/books/library') ||
+    pathname.startsWith('/assets/library')
+  ) return 'library';
   if (
     pathname === '/' ||
     pathname.startsWith('/store') ||
     pathname.startsWith('/product') ||
     pathname.startsWith('/browse') ||
     pathname.startsWith('/cart') ||
-    pathname.startsWith('/checkout')
-  ) return 'merch';
+    pathname.startsWith('/checkout') ||
+    pathname.startsWith('/music') ||
+    pathname.startsWith('/books') ||
+    pathname.startsWith('/assets') ||
+    pathname.startsWith('/merch') ||
+    pathname.startsWith('/shop')
+  ) return 'store';
+  if (pathname.startsWith('/radio')) return 'radio';
   if (pathname.startsWith('/services') || pathname.startsWith('/service')) return 'services';
   if (pathname.startsWith('/resources')) return 'resources';
   if (pathname.startsWith('/friends')) return 'community';
-  if (pathname.startsWith('/community')) return 'community';
+  if (pathname.startsWith('/community') || pathname.startsWith('/profile') || pathname.startsWith('/inbox')) return 'community';
   if (pathname.startsWith('/notifications')) return 'notifications';
-  if (pathname.startsWith('/account') || pathname.startsWith('/profile')) return 'account';
-  if (pathname.startsWith('/library') || pathname.startsWith('/collection')) return 'music';
+  if (pathname.startsWith('/account')) return 'settings';
   if (pathname.startsWith('/projects')) return 'services';
-  if (pathname.startsWith('/inbox')) return 'community';
   if (pathname.startsWith('/dashboard') || pathname.startsWith('/studio')) return 'dashboard';
   if (pathname.startsWith('/settings')) return 'settings';
+  if (pathname.startsWith('/support')) return 'support';
   return '';
 }
 

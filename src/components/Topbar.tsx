@@ -41,14 +41,7 @@ const IconMessages = () => (
   </svg>
 );
 
-const IconFriends = () => (
-  <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="8" cy="8" r="3"/>
-    <path d="M2 18c0-3 2.7-5 6-5s6 2 6 5"/>
-    <circle cx="15.5" cy="6.5" r="2.5"/>
-    <path d="M14 13c3 0 6 1.6 6 4"/>
-  </svg>
-);
+const IconSettings = () => <span className="os-icon os-icon-settings os-icon-sm" aria-hidden="true" />;
 
 const IconSignOut = () => (
   <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -181,7 +174,7 @@ export function Topbar() {
 
   const displayName = profile?.display_name || profile?.username || user?.email?.split('@')[0] || 'You';
   const avatarUrl = profile?.avatar_url ?? null;
-  const profileHref = profile?.username ? `/community/profile/${profile.username}` : '/profile';
+  const profileHref = profile?.username ? `/profile/${profile.username}` : '/profile';
   const hasNewNotifications = notifications.some(n => !seenIds.has(n.id));
 
   async function handleSignOut() {
@@ -321,11 +314,11 @@ export function Topbar() {
                 <Link href={profileHref} className="os-popover-item" role="menuitem">
                   <IconProfile /> Profile
                 </Link>
-                <Link href="/community/friends" className="os-popover-item" role="menuitem">
-                  <IconFriends /> Friends
+                <Link href="/inbox" className="os-popover-item" role="menuitem">
+                  <IconMessages /> Inbox
                 </Link>
-                <Link href="/community/messages" className="os-popover-item" role="menuitem">
-                  <IconMessages /> Messages
+                <Link href="/settings" className="os-popover-item" role="menuitem">
+                  <IconSettings /> Settings
                 </Link>
                 <div className="os-popover-divider" />
                 <button type="button" className="os-popover-item" role="menuitem" onClick={handleSignOut}>

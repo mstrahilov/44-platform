@@ -10,13 +10,14 @@ import {
   type AchievementNotification,
 } from '@/lib/achievementNotifications';
 
-type TabId = 'all' | 'mentions' | 'replies' | 'orders' | 'achievements';
+type TabId = 'all' | 'mentions' | 'replies' | 'likes' | 'messages' | 'achievements';
 
 const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'all', label: 'All' },
   { id: 'mentions', label: 'Mentions' },
   { id: 'replies', label: 'Replies' },
-  { id: 'orders', label: 'Orders' },
+  { id: 'likes', label: 'Likes' },
+  { id: 'messages', label: 'Messages' },
   { id: 'achievements', label: 'Achievements' },
 ];
 
@@ -65,14 +66,17 @@ export default function NotificationsPage() {
     if (activeTab === 'achievements') return item.kind === 'achievement';
     if (activeTab === 'replies') return item.kind === 'reply';
     if (activeTab === 'mentions') return item.kind === 'mention';
+    if (activeTab === 'likes') return item.kind === 'like';
+    if (activeTab === 'messages') return item.kind === 'message';
     return false;
   });
   const emptyCopyByTab: Record<TabId, string> = {
-    all: 'Unlock achievements, get replies, or place orders to see activity here.',
+    all: 'Unlock achievements, get replies, likes, mentions, or messages to see activity here.',
     achievements: 'Achievements you unlock across the platform will appear here.',
     mentions: 'Posts and replies that mention you will appear here.',
     replies: 'Replies to your posts and comments will appear here.',
-    orders: 'Order updates and receipts will appear here.',
+    likes: 'Likes on your posts will appear here.',
+    messages: 'New messages in your inbox will appear here.',
   };
 
   return (
@@ -106,7 +110,7 @@ export default function NotificationsPage() {
                 >
                   <div className="dashboard-row-copy">
                     <div className="os-type-eyebrow" style={{ color: item.kind === 'reply' ? 'var(--os-color-ink-secondary)' : 'var(--os-color-accent)' }}>
-                      {item.kind === 'reply' ? 'Reply' : item.kind === 'mention' ? 'Mention' : 'Achievement Unlocked'}
+                      {item.kind === 'reply' ? 'Reply' : item.kind === 'mention' ? 'Mention' : item.kind === 'like' ? 'Like' : item.kind === 'message' ? 'Message' : 'Achievement Unlocked'}
                     </div>
                     <div className="dashboard-row-title">{item.title}</div>
                     {item.description && (
