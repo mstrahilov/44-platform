@@ -313,6 +313,7 @@ body.theme-light .app-environment-image { opacity: 0.6; }
   align-items: center;
   gap: 14px;
   width: 100%;
+  min-height: 56px;
   text-align: left;
   background: none;
   border: none;
@@ -697,18 +698,80 @@ body.theme-light .app-environment-image { opacity: 0.6; }
 @media (max-width: 768px) {
   .app-frame {
     padding: 0;
+    height: 100dvh;
   }
   .app-shell {
-    flex-direction: column;
+    flex-direction: column-reverse;
     border-radius: 0;
     border: none;
     box-shadow: none;
   }
   .app-sidebar {
+    width: 100%;
+    height: calc(74px + env(safe-area-inset-bottom));
+    flex: 0 0 auto;
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-right: 0;
+    border-top: 1px solid var(--os-color-hairline);
+    padding-bottom: env(safe-area-inset-bottom);
+    touch-action: pan-x;
+    scrollbar-width: none;
+  }
+  .app-sidebar::-webkit-scrollbar {
     display: none;
   }
+  .sidebar-top,
+  .sidebar-spacer,
+  .sidebar-section-label {
+    display: none;
+  }
+  .sidebar-nav {
+    width: max-content;
+    min-width: 100%;
+    flex: 1;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+  }
+  .sidebar-section {
+    flex-direction: row;
+    gap: 6px;
+  }
+  .sidebar-divider {
+    width: 1px;
+    height: 34px;
+    margin: 0 6px;
+  }
+  .sidebar-item,
+  .app-sidebar-compact .sidebar-item {
+    width: 58px;
+    height: 58px;
+    min-height: 58px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 16px;
+    gap: 0;
+    flex: 0 0 auto;
+  }
+  .sidebar-item-label,
+  .app-sidebar-compact .sidebar-item-label {
+    display: none;
+  }
+  .sidebar-pin-art,
+  .app-sidebar-compact .sidebar-pin-art {
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+  }
   .app-main {
-    padding-bottom: calc(60px + env(safe-area-inset-bottom));
+    height: calc(100dvh - 74px - env(safe-area-inset-bottom));
+    min-height: 0;
+  }
+  .app-main-content {
+    scroll-padding-bottom: 96px;
   }
 }
 
@@ -8506,4 +8569,345 @@ body.accent-violet {
   color: var(--os-color-accent);
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+/* =========================================================
+   Mobile Launch Pass
+   Phone screens keep the 44OS shell, but the Dock becomes a
+   bottom tray and content collapses to a single readable column.
+   ========================================================= */
+@media (max-width: 768px) {
+  :root {
+    --os-content-inset: 18px;
+    --os-detail-inset: 18px;
+    --os-page-pad: 18px;
+    --os-section-gap: 34px;
+    --os-app-header-pad-top: 26px;
+    --os-app-header-pad-bottom: 22px;
+    --os-topbar-height: 56px;
+    --os-topbar-control-size: 40px;
+    --os-topbar-pill-height: 36px;
+    --os-topbar-edge-inset: 10px;
+    --os-topbar-left-inset: 10px;
+  }
+
+  html,
+  body {
+    min-height: 100dvh;
+  }
+
+  .app-environment {
+    border-radius: 0;
+    border: 0;
+  }
+
+  .os-topbar {
+    height: var(--os-topbar-height);
+    padding: 0 10px;
+    gap: 8px;
+  }
+
+  .os-topbar-left {
+    gap: 6px;
+    flex: 1 1 auto;
+  }
+
+  .os-topbar-right {
+    gap: 6px;
+  }
+
+  .os-topbar-tab {
+    min-width: 0;
+    min-height: 36px;
+    padding: 0 13px;
+    font-size: 13px;
+  }
+
+  .os-topbar-back {
+    max-width: 160px;
+    min-height: 36px;
+    padding: 0 12px 0 8px;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .os-topbar-back svg {
+    flex: 0 0 auto;
+  }
+
+  .os-topbar-search-form {
+    position: fixed;
+    z-index: 60;
+    top: 8px;
+    left: 10px;
+    right: 10px;
+    width: auto;
+    height: 42px;
+  }
+
+  @keyframes os-topbar-search-in {
+    from { opacity: 0.72; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .os-popover {
+    position: fixed;
+    top: calc(var(--os-topbar-height) + 6px);
+    right: 10px;
+    left: auto;
+    max-width: min(360px, calc(100vw - 20px));
+    max-height: calc(100dvh - var(--os-topbar-height) - 96px);
+    overflow: auto;
+  }
+
+  .os-popover-wide {
+    width: min(420px, calc(100vw - 20px));
+  }
+
+  .view-hub,
+  .view-page,
+  .view-content {
+    padding-left: var(--os-content-inset);
+    padding-right: var(--os-content-inset);
+    padding-bottom: 96px;
+    gap: var(--os-section-gap);
+  }
+
+  .dashboard-header,
+  .social-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .dashboard-header-copy p,
+  .social-title-copy {
+    max-width: 100%;
+  }
+
+  .app-grid,
+  .app-shelf,
+  .app-grid-wide,
+  .app-shelf:has(.app-shelf-item-wide),
+  .dashboard-overview-grid,
+  .dashboard-metric-grid,
+  .dashboard-form-grid,
+  .dashboard-form-grid-2,
+  .dashboard-form-grid-3,
+  .checkout-grid,
+  .checkout-grid-two,
+  .library-stats-grid,
+  .library-two-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .app-grid,
+  .app-shelf {
+    gap: 18px;
+  }
+
+  .product-tile-title {
+    font-size: clamp(18px, 5vw, 24px);
+  }
+
+  .view-album-header,
+  .library-detail-header {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 34px var(--os-detail-inset);
+    min-height: 0;
+    align-items: start;
+  }
+
+  .view-album-cover,
+  .library-detail-header .view-album-cover {
+    width: min(72vw, 260px);
+    height: min(72vw, 260px);
+  }
+
+  .view-album-cover-book,
+  .library-detail-header .book-release-cover {
+    width: min(58vw, 220px);
+    height: auto;
+  }
+
+  .view-album-copy,
+  .library-detail-header .view-album-copy {
+    padding: 0;
+    gap: 10px;
+  }
+
+  .view-album-title,
+  .library-detail-header .view-album-title {
+    max-width: 100%;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    font-size: clamp(34px, 11vw, 48px);
+    line-height: 0.98;
+  }
+
+  .view-album-actions {
+    width: 100%;
+    gap: 10px;
+  }
+
+  .view-album-actions .os-button,
+  .library-action-buttons .os-button,
+  .dashboard-form-actions .os-button {
+    min-height: 44px;
+  }
+
+  .view-tracklist {
+    border-radius: 20px;
+  }
+
+  .view-track-row {
+    grid-template-columns: 38px minmax(0, 1fr) 48px;
+    gap: 12px;
+    min-height: 58px;
+    padding: 0 14px;
+  }
+
+  .library-achievement-row,
+  .dashboard-list-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+  }
+
+  .library-achievement-row {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+
+  .library-achievement-row .os-status-pill {
+    justify-self: start;
+    grid-column: 2;
+  }
+
+  .dashboard-list-surface,
+  .social-feed-composer {
+    border-radius: 22px;
+  }
+
+  .social-shell,
+  .social-shell-wide {
+    width: 100%;
+    max-width: none;
+  }
+
+  .social-feed-list {
+    padding: 0 16px;
+  }
+
+  .social-row {
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 12px;
+    min-height: 0;
+    padding: 18px 0;
+  }
+
+  .social-reply-drawer {
+    margin-left: 0;
+  }
+
+  .social-reply-drawer-form,
+  .social-reply-drawer-form-nested {
+    margin-left: 0;
+    border-radius: 18px;
+  }
+
+  .social-profile-cover {
+    min-height: 128px;
+    border-radius: 18px;
+  }
+
+  .social-profile-main {
+    gap: 18px;
+    padding-top: 16px;
+  }
+
+  .social-profile-identity {
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .social-avatar-large {
+    width: 78px;
+    height: 78px;
+  }
+
+  .social-profile-name {
+    font-size: clamp(34px, 10vw, 48px);
+  }
+
+  .social-profile-actions {
+    width: 100%;
+  }
+
+  .social-profile-actions .os-button {
+    flex: 1 1 140px;
+  }
+
+  .os-system-panel,
+  .os-system-window {
+    width: calc(100vw - 24px);
+    min-height: 0;
+    border-radius: 24px;
+  }
+
+  .os-system-panel {
+    padding: 24px 18px;
+  }
+
+  .os-system-window {
+    height: auto;
+    min-height: calc(100dvh - 150px);
+    grid-template-columns: 1fr;
+  }
+
+  .os-system-window-rail {
+    border-right: 0;
+    border-bottom: 1px solid var(--os-panel-divider);
+    padding: 16px;
+  }
+
+  .music-player-bar {
+    min-height: 104px;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 420px) {
+  :root {
+    --os-content-inset: 14px;
+    --os-detail-inset: 14px;
+  }
+
+  .os-topbar-icon-button,
+  .os-topbar-avatar {
+    width: 38px;
+    height: 38px;
+  }
+
+  .os-topbar-tab {
+    padding: 0 11px;
+  }
+
+  .sidebar-item,
+  .app-sidebar-compact .sidebar-item {
+    width: 54px;
+    height: 54px;
+    min-height: 54px;
+  }
+
+  .sidebar-pin-art,
+  .app-sidebar-compact .sidebar-pin-art {
+    width: 34px;
+    height: 34px;
+  }
 }
