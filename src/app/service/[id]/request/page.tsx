@@ -43,7 +43,8 @@ export default function ServiceRequestPage() {
   }, [id]);
 
   useEffect(() => {
-    if (service && !briefTitle) setBriefTitle(`Request: ${service.title}`);
+    if (!service || briefTitle) return;
+    Promise.resolve().then(() => setBriefTitle(`Request: ${service.title}`));
   }, [service, briefTitle]);
 
   if (loading || authLoading) {

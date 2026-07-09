@@ -58,7 +58,7 @@ export function ProductReviewsSection({
   }
 
   useEffect(() => {
-    loadReviews();
+    Promise.resolve().then(() => loadReviews());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productId]);
 
@@ -69,7 +69,7 @@ export function ProductReviewsSection({
 
   useEffect(() => {
     if (!ownReview || composerOpen) return;
-    setBody(ownReview.body ?? '');
+    Promise.resolve().then(() => setBody(ownReview.body ?? ''));
   }, [composerOpen, ownReview]);
 
   async function submitReview(event: React.FormEvent<HTMLFormElement>) {

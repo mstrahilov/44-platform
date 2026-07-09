@@ -52,7 +52,7 @@ export function ProductStoreDetail({
   const router = useRouter();
   const searchParams = useSearchParams();
   const cart = useCart();
-  const { currentTrack, isPlaying, playQueue, toggleTrack, queueNext } = useMusicPlayer();
+  const { currentTrack, isPlaying, toggleTrack, queueNext } = useMusicPlayer();
   const { openContextMenu } = useContextMenu();
   const [product, setProduct] = useState<Product | null>(null);
   const [tracks, setTracks] = useState<ProductTrack[]>([]);
@@ -61,7 +61,7 @@ export function ProductStoreDetail({
   const [owned, setOwned] = useState(false);
   const [ownedLibraryItemId, setOwnedLibraryItemId] = useState<string | null>(null);
   const [ownedAcquisitionType, setOwnedAcquisitionType] = useState<string | null>(null);
-  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(() => searchParams.get('track'));
   const [inferredTrackDurations, setInferredTrackDurations] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
@@ -151,7 +151,7 @@ export function ProductStoreDetail({
 
   useEffect(() => {
     const highlightedTrackId = searchParams.get('track');
-    setSelectedTrackId(highlightedTrackId);
+    Promise.resolve().then(() => setSelectedTrackId(highlightedTrackId));
   }, [searchParams]);
 
   useEffect(() => {
@@ -244,7 +244,6 @@ export function ProductStoreDetail({
   const heroImage = product.hero_url || product.cover_url;
   const productExperience = getProductExperience(product);
   const isReleasePage = releasePage || productExperience === 'music';
-  const isPhysicalMerch = productExperience === 'physical';
   const canClaimToLibrary = canSaveProductToLibrary(product);
   const hasDownloadUnlock = ownedAcquisitionType === 'purchase';
   const creatorLink = creatorHref(product.creators ?? product.creator);
@@ -268,13 +267,6 @@ export function ProductStoreDetail({
         productId: product.id,
       }))
   );
-
-  function playRelease() {
-    if (playableTracks.length > 0) {
-      playQueue(playableTracks);
-      setSelectedTrackId(playableTracks[0]?.id ?? null);
-    }
-  }
 
   function toggleReleaseTrack(track: ProductTrack) {
     if (!track.audio_url) return;
@@ -315,7 +307,7 @@ export function ProductStoreDetail({
     onAddToLibrary: addToLibrary,
     onAddToCart: addProductToCart,
   });
-  const aboutHeading = getAboutHeading(product);
+  const aboutHeading = getAboutHeading();
   const contentHeading = getContentHeading(product);
   const productDetails = buildProductDetails(product, tracks, inferredTrackDurations);
   const creatorDisplayName = product.creators?.display_name || product.creator || '44 Creator';
@@ -577,7 +569,7 @@ function resolveStoreActions({
   ];
 }
 
-function getAboutHeading(product: Product) {
+function getAboutHeading() {
   return 'Description';
 }
 

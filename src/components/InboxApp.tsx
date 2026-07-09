@@ -39,6 +39,10 @@ type Message = {
 };
 
 type MessageProfile = Pick<SocialAuthor, 'id' | 'slug' | 'username' | 'display_name' | 'avatar_url' | 'role' | 'creator_type'>;
+type InboxProfileState = {
+  userId: string;
+  profile: StudioProfile | null;
+};
 
 const INBOX_READ_STORAGE_KEY = '44-inbox-read-at';
 
@@ -75,7 +79,8 @@ function MessagesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading } = useAuth();
-  const [profile, setProfile] = useState<StudioProfile | null>(null);
+  const userId = user?.id ?? null;
+  const [profileState, setProfileState] = useState<InboxProfileState | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [members, setMembers] = useState<ConversationMember[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -85,7 +90,7 @@ function MessagesContent() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [setupGateOpen, setSetupGateOpen] = useState(false);
-  const [readMap, setReadMap] = useState<Record<string, string>>({});
+  const [readMap, setReadMap] = useState<Record<string, string>>(() => getReadMap());
   const [composing, setComposing] = useState(false);
   const [recipientQuery, setRecipientQuery] = useState('');
   const [recipientProfiles, setRecipientProfiles] = useState<MessageProfile[]>([]);
@@ -94,12 +99,14 @@ function MessagesContent() {
   useCommunityTopbarTabs('messages');
 
   useEffect(() => {
-    if (!user) {
-      setProfile(null);
-      return;
-    }
-    loadStudioProfile(user.id).then(result => setProfile(result.profile));
-  }, [user]);
+    if (!userId) return;
+    const activeUserId = userId;
+    let alive = true;
+    loadStudioProfile(activeUserId).then(result => {
+      if (alive) setProfileState({ userId: activeUserId, profile: result.profile });
+    });
+    return () => { alive = false; };
+  }, [userId]);
 
   const loadInbox = useCallback(async () => {
     if (!user) return;
@@ -179,7 +186,7 @@ function MessagesContent() {
     const userId = user.id;
     const withProfile = searchParams.get('with');
     if (!withProfile) {
-      loadInbox();
+      Promise.resolve().then(() => loadInbox());
       return;
     }
     const targetProfileId = withProfile;
@@ -199,14 +206,7 @@ function MessagesContent() {
   }, [loadInbox, router, searchParams, user]);
 
   useEffect(() => {
-    setReadMap(getReadMap());
-  }, [user]);
-
-  useEffect(() => {
-    if (!user || !composing || !recipientQuery.trim()) {
-      setRecipientProfiles([]);
-      return;
-    }
+    if (!user || !composing || !recipientQuery.trim()) return;
 
     let alive = true;
     async function loadRecipients() {
@@ -230,9 +230,13 @@ function MessagesContent() {
     return () => { alive = false; };
   }, [composing, recipientQuery, user]);
 
+  const profile = profileState && profileState.userId === userId ? profileState.profile : null;
+  const visibleRecipientProfiles = user && composing && recipientQuery.trim() ? recipientProfiles : [];
   const canInteract = hasCommunityIdentity(profile);
   const activeConversation = conversations.find(row => row.id === activeId) ?? conversations[0] ?? null;
   const activeMessages = activeConversation ? messages.filter(message => message.conversation_id === activeConversation.id) : [];
+  const activeConversationId = activeConversation?.id ?? '';
+  const latestActiveMessageAt = activeMessages.at(-1)?.created_at ?? '';
   const activeMembers = activeConversation ? members.filter(member => member.conversation_id === activeConversation.id) : [];
   const otherMember = activeMembers.find(member => member.profile_id !== user?.id)?.profiles ?? null;
 
@@ -251,11 +255,11 @@ function MessagesContent() {
   }, [conversations, members, messages, readMap, user]);
 
   useEffect(() => {
-    if (!activeConversation) return;
-    const latest = activeMessages.at(-1)?.created_at ?? new Date().toISOString();
-    setConversationReadAt(activeConversation.id, latest);
-    setReadMap(getReadMap());
-  }, [activeConversation?.id, activeMessages.length]);
+    if (!activeConversationId) return;
+    const latest = latestActiveMessageAt || new Date().toISOString();
+    setConversationReadAt(activeConversationId, latest);
+    Promise.resolve().then(() => setReadMap(getReadMap()));
+  }, [activeConversationId, latestActiveMessageAt]);
 
   async function sendMessage(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -466,10 +470,10 @@ function MessagesContent() {
                   </div>
                   {!selectedRecipient && recipientQuery.trim() && (
                     <div className="social-compose-results">
-                    {recipientProfiles.length === 0 ? (
+                    {visibleRecipientProfiles.length === 0 ? (
                       <div className="app-empty-text">No matching people.</div>
                     ) : (
-                      recipientProfiles.map(result => (
+                      visibleRecipientProfiles.map(result => (
                         <button
                           key={result.id}
                           type="button"

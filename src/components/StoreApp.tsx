@@ -1,21 +1,19 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { PageShell, ProductCard, ProductGrid, HubHero, HubSection, EmptyMessage, ServiceCard } from '@/components/Ui';
+import { PageShell, ProductCard, ProductGrid, HubHero, HubSection, EmptyMessage } from '@/components/Ui';
 import { useTopbarTabs } from '@/components/TopbarContext';
 import { getProductExperience, type ProductExperience } from '@/lib/experience';
-import type { Service } from '@/lib/platform';
 import type { Product } from '@/lib/products';
 import type { StoreCategory } from '@/lib/storeRoutes';
 import { supabase } from '@/lib/supabase';
 
-const STORE_TABS: Array<{ id: StoreCategory | 'services'; label: string; href: string }> = [
+const STORE_TABS: Array<{ id: StoreCategory; label: string; href: string }> = [
   { id: 'all', label: 'Discover', href: '/' },
   { id: 'music', label: 'Music', href: '/store/music' },
   { id: 'books', label: 'Books', href: '/store/books' },
   { id: 'merch', label: 'Merch', href: '/store/merch' },
   { id: 'assets', label: 'Sample Packs', href: '/store/assets' },
-  { id: 'services', label: 'Services', href: '/services' },
 ];
 
 const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
@@ -28,7 +26,7 @@ const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
 const CATEGORY_COPY: Record<StoreCategory, { title: string; copy: string; empty: string }> = {
   all: {
     title: 'Discover',
-    copy: 'Discover music, books, sample packs, merch, and services on 44.',
+    copy: 'Discover music, books, sample packs, and merch on 44.',
     empty: 'No items are published yet.',
   },
   music: {
@@ -55,7 +53,6 @@ const CATEGORY_COPY: Record<StoreCategory, { title: string; copy: string; empty:
 
 export default function StoreApp({ category }: { category: StoreCategory }) {
   const [products, setProducts] = useState<Product[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -68,30 +65,20 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
       setLoading(true);
       setError('');
 
-      const [productResult, serviceResult] = await Promise.all([
-        supabase
-          .from('products')
-          .select('*, creators:profiles!author_id(*)')
-          .eq('is_published', true)
-          .order('sort_order', { ascending: false, nullsFirst: false })
-          .order('created_at', { ascending: false })
-          .limit(160),
-        supabase
-          .from('services')
-          .select('*, creators:profiles!author_id(*, name:display_name), categories(id, slug, name)')
-          .eq('status', 'published')
-          .order('created_at', { ascending: false })
-          .limit(160),
-      ]);
+      const productResult = await supabase
+        .from('products')
+        .select('*, creators:profiles!author_id(*)')
+        .eq('is_published', true)
+        .order('sort_order', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false })
+        .limit(160);
 
       if (!alive) return;
       if (productResult.error) {
         setError(productResult.error.message);
         setProducts([]);
-        setServices([]);
       } else {
         setProducts((productResult.data ?? []) as Product[]);
-        setServices(serviceResult.error ? [] : (serviceResult.data ?? []) as Service[]);
       }
       setLoading(false);
     }
@@ -115,7 +102,6 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
     const bookProducts = products.filter(product => getProductExperience(product) === 'book').slice(0, 8);
     const apparelProducts = products.filter(product => getProductExperience(product) === 'physical').slice(0, 8);
     const assetProducts = products.filter(product => getProductExperience(product) === 'asset').slice(0, 8);
-    const visibleServices = services.slice(0, 8);
 
     return (
       <PageShell>
@@ -161,15 +147,6 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
                       <ProductCard key={product.id} product={product} />
                     ))}
                   </ProductGrid>
-                </HubSection>
-              )}
-              {visibleServices.length > 0 && (
-                <HubSection title="Explore Services" href="/services">
-                  <div className="app-grid">
-                    {visibleServices.map(service => (
-                      <ServiceCard key={service.id} service={service} />
-                    ))}
-                  </div>
                 </HubSection>
               )}
             </>

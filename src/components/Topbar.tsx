@@ -57,6 +57,16 @@ const CURRENT_PATH_KEY = '44-current-path';
 const PREVIOUS_PATH_KEY = '44-previous-path';
 const SCROLL_PREFIX = '44-scroll:';
 
+type ProfileState = {
+  userId: string;
+  profile: StudioProfile | null;
+};
+
+type NotificationState = {
+  userId: string;
+  rows: AchievementNotification[];
+};
+
 function labelForPath(path: string | null | undefined) {
   if (!path) return null;
   if (path.startsWith('/library')) return 'Library';
@@ -104,12 +114,13 @@ export function Topbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useAuth();
+  const userId = user?.id ?? null;
   const { tabs, back } = useTopbar();
   const { count: cartCount } = useCart();
-  const [profile, setProfile] = useState<StudioProfile | null>(null);
-  const [notifications, setNotifications] = useState<AchievementNotification[]>([]);
-  const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
-  const [hiddenNotificationIds, setHiddenNotificationIds] = useState<Set<string>>(new Set());
+  const [profileState, setProfileState] = useState<ProfileState | null>(null);
+  const [notificationState, setNotificationState] = useState<NotificationState | null>(null);
+  const [seenIds, setSeenIds] = useState<Set<string>>(() => loadSeenIds());
+  const [hiddenNotificationIds, setHiddenNotificationIds] = useState<Set<string>>(() => loadHiddenNotificationIds());
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notifMenuOpen, setNotifMenuOpen] = useState(false);
   const [previousPath, setPreviousPath] = useState<string | null>(null);
@@ -117,22 +128,32 @@ export function Topbar() {
   const notifWrapRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!user) { setProfile(null); return; }
-    loadStudioProfile(user.id).then(r => setProfile(r.profile));
-  }, [user]);
+    if (!userId) return;
+    let alive = true;
+    const activeUserId = userId;
+    loadStudioProfile(activeUserId).then(r => {
+      if (alive) setProfileState({ userId: activeUserId, profile: r.profile });
+    });
+    return () => { alive = false; };
+  }, [userId]);
 
   useEffect(() => {
-    if (!user) { setNotifications([]); return; }
-    loadAchievementNotifications(user.id).then(rows => setNotifications(rows.slice(0, 10)));
-  }, [user]);
+    if (!userId) return;
+    let alive = true;
+    const activeUserId = userId;
+    loadAchievementNotifications(activeUserId).then(rows => {
+      if (alive) setNotificationState({ userId: activeUserId, rows: rows.slice(0, 10) });
+    });
+    return () => { alive = false; };
+  }, [userId]);
 
   useEffect(() => {
-    if (!user) return;
-    const userId = user.id;
+    if (!userId) return;
+    const activeUserId = userId;
 
     async function refreshNotifications() {
-      const rows = await loadAchievementNotifications(userId);
-      setNotifications(rows.slice(0, 10));
+      const rows = await loadAchievementNotifications(activeUserId);
+      setNotificationState({ userId: activeUserId, rows: rows.slice(0, 10) });
     }
 
     function onAchievementUpdate() {
@@ -141,21 +162,29 @@ export function Topbar() {
 
     window.addEventListener(ACHIEVEMENT_NOTIFICATIONS_UPDATED, onAchievementUpdate);
     return () => window.removeEventListener(ACHIEVEMENT_NOTIFICATIONS_UPDATED, onAchievementUpdate);
-  }, [user]);
+  }, [userId]);
 
-  useEffect(() => { setUserMenuOpen(false); setNotifMenuOpen(false); }, [pathname]);
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      setUserMenuOpen(false);
+      setNotifMenuOpen(false);
+    });
+  }, [pathname]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const pathWithQuery = `${pathname}${window.location.search}`;
     const current = window.sessionStorage.getItem(CURRENT_PATH_KEY);
+    let nextPreviousPath: string | null;
     if (current && current !== pathWithQuery) {
       window.sessionStorage.setItem(PREVIOUS_PATH_KEY, current);
-      setPreviousPath(current);
+      nextPreviousPath = current;
     } else {
-      setPreviousPath(window.sessionStorage.getItem(PREVIOUS_PATH_KEY));
+      nextPreviousPath = window.sessionStorage.getItem(PREVIOUS_PATH_KEY);
     }
     window.sessionStorage.setItem(CURRENT_PATH_KEY, pathWithQuery);
+    const frame = window.requestAnimationFrame(() => setPreviousPath(nextPreviousPath));
+    return () => window.cancelAnimationFrame(frame);
   }, [pathname]);
 
   useEffect(() => {
@@ -208,6 +237,8 @@ export function Topbar() {
     return () => document.removeEventListener('mousedown', onClick);
   }, [userMenuOpen, notifMenuOpen]);
 
+  const profile = profileState && profileState.userId === userId ? profileState.profile : null;
+  const notifications = notificationState && notificationState.userId === userId ? notificationState.rows : [];
   const displayName = profile?.display_name || profile?.username || user?.email?.split('@')[0] || 'You';
   const avatarUrl = profile?.avatar_url ?? null;
   const profileHref = profile?.username ? `/profile/${profile.username}` : '/profile';
@@ -239,11 +270,6 @@ export function Topbar() {
     setHiddenNotificationIds(next);
     saveHiddenNotificationIds(next);
   }
-
-  useEffect(() => {
-    setSeenIds(loadSeenIds());
-    setHiddenNotificationIds(loadHiddenNotificationIds());
-  }, []);
 
   return (
     <div className="os-topbar">
@@ -311,7 +337,7 @@ export function Topbar() {
                   )}
                 </div>
                 {visibleNotifications.length === 0 ? (
-                  <div className="os-notification-empty">You're all caught up.</div>
+                  <div className="os-notification-empty">You&rsquo;re all caught up.</div>
                 ) : (
                   <div className="os-notification-list">
                     {visibleNotifications.map(item => (

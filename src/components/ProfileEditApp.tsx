@@ -33,10 +33,7 @@ export default function EditProfilePage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+    if (!user) return;
     async function load() {
       const { data } = await supabase
         .from('profiles')
@@ -104,7 +101,7 @@ export default function EditProfilePage() {
     }
   }
 
-  if (authLoading || loading) {
+  if (authLoading) {
     return <PageShell><CenteredMessage>Loading profile...</CenteredMessage></PageShell>;
   }
 
@@ -117,6 +114,10 @@ export default function EditProfilePage() {
         </CenteredMessage>
       </PageShell>
     );
+  }
+
+  if (loading) {
+    return <PageShell><CenteredMessage>Loading profile...</CenteredMessage></PageShell>;
   }
 
   const previewProfile = {

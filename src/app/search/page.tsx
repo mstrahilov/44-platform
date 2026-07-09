@@ -64,7 +64,9 @@ function SearchContent() {
     loadSearchIndex();
   }, []);
 
-  useEffect(() => { setDraft(query); }, [query]);
+  useEffect(() => {
+    Promise.resolve().then(() => setDraft(query));
+  }, [query]);
 
   function submitSearch(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

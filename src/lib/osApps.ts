@@ -86,7 +86,7 @@ export const OS_APPS: OSApp[] = [
   {
     id: 'store',
     label: 'Browse',
-    description: 'Discover music, books, sample packs, merch, and services on 44.',
+    description: 'Discover music, books, sample packs, and merch on 44.',
     href: '/',
     iconClass: 'os-icon-grid',
     group: 'media',
@@ -220,7 +220,7 @@ export const OS_APPS: OSApp[] = [
   {
     id: 'dashboard',
     label: 'Dashboard',
-    description: 'Your creator workspace — publish music, books, sample packs, merch, services, and track earnings.',
+    description: 'Your creator workspace for publishing catalog items and tracking earnings.',
     href: '/dashboard',
     iconClass: 'os-icon-showcase',
     group: 'account',

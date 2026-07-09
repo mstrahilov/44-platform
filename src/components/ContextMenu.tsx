@@ -73,7 +73,9 @@ export function ContextMenuProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Route change closes the menu.
-  useEffect(() => { setMenu(null); }, [pathname]);
+  useEffect(() => {
+    Promise.resolve().then(() => setMenu(null));
+  }, [pathname]);
 
   // Outside press, Escape, scroll, and resize close the menu.
   useEffect(() => {

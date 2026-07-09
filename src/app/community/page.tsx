@@ -58,6 +58,14 @@ type MentionProfile = {
   display_name: string | null;
   avatar_url: string | null;
 };
+type CommunityProfileState = {
+  userId: string;
+  profile: StudioProfile | null;
+};
+type FollowingState = {
+  userId: string;
+  ids: Set<string>;
+};
 
 const COMMUNITY_COPY: Record<'feed' | 'following' | 'questions' | 'collaboration' | 'topic', { title: string; copy: string; empty: string }> = {
   feed: {
@@ -143,12 +151,13 @@ function CommunityPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [replyCounts, setReplyCounts] = useState<CountMap>({});
   const [repliersMap, setRepliersMap] = useState<LikersMap>({});
   const [likes, setLikes] = useState<PostLike[]>([]);
-  const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
-  const [profile, setProfile] = useState<StudioProfile | null>(null);
+  const [followingState, setFollowingState] = useState<FollowingState | null>(null);
+  const [profileState, setProfileState] = useState<CommunityProfileState | null>(null);
   const [likingId, setLikingId] = useState('');
   const [postComposerOpen, setPostComposerOpen] = useState(false);
   const [postTitle, setPostTitle] = useState('');
@@ -198,6 +207,7 @@ function CommunityPageContent() {
     : postComposerOpen
       ? extractMentionQuery(postComposerValue, forcedTopic)
       : '';
+  const visibleMentionOptions = activeMentionQuery ? mentionOptions : [];
 
   useCommunityTopbarTabs(activeCommunityTab);
 
@@ -249,31 +259,33 @@ function CommunityPageContent() {
   }, [activeCommunityTab]);
 
   useEffect(() => {
-    if (!user) {
-      setProfile(null);
-      setFollowingIds(new Set());
-      return;
-    }
-    loadStudioProfile(user.id).then(result => setProfile(result.profile));
+    if (!userId) return;
+    const activeUserId = userId;
+    let alive = true;
+    loadStudioProfile(activeUserId).then(result => {
+      if (alive) setProfileState({ userId: activeUserId, profile: result.profile });
+    });
     supabase
       .from('profile_follows')
       .select('following_id')
-      .eq('follower_id', user.id)
+      .eq('follower_id', activeUserId)
       .then(result => {
+        if (!alive) return;
         if (result.error) {
           setError(result.error.message);
-          setFollowingIds(new Set());
+          setFollowingState({ userId: activeUserId, ids: new Set() });
           return;
         }
-        setFollowingIds(new Set(((result.data ?? []) as Array<{ following_id: string }>).map(row => row.following_id)));
+        setFollowingState({
+          userId: activeUserId,
+          ids: new Set(((result.data ?? []) as Array<{ following_id: string }>).map(row => row.following_id)),
+        });
       });
-  }, [user]);
+    return () => { alive = false; };
+  }, [userId]);
 
   useEffect(() => {
-    if (!activeMentionQuery) {
-      setMentionOptions([]);
-      return;
-    }
+    if (!activeMentionQuery) return;
     let alive = true;
     supabase
       .from('profiles')
@@ -297,6 +309,10 @@ function CommunityPageContent() {
     if (!user) return new Set<string>();
     return new Set(likes.filter(like => like.profile_id === user.id).map(like => like.post_id));
   }, [likes, user]);
+  const profile = profileState && profileState.userId === userId ? profileState.profile : null;
+  const followingIds = useMemo(() => (
+    followingState && followingState.userId === userId ? followingState.ids : new Set<string>()
+  ), [followingState, userId]);
   const canInteract = hasCommunityIdentity(profile);
   const generalPosts = useMemo(() => posts.filter(post => isGeneralPost(post)), [posts]);
   const visiblePosts = useMemo(() => {
@@ -318,7 +334,10 @@ function CommunityPageContent() {
         : requestedTopic
           ? { ...COMMUNITY_COPY.topic, title: titleFromTopic(requestedTopic), copy: `Posts using #${requestedTopic}.` }
           : COMMUNITY_COPY.feed;
-  const openReplyLikes = openRepliesPostId ? (inlineReplyLikes[openRepliesPostId] ?? []) : [];
+  const openReplyLikes = useMemo(
+    () => (openRepliesPostId ? (inlineReplyLikes[openRepliesPostId] ?? []) : []),
+    [inlineReplyLikes, openRepliesPostId],
+  );
   const inlineReplyLikedIds = useMemo(() => {
     const set = new Set<string>();
     if (!user) return set;
@@ -961,9 +980,9 @@ function CommunityPageContent() {
                 disabled={!user || posting}
               />
               {forcedTopic && activeCommunityTab === 'feed' && <div className="social-composer-lock">This post will publish with #{forcedTopic}.</div>}
-              {mentionOptions.length > 0 && (
+              {visibleMentionOptions.length > 0 && (
                 <div className="social-mention-list">
-                  {mentionOptions.map(option => (
+                  {visibleMentionOptions.map(option => (
                     <button
                       key={option.id}
                       type="button"
@@ -1221,9 +1240,9 @@ function CommunityPageContent() {
                           placeholder="Write a reply..."
                           rows={2}
                         />
-                        {mentionOptions.length > 0 && (
+                        {visibleMentionOptions.length > 0 && (
                           <div className="social-mention-list">
-                            {mentionOptions.map(option => (
+                            {visibleMentionOptions.map(option => (
                               <button
                                 key={option.id}
                                 type="button"
@@ -1318,9 +1337,9 @@ function CommunityPageContent() {
                                   rows={2}
                                   autoFocus
                                 />
-                                {mentionOptions.length > 0 && (
+                                {visibleMentionOptions.length > 0 && (
                                   <div className="social-mention-list">
-                                    {mentionOptions.map(option => (
+                                    {visibleMentionOptions.map(option => (
                                       <button
                                         key={option.id}
                                         type="button"

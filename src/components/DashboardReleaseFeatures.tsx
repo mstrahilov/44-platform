@@ -1,6 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
 import { UploadField } from '@/components/UploadField';
 import type { DashboardCatalogSectionId } from '@/lib/dashboardCatalog';
 import { supabase } from '@/lib/supabase';
@@ -14,6 +13,7 @@ export type DraftAchievement = {
   hidden?: boolean;
   locked?: boolean;
   points?: number;
+  iconUrl?: string | null;
 };
 
 export type DraftBonusContent = {
@@ -43,10 +43,22 @@ export type SavedProductAsset = {
   file_url: string | null;
 };
 
+const SUPABASE_PUBLIC_URL = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, '') ?? '';
+
+function achievementIconUrl(fileName: string) {
+  return SUPABASE_PUBLIC_URL
+    ? `${SUPABASE_PUBLIC_URL}/storage/v1/object/public/media/achievements/${fileName}`
+    : null;
+}
+
+function supportsAchievementsForSection(sectionId: DashboardCatalogSectionId) {
+  return sectionId === 'music';
+}
+
 export function createReleaseFeatureState(sectionId: DashboardCatalogSectionId): ReleaseFeatureState {
   const achievements = achievementTemplates(sectionId);
   return {
-    achievementsEnabled: sectionId !== 'assets',
+    achievementsEnabled: supportsAchievementsForSection(sectionId),
     commentaryEnabled: false,
     behindTheScenesEnabled: false,
     behindTheScenesUrl: '',
@@ -58,30 +70,14 @@ export function createReleaseFeatureState(sectionId: DashboardCatalogSectionId):
 export function achievementTemplates(sectionId: DashboardCatalogSectionId): DraftAchievement[] {
   if (sectionId === 'music') {
     return [
-      { code: 'front_to_back', title: 'Front to Back', description: 'Listen to every track on this release.', triggerType: 'all_tracks_listened', enabled: false, points: 50 },
-      { code: 'no_skips', title: 'No Skips', description: 'Listen from the first track to the last without skipping.', triggerType: 'album_no_skips', enabled: false, points: 75 },
-      { code: 'nightbird', title: 'Nightbird', description: 'Listen to the release between 10 PM and 4 AM.', triggerType: 'release_completed_at_night', enabled: false, hidden: true, points: 50 },
-      { code: 'heavy_rotation', title: 'Heavy Rotation', description: 'Listen to the full release three times.', triggerType: 'release_completed_three_sessions', enabled: false, points: 75 },
-      { code: 'first_wave', title: 'First Wave', description: 'Listen to the full release within two weeks of launch.', triggerType: 'release_completed_launch_window', enabled: false, points: 50 },
-      { code: 'joined_the_orbit', title: 'Joined the Orbit', description: 'Follow the creator from this release.', triggerType: 'creator_followed_from_product', enabled: false, points: 50 },
-      { code: 'left_your_mark', title: 'Left Your Mark', description: 'Write a review for this release.', triggerType: 'review_created', enabled: false, points: 50 },
-      { code: 'signal_boost', title: 'Signal Boost', description: 'Get someone to open this release from your shared link.', triggerType: 'shared_link_opened', enabled: false, hidden: true, points: 75 },
-      { code: 'overachiever', title: 'Overachiever', description: 'Unlock every other enabled achievement to claim the creator\'s final reward.', triggerType: 'all_achievements_unlocked', enabled: true, locked: true, hidden: false, points: 100 },
-    ];
-  }
-
-  if (sectionId === 'books') {
-    return [
-      { code: 'cover_to_cover', title: 'Cover to Cover', description: 'Read the entire book.', triggerType: 'book_completed', enabled: false, points: 50 },
-      { code: 'page_turner', title: 'Page-Turner', description: 'Read 25 percent of the book in one session.', triggerType: 'book_quarter_single_session', enabled: false, points: 50 },
-      { code: 'no_bookmark_needed', title: 'No Bookmark Needed', description: 'Finish the book in a single reading session.', triggerType: 'book_completed_single_session', enabled: false, points: 75 },
-      { code: 'night_owl', title: 'Night Owl', description: 'Read between 10 PM and 4 AM.', triggerType: 'book_read_at_night', enabled: false, hidden: true, points: 50 },
-      { code: 'back_for_more', title: 'Back for More', description: 'Return on another day and keep reading.', triggerType: 'book_progress_on_second_day', enabled: false, points: 50 },
-      { code: 'first_edition', title: 'First Edition', description: 'Finish the book within two weeks of launch.', triggerType: 'book_completed_launch_window', enabled: false, points: 50 },
-      { code: 'joined_the_orbit', title: 'Joined the Orbit', description: 'Follow the creator from this book.', triggerType: 'creator_followed_from_product', enabled: false, points: 50 },
-      { code: 'left_your_mark', title: 'Left Your Mark', description: 'Write a review for this book.', triggerType: 'review_created', enabled: false, points: 50 },
-      { code: 'signal_boost', title: 'Signal Boost', description: 'Get someone to open this book from your shared link.', triggerType: 'shared_link_opened', enabled: false, hidden: true, points: 75 },
-      { code: 'overachiever', title: 'Overachiever', description: 'Unlock every other enabled achievement to claim the creator\'s final reward.', triggerType: 'all_achievements_unlocked', enabled: true, locked: true, hidden: false, points: 100 },
+      { code: 'front_to_back', title: 'Front to Back', description: 'Listen to every track on this release.', triggerType: 'all_tracks_listened', enabled: false, points: 50, iconUrl: achievementIconUrl('front_to_back.png') },
+      { code: 'no_skips', title: 'No Skips', description: 'Listen from the first track to the last without skipping.', triggerType: 'album_no_skips', enabled: false, points: 75, iconUrl: achievementIconUrl('no_skips.png') },
+      { code: 'nightbird', title: 'Nightbird', description: 'Listen to the release between 10 PM and 4 AM.', triggerType: 'release_completed_at_night', enabled: false, hidden: true, points: 50, iconUrl: achievementIconUrl('nightbird.png') },
+      { code: 'heavy_rotation', title: 'Heavy Rotation', description: 'Listen to the full release three times.', triggerType: 'release_completed_three_sessions', enabled: false, points: 75, iconUrl: achievementIconUrl('heavy_rotation.png') },
+      { code: 'joined_the_orbit', title: 'Joined the Orbit', description: 'Follow the creator from this release.', triggerType: 'creator_followed_from_product', enabled: false, points: 50, iconUrl: achievementIconUrl('joined_the_orbit.png') },
+      { code: 'left_your_mark', title: 'Left Your Mark', description: 'Write a review for this release.', triggerType: 'review_created', enabled: false, points: 50, iconUrl: achievementIconUrl('left_your_mark.png') },
+      { code: 'signal_boost', title: 'Signal Boost', description: 'Get someone to open this release from your shared link.', triggerType: 'shared_link_opened', enabled: false, hidden: true, points: 75, iconUrl: achievementIconUrl('signal_boost.png') },
+      { code: 'overachiever', title: 'Overachiever', description: 'Unlock every other enabled achievement to claim the creator\'s final reward.', triggerType: 'all_achievements_unlocked', enabled: true, locked: true, hidden: false, points: 100, iconUrl: achievementIconUrl('overachiever.png') },
     ];
   }
 
@@ -91,6 +87,7 @@ export function achievementTemplates(sectionId: DashboardCatalogSectionId): Draf
 export function normalizeFeatureStateForSection(state: ReleaseFeatureState, sectionId: DashboardCatalogSectionId): ReleaseFeatureState {
   const templates = achievementTemplates(sectionId);
   const existing = new Map(state.achievements.map(achievement => [achievement.code, achievement]));
+  const supportsAchievements = supportsAchievementsForSection(sectionId);
   const achievements = templates.map(template => {
     const current = existing.get(template.code);
     return {
@@ -101,26 +98,23 @@ export function normalizeFeatureStateForSection(state: ReleaseFeatureState, sect
   });
   return {
     ...state,
-    achievementsEnabled: sectionId === 'assets' ? false : state.achievementsEnabled,
+    achievementsEnabled: supportsAchievements ? state.achievementsEnabled : false,
     bonusItems: state.bonusItems.map(item => ({
       ...item,
-      visibility: item.visibility === 'achievement' && sectionId === 'assets' ? 'free' : item.visibility,
+      visibility: supportsAchievements ? 'achievement' : 'free',
+      achievementCode: supportsAchievements ? 'overachiever' : '',
     })),
     achievements,
   };
 }
 
 export function validateReleaseFeatureState(state: ReleaseFeatureState, sectionId: DashboardCatalogSectionId) {
-  const supportsAchievements = sectionId !== 'assets';
+  const supportsAchievements = supportsAchievementsForSection(sectionId);
   const enabledCodes = new Set(state.achievements.filter(achievement => achievement.enabled).map(achievement => achievement.code));
   const overachieverRewards = state.bonusItems.filter(item => item.visibility === 'achievement' && item.achievementCode === 'overachiever');
 
-  if (overachieverRewards.length > 1) {
-    return 'Only one bonus reward can be attached to Overachiever.';
-  }
-
-  if (supportsAchievements && state.achievementsEnabled && state.bonusItems.length > 0 && overachieverRewards.length === 0) {
-    return 'Choose one bonus content item to unlock from Overachiever.';
+  if (supportsAchievements && state.achievementsEnabled && state.bonusItems.length > 0 && overachieverRewards.length !== state.bonusItems.length) {
+    return 'Bonus content unlocks from Overachiever in v1.0.';
   }
 
   for (const item of state.bonusItems) {
@@ -133,8 +127,8 @@ export function validateReleaseFeatureState(state: ReleaseFeatureState, sectionI
         return 'Turn on achievements before locking bonus content behind one.';
       }
 
-      if (!item.achievementCode || !enabledCodes.has(item.achievementCode)) {
-        return 'Choose an enabled achievement for each locked bonus item.';
+      if (item.achievementCode !== 'overachiever' || !enabledCodes.has('overachiever')) {
+        return 'Bonus content unlocks from Overachiever in v1.0.';
       }
     }
   }
@@ -143,14 +137,14 @@ export function validateReleaseFeatureState(state: ReleaseFeatureState, sectionI
 }
 
 export function buildAchievementRows(productId: string, state: ReleaseFeatureState, sectionId: DashboardCatalogSectionId) {
-  if (sectionId === 'assets' || !state.achievementsEnabled) return [];
+  if (!supportsAchievementsForSection(sectionId) || !state.achievementsEnabled) return [];
 
   const rewardMap = new Map<string, DraftBonusContent[]>();
   state.bonusItems
-    .filter(item => item.visibility === 'achievement')
+    .filter(item => item.fileUrl.trim())
     .forEach(item => {
-      const current = rewardMap.get(item.achievementCode) ?? [];
-      rewardMap.set(item.achievementCode, [...current, item]);
+      const current = rewardMap.get('overachiever') ?? [];
+      rewardMap.set('overachiever', [...current, { ...item, visibility: 'achievement', achievementCode: 'overachiever' }]);
     });
 
   return state.achievements
@@ -174,32 +168,30 @@ export function buildAchievementRows(productId: string, state: ReleaseFeatureSta
           })),
         },
         points: achievement.points ?? (achievement.code === 'overachiever' ? 100 : 25),
-        icon: null,
+        icon: achievement.iconUrl ?? null,
         sort_order: index,
-        is_secret: false,
+        is_secret: achievement.hidden ?? false,
       };
     });
 }
 
 export function buildFeatureAssetRows(productId: string, state: ReleaseFeatureState) {
-  const rows = [];
+  if (!state.achievementsEnabled) return [];
 
-  if (state.behindTheScenesEnabled && state.behindTheScenesUrl.trim()) {
-    rows.push({
-      product_id: productId,
-      asset_type: 'behind_the_scenes',
-      title: 'Behind-the-Scenes',
-      file_url: state.behindTheScenesUrl.trim(),
-      storage_path: null,
-      is_downloadable: true,
-      sort_order: 100,
-    });
-  }
+  const rows: Array<{
+    product_id: string;
+    asset_type: 'bonus_achievement';
+    title: string;
+    file_url: string;
+    storage_path: null;
+    is_downloadable: boolean;
+    sort_order: number;
+  }> = [];
 
   state.bonusItems.forEach((item, index) => {
     rows.push({
       product_id: productId,
-      asset_type: item.visibility === 'achievement' ? 'bonus_achievement' : 'bonus_free',
+      asset_type: 'bonus_achievement',
       title: item.title.trim(),
       file_url: item.fileUrl.trim(),
       storage_path: null,
@@ -237,25 +229,32 @@ export function hydrateReleaseFeatureState(
     });
   });
 
-  const behindTheScenes = assetRows.find(asset => asset.asset_type === 'behind_the_scenes');
   const bonusItems = assetRows
-    .filter(asset => asset.asset_type === 'bonus_free' || asset.asset_type === 'bonus_achievement')
+    .filter(asset => asset.asset_type === 'behind_the_scenes' || asset.asset_type === 'bonus_free' || asset.asset_type === 'bonus_achievement')
     .map(asset => ({
       title: asset.title ?? '',
       fileUrl: asset.file_url ?? '',
-      visibility: asset.asset_type === 'bonus_achievement' ? 'achievement' as const : 'free' as const,
-      achievementCode: asset.file_url ? rewardByFileUrl.get(asset.file_url) ?? '' : '',
+      visibility: 'achievement' as const,
+      achievementCode: asset.file_url ? rewardByFileUrl.get(asset.file_url) ?? 'overachiever' : 'overachiever',
     }));
 
   return normalizeFeatureStateForSection({
     ...base,
-    achievementsEnabled: sectionId !== 'assets' && achievementRows.length > 0,
+    achievementsEnabled: supportsAchievementsForSection(sectionId) && achievementRows.length > 0,
     commentaryEnabled,
-    behindTheScenesEnabled: Boolean(behindTheScenes?.file_url),
-    behindTheScenesUrl: behindTheScenes?.file_url ?? '',
+    behindTheScenesEnabled: false,
+    behindTheScenesUrl: '',
     achievements: base.achievements.map(template => {
       const saved = achievementByCode.get(template.code);
-      return saved ? { ...template, enabled: true, hidden: saved.is_secret ?? saved.hidden ?? template.hidden ?? false } : template;
+      return saved ? {
+        ...template,
+        title: saved.title || template.title,
+        description: saved.description || template.description,
+        triggerType: saved.triggerType || template.triggerType,
+        iconUrl: saved.iconUrl || template.iconUrl,
+        enabled: true,
+        hidden: saved.is_secret ?? saved.hidden ?? template.hidden ?? false,
+      } : template;
     }),
     bonusItems,
   }, sectionId);
@@ -314,10 +313,9 @@ export function DashboardReleaseFeatures({
   state: ReleaseFeatureState;
   onChange: (next: ReleaseFeatureState) => void;
 }) {
-  const supportsAchievements = sectionId !== 'assets';
+  const supportsAchievements = supportsAchievementsForSection(sectionId);
   const enabledAchievements = state.achievements.filter(achievement => achievement.enabled);
-  const overachieverAssigned = state.bonusItems.some(item => item.visibility === 'achievement' && item.achievementCode === 'overachiever');
-  const achievementChoices = useMemo(() => enabledAchievements, [enabledAchievements]);
+  const overachieverEnabled = enabledAchievements.some(achievement => achievement.code === 'overachiever');
 
   function patch(patchState: Partial<ReleaseFeatureState>) {
     onChange({ ...state, ...patchState });
@@ -339,11 +337,10 @@ export function DashboardReleaseFeatures({
   }
 
   function addBonusItem() {
-    const firstAchievement = achievementChoices[0]?.code ?? '';
     patch({
       bonusItems: [
         ...state.bonusItems,
-        { title: '', fileUrl: '', visibility: 'free', achievementCode: firstAchievement },
+        { title: '', fileUrl: '', visibility: 'achievement', achievementCode: 'overachiever' },
       ],
     });
   }
@@ -357,8 +354,8 @@ export function DashboardReleaseFeatures({
       <section className="dashboard-form-step">
         <div className="dashboard-form-section-head">
           <div className="dashboard-form-section-copy">
-            <div className="dashboard-field-label">Release Features</div>
-            <p>Enable achievements and optional creator features before publishing.</p>
+            <div className="dashboard-field-label">Release Achievements</div>
+            <p>Choose the evergreen music achievements fans can earn in v1.0.</p>
           </div>
         </div>
 
@@ -367,7 +364,7 @@ export function DashboardReleaseFeatures({
             <div className="settings-row-copy">
               <div className="os-type-card-title">Achievements</div>
               <p className="os-type-body-small">
-                {supportsAchievements ? 'Music and books can include achievements.' : 'Sample packs do not support achievements.'}
+                {supportsAchievements ? 'Music releases can include the v1.0 achievement set.' : 'Achievements are limited to music releases in v1.0.'}
               </p>
             </div>
             <button
@@ -385,7 +382,12 @@ export function DashboardReleaseFeatures({
               {state.achievements.map(achievement => (
                 <div key={achievement.code} className="dashboard-feature-row dashboard-achievement-row">
                   <div className="dashboard-achievement-art" aria-hidden="true">
-                    {achievement.title.slice(0, 2).toUpperCase()}
+                    {achievement.iconUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={achievement.iconUrl} alt="" />
+                    ) : (
+                      achievement.title.slice(0, 2).toUpperCase()
+                    )}
                   </div>
                   <div className="dashboard-achievement-copy">
                     <span className="os-type-card-title">{achievement.title}</span>
@@ -410,21 +412,22 @@ export function DashboardReleaseFeatures({
         <div className="dashboard-form-section-head">
           <div className="dashboard-form-section-copy">
             <div className="dashboard-field-label">Bonus Content</div>
-            <p>Add extras for everyone or lock them behind achievements.</p>
+            <p>Upload unlockable extras. Fans receive them after earning Overachiever.</p>
           </div>
-          <button className="os-button os-button-secondary os-button-compact" type="button" onClick={addBonusItem}>
+          <button className="os-button os-button-secondary os-button-compact" type="button" onClick={addBonusItem} disabled={!supportsAchievements || !state.achievementsEnabled || !overachieverEnabled}>
             Add Bonus Content
           </button>
         </div>
+
+        {(!supportsAchievements || !state.achievementsEnabled) && (
+          <p className="library-empty-text">Turn on music achievements to attach unlockable bonus content.</p>
+        )}
 
         {state.bonusItems.length === 0 ? (
           <p className="library-empty-text">No bonus content yet.</p>
         ) : (
           <div className="dashboard-feature-list">
-            {state.bonusItems.map((item, index) => {
-              const assigningOverachiever = item.visibility === 'achievement' && item.achievementCode === 'overachiever';
-              const overachieverDisabled = overachieverAssigned && !assigningOverachiever;
-              return (
+            {state.bonusItems.map((item, index) => (
                 <div key={index} className="dashboard-feature-card">
                   <label className="dashboard-field">
                     <div className="dashboard-field-label">Bonus Title</div>
@@ -439,39 +442,14 @@ export function DashboardReleaseFeatures({
                     buttonLabel="Upload bonus file"
                     onChange={nextValue => updateBonus(index, { fileUrl: nextValue })}
                   />
-                  <label className="dashboard-field">
-                    <div className="dashboard-field-label">Visibility</div>
-                    <select
-                      className="os-input-field"
-                      value={item.visibility}
-                      onChange={event => updateBonus(index, { visibility: event.target.value as DraftBonusContent['visibility'] })}
-                    >
-                      <option value="free">Available to all Library owners</option>
-                      <option value="achievement" disabled={!achievementChoices.length}>Locked behind achievement</option>
-                    </select>
-                  </label>
-                  {item.visibility === 'achievement' && (
-                    <label className="dashboard-field">
-                      <div className="dashboard-field-label">Unlock Achievement</div>
-                      <select
-                        className="os-input-field"
-                        value={item.achievementCode}
-                        onChange={event => updateBonus(index, { achievementCode: event.target.value })}
-                      >
-                        {achievementChoices.map(achievement => (
-                          <option key={achievement.code} value={achievement.code} disabled={achievement.code === 'overachiever' && overachieverDisabled}>
-                            {achievement.title}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  )}
+                  <div className="dashboard-bonus-unlock-note">
+                    Unlocks from Overachiever
+                  </div>
                   <button className="os-button os-button-ghost os-button-compact" type="button" onClick={() => removeBonusItem(index)}>
                     Remove Bonus
                   </button>
                 </div>
-              );
-            })}
+            ))}
           </div>
         )}
       </section>

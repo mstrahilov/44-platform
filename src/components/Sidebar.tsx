@@ -145,7 +145,10 @@ export default function Sidebar() {
   const dragRef = useRef<{ startX: number } | null>(null);
   const suppressClickRef = useRef(false);
   const compactRef = useRef(compact);
-  compactRef.current = compact;
+
+  useEffect(() => {
+    compactRef.current = compact;
+  }, [compact]);
 
   function onPointerDown(event: React.PointerEvent<HTMLElement>) {
     if (event.button !== 0) return;

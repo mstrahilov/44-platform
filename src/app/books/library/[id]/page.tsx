@@ -5,14 +5,11 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { useParams } from 'next/navigation';
-import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
-import { LibraryAchievementsSection, LibraryCreatorChip, LibraryProductDetailsSection } from '@/components/LibraryDetailPrimitives';
+import { LibraryCreatorChip, LibraryProductDetailsSection } from '@/components/LibraryDetailPrimitives';
 import { ProductUpdatesSection } from '@/components/ProductUpdatesSection';
 import { useTopbarBack } from '@/components/TopbarContext';
-import { trackProductAchievementTrigger } from '@/lib/achievementTracking';
 import { getProductLibraryPrimaryAction, getProductRuntimeKind } from '@/lib/libraryContent';
 import type { Product } from '@/lib/products';
-import { type ProductAchievement, type UserAchievement } from '@/lib/platform';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 
@@ -30,19 +27,12 @@ export default function BooksLibraryItemPage() {
   const { user, loading: authLoading } = useAuth();
   useTopbarBack({ href: '/library/books', label: 'Books Library' });
   const [row, setRow] = useState<BookLibraryRow | null>(null);
-  const [achievements, setAchievements] = useState<ProductAchievement[]>([]);
-  const [unlockedAchievementIds, setUnlockedAchievementIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
-
-    if (!user) {
-      setLoading(false);
-      setError('Sign in to read this book.');
-      return;
-    }
+    if (!user) return;
 
     async function fetchBook(userId: string) {
       setLoading(true);
@@ -69,45 +59,27 @@ export default function BooksLibraryItemPage() {
       }
 
       setRow(libraryRow);
-      const [{ data: achievementRows }, { data: unlockedRows }] = await Promise.all([
-        supabase
-          .from('product_achievements')
-          .select('id,product_id,code,title,description,trigger_type,trigger_config,reward_product_id,reward_config,points,icon,sort_order,is_secret')
-          .eq('product_id', libraryRow.product_id)
-          .order('sort_order'),
-        supabase
-          .from('user_achievements')
-          .select('id,user_id,achievement_id,product_id,unlocked_at')
-          .eq('user_id', userId)
-          .eq('product_id', libraryRow.product_id),
-      ]);
-
-      setAchievements((achievementRows as ProductAchievement[] | null) ?? []);
-      setUnlockedAchievementIds(new Set(((unlockedRows as UserAchievement[] | null) ?? []).map(item => item.achievement_id)));
       setLoading(false);
     }
 
     fetchBook(user.id);
   }, [authLoading, id, user]);
 
-  if (authLoading || loading) return <BookStateMessage>Loading...</BookStateMessage>;
-  if (error) return <BookStateMessage>{error}</BookStateMessage>;
+  if (authLoading) return <BookStateMessage>Loading...</BookStateMessage>;
   if (!user) return <BookStateMessage>Sign in to read this book.</BookStateMessage>;
+  if (loading) return <BookStateMessage>Loading...</BookStateMessage>;
+  if (error) return <BookStateMessage>{error}</BookStateMessage>;
   if (!row?.products) return <BookStateMessage>Book not found.</BookStateMessage>;
 
-  return <OwnedBook userId={user.id} row={row} achievements={achievements} unlockedAchievementIds={unlockedAchievementIds} />;
+  return <OwnedBook key={row.id} userId={user.id} row={row} />;
 }
 
 function OwnedBook({
   userId,
   row,
-  achievements,
-  unlockedAchievementIds,
 }: {
   userId: string;
   row: BookLibraryRow;
-  achievements: ProductAchievement[];
-  unlockedAchievementIds: Set<string>;
 }) {
   const product = row.products!;
   const action = getProductLibraryPrimaryAction(product);
@@ -115,10 +87,6 @@ function OwnedBook({
   const description = product.long_description || product.short_description || '';
   const creatorDisplayName = product.creators?.display_name || product.creator || '44 Creator';
   const [page, setPage] = useState(1);
-  const [localUnlockedAchievementIds, setLocalUnlockedAchievementIds] = useState(unlockedAchievementIds);
-  const [toast, setToast] = useState<AchievementToastData | null>(null);
-
-  useEffect(() => { setLocalUnlockedAchievementIds(unlockedAchievementIds); }, [unlockedAchievementIds]);
 
   const readerSrc = useMemo(() => {
     if (!product.read_url) return null;
@@ -129,7 +97,7 @@ function OwnedBook({
   function readBook() {
     if (product.read_url) {
       document.getElementById('book-reader')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      recordReaderProgress(1);
+      recordReaderProgress();
       return;
     }
 
@@ -139,46 +107,15 @@ function OwnedBook({
   function goToPage(nextPage: number) {
     const safePage = Math.max(1, nextPage);
     setPage(safePage);
-    recordReaderProgress(safePage);
+    recordReaderProgress();
   }
 
-  async function recordReaderProgress(nextPage: number) {
+  function recordReaderProgress() {
     const today = new Date().toISOString().slice(0, 10);
     const storageKey = `44-book-read-day:${userId}:${product.id}`;
     const firstReadDay = typeof window !== 'undefined' ? window.localStorage.getItem(storageKey) : null;
     if (!firstReadDay && typeof window !== 'undefined') window.localStorage.setItem(storageKey, today);
 
-    if (nextPage >= 5) {
-      await unlockTrigger('book_quarter_single_session', { source: 'book_reader', page: nextPage });
-    }
-
-    if (firstReadDay && firstReadDay !== today && nextPage > 1) {
-      await unlockTrigger('book_progress_on_second_day', { source: 'book_reader', page: nextPage });
-    }
-
-    const hour = new Date().getHours();
-    if ((hour >= 22 || hour < 4) && nextPage > 1) {
-      await unlockTrigger('book_read_at_night', { source: 'book_reader', page: nextPage, local_hour: hour });
-    }
-  }
-
-  async function unlockTrigger(triggerType: string, metadata?: Record<string, unknown>) {
-    const result = await trackProductAchievementTrigger({
-      userId,
-      productId: product.id,
-      triggerType,
-      achievements,
-      unlockedAchievementIds: localUnlockedAchievementIds,
-      metadata,
-    });
-    if (result.unlockedIds.length === 0) return;
-    setLocalUnlockedAchievementIds(current => {
-      const next = new Set(current);
-      result.unlockedIds.forEach(id => next.add(id));
-      return next;
-    });
-    const lastUnlocked = result.unlockedAchievements[result.unlockedAchievements.length - 1];
-    if (lastUnlocked) setToast(lastUnlocked);
   }
 
   return (
@@ -242,15 +179,9 @@ function OwnedBook({
         )}
       </div>
 
-      <LibraryAchievementsSection
-        achievements={achievements}
-        unlockedAchievementIds={localUnlockedAchievementIds}
-        emptyMessage="Book achievements will appear here when the creator enables them."
-      />
       <LibraryProductDetailsSection product={product} />
 
       <ProductUpdatesSection productId={product.id} emptyMessage="No updates from the creator yet." />
-      <AchievementToast toast={toast} onDone={() => setToast(null)} />
     </div>
   );
 }

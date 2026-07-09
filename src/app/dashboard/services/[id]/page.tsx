@@ -127,13 +127,11 @@ export default function EditServicePage() {
       .eq('author_id', profileId);
 
     if (isMissingColumnError(updateError)) {
-      const {
-        market_mode: _marketMode,
-        local_price_cents: _localPriceCents,
-        local_currency: _localCurrency,
-        available_locally_only: _availableLocallyOnly,
-        ...legacyPayload
-      } = updatePayload;
+      const legacyPayload: Record<string, unknown> = { ...updatePayload };
+      delete legacyPayload.market_mode;
+      delete legacyPayload.local_price_cents;
+      delete legacyPayload.local_currency;
+      delete legacyPayload.available_locally_only;
       const retry = await supabase
         .from('services')
         .update(legacyPayload)

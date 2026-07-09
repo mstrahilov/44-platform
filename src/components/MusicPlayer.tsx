@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
 export type MusicQueueTrack = {
   id: string;
@@ -47,6 +47,13 @@ type MusicPlayerContextValue = {
   clear: () => void;
 };
 
+type StartTrack = (
+  nextQueue: MusicQueueTrack[],
+  index: number,
+  reason?: MusicTrackPlaybackEventDetail['reason'],
+  startTimeSeconds?: number,
+) => void;
+
 const MusicPlayerContext = createContext<MusicPlayerContextValue | null>(null);
 
 function formatPlayerTime(seconds: number) {
@@ -60,6 +67,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const queueRef = useRef<MusicQueueTrack[]>([]);
   const currentIndexRef = useRef(-1);
+  const startTrackRef = useRef<StartTrack>(() => {});
   const [queue, setQueue] = useState<MusicQueueTrack[]>([]);
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -75,8 +83,8 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     if (!audioRef.current) {
       audioRef.current = new Audio();
       audioRef.current.preload = 'auto';
-      audioRef.current.volume = volume;
-      audioRef.current.muted = muted;
+      audioRef.current.volume = 1;
+      audioRef.current.muted = false;
     }
 
     const audio = audioRef.current;
@@ -91,7 +99,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       const nextIndex = currentIndexRef.current + 1;
       const nextTrack = queueRef.current[nextIndex];
       if (nextTrack) {
-        startTrack(queueRef.current, nextIndex, 'auto');
+        startTrackRef.current(queueRef.current, nextIndex, 'auto');
         return;
       }
       setIsPlaying(false);
@@ -199,6 +207,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  useEffect(() => {
+    startTrackRef.current = startTrack;
+  });
+
   function playQueue(nextQueue: MusicQueueTrack[], index = 0, startTimeSeconds = 0) {
     startTrack(nextQueue, index, 'queue', startTimeSeconds);
   }
@@ -294,7 +306,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     setPlaybackError('');
   }
 
-  const value = useMemo<MusicPlayerContextValue>(() => ({
+  const value: MusicPlayerContextValue = {
     queue,
     currentTrack,
     currentIndex,
@@ -314,7 +326,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     setVolume,
     toggleMute,
     clear,
-  }), [currentIndex, currentTime, currentTrack, duration, isPlaying, muted, playbackError, queue, volume]);
+  };
 
   return (
     <MusicPlayerContext.Provider value={value}>

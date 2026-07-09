@@ -2,6 +2,7 @@
 
 import { unlockAchievementForUser } from '@/lib/achievementNotifications';
 import type { AchievementNotification } from '@/lib/achievementNotifications';
+import { isV1AchievementCode } from '@/lib/achievementCatalog';
 import type { ProductAchievement } from '@/lib/platform';
 import { supabase } from '@/lib/supabase';
 
@@ -27,7 +28,7 @@ export async function trackProductAchievementTrigger({
   unlockedAchievementIds,
   metadata,
 }: TrackTriggerOptions): Promise<AchievementTrackResult> {
-  const achievementRows = achievements ?? await loadProductAchievements(productId);
+  const achievementRows = (achievements ?? await loadProductAchievements(productId)).filter(achievement => isV1AchievementCode(achievement.code));
   const unlockedIds = unlockedAchievementIds ?? await loadUnlockedAchievementIds(userId, productId);
   const candidates = achievementRows.filter(achievement => achievement.trigger_type === triggerType);
   const unlockedAchievements: AchievementNotification[] = [];
@@ -73,7 +74,7 @@ export async function maybeUnlockOverachiever({
   unlockedAchievementIds?: Set<string>;
   metadata?: Record<string, unknown>;
 }) {
-  const achievementRows = achievements ?? await loadProductAchievements(productId);
+  const achievementRows = (achievements ?? await loadProductAchievements(productId)).filter(achievement => isV1AchievementCode(achievement.code));
   const overachiever = achievementRows.find(achievement => achievement.code === 'overachiever');
   if (!overachiever) return null;
 
@@ -88,13 +89,46 @@ export async function maybeUnlockOverachiever({
 }
 
 export async function loadProductAchievements(productId: string) {
+  const supportsAchievements = await productSupportsV1Achievements(productId);
+  if (!supportsAchievements) return [];
+
   const { data } = await supabase
     .from('product_achievements')
     .select('id,product_id,code,title,description,trigger_type,trigger_config,reward_product_id,reward_config,points,icon,sort_order,is_secret')
     .eq('product_id', productId)
     .order('sort_order');
 
-  return (data as ProductAchievement[] | null) ?? [];
+  return ((data as ProductAchievement[] | null) ?? []).filter(achievement => isV1AchievementCode(achievement.code));
+}
+
+async function productSupportsV1Achievements(productId: string) {
+  const { data } = await supabase
+    .from('products')
+    .select('experience_type,runtime_type,category,product_type')
+    .eq('id', productId)
+    .maybeSingle();
+
+  if (!data) return false;
+  const product = data as {
+    experience_type?: string | null;
+    runtime_type?: string | null;
+    category?: string | null;
+    product_type?: string | null;
+  };
+  const values = [
+    product.experience_type,
+    product.runtime_type,
+    product.category,
+    product.product_type,
+  ].map(value => (value ?? '').toLowerCase());
+
+  return values.some(value =>
+    value === 'music'
+    || value.includes('album')
+    || value.includes('ep')
+    || value.includes('single')
+    || value.includes('track'),
+  );
 }
 
 export async function loadUnlockedAchievementIds(userId: string, productId: string) {

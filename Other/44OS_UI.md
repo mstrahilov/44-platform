@@ -1,587 +1,352 @@
-# 44OS UI Specification
+# 44OS UI Principles
 
-**One of exactly two project handoff documents.** This file defines how 44OS looks, feels, and behaves. `Other/44OS_FOUNDATION.md` defines architecture, routes, Supabase, and next work. If a screen disagrees with this document, the screen is wrong or this document must be updated in the same change.
+This is one of the three active handoff documents for 44OS. Read it before changing layout, styling, app chrome, component primitives, or visual behavior.
 
-44OS should feel like one operating system, not a pile of pages. Apps can do different jobs, but they share one shell, one material system, one spacing rhythm, one Dock, one topbar, one set of controls, and one interaction philosophy.
-
-Live visual reference: `/studio/44os`.
+44OS should feel like a premium operating system: calm, spatially consistent, tactile, legible, and fast. It is not a marketing site and should not look like a stack of unrelated pages.
 
 ---
 
-## 1. Core Principles
+## 1. Quality Bar
 
-- The shell is persistent. Only workspace content changes.
-- Primary destinations live in the Dock. Topbar tabs are for local sections or filters.
-- Glass belongs to the app shell and system popovers. Lists/cards/content should use the same readable paper/material color as notifications, not background bleed-through.
-- User-facing copy says Library, releases, books, sample packs, merch, services, reviews, updates, earnings, sold items. It does not say Product as a generic catalog/item word and does not say Collection. The shipped Product Details section label is allowed until renamed intentionally.
-- Spacing is part of the brand. Section titles, lists, headers, and empty states must share the same rhythm everywhere.
-- Build reusable primitives before one-off page fixes.
-- Mobile is the same OS adapted to a smaller screen, not a separate experience.
+Every shipped screen must pass these checks:
 
----
+- No horizontal scroll at normal desktop or mobile widths.
+- No overlapping text, buttons, media, menus, or shell chrome.
+- Interactive targets are at least 44px in both dimensions where practical.
+- Type remains legible; do not scale fonts directly with viewport width.
+- Cards, rows, buttons, and controls keep stable dimensions when content loads or hover states appear.
+- Empty, loading, error, signed-out, and success states look intentional.
+- Keyboard focus is visible.
+- Images keep their aspect ratio and never stretch.
+- The same action uses the same visual control across the app.
+- The app looks like one system in light and dark themes.
 
-## 2. System Anatomy
+Apple references used for this quality bar:
 
-From back to front:
-
-1. **Environment**: ambient background and tint. No content goes here.
-2. **System window**: `.app-shell`, the main translucent OS container.
-3. **Dock**: `.app-sidebar`, desktop left rail and mobile bottom tray.
-4. **Topbar**: `.os-topbar`, search/cart/notifications/avatar plus optional local tabs/back link.
-5. **Workspace**: `.app-main-content`, scrollable app content.
-6. **Music player**: persistent bottom player when audio is active.
-
-Desktop shell metrics:
-
-| Element | Standard |
-|---|---|
-| Frame padding | 10px |
-| App shell radius | 18px |
-| Dock width, full | 280px |
-| Dock width, compact | 76px |
-| Dock item size, compact | 56px square |
-| Dock row min-height, full | 56px |
-| Topbar/system band | 60px |
-| Topbar control | 44px |
-| Content inset | `clamp(44px, 4.4vw, 72px)` |
-| Content max width | 1440px |
-| Readable max width | 1180px |
-| Detail inset | `clamp(64px, 6.5vw, 112px)` |
-
-Mobile shell metrics:
-
-| Element | Standard |
-|---|---|
-| Frame padding | 0 |
-| Shell radius | 0 |
-| Dock position | bottom tray |
-| Dock height | `74px + safe-area-inset-bottom` |
-| Mobile Dock item | 58px square |
-| Small mobile Dock item | 54px square under narrow widths |
-| Mobile pin art/avatar | 36px, 34px on narrow widths |
-| Workspace height | viewport minus Dock tray |
-| Topbar controls | compact but never below usable tap size |
+- Clean, efficient interfaces with adequate spacing, contrast, and 44pt touch targets.
+- Content-first design where controls sit in a distinct, thoughtfully grouped layer above content.
+- High-resolution imagery that preserves aspect ratio and supports, rather than obscures, the experience.
 
 ---
 
-## 3. Grid And Rhythm
+## 2. System Personality
 
-Base unit: **4px**.
+44OS is:
 
-Use tokenized spacing only:
+- Premium, quiet, and focused.
+- Editorial enough for creative work, but operational enough for repeated use.
+- Glassy in shell chrome, readable in content.
+- Spatially consistent.
+- Minimal without feeling empty.
 
-| Token | Value | Typical use |
-|---|---:|---|
-| `--os-space-1` | 4px | micro gaps |
-| `--os-space-2` | 8px | title to description |
-| `--os-space-3` | 12px | compact groups |
-| `--os-space-4` | 16px | section title to content |
-| `--os-space-5` | 20px | row vertical padding, card gaps |
-| `--os-space-6` | 24px | row horizontal padding, panel padding |
-| `--os-space-7` | 32px | header bottom padding |
-| `--os-space-8` | 40px | large module padding |
-| `--os-space-9` | 48px | section-to-section beat |
-| `--os-space-10` | 64px | page bottom padding |
+44OS is not:
 
-Default page rhythm:
+- A landing page.
+- A purple/blue gradient dashboard.
+- A pile of nested cards.
+- A theme demo.
+- A set of separate mobile pages.
+- A decorative orb/bokeh composition.
 
-```text
-topbar
-48px
-page title
-8px
-description
-32px
-hairline
-48px
-section title
-16px
-content
-48px
-next section
-64px bottom
+---
+
+## 3. Creator And Fan Experience
+
+The UI should make advanced creative technology feel approachable. A creator should feel, "I know what to do next." A fan should feel, "This work belongs somewhere, and my relationship to it is remembered."
+
+Creator-facing rules:
+
+- Publishing should feel straightforward, not technical.
+- Advanced systems should be explained through creator outcomes, not implementation language.
+- Local/global pricing should read as fairness and reach, not as a finance tool.
+- Achievement setup should describe what fans can unlock or experience, not how event tracking works.
+- Bonus content, hidden files, commentary, and interactive artifacts should feel like ways to deepen a release.
+- Dashboard screens should prioritize clarity, previews, validation, and confidence.
+
+Fan-facing rules:
+
+- Browse should invite discovery without feeling algorithmic or manipulative.
+- Library should feel personal and durable, like a shelf, archive, and activity record.
+- Profiles should make a creator's work, posts, and identity feel connected.
+- Community should feel useful and human: posts, questions, collaboration, follows, and messages should support real creative scenes.
+- V1.0 achievements are music-only and should feel earned and legible, not gamified clutter.
+- Bonus Content is not a generic feature bucket in v1.0. It is unlockable creator material released by Overachiever.
+- Interactive/flagship experiences should always return to the Library with clear evidence of what changed.
+
+Copy rules:
+
+- Prefer direct human language over platform jargon.
+- Explain what a creator or fan can do, not what the database or API does.
+- Avoid hype words unless the feature actually earns them.
+- Use "global price" and "local price" in ways that make the creator's intent clear.
+- Use "Library" as the durable home for owned work, unlocked artifacts, bonus material, and future interactive discoveries.
+
+---
+
+## 4. Materials
+
+Use three material roles:
+
+- **Environment**: the fixed background behind the OS window.
+- **Shell glass**: Dock, Topbar, menus, popovers, modals, and system overlays.
+- **Content surface**: readable pages, lists, forms, cards, detail bodies, and dense work areas.
+
+Rules:
+
+- Glass belongs to shell chrome and overlays.
+- Dense content should use readable paper/material surfaces, not transparent background bleed.
+- Avoid decorative orbs, bokeh blobs, and heavy ambient gradients.
+- Do not place cards inside cards.
+- Page sections are layout regions, not floating cards.
+- Individual repeated items may be cards when that helps scanning.
+
+---
+
+## 5. Layout And Rhythm
+
+Base unit: 4px.
+
+Preferred spacing tokens:
+
+- `--os-space-1`: 4px
+- `--os-space-2`: 8px
+- `--os-space-3`: 12px
+- `--os-space-4`: 16px
+- `--os-space-5`: 20px
+- `--os-space-6`: 24px
+- `--os-space-7`: 32px
+- `--os-space-8`: 40px
+- `--os-space-9`: 48px
+- `--os-space-10`: 64px
+
+Page rhythm:
+
+- App title and description align to the same leading axis as sections and content.
+- Section title to content: 16px.
+- Section to section: 48px.
+- Page bottom breathing room: 64px minimum.
+- Detail pages may use a wider inset, but the leading axis must stay clear.
+
+Rules:
+
+- Use shared containers before local margins.
+- Do not hardcode left offsets for one page.
+- Do not tune spacing by adding random inline `style` props.
+- If a spacing fix is broadly useful, move it into a primitive or global class.
+
+---
+
+## 6. Typography
+
+Preferred font stack:
+
+```css
+-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", sans-serif
 ```
 
 Rules:
 
-- `--os-section-gap` is 48px between sections.
-- `--os-section-head-gap` is 16px between section title and content.
-- Section titles and their content must share the same left edge.
-- Do not add local margins that double-stack against `HubSection`, `.app-section`, `.dashboard-page`, or `.social-shell`.
-- If one section has better spacing than another, update the shared primitive/class rather than tuning a one-off.
+- Use the shared type classes and tokens.
+- Do not use negative letter spacing.
+- Do not scale body text with viewport width.
+- Reserve hero-scale type for app front doors and true hero/detail moments.
+- Dense panels, cards, settings, and dashboard controls use compact type.
+- Body copy should be readable before it is stylish.
+
+Core type roles:
+
+- Display/app title.
+- Page/detail title.
+- Section title.
+- Card/list title.
+- Body.
+- Body small/helper.
+- Meta.
+- Eyebrow.
 
 ---
 
-## 4. Leading Axis
+## 7. Dock
 
-There is one content leading axis.
+The Dock is the OS taskbar and app launcher. It renders from `src/lib/osApps.ts`.
 
-The following align to it:
+Rules:
 
-- first topbar tab/back label
-- app title
-- app description
-- hairline start
-- section titles
-- cards, lists, empty states, and detail content
+- Browse is the visible label for the Store app.
+- Search is a Dock app.
+- Notifications stay in the Topbar.
+- Library, Dashboard, Messages, Profile, and Settings require sign-in.
+- Support is public.
+- Services and Resources are not v1 Dock destinations.
+- Compact Dock items are square.
+- Full Dock rows and compact Dock targets keep a 56px rhythm.
+- Pinned items should use artwork/profile imagery when available.
+- Dock visibility preferences apply after sign-in; signed-out visitors get the public default.
 
-Do not hardcode left offsets. Use the shared page containers and tokens.
+Desktop Dock target:
 
----
-
-## 5. Dock
-
-The Dock is the OS taskbar. It renders from `src/lib/osApps.ts` plus user preferences from `src/lib/dockPreferences.ts`.
-
-Current Dock in code:
-
-- Library, signed in only
-- Community
-- Browse
-- Radio
-- pinned item divider when pins exist
-- up to 5 pinned items
-- Dashboard, signed in only
-- Log In when signed out, Settings when signed in
-
-Notifications remain a topbar control. Search is now a Dock app. Profile and Messages are signed-in Dock apps and also appear in the avatar menu.
-
-Current Dock target:
-
-- Store is renamed visually to **Browse**.
-- The Browse app still uses `/store` routes behind the scenes until a route migration is intentionally planned.
-- Browse uses the grid icon from the legacy icon set.
-- Community uses a people-style icon instead of chat bubbles.
-- Dashboard uses a creator/showcase-style icon.
-- Radio remains in the Dock. Search, Community, Messages, Profile, Library, Dashboard, Support, and Settings are current Dock destinations where auth rules allow. Services and Resources are not Dock destinations.
-- Users can still hide unfinished apps from Settings > Dock when needed.
-- Signed-out visitors see the default public Dock for testing, even if that browser has old local hidden-app preferences. Personal Dock visibility preferences apply after login.
-- Library, Dashboard, and Settings are personal surfaces and should not appear as signed-out Dock destinations.
-
-Dock rules:
-
-- No "44OS" label in the Dock.
-- Full Dock shows icon + label. Compact Dock shows icons/artwork only.
-- Full and compact Dock items use the same 56px height rhythm.
-- Compact Dock items are perfect squares with rounded corners.
-- Pinned music/books/assets should show artwork when available.
-- Pinned profiles should show profile imagery when available.
-- Active state belongs to the most specific current target. Opening a pinned item should highlight the pinned item, not its parent app.
-- Dock app reorder is built but disabled for launch. Treat reorder as a future system update unless the user explicitly asks to re-enable it.
-- Right-click Dock app: Open, Hide from Dock when allowed, Dock Settings, mode actions.
-- Right-click pinned Dock item: Open, Unpin Item.
-- Right-click empty Dock space: mode toggle and Dock Settings.
-
-Signed-out protected states:
-
-- Public destinations should remain visible in the shell during testing: Community, Browse, and Radio.
-- Personal areas such as Library, Dashboard, and Settings should be hidden from signed-out navigation. Direct visits should show quiet centered empty states with a clear login action instead of exposing controls.
-- Signed-out visitors use the default light/amber look. Stored theme/accent preferences should only affect the UI when a user session is present.
+- Public: Search, Browse, Radio, Community, Support, Log In.
+- Signed in: Search, Browse, Radio, Community, Messages, Profile, Library, Dashboard, Support, Settings.
 
 Mobile Dock:
 
 - Bottom tray.
-- Horizontal scroll if needed.
+- Safe-area aware.
+- Horizontally scrollable if needed.
 - Labels hidden.
-- Items remain square.
-- Dividers become vertical separators.
-- Safe area padding is respected.
+- Targets remain usable.
 
 ---
 
-## 6. Topbar
+## 8. Topbar
 
-The topbar is system chrome first.
+The Topbar is system chrome plus local app context.
 
-Trailing controls:
+Topbar owns:
 
-- Search
-- Cart
-- Notifications
-- Avatar/profile menu
-
-Local controls:
-
-- Tabs for app-local filters/sections.
-- Back label when a detail page was opened from another context.
-- Never show tabs and back label in the same slot.
+- Local tabs.
+- Back label.
+- Cart when it has items.
+- Notifications.
+- Avatar/account menu.
 
 Rules:
 
-- Topbar tabs are not primary navigation.
-- Home/Store and Library can use tabs for category filters.
-- Community can use tabs for Feed, Following, Questions, Collaboration.
-- Settings can use tabs for System, Dock, Region, Account.
-- Dashboard can use tabs for current shipped creator sections.
-- Back buttons should preserve origin label and scroll position when practical.
-- Search, cart, notifications, and avatar are system controls; apps do not add custom trailing controls there.
-- The topbar trailing controls are notifications, avatar, and cart only when the cart has items. Search lives in the Dock.
+- Topbar tabs are local filters, not primary app navigation.
+- Do not show tabs and back label in the same slot.
+- Do not add Search back to the Topbar.
+- Cart appears only when the cart has items.
+- Topbar controls use icon buttons with accessible labels.
+- Popovers should feel like system menus, not page cards.
+- Tabs must be visually discoverable. Use stronger contrast, a clearer active state, and enough weight that testers immediately understand there is deeper navigation inside the app.
+- The Dock answers "Where am I going?" The Topbar tabs answer "What part of this app am I viewing?"
 
 ---
 
-## 7. Workspace Containers
+## 9. Page Copy And Information Architecture
 
-Use the existing containers:
+Every primary page needs three layers of orientation:
 
-| Container | Use |
-|---|---|
-| `.app-page` | Home/Store, Library, Search, Resources, Support, hub pages |
-| `.dashboard-page` | Dashboard and Settings |
-| `.social-shell` | Community, profiles, inbox, readable social surfaces |
-| detail layout classes | Store/Library item pages |
+- **Dock/app label**: short destination name, such as Browse, Library, Community, Dashboard.
+- **Page hero**: title plus one sentence that explains the current surface.
+- **Tab/section context**: title and optional description for the selected tab or section.
+
+Page hero rules:
+
+- Titles are nouns or clear destinations: Discover, Library, Questions, Collaboration, Dashboard, Settings.
+- Descriptions tell the user what they can do there.
+- Descriptions should be human and useful, not marketing blurbs.
+- Avoid vague copy like "manage your content" when the page can say "publish releases, update pricing, and review catalog health."
+
+Tab copy rules:
+
+- Each tab view needs its own title and description when the tab changes the user's task.
+- Community tabs should explain behavior:
+  - Posts: general conversation from the community.
+  - Following: posts from people you follow.
+  - Questions: ask practical creative questions and get answers.
+  - Collaboration: find or offer help on creative work.
+- Dashboard tabs should explain the work to be done, not the database object.
+- Settings tabs should explain the consequence of the controls.
+
+Section heading rules:
+
+- **Simple sections** use title only when the content is obvious: Tracklist, Details, Files, Orders.
+- **Guided sections** use title plus one short description when the concept is new or powerful: Achievements, Creator Updates, Bonus Content, Local Pricing, Questions, Collaboration, Library Unlocks, Launch.
+- Descriptions should be one sentence. If a section needs more than that, the UI likely needs a better structure.
+- Small metric/stat cards should not include wrapping helper text inside tight cards. Put explanations in the section intro, tooltip, or larger row surface.
+
+Creator/fan copy tone:
+
+- Speak to outcomes: publish, add, unlock, update, ask, collaborate, follow, download, launch.
+- Avoid internal language: product row, trigger config, RLS, storage path, schema.
+- Achievements copy should make the fan action clear and the creator setup simple.
+- Creator Updates should read like living release notes: "Updates from the creator for people who own this item."
+- Library should communicate memory: owned, unlocked, saved, downloaded, updated, launched.
+
+---
+
+## 10. Workspace Patterns
+
+Use existing/shared containers:
+
+- `.app-page` for Browse, Library, Search, Support, and hub pages.
+- `.dashboard-page` for Dashboard and Settings.
+- `.social-shell` for Community, profiles, and inbox.
+- Detail layout classes for Store and Library item detail pages.
 
 Rules:
 
-- Every primary app front screen opens with `HubHero`.
-- App title is display type; detail pages use smaller page/detail titles.
+- Primary app front screens open with `HubHero`.
 - Sections use `HubSection`.
-- Long detail pages can use `--os-detail-inset` for reading comfort.
-- Avoid nested cards. Content item rows can be cards; a section itself should not become a card unless it is a list surface.
+- Empty states use shared message primitives.
+- Forms use shared field, label, helper, and action-row classes.
+- Lists should prefer row surfaces with clear dividers over decorative cards.
+- Repeated cards must have consistent image ratio, title line behavior, metadata rhythm, and action placement.
 
 ---
 
-## 8. Typography
+## 11. Controls
 
-Use the type scale, not local font sizes.
+Use familiar controls:
 
-| Class | Role |
-|---|---|
-| `.os-type-display` | app title |
-| `.os-type-page-title` | detail/subpage title |
-| `.os-type-panel-title` | section title |
-| `.os-type-section-title` | subheading |
-| `.os-type-card-title` | card/list/form title |
-| `.os-type-body` | body and app descriptions |
-| `.os-type-body-small` | helper text/list subtitles |
-| `.os-type-meta` | timestamps/meta |
-| `.os-type-eyebrow` | tiny uppercase labels |
-
-Default rule: type does not scale dramatically by viewport. Exception: very large Store/Library detail titles may use responsive clamping so they do not break mobile or wrap every title.
-
-Hierarchy must read naturally: app title > section title > item title > body > meta.
-
----
-
-## 9. Materials And Color
-
-Use semantic tokens only:
-
-- `--os-color-canvas`
-- `--os-color-ink`
-- `--os-color-ink-secondary`
-- `--os-color-ink-muted`
-- `--os-color-accent`
-- `--os-color-hairline`
-- `--os-surface-*` / shared paper/list materials
+- Icon buttons for tool actions.
+- Segmented controls/tabs for modes and filters.
+- Toggles or checkboxes for binary settings.
+- Sliders, steppers, or inputs for numeric values.
+- Menus for option sets.
+- Text buttons only for clear commands.
 
 Rules:
 
-- Shell and popovers can be glass.
-- Lists, rows, achievements, posts, reviews, notifications, settings groups, and detail panels should use the same readable content material family.
-- Avoid brown/amber bleed-through or background image bleed in content panels.
-- Hover wash: ink mixed around 8%.
-- Active/selected wash: ink mixed around 13%.
-- Danger color only for destructive actions.
-- No hardcoded one-off colors except artwork.
+- Buttons must not resize or jump on hover.
+- Icon-only buttons need accessible labels.
+- Primary actions are visually rare.
+- Destructive actions require clear copy and confirmation when data loss is possible.
+- Disabled controls must communicate state without becoming unreadable.
 
 ---
 
-## 10. Lists
-
-One list system should cover tracks, achievements, dashboard rows, settings rows, notifications, posts/replies where appropriate, product details, and library/detail metadata.
-
-List anatomy:
-
-- Surface: one readable panel or unframed list, depending on context.
-- Row padding: shared row tokens.
-- Dividers: straight hairlines between regular rows.
-- Rounded corners: only the surface outer edge, hover row, selected row, or active row.
-- Empty states: quiet text, not a large white card unless it is a real content list with actual items.
-
-Tracklists:
-
-- Home/Store and Library tracklists share row behavior.
-- Track number, title, and duration align consistently.
-- Duration must display for singles and multi-track releases.
-- Play button appears on hover and selected/playing state.
-- Play button must not sit behind the track number.
-- Context menu can expose Play and Play Next.
-
-Achievements:
-
-- Use the same list material as notifications/content lists.
-- Section title to achievement list spacing must match the global 16px section-head gap.
-- Unlocked achievements sort above locked achievements.
-- Unlocked status uses the success/accent state.
-- Hidden achievements hide description until unlocked.
-
-Product Details:
-
-- Home/Store and Library both include Product Details where useful.
-- Download Size is hidden for now.
-- Library Product Details sit below achievements/extras and above Creator Updates.
-
----
-
-## 11. Empty States
-
-Global empty-state standard:
-
-- If an empty state sits immediately below a page title/description with no section title, center the quiet text in the available content area.
-- If an empty state sits inside a section, align quiet text to the section leading edge.
-- Empty states do not need action buttons unless the action is truly the primary purpose of the section.
-- Reviews are the exception: section title with Post Review button on the right is allowed.
-- No empty-state card if there is no content yet, unless the surrounding surface exists because other real rows/items are present.
-- Empty-state typography should be consistent: muted body or body-small, no oversized novelty messages.
-
-Examples:
-
-- No reviews yet: section title + Post Review button + left-aligned quiet text.
-- No Product Gallery / Book Sample / Tracklist content: left-aligned quiet text, no white card.
-- Empty Assets page directly under page header: centered quiet text is acceptable.
-- Empty Library subsection: left-aligned quiet text under that subsection.
-
----
-
-## 12. Buttons, Inputs, Context Menus
-
-Buttons:
-
-- Use `.os-button` variants only.
-- Primary action first when there are multiple actions.
-- Detail page actions should be short: Play, Read, Download, Add to Library, Add to Cart, Remove from Library.
-- "Buy Download" should be "Add to Cart".
-
-Inputs:
-
-- Use shared input/textarea styles.
-- Composer/reply inputs should use consistent rounded boxes.
-- Buttons for composer/reply should sit below or cleanly aligned within the input area, not cramped against the text field.
-
-Context menus:
-
-- Use `ContextMenuProvider` / `useContextMenu`.
-- One menu at a time.
-- Unified text color in light and dark themes.
-- Destructive actions last and visually marked.
-- Library tiles should offer Open Item, View Creator, Remove From Library, Pin to Dock.
-- Profile/avatar context menus should allow Pin to Dock where it makes sense.
-- If an item is already in the Library, do not show Add to Library for that item.
-
----
-
-## 13. Home/Store And Library Detail Pages
-
-Home/Store and Library detail pages should look like siblings.
-
-Header:
-
-- Artwork aligns with the detail content/section axis.
-- Artwork should respect item aspect ratio: square for music, book ratio for books, merch/item image ratio where appropriate.
-- Item/release title uses the next smaller type size when needed to fit cleanly.
-- Metadata uses spaced bullets: `Single · 2025 · Free`, never jammed together.
-- Creator row uses circular avatar/profile icon and links to profile.
-- Informational purchase/explainer text should be tiny, muted, and not dominate the header.
-
-Home/Store actions:
-
-- Music: Add to Library, Add to Cart.
-- Books: Read Sample if available, Add to Cart or View in Library.
-- Assets: Add to Cart/download behavior depending on state.
-- Merch: Add to Cart.
-
-Library actions:
-
-- Music: Play; Download only if purchased.
-- Books: Read and Download.
-- Assets: Download.
-
-Section order:
-
-- Description
-- Tracklist / reader / sample / gallery when applicable
-- Achievements
-- Extras/features
-- Product Details
-- Reviews on Home/Store pages only
-- Creator Updates on Library pages only
-
-Reviews:
-
-- Empty reviews use quiet left-aligned text.
-- Published reviews use the same card visual language as Community posts.
-- Reviews are body-only; no review title field.
-
-Creator Updates:
-
-- Empty updates use quiet left-aligned text, no empty card.
-
----
-
-## 14. Community
-
-Community is a single-feed social experience.
-
-Current interaction model:
-
-- New Post is a button. It opens an inline composer.
-- Clicking a post opens its reply drawer.
-- Clicking the speech bubble opens the reply input under that post or reply.
-- Opening another drawer/input closes the previous one.
-- The speech bubble is not highlighted just because a drawer is open; it represents reply intent.
-- Replies include reply and like actions.
-- Owned replies/posts expose delete where appropriate.
-- Reply dividers and spacing match the former reply-page visual style.
-- Replies are newest-first.
-- Reply nesting should remain readable: the original post is top-level; replies align under it; replies-to-replies indent one level.
-
-Mentions and hashtags:
-
-- Mentions like `@big_boss` are bold black links with no underline.
-- Hashtags like `#question` are bold black links with no underline.
-- Cursor/pointer communicates clickability.
-- Mention suggestions appear while typing after a real fragment starts, e.g. `@b`, not on bare `@` or `@ `.
-- Questions tab should append/lock `#question` when posting from that tab. Collaboration should do the same with `#collaboration`.
-
-Topic panel:
-
-- Trending topics panel is built/optional but hidden for launch unless the user asks to re-enable it.
-
----
-
-## 15. Settings
-
-Settings is the single control panel.
-
-Tabs:
-
-- Account
-- System
-- Dock
-- Region
+## 12. Icons And Imagery
 
 Rules:
 
-- Reset Defaults sits at the bottom right of each settings page.
-- Region should default from user login/home location when that is available; reset should return to the detected home country/currency.
-- Dock landing options should match the current visible/testing apps: Browse, Library, Community, Dashboard, Radio.
-- Dock reorder should not be exposed for launch.
-- Account identity fields such as display name, avatar, username, and bio belong in Profile/Edit Profile, not Account settings.
-- Lightweight onboarding tips are allowed when an interaction is not obvious. They must be contextual, dismissible, and persisted so they do not become a repeated tour.
-- Account notification toggles cover mentions, replies, likes, and achievements. Do not show unused promotional email or recommendation toggles until they are wired to real behavior.
+- Prefer the existing `os-icon` mask system for shell/app icons.
+- Do not scatter one-off inline SVG icons when a system icon exists.
+- If adding an icon library later, standardize it rather than mixing strategies.
+- Product, profile, and media imagery should show the real item/person/state whenever available.
+- Do not use purely atmospheric imagery where users need to inspect an item.
+- Preserve image aspect ratio.
 
 ---
 
-## 16. Mobile Rules
+## 13. Motion
 
-Mobile must stay usable without special instructions.
+Motion should be quiet and functional.
 
-- Dock is bottom tray.
-- Topbar controls remain reachable.
-- Menus/popovers should fit viewport and avoid horizontal overflow.
-- Store/Library detail headers collapse to one column.
-- Artwork keeps correct aspect ratio.
-- Grids become one or two columns based on available space.
-- Player bar must not block primary actions.
-- Context menus and popovers must be reachable by touch alternatives where possible.
-- Tap targets should be at least 44px.
-- Avoid fixed desktop widths.
-- Test Store, Library, Community, Dashboard, Settings, auth, and item detail pages on mobile before launch.
+Allowed:
 
----
+- Small hover/press transitions.
+- Popover/menu entrance.
+- Selection and active-state transitions.
+- Player/status transitions.
 
-## 17. App-Specific Rules
+Avoid:
 
-Browse / Store:
+- Large decorative animation.
+- Background movement that competes with content.
+- Motion that changes layout dimensions.
 
-- Public acquisition surface.
-- User-facing app label should be Browse.
-- Existing `/store` URLs can remain until a deliberate route migration.
-- Discover should use the tab order `Discover, Music, Books, Merch, Sample Packs, Services`.
-- Discover page sections use clean shelves/grids.
-- Discover should show `Explore Music`, `Explore Books`, `Explore Merch`, `Explore Sample Packs`, and `Explore Services`, capped at 8 items each and hidden completely when empty.
-- Detail pages show Reviews, not Creator Updates.
-- Music is streamable when published tracks exist.
-
-Library:
-
-- Saved/owned surface.
-- Detail pages show Creator Updates, not Reviews.
-- Music playback behavior should match Store tracklists.
-- Product Details included below achievements/extras.
-
-Community:
-
-- Feed-first.
-- Topbar order is Posts, Questions, Collaboration, Following.
-- Questions and Collaboration use structured title/body posts instead of duplicating body text as title.
-- Question and Collaboration card actions align right. Card click expands the thread; response composers appear before long response lists.
-- Use green for complete, verified, unlocked, answered, and closed states. Use amber for open, locked, and not-answered states.
-- Inline composer and reply drawers.
-- No separate reply page for normal browsing unless a direct route is needed for deep links.
-
-Dashboard:
-
-- Creator workspace.
-- Shipped navigation should not expose unfinished tabs.
-- Achievement/extras foundation is part of music/books publishing only.
-- Creator list rows should stay simple but include Edit plus Publish/Unpublish where the item can be published.
-- Upload fields should show a preview after upload and provide an inline remove control.
-- Audio uploads should not render file preview cards; show a concise green Uploaded state instead.
-- Merch uses Product Image language, plus a previewable/removable gallery on creation.
-- Achievement controls use 44-owned artwork/placeholder art on the left, grey descriptions, and a right-side enable checkbox. Creators should not set achievement image URLs or hidden/secret state.
-
-Messages:
-
-- New Message should behave like a draft conversation: a left-side draft row, a To field at the top of the thread pane, recipient search only after typing, and the message composer pinned at the bottom.
-- Profile/message entry points should route into the same Messages UI.
-
-Resources and Services:
-
-- Should remain out of the Dock.
-- Services can still be surfaced under Browse navigation and Dashboard where needed.
-- Do not over-polish these before core launch/domain/auth health is done.
-
-Radio:
-
-- Should be made available in the Dock/menu for building and testing.
-- Future first version should feel like a station/playlist app, not a generic list page.
-
-Support:
-
-- Should remain a Steam/Spotify-style OS help center.
-- Cover account/login, orders, Library saves/purchases/downloads, Dock/settings, creator uploads, Radio, troubleshooting, and contact/escalation.
-- Support content should be searchable and categorized with a left sidebar of expandable sections, breadcrumb context above the content, and an article reader on the right.
-- Do not use repeated Open buttons on the main support index; actions belong inside the selected article.
+Respect reduced-motion preferences.
 
 ---
 
-## 18. Compliance Checklist
+## 14. Implementation Rules
 
-Every new or edited screen should pass:
-
-1. Uses the correct page container.
-2. Uses the shared app header or detail header pattern.
-3. Uses Dock/topbar ownership from the registry.
-4. Uses global spacing tokens.
-5. Aligns to the leading axis.
-6. Uses shared list/card/input/button/context-menu primitives.
-7. Uses semantic color/material tokens.
-8. Handles empty state according to the global standard.
-9. Works in light and dark themes.
-10. Works on mobile.
-11. Does not expose Product as generic catalog/item copy or Collection as a user-facing word; Product Details is the current allowed exception.
-12. `npm run build` passes after production-facing code changes.
-
----
-
-## 19. Agent Workflow
-
-Before changing UI:
-
-1. Read this file and `Other/44OS_FOUNDATION.md`.
-2. Inspect the current component/class before creating a new one.
-3. Prefer changing shared primitives over repeating page-specific fixes.
-4. Keep Supabase/data changes out of UI work unless the user explicitly approves them.
-5. Update this doc if a UI rule changes.
-6. Run build for production-facing code changes.
+- Shared primitive first, one-off style second.
+- Prefer classes and tokens over inline styles.
+- Dynamic inline styles are allowed for real dynamic values such as artwork URLs.
+- Keep CSS grouped by system area and component role.
+- Remove unused CSS when routes/components are removed.
+- Do not add a new palette for a single page.
+- Every visual change should be checked in desktop and mobile widths.

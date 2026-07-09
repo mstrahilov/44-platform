@@ -270,7 +270,6 @@ export function ServiceCard({ service }: { service: Service }) {
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function ResourceCard({
   resource,
   saved,

@@ -78,6 +78,7 @@ export function LibraryAchievementsSection({
     <div className="view-section">
       <div className="library-section-head">
         <h2 className="view-section-title">Achievements</h2>
+        <p className="os-type-body-small">Earn the release journey, then claim the creator&apos;s Overachiever bonus content.</p>
       </div>
 
       {achievements.length === 0 ? (

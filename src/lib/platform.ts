@@ -118,6 +118,7 @@ export interface Track {
 export interface ProductAchievement {
   id: string;
   product_id: string;
+  template_id?: string | null;
   code: string;
   title: string;
   description: string | null;

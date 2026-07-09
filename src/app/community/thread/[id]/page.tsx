@@ -36,17 +36,22 @@ type ReplyLikeRow = {
   profile_id: string;
   profiles?: SocialLiker | null;
 };
+type ThreadProfileState = {
+  userId: string;
+  profile: StudioProfile | null;
+};
 
 export default function CommunityThreadPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const userId = user?.id ?? null;
   useTopbarBack({ href: '/community', label: 'Community' });
   const [thread, setThread] = useState<SocialPost | null>(null);
   const [replies, setReplies] = useState<SocialReply[]>([]);
   const [likes, setLikes] = useState<LikeRow[]>([]);
   const [replyLikes, setReplyLikes] = useState<ReplyLikeRow[]>([]);
-  const [profile, setProfile] = useState<StudioProfile | null>(null);
+  const [profileState, setProfileState] = useState<ThreadProfileState | null>(null);
   const [replyBody, setReplyBody] = useState('');
   const [replyComposerOpen, setReplyComposerOpen] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
@@ -132,12 +137,16 @@ export default function CommunityThreadPage() {
   }, [id]);
 
   useEffect(() => {
-    if (!user) {
-      setProfile(null);
-      return;
-    }
-    loadStudioProfile(user.id).then(result => setProfile(result.profile));
-  }, [user]);
+    if (!userId) return;
+    const activeUserId = userId;
+    let alive = true;
+    loadStudioProfile(activeUserId).then(result => {
+      if (alive) setProfileState({ userId: activeUserId, profile: result.profile });
+    });
+    return () => { alive = false; };
+  }, [userId]);
+
+  const profile = profileState && profileState.userId === userId ? profileState.profile : null;
 
   const likedByUser = useMemo(() => {
     if (!user) return false;
@@ -470,7 +479,6 @@ export default function CommunityThreadPage() {
                 <ReplyBranch
                   key={top.id}
                   top={top}
-                  children={children}
                   currentUserId={user?.id ?? null}
                   canInteract={canInteract}
                   replyingTo={replyingTo}
@@ -487,7 +495,9 @@ export default function CommunityThreadPage() {
                   replyLiking={replyLiking}
                   onDeleteReply={deleteReply}
                   onBlockedInteraction={() => requireCommunityInteraction(() => {})}
-                />
+                >
+                  {children}
+                </ReplyBranch>
               ))
             )}
           </div>
@@ -541,7 +551,6 @@ function ReplyBranch({
     <div className="social-reply-branch">
       <ReplyRow
         reply={top}
-        canInteract={canInteract}
         onReplyClick={() => (currentUserId && canInteract ? onOpenReply(top.id) : onBlockedInteraction())}
         likers={replyLikersMap[top.id] ?? []}
         likeCount={replyLikeCounts[top.id] ?? 0}
@@ -565,7 +574,6 @@ function ReplyBranch({
         <div key={child.id} className="social-reply-child">
           <ReplyRow
             reply={child}
-            canInteract={canInteract}
             onReplyClick={() => (currentUserId && canInteract ? onOpenReply(child.id) : onBlockedInteraction())}
             likers={replyLikersMap[child.id] ?? []}
             likeCount={replyLikeCounts[child.id] ?? 0}
@@ -592,7 +600,6 @@ function ReplyBranch({
 
 function ReplyRow({
   reply,
-  canInteract,
   onReplyClick,
   likers,
   likeCount,
@@ -603,7 +610,6 @@ function ReplyRow({
   onDelete,
 }: {
   reply: SocialReply;
-  canInteract: boolean;
   onReplyClick: () => void;
   likers: SocialLiker[];
   likeCount: number;

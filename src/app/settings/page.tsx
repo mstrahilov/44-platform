@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -73,7 +73,7 @@ function SettingsContent() {
   const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
 
   useEffect(() => {
-    setActiveTab(requestedTab);
+    Promise.resolve().then(() => setActiveTab(requestedTab));
   }, [requestedTab, tabs]);
 
   useEffect(() => {
@@ -451,7 +451,7 @@ function AccountSettings() {
   const [resetSignal, setResetSignal] = useState(0);
 
   useEffect(() => {
-    setNewEmail(user?.email ?? '');
+    Promise.resolve().then(() => setNewEmail(user?.email ?? ''));
   }, [user?.email]);
 
   async function changeEmail(event: React.FormEvent<HTMLFormElement>) {

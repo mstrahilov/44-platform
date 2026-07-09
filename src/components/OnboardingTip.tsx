@@ -12,11 +12,11 @@ export function OnboardingTip({
   children: React.ReactNode;
 }) {
   const storageKey = `44-tip-dismissed-${id}`;
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(() => (
+    typeof window !== 'undefined' && window.localStorage.getItem(storageKey) !== 'true'
+  ));
 
   useEffect(() => {
-    setVisible(window.localStorage.getItem(storageKey) !== 'true');
-
     function sync() {
       setVisible(window.localStorage.getItem(storageKey) !== 'true');
     }

@@ -8,10 +8,11 @@ import { useParams, useRouter } from 'next/navigation';
 import { useContextMenu } from '@/components/ContextMenu';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
+import { isV1AchievementCode } from '@/lib/achievementCatalog';
 import type { Product } from '@/lib/products';
 import { productLibraryHref } from '@/lib/experience';
 import { getProductLibraryContent, getProductLibraryPrimaryAction, getProductRuntimeKind, isFreeLibraryClaim } from '@/lib/libraryContent';
-import { creatorHref, type ProductAchievement, type Resource, type ServiceRequest, type Track, type UserAchievement } from '@/lib/platform';
+import { type ProductAchievement, type Resource, type ServiceRequest, type Track, type UserAchievement } from '@/lib/platform';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
 import { LibraryAchievementsSection, LibraryCreatorChip, LibraryProductDetailsSection } from '@/components/LibraryDetailPrimitives';
 import { ProductUpdatesSection } from '@/components/ProductUpdatesSection';
@@ -117,7 +118,9 @@ export function LibraryItemDetail({
           ]);
 
           setTracks((trackRows as Track[] | null) ?? []);
-          setAchievements((achievementRows as ProductAchievement[] | null) ?? []);
+          setAchievements(row.products && getProductRuntimeKind(row.products) === 'music'
+            ? ((achievementRows as ProductAchievement[] | null) ?? []).filter(achievement => isV1AchievementCode(achievement.code))
+            : []);
           setUnlockedAchievementIds(new Set(((unlockedRows as UserAchievement[] | null) ?? []).map(item => item.achievement_id)));
         }
       }

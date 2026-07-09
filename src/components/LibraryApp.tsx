@@ -72,11 +72,7 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) {
-      setRows([]);
-      setLoading(false);
-      return;
-    }
+    if (!user) return;
 
     let alive = true;
 
@@ -122,7 +118,7 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
     ].filter(group => group.rows.length > 0);
   }, [category, visibleRows]);
 
-  if (authLoading || loading) {
+  if (authLoading) {
     return <PageShell><CenteredMessage>Loading...</CenteredMessage></PageShell>;
   }
 
@@ -138,6 +134,10 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
         </main>
       </PageShell>
     );
+  }
+
+  if (loading) {
+    return <PageShell><CenteredMessage>Loading...</CenteredMessage></PageShell>;
   }
 
   const copy = CATEGORY_COPY[category];

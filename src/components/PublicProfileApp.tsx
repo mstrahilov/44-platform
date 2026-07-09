@@ -23,6 +23,10 @@ import { createOrOpenConversation } from '@/lib/messages';
 import { trackProductAchievementTrigger } from '@/lib/achievementTracking';
 
 type ProfileTab = 'posts' | 'music' | 'books' | 'assets' | 'services';
+type CurrentProfileState = {
+  userId: string;
+  profile: StudioProfile | null;
+};
 
 function parseProfileTab(value: string | null, isCreator: boolean): ProfileTab | null {
   if (!value) return null;
@@ -41,6 +45,7 @@ export default function PublicProfilePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [profile, setProfile] = useState<Profile | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -50,7 +55,7 @@ export default function PublicProfilePage() {
   const [likeCounts, setLikeCounts] = useState<CountMap>({});
   const [likersMap, setLikersMap] = useState<LikersMap>({});
   const [isFollowing, setIsFollowing] = useState(false);
-  const [currentProfile, setCurrentProfile] = useState<StudioProfile | null>(null);
+  const [currentProfileState, setCurrentProfileState] = useState<CurrentProfileState | null>(null);
   const [tab, setTab] = useState<ProfileTab>('posts');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
@@ -144,12 +149,14 @@ export default function PublicProfilePage() {
   }, [username]);
 
   useEffect(() => {
-    if (!user) {
-      setCurrentProfile(null);
-      return;
-    }
-    loadStudioProfile(user.id).then(result => setCurrentProfile(result.profile));
-  }, [user]);
+    if (!userId) return;
+    const activeUserId = userId;
+    let alive = true;
+    loadStudioProfile(activeUserId).then(result => {
+      if (alive) setCurrentProfileState({ userId: activeUserId, profile: result.profile });
+    });
+    return () => { alive = false; };
+  }, [userId]);
 
   useEffect(() => {
     if (!user || !profile || user.id === profile.id) {
@@ -252,6 +259,7 @@ export default function PublicProfilePage() {
     product_market_mode: profile.product_market_mode ?? null,
     service_market_mode: profile.service_market_mode ?? null,
   } : null;
+  const currentProfile = currentProfileState && currentProfileState.userId === userId ? currentProfileState.profile : null;
   const isCreator = Boolean(profileForRoleCheck && isCreatorProfile(profileForRoleCheck));
   const publishedProducts = useMemo(
     () => products.filter(product => product.is_published || product.status === 'published'),
@@ -294,12 +302,12 @@ export default function PublicProfilePage() {
     const requestedTab = parseProfileTab(searchParams.get('tab'), isCreator);
     const requestedIsVisible = requestedTab && tabs.some(item => item.id === requestedTab);
     if (requestedIsVisible && requestedTab !== tab) {
-      setTab(requestedTab);
+      Promise.resolve().then(() => setTab(requestedTab));
       return;
     }
     const currentIsVisible = tabs.some(item => item.id === tab);
     if (!currentIsVisible && tabs[0]) {
-      setTab(tabs[0].id);
+      Promise.resolve().then(() => setTab(tabs[0].id));
     }
   }, [isCreator, searchParams, tab, tabs]);
 

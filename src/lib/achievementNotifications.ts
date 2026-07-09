@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { isV1AchievementCode } from '@/lib/achievementCatalog';
 import type { AchievementEvent, ProductAchievement } from '@/lib/platform';
 import type { AchievementToastData } from '@/components/AchievementToast';
 
@@ -93,15 +94,16 @@ export async function loadAchievementNotifications(userId: string): Promise<Achi
         .filter((value): value is string => Boolean(value)),
     ),
   );
-  const achievementMap = new Map<string, Pick<ProductAchievement, 'id' | 'title' | 'description' | 'points' | 'icon'>>();
+  const achievementMap = new Map<string, Pick<ProductAchievement, 'id' | 'code' | 'title' | 'description' | 'points' | 'icon'>>();
 
   if (achievementIds.length > 0) {
     const { data: achievements } = await supabase
       .from('product_achievements')
-      .select('id,title,description,points,icon')
+      .select('id,code,title,description,points,icon')
       .in('id', achievementIds);
 
-    ((achievements as Array<Pick<ProductAchievement, 'id' | 'title' | 'description' | 'points' | 'icon'>> | null) ?? []).forEach(item => {
+    ((achievements as Array<Pick<ProductAchievement, 'id' | 'code' | 'title' | 'description' | 'points' | 'icon'>> | null) ?? []).forEach(item => {
+      if (!isV1AchievementCode(item.code)) return;
       achievementMap.set(item.id, item);
     });
   }

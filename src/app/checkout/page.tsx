@@ -44,9 +44,13 @@ export default function CheckoutPage() {
   useTopbarBack({ href: '/cart', label: 'Cart' });
 
   useEffect(() => {
-    if (user?.email) setEmail(current => current || user.email!);
-    if (user?.email) setName(current => current || user.email!.split('@')[0]);
-  }, [user]);
+    const userEmail = user?.email;
+    if (!userEmail) return;
+    Promise.resolve().then(() => {
+      setEmail(current => current || userEmail);
+      setName(current => current || userEmail.split('@')[0]);
+    });
+  }, [user?.email]);
 
   useEffect(() => {
     async function loadProducts() {

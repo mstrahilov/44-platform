@@ -257,11 +257,15 @@ export default function EditProductPage() {
 
   useEffect(() => {
     if (!isMusicProduct) return;
-    setTracks(current => ensureTrackCount(current, Number(trackCount || '0')));
+    Promise.resolve().then(() => {
+      setTracks(current => ensureTrackCount(current, Number(trackCount || '0')));
+    });
   }, [isMusicProduct, trackCount]);
 
   useEffect(() => {
-    setFeatureState(current => normalizeFeatureStateForSection(current, section.id));
+    Promise.resolve().then(() => {
+      setFeatureState(current => normalizeFeatureStateForSection(current, section.id));
+    });
   }, [section.id]);
 
   function updateTrack(index: number, patch: Partial<DraftTrack>) {
@@ -344,17 +348,15 @@ export default function EditProductPage() {
       .eq('author_id', profileId);
 
     if (isMissingColumnError(updateError)) {
-      const {
-        market_mode: _marketMode,
-        local_price_cents: _localPriceCents,
-        local_currency: _localCurrency,
-        available_locally_only: _availableLocallyOnly,
-        experience_type: _experienceType,
-        fulfillment_type: _fulfillmentType,
-        merch_fulfillment_mode: _merchFulfillmentMode,
-        merch_shipping_scope: _merchShippingScope,
-        ...legacyPayload
-      } = updatePayload;
+      const legacyPayload: Record<string, unknown> = { ...updatePayload };
+      delete legacyPayload.market_mode;
+      delete legacyPayload.local_price_cents;
+      delete legacyPayload.local_currency;
+      delete legacyPayload.available_locally_only;
+      delete legacyPayload.experience_type;
+      delete legacyPayload.fulfillment_type;
+      delete legacyPayload.merch_fulfillment_mode;
+      delete legacyPayload.merch_shipping_scope;
       const retry = await supabase
         .from('products')
         .update(legacyPayload)

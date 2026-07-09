@@ -103,10 +103,6 @@ export default function RadioPage() {
           </HubSection>
         ) : (
           <>
-            {(() => {
-              const tracks = bundle?.tracks ?? [];
-              return (
-                <>
             {bundle?.status ? (
               <div className="dashboard-status dashboard-status-error" style={{ marginBottom: 'var(--os-space-5)' }}>
                 {bundle.status}
@@ -147,10 +143,6 @@ export default function RadioPage() {
                   </>
                 )}
               </GlassPanel>
-
-                </>
-              );
-            })()}
           </>
         )}
       </main>
@@ -170,10 +162,4 @@ function toQueueTrack(track: RadioPlayableTrack): MusicQueueTrack {
     productId: track.productId,
     playbackMode: 'radio',
   };
-}
-
-function formatDuration(seconds: number) {
-  const minutes = Math.floor(seconds / 60);
-  const remainder = seconds % 60;
-  return `${minutes}:${String(remainder).padStart(2, '0')}`;
 }

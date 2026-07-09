@@ -77,11 +77,8 @@ export default function ProjectPage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-    void loadRow();
+    if (!user) return;
+    Promise.resolve().then(() => loadRow());
   }, [authLoading, loadRow, user]);
 
   const isCreator = Boolean(
@@ -211,7 +208,7 @@ export default function ProjectPage() {
     setSending(false);
   }
 
-  if (authLoading || loading) {
+  if (authLoading) {
     return <PageShell><CenteredMessage>Loading project…</CenteredMessage></PageShell>;
   }
 
@@ -226,6 +223,10 @@ export default function ProjectPage() {
         </main>
       </PageShell>
     );
+  }
+
+  if (loading) {
+    return <PageShell><CenteredMessage>Loading project…</CenteredMessage></PageShell>;
   }
 
   if (notFound || !row) {
@@ -407,7 +408,7 @@ export default function ProjectPage() {
               )}
 
               {!isClient && !isCreator && (
-                <div className="dashboard-empty">You're viewing this project as an outsider. Only the client and creator can act on it.</div>
+                <div className="dashboard-empty">You&rsquo;re viewing this project as an outsider. Only the client and creator can act on it.</div>
               )}
             </div>
           </aside>

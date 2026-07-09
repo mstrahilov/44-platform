@@ -128,7 +128,7 @@ function NewProductContent() {
   const [trackCount, setTrackCount] = useState('1');
   const [tracks, setTracks] = useState<DraftTrack[]>([createDraftTrack()]);
   const [featureState, setFeatureState] = useState(() => createReleaseFeatureState(section.id));
-  const [publishStatus, setPublishStatus] = useState<'draft' | 'published' | 'scheduled'>('draft');
+  const [publishStatus] = useState<'draft' | 'published' | 'scheduled'>('draft');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -163,7 +163,7 @@ function NewProductContent() {
     }
 
     loadFormData();
-  }, [section.id, user]);
+  }, [section.id, section.typeOptions, user]);
 
   const selectedCategory = useMemo(
     () => categories.find(category => category.id === categoryId) ?? null,
@@ -177,11 +177,15 @@ function NewProductContent() {
 
   useEffect(() => {
     if (!isMusicProduct) return;
-    setTracks(current => ensureTrackCount(current, Number(trackCount || '0')));
+    Promise.resolve().then(() => {
+      setTracks(current => ensureTrackCount(current, Number(trackCount || '0')));
+    });
   }, [isMusicProduct, trackCount]);
 
   useEffect(() => {
-    setFeatureState(current => normalizeFeatureStateForSection(current, section.id));
+    Promise.resolve().then(() => {
+      setFeatureState(current => normalizeFeatureStateForSection(current, section.id));
+    });
   }, [section.id]);
 
   function updateTrack(index: number, patch: Partial<DraftTrack>) {
@@ -267,17 +271,15 @@ function NewProductContent() {
       .single();
 
     if (isMissingColumnError(insertError)) {
-      const {
-        market_mode: _marketMode,
-        local_price_cents: _localPriceCents,
-        local_currency: _localCurrency,
-        available_locally_only: _availableLocallyOnly,
-        experience_type: _experienceType,
-        fulfillment_type: _fulfillmentType,
-        merch_fulfillment_mode: _merchFulfillmentMode,
-        merch_shipping_scope: _merchShippingScope,
-        ...legacyPayload
-      } = insertPayload;
+      const legacyPayload: Record<string, unknown> = { ...insertPayload };
+      delete legacyPayload.market_mode;
+      delete legacyPayload.local_price_cents;
+      delete legacyPayload.local_currency;
+      delete legacyPayload.available_locally_only;
+      delete legacyPayload.experience_type;
+      delete legacyPayload.fulfillment_type;
+      delete legacyPayload.merch_fulfillment_mode;
+      delete legacyPayload.merch_shipping_scope;
       const retry = await supabase.from('products').insert(legacyPayload).select('id').single();
       insertedProduct = retry.data;
       insertError = retry.error;

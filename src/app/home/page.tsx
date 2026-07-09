@@ -17,6 +17,15 @@ type LibraryRow = {
   acquired_at: string | null;
   products: Product | null;
 };
+type HomeProfileState = {
+  userId: string;
+  profile: StudioProfile | null;
+};
+type HomeActivityState = {
+  userId: string;
+  recentItems: LibraryRow[];
+  notifications: AchievementNotification[];
+};
 
 function greetingForHour(hour: number): string {
   if (hour < 5) return 'Good evening';
@@ -27,34 +36,53 @@ function greetingForHour(hour: number): string {
 
 export default function HomePage() {
   const { user, loading } = useAuth();
+  const userId = user?.id ?? null;
   const { hiddenIds } = useDockPreferences();
-  const [profile, setProfile] = useState<StudioProfile | null>(null);
-  const [recentItems, setRecentItems] = useState<LibraryRow[]>([]);
-  const [notifications, setNotifications] = useState<AchievementNotification[]>([]);
+  const [profileState, setProfileState] = useState<HomeProfileState | null>(null);
+  const [activityState, setActivityState] = useState<HomeActivityState | null>(null);
 
   useEffect(() => {
-    if (!user) { setProfile(null); return; }
-    loadStudioProfile(user.id).then(r => setProfile(r.profile));
-  }, [user]);
+    if (!userId) return;
+    const activeUserId = userId;
+    let alive = true;
+    loadStudioProfile(activeUserId).then(r => {
+      if (alive) setProfileState({ userId: activeUserId, profile: r.profile });
+    });
+    return () => { alive = false; };
+  }, [userId]);
 
   useEffect(() => {
-    if (!user) { setRecentItems([]); setNotifications([]); return; }
-    const userId = user.id;
+    if (!userId) return;
+    const activeUserId = userId;
+    let alive = true;
 
-    supabase
-      .from('library_items')
-      .select('id,product_id,acquired_at,products(*)')
-      .eq('user_id', userId)
-      .neq('status', 'archived')
-      .neq('status', 'hidden')
-      .order('acquired_at', { ascending: false })
-      .limit(4)
-      .then(({ data }) => {
-        setRecentItems(((data ?? []) as unknown as LibraryRow[]).filter(row => row.products));
+    async function loadActivity() {
+      const [{ data }, rows] = await Promise.all([
+        supabase
+          .from('library_items')
+          .select('id,product_id,acquired_at,products(*)')
+          .eq('user_id', activeUserId)
+          .neq('status', 'archived')
+          .neq('status', 'hidden')
+          .order('acquired_at', { ascending: false })
+          .limit(4),
+        loadAchievementNotifications(activeUserId),
+      ]);
+      if (!alive) return;
+      setActivityState({
+        userId: activeUserId,
+        recentItems: ((data ?? []) as unknown as LibraryRow[]).filter(row => row.products),
+        notifications: rows.slice(0, 5),
       });
+    }
 
-    loadAchievementNotifications(userId).then(rows => setNotifications(rows.slice(0, 5)));
-  }, [user]);
+    loadActivity();
+    return () => { alive = false; };
+  }, [userId]);
+
+  const profile = profileState && profileState.userId === userId ? profileState.profile : null;
+  const recentItems = activityState && activityState.userId === userId ? activityState.recentItems : [];
+  const notifications = activityState && activityState.userId === userId ? activityState.notifications : [];
 
   if (loading) {
     return <PageShell><CenteredMessage>Loading…</CenteredMessage></PageShell>;

@@ -167,10 +167,10 @@ export default function DashboardPage() {
               href={card.href}
             />
           ))}
-          <OverviewStatCard label="Library Saves" value={librarySaves} note="Items added to user Libraries." />
-          <OverviewStatCard label="Total Plays" value={totalPlays} note="Plays across music releases." />
-          <OverviewStatCard label="Products Sold" value={soldItems} note="Purchased items in this period." />
-          <OverviewStatCard label="Revenue Earned" value={formatCurrency(revenueCents)} note="Gross revenue from purchases." />
+          <OverviewStatCard label="Library Saves" value={librarySaves} note="Saved by fans" />
+          <OverviewStatCard label="Total Plays" value={totalPlays} note="Music plays" />
+          <OverviewStatCard label="Products Sold" value={soldItems} note="Paid items" />
+          <OverviewStatCard label="Revenue Earned" value={formatCurrency(revenueCents)} note="Gross revenue" />
         </div>
 
         {overview.metricsError && (
@@ -208,9 +208,11 @@ export default function DashboardPage() {
 function OverviewStatCard({ label, value, note }: { label: string; value: string | number; note: string }) {
   return (
     <GlassPanel className="dashboard-metric-card">
-      <div className="os-type-meta">{label}</div>
-      <div className="os-type-page-title">{value}</div>
-      <p className="os-type-body-small">{note}</p>
+      <div className="dashboard-overview-card-inner">
+        <div className="os-type-meta">{label}</div>
+        <div className="os-type-page-title">{value}</div>
+        <p className="os-type-body-small">{note}</p>
+      </div>
     </GlassPanel>
   );
 }
@@ -230,11 +232,11 @@ function OverviewCard({
 }) {
   return (
     <Link href={href} className="dashboard-card-link">
-      <GlassPanel style={{ padding: 24 }}>
-        <div style={{ display: 'grid', gap: 8 }}>
-          <div className="os-type-meta" style={{ color: 'var(--os-color-ink-muted)', textTransform: 'uppercase' }}>{title}</div>
+      <GlassPanel className="dashboard-overview-card">
+        <div className="dashboard-overview-card-inner">
+          <div className="os-type-meta">{title}</div>
           <div className="os-type-page-title">{total}</div>
-          <div className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>
+          <div className="os-type-body-small">
             {published} published, {drafts} draft
           </div>
         </div>

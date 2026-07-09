@@ -126,13 +126,11 @@ export default function NewServicePage() {
     let { error: insertError } = await supabase.from('services').insert(insertPayload);
 
     if (isMissingColumnError(insertError)) {
-      const {
-        market_mode: _marketMode,
-        local_price_cents: _localPriceCents,
-        local_currency: _localCurrency,
-        available_locally_only: _availableLocallyOnly,
-        ...legacyPayload
-      } = insertPayload;
+      const legacyPayload: Record<string, unknown> = { ...insertPayload };
+      delete legacyPayload.market_mode;
+      delete legacyPayload.local_price_cents;
+      delete legacyPayload.local_currency;
+      delete legacyPayload.available_locally_only;
       const retry = await supabase.from('services').insert(legacyPayload);
       insertError = retry.error;
     }

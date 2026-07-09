@@ -17,6 +17,7 @@ import {
 } from '@/components/MusicPlayer';
 import { ProductUpdatesSection } from '@/components/ProductUpdatesSection';
 import { useTopbarBack } from '@/components/TopbarContext';
+import { isV1AchievementCode } from '@/lib/achievementCatalog';
 import { incrementAchievementProgress, trackProductAchievementTrigger } from '@/lib/achievementTracking';
 import { getProductLibraryPrimaryAction, getProductRuntimeKind } from '@/lib/libraryContent';
 import type { Product } from '@/lib/products';
@@ -50,12 +51,7 @@ export default function MusicLibraryItemPage() {
 
   useEffect(() => {
     if (authLoading) return;
-
-    if (!user) {
-      setLoading(false);
-      setError('Sign in to view this release.');
-      return;
-    }
+    if (!user) return;
 
     async function fetchRelease(userId: string) {
       setLoading(true);
@@ -99,7 +95,7 @@ export default function MusicLibraryItemPage() {
 
       const orderedTracks = ((trackRows as MusicTrack[] | null) ?? []).sort((a, b) => trackOrder(a) - trackOrder(b));
       setTracks(orderedTracks);
-      setAchievements((achievementRows as ProductAchievement[] | null) ?? []);
+      setAchievements(((achievementRows as ProductAchievement[] | null) ?? []).filter(achievement => isV1AchievementCode(achievement.code)));
       setUnlockedAchievementIds(new Set(((unlockedRows as UserAchievement[] | null) ?? []).map(item => item.achievement_id)));
       setLoading(false);
     }
@@ -107,13 +103,15 @@ export default function MusicLibraryItemPage() {
     fetchRelease(user.id);
   }, [authLoading, id, user]);
 
-  if (authLoading || loading) return <ReleaseStateMessage>Loading...</ReleaseStateMessage>;
-  if (error) return <ReleaseStateMessage>{error}</ReleaseStateMessage>;
+  if (authLoading) return <ReleaseStateMessage>Loading...</ReleaseStateMessage>;
   if (!user) return <ReleaseStateMessage>Sign in to view this release.</ReleaseStateMessage>;
+  if (loading) return <ReleaseStateMessage>Loading...</ReleaseStateMessage>;
+  if (error) return <ReleaseStateMessage>{error}</ReleaseStateMessage>;
   if (!row?.products) return <ReleaseStateMessage>Release not found.</ReleaseStateMessage>;
 
   return (
     <OwnedMusicRelease
+      key={row.id}
       userId={user.id}
       row={row}
       tracks={tracks}
@@ -140,20 +138,13 @@ function OwnedMusicRelease({
   const action = getProductLibraryPrimaryAction(product);
   const { currentTrack, isPlaying, playQueue, toggleTrack: togglePlayerTrack, queueNext } = useMusicPlayer();
   const { openContextMenu } = useContextMenu();
-  const [localUnlockedAchievementIds, setLocalUnlockedAchievementIds] = useState(unlockedAchievementIds);
+  const [localUnlockedAchievementIds, setLocalUnlockedAchievementIds] = useState(() => new Set(unlockedAchievementIds));
   const [completedTrackIds, setCompletedTrackIds] = useState<Set<string>>(new Set());
   const [noSkipsEligible, setNoSkipsEligible] = useState(false);
   const [fullReleaseHandled, setFullReleaseHandled] = useState(false);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [toast, setToast] = useState<AchievementToastData | null>(null);
   const downloadsUnlocked = row.acquisition_type === 'purchase';
-
-  useEffect(() => {
-    setCompletedTrackIds(new Set());
-    setNoSkipsEligible(false);
-    setFullReleaseHandled(false);
-  }, [product.id]);
-  useEffect(() => { setLocalUnlockedAchievementIds(unlockedAchievementIds); }, [unlockedAchievementIds]);
 
   const musicQueue = useMemo<MusicQueueTrack[]>(() => (
     tracks
@@ -236,6 +227,25 @@ function OwnedMusicRelease({
 
   const playableTrackIds = useMemo(() => tracks.filter(track => Boolean(track.audio_url)).map(track => track.id), [tracks]);
 
+  async function unlockTrigger(triggerType: string, metadata?: Record<string, unknown>) {
+    const result = await trackProductAchievementTrigger({
+      userId,
+      productId: row.product_id,
+      triggerType,
+      achievements,
+      unlockedAchievementIds: localUnlockedAchievementIds,
+      metadata,
+    });
+    if (result.unlockedIds.length === 0) return;
+    setLocalUnlockedAchievementIds(current => {
+      const next = new Set(current);
+      result.unlockedIds.forEach(id => next.add(id));
+      return next;
+    });
+    const lastUnlocked = result.unlockedAchievements[result.unlockedAchievements.length - 1];
+    if (lastUnlocked) setToast(lastUnlocked);
+  }
+
   useEffect(() => {
     async function handleFullReleaseListened() {
       if (fullReleaseHandled || playableTrackIds.length === 0) return;
@@ -270,25 +280,6 @@ function OwnedMusicRelease({
     handleFullReleaseListened();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [completedTrackIds, fullReleaseHandled, noSkipsEligible, playableTrackIds, product.created_at, product.id, userId]);
-
-  async function unlockTrigger(triggerType: string, metadata?: Record<string, unknown>) {
-    const result = await trackProductAchievementTrigger({
-      userId,
-      productId: row.product_id,
-      triggerType,
-      achievements,
-      unlockedAchievementIds: localUnlockedAchievementIds,
-      metadata,
-    });
-    if (result.unlockedIds.length === 0) return;
-    setLocalUnlockedAchievementIds(current => {
-      const next = new Set(current);
-      result.unlockedIds.forEach(id => next.add(id));
-      return next;
-    });
-    const lastUnlocked = result.unlockedAchievements[result.unlockedAchievements.length - 1];
-    if (lastUnlocked) setToast(lastUnlocked);
-  }
 
   const heroImage = product.hero_url || product.cover_url;
   const releaseType = product.product_type || 'Release';

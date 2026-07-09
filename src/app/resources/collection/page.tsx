@@ -17,10 +17,7 @@ export default function ResourcesCollectionPage() {
   useResourcesTopbarTabs('collection');
 
   useEffect(() => {
-    if (!user) {
-      setRows([]);
-      return;
-    }
+    if (!user) return;
 
     async function loadCollection() {
       const { data, error } = await supabase

@@ -65,7 +65,7 @@ const ARTICLES: SupportArticle[] = [
     question: 'Publish music, books, sample packs, merch, or services',
     answer: [
       'Creators publish and manage work from Dashboard. Use the profile shortcut buttons for fast access to new releases, books, sample packs, merch, and services.',
-      'Music and books can include achievements and bonus content. Sample packs and merch use simpler item publishing flows.',
+      'Music releases can include v1.0 achievements and Overachiever bonus content. Books, sample packs, and merch use simpler publishing flows until their experiences are fully built.',
       'Services are 44-operated project intake flows, not a general creator marketplace.',
     ],
     actions: [{ label: 'Open Dashboard', href: '/dashboard' }],
