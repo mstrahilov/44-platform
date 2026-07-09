@@ -100,7 +100,7 @@ function SettingsContent() {
     tabs.map(tab => ({
       id: tab.id,
       label: tab.label,
-      href: tab.id === 'system' ? '/settings' : `/settings?tab=${tab.id}`,
+      href: `/settings?tab=${tab.id}`,
       active: tab.id === activeTab,
     })),
   );

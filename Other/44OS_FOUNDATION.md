@@ -70,9 +70,9 @@ The app registry is the navigation backbone:
 
 Current default Dock in code:
 
-- Signed-in default visible order: **Home**, **Library**, **Community**, **Dashboard**, **Resources**, **Services**, **Radio**.
-- Signed-out public visible order: **Home**, **Community**, **Resources**, **Services**, **Radio**.
-- Support remains the bottom help destination. The system slot shows Log In when signed out and Settings when signed in.
+- Signed-in default visible order: **Home**, **Library**, **Services**, **Resources**, **Community**, **Radio**.
+- Signed-out public visible order: **Home**, **Services**, **Resources**, **Community**, **Radio**.
+- Support and Dashboard sit in the bottom account cluster above the divider when available. The system slot shows Log In when signed out and Settings when signed in.
 - Search opens from the topbar search control, not the Dock.
 - Notifications open from the topbar bell, not the Dock.
 - Profile and Inbox are account/community utilities, reached from profile/avatar or Community surfaces.
@@ -86,19 +86,20 @@ Current Dock behavior:
 - Resources, Services, and Radio are available in the Dock/menu for building and testing.
 - Users can still hide non-locked Dock apps from Settings > Dock.
 - Signed-out visitors always see the default public Dock, regardless of any old local hidden-app preferences on the machine. Signed-in users can still personalize visible Dock apps locally.
-- The Dock bottom cluster is **Support** above the system divider. Signed-out users see **Log In** where signed-in users see **Settings**.
+- The Dock bottom cluster is **Support**, then signed-in **Dashboard**, above the system divider. Signed-out users see **Log In** where signed-in users see **Settings**.
 
 Landing:
 
 - `src/lib/landingPage.ts` still uses the `store` landing id, but it now resolves to **Home** at `/`.
 - Settings currently offers only Home, Library, Community, and Dashboard as landing choices.
 - Legacy landing choices normalize safely back to current apps.
+- Normal sign-in, sign-up confirmation, and magic-link authentication return to Home at `/`. Password reset intentionally returns to `/settings?tab=account`.
 
 Immediate landing target:
 
 - `44os.com` opens the Home experience at the root domain and does not visibly land on `/store`.
 - The app can continue using Store internals/routes behind the scenes, but the user-facing landing destination should read Home.
-- Re-check saved user landing settings after the domain change because stale settings/redirects may be causing Settings tabs or Appearance/System controls to fail on production.
+- Settings opens explicitly at `/settings?tab=system`; the System tab should not rely on a bare `/settings` URL because stale account callbacks can make `/settings?tab=account` feel sticky in production browsers.
 
 ---
 

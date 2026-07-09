@@ -4,7 +4,6 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
-import { getLandingPageHref } from '@/lib/landingPage';
 import { getSitePathUrl } from '@/lib/siteUrl';
 
 function authMessage(message?: string) {
@@ -37,7 +36,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.replace(getLandingPageHref());
+      router.replace('/');
     }
   }, [loading, router, user]);
 
@@ -63,7 +62,7 @@ export default function LoginPage() {
         email: cleanEmail,
         password,
         options: {
-          emailRedirectTo: getSitePathUrl('/settings?tab=account'),
+          emailRedirectTo: getSitePathUrl('/'),
           data: {
             name: cleanName,
             display_name: cleanName,
@@ -86,7 +85,7 @@ export default function LoginPage() {
         setStatus(authMessage(error.message));
         return;
       }
-      router.push(getLandingPageHref());
+      router.push('/');
       return;
     }
 
@@ -102,7 +101,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOtp({
       email: cleanEmail,
       options: {
-        emailRedirectTo: getSitePathUrl('/settings?tab=account'),
+        emailRedirectTo: getSitePathUrl('/'),
       },
     });
 
@@ -120,7 +119,7 @@ export default function LoginPage() {
       type: 'signup',
       email: cleanEmail,
       options: {
-        emailRedirectTo: getSitePathUrl('/settings?tab=account'),
+        emailRedirectTo: getSitePathUrl('/'),
       },
     });
     setResendingConfirmation(false);

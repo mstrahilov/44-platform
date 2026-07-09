@@ -137,14 +137,14 @@ Current Dock in code:
 
 - Home
 - Library, signed in only
-- Community
-- Dashboard, signed in only
-- Resources
 - Services
+- Resources
+- Community
 - Radio
 - pinned item divider when pins exist
 - up to 5 pinned items
 - Support
+- Dashboard, signed in only
 - Log In when signed out, Settings when signed in
 
 Search and Notifications are topbar controls. Profile and Inbox are personal/community utilities, not default Dock apps.
@@ -175,7 +175,7 @@ Dock rules:
 
 Signed-out protected states:
 
-- Public destinations should remain visible in the shell during testing: Home, Community, Resources, Services, Radio, and Support.
+- Public destinations should remain visible in the shell during testing: Home, Services, Resources, Community, Radio, and Support.
 - Personal areas such as Library, Dashboard, and Settings should be hidden from signed-out navigation. Direct visits should show quiet centered empty states with a clear login action instead of exposing controls.
 - Signed-out visitors use the default light/amber look. Stored theme/accent preferences should only affect the UI when a user session is present.
 

@@ -390,7 +390,7 @@ export function Topbar() {
                 <Link href="/inbox" className="os-popover-item" role="menuitem">
                   <IconMessages /> Inbox
                 </Link>
-                <Link href="/settings" className="os-popover-item" role="menuitem">
+                <Link href="/settings?tab=system" className="os-popover-item" role="menuitem">
                   <IconSettings /> Settings
                 </Link>
                 <div className="os-popover-divider" />
