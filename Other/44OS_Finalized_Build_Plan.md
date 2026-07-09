@@ -7,10 +7,10 @@ Written to be usable by any developer or coding agent (Claude Code, Codex, or a 
 
 ## 0. Finalized Decisions (replace prior conflicting docs)
 
-- **Dock order:** Home, Library, Community, Radio, Support (bottom cluster), Settings (bottom cluster). Library moves to the second position, immediately after Home.
-- **Services:** removed from the Dock. Surface Services under Home navigation and as a creator Dashboard section instead.
+- **Dock order:** the current testing Dock is Library at the top, then Community, Browse, Radio, with Dashboard in the lower utility slot above Settings. Support is out of the Dock until it is actually built.
+- **Services:** removed from the Dock. Surface Services under Browse navigation and as a creator Dashboard section instead.
 - **Resources:** removed as a standalone Dock destination. Its function is absorbed into Community going forward (see Section 2). Do not build out Resources as its own app.
-- **Merch:** becomes a real, functional category under Home/Library — not a placeholder. See Section 1.
+- **Merch:** becomes a real, functional category under Browse/Library — not a placeholder. See Section 1.
 - **Questions & Collaboration:** become real structured objects with their own data shape, not just tagged posts in the general feed. See Section 2. This is a genuine schema change — write reviewed SQL to `Other/`, do not run it without explicit user approval and a backup, per the Foundation doc's existing Supabase safety rule.
 - **Radio:** full build, including a real admin curation dashboard. This is the single highest-priority item in this plan. See Section 3.
 - **Support:** becomes a real Steam/Spotify-style help center, not a placeholder. See Section 4.
@@ -26,7 +26,9 @@ Progress snapshot as of July 9, 2026:
 - Questions & Collaboration: completed.
 - Merch v1: completed.
 - Messages: in progress.
-- Account, Support, Settings, Tooltips, Desktop packaging research, and Evaluation/QA: pending.
+- Dock/navigation/testing pass: completed.
+- Account, Support, Settings, Tooltips, and Desktop packaging research: completed for v1.
+- Evaluation/QA: pending.
 
 **Recommended build order:** Radio (Section 3) → Questions/Collaboration (Section 2) → Merch (Section 1) → Account (Section 7) → Support (Section 4) → Settings (Section 5) → Messages (Section 6) → Onboarding tooltips (Section 8) → Desktop packaging research (Section 9) → Evaluation/testing pass (Section 10).
 
@@ -147,7 +149,7 @@ Acceptance criteria:
 
 - Audit all four tabs (System, Dock, Region, Account) against what's actually wired to persistence vs. what's currently cosmetic.
 - System/appearance controls (theme, accent color, typography, accessibility options) must persist correctly per-user and apply consistently across sessions.
-- Dock tab: landing app choice, visible apps, must reflect the finalized Dock set from Section 0 (Home, Library, Community, Radio — Services and Resources removed from user-facing Dock toggle list).
+- Dock tab: landing app choice and visible apps must reflect the current shipped/testing Dock set from Section 0.
 - Region: defaults from login/location where available, reset returns to detected home country/currency (already specified in UI doc — verify it's actually functional, not just specified).
 - Reset Defaults button present and functional on every settings page, bottom right, per existing UI doc placement rule.
 - This is a QA/completion pass more than new feature work — the goal is closing the gap between "specified" and "actually functional."
@@ -214,7 +216,7 @@ Acceptance criteria (this is a research/recommendation deliverable, not a build 
 
 Once Sections 1–9 are built:
 
-- Run a full internal QA pass across Home, Library, Community, Radio, Support, Settings, Messages, Account, and Merch flows.
+- Run a full internal QA pass across Browse, Library, Community, Radio, Support, Settings, Messages, Account, and Merch flows.
 - Invite external testers/early creators.
 - Collect feedback, do final tweaks.
 - Prepare for public launch/publishing.
@@ -227,4 +229,4 @@ Once Sections 1–9 are built:
 - This document supersedes those two docs wherever they conflict, per the decisions in Section 0. Update those two docs to match once each item ships — don't leave them stale.
 - Any Supabase schema change: write reviewed SQL to `Other/`, do not run it, wait for explicit user approval and a backup, per the existing Supabase safety rule.
 - Run `npm run build` after any production-facing change.
-- Services should remain out of the Dock and can be organized under Home navigation plus Dashboard where needed.
+- Services should remain out of the Dock and can be organized under Browse navigation plus Dashboard where needed.

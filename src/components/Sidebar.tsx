@@ -197,12 +197,17 @@ export default function Sidebar() {
   const dockApps = availableApps.filter(app => app.locked || !effectiveHiddenIds.includes(app.id));
   const activePinnedItem = pinnedItems.find(item => isPinnedDockItemActive(pathname, item.href));
   const mainActiveAppId = activePinnedItem ? '' : activeAppId;
-  const libraryApp = dockApps.find(app => app.id === 'library') ?? null;
-  const orderedMainApps = ['community', 'store', 'radio']
+  const primaryApps = ['search', 'store', 'radio']
     .map(id => dockApps.find(app => app.id === id))
     .filter((app): app is OSApp => Boolean(app));
-  const bottomDashboardApp = dockApps.find(app => app.id === 'dashboard') ?? null;
-  const systemApps = dockApps.filter(app => app.group === 'system');
+  const communityApps = ['community', 'inbox', 'profile']
+    .map(id => dockApps.find(app => app.id === id))
+    .filter((app): app is OSApp => Boolean(app));
+  const workspaceApps = ['library', 'dashboard']
+    .map(id => dockApps.find(app => app.id === id))
+    .filter((app): app is OSApp => Boolean(app));
+  const supportApp = dockApps.find(app => app.id === 'support') ?? null;
+  const settingsApp = dockApps.find(app => app.id === 'settings') ?? null;
 
   const time = now
     ? now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
@@ -231,13 +236,22 @@ export default function Sidebar() {
       </div>
 
       <nav className="sidebar-nav" aria-label="Dock">
-        {libraryApp && (
+        <DockSection apps={primaryApps} activeAppId={mainActiveAppId} compact={compact} />
+
+        {communityApps.length > 0 && (
           <>
-            <DockItem app={libraryApp} active={mainActiveAppId === libraryApp.id} compact={compact} />
             <div className="sidebar-divider" />
+            <DockSection apps={communityApps} activeAppId={mainActiveAppId} compact={compact} />
           </>
         )}
-        <DockSection apps={orderedMainApps} activeAppId={mainActiveAppId} compact={compact} />
+
+        {workspaceApps.length > 0 && (
+          <>
+            <div className="sidebar-divider" />
+            <DockSection apps={workspaceApps} activeAppId={mainActiveAppId} compact={compact} />
+          </>
+        )}
+
         {pinnedItems.length > 0 && (
           <>
             <div className="sidebar-divider" />
@@ -249,17 +263,15 @@ export default function Sidebar() {
 
         <div className="sidebar-spacer" />
 
-        {bottomDashboardApp && (
-          <DockItem app={bottomDashboardApp} active={mainActiveAppId === bottomDashboardApp.id} compact={compact} />
+        {supportApp && (
+          <DockItem app={supportApp} active={mainActiveAppId === supportApp.id} compact={compact} />
         )}
 
-        <div className="sidebar-divider" />
+        {(settingsApp || !user) && <div className="sidebar-divider" />}
 
-        {user ? (
-          systemApps.map(app => (
-            <DockItem key={app.id} app={app} active={mainActiveAppId === app.id} compact={compact} />
-          ))
-        ) : (
+        {user && settingsApp ? (
+          <DockItem app={settingsApp} active={mainActiveAppId === settingsApp.id} compact={compact} />
+        ) : !user ? (
           <Link
             href="/login"
             className={pathname.startsWith('/login') ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}
@@ -269,7 +281,7 @@ export default function Sidebar() {
             <span className="os-icon os-icon-user" aria-hidden="true" />
             <span className="sidebar-item-label">Log In</span>
           </Link>
-        )}
+        ) : null}
       </nav>
     </aside>
   );

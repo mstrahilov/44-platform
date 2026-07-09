@@ -9,17 +9,31 @@ import {
   loadAchievementNotifications,
   type AchievementNotification,
 } from '@/lib/achievementNotifications';
+import { notificationIsEnabled } from '@/lib/notificationPreferences';
 
-type TabId = 'all' | 'mentions' | 'replies' | 'likes' | 'messages' | 'achievements';
+type TabId = 'all' | 'mentions' | 'replies' | 'likes' | 'achievements';
 
 const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'all', label: 'All' },
   { id: 'mentions', label: 'Mentions' },
   { id: 'replies', label: 'Replies' },
   { id: 'likes', label: 'Likes' },
-  { id: 'messages', label: 'Messages' },
   { id: 'achievements', label: 'Achievements' },
 ];
+
+const SEEN_NOTIF_KEY = '44-seen-notification-ids';
+
+function markNotificationsSeen(notifications: AchievementNotification[]) {
+  if (typeof window === 'undefined' || notifications.length === 0) return;
+  try {
+    const raw = window.localStorage.getItem(SEEN_NOTIF_KEY);
+    const seen = new Set(raw ? (JSON.parse(raw) as string[]) : []);
+    notifications.forEach(notification => seen.add(notification.id));
+    window.localStorage.setItem(SEEN_NOTIF_KEY, JSON.stringify(Array.from(seen)));
+  } catch {
+    // Local read-state should never block viewing notifications.
+  }
+}
 
 export default function NotificationsPage() {
   const router = useRouter();
@@ -57,28 +71,31 @@ export default function NotificationsPage() {
     return () => window.removeEventListener(ACHIEVEMENT_NOTIFICATIONS_UPDATED, onAchievementUpdate);
   }, [user]);
 
+  const enabledNotifications = notifications.filter(item => item.kind !== 'message' && notificationIsEnabled(item));
+
+  useEffect(() => {
+    markNotificationsSeen(enabledNotifications);
+  }, [enabledNotifications]);
+
   if (loading || !user) {
     return <PageShell><CenteredMessage>Loading…</CenteredMessage></PageShell>;
   }
 
-  const visibleNotifications = notifications.filter(item => {
+  const visibleNotifications = enabledNotifications.filter(item => {
     if (activeTab === 'all') return true;
     if (activeTab === 'achievements') return item.kind === 'achievement';
     if (activeTab === 'replies') return item.kind === 'reply';
     if (activeTab === 'mentions') return item.kind === 'mention';
     if (activeTab === 'likes') return item.kind === 'like';
-    if (activeTab === 'messages') return item.kind === 'message';
     return false;
   });
   const emptyCopyByTab: Record<TabId, string> = {
-    all: 'Unlock achievements, get replies, likes, mentions, or messages to see activity here.',
+    all: 'Unlock achievements, get replies, likes, or mentions to see activity here.',
     achievements: 'Achievements you unlock across the platform will appear here.',
     mentions: 'Posts and replies that mention you will appear here.',
     replies: 'Replies to your posts and comments will appear here.',
     likes: 'Likes on your posts will appear here.',
-    messages: 'New messages in your inbox will appear here.',
   };
-
   return (
     <PageShell>
       <main className="dashboard-page">
@@ -103,14 +120,15 @@ export default function NotificationsPage() {
                 <article
                   key={item.id}
                   className="dashboard-list-row"
-                  style={{ gridTemplateColumns: 'minmax(0, 1fr) auto', cursor: item.href ? 'pointer' : 'default' }}
+                  style={{ gridTemplateColumns: 'auto minmax(0, 1fr) auto', cursor: item.href ? 'pointer' : 'default' }}
                   onClick={() => {
                     if (item.href) router.push(item.href);
                   }}
                 >
+                  <NotificationArt item={item} />
                   <div className="dashboard-row-copy">
                     <div className="os-type-eyebrow" style={{ color: item.kind === 'reply' ? 'var(--os-color-ink-secondary)' : 'var(--os-color-accent)' }}>
-                      {item.kind === 'reply' ? 'Reply' : item.kind === 'mention' ? 'Mention' : item.kind === 'like' ? 'Like' : item.kind === 'message' ? 'Message' : 'Achievement Unlocked'}
+                      {item.kind === 'reply' ? 'Reply' : item.kind === 'mention' ? 'Mention' : item.kind === 'like' ? 'Like' : 'Achievement Unlocked'}
                     </div>
                     <div className="dashboard-row-title">{item.title}</div>
                     {item.description && (
@@ -131,5 +149,21 @@ export default function NotificationsPage() {
         </section>
       </main>
     </PageShell>
+  );
+}
+
+function NotificationArt({ item }: { item: AchievementNotification }) {
+  const image = item.kind === 'achievement' ? item.achievementIcon : item.actorAvatarUrl;
+  const fallback = item.kind === 'achievement' ? '★' : item.title.charAt(0).toUpperCase();
+
+  return (
+    <div className={item.kind === 'achievement' ? 'notification-art notification-art-achievement' : 'notification-art notification-art-user'} aria-hidden="true">
+      {image ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={image} alt="" />
+      ) : (
+        <span>{fallback}</span>
+      )}
+    </div>
   );
 }

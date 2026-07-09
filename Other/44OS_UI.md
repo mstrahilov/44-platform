@@ -135,24 +135,25 @@ The Dock is the OS taskbar. It renders from `src/lib/osApps.ts` plus user prefer
 
 Current Dock in code:
 
-- Home
 - Library, signed in only
 - Community
+- Browse
 - Radio
 - pinned item divider when pins exist
 - up to 5 pinned items
-- Support
 - Dashboard, signed in only
 - Log In when signed out, Settings when signed in
 
-Search and Notifications are topbar controls. Profile and Inbox are personal/community utilities, not default Dock apps.
+Notifications remain a topbar control. Search is now a Dock app. Profile and Messages are signed-in Dock apps and also appear in the avatar menu.
 
 Current Dock target:
 
-- Store is renamed visually to **Home**.
-- The Home app still uses `/store` routes behind the scenes until a route migration is intentionally planned.
-- Home uses a Home-style icon. Icons should remain easy to replace from public icon assets.
-- Radio remains in the Dock. Services and Resources are not Dock destinations.
+- Store is renamed visually to **Browse**.
+- The Browse app still uses `/store` routes behind the scenes until a route migration is intentionally planned.
+- Browse uses the grid icon from the legacy icon set.
+- Community uses a people-style icon instead of chat bubbles.
+- Dashboard uses a creator/showcase-style icon.
+- Radio remains in the Dock. Search, Community, Messages, Profile, Library, Dashboard, Support, and Settings are current Dock destinations where auth rules allow. Services and Resources are not Dock destinations.
 - Users can still hide unfinished apps from Settings > Dock when needed.
 - Signed-out visitors see the default public Dock for testing, even if that browser has old local hidden-app preferences. Personal Dock visibility preferences apply after login.
 - Library, Dashboard, and Settings are personal surfaces and should not appear as signed-out Dock destinations.
@@ -173,7 +174,7 @@ Dock rules:
 
 Signed-out protected states:
 
-- Public destinations should remain visible in the shell during testing: Home, Community, Radio, and Support.
+- Public destinations should remain visible in the shell during testing: Community, Browse, and Radio.
 - Personal areas such as Library, Dashboard, and Settings should be hidden from signed-out navigation. Direct visits should show quiet centered empty states with a clear login action instead of exposing controls.
 - Signed-out visitors use the default light/amber look. Stored theme/accent preferences should only affect the UI when a user session is present.
 
@@ -214,6 +215,7 @@ Rules:
 - Dashboard can use tabs for current shipped creator sections.
 - Back buttons should preserve origin label and scroll position when practical.
 - Search, cart, notifications, and avatar are system controls; apps do not add custom trailing controls there.
+- The topbar trailing controls are notifications, avatar, and cart only when the cart has items. Search lives in the Dock.
 
 ---
 
@@ -347,7 +349,7 @@ Buttons:
 
 - Use `.os-button` variants only.
 - Primary action first when there are multiple actions.
-- Detail page actions should be short: Play, Read, Download, Add to Library, Add to Cart.
+- Detail page actions should be short: Play, Read, Download, Add to Library, Add to Cart, Remove from Library.
 - "Buy Download" should be "Add to Cart".
 
 Inputs:
@@ -453,18 +455,20 @@ Settings is the single control panel.
 
 Tabs:
 
+- Account
 - System
 - Dock
 - Region
-- Account
 
 Rules:
 
 - Reset Defaults sits at the bottom right of each settings page.
 - Region should default from user login/home location when that is available; reset should return to the detected home country/currency.
-- Dock landing options should match launch-visible apps: Home, Library, Community, Dashboard.
+- Dock landing options should match the current visible/testing apps: Browse, Library, Community, Dashboard, Radio.
 - Dock reorder should not be exposed for launch.
 - Account identity fields such as display name, avatar, username, and bio belong in Profile/Edit Profile, not Account settings.
+- Lightweight onboarding tips are allowed when an interaction is not obvious. They must be contextual, dismissible, and persisted so they do not become a repeated tour.
+- Account notification toggles cover mentions, replies, likes, and achievements. Do not show unused promotional email or recommendation toggles until they are wired to real behavior.
 
 ---
 
@@ -488,12 +492,14 @@ Mobile must stay usable without special instructions.
 
 ## 17. App-Specific Rules
 
-Home / Store:
+Browse / Store:
 
 - Public acquisition surface.
-- User-facing app label should be Home.
+- User-facing app label should be Browse.
 - Existing `/store` URLs can remain until a deliberate route migration.
-- Home page sections use clean shelves/grids.
+- Discover should use the tab order `Discover, Music, Books, Merch, Sample Packs, Services`.
+- Discover page sections use clean shelves/grids.
+- Discover should show `Explore Music`, `Explore Books`, `Explore Merch`, `Explore Sample Packs`, and `Explore Services`, capped at 8 items each and hidden completely when empty.
 - Detail pages show Reviews, not Creator Updates.
 - Music is streamable when published tracks exist.
 
@@ -507,6 +513,10 @@ Library:
 Community:
 
 - Feed-first.
+- Topbar order is Posts, Questions, Collaboration, Following.
+- Questions and Collaboration use structured title/body posts instead of duplicating body text as title.
+- Question and Collaboration card actions align right. Card click expands the thread; response composers appear before long response lists.
+- Use green for complete, verified, unlocked, answered, and closed states. Use amber for open, locked, and not-answered states.
 - Inline composer and reply drawers.
 - No separate reply page for normal browsing unless a direct route is needed for deep links.
 
@@ -514,12 +524,22 @@ Dashboard:
 
 - Creator workspace.
 - Shipped navigation should not expose unfinished tabs.
-- Achievement/extras foundation is part of music/books publishing.
+- Achievement/extras foundation is part of music/books publishing only.
+- Creator list rows should stay simple but include Edit plus Publish/Unpublish where the item can be published.
+- Upload fields should show a preview after upload and provide an inline remove control.
+- Audio uploads should not render file preview cards; show a concise green Uploaded state instead.
+- Merch uses Product Image language, plus a previewable/removable gallery on creation.
+- Achievement controls use 44-owned artwork/placeholder art on the left, grey descriptions, and a right-side enable checkbox. Creators should not set achievement image URLs or hidden/secret state.
+
+Messages:
+
+- New Message should behave like a draft conversation: a left-side draft row, a To field at the top of the thread pane, recipient search only after typing, and the message composer pinned at the bottom.
+- Profile/message entry points should route into the same Messages UI.
 
 Resources and Services:
 
-- Should be available in the Dock/menu for building and testing.
-- Can still be hidden for launch if unfinished.
+- Should remain out of the Dock.
+- Services can still be surfaced under Browse navigation and Dashboard where needed.
 - Do not over-polish these before core launch/domain/auth health is done.
 
 Radio:
@@ -529,9 +549,10 @@ Radio:
 
 Support:
 
-- Should become a Steam/Spotify-style OS help center.
+- Should remain a Steam/Spotify-style OS help center.
 - Cover account/login, orders, Library saves/purchases/downloads, Dock/settings, creator uploads, Radio, troubleshooting, and contact/escalation.
-- Support content should be searchable or clearly categorized once the app grows.
+- Support content should be searchable and categorized with a left sidebar of expandable sections, breadcrumb context above the content, and an article reader on the right.
+- Do not use repeated Open buttons on the main support index; actions belong inside the selected article.
 
 ---
 

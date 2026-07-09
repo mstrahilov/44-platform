@@ -82,9 +82,6 @@ export const OS_APPS: OSApp[] = [
     href: '/search',
     iconClass: 'os-icon-search',
     group: 'media',
-    // Search stays a real app (topbar search opens /search); it is just
-    // not a Dock destination anymore.
-    hidden: true,
   },
   {
     id: 'store',
@@ -148,13 +145,12 @@ export const OS_APPS: OSApp[] = [
   },
   {
     id: 'inbox',
-    label: 'Inbox',
+    label: 'Messages',
     description: 'Direct messages and project communication.',
     href: '/inbox',
     iconClass: 'os-icon-inbox',
-    group: 'legacy',
+    group: 'community',
     requiresAuth: true,
-    hidden: true,
   },
   {
     id: 'profile',
@@ -162,9 +158,8 @@ export const OS_APPS: OSApp[] = [
     description: 'Your public creator/member profile.',
     href: '/profile',
     iconClass: 'os-icon-user',
-    group: 'legacy',
+    group: 'account',
     requiresAuth: true,
-    hidden: true,
   },
   {
     id: 'resources',
@@ -220,9 +215,7 @@ export const OS_APPS: OSApp[] = [
     description: 'Help with your account, library, and orders on 44.',
     href: '/support',
     iconClass: 'os-icon-support',
-    // Renders in the Dock's bottom cluster, directly above the system divider.
-    group: 'legacy',
-    hidden: true,
+    group: 'system',
   },
   {
     id: 'dashboard',
@@ -237,7 +230,7 @@ export const OS_APPS: OSApp[] = [
     id: 'settings',
     label: 'Settings',
     description: 'System, Dock, region, and account controls.',
-    href: '/settings?tab=system',
+    href: '/settings?tab=account',
     iconClass: 'os-icon-settings',
     group: 'system',
     requiresAuth: true,
@@ -302,7 +295,9 @@ export function getActiveOSAppId(pathname: string): OSAppId | '' {
   if (pathname.startsWith('/services') || pathname.startsWith('/service')) return 'store';
   if (pathname.startsWith('/resources')) return 'community';
   if (pathname.startsWith('/friends')) return 'community';
-  if (pathname.startsWith('/community') || pathname.startsWith('/profile') || pathname.startsWith('/inbox')) return 'community';
+  if (pathname.startsWith('/community')) return 'community';
+  if (pathname.startsWith('/profile')) return 'profile';
+  if (pathname.startsWith('/inbox')) return 'inbox';
   if (pathname.startsWith('/notifications')) return 'notifications';
   if (pathname.startsWith('/account')) return 'settings';
   if (pathname.startsWith('/projects')) return 'store';

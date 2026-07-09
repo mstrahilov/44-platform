@@ -12,17 +12,17 @@
 
 The current launch surface is:
 
-- **Home**: visual name for the public discovery/acquisition app. The underlying route can remain `/store` for now, but the Dock/app-facing label should become Home.
+- **Browse**: visual name for the public discovery/acquisition app. The underlying route can remain `/store` for now, but the Dock/app-facing label is now Browse and uses the grid icon.
 - **Library**: everything a signed-in user saved, added, or purchased.
 - **Community**: social posts, replies, likes, profiles, follows, mentions, hashtags, messaging, structured Questions, structured Collaboration listings, and practical knowledge/helpful creator knowledge that previously sat in standalone Resources planning.
 - **Dashboard**: creator workspace for publishing and managing music, books, sample packs, merch, services, overview metrics, and earnings.
 - **Resources**: no longer a standalone launch app. Existing routes may remain temporarily, but its practical knowledge role is being absorbed into Community and it should stay out of the Dock.
-- **Services**: 44-operated help/project/service intake. This surface is no longer in the Dock; it is accessed from Home navigation and creator Dashboard sections.
+- **Services**: 44-operated help/project/service intake. This surface is no longer in the Dock; it is accessed from Browse navigation and creator Dashboard sections.
 - **Radio**: real 44 Radio station experience with synced playback and a single always-on looping playlist built from uploaded creator music. The first web UI pass now exists at `/radio` and `/dashboard/radio`, backed by reviewed SQL in `Other/44os-radio-foundation.sql` that must be applied before live data will work.
 - **Settings**: system, Dock, region, and account controls.
 - **Support**: real operating-system help center for account/login, orders, Dock/settings, Library behavior, purchases, downloads, Radio, creator uploads, troubleshooting, and escalation/contact.
 
-The web app follows a Steam-like public/private split. Signed-out visitors can browse public surfaces such as Home, Community, Services, Radio, and Support, plus shared item/profile links. Personal surfaces such as Library, Dashboard, and Settings are only exposed in the Dock after sign-in.
+The web app follows a Steam-like public/private split. Signed-out visitors can browse public surfaces such as Browse, Community, Services, Radio, and Support, plus shared item/profile links. Personal surfaces such as Library, Dashboard, and Settings are only exposed in the Dock after sign-in.
 
 Language rules:
 
@@ -31,7 +31,7 @@ Language rules:
 - The UI does **not** say "collection"; use **Library**.
 - Services are 44-operated project intake/workspace flows, not a creator marketplace.
 - Reviews live on Store item pages. Creator Updates live on owned Library item pages. They are not Community posts.
-- Merch is a real Home/Library category with local creator fulfillment. Do not frame it like a global shipping marketplace.
+- Merch is a real Browse/Library category with local creator fulfillment. Do not frame it like a global shipping marketplace.
 
 ---
 
@@ -71,37 +71,38 @@ The app registry is the navigation backbone:
 
 Current product-direction Dock target:
 
-- Signed-in default visible order should be **Home**, **Library**, **Community**, **Radio**.
-- Signed-out public visible order should be **Home**, **Community**, **Radio**.
-- **Support** and **Settings** belong in the bottom cluster. **Library** remains signed-in only. Dashboard remains a creator workspace, but it is not part of the user-facing launch Dock target defined by the finalized build plan.
-- Search opens from the topbar search control, not the Dock.
+- Current testing layout is **Search**, **Browse**, **Radio**, divider, **Community**, **Messages**, **Profile**, divider, **Library**, **Dashboard**, with **Support** and **Settings** in the bottom utility area.
+- Signed-out public visible order should be **Search**, **Browse**, **Radio**, **Community**, and **Support**, with **Log In** in the system slot.
+- **Support** is currently hidden from the Dock for testing. **Library** remains signed-in only.
+- Search is a Dock app. It should not also appear as a persistent topbar search control.
 - Notifications open from the topbar bell, not the Dock.
-- Profile and Inbox are account/community utilities, reached from profile/avatar or Community surfaces.
+- Profile and Messages are Dock apps for signed-in users and also appear in the avatar menu.
 - Dock mode and visible apps are localStorage-first through `src/lib/dockPreferences.ts`.
 - Pinned Dock items are localStorage-first and capped at 5. Pins can point to music, books, assets, profiles, or item pages. In compact mode pins use artwork/profile imagery when available.
 - Dock app reorder exists in code/localStorage but should remain disabled for launch unless deliberately re-enabled later.
 
 Current Dock behavior:
 
-- The visible Store app is labeled **Home** and uses a Home-style icon. `/store` URLs remain for category and detail routes until a deliberate route migration is planned.
-- Services remains out of the Dock and is surfaced under Home navigation plus Dashboard creator tools.
+- The visible Store app is labeled **Browse** and uses the grid icon from `public/icons/legacy/grid.svg`. `/store` URLs remain for category and detail routes until a deliberate route migration is planned.
+- Services remains out of the Dock and is surfaced under Browse navigation plus Dashboard creator tools.
 - Resources should not be built out as its own Dock app; its future value is absorbed into Community.
 - Users can still hide non-locked Dock apps from Settings > Dock, but the visible-app list should move toward the finalized set from the build plan.
 - Signed-out visitors always see the default public Dock, regardless of any old local hidden-app preferences on the machine. Signed-in users can still personalize visible Dock apps locally.
-- The Dock bottom cluster target is **Support** and **Settings**. Signed-out users still see **Log In** in the system slot where signed-in users see **Settings**.
+- Community uses a people-style icon rather than chat bubbles. Dashboard uses a creator/showcase-style icon.
+- The Dock bottom utility target is currently **Dashboard** and **Settings**. Signed-out users still see **Log In** in the system slot where signed-in users see **Settings**.
 
 Landing:
 
-- `src/lib/landingPage.ts` still uses the `store` landing id, but it now resolves to **Home** at `/`.
-- Settings currently offers only Home, Library, Community, and Dashboard as landing choices.
+- `src/lib/landingPage.ts` still uses the `store` landing id, but it now resolves to **Browse** at `/`.
+- Settings currently offers only Browse, Library, Community, and Dashboard as landing choices.
 - Legacy landing choices normalize safely back to current apps.
-- Normal sign-in, sign-up confirmation, and magic-link authentication return to Home at `/`. Password reset intentionally returns to `/settings?tab=account`.
+- Normal sign-in, sign-up confirmation, and magic-link authentication return to Browse at `/`. Password reset intentionally returns to `/settings?tab=account`.
 
 Immediate landing target:
 
-- `44os.com` opens the Home experience at the root domain and does not visibly land on `/store`.
-- The app can continue using Store internals/routes behind the scenes, but the user-facing landing destination should read Home.
-- Settings opens explicitly at `/settings?tab=system`; the System tab should not rely on a bare `/settings` URL because stale account callbacks can make `/settings?tab=account` feel sticky in production browsers.
+- `44os.com` opens the Browse experience at the root domain and does not visibly land on `/store`.
+- The app can continue using Store internals/routes behind the scenes, but the user-facing landing destination should read Browse.
+- Settings opens to `/settings?tab=account` by default because Account is the most common user control area. System remains available at `/settings?tab=system`.
 
 ---
 
@@ -109,7 +110,7 @@ Immediate landing target:
 
 Primary routes:
 
-- `/` - canonical Home surface at the root domain.
+- `/` - canonical Browse surface at the root domain.
 - `/store` and `/store/[category]` - Store browse surfaces.
 - `/store/[category]/[slug]` - canonical Store item detail surface.
 - `/product/[id]` - compatibility item route still exists and is Store-owned.
@@ -126,7 +127,7 @@ Primary routes:
 - `/settings` - System, Dock, Region, Account.
 - `/support` - help surface.
 - `/search` - global search from topbar.
-- `/resources`, `/resources/[id]`, `/services`, `/service/[id]`, `/projects/[id]` - existing secondary surfaces. Resources is no longer a standalone app direction; Services lives under Home navigation and creator Dashboard sections instead of the Dock.
+- `/resources`, `/resources/[id]`, `/services`, `/service/[id]`, `/projects/[id]` - existing secondary surfaces. Resources is no longer a standalone app direction; Services lives under Browse navigation and creator Dashboard sections instead of the Dock.
 - `/radio` - registered starter page for the Radio app.
 
 Legacy/compatibility routes still exist in the codebase. The next health-check chat should audit which ones are actually linked, which should redirect, and which can be safely removed. Do not remove routes blindly.
@@ -135,16 +136,28 @@ Legacy/compatibility routes still exist in the codebase. The next health-check c
 
 ## 5. Current App Behavior
 
-### Home / Store
+### Browse / Store
 
-Home is the public acquisition surface. It currently uses Store routes and Store internals. Detail pages use the same clean release/item header style as Library detail pages, but with acquisition actions:
+Browse is the public acquisition surface. It currently uses Store routes and Store internals. Detail pages use the same clean release/item header style as Library detail pages, but with acquisition actions:
 
 - Music: Add to Library for streaming/save; Add to Cart for paid download support.
 - Books: Read Sample where available; Add to Cart or View in Library when owned.
 - Sample Packs: Add to Cart or library/download behavior depending on ownership.
 - Merch: Add to Cart only.
 
-Home/Store item pages show **Reviews**. Empty reviews show quiet text, not a card. Published reviews use the Community-style white/paper card surface.
+Browse/Store item pages show **Reviews**. Empty reviews show quiet text, not a card. Published reviews use the Community-style white/paper card surface.
+
+Browse tabs should remain consistent across every public acquisition surface: **Discover**, **Music**, **Books**, **Merch**, **Sample Packs**, **Services**.
+
+The Discover page should show:
+
+- `Explore Music`
+- `Explore Books`
+- `Explore Merch`
+- `Explore Sample Packs`
+- `Explore Services`
+
+Each section should show at most 8 items and hide entirely if empty.
 
 ### Library
 
@@ -157,6 +170,8 @@ Library is the saved/owned surface. Detail pages mirror Store header style witho
 Library music and Store music should share tracklist behavior: hover/selected play state, playable rows, track lengths, total length, straight dividers, rounded selected/hover rows, and context actions for Play and Play Next.
 
 Library pages show achievements, extras/features, Product Details, and Creator Updates in that order where applicable.
+
+Removed library items should stop showing as owned in Browse/Store immediately. Re-adding a previously removed item should restore the existing `library_items` row to visible state rather than leaving the UI stuck on `View in Library`.
 
 Library is a personal surface. It is hidden from the signed-out Dock and direct visits show a quiet centered empty state asking the visitor to log in.
 
@@ -244,6 +259,9 @@ Current data areas:
 
 Existing SQL/migration material:
 
+- `Other/44os-messages-foundation.sql`
+- `Other/44os-achievement-icons.sql`
+- `Other/44os-community-delete-policies.sql`
 - `Other/44os-phase7-additive-schema.sql`
 - `Other/44os-steam-foundation.sql`
 - `Other/44os-functional-sweep.sql`
@@ -297,13 +315,13 @@ This is the active work-session queue from the finalized build plan. Work top to
 1. **Completed:** Radio v1 listener experience is live with synced playback, now-playing UI, and creator-track rotation.
 2. **Completed:** Community Questions and Collaboration are now structured Community objects with reviewed SQL recorded in `Other/`.
 3. **Completed:** Merch is now a real local-fulfillment category with checkout capture, creator orders, and region-aware creator pricing.
-4. **In progress:** Messages functional pass. Conversation creation/opening is working; continue with unread state, refresh behavior, and full end-to-end QA.
-5. **Pending:** Account. Complete email/password/security flows using Supabase Auth correctly.
-6. **Pending:** Support. Replace the placeholder with a real categorized, searchable help center and escalation path.
-7. **Pending:** Settings. Perform a full functional pass so every visible control truly persists and works, including Dock, System, Region, and Account tabs.
-8. **Pending:** Onboarding tooltips. Add lightweight dismissible contextual tips, persisted per user.
-9. **Pending:** Desktop packaging research. Compare Electron, Tauri, and other lightweight wrappers for the existing Next.js app and produce a recommendation.
-10. **Pending:** Evaluation and testing pass. Run internal QA across Home, Library, Community, Radio, Support, Settings, Messages, Account, and Merch, then gather external feedback.
+4. **Completed for v1:** Messages functional pass now includes conversation creation/opening, send flow, focus/visibility refresh, local unread indication, and an iOS-style new-message draft with a searchable To field before the first send.
+5. **Completed for v1:** Account settings include Supabase email change, password update, password reset flows, and functional local notification preferences for mentions, replies, likes, and achievements.
+6. **Completed for v1:** Settings functional pass covers System, Dock, Region, and Account controls, including Radio as a landing option.
+7. **Completed for v1:** Support is now a categorized, searchable help center with a left topic sidebar, expandable sections, breadcrumb context, article reader, and contact/escalation guidance.
+8. **Completed for v1:** Onboarding tips have a lightweight dismissible local persistence primitive.
+9. **Completed for v1:** Desktop packaging research recommends Tauri 2 first, with Electron as fallback, in `Other/44OS_Desktop_Packaging_Recommendation.md`.
+10. **Pending:** Evaluation and testing pass. Run internal QA across Browse, Library, Community, Radio, Support, Settings, Messages, Account, and Merch, then gather external feedback.
 
 ---
 

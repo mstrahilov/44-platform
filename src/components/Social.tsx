@@ -70,17 +70,19 @@ export function SocialAuthorLine({
   handleOnly?: boolean;
 }) {
   const handle = authorHandle(author);
+  const href = authorHref(author);
+  const nameContent = handleOnly && handle ? `@${handle}` : authorDisplayName(author);
   return (
     <div className="social-row-meta">
       {handleOnly && handle ? (
-        <span className="social-author-name">
-          @{handle}
-        </span>
+        <Link className="social-author-name" href={href} onClick={event => event.stopPropagation()}>
+          {nameContent}
+        </Link>
       ) : (
         <>
-          <span className="social-author-name">
-            {authorDisplayName(author)}
-          </span>
+          <Link className="social-author-name" href={href} onClick={event => event.stopPropagation()}>
+            {nameContent}
+          </Link>
           {handle && <span className="social-handle">@{handle}</span>}
         </>
       )}

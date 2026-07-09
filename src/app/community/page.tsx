@@ -22,12 +22,17 @@ import {
   createCommunityQuestion,
   createCollaborationResponse,
   createQuestionAnswer,
+  deleteCollaborationResponse,
+  deleteCommunityCollaboration,
+  deleteCommunityQuestion,
+  deleteQuestionAnswer,
   loadCollaborationResponses,
   loadCommunityCollaborations,
   loadCommunityQuestions,
   loadQuestionAnswers,
   loadQuestionVotes,
   addQuestionVote,
+  updateCommunityCollaborationStatus,
   type CommunityCollaborationResponse,
   type CommunityCollaboration,
   type CommunityQuestion,
@@ -56,7 +61,7 @@ type MentionProfile = {
 
 const COMMUNITY_COPY: Record<'feed' | 'following' | 'questions' | 'collaboration' | 'topic', { title: string; copy: string; empty: string }> = {
   feed: {
-    title: 'Community',
+    title: 'Posts',
     copy: 'General posts from the 44 community.',
     empty: 'No posts yet.',
   },
@@ -146,6 +151,7 @@ function CommunityPageContent() {
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [likingId, setLikingId] = useState('');
   const [postComposerOpen, setPostComposerOpen] = useState(false);
+  const [postTitle, setPostTitle] = useState('');
   const [postBody, setPostBody] = useState('');
   const [posting, setPosting] = useState(false);
   const [openRepliesPostId, setOpenRepliesPostId] = useState<string | null>(null);
@@ -399,7 +405,7 @@ function CommunityPageContent() {
     const body = postBody.trim();
 
     if (activeCommunityTab === 'questions') {
-      const title = buildPostTitle(body);
+      const title = postTitle.trim() || buildPostTitle(body);
       const result = await createCommunityQuestion({
         authorId: user.id,
         title,
@@ -414,6 +420,7 @@ function CommunityPageContent() {
       }
 
       setQuestions(current => [result.data as CommunityQuestion, ...current]);
+      setPostTitle('');
       setPostBody('');
       setPostComposerOpen(false);
       setPosting(false);
@@ -421,7 +428,7 @@ function CommunityPageContent() {
     }
 
     if (activeCommunityTab === 'collaboration') {
-      const title = buildPostTitle(body);
+      const title = postTitle.trim() || buildPostTitle(body);
       const roleMatch = body.match(/(?:need|looking for|seeking)\s+([a-z0-9 _-]{3,40})/i);
       const projectMatch = body.match(/(?:for|on)\s+([a-z0-9 _-]{3,40})/i);
       const result = await createCommunityCollaboration({
@@ -439,6 +446,7 @@ function CommunityPageContent() {
       }
 
       setCollaborations(current => [result.data as CommunityCollaboration, ...current]);
+      setPostTitle('');
       setPostBody('');
       setPostComposerOpen(false);
       setPosting(false);
@@ -599,6 +607,68 @@ function CommunityPageContent() {
       setQuestions(current => current.map(item => item.id === question.id ? { ...item, accepted_answer_id: answer.id, has_accepted_answer: true } : item));
     }
     setStructuredAcceptingId('');
+  }
+
+  async function deleteQuestion(question: CommunityQuestion) {
+    if (!user || question.author_id !== user.id) return;
+    if (!window.confirm('Delete this question? This cannot be undone.')) return;
+    const result = await deleteCommunityQuestion({ questionId: question.id, ownerId: user.id });
+    if (result.error) {
+      setError(result.error.message);
+      return;
+    }
+    setQuestions(current => current.filter(item => item.id !== question.id));
+  }
+
+  async function deleteAnswer(questionId: string, answer: CommunityQuestionAnswer) {
+    if (!user || answer.author_id !== user.id) return;
+    if (!window.confirm('Delete this answer? This cannot be undone.')) return;
+    const result = await deleteQuestionAnswer({ answerId: answer.id, ownerId: user.id });
+    if (result.error) {
+      setError(result.error.message);
+      return;
+    }
+    setQuestionAnswers(current => ({
+      ...current,
+      [questionId]: (current[questionId] ?? []).filter(item => item.id !== answer.id),
+    }));
+    setQuestions(current => current.map(item => item.id === questionId ? { ...item, answer_count: Math.max(0, item.answer_count - 1) } : item));
+  }
+
+  async function toggleCollaborationStatus(collaboration: CommunityCollaboration) {
+    if (!user || collaboration.author_id !== user.id) return;
+    const nextStatus = collaboration.status === 'filled' ? 'open' : 'filled';
+    const result = await updateCommunityCollaborationStatus({ collaborationId: collaboration.id, ownerId: user.id, status: nextStatus });
+    if (result.error) {
+      setError(result.error.message);
+      return;
+    }
+    setCollaborations(current => current.map(item => item.id === collaboration.id ? { ...item, status: nextStatus } : item));
+  }
+
+  async function deleteCollaboration(collaboration: CommunityCollaboration) {
+    if (!user || collaboration.author_id !== user.id) return;
+    if (!window.confirm('Delete this collaboration post? This cannot be undone.')) return;
+    const result = await deleteCommunityCollaboration({ collaborationId: collaboration.id, ownerId: user.id });
+    if (result.error) {
+      setError(result.error.message);
+      return;
+    }
+    setCollaborations(current => current.filter(item => item.id !== collaboration.id));
+  }
+
+  async function deleteCollaborationReply(collaborationId: string, response: CommunityCollaborationResponse) {
+    if (!user || response.author_id !== user.id) return;
+    if (!window.confirm('Delete this response? This cannot be undone.')) return;
+    const result = await deleteCollaborationResponse({ responseId: response.id, ownerId: user.id });
+    if (result.error) {
+      setError(result.error.message);
+      return;
+    }
+    setCollaborationResponses(current => ({
+      ...current,
+      [collaborationId]: (current[collaborationId] ?? []).filter(item => item.id !== response.id),
+    }));
   }
 
   async function loadReplies(postId: string) {
@@ -851,6 +921,7 @@ function CommunityPageContent() {
               className="os-button os-button-primary os-button-compact"
               onClick={() => requireCommunityAction(() => {
                 setPostComposerOpen(true);
+                setPostTitle('');
                 setPostBody('');
                 setMentionOptions([]);
               })}
@@ -865,6 +936,15 @@ function CommunityPageContent() {
         {postComposerOpen && (
           <form className="social-feed-composer social-feed-composer-open" onSubmit={submitPost}>
             <div className="social-feed-composer-box">
+              {(activeCommunityTab === 'questions' || activeCommunityTab === 'collaboration') && (
+                <input
+                  className="os-input-field"
+                  value={postTitle}
+                  onChange={event => setPostTitle(event.target.value)}
+                  placeholder={activeCommunityTab === 'questions' ? 'Question title' : 'Collaboration title'}
+                  disabled={!user || posting}
+                />
+              )}
               <textarea
                 value={postComposerValue}
                 onChange={event => setPostBody(parseLockedBody(event.target.value, forcedTopic))}
@@ -905,6 +985,7 @@ function CommunityPageContent() {
                   className="os-button os-button-ghost os-button-compact"
                   onClick={() => {
                     setPostComposerOpen(false);
+                    setPostTitle('');
                     setPostBody('');
                     setMentionOptions([]);
                   }}
@@ -927,7 +1008,7 @@ function CommunityPageContent() {
               <div className="dashboard-empty">{pageCopy.empty}</div>
             ) : (
               questions.map(question => (
-                <article key={question.id} className="social-feed-post">
+                <article key={question.id} className="social-feed-post social-structured-clickable" onClick={() => { void openQuestion(question); }}>
                   <div className="social-row social-structured-row">
                     <SocialAvatar profile={question.authors} />
                     <div className="social-row-main">
@@ -936,7 +1017,7 @@ function CommunityPageContent() {
                         <div className="social-structured-metrics">
                           <span>{question.vote_count} votes</span>
                           <span>{question.answer_count} answers</span>
-                          {question.has_accepted_answer ? <span>Accepted answer</span> : null}
+                          {question.has_accepted_answer ? <span className="os-status-success">Answered</span> : <span className="os-status-warning">Not answered</span>}
                         </div>
                       </div>
                       <h2 className="social-structured-title">{question.title}</h2>
@@ -947,43 +1028,20 @@ function CommunityPageContent() {
                         </div>
                       ) : null}
                       <div className="social-structured-actions">
-                        <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => requireCommunityAction(() => { void voteOnQuestion(question); })} disabled={structuredVotingId === question.id}>
+                        <button type="button" className="os-button os-button-ghost os-button-compact" onClick={event => { event.stopPropagation(); requireCommunityAction(() => { void voteOnQuestion(question); }); }} disabled={structuredVotingId === question.id}>
                           Upvote
                         </button>
-                        <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => requireCommunityAction(() => { void openQuestion(question); })}>
-                          {openStructuredId === question.id ? 'Hide Answers' : 'View Answers'}
+                        <button type="button" className="os-button os-button-ghost os-button-compact" onClick={event => { event.stopPropagation(); requireCommunityAction(() => { void openQuestion(question); }); }}>
+                          View Answers
                         </button>
+                        {user && question.author_id === user.id ? (
+                          <button type="button" className="os-button os-button-ghost os-button-compact" onClick={event => { event.stopPropagation(); void deleteQuestion(question); }}>
+                            Delete
+                          </button>
+                        ) : null}
                       </div>
                       {openStructuredId === question.id && (
-                        <div className="social-structured-thread">
-                          {(questionAnswers[question.id] ?? []).length ? (
-                            <div className="social-structured-list">
-                              {(questionAnswers[question.id] ?? []).map(answer => (
-                                <div key={answer.id} className={answer.is_accepted ? 'social-structured-item social-structured-item-accepted' : 'social-structured-item'}>
-                                  <div className="social-structured-topline">
-                                    <SocialAuthorLine author={answer.authors} createdAt={answer.created_at} handleOnly />
-                                    <div className="social-structured-metrics">
-                                      <span>{answer.vote_count} votes</span>
-                                      {answer.is_accepted ? <span>Accepted</span> : null}
-                                    </div>
-                                  </div>
-                                  <p className="social-row-body"><SocialRichText text={answer.body} /></p>
-                                  <div className="social-structured-actions">
-                                    <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => requireCommunityAction(() => { void voteOnAnswer(question.id, answer); })} disabled={structuredVotingId === answer.id}>
-                                      Upvote
-                                    </button>
-                                    {user && question.author_id === user.id && !answer.is_accepted ? (
-                                      <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => { void acceptAnswer(question, answer); }} disabled={structuredAcceptingId === answer.id}>
-                                        Accept
-                                      </button>
-                                    ) : null}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="social-reply-empty">No answers yet.</p>
-                          )}
+                        <div className="social-structured-thread" onClick={event => event.stopPropagation()}>
                           <form className="social-feed-composer social-feed-composer-open social-structured-composer" onSubmit={event => submitQuestionAnswer(event, question)}>
                             <div className="social-feed-composer-box">
                               <textarea
@@ -1003,6 +1061,39 @@ function CommunityPageContent() {
                               </div>
                             </div>
                           </form>
+                          {(questionAnswers[question.id] ?? []).length ? (
+                            <div className="social-structured-list">
+                              {[...(questionAnswers[question.id] ?? [])].sort((a, b) => Number(b.is_accepted) - Number(a.is_accepted) || b.vote_count - a.vote_count).map(answer => (
+                                <div key={answer.id} className={answer.is_accepted ? 'social-structured-item social-structured-item-accepted' : 'social-structured-item'}>
+                                  <div className="social-structured-topline">
+                                    <SocialAuthorLine author={answer.authors} createdAt={answer.created_at} handleOnly />
+                                    <div className="social-structured-metrics">
+                                      <span>{answer.vote_count} votes</span>
+                                      {answer.is_accepted ? <span className="os-status-success">Answered</span> : null}
+                                    </div>
+                                  </div>
+                                  <p className="social-row-body"><SocialRichText text={answer.body} /></p>
+                                  <div className="social-structured-actions">
+                                    <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => requireCommunityAction(() => { void voteOnAnswer(question.id, answer); })} disabled={structuredVotingId === answer.id}>
+                                      Upvote
+                                    </button>
+                                    {user && question.author_id === user.id && !answer.is_accepted ? (
+                                      <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => { void acceptAnswer(question, answer); }} disabled={structuredAcceptingId === answer.id}>
+                                        Accept
+                                      </button>
+                                    ) : null}
+                                    {user && answer.author_id === user.id ? (
+                                      <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => { void deleteAnswer(question.id, answer); }}>
+                                        Delete
+                                      </button>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="social-reply-empty">No answers yet.</p>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1019,39 +1110,35 @@ function CommunityPageContent() {
               <div className="dashboard-empty">{pageCopy.empty}</div>
             ) : (
               collaborations.map(collaboration => (
-                <article key={collaboration.id} className="social-feed-post">
+                <article key={collaboration.id} className="social-feed-post social-structured-clickable" onClick={() => { void openCollaboration(collaboration); }}>
                   <div className="social-row social-structured-row">
                     <SocialAvatar profile={collaboration.authors} />
                     <div className="social-row-main">
                       <div className="social-structured-topline">
                         <SocialAuthorLine author={collaboration.authors} createdAt={collaboration.created_at} handleOnly />
-                        <span className="dashboard-status-pill">{collaboration.status}</span>
+                        <span className={collaboration.status === 'filled' ? 'dashboard-status-pill dashboard-status-pill-success' : 'dashboard-status-pill dashboard-status-pill-warning'}>
+                          {collaboration.status === 'filled' ? 'Closed' : 'Open'}
+                        </span>
                       </div>
                       <h2 className="social-structured-title">{collaboration.title}</h2>
                       <p className="social-row-body"><SocialRichText text={collaboration.body} /></p>
-                      <div className="social-structured-tags">
-                        {collaboration.role_needed ? <span className="social-structured-tag">{collaboration.role_needed}</span> : null}
-                        {collaboration.project_type ? <span className="social-structured-tag">{collaboration.project_type}</span> : null}
-                      </div>
                       <div className="social-structured-actions">
-                        <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => requireCommunityAction(() => { void openCollaboration(collaboration); })}>
-                          {openStructuredId === collaboration.id ? 'Hide Responses' : 'Respond'}
+                        <button type="button" className="os-button os-button-ghost os-button-compact" onClick={event => { event.stopPropagation(); requireCommunityAction(() => { void openCollaboration(collaboration); }); }}>
+                          Respond
                         </button>
+                        {user && collaboration.author_id === user.id ? (
+                          <>
+                            <button type="button" className="os-button os-button-ghost os-button-compact" onClick={event => { event.stopPropagation(); void toggleCollaborationStatus(collaboration); }}>
+                              {collaboration.status === 'filled' ? 'Reopen' : 'Mark Closed'}
+                            </button>
+                            <button type="button" className="os-button os-button-ghost os-button-compact" onClick={event => { event.stopPropagation(); void deleteCollaboration(collaboration); }}>
+                              Delete
+                            </button>
+                          </>
+                        ) : null}
                       </div>
                       {openStructuredId === collaboration.id && (
-                        <div className="social-structured-thread">
-                          {(collaborationResponses[collaboration.id] ?? []).length ? (
-                            <div className="social-structured-list">
-                              {(collaborationResponses[collaboration.id] ?? []).map(response => (
-                                <div key={response.id} className="social-structured-item">
-                                  <SocialAuthorLine author={response.authors} createdAt={response.created_at} handleOnly />
-                                  <p className="social-row-body"><SocialRichText text={response.body} /></p>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="social-reply-empty">No responses yet.</p>
-                          )}
+                        <div className="social-structured-thread" onClick={event => event.stopPropagation()}>
                           <form className="social-feed-composer social-feed-composer-open social-structured-composer" onSubmit={event => submitCollaborationResponse(event, collaboration)}>
                             <div className="social-feed-composer-box">
                               <textarea
@@ -1071,6 +1158,25 @@ function CommunityPageContent() {
                               </div>
                             </div>
                           </form>
+                          {(collaborationResponses[collaboration.id] ?? []).length ? (
+                            <div className="social-structured-list">
+                              {(collaborationResponses[collaboration.id] ?? []).map(response => (
+                                <div key={response.id} className="social-structured-item">
+                                  <div className="social-structured-topline">
+                                    <SocialAuthorLine author={response.authors} createdAt={response.created_at} handleOnly />
+                                    {user && response.author_id === user.id ? (
+                                      <button type="button" className="os-icon-button" aria-label="Delete response" onClick={() => { void deleteCollaborationReply(collaboration.id, response); }}>
+                                        <SocialTrashIcon />
+                                      </button>
+                                    ) : null}
+                                  </div>
+                                  <p className="social-row-body"><SocialRichText text={response.body} /></p>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="social-reply-empty">No responses yet.</p>
+                          )}
                         </div>
                       )}
                     </div>

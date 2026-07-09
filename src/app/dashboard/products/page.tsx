@@ -33,8 +33,6 @@ function DashboardProductsContent() {
   const [fetching, setFetching] = useState(true);
   const [status, setStatus] = useState('');
   const [statusKind, setStatusKind] = useState<'success' | 'error'>('success');
-  const [sortDrafts, setSortDrafts] = useState<Record<string, string>>({});
-  const [savingSortId, setSavingSortId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -58,90 +56,39 @@ function DashboardProductsContent() {
         .order('created_at', { ascending: false });
       const nextProducts = (productRows as Product[] | null) ?? [];
       setProducts(nextProducts);
-      setSortDrafts(
-        nextProducts.reduce<Record<string, string>>((acc, product) => {
-          acc[product.id] = String(product.sort_order ?? '');
-          return acc;
-        }, {}),
-      );
       setFetching(false);
     }
 
     loadProducts();
   }, [user]);
 
-  async function togglePublish(product: Product) {
-    if (!user) return;
-    const profileId = profile?.id ?? user.id;
-    const nextPublished = !(product.is_published || product.status === 'published');
-    const { error } = await supabase
-      .from('products')
-      .update({
-        is_published: nextPublished,
-        status: nextPublished ? 'published' : 'draft',
-      })
-      .eq('id', product.id)
-      .eq('author_id', profileId);
-
-    if (error) {
-      setStatusKind('error');
-      setStatus(error.message);
-      return;
-    }
-
-    setProducts(current =>
-      current.map(entry =>
-        entry.id === product.id
-          ? {
-              ...entry,
-              is_published: nextPublished,
-              status: nextPublished ? 'published' : 'draft',
-            }
-          : entry,
-      ),
-    );
-    setStatusKind('success');
-    setStatus(nextPublished ? `${section.itemLabel.charAt(0).toUpperCase()}${section.itemLabel.slice(1)} published.` : `${section.itemLabel.charAt(0).toUpperCase()}${section.itemLabel.slice(1)} moved back to draft.`);
-  }
-
-  async function saveSortOrder(product: Product) {
-    if (!user) return;
-    const profileId = profile?.id ?? user.id;
-    const draftValue = sortDrafts[product.id] ?? '';
-    const parsedValue = draftValue.trim() === '' ? null : Number(draftValue);
-    if (draftValue.trim() !== '' && !Number.isFinite(parsedValue)) {
-      setStatusKind('error');
-      setStatus('Sort order must be a number.');
-      return;
-    }
-
-    setSavingSortId(product.id);
-    const { error } = await supabase
-      .from('products')
-      .update({ sort_order: parsedValue })
-      .eq('id', product.id)
-      .eq('author_id', profileId);
-
-    setSavingSortId(null);
-
-    if (error) {
-      setStatusKind('error');
-      setStatus(error.message);
-      return;
-    }
-
-    const nextProducts = products
-      .map(entry => (entry.id === product.id ? { ...entry, sort_order: parsedValue } : entry))
-      .sort((left, right) => (right.sort_order ?? Number.NEGATIVE_INFINITY) - (left.sort_order ?? Number.NEGATIVE_INFINITY));
-    setProducts(nextProducts);
-    setStatusKind('success');
-    setStatus('Sort order updated.');
-  }
-
   const visibleProducts = useMemo(
     () => products.filter(product => productBelongsToDashboardSection(product, section.id)),
     [products, section.id],
   );
+
+  async function togglePublish(product: Product) {
+    const published = product.is_published || product.status === 'published';
+    const nextPublished = !published;
+    const nextStatus = nextPublished ? 'published' : 'draft';
+
+    const { error } = await supabase
+      .from('products')
+      .update({ is_published: nextPublished, status: nextStatus })
+      .eq('id', product.id);
+
+    if (error) {
+      setStatus(error.message);
+      setStatusKind('error');
+      return;
+    }
+
+    setProducts(current => current.map(item => (
+      item.id === product.id ? { ...item, is_published: nextPublished, status: nextStatus } : item
+    )));
+    setStatus(nextPublished ? `${product.title} is published.` : `${product.title} is unpublished.`);
+    setStatusKind('success');
+  }
 
   if (loading || !user) {
     return <PageShell><div style={{ minHeight: '40vh' }} /></PageShell>;
@@ -202,31 +149,10 @@ function DashboardProductsContent() {
                 </div>
 
                 <div className="dashboard-row-actions">
-                  <label className="dashboard-field" style={{ minWidth: 120 }}>
-                    <div className="dashboard-field-label">Sort Order</div>
-                    <input
-                      className="os-input-field"
-                      value={sortDrafts[product.id] ?? ''}
-                      inputMode="numeric"
-                      onChange={event => setSortDrafts(current => ({ ...current, [product.id]: event.target.value.replace(/[^\d-]/g, '') }))}
-                      placeholder="Auto"
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    className="os-button os-button-ghost os-button-compact"
-                    onClick={() => saveSortOrder(product)}
-                    disabled={savingSortId === product.id}
-                  >
-                    {savingSortId === product.id ? 'Saving…' : 'Save Order'}
-                  </button>
                   <Link href={`/dashboard/products/${product.id}`} className="os-button os-button-ghost os-button-compact">
                     Edit
                   </Link>
-                  <button
-                    className="os-button os-button-secondary os-button-compact"
-                    onClick={() => togglePublish(product)}
-                  >
+                  <button type="button" className="os-button os-button-secondary os-button-compact" onClick={() => togglePublish(product)}>
                     {product.is_published || product.status === 'published' ? 'Unpublish' : 'Publish'}
                   </button>
                 </div>

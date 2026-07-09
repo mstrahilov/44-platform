@@ -115,6 +115,7 @@ export default function EditProductPage() {
   const [trackCount, setTrackCount] = useState('1');
   const [tracks, setTracks] = useState<DraftTrack[]>([createDraftTrack()]);
   const [featureState, setFeatureState] = useState(() => createReleaseFeatureState('music'));
+  const [publishStatus, setPublishStatus] = useState<'draft' | 'published' | 'scheduled'>('draft');
   const [hasSavedFeatures, setHasSavedFeatures] = useState(false);
   const [ownerId, setOwnerId] = useState('');
   const [saving, setSaving] = useState(false);
@@ -166,7 +167,7 @@ export default function EditProductPage() {
         supabase.from('product_assets').select('asset_type,title,file_url').eq('product_id', id).order('sort_order'),
         supabase
           .from('product_achievements')
-          .select('code,title,description,trigger_type,reward_config,is_secret')
+          .select('code,title,description,trigger_type,reward_config,is_secret,icon')
           .eq('product_id', id)
           .order('sort_order'),
       ]);
@@ -187,6 +188,7 @@ export default function EditProductPage() {
       setCoverUrl(product.cover_url ?? '');
       setItemFileUrl(product.read_url || product.download_url || ((assetRows as ProductAssetRow[] | null) ?? []).find(asset => !featureAssetTypes().includes(asset.asset_type ?? ''))?.file_url || '');
       setYear(product.year ? String(product.year) : '');
+      setPublishStatus(product.status === 'published' || product.is_published ? 'published' : product.status === 'scheduled' ? 'scheduled' : 'draft');
       setFeatureState(hydrateReleaseFeatureState(
         productSection.id,
         ((achievementRows as Array<{
@@ -196,6 +198,7 @@ export default function EditProductPage() {
           trigger_type: string;
           reward_config: Record<string, unknown> | null;
           is_secret: boolean | null;
+          icon: string | null;
         }> | null) ?? []).map(achievement => ({
           code: achievement.code,
           title: achievement.title,
@@ -204,6 +207,7 @@ export default function EditProductPage() {
           reward_config: achievement.reward_config,
           is_secret: achievement.is_secret,
           hidden: achievement.is_secret ?? false,
+          iconUrl: achievement.icon ?? '',
           enabled: true,
         })) satisfies SavedProductAchievement[],
         featureAssets,
@@ -328,6 +332,8 @@ export default function EditProductPage() {
       read_url: section.id === 'books' ? itemFileUrl.trim() : null,
       download_url: needsDigitalFile ? itemFileUrl.trim() : null,
       year: year ? Number(year) : null,
+      status: publishStatus,
+      is_published: publishStatus === 'published',
       creator: creatorName,
     };
 
@@ -436,12 +442,12 @@ export default function EditProductPage() {
       }
     }
 
-    const featureError = await saveReleaseFeatures({
-      supabaseClient: supabase,
-      productId: id,
-      sectionId: section.id,
-      state: featureState,
-    });
+      const featureError = (section.id === 'music' || section.id === 'books') ? await saveReleaseFeatures({
+        supabaseClient: supabase,
+        productId: id,
+        sectionId: section.id,
+        state: featureState,
+      }) : '';
 
     if (featureError) {
       setSaving(false);
@@ -633,12 +639,13 @@ export default function EditProductPage() {
             ) : null}
 
             <UploadField
-              label="Artwork"
+              label={isMerchProduct ? 'Product Image' : 'Artwork'}
               folder="products/covers"
               userId={user.id}
               value={coverUrl}
               accept="image/*"
-              buttonLabel="Upload artwork"
+              previewKind="image"
+              buttonLabel={isMerchProduct ? 'Upload product image' : 'Upload artwork'}
               onChange={setCoverUrl}
             />
 
@@ -678,26 +685,15 @@ export default function EditProductPage() {
                   {tracks.slice(0, Number(trackCount || '0')).map((track, index) => (
                     <GlassPanel key={track.id ?? `track-${index}`} style={{ padding: 18 }}>
                       <div style={{ display: 'grid', gap: 16 }}>
-                        <div className="dashboard-field-label">Track {index + 1}</div>
+                        <div className="dashboard-field-label">{index + 1}. Track Title</div>
 
-                        <div className="dashboard-form-grid" style={{ gridTemplateColumns: 'minmax(0, 1fr) 180px' }}>
+                        <div className="dashboard-form-grid">
                           <label className="dashboard-field">
-                            <div className="dashboard-field-label">Track Title</div>
                             <input
                               className="os-input-field"
                               value={track.title}
                               onChange={event => updateTrack(index, { title: event.target.value })}
                               placeholder={`Track ${index + 1} title`}
-                            />
-                          </label>
-
-                          <label className="dashboard-field">
-                            <div className="dashboard-field-label">Duration (seconds)</div>
-                            <input
-                              className="os-input-field"
-                              value={track.durationSeconds}
-                              onChange={event => updateTrack(index, { durationSeconds: event.target.value.replace(/\D/g, '').slice(0, 4) })}
-                              placeholder="180"
                             />
                           </label>
                         </div>
@@ -709,6 +705,7 @@ export default function EditProductPage() {
                           value={track.audioUrl}
                           accept="audio/*"
                           buttonLabel="Upload audio"
+                          previewKind="none"
                           onChange={nextValue => updateTrack(index, { audioUrl: nextValue })}
                         />
                       </div>
@@ -718,7 +715,7 @@ export default function EditProductPage() {
               </div>
             ) : null}
 
-            {!isMerchProduct ? (
+            {(section.id === 'music' || section.id === 'books') ? (
               <DashboardReleaseFeatures
                 sectionId={section.id}
                 userId={user.id}

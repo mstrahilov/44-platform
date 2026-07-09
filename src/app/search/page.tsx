@@ -3,14 +3,14 @@
 import Link from 'next/link';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { PageShell, ProductCard, ProductGrid, PostCard, EmptyMessage, HubSection } from '@/components/Ui';
-import { SocialProfileRow } from '@/components/Social';
-import { productStoreHref } from '@/lib/experience';
+import { PageShell, ProductCard, ProductGrid, EmptyMessage, HubSection, HubHero } from '@/components/Ui';
+import { SocialAvatar, SocialPostRow } from '@/components/Social';
 import type { Product } from '@/lib/products';
-import type { CommunityPost, Profile } from '@/lib/platform';
+import type { Profile } from '@/lib/platform';
 import { creatorHref } from '@/lib/platform';
 import { supabase } from '@/lib/supabase';
 import { matchesQuery } from '@/lib/taxonomy';
+import type { SocialPost } from '@/lib/social';
 
 type SearchProfile = Pick<Profile, 'id' | 'slug' | 'username' | 'display_name' | 'avatar_url' | 'bio' | 'role' | 'creator_type'>;
 
@@ -28,7 +28,7 @@ function SearchContent() {
   const query = searchParams.get('q')?.trim() ?? '';
   const [draft, setDraft] = useState(query);
   const [products, setProducts] = useState<Product[]>([]);
-  const [posts, setPosts] = useState<CommunityPost[]>([]);
+  const [posts, setPosts] = useState<SocialPost[]>([]);
   const [profiles, setProfiles] = useState<SearchProfile[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -56,7 +56,7 @@ function SearchContent() {
       ]);
 
       setProducts((productResult.data as Product[] | null) ?? []);
-      setPosts((postResult.data as CommunityPost[] | null) ?? []);
+      setPosts((postResult.data as SocialPost[] | null) ?? []);
       setProfiles((profileResult.data as SearchProfile[] | null) ?? []);
       setLoading(false);
     }
@@ -89,36 +89,30 @@ function SearchContent() {
   return (
     <PageShell>
       <main className="app-page">
-        <header className="dashboard-header">
-          <div className="dashboard-header-copy">
-            <h1 className="os-type-display">Search</h1>
-            <p className="os-type-body">
-              {query ? `Results for "${query}" across 44OS.` : 'Search items, creators, and posts.'}
-            </p>
-          </div>
-        </header>
+        <HubHero
+          title="Search"
+          copy={query ? `Results for "${query}" across 44OS.` : 'Find items, creators, posts, questions, collaborations, and services across 44OS.'}
+        />
 
-        <form className="settings-field" style={{ maxWidth: 720 }} onSubmit={submitSearch} role="search">
-          <div className="settings-field-head">
-            <div className="os-type-field-title">Search 44OS</div>
-            <p className="os-type-body-small">Find items, creators, and posts.</p>
-          </div>
-          <div style={{ display: 'flex', gap: 'var(--os-space-3)', alignItems: 'center' }}>
+        <form className="search-page-form" onSubmit={submitSearch} role="search">
+          <div className="search-page-input-wrap">
             <input
-              className="os-input-field"
+              className="search-page-input"
               value={draft}
               onChange={event => setDraft(event.target.value)}
-              placeholder="Search"
+              placeholder="Search 44OS"
               aria-label="Search"
             />
-            <button className="os-button os-button-primary" type="submit">Search</button>
+            <button className="search-page-submit" type="submit" aria-label="Search">
+              <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
+            </button>
           </div>
         </form>
 
         {loading ? (
           <EmptyMessage>Searching...</EmptyMessage>
         ) : !query ? (
-          <EmptyMessage>Type in the topbar search to search across 44OS.</EmptyMessage>
+          <EmptyMessage>Enter a search term to look across 44OS.</EmptyMessage>
         ) : !hasResults ? (
           <EmptyMessage>No results found.</EmptyMessage>
         ) : (
@@ -135,14 +129,20 @@ function SearchContent() {
 
             {profileMatches.length > 0 && (
               <HubSection title="Creators">
-                <div className="dashboard-list-surface">
+                <div className="search-profile-list">
                   {profileMatches.map(profile => (
-                    <SocialProfileRow
+                    <Link
                       key={profile.id}
-                      profile={profile}
-                      aside={<Link className="os-button os-button-secondary os-button-compact" href={creatorHref(profile)}>Open</Link>}
-                      subtitle={profile.bio || profile.creator_type || '44 Creator'}
-                    />
+                      href={creatorHref(profile)}
+                      className="search-profile-row"
+                    >
+                      <SocialAvatar profile={profile} />
+                      <span className="search-profile-copy">
+                        <span className="social-author-name">{profile.display_name || profile.username || '44 Creator'}</span>
+                        {profile.username && <span className="social-handle">@{profile.username}</span>}
+                        <span className="social-note os-type-body-small">{profile.bio || profile.creator_type || '44 Creator'}</span>
+                      </span>
+                    </Link>
                   ))}
                 </div>
               </HubSection>
@@ -150,22 +150,12 @@ function SearchContent() {
 
             {postMatches.length > 0 && (
               <HubSection title="Posts">
-                <div className="app-grid">
+                <div className="social-feed">
                   {postMatches.map(post => (
-                    <PostCard key={post.id} post={post} />
+                    <SocialPostRow key={post.id} post={post} showTitle handleOnly={false} />
                   ))}
                 </div>
               </HubSection>
-            )}
-
-            {productMatches.length > 0 && (
-              <div className="app-tag-row">
-                {productMatches.slice(0, 3).map(product => (
-                  <Link key={product.id} className="os-button os-button-secondary os-button-compact" href={productStoreHref(product)}>
-                    Open {product.title}
-                  </Link>
-                ))}
-              </div>
             )}
           </>
         )}

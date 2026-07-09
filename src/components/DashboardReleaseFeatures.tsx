@@ -63,7 +63,6 @@ export function achievementTemplates(sectionId: DashboardCatalogSectionId): Draf
       { code: 'nightbird', title: 'Nightbird', description: 'Listen to the release between 10 PM and 4 AM.', triggerType: 'release_completed_at_night', enabled: false, hidden: true, points: 50 },
       { code: 'heavy_rotation', title: 'Heavy Rotation', description: 'Listen to the full release three times.', triggerType: 'release_completed_three_sessions', enabled: false, points: 75 },
       { code: 'first_wave', title: 'First Wave', description: 'Listen to the full release within two weeks of launch.', triggerType: 'release_completed_launch_window', enabled: false, points: 50 },
-      { code: 'directors_cut', title: 'Director\'s Cut', description: 'Listen to the full release in Commentary Mode.', triggerType: 'commentary_album_completed', enabled: false, points: 75 },
       { code: 'joined_the_orbit', title: 'Joined the Orbit', description: 'Follow the creator from this release.', triggerType: 'creator_followed_from_product', enabled: false, points: 50 },
       { code: 'left_your_mark', title: 'Left Your Mark', description: 'Write a review for this release.', triggerType: 'review_created', enabled: false, points: 50 },
       { code: 'signal_boost', title: 'Signal Boost', description: 'Get someone to open this release from your shared link.', triggerType: 'shared_link_opened', enabled: false, hidden: true, points: 75 },
@@ -115,10 +114,6 @@ export function validateReleaseFeatureState(state: ReleaseFeatureState, sectionI
   const supportsAchievements = sectionId !== 'assets';
   const enabledCodes = new Set(state.achievements.filter(achievement => achievement.enabled).map(achievement => achievement.code));
   const overachieverRewards = state.bonusItems.filter(item => item.visibility === 'achievement' && item.achievementCode === 'overachiever');
-
-  if (state.behindTheScenesEnabled && !state.behindTheScenesUrl.trim()) {
-    return 'Upload a behind-the-scenes file or turn that option off.';
-  }
 
   if (overachieverRewards.length > 1) {
     return 'Only one bonus reward can be attached to Overachiever.';
@@ -181,7 +176,7 @@ export function buildAchievementRows(productId: string, state: ReleaseFeatureSta
         points: achievement.points ?? (achievement.code === 'overachiever' ? 100 : 25),
         icon: null,
         sort_order: index,
-        is_secret: achievement.code === 'overachiever' ? false : achievement.hidden ?? false,
+        is_secret: false,
       };
     });
 }
@@ -335,13 +330,6 @@ export function DashboardReleaseFeatures({
     patch({ achievements });
   }
 
-  function toggleHiddenAchievement(code: string) {
-    const achievements = state.achievements.map(achievement =>
-      achievement.code === code && achievement.code !== 'overachiever' ? { ...achievement, hidden: !achievement.hidden } : achievement,
-    );
-    patch({ achievements });
-  }
-
   function updateBonus(index: number, patchItem: Partial<DraftBonusContent>) {
     patch({
       bonusItems: state.bonusItems.map((item, itemIndex) => (
@@ -396,72 +384,24 @@ export function DashboardReleaseFeatures({
             <div className="dashboard-feature-list">
               {state.achievements.map(achievement => (
                 <div key={achievement.code} className="dashboard-feature-row dashboard-achievement-row">
-                  <label className="dashboard-achievement-enable">
+                  <div className="dashboard-achievement-art" aria-hidden="true">
+                    {achievement.title.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="dashboard-achievement-copy">
+                    <span className="os-type-card-title">{achievement.title}</span>
+                    <span className="os-type-body-small">{achievement.description}</span>
+                  </div>
+                  <label className="dashboard-achievement-toggle">
                     <input
                       type="checkbox"
                       checked={achievement.enabled}
                       disabled={achievement.locked}
                       onChange={() => toggleAchievement(achievement.code)}
                     />
-                    <span className="dashboard-achievement-copy">
-                      <span className="os-type-card-title">{achievement.title}</span>
-                      <span className="os-type-body-small">{achievement.description}</span>
-                    </span>
-                  </label>
-                  <label className="dashboard-achievement-secret">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(achievement.hidden)}
-                      disabled={!achievement.enabled || achievement.code === 'overachiever'}
-                      onChange={() => toggleHiddenAchievement(achievement.code)}
-                    />
-                    Hidden
                   </label>
                 </div>
               ))}
             </div>
-          )}
-        </div>
-
-        <div className="settings-field">
-          <div className="settings-row">
-            <div className="settings-row-copy">
-              <div className="os-type-card-title">Commentary Mode</div>
-              <p className="os-type-body-small">Mark this release as having creator commentary.</p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={state.commentaryEnabled}
-              className={state.commentaryEnabled ? 'settings-toggle settings-toggle-on' : 'settings-toggle'}
-              onClick={() => patch({ commentaryEnabled: !state.commentaryEnabled })}
-            />
-          </div>
-
-          <div className="settings-row">
-            <div className="settings-row-copy">
-              <div className="os-type-card-title">Behind-the-Scenes Content</div>
-              <p className="os-type-body-small">Attach extra media for owners.</p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={state.behindTheScenesEnabled}
-              className={state.behindTheScenesEnabled ? 'settings-toggle settings-toggle-on' : 'settings-toggle'}
-              onClick={() => patch({ behindTheScenesEnabled: !state.behindTheScenesEnabled })}
-            />
-          </div>
-
-          {state.behindTheScenesEnabled && (
-            <UploadField
-              label="Behind-the-Scenes File"
-              folder="products/bonus"
-              userId={userId}
-              value={state.behindTheScenesUrl}
-              accept="video/*,audio/*,application/pdf,.pdf,.zip"
-              buttonLabel="Upload behind-the-scenes file"
-              onChange={nextValue => patch({ behindTheScenesUrl: nextValue })}
-            />
           )}
         </div>
       </section>

@@ -122,11 +122,13 @@ function NewProductContent() {
   const [merchFulfillmentMode, setMerchFulfillmentMode] = useState<'ship' | 'deliver'>('deliver');
   const [merchShippingScope, setMerchShippingScope] = useState<'local' | 'global'>('local');
   const [coverUrl, setCoverUrl] = useState('');
+  const [galleryUrls, setGalleryUrls] = useState<string[]>([]);
   const [itemFileUrl, setItemFileUrl] = useState('');
   const [year, setYear] = useState('');
   const [trackCount, setTrackCount] = useState('1');
   const [tracks, setTracks] = useState<DraftTrack[]>([createDraftTrack()]);
   const [featureState, setFeatureState] = useState(() => createReleaseFeatureState(section.id));
+  const [publishStatus, setPublishStatus] = useState<'draft' | 'published' | 'scheduled'>('draft');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -252,8 +254,8 @@ function NewProductContent() {
       read_url: section.id === 'books' ? itemFileUrl.trim() : null,
       download_url: needsDigitalFile ? itemFileUrl.trim() : null,
       featured: false,
-      status: 'draft',
-      is_published: false,
+      status: publishStatus,
+      is_published: publishStatus === 'published',
       year: year ? Number(year) : null,
       sort_order: sortOrder,
     };
@@ -292,7 +294,7 @@ function NewProductContent() {
         product_id: insertedProduct.id,
         number: index + 1,
         title: track.title.trim(),
-        duration_seconds: track.durationSeconds ? Number(track.durationSeconds) : null,
+        duration_seconds: null,
         audio_url: track.audioUrl.trim(),
         download_url: null,
       }));
@@ -323,7 +325,27 @@ function NewProductContent() {
       }
     }
 
-    if (insertedProduct?.id) {
+    if (isMerchProduct && insertedProduct?.id && galleryUrls.length > 0) {
+      const { error: galleryInsertError } = await supabase.from('product_assets').insert(
+        galleryUrls.map((url, index) => ({
+          product_id: insertedProduct.id,
+          asset_type: 'gallery_image',
+          title: `Gallery Image ${index + 1}`,
+          file_url: url,
+          storage_path: null,
+          is_downloadable: false,
+          sort_order: index,
+        })),
+      );
+
+      if (galleryInsertError) {
+        setSaving(false);
+        setError(galleryInsertError.message);
+        return;
+      }
+    }
+
+    if (insertedProduct?.id && (section.id === 'music' || section.id === 'books')) {
       const featureError = await saveReleaseFeatures({
         supabaseClient: supabase,
         productId: insertedProduct.id,
@@ -493,14 +515,51 @@ function NewProductContent() {
               ) : null}
 
               <UploadField
-              label="Artwork"
+              label={isMerchProduct ? 'Product Image' : 'Artwork'}
               folder="products/covers"
               userId={user.id}
               value={coverUrl}
               accept="image/*"
-              buttonLabel="Upload artwork"
+              previewKind="image"
+              buttonLabel={isMerchProduct ? 'Upload product image' : 'Upload artwork'}
               onChange={setCoverUrl}
               />
+
+              {isMerchProduct ? (
+                <div className="dashboard-field">
+                  <div className="dashboard-field-label">Image Gallery</div>
+                  <UploadField
+                    label="Gallery Image"
+                    folder="products/gallery"
+                    userId={user.id}
+                    value=""
+                    accept="image/*"
+                    previewKind="image"
+                    buttonLabel="Add gallery image"
+                    onChange={nextValue => {
+                      if (nextValue) setGalleryUrls(current => [...current, nextValue]);
+                    }}
+                  />
+                  {galleryUrls.length > 0 && (
+                    <div className="upload-gallery">
+                      {galleryUrls.map((url, index) => (
+                        <div key={url} className="upload-preview upload-preview-image upload-gallery-item">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={url} alt="" />
+                          <button
+                            type="button"
+                            className="upload-preview-remove"
+                            aria-label={`Remove gallery image ${index + 1}`}
+                            onClick={() => setGalleryUrls(current => current.filter(item => item !== url))}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : null}
 
               {isMerchProduct ? (
                 <div className="dashboard-form-section">
@@ -544,26 +603,15 @@ function NewProductContent() {
                   {tracks.slice(0, Number(trackCount || '0')).map((track, index) => (
                     <GlassPanel key={`track-${index}`} style={{ padding: 18 }}>
                       <div style={{ display: 'grid', gap: 16 }}>
-                        <div className="dashboard-field-label">Track {index + 1}</div>
+                        <div className="dashboard-field-label">{index + 1}. Track Title</div>
 
-                        <div className="dashboard-form-grid" style={{ gridTemplateColumns: 'minmax(0, 1fr) 180px' }}>
+                        <div className="dashboard-form-grid">
                           <label className="dashboard-field">
-                            <div className="dashboard-field-label">Track Title</div>
                             <input
                               className="os-input-field"
                               value={track.title}
                               onChange={event => updateTrack(index, { title: event.target.value })}
                               placeholder={`Track ${index + 1} title`}
-                            />
-                          </label>
-
-                          <label className="dashboard-field">
-                            <div className="dashboard-field-label">Duration (seconds)</div>
-                            <input
-                              className="os-input-field"
-                              value={track.durationSeconds}
-                              onChange={event => updateTrack(index, { durationSeconds: event.target.value.replace(/\D/g, '').slice(0, 4) })}
-                              placeholder="180"
                             />
                           </label>
                         </div>
@@ -575,6 +623,7 @@ function NewProductContent() {
                           value={track.audioUrl}
                           accept="audio/*"
                           buttonLabel="Upload audio"
+                          previewKind="none"
                           onChange={nextValue => updateTrack(index, { audioUrl: nextValue })}
                         />
                       </div>
@@ -584,7 +633,7 @@ function NewProductContent() {
               </div>
             ) : null}
 
-            {!isMerchProduct ? (
+            {(section.id === 'music' || section.id === 'books') ? (
               <DashboardReleaseFeatures
                 sectionId={section.id}
                 userId={user.id}
@@ -602,7 +651,6 @@ function NewProductContent() {
             )}
 
             <div className="dashboard-form-actions">
-              <div className="dashboard-form-actions-left" />
               <div className="dashboard-form-actions-right">
                 <Link className="os-button os-button-secondary" href={section.href}>
                   Cancel

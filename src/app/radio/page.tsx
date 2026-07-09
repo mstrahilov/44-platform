@@ -113,26 +113,30 @@ export default function RadioPage() {
               </div>
             ) : null}
 
-            <HubSection title="Now Playing">
-              <GlassPanel className="radio-now-card">
+            <GlassPanel className="radio-now-card">
                 {syncedTrack ? (
                   <div className="radio-now-layout">
-                    <div className="radio-now-art">
+                    <Link href={syncedTrack.releaseHref} className="radio-now-art" aria-label={`Open ${syncedTrack.releaseTitle}`}>
                       {syncedTrack.coverUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={syncedTrack.coverUrl} alt="" />
                       ) : null}
-                    </div>
+                    </Link>
                     <div className="radio-now-info">
                       <div className="radio-now-eyebrow">Now Playing</div>
                       <Link href={syncedTrack.trackHref} className="radio-now-title-link">
                         <div className="radio-now-title">{syncedTrack.title}</div>
                       </Link>
                       <div className="radio-now-meta">
-                        <Link href={radioArtistHref(syncedTrack)}>{syncedTrack.artistName}</Link>
-                      </div>
-                      <div className="radio-now-album">
-                        <Link href={syncedTrack.releaseHref}>{syncedTrack.releaseTitle}</Link>
+                        <Link href={radioArtistHref(syncedTrack)} className="radio-now-artist-link">
+                          <span className="radio-now-avatar">
+                            {syncedTrack.artistAvatarUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={syncedTrack.artistAvatarUrl} alt="" />
+                            ) : null}
+                          </span>
+                          {syncedTrack.artistName}
+                        </Link>
                       </div>
                     </div>
                   </div>
@@ -143,7 +147,6 @@ export default function RadioPage() {
                   </>
                 )}
               </GlassPanel>
-            </HubSection>
 
                 </>
               );

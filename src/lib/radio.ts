@@ -46,6 +46,7 @@ export type RadioPlayableTrack = {
   title: string;
   artistName: string;
   artistProfileSlug: string | null;
+  artistAvatarUrl: string | null;
   coverUrl: string | null;
   audioUrl: string;
   durationSeconds: number;
@@ -136,6 +137,7 @@ export async function loadRadioBundle(): Promise<RadioBundle> {
       title: track.title,
       artistName: product.creators?.display_name || product.creator || '44 Creator',
       artistProfileSlug: product.creators?.username || product.creators?.slug || null,
+      artistAvatarUrl: product.creators?.avatar_url ?? null,
       coverUrl: product.cover_url || product.hero_url || null,
       audioUrl: track.audio_url,
       durationSeconds: track.duration_seconds,

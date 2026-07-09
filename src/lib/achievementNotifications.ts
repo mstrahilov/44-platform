@@ -9,6 +9,9 @@ export interface AchievementNotification extends AchievementToastData {
   productId?: string | null;
   href?: string | null;
   kind?: 'achievement' | 'reply' | 'mention' | 'like' | 'message';
+  actorUserId?: string | null;
+  actorAvatarUrl?: string | null;
+  achievementIcon?: string | null;
 }
 
 function broadcastAchievementNotification(notification: AchievementNotification) {
@@ -90,16 +93,32 @@ export async function loadAchievementNotifications(userId: string): Promise<Achi
         .filter((value): value is string => Boolean(value)),
     ),
   );
-  const achievementMap = new Map<string, Pick<ProductAchievement, 'id' | 'title' | 'description' | 'points'>>();
+  const achievementMap = new Map<string, Pick<ProductAchievement, 'id' | 'title' | 'description' | 'points' | 'icon'>>();
 
   if (achievementIds.length > 0) {
     const { data: achievements } = await supabase
       .from('product_achievements')
-      .select('id,title,description,points')
+      .select('id,title,description,points,icon')
       .in('id', achievementIds);
 
-    ((achievements as Array<Pick<ProductAchievement, 'id' | 'title' | 'description' | 'points'>> | null) ?? []).forEach(item => {
+    ((achievements as Array<Pick<ProductAchievement, 'id' | 'title' | 'description' | 'points' | 'icon'>> | null) ?? []).forEach(item => {
       achievementMap.set(item.id, item);
+    });
+  }
+
+  const actorIds = Array.from(new Set(eventRows
+    .map(event => typeof event.metadata?.actor_user_id === 'string' ? event.metadata.actor_user_id : null)
+    .filter((value): value is string => Boolean(value))));
+  const actorAvatarMap = new Map<string, string | null>();
+
+  if (actorIds.length > 0) {
+    const { data: actors } = await supabase
+      .from('profiles')
+      .select('id,avatar_url')
+      .in('id', actorIds);
+
+    ((actors as Array<{ id: string; avatar_url: string | null }> | null) ?? []).forEach(actor => {
+      actorAvatarMap.set(actor.id, actor.avatar_url);
     });
   }
 
@@ -118,11 +137,13 @@ export async function loadAchievementNotifications(userId: string): Promise<Achi
         createdAt: event.created_at,
         productId: event.product_id,
         kind: 'achievement',
+        achievementIcon: achievement.icon,
       });
       continue;
     }
 
     if (event.event_type === 'reply_received') {
+      const actorUserId = typeof event.metadata?.actor_user_id === 'string' ? event.metadata.actor_user_id : null;
       const actorName = typeof event.metadata?.actor_name === 'string' ? event.metadata.actor_name : 'Someone';
       const postTitle = typeof event.metadata?.post_title === 'string' ? event.metadata.post_title : 'your post';
       const replyBody = typeof event.metadata?.reply_body === 'string' ? event.metadata.reply_body : '';
@@ -137,11 +158,14 @@ export async function loadAchievementNotifications(userId: string): Promise<Achi
         productId: null,
         href: postSlug || postId ? `/community/thread/${postSlug || postId}` : '/notifications',
         kind: 'reply',
+        actorUserId,
+        actorAvatarUrl: actorUserId ? actorAvatarMap.get(actorUserId) ?? null : null,
       });
       continue;
     }
 
     if (event.event_type === 'like_received') {
+      const actorUserId = typeof event.metadata?.actor_user_id === 'string' ? event.metadata.actor_user_id : null;
       const actorName = typeof event.metadata?.actor_name === 'string' ? event.metadata.actor_name : 'Someone';
       const postTitle = typeof event.metadata?.post_title === 'string' ? event.metadata.post_title : 'your post';
       const postId = typeof event.metadata?.post_id === 'string' ? event.metadata.post_id : null;
@@ -155,6 +179,8 @@ export async function loadAchievementNotifications(userId: string): Promise<Achi
         productId: null,
         href: postSlug || postId ? `/community/thread/${postSlug || postId}` : '/notifications',
         kind: 'like',
+        actorUserId,
+        actorAvatarUrl: actorUserId ? actorAvatarMap.get(actorUserId) ?? null : null,
       });
       continue;
     }
@@ -177,6 +203,7 @@ export async function loadAchievementNotifications(userId: string): Promise<Achi
     }
 
     if (event.event_type === 'mention_received') {
+      const actorUserId = typeof event.metadata?.actor_user_id === 'string' ? event.metadata.actor_user_id : null;
       const actorName = typeof event.metadata?.actor_name === 'string' ? event.metadata.actor_name : 'Someone';
       const postTitle = typeof event.metadata?.post_title === 'string' ? event.metadata.post_title : 'a post';
       const postBody = typeof event.metadata?.post_body === 'string' ? event.metadata.post_body : '';
@@ -191,6 +218,8 @@ export async function loadAchievementNotifications(userId: string): Promise<Achi
         productId: null,
         href: postSlug || postId ? `/community/thread/${postSlug || postId}` : '/notifications',
         kind: 'mention',
+        actorUserId,
+        actorAvatarUrl: actorUserId ? actorAvatarMap.get(actorUserId) ?? null : null,
       });
     }
   }

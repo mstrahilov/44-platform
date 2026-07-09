@@ -32,42 +32,28 @@ import { getSitePathUrl } from '@/lib/siteUrl';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { getAvailableDockApps, type OSAppId } from '@/lib/osApps';
 import { resetDockPreferences, setDockAppHidden, setDockMode, useDockPreferences, type DockMode } from '@/lib/dockPreferences';
+import { getNotificationPreference, resetNotificationPreferences, setNotificationPreference, type NotificationPreferenceKind } from '@/lib/notificationPreferences';
 
 type SettingsTabId = 'system' | 'dock' | 'region' | 'account';
 
 const TABS: Array<{ id: SettingsTabId; label: string; copy: string }> = [
+  { id: 'account', label: 'Account', copy: 'Email, password, privacy, and notifications.' },
   { id: 'system', label: 'System', copy: 'Theme, accent, and the way 44OS opens.' },
   { id: 'dock', label: 'Dock', copy: 'Control Dock layout, visible apps, and where 44OS opens.' },
   { id: 'region', label: 'Region', copy: 'Region, currency, and local pricing defaults.' },
-  { id: 'account', label: 'Account', copy: 'Email, password, privacy, and notifications.' },
 ];
 
 const ACCOUNT_KEYS = {
-  replies: '44-setting-replies',
-  likes: '44-setting-likes',
-  releases: '44-setting-releases',
-  emails: '44-setting-emails',
-  publicProfile: '44-setting-public-profile',
-  directMessages: '44-setting-direct-messages',
-  recommendations: '44-setting-recommendations',
+  mentions: 'mentions',
+  replies: 'replies',
+  likes: 'likes',
+  achievements: 'achievements',
 } as const;
-
-function getStoredToggle(key: string, fallback = false) {
-  if (typeof window === 'undefined') return fallback;
-  const value = window.localStorage.getItem(key);
-  if (value === null) return fallback;
-  return value === 'true';
-}
-
-function setStoredToggle(key: string, value: boolean) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(key, String(value));
-}
 
 function normalizeSettingsTab(value: string | null): SettingsTabId {
   if (value === 'appearance' || value === 'clock' || value === 'accessibility' || value === 'advanced') return 'system';
   if (value === 'privacy' || value === 'notifications' || value === 'orders') return 'account';
-  return TABS.some(tab => tab.id === value) ? (value as SettingsTabId) : 'system';
+  return TABS.some(tab => tab.id === value) ? (value as SettingsTabId) : 'account';
 }
 
 export default function SettingsPage() {
@@ -364,7 +350,7 @@ function DockSettings() {
     .filter(app => !app.locked)
     .sort((a, b) => orderIndex(order, a.id) - orderIndex(order, b.id));
   const landingApps = availableApps
-    .filter(app => ['store', 'library', 'community', 'dashboard'].includes(app.id))
+    .filter(app => ['store', 'library', 'community', 'radio', 'dashboard'].includes(app.id))
     .sort((a, b) => orderIndex(order, a.id) - orderIndex(order, b.id));
 
   function chooseLandingPage(id: LandingPageId) {
@@ -457,8 +443,47 @@ function DockSettings() {
 function AccountSettings() {
   const { user } = useAuth();
   const [sendingReset, setSendingReset] = useState(false);
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [status, setStatus] = useState('');
   const [resetSignal, setResetSignal] = useState(0);
+
+  useEffect(() => {
+    setNewEmail(user?.email ?? '');
+  }, [user?.email]);
+
+  async function changeEmail(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!user?.email || !newEmail.trim() || savingEmail) return;
+    if (newEmail.trim() === user.email) {
+      setStatus('Email is already current.');
+      return;
+    }
+    setSavingEmail(true);
+    setStatus('');
+    const { error } = await supabase.auth.updateUser(
+      { email: newEmail.trim() },
+      { emailRedirectTo: getSitePathUrl('/settings?tab=account') },
+    );
+    setSavingEmail(false);
+    setStatus(error ? error.message : 'Check your new email to confirm the change.');
+  }
+
+  async function changePassword(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (newPassword.length < 8 || savingPassword) {
+      setStatus('Password must be at least 8 characters.');
+      return;
+    }
+    setSavingPassword(true);
+    setStatus('');
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setSavingPassword(false);
+    setStatus(error ? error.message : 'Password updated.');
+    if (!error) setNewPassword('');
+  }
 
   async function sendPasswordReset() {
     if (!user?.email || sendingReset) return;
@@ -472,9 +497,7 @@ function AccountSettings() {
   }
 
   function resetAccountDefaults() {
-    Object.entries(ACCOUNT_KEYS).forEach(([, key]) => {
-      window.localStorage.removeItem(key);
-    });
+    resetNotificationPreferences();
     setStatus('Account preferences reset.');
     setResetSignal(current => current + 1);
   }
@@ -484,30 +507,46 @@ function AccountSettings() {
       <div className="settings-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Email</div>
-          <p className="os-type-body-small">Your login and account recovery email.</p>
+          <p className="os-type-body-small">Your login and account recovery email. Changes require email confirmation.</p>
         </div>
-        <span className="os-type-body">{user?.email ?? 'Sign in to manage your account.'}</span>
+        <form className="settings-inline-form" onSubmit={changeEmail}>
+          <input
+            className="os-input-field"
+            type="email"
+            value={newEmail}
+            onChange={event => setNewEmail(event.target.value)}
+            placeholder={user?.email ?? 'email@example.com'}
+            autoComplete="email"
+          />
+          <button className="os-button os-button-secondary" type="submit" disabled={!user?.email || savingEmail}>
+            {savingEmail ? 'Saving...' : 'Change Email'}
+          </button>
+        </form>
       </div>
 
       <div className="settings-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Password</div>
-          <p className="os-type-body-small">Send a password reset link to your email.</p>
+          <p className="os-type-body-small">Update your current password, or send a reset link to your email.</p>
         </div>
-        <button className="os-button os-button-secondary" type="button" onClick={sendPasswordReset} disabled={!user?.email || sendingReset}>
-          {sendingReset ? 'Sending...' : 'Send Password Reset'}
-        </button>
+        <form className="settings-inline-form" onSubmit={changePassword}>
+          <input
+            className="os-input-field"
+            type="password"
+            value={newPassword}
+            onChange={event => setNewPassword(event.target.value)}
+            placeholder="New password"
+            autoComplete="new-password"
+            minLength={8}
+          />
+          <button className="os-button os-button-primary" type="submit" disabled={savingPassword || newPassword.length < 8}>
+            {savingPassword ? 'Saving...' : 'Change Password'}
+          </button>
+          <button className="os-button os-button-secondary" type="button" onClick={sendPasswordReset} disabled={!user?.email || sendingReset}>
+            {sendingReset ? 'Sending...' : 'Send Reset Link'}
+          </button>
+        </form>
         {status && <p className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>{status}</p>}
-      </div>
-
-      <div className="settings-field">
-        <div className="settings-field-head">
-          <div className="os-type-field-title">Privacy</div>
-          <p className="os-type-body-small">Profile details live on your Profile page. These controls affect account-level visibility.</p>
-        </div>
-        <ToggleRow storageKey={ACCOUNT_KEYS.publicProfile} title="Public profile" desc="Let others view your profile and creator/member activity." defaultOn resetSignal={resetSignal} />
-        <ToggleRow storageKey={ACCOUNT_KEYS.directMessages} title="Allow direct messages" desc="Let members message you directly." defaultOn resetSignal={resetSignal} />
-        <ToggleRow storageKey={ACCOUNT_KEYS.recommendations} title="Personalized recommendations" desc="Use your activity to tailor what you see." defaultOn resetSignal={resetSignal} />
       </div>
 
       <div className="settings-field">
@@ -515,10 +554,10 @@ function AccountSettings() {
           <div className="os-type-field-title">Notifications</div>
           <p className="os-type-body-small">Choose which account activity should reach you.</p>
         </div>
-        <ToggleRow storageKey={ACCOUNT_KEYS.replies} title="Replies to your posts" desc="When someone replies in the community." defaultOn resetSignal={resetSignal} />
-        <ToggleRow storageKey={ACCOUNT_KEYS.likes} title="Likes" desc="When someone likes your post or reply." defaultOn resetSignal={resetSignal} />
-        <ToggleRow storageKey={ACCOUNT_KEYS.releases} title="New releases from creators you follow" desc="Music, books, sample packs, merch, and service drops." defaultOn resetSignal={resetSignal} />
-        <ToggleRow storageKey={ACCOUNT_KEYS.emails} title="44 emails" desc="Occasional news about 44." resetSignal={resetSignal} />
+        <ToggleRow preferenceKind={ACCOUNT_KEYS.mentions} title="Mentions" desc="When someone mentions you in Community." defaultOn resetSignal={resetSignal} />
+        <ToggleRow preferenceKind={ACCOUNT_KEYS.replies} title="Replies" desc="When someone replies to your posts or comments." defaultOn resetSignal={resetSignal} />
+        <ToggleRow preferenceKind={ACCOUNT_KEYS.likes} title="Likes" desc="When someone likes your post or reply." defaultOn resetSignal={resetSignal} />
+        <ToggleRow preferenceKind={ACCOUNT_KEYS.achievements} title="Achievements" desc="When you unlock achievements across 44OS." defaultOn resetSignal={resetSignal} />
       </div>
       <div className="settings-section-actions">
         <button className="os-button os-button-secondary os-button-compact" type="button" onClick={resetAccountDefaults}>
@@ -532,26 +571,26 @@ function AccountSettings() {
 function ToggleRow({
   title,
   desc,
-  storageKey,
+  preferenceKind,
   defaultOn = false,
   resetSignal = 0,
 }: {
   title: string;
   desc: string;
-  storageKey: string;
+  preferenceKind: NotificationPreferenceKind;
   defaultOn?: boolean;
   resetSignal?: number;
 }) {
   const [on, setOn] = useState(defaultOn);
 
   useEffect(() => {
-    Promise.resolve().then(() => setOn(getStoredToggle(storageKey, defaultOn)));
-  }, [storageKey, defaultOn, resetSignal]);
+    Promise.resolve().then(() => setOn(getNotificationPreference(preferenceKind, defaultOn)));
+  }, [preferenceKind, defaultOn, resetSignal]);
 
   function toggle() {
     setOn(current => {
       const next = !current;
-      setStoredToggle(storageKey, next);
+      setNotificationPreference(preferenceKind, next);
       return next;
     });
   }

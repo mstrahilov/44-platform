@@ -5,10 +5,10 @@ import { useTopbarTabs } from '@/components/TopbarContext';
 export type CommunitySection = 'feed' | 'following' | 'questions' | 'collaboration' | 'friends' | 'messages' | 'profile';
 
 const COMMUNITY_TABS: Array<{ id: CommunitySection; label: string; href: string }> = [
-  { id: 'feed', label: 'Feed', href: '/community' },
-  { id: 'following', label: 'Following', href: '/community?view=following' },
+  { id: 'feed', label: 'Posts', href: '/community' },
   { id: 'questions', label: 'Questions', href: '/community?view=questions' },
   { id: 'collaboration', label: 'Collaboration', href: '/community?view=collaboration' },
+  { id: 'following', label: 'Following', href: '/community?view=following' },
 ];
 
 export function useCommunityTopbarTabs(active: CommunitySection) {

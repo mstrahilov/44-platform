@@ -79,7 +79,7 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
         supabase
           .from('services')
           .select('*, creators:profiles!author_id(*, name:display_name), categories(id, slug, name)')
-          .or('status.eq.published,is_published.eq.true')
+          .eq('status', 'published')
           .order('created_at', { ascending: false })
           .limit(160),
       ]);
@@ -91,7 +91,7 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
         setServices([]);
       } else {
         setProducts((productResult.data ?? []) as Product[]);
-        setServices((serviceResult.data ?? []) as Service[]);
+        setServices(serviceResult.error ? [] : (serviceResult.data ?? []) as Service[]);
       }
       setLoading(false);
     }

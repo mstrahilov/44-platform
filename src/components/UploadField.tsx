@@ -10,6 +10,7 @@ type UploadFieldProps = {
   value: string;
   accept?: string;
   buttonLabel?: string;
+  previewKind?: 'image' | 'file' | 'none';
   onChange: (nextValue: string) => void;
 };
 
@@ -20,6 +21,7 @@ export function UploadField({
   value,
   accept,
   buttonLabel = 'Upload file',
+  previewKind,
   onChange,
 }: UploadFieldProps) {
   const inputId = useId();
@@ -48,6 +50,22 @@ export function UploadField({
   return (
     <div className="dashboard-field">
       <div className="dashboard-field-label">{label}</div>
+      {value && previewKind !== 'none' && (previewKind === 'image' || accept?.includes('image')) ? (
+        <div className="upload-preview upload-preview-image">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={value} alt="" />
+          <button type="button" className="upload-preview-remove" aria-label={`Remove ${label}`} onClick={() => onChange('')}>
+            ×
+          </button>
+        </div>
+      ) : value && previewKind !== 'none' ? (
+        <div className="upload-preview upload-preview-file">
+          <span>{value.split('/').pop() || 'Uploaded file'}</span>
+          <button type="button" className="upload-preview-remove" aria-label={`Remove ${label}`} onClick={() => onChange('')}>
+            ×
+          </button>
+        </div>
+      ) : null}
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
         <label htmlFor={inputId} className="os-button os-button-secondary os-button-compact" style={{ cursor: uploading ? 'progress' : 'pointer' }}>
           {uploading ? 'Uploading…' : buttonLabel}
@@ -60,7 +78,7 @@ export function UploadField({
           disabled={uploading}
           style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
         />
-        <span style={{ color: value ? 'var(--os-color-ink-secondary)' : 'var(--os-color-ink-muted)', fontSize: 13 }}>
+        <span className={value ? 'upload-state upload-state-complete' : 'upload-state'}>
           {value ? 'Uploaded' : 'No file selected yet'}
         </span>
       </div>

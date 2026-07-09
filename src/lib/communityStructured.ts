@@ -175,6 +175,22 @@ export async function createCommunityCollaboration(input: {
     .single();
 }
 
+export async function deleteCommunityQuestion(input: { questionId: string; ownerId: string }) {
+  return supabase
+    .from('community_questions')
+    .delete()
+    .eq('id', input.questionId)
+    .eq('author_id', input.ownerId);
+}
+
+export async function deleteQuestionAnswer(input: { answerId: string; ownerId: string }) {
+  return supabase
+    .from('community_question_answers')
+    .delete()
+    .eq('id', input.answerId)
+    .eq('author_id', input.ownerId);
+}
+
 export async function loadQuestionAnswers(questionId: string) {
   const answersResult = await supabase
     .from('community_question_answers')
@@ -307,4 +323,32 @@ export async function createCollaborationResponse(input: {
     })
     .select('*, authors:profiles!author_id(id, username, slug, display_name, avatar_url)')
     .single();
+}
+
+export async function updateCommunityCollaborationStatus(input: {
+  collaborationId: string;
+  ownerId: string;
+  status: CommunityCollaboration['status'];
+}) {
+  return supabase
+    .from('community_collaborations')
+    .update({ status: input.status })
+    .eq('id', input.collaborationId)
+    .eq('author_id', input.ownerId);
+}
+
+export async function deleteCommunityCollaboration(input: { collaborationId: string; ownerId: string }) {
+  return supabase
+    .from('community_collaborations')
+    .delete()
+    .eq('id', input.collaborationId)
+    .eq('author_id', input.ownerId);
+}
+
+export async function deleteCollaborationResponse(input: { responseId: string; ownerId: string }) {
+  return supabase
+    .from('community_collaboration_responses')
+    .delete()
+    .eq('id', input.responseId)
+    .eq('author_id', input.ownerId);
 }

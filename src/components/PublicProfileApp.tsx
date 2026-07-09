@@ -8,7 +8,6 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { formatServicePrice, type Profile, type Service } from '@/lib/platform';
 import type { Product } from '@/lib/products';
-import { formatProductPrice } from '@/lib/products';
 import { getProductExperience, productStoreHref } from '@/lib/experience';
 import { PageShell, CenteredMessage } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
@@ -277,15 +276,18 @@ export default function PublicProfilePage() {
   const generalPosts = useMemo(() => posts.filter(post => isGeneralPost(post)), [posts]);
   const tabs = useMemo(
     () => {
-      const next: Array<{ id: ProfileTab; label: string }> = [];
-      if (generalPosts.length > 0 || !isCreator) next.push({ id: 'posts', label: 'Posts' });
-      if (isCreator && musicProducts.length > 0) next.push({ id: 'music', label: 'Music' });
-      if (isCreator && bookProducts.length > 0) next.push({ id: 'books', label: 'Books' });
-      if (isCreator && assetProducts.length > 0) next.push({ id: 'assets', label: 'Sample Packs' });
-      if (isCreator && publishedServices.length > 0) next.push({ id: 'services', label: 'Services' });
-      return next;
+      if (isCreator) {
+        return [
+          { id: 'posts', label: 'Posts' },
+          { id: 'music', label: 'Music' },
+          { id: 'books', label: 'Books' },
+          { id: 'assets', label: 'Sample Packs' },
+          { id: 'services', label: 'Services' },
+        ] satisfies Array<{ id: ProfileTab; label: string }>;
+      }
+      return generalPosts.length > 0 ? [{ id: 'posts' as const, label: 'Posts' }] : [];
     },
-    [assetProducts.length, bookProducts.length, generalPosts.length, isCreator, musicProducts.length, publishedServices.length],
+    [generalPosts.length, isCreator],
   );
 
   useEffect(() => {
@@ -353,7 +355,7 @@ export default function PublicProfilePage() {
 
             <div className="social-profile-actions">
               {isOwn ? (
-                <Link href="/profile/edit" className="os-button os-button-primary">Edit Profile</Link>
+                <Link href="/profile/edit" className="os-button os-button-secondary">Edit Profile</Link>
               ) : (
                 <>
                   <button type="button" className="os-button os-button-secondary" onClick={openMessage} disabled={busy === 'message'}>
@@ -383,6 +385,16 @@ export default function PublicProfilePage() {
                 </button>
               ))}
             </nav>
+          )}
+
+          {isOwn && isCreator && (
+            <div className="social-profile-tab-actions" aria-label="Creator shortcuts">
+              <Link href="/dashboard/products/new?section=music" className="os-button os-button-primary os-button-compact">New Release</Link>
+              <Link href="/dashboard/products/new?section=books" className="os-button os-button-secondary os-button-compact">New Book</Link>
+              <Link href="/dashboard/products/new?section=assets" className="os-button os-button-secondary os-button-compact">New Sample Pack</Link>
+              <Link href="/dashboard/products/new?section=merch" className="os-button os-button-secondary os-button-compact">New Merch</Link>
+              <Link href="/dashboard/services/new" className="os-button os-button-secondary os-button-compact">New Service</Link>
+            </div>
           )}
         </section>
 
@@ -424,7 +436,7 @@ export default function PublicProfilePage() {
                 key={product.id}
                 href={productStoreHref(product)}
                 title={product.title}
-                meta={`${product.product_type || product.category || 'Release'} · ${formatProductPrice(product)}`}
+                meta={profileProductMeta(product, 'Release')}
                 image={product.cover_url}
               />
             ))}
@@ -438,7 +450,7 @@ export default function PublicProfilePage() {
                 key={product.id}
                 href={productStoreHref(product)}
                 title={product.title}
-                meta={`${product.product_type || 'Book'} · ${formatProductPrice(product)}`}
+                meta={profileProductMeta(product, 'Book')}
                 image={product.cover_url}
               />
             ))}
@@ -452,7 +464,7 @@ export default function PublicProfilePage() {
                 key={product.id}
                 href={productStoreHref(product)}
                 title={product.title}
-                meta={`${product.product_type || 'Asset'} · ${formatProductPrice(product)}`}
+                meta={profileProductMeta(product, 'Sample Pack')}
                 image={product.cover_url}
               />
             ))}
@@ -476,6 +488,12 @@ export default function PublicProfilePage() {
       <CommunitySetupGate open={setupGateOpen} onClose={() => setSetupGateOpen(false)} />
     </PageShell>
   );
+}
+
+function profileProductMeta(product: Product, fallbackType: string) {
+  const type = product.product_type || product.category || fallbackType;
+  const year = product.year || (product.created_at ? new Date(product.created_at).getFullYear() : null);
+  return year ? `${type} · ${year}` : type;
 }
 
 function ArtifactGrid({ children, empty }: { children: ReactNode; empty: string }) {
