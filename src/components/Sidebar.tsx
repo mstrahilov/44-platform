@@ -198,10 +198,10 @@ export default function Sidebar() {
   const activePinnedItem = pinnedItems.find(item => isPinnedDockItemActive(pathname, item.href));
   const mainActiveAppId = activePinnedItem ? '' : activeAppId;
   const libraryApp = dockApps.find(app => app.id === 'library') ?? null;
-  const orderedMainApps = ['store', 'community', 'dashboard', 'radio']
+  const orderedMainApps = ['community', 'store', 'radio']
     .map(id => dockApps.find(app => app.id === id))
     .filter((app): app is OSApp => Boolean(app));
-  const supportApp = dockApps.find(app => app.id === 'support') ?? null;
+  const bottomDashboardApp = dockApps.find(app => app.id === 'dashboard') ?? null;
   const systemApps = dockApps.filter(app => app.group === 'system');
 
   const time = now
@@ -249,8 +249,8 @@ export default function Sidebar() {
 
         <div className="sidebar-spacer" />
 
-        {supportApp && (
-          <DockItem app={supportApp} active={mainActiveAppId === supportApp.id} compact={compact} />
+        {bottomDashboardApp && (
+          <DockItem app={bottomDashboardApp} active={mainActiveAppId === bottomDashboardApp.id} compact={compact} />
         )}
 
         <div className="sidebar-divider" />

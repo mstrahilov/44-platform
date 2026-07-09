@@ -221,7 +221,8 @@ export const OS_APPS: OSApp[] = [
     href: '/support',
     iconClass: 'os-icon-support',
     // Renders in the Dock's bottom cluster, directly above the system divider.
-    group: 'account',
+    group: 'legacy',
+    hidden: true,
   },
   {
     id: 'dashboard',
