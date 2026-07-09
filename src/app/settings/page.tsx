@@ -517,7 +517,7 @@ function AccountSettings() {
         </div>
         <ToggleRow storageKey={ACCOUNT_KEYS.replies} title="Replies to your posts" desc="When someone replies in the community." defaultOn resetSignal={resetSignal} />
         <ToggleRow storageKey={ACCOUNT_KEYS.likes} title="Likes" desc="When someone likes your post or reply." defaultOn resetSignal={resetSignal} />
-        <ToggleRow storageKey={ACCOUNT_KEYS.releases} title="New releases from creators you follow" desc="Music, books, assets, resources, and merch drops." defaultOn resetSignal={resetSignal} />
+        <ToggleRow storageKey={ACCOUNT_KEYS.releases} title="New releases from creators you follow" desc="Music, books, sample packs, merch, and service drops." defaultOn resetSignal={resetSignal} />
         <ToggleRow storageKey={ACCOUNT_KEYS.emails} title="44 emails" desc="Occasional news about 44." resetSignal={resetSignal} />
       </div>
       <div className="settings-section-actions">

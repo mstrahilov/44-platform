@@ -55,15 +55,15 @@ const EXPERIENCE_CONFIG: Record<ExperienceConfig['id'], ExperienceConfig> = {
   },
   assets: {
     id: 'assets',
-    title: 'Assets',
-    libraryTitle: 'Asset Library',
-    storeTitle: 'Assets',
-    noun: 'asset',
-    pluralNoun: 'assets',
+    title: 'Sample Packs',
+    libraryTitle: 'Sample Pack Library',
+    storeTitle: 'Sample Packs',
+    noun: 'sample pack',
+    pluralNoun: 'sample packs',
     experience: 'asset',
     copy: {
       library: 'Samples, templates, presets, and creator tools you own inside 44OS.',
-      store: 'Browse useful creative assets and add them to your Asset Library.',
+      store: 'Browse useful sample packs and creator tools and add them to your Sample Pack Library.',
     },
   },
 };
@@ -144,10 +144,15 @@ export function ExperienceApp({ app, route }: { app: ExperienceConfig['id']; rou
     async function loadOwned(userId: string) {
       const { data } = await supabase
         .from('library_items')
-        .select('product_id')
+        .select('product_id,status')
         .eq('user_id', userId);
 
-      setOwnedProductIds((data ?? []).map(item => item.product_id).filter(Boolean));
+      setOwnedProductIds(
+        (data ?? [])
+          .filter(item => item.product_id && item.status !== 'hidden')
+          .map(item => item.product_id)
+          .filter(Boolean),
+      );
     }
 
     loadOwned(user.id);

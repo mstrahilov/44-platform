@@ -5,6 +5,15 @@ import { supabase } from '@/lib/supabase';
 export async function createOrOpenConversation(currentUserId: string, otherProfileId: string) {
   const conversationKey = normalizeConversationKey(currentUserId, otherProfileId);
 
+  async function ensureMembers(conversationId: string) {
+    return supabase
+      .from('conversation_members')
+      .upsert([
+        { conversation_id: conversationId, profile_id: currentUserId },
+        { conversation_id: conversationId, profile_id: otherProfileId },
+      ], { onConflict: 'conversation_id,profile_id' });
+  }
+
   const { data: existing, error: existingError } = await supabase
     .from('conversations')
     .select('id')
@@ -16,7 +25,8 @@ export async function createOrOpenConversation(currentUserId: string, otherProfi
   }
 
   if (existing?.id) {
-    return { href: `/inbox?conversation=${existing.id}`, error: null };
+    const { error: memberError } = await ensureMembers(existing.id);
+    return { href: `/inbox?conversation=${existing.id}`, error: memberError };
   }
 
   const { data: created, error: createError } = await supabase
@@ -37,12 +47,7 @@ export async function createOrOpenConversation(currentUserId: string, otherProfi
   }
 
   const conversationId = (created as { id: string }).id;
-  const { error: memberError } = await supabase
-    .from('conversation_members')
-    .upsert([
-      { conversation_id: conversationId, profile_id: currentUserId },
-      { conversation_id: conversationId, profile_id: otherProfileId },
-    ], { onConflict: 'conversation_id,profile_id' });
+  const { error: memberError } = await ensureMembers(conversationId);
 
   return {
     href: `/inbox?conversation=${conversationId}`,

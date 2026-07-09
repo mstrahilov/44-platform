@@ -24,12 +24,6 @@ type OverviewState = {
   metricsError: string;
 };
 
-const APPAREL_SECTION = {
-  id: 'apparel',
-  label: 'Apparel',
-  href: '/store/merch',
-};
-
 export default function DashboardPage() {
   useDashboardTabs('overview');
   const { user, loading } = useAuth();
@@ -130,7 +124,8 @@ export default function DashboardPage() {
         const experience = getProductExperience(item);
         if (section.id === 'music') return experience === 'music';
         if (section.id === 'books') return experience === 'book';
-        return experience === 'asset';
+        if (section.id === 'assets') return experience === 'asset';
+        return experience === 'physical';
       });
       const published = items.filter(item => item.is_published || item.status === 'published').length;
       return {
@@ -142,18 +137,6 @@ export default function DashboardPage() {
         href: section.href,
       };
     }),
-    (() => {
-      const items = overview.products.filter(item => getProductExperience(item) === 'physical');
-      const published = items.filter(item => item.is_published || item.status === 'published').length;
-      return {
-        id: APPAREL_SECTION.id,
-        title: APPAREL_SECTION.label,
-        total: items.length,
-        published,
-        drafts: items.length - published,
-        href: APPAREL_SECTION.href,
-      };
-    })(),
   ];
 
   const librarySaves = overview.libraryItems.length;
@@ -184,19 +167,35 @@ export default function DashboardPage() {
               href={card.href}
             />
           ))}
+          <OverviewStatCard label="Library Saves" value={librarySaves} note="Items added to user Libraries." />
+          <OverviewStatCard label="Total Plays" value={totalPlays} note="Plays across music releases." />
+          <OverviewStatCard label="Products Sold" value={soldItems} note="Purchased items in this period." />
+          <OverviewStatCard label="Revenue Earned" value={formatCurrency(revenueCents)} note="Gross revenue from purchases." />
         </div>
 
-        <HubSection title="Analytics">
-          <div className="dashboard-metric-grid">
-            <MetricCard label="Library Saves" value={librarySaves} note="Items added to user Libraries." />
-            <MetricCard label="Total Plays" value={totalPlays} note="Plays across music releases." />
-            <MetricCard label="Products Sold" value={soldItems} note="Purchased items in this period." />
-            <MetricCard label="Revenue Earned" value={formatCurrency(revenueCents)} note="Gross revenue from purchases." />
+        {overview.metricsError && (
+          <div className="dashboard-status dashboard-status-error">
+            Some analytics could not be loaded: {overview.metricsError}
           </div>
+        )}
 
-          {overview.metricsError && (
-            <div className="dashboard-status dashboard-status-error">
-              Some analytics could not be loaded: {overview.metricsError}
+        <HubSection title="Earnings">
+          {purchasedItems.length === 0 ? (
+            <p className="library-empty-text">No items sold yet.</p>
+          ) : (
+            <div className="dashboard-list-surface">
+              {purchasedItems.map((item, index) => {
+                const product = item.product_id ? productById.get(item.product_id) : null;
+                return (
+                  <div key={item.id} className="dashboard-list-row" style={{ borderTop: index === 0 ? 'none' : undefined }}>
+                    <div className="dashboard-row-copy">
+                      <div className="dashboard-row-title">{product?.title ?? 'Item'}</div>
+                      <div className="dashboard-row-subtitle">{item.acquired_at ? formatDate(item.acquired_at) : 'Purchase date unavailable'}</div>
+                    </div>
+                    <div className="dashboard-row-meta">{formatCurrency(product?.price_cents ?? 0)}</div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </HubSection>
@@ -206,7 +205,7 @@ export default function DashboardPage() {
   );
 }
 
-function MetricCard({ label, value, note }: { label: string; value: string | number; note: string }) {
+function OverviewStatCard({ label, value, note }: { label: string; value: string | number; note: string }) {
   return (
     <GlassPanel className="dashboard-metric-card">
       <div className="os-type-meta">{label}</div>
@@ -250,4 +249,8 @@ function formatCurrency(cents: number) {
     currency: 'USD',
     maximumFractionDigits: 0,
   }).format(cents / 100);
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(value));
 }

@@ -134,7 +134,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { user } = useAuth();
   const [profile, setProfile] = useState<StudioProfile | null>(null);
-  const { mode, hiddenIds, order, pinnedItems } = useDockPreferences();
+  const { mode, hiddenIds, pinnedItems } = useDockPreferences();
   const now = useNow();
   const activeAppId = getActiveOSAppId(pathname);
   const { openContextMenu } = useContextMenu();
@@ -197,10 +197,11 @@ export default function Sidebar() {
   const dockApps = availableApps.filter(app => app.locked || !effectiveHiddenIds.includes(app.id));
   const activePinnedItem = pinnedItems.find(item => isPinnedDockItemActive(pathname, item.href));
   const mainActiveAppId = activePinnedItem ? '' : activeAppId;
-  const orderedMainApps = dockApps
-    .filter(app => app.group === 'media' || app.group === 'community' || app.group === 'studio')
-    .sort((a, b) => orderIndex(order, a.id) - orderIndex(order, b.id));
-  const accountApps = dockApps.filter(app => app.group === 'account');
+  const libraryApp = dockApps.find(app => app.id === 'library') ?? null;
+  const orderedMainApps = ['store', 'community', 'dashboard', 'radio']
+    .map(id => dockApps.find(app => app.id === id))
+    .filter((app): app is OSApp => Boolean(app));
+  const supportApp = dockApps.find(app => app.id === 'support') ?? null;
   const systemApps = dockApps.filter(app => app.group === 'system');
 
   const time = now
@@ -230,6 +231,12 @@ export default function Sidebar() {
       </div>
 
       <nav className="sidebar-nav" aria-label="Dock">
+        {libraryApp && (
+          <>
+            <DockItem app={libraryApp} active={mainActiveAppId === libraryApp.id} compact={compact} />
+            <div className="sidebar-divider" />
+          </>
+        )}
         <DockSection apps={orderedMainApps} activeAppId={mainActiveAppId} compact={compact} />
         {pinnedItems.length > 0 && (
           <>
@@ -242,10 +249,9 @@ export default function Sidebar() {
 
         <div className="sidebar-spacer" />
 
-        {/* Support (account group) sits at the bottom, directly above the system divider. */}
-        {accountApps.map(app => (
-          <DockItem key={app.id} app={app} active={mainActiveAppId === app.id} compact={compact} />
-        ))}
+        {supportApp && (
+          <DockItem app={supportApp} active={mainActiveAppId === supportApp.id} compact={compact} />
+        )}
 
         <div className="sidebar-divider" />
 
@@ -267,11 +273,6 @@ export default function Sidebar() {
       </nav>
     </aside>
   );
-}
-
-function orderIndex(order: string[], id: string) {
-  const index = order.indexOf(id);
-  return index === -1 ? Number.MAX_SAFE_INTEGER : index;
 }
 
 function isPinnedDockItemActive(pathname: string, href: string) {

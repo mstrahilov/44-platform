@@ -130,7 +130,13 @@ export function ProductStoreDetail({
   useEffect(() => {
     async function fetchOwnership(userId: string) {
       if (!product) return;
-      const { data } = await supabase.from('library_items').select('id, product_id, acquisition_type').eq('user_id', userId).eq('product_id', product.id).maybeSingle();
+      const { data } = await supabase
+        .from('library_items')
+        .select('id, product_id, acquisition_type')
+        .eq('user_id', userId)
+        .eq('product_id', product.id)
+        .neq('status', 'hidden')
+        .maybeSingle();
       setOwned(Boolean(data));
       setOwnedLibraryItemId(data?.id ?? null);
       setOwnedAcquisitionType(data?.acquisition_type ?? null);
@@ -169,11 +175,17 @@ export function ProductStoreDetail({
     if (!product) return;
     if (!user) { alert('Sign in first, then add this to your library.'); return; }
     if (!canSaveProductToLibrary(product)) return;
-    const { error } = await supabase.from('library_items').upsert({ user_id: user.id, product_id: product.id, acquisition_type: 'free' }, { onConflict: 'user_id,product_id' });
+    const { error } = await supabase.from('library_items').upsert({ user_id: user.id, product_id: product.id, acquisition_type: 'free', status: 'visible' }, { onConflict: 'user_id,product_id' });
     if (error) { alert(error.message); return; }
     setOwned(true);
     setOwnedAcquisitionType('free');
-    const { data } = await supabase.from('library_items').select('id, acquisition_type').eq('user_id', user.id).eq('product_id', product.id).maybeSingle();
+    const { data } = await supabase
+      .from('library_items')
+      .select('id, acquisition_type')
+      .eq('user_id', user.id)
+      .eq('product_id', product.id)
+      .neq('status', 'hidden')
+      .maybeSingle();
     setOwnedLibraryItemId(data?.id ?? null);
     setOwnedAcquisitionType(data?.acquisition_type ?? 'free');
   }

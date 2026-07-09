@@ -118,9 +118,27 @@ function MessagesContent() {
     setSchemaReady(true);
 
     const requested = searchParams.get('conversation');
-    if (requested && rows.some(row => row.id === requested)) setActiveId(requested);
-    else if (!activeId && rows[0]) setActiveId(rows[0].id);
+    if (requested && rows.some(row => row.id === requested)) {
+      setActiveId(requested);
+    } else if (!activeId || !rows.some(row => row.id === activeId)) {
+      setActiveId(rows[0]?.id ?? '');
+    }
   }, [activeId, searchParams, user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    function refreshInbox() {
+      loadInbox();
+    }
+
+    window.addEventListener('focus', refreshInbox);
+    document.addEventListener('visibilitychange', refreshInbox);
+    return () => {
+      window.removeEventListener('focus', refreshInbox);
+      document.removeEventListener('visibilitychange', refreshInbox);
+    };
+  }, [loadInbox, user]);
 
   useEffect(() => {
     if (!user) return;
@@ -186,6 +204,16 @@ function MessagesContent() {
       setError(insertError.message);
     } else if (data) {
       setMessages(current => [...current, data as Message]);
+      setConversations(current => {
+        const updatedAt = new Date().toISOString();
+        const next = current.map(conversation => (
+          conversation.id === activeConversation.id
+            ? { ...conversation, updated_at: updatedAt }
+            : conversation
+        ));
+        next.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+        return next;
+      });
       setBody('');
       await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', activeConversation.id);
     }

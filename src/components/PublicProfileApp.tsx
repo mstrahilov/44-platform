@@ -281,7 +281,7 @@ export default function PublicProfilePage() {
       if (generalPosts.length > 0 || !isCreator) next.push({ id: 'posts', label: 'Posts' });
       if (isCreator && musicProducts.length > 0) next.push({ id: 'music', label: 'Music' });
       if (isCreator && bookProducts.length > 0) next.push({ id: 'books', label: 'Books' });
-      if (isCreator && assetProducts.length > 0) next.push({ id: 'assets', label: 'Assets' });
+      if (isCreator && assetProducts.length > 0) next.push({ id: 'assets', label: 'Sample Packs' });
       if (isCreator && publishedServices.length > 0) next.push({ id: 'services', label: 'Services' });
       return next;
     },
@@ -446,7 +446,7 @@ export default function PublicProfilePage() {
         )}
 
         {tab === 'assets' && (
-          <ArtifactGrid empty="No assets published yet.">
+          <ArtifactGrid empty="No sample packs published yet.">
             {assetProducts.map(product => (
               <SocialArtifactCard
                 key={product.id}

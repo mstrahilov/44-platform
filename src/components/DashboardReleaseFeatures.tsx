@@ -379,7 +379,7 @@ export function DashboardReleaseFeatures({
             <div className="settings-row-copy">
               <div className="os-type-card-title">Achievements</div>
               <p className="os-type-body-small">
-                {supportsAchievements ? 'Music and books can include achievements.' : 'Assets do not support achievements.'}
+                {supportsAchievements ? 'Music and books can include achievements.' : 'Sample packs do not support achievements.'}
               </p>
             </div>
             <button

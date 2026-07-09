@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
 import { productLibraryHref } from '@/lib/experience';
-import { getProductLibraryContent, getProductLibraryPrimaryAction, getProductRuntimeKind } from '@/lib/libraryContent';
+import { getProductLibraryContent, getProductLibraryPrimaryAction, getProductRuntimeKind, isFreeLibraryClaim } from '@/lib/libraryContent';
 import { creatorHref, type ProductAchievement, type Resource, type ServiceRequest, type Track, type UserAchievement } from '@/lib/platform';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
 import { LibraryAchievementsSection, LibraryCreatorChip, LibraryProductDetailsSection } from '@/components/LibraryDetailPrimitives';
@@ -184,6 +184,7 @@ function ProductLibraryDetail({
   achievements: ProductAchievement[];
   unlockedAchievementIds: Set<string>;
 }) {
+  const router = useRouter();
   const product = row.products!;
   const action = getProductLibraryPrimaryAction(product);
   const runtimeKind = getProductRuntimeKind(product);
@@ -196,6 +197,7 @@ function ProductLibraryDetail({
   const [playedTrackIds, setPlayedTrackIds] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<AchievementToastData | null>(null);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
+  const [removing, setRemoving] = useState(false);
 
   useEffect(() => { Promise.resolve().then(() => setPlayedTrackIds(new Set())); }, [product.id]);
   useEffect(() => { Promise.resolve().then(() => setLocalUnlockedAchievementIds(unlockedAchievementIds)); }, [unlockedAchievementIds]);
@@ -284,10 +286,24 @@ function ProductLibraryDetail({
   const content = getProductLibraryContent(product);
   const creatorDisplayName = product.creators?.display_name || product.creator || '44 Creator';
   const canDownload = Boolean(product.download_url || product.read_url);
+  const freeLibraryItem = row.acquisition_type === 'free' || isFreeLibraryClaim(product);
   const trackNumbers = useMemo(
     () => new Map(tracks.map((track, index) => [track.id, track.number ?? index + 1])),
     [tracks],
   );
+
+  async function removeFromLibrary() {
+    setRemoving(true);
+    const result = freeLibraryItem
+      ? await supabase.from('library_items').delete().eq('id', row.id).eq('user_id', userId)
+      : await supabase.from('library_items').update({ status: 'hidden' }).eq('id', row.id).eq('user_id', userId);
+    setRemoving(false);
+    if (result.error) {
+      alert(result.error.message);
+      return;
+    }
+    router.push('/library');
+  }
 
   return (
     <div className="view-detail-single library-detail-page">
@@ -321,6 +337,9 @@ function ProductLibraryDetail({
                 Download
               </a>
             )}
+            <button className="os-button os-button-ghost" type="button" onClick={() => { void removeFromLibrary(); }} disabled={removing}>
+              {removing ? 'Removing…' : 'Remove from Library'}
+            </button>
           </div>
         </div>
       </div>

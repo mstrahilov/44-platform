@@ -65,9 +65,9 @@ function labelForPath(path: string | null | undefined) {
   if (path.startsWith('/profile')) return 'Profile';
   if (path.startsWith('/music')) return 'Music';
   if (path.startsWith('/books')) return 'Books';
-  if (path.startsWith('/assets')) return 'Assets';
+  if (path.startsWith('/assets')) return 'Sample Packs';
   if (path.startsWith('/merch') || path.startsWith('/shop')) return 'Merch';
-  if (path.startsWith('/resources')) return 'Resources';
+  if (path.startsWith('/resources')) return 'Community';
   if (path.startsWith('/services') || path.startsWith('/service')) return 'Services';
   if (path === '/' || path.startsWith('/home')) return 'Home';
   return null;

@@ -1,6 +1,6 @@
 # 44OS Foundation
 
-**One of exactly two project handoff documents.** This file explains what 44OS is, how the app is structured, how Supabase is used, and what should happen next. Its sibling, `Other/44OS_UI.md`, defines the visual system and interaction rules. If any older note, chat memory, or comment disagrees with these two files, these two files win.
+**One of exactly two project handoff documents.** This file explains what 44OS is, how the app is structured, how Supabase is used, and what should happen next. Its sibling, `Other/44OS_UI.md`, defines the visual system and interaction rules. The finalized build plan in `Other/44OS_Finalized_Build_Plan.md` can temporarily supersede this file and the UI doc where it says so; once a decision is adopted, update these handoff docs in the same change so they stay current.
 
 **Critical rule for future chats:** read `Other/44OS_FOUNDATION.md` and `Other/44OS_UI.md` before making changes. Keep them updated in the same change whenever architecture, routes, Supabase, Dock behavior, or UI rules change.
 
@@ -14,23 +14,24 @@ The current launch surface is:
 
 - **Home**: visual name for the public discovery/acquisition app. The underlying route can remain `/store` for now, but the Dock/app-facing label should become Home.
 - **Library**: everything a signed-in user saved, added, or purchased.
-- **Community**: social posts, replies, likes, profiles, follows, mentions, hashtags, and messaging surfaces.
-- **Dashboard**: creator workspace for publishing and managing music, books, assets, achievements, extras, overview metrics, and earnings.
-- **Resources**: guides, templates, and useful creative references.
-- **Services**: 44-operated help/project/service intake.
-- **Radio**: upcoming 44 Radio station/playlist experience.
+- **Community**: social posts, replies, likes, profiles, follows, mentions, hashtags, messaging, structured Questions, structured Collaboration listings, and practical knowledge/helpful creator knowledge that previously sat in standalone Resources planning.
+- **Dashboard**: creator workspace for publishing and managing music, books, sample packs, merch, services, overview metrics, and earnings.
+- **Resources**: no longer a standalone launch app. Existing routes may remain temporarily, but its practical knowledge role is being absorbed into Community and it should stay out of the Dock.
+- **Services**: 44-operated help/project/service intake. This surface is no longer in the Dock; it is accessed from Home navigation and creator Dashboard sections.
+- **Radio**: real 44 Radio station experience with synced playback and a single always-on looping playlist built from uploaded creator music. The first web UI pass now exists at `/radio` and `/dashboard/radio`, backed by reviewed SQL in `Other/44os-radio-foundation.sql` that must be applied before live data will work.
 - **Settings**: system, Dock, region, and account controls.
-- **Support**: currently a quiet coming-soon page; future operating-system help center for account/login, orders, Dock/settings, Library behavior, purchases, downloads, Radio, and troubleshooting.
+- **Support**: real operating-system help center for account/login, orders, Dock/settings, Library behavior, purchases, downloads, Radio, creator uploads, troubleshooting, and escalation/contact.
 
-The web app follows a Steam-like public/private split. Signed-out visitors can browse public surfaces such as Home, Community, Resources, Services, Radio, and Support, plus shared item/profile links. Personal surfaces such as Library, Dashboard, and Settings are only exposed in the Dock after sign-in.
+The web app follows a Steam-like public/private split. Signed-out visitors can browse public surfaces such as Home, Community, Services, Radio, and Support, plus shared item/profile links. Personal surfaces such as Library, Dashboard, and Settings are only exposed in the Dock after sign-in.
 
 Language rules:
 
-- The UI says **music**, **books**, **assets**, **merch**, **releases**, **items**, **library**, **reviews**, **updates**, **earnings**, and **sold items**.
+- The UI says **music**, **books**, **sample packs**, **merch**, **services**, **releases**, **items**, **library**, **reviews**, **updates**, **earnings**, and **sold items**.
 - The UI does **not** say "products" as a generic catalog/item word. The shipped **Product Details** section label is allowed until renamed intentionally.
 - The UI does **not** say "collection"; use **Library**.
 - Services are 44-operated project intake/workspace flows, not a creator marketplace.
 - Reviews live on Store item pages. Creator Updates live on owned Library item pages. They are not Community posts.
+- Merch is a real Home/Library category with local creator fulfillment. Do not frame it like a global shipping marketplace.
 
 ---
 
@@ -68,11 +69,11 @@ The app registry is the navigation backbone:
 - `getActiveOSAppId(pathname)` maps every route to exactly one owning app so Dock highlight state stays coherent.
 - The Dock, Settings > Dock, and app availability should come from this registry. Do not hardcode app nav arrays.
 
-Current default Dock in code:
+Current product-direction Dock target:
 
-- Signed-in default visible order: **Home**, **Library**, **Services**, **Resources**, **Community**, **Radio**.
-- Signed-out public visible order: **Home**, **Services**, **Resources**, **Community**, **Radio**.
-- Support and Dashboard sit in the bottom account cluster above the divider when available. The system slot shows Log In when signed out and Settings when signed in.
+- Signed-in default visible order should be **Home**, **Library**, **Community**, **Radio**.
+- Signed-out public visible order should be **Home**, **Community**, **Radio**.
+- **Support** and **Settings** belong in the bottom cluster. **Library** remains signed-in only. Dashboard remains a creator workspace, but it is not part of the user-facing launch Dock target defined by the finalized build plan.
 - Search opens from the topbar search control, not the Dock.
 - Notifications open from the topbar bell, not the Dock.
 - Profile and Inbox are account/community utilities, reached from profile/avatar or Community surfaces.
@@ -83,10 +84,11 @@ Current default Dock in code:
 Current Dock behavior:
 
 - The visible Store app is labeled **Home** and uses a Home-style icon. `/store` URLs remain for category and detail routes until a deliberate route migration is planned.
-- Resources, Services, and Radio are available in the Dock/menu for building and testing.
-- Users can still hide non-locked Dock apps from Settings > Dock.
+- Services remains out of the Dock and is surfaced under Home navigation plus Dashboard creator tools.
+- Resources should not be built out as its own Dock app; its future value is absorbed into Community.
+- Users can still hide non-locked Dock apps from Settings > Dock, but the visible-app list should move toward the finalized set from the build plan.
 - Signed-out visitors always see the default public Dock, regardless of any old local hidden-app preferences on the machine. Signed-in users can still personalize visible Dock apps locally.
-- The Dock bottom cluster is **Support**, then signed-in **Dashboard**, above the system divider. Signed-out users see **Log In** where signed-in users see **Settings**.
+- The Dock bottom cluster target is **Support** and **Settings**. Signed-out users still see **Log In** in the system slot where signed-in users see **Settings**.
 
 Landing:
 
@@ -115,6 +117,7 @@ Primary routes:
 - `/library` and `/library/[category]` - Library browse surfaces.
 - `/library/[category]/[id]` - canonical owned Library item detail surface.
 - `/community` - main feed with Feed, Following, Questions, and Collaboration tabs.
+- Questions and Collaboration are moving from hashtag-driven feed variants to structured Community objects with their own data shape and purpose-built list/detail behavior.
 - `/community/[slug]`, `/community/new`, `/community/feed`, `/community/browse`, `/community/messages`, `/community/profile`, `/community/friends` - compatibility or secondary Community surfaces.
 - `/profile` and `/profile/[username]` - profile surfaces, Community-owned in Dock behavior.
 - `/inbox` - messaging surface, Community-owned.
@@ -123,7 +126,7 @@ Primary routes:
 - `/settings` - System, Dock, Region, Account.
 - `/support` - help surface.
 - `/search` - global search from topbar.
-- `/resources`, `/resources/[id]`, `/services`, `/service/[id]`, `/projects/[id]` - existing future/hidden surfaces.
+- `/resources`, `/resources/[id]`, `/services`, `/service/[id]`, `/projects/[id]` - existing secondary surfaces. Resources is no longer a standalone app direction; Services lives under Home navigation and creator Dashboard sections instead of the Dock.
 - `/radio` - registered starter page for the Radio app.
 
 Legacy/compatibility routes still exist in the codebase. The next health-check chat should audit which ones are actually linked, which should redirect, and which can be safely removed. Do not remove routes blindly.
@@ -138,7 +141,7 @@ Home is the public acquisition surface. It currently uses Store routes and Store
 
 - Music: Add to Library for streaming/save; Add to Cart for paid download support.
 - Books: Read Sample where available; Add to Cart or View in Library when owned.
-- Assets: Add to Cart or library/download behavior depending on ownership.
+- Sample Packs: Add to Cart or library/download behavior depending on ownership.
 - Merch: Add to Cart only.
 
 Home/Store item pages show **Reviews**. Empty reviews show quiet text, not a card. Published reviews use the Community-style white/paper card surface.
@@ -149,7 +152,7 @@ Library is the saved/owned surface. Detail pages mirror Store header style witho
 
 - Music: Play. Download appears only when the paid download is purchased.
 - Books: Read and Download.
-- Assets: Download.
+- Sample Packs: Download.
 
 Library music and Store music should share tracklist behavior: hover/selected play state, playable rows, track lengths, total length, straight dividers, rounded selected/hover rows, and context actions for Play and Play Next.
 
@@ -159,10 +162,10 @@ Library is a personal surface. It is hidden from the signed-out Dock and direct 
 
 ### Community
 
-Community has been simplified into a single-page feed experience:
+Community currently has a simplified single-page feed experience, but the build direction is broader:
 
 - Tabs: Feed, Following, Questions, Collaboration.
-- Questions and Collaboration are official topic tabs based on hashtags like `#question` and `#collaboration`.
+- Questions and Collaboration are moving to real structured objects with their own schema and purpose-built cards/sort behavior. Do not keep treating them as only hashtagged feed posts.
 - New Post opens an inline composer.
 - Clicking a post opens its reply drawer.
 - Clicking the speech bubble opens the reply input for that post or reply.
@@ -170,15 +173,15 @@ Community has been simplified into a single-page feed experience:
 - Replies are newest-first within their visible drawer, with clean divider spacing and no vertical thread line.
 - Mentions and hashtags are bold black links with no underline. Mention suggestions should appear only after the user starts typing a username fragment such as `@b`.
 - Owned replies/posts should expose delete where appropriate.
+- Community will also absorb the practical creator-knowledge role that earlier planning placed under Resources.
 
 ### Dashboard
 
 Dashboard is creator-first. Current shipped areas:
 
-- Overview cards and summary metrics.
-- Music, Books, Assets catalog editing.
-- Achievements and extras/future release features foundation.
-- Earnings/Sold Items as creator revenue context.
+- Overview cards, summary metrics, and the sold-items earnings list together on the Overview page.
+- Music, Books, Sample Packs, Merch, and Services management.
+- Dashboard Radio is no longer part of the active creator workflow.
 
 Avoid exposing placeholder tabs/workflows until they actually work.
 
@@ -192,6 +195,7 @@ Settings tabs:
 - Dock: mode, visible apps, landing page, reset defaults.
 - Region: country/currency/local pricing defaults.
 - Account: email, password reset, privacy and notification preferences.
+- Account and Settings are both scheduled for a full functional pass. Every visible control should work; avoid cosmetic-only settings.
 
 Reset defaults controls should sit at the bottom right of each settings page.
 
@@ -231,6 +235,7 @@ Current data areas:
 - `product_updates`: creator updates shown on Library item pages.
 - `product_achievements`, `user_achievements`, `achievement_events`: release/book achievement definitions, unlocks, and notifications/events.
 - `posts`, `post_replies`, `post_likes`, `reply_likes`: Community feed and replies.
+- Questions and Collaboration will require reviewed schema work for structured objects. Write SQL in `Other/` first and do not run it without explicit approval and a backup.
 - `profile_follows`: following graph.
 - `conversations`, `conversation_members`, `messages`: messaging.
 - `services`, `service_requests`, `project_messages`: Services/Projects spine.
@@ -242,6 +247,7 @@ Existing SQL/migration material:
 - `Other/44os-phase7-additive-schema.sql`
 - `Other/44os-steam-foundation.sql`
 - `Other/44os-functional-sweep.sql`
+- `Other/44os-radio-foundation.sql`
 - `supabase/migrations/20260704164154_remote_schema.sql`
 - `supabase/migrations/20260704190000_44os_phase7_additive_schema.sql`
 - `supabase/migrations/20260704201500_44os_steam_foundation.sql`
@@ -286,24 +292,25 @@ Recommended manual test script:
 
 ## 8. Next Work Queue
 
-This is the handoff list for the next chat. Work top to bottom unless the user redirects.
+This is the active work-session queue from the finalized build plan. Work top to bottom unless the user redirects.
 
-1. **Production login/account QA.** Verify signup, login, logout, password reset, email confirmation/magic link, session persistence, and role/profile creation on `https://44os.com`.
-2. **Production Settings regression check.** On the live domain, test Settings tabs and saved user preferences, especially System/appearance controls after the domain change.
-3. **Support knowledge-base plan.** Turn Support into a Steam/Spotify-style help center for the OS: account/login, orders, Library saves/purchases/downloads, Dock/settings, Radio, creator uploads, troubleshooting, and contact/escalation.
-4. **Route/taxonomy audit.** Make a current map of every route, its owner app, whether it is public, compatibility, hidden, or removable, and what it should redirect to if kept. Do not remove routes blindly.
-5. **Lint health cleanup.** `npm run build` passes. `npm run lint` still has broad React hook/ref rule failures; separate real blockers from lint-rule migration noise and fix production blockers first.
-6. **Supabase safety snapshot.** Generate a current schema/reference snapshot after user approval, and store it as documentation in `Other/`. Do not overwrite live data.
-7. **Creator onboarding/upload polish.** Prepare the platform for invited creators to upload releases/books/assets without confusion or data loss.
-8. **Final UI consistency sweep.** Check mobile, empty states, list materials, Dock active state, section spacing, context menus, and Home/Library detail parity.
-9. **Radio app foundation.** Build Radio as a real app. First version can be a Supabase-backed playlist/station that plays continuously like 44 Radio, with schedule metadata. Dashboard creator submission/curation can come later.
-10. **Desktop shell research.** After the web app stabilizes, compare Electron vs Tauri or another lightweight shell for macOS/Windows testing. Preserve web routing/auth/deep-link behavior.
+1. **Completed:** Radio v1 listener experience is live with synced playback, now-playing UI, and creator-track rotation.
+2. **Completed:** Community Questions and Collaboration are now structured Community objects with reviewed SQL recorded in `Other/`.
+3. **Completed:** Merch is now a real local-fulfillment category with checkout capture, creator orders, and region-aware creator pricing.
+4. **In progress:** Messages functional pass. Conversation creation/opening is working; continue with unread state, refresh behavior, and full end-to-end QA.
+5. **Pending:** Account. Complete email/password/security flows using Supabase Auth correctly.
+6. **Pending:** Support. Replace the placeholder with a real categorized, searchable help center and escalation path.
+7. **Pending:** Settings. Perform a full functional pass so every visible control truly persists and works, including Dock, System, Region, and Account tabs.
+8. **Pending:** Onboarding tooltips. Add lightweight dismissible contextual tips, persisted per user.
+9. **Pending:** Desktop packaging research. Compare Electron, Tauri, and other lightweight wrappers for the existing Next.js app and produce a recommendation.
+10. **Pending:** Evaluation and testing pass. Run internal QA across Home, Library, Community, Radio, Support, Settings, Messages, Account, and Merch, then gather external feedback.
 
 ---
 
 ## 9. Maintenance Rules
 
 - Only maintain these two project handoff docs: `Other/44OS_FOUNDATION.md` and `Other/44OS_UI.md`.
+- Keep `Other/44OS_Finalized_Build_Plan.md` as the current interim planning source when it supersedes older notes, but fold accepted decisions back into the two handoff docs immediately so future sessions do not drift.
 - If app behavior changes, update the Foundation doc.
 - If visual/interaction rules change, update the UI doc.
 - If Supabase changes are proposed, add a reviewed SQL file and update this doc before running anything.

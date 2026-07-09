@@ -13,7 +13,7 @@ Live visual reference: `/studio/44os`.
 - The shell is persistent. Only workspace content changes.
 - Primary destinations live in the Dock. Topbar tabs are for local sections or filters.
 - Glass belongs to the app shell and system popovers. Lists/cards/content should use the same readable paper/material color as notifications, not background bleed-through.
-- User-facing copy says Library, releases, books, assets, merch, reviews, updates, earnings, sold items. It does not say Product as a generic catalog/item word and does not say Collection. The shipped Product Details section label is allowed until renamed intentionally.
+- User-facing copy says Library, releases, books, sample packs, merch, services, reviews, updates, earnings, sold items. It does not say Product as a generic catalog/item word and does not say Collection. The shipped Product Details section label is allowed until renamed intentionally.
 - Spacing is part of the brand. Section titles, lists, headers, and empty states must share the same rhythm everywhere.
 - Build reusable primitives before one-off page fixes.
 - Mobile is the same OS adapted to a smaller screen, not a separate experience.
@@ -137,8 +137,6 @@ Current Dock in code:
 
 - Home
 - Library, signed in only
-- Services
-- Resources
 - Community
 - Radio
 - pinned item divider when pins exist
@@ -154,7 +152,7 @@ Current Dock target:
 - Store is renamed visually to **Home**.
 - The Home app still uses `/store` routes behind the scenes until a route migration is intentionally planned.
 - Home uses a Home-style icon. Icons should remain easy to replace from public icon assets.
-- Resources, Services, and Radio are available in the Dock/menu for building and testing.
+- Radio remains in the Dock. Services and Resources are not Dock destinations.
 - Users can still hide unfinished apps from Settings > Dock when needed.
 - Signed-out visitors see the default public Dock for testing, even if that browser has old local hidden-app preferences. Personal Dock visibility preferences apply after login.
 - Library, Dashboard, and Settings are personal surfaces and should not appear as signed-out Dock destinations.
@@ -175,7 +173,7 @@ Dock rules:
 
 Signed-out protected states:
 
-- Public destinations should remain visible in the shell during testing: Home, Services, Resources, Community, Radio, and Support.
+- Public destinations should remain visible in the shell during testing: Home, Community, Radio, and Support.
 - Personal areas such as Library, Dashboard, and Settings should be hidden from signed-out navigation. Direct visits should show quiet centered empty states with a clear login action instead of exposing controls.
 - Signed-out visitors use the default light/amber look. Stored theme/accent preferences should only affect the UI when a user session is present.
 

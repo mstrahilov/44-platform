@@ -88,10 +88,10 @@ export const OS_APPS: OSApp[] = [
   },
   {
     id: 'store',
-    label: 'Home',
-    description: 'Discover music, books, assets, and merch from creators on 44.',
+    label: 'Browse',
+    description: 'Discover music, books, sample packs, merch, and services on 44.',
     href: '/',
-    iconClass: 'os-icon-home',
+    iconClass: 'os-icon-grid',
     group: 'media',
   },
   {
@@ -114,8 +114,8 @@ export const OS_APPS: OSApp[] = [
   },
   {
     id: 'assets',
-    label: 'Assets',
-    description: 'Samples, templates, presets, and creative tools for your work.',
+    label: 'Sample Packs',
+    description: 'Sample packs, stems, presets, and creative tools for your work.',
     href: '/store/assets',
     iconClass: 'os-icon-assets',
     group: 'legacy',
@@ -135,7 +135,7 @@ export const OS_APPS: OSApp[] = [
     label: 'Radio',
     description: 'Live mixes, creator stations, and listening rooms for 44.',
     href: '/radio',
-    iconClass: 'os-icon-radio',
+    iconClass: 'os-icon-radio-classic',
     group: 'media',
   },
   {
@@ -143,7 +143,7 @@ export const OS_APPS: OSApp[] = [
     label: 'Community',
     description: 'Posts from creators and the 44 community.',
     href: '/community',
-    iconClass: 'os-icon-community',
+    iconClass: 'os-icon-friends',
     group: 'community',
   },
   {
@@ -172,7 +172,8 @@ export const OS_APPS: OSApp[] = [
     description: 'Guides, templates, and useful references for creatives.',
     href: '/resources',
     iconClass: 'os-icon-resources',
-    group: 'media',
+    group: 'legacy',
+    hidden: true,
   },
   {
     id: 'services',
@@ -180,7 +181,8 @@ export const OS_APPS: OSApp[] = [
     description: 'Professional creative services, produced and delivered through 44.',
     href: '/services',
     iconClass: 'os-icon-services',
-    group: 'media',
+    group: 'legacy',
+    hidden: true,
   },
   {
     id: 'friends',
@@ -224,9 +226,9 @@ export const OS_APPS: OSApp[] = [
   {
     id: 'dashboard',
     label: 'Dashboard',
-    description: 'Your creator workspace — publish music, books, assets, and track earnings.',
+    description: 'Your creator workspace — publish music, books, sample packs, merch, services, and track earnings.',
     href: '/dashboard',
-    iconClass: 'os-icon-dashboard',
+    iconClass: 'os-icon-showcase',
     group: 'account',
     requiresAuth: true,
   },
@@ -296,13 +298,13 @@ export function getActiveOSAppId(pathname: string): OSAppId | '' {
     pathname.startsWith('/shop')
   ) return 'store';
   if (pathname.startsWith('/radio')) return 'radio';
-  if (pathname.startsWith('/services') || pathname.startsWith('/service')) return 'services';
-  if (pathname.startsWith('/resources')) return 'resources';
+  if (pathname.startsWith('/services') || pathname.startsWith('/service')) return 'store';
+  if (pathname.startsWith('/resources')) return 'community';
   if (pathname.startsWith('/friends')) return 'community';
   if (pathname.startsWith('/community') || pathname.startsWith('/profile') || pathname.startsWith('/inbox')) return 'community';
   if (pathname.startsWith('/notifications')) return 'notifications';
   if (pathname.startsWith('/account')) return 'settings';
-  if (pathname.startsWith('/projects')) return 'services';
+  if (pathname.startsWith('/projects')) return 'store';
   if (pathname.startsWith('/dashboard') || pathname.startsWith('/studio')) return 'dashboard';
   if (pathname.startsWith('/settings')) return 'settings';
   if (pathname.startsWith('/support')) return 'support';

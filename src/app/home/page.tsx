@@ -107,7 +107,7 @@ export default function HomePage() {
 
         <HubSection title="Recent in Library">
           {recentItems.length === 0 ? (
-            <EmptyMessage>Nothing in your Library yet. Explore Music, Books, or Assets to add something.</EmptyMessage>
+            <EmptyMessage>Nothing in your Library yet. Explore Music, Books, or Sample Packs to add something.</EmptyMessage>
           ) : (
             <Shelf>
               {recentItems.map(row => (

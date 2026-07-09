@@ -66,18 +66,21 @@ function ensureTrackCount(current: DraftTrack[], nextCount: number) {
 }
 
 function runtimeTypeForSection(sectionId: DashboardCatalogSectionId) {
+  if (sectionId === 'merch') return 'merch';
   if (sectionId === 'books') return 'book';
   if (sectionId === 'assets') return 'sample_pack';
   return 'music';
 }
 
 function experienceTypeForSection(sectionId: DashboardCatalogSectionId) {
+  if (sectionId === 'merch') return 'merch';
   if (sectionId === 'books') return 'book';
   if (sectionId === 'assets') return 'asset';
   return 'music';
 }
 
 function productAssetTypeForSection(sectionId: DashboardCatalogSectionId) {
+  if (sectionId === 'merch') return 'merch';
   if (sectionId === 'books') return 'book';
   if (sectionId === 'assets') return 'sample_pack';
   return 'music';
@@ -93,6 +96,7 @@ export default function NewProductPage() {
 
 function categoryMatchesSection(category: Category, sectionId: DashboardCatalogSectionId) {
   const name = `${category.name} ${category.slug}`.toLowerCase();
+  if (sectionId === 'merch') return name.includes('merch') || name.includes('apparel') || name.includes('shop');
   if (sectionId === 'books') return name.includes('book');
   if (sectionId === 'assets') return name.includes('asset') || name.includes('sample') || name.includes('preset') || name.includes('template');
   return name.includes('music');
@@ -115,6 +119,8 @@ function NewProductContent() {
   const [marketMode, setMarketMode] = useState<MarketMode>('global');
   const [localPrice, setLocalPrice] = useState('');
   const [localCurrency, setLocalCurrency] = useState('USD');
+  const [merchFulfillmentMode, setMerchFulfillmentMode] = useState<'ship' | 'deliver'>('deliver');
+  const [merchShippingScope, setMerchShippingScope] = useState<'local' | 'global'>('local');
   const [coverUrl, setCoverUrl] = useState('');
   const [itemFileUrl, setItemFileUrl] = useState('');
   const [year, setYear] = useState('');
@@ -145,7 +151,11 @@ function NewProductContent() {
 
       setProfile(profileResult.profile);
       setCreatorName(getStudioDisplayName(profileResult.profile, user.email));
-      const nextCurrency = profileResult.profile?.home_currency || currencyForCountry(profileResult.profile?.home_country_code);
+      const nextCurrency =
+        profileResult.profile?.display_currency ||
+        currencyForCountry(profileResult.profile?.country_code) ||
+        profileResult.profile?.home_currency ||
+        currencyForCountry(profileResult.profile?.home_country_code);
       setLocalCurrency(nextCurrency);
       setProductType(section.typeOptions[0]);
     }
@@ -159,7 +169,9 @@ function NewProductContent() {
   );
 
   const isMusicProduct = section.id === 'music';
+  const isMerchProduct = section.id === 'merch';
   const needsDigitalFile = section.id === 'books' || section.id === 'assets';
+  const merchUsesLocalOnlyPricing = isMerchProduct && (merchFulfillmentMode === 'deliver' || merchShippingScope === 'local');
 
   useEffect(() => {
     if (!isMusicProduct) return;
@@ -199,7 +211,7 @@ function NewProductContent() {
       }
     }
     if (needsDigitalFile && !itemFileUrl.trim()) {
-      setError(section.id === 'books' ? 'Books need an uploaded file before saving.' : 'Assets need an uploaded pack file before saving.');
+      setError(section.id === 'books' ? 'Books need an uploaded file before saving.' : 'Sample packs need an uploaded file before saving.');
       return;
     }
 
@@ -224,17 +236,19 @@ function NewProductContent() {
       category: selectedCategory?.name ?? section.label,
       short_description: null,
       long_description: cleanDescription,
-      price_cents: priceCents,
-      market_mode: marketMode,
-      local_price_cents: marketMode === 'global' ? null : localPriceCents,
-      local_currency: marketMode === 'global' ? null : localCurrency,
-      available_locally_only: false,
+      price_cents: merchUsesLocalOnlyPricing ? 0 : priceCents,
+      market_mode: isMerchProduct ? (merchUsesLocalOnlyPricing ? 'global_plus_local' : marketMode) : marketMode,
+      local_price_cents: isMerchProduct ? (localPriceCents ?? priceCents) : (marketMode === 'global' ? null : localPriceCents),
+      local_currency: isMerchProduct ? localCurrency : (marketMode === 'global' ? null : localCurrency),
+      available_locally_only: isMerchProduct ? merchUsesLocalOnlyPricing : false,
       is_free: isFree,
       cover_url: coverUrl.trim() || null,
       hero_url: null,
       runtime_type: runtimeTypeForSection(section.id),
       experience_type: experienceTypeForSection(section.id),
-      fulfillment_type: 'digital',
+      fulfillment_type: isMerchProduct ? 'physical' : 'digital',
+      merch_fulfillment_mode: isMerchProduct ? merchFulfillmentMode : null,
+      merch_shipping_scope: isMerchProduct ? (merchFulfillmentMode === 'deliver' ? 'local' : merchShippingScope) : null,
       read_url: section.id === 'books' ? itemFileUrl.trim() : null,
       download_url: needsDigitalFile ? itemFileUrl.trim() : null,
       featured: false,
@@ -258,6 +272,8 @@ function NewProductContent() {
         available_locally_only: _availableLocallyOnly,
         experience_type: _experienceType,
         fulfillment_type: _fulfillmentType,
+        merch_fulfillment_mode: _merchFulfillmentMode,
+        merch_shipping_scope: _merchShippingScope,
         ...legacyPayload
       } = insertPayload;
       const retry = await supabase.from('products').insert(legacyPayload).select('id').single();
@@ -343,42 +359,105 @@ function NewProductContent() {
             <section className="dashboard-form-step">
               <div className="dashboard-form-section-head">
                 <div className="dashboard-form-section-copy">
-                  <div className="dashboard-field-label">Release Information</div>
-                  <p>Set the core title, type, pricing, artwork, and main files for this item.</p>
+                  <div className="dashboard-field-label">{isMerchProduct ? 'Item Information' : 'Release Information'}</div>
+                  <p>Set the core title, type, pricing, artwork, and main details for this item.</p>
                 </div>
               </div>
 
               <label className="dashboard-field">
-                <div className="dashboard-field-label">Title</div>
-                <input className="os-input-field" value={title} onChange={event => setTitle(event.target.value)} placeholder="Example: Here Comes The Feeling" />
+                <div className="dashboard-field-label">{isMerchProduct ? 'Product Name' : 'Title'}</div>
+                <input className="os-input-field" value={title} onChange={event => setTitle(event.target.value)} placeholder={isMerchProduct ? 'Example: 44 Studio Hoodie' : 'Example: Here Comes The Feeling'} />
               </label>
 
               <label className="dashboard-field">
-              <div className="dashboard-field-label">{section.typeLabel}</div>
-              <select className="os-input-field" value={productType} onChange={event => setProductType(event.target.value)}>
-                {section.typeOptions.map(option => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
-              </label>
-
-              <label className="dashboard-field">
-                <div className="dashboard-field-label">Description</div>
+                <div className="dashboard-field-label">{isMerchProduct ? 'Product Description' : 'Description'}</div>
                 <textarea className="os-input-textarea" rows={6} value={description} onChange={event => setDescription(event.target.value)} />
               </label>
 
               <div className="dashboard-form-grid dashboard-form-grid-3">
               <label className="dashboard-field">
-                <div className="dashboard-field-label">Price</div>
-                <span className="dashboard-price-input">
-                  <span>{currencySymbol('USD')}</span>
-                  <input className="os-input-field" value={price} onChange={event => setPrice(formatPriceInput(event.target.value))} />
-                </span>
+                <div className="dashboard-field-label">{section.typeLabel}</div>
+                <select className="os-input-field" value={productType} onChange={event => setProductType(event.target.value)}>
+                  {section.typeOptions.map(option => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
               </label>
+              <label className="dashboard-field">
+                <div className="dashboard-field-label">{isMerchProduct ? 'Drop Year' : 'Release Year'}</div>
+                <input className="os-input-field" value={year} onChange={event => setYear(event.target.value.replace(/[^0-9]/g, '').slice(0, 4))} placeholder="2026" />
+              </label>
+              </div>
 
-              {marketMode !== 'global' && (
+              {isMerchProduct ? (
+                <div className="settings-field">
+                  <div className="settings-field-head">
+                    <div className="os-type-card-title">Fulfillment</div>
+                    <p className="os-type-body-small">Choose whether you ship the item or deliver it to the customer yourself.</p>
+                  </div>
+                  <div className="settings-segment" role="group" aria-label="Merch fulfillment">
+                    <button
+                      type="button"
+                      className={merchFulfillmentMode === 'ship' ? 'settings-segment-item settings-segment-item-active' : 'settings-segment-item'}
+                      onClick={() => setMerchFulfillmentMode('ship')}
+                    >
+                      Ship to Customer
+                    </button>
+                    <button
+                      type="button"
+                      className={merchFulfillmentMode === 'deliver' ? 'settings-segment-item settings-segment-item-active' : 'settings-segment-item'}
+                      onClick={() => setMerchFulfillmentMode('deliver')}
+                    >
+                      Deliver to Customer (Local Only)
+                    </button>
+                  </div>
+                  <p className="dashboard-form-note">
+                    {merchFulfillmentMode === 'ship'
+                      ? 'After an order is placed, you will provide shipment details and a tracking number yourself.'
+                      : 'You will deliver the item locally without a tracking number.'}
+                  </p>
+                </div>
+              ) : null}
+
+              {isMerchProduct && merchFulfillmentMode === 'ship' ? (
+                <div className="settings-field">
+                  <div className="settings-field-head">
+                    <div className="os-type-card-title">Shipping Area</div>
+                    <p className="os-type-body-small">Choose whether you ship only within your home country or ship globally.</p>
+                  </div>
+                  <div className="settings-segment" role="group" aria-label="Merch shipping area">
+                    <button
+                      type="button"
+                      className={merchShippingScope === 'global' ? 'settings-segment-item settings-segment-item-active' : 'settings-segment-item'}
+                      onClick={() => setMerchShippingScope('global')}
+                    >
+                      Global Shipping
+                    </button>
+                    <button
+                      type="button"
+                      className={merchShippingScope === 'local' ? 'settings-segment-item settings-segment-item-active' : 'settings-segment-item'}
+                      onClick={() => setMerchShippingScope('local')}
+                    >
+                      Local Shipping Only
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="dashboard-form-grid dashboard-form-grid-3">
+              {!merchUsesLocalOnlyPricing ? (
                 <label className="dashboard-field">
-                  <div className="dashboard-field-label">Local Price ({localCurrency})</div>
+                  <div className="dashboard-field-label">{isMerchProduct ? 'Global Price' : 'Price'}</div>
+                  <span className="dashboard-price-input">
+                    <span>{currencySymbol('USD')}</span>
+                    <input className="os-input-field" value={price} onChange={event => setPrice(formatPriceInput(event.target.value))} />
+                  </span>
+                </label>
+              ) : null}
+
+              {(isMerchProduct ? merchUsesLocalOnlyPricing : marketMode !== 'global') && (
+                <label className="dashboard-field">
+                  <div className="dashboard-field-label">{merchUsesLocalOnlyPricing ? `Price (${localCurrency})` : `Local Price (${localCurrency})`}</div>
                   <span className="dashboard-price-input">
                     <span>{currencySymbol(localCurrency)}</span>
                     <input className="os-input-field" value={localPrice} onChange={event => setLocalPrice(formatPriceInput(event.target.value))} />
@@ -386,12 +465,9 @@ function NewProductContent() {
                 </label>
               )}
 
-              <label className="dashboard-field">
-                <div className="dashboard-field-label">Release Year</div>
-                <input className="os-input-field" value={year} onChange={event => setYear(event.target.value.replace(/[^0-9]/g, '').slice(0, 4))} placeholder="2026" />
-              </label>
               </div>
 
+              {!isMerchProduct ? (
               <div className="settings-field">
               <div className="settings-field-head">
                 <div className="os-type-card-title">Market</div>
@@ -412,8 +488,9 @@ function NewProductContent() {
                   </button>
                 ))}
               </div>
-              <p className="dashboard-form-note">Leave Local Price blank to use the global price everywhere.</p>
+              <p className="dashboard-form-note">{isMerchProduct ? 'Merch is creator-fulfilled locally. Use local pricing when needed.' : 'Leave Local Price blank to use the global price everywhere.'}</p>
               </div>
+              ) : null}
 
               <UploadField
               label="Artwork"
@@ -425,7 +502,12 @@ function NewProductContent() {
               onChange={setCoverUrl}
               />
 
-              {needsDigitalFile ? (
+              {isMerchProduct ? (
+                <div className="dashboard-form-section">
+                  <div className="dashboard-field-label">Local Fulfillment</div>
+                  <p className="dashboard-form-note">Buyers will enter a delivery address at checkout. 44 does not handle shipping logistics for merch.</p>
+                </div>
+              ) : needsDigitalFile ? (
                 <UploadField
                 label={section.id === 'books' ? 'Book File' : 'Asset File'}
                 folder={section.id === 'books' ? 'products/books' : 'products/assets'}
@@ -502,12 +584,14 @@ function NewProductContent() {
               </div>
             ) : null}
 
-            <DashboardReleaseFeatures
-              sectionId={section.id}
-              userId={user.id}
-              state={featureState}
-              onChange={setFeatureState}
-            />
+            {!isMerchProduct ? (
+              <DashboardReleaseFeatures
+                sectionId={section.id}
+                userId={user.id}
+                state={featureState}
+                onChange={setFeatureState}
+              />
+            ) : null}
 
             {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
 

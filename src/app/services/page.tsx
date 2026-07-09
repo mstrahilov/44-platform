@@ -1,22 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Service } from '@/lib/platform';
-import { PageShell, HubHero, HubSection, Shelf, ServiceCard } from '@/components/Ui';
+import { PageShell, HubHero, EmptyMessage, ServiceCard } from '@/components/Ui';
 import { useServicesTopbarTabs } from '@/components/ServicesTopbarTabs';
-
-type Category = {
-  id: string;
-  scope: string;
-  slug: string;
-  name: string;
-  sort_order: number | null;
-};
 
 export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
 
   useEffect(() => {
     async function fetchServices() {
@@ -41,37 +32,8 @@ export default function ServicesPage() {
 
       setServices((fallbackResult.data ?? []) as Service[]);
     }
-
-    async function fetchCategories() {
-      const { data } = await supabase
-        .from('categories')
-        .select('id, scope, slug, name, sort_order')
-        .eq('scope', 'services')
-        .order('sort_order', { ascending: true, nullsFirst: false })
-        .order('name', { ascending: true });
-
-      setCategories((data ?? []) as Category[]);
-    }
-
     fetchServices();
-    fetchCategories();
   }, []);
-
-  const orderedCategories = useMemo(() => {
-    return [...categories].sort((a, b) => {
-      const aOrder = a.sort_order ?? 999;
-      const bOrder = b.sort_order ?? 999;
-      if (aOrder !== bOrder) return aOrder - bOrder;
-      return a.name.localeCompare(b.name);
-    }).filter(category => services.some(service => {
-      const svc = service.categories;
-      return (
-        service.category_id === category.id ||
-        svc?.slug === category.slug ||
-        svc?.name === category.name
-      );
-    }));
-  }, [categories, services]);
 
   useServicesTopbarTabs('services');
 
@@ -83,32 +45,15 @@ export default function ServicesPage() {
           copy="Start a project with 44-operated creative services for audio, video, design, development, and campaign work."
         />
 
-        {orderedCategories.map(category => {
-          const categoryServices = services
-            .filter(service => {
-              const svc = service.categories;
-              return (
-                service.category_id === category.id ||
-                svc?.slug === category.slug ||
-                svc?.name === category.name
-              );
-            })
-            .slice(0, 8);
-
-          if (categoryServices.length === 0) return null;
-
-          return (
-            <HubSection key={category.slug} title={`Explore ${category.name}`} href={`/services/browse/${category.slug}`}>
-              <Shelf>
-                {categoryServices.map(service => (
-                  <div key={service.id} className="app-shelf-item">
-                    <ServiceCard service={service} />
-                  </div>
-                ))}
-              </Shelf>
-            </HubSection>
-          );
-        })}
+        {services.length === 0 ? (
+          <EmptyMessage>No services here yet.</EmptyMessage>
+        ) : (
+          <div className="app-grid">
+            {services.map(service => (
+              <ServiceCard key={service.id} service={service} />
+            ))}
+          </div>
+        )}
       </div>
     </PageShell>
   );

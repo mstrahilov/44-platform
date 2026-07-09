@@ -103,6 +103,7 @@ export function ProductCard({ product, owned: _owned }: { product: Product; owne
         .select('id')
         .eq('user_id', user.id)
         .eq('product_id', product.id)
+        .neq('status', 'hidden')
         .maybeSingle();
       if (alive) setOwned(Boolean(data));
     }
@@ -116,6 +117,7 @@ export function ProductCard({ product, owned: _owned }: { product: Product; owne
       user_id: user.id,
       product_id: product.id,
       acquisition_type: 'free',
+      status: 'visible',
     }, { onConflict: 'user_id,product_id' });
     setOwned(true);
   }

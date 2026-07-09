@@ -5,7 +5,7 @@ import { isStoreCategory } from '@/lib/storeRoutes';
 const BACK_LABEL: Record<string, string> = {
   music: 'Music',
   books: 'Books',
-  assets: 'Assets',
+  assets: 'Sample Packs',
   merch: 'Merch',
 };
 

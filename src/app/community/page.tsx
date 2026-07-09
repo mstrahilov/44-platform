@@ -16,6 +16,24 @@ import {
   SocialTrashIcon,
 } from '@/components/Social';
 import { useCommunityTopbarTabs } from '@/components/CommunityTopbarTabs';
+import {
+  acceptQuestionAnswer,
+  createCommunityCollaboration,
+  createCommunityQuestion,
+  createCollaborationResponse,
+  createQuestionAnswer,
+  loadCollaborationResponses,
+  loadCommunityCollaborations,
+  loadCommunityQuestions,
+  loadQuestionAnswers,
+  loadQuestionVotes,
+  addQuestionVote,
+  type CommunityCollaborationResponse,
+  type CommunityCollaboration,
+  type CommunityQuestion,
+  type CommunityQuestionAnswer,
+  type CommunityQuestionVote,
+} from '@/lib/communityStructured';
 import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { useAuth } from '@/lib/useAuth';
@@ -49,13 +67,13 @@ const COMMUNITY_COPY: Record<'feed' | 'following' | 'questions' | 'collaboration
   },
   questions: {
     title: 'Questions',
-    copy: 'Posts using #question. Add #question to a post when you want help from the community.',
-    empty: 'No #question posts yet.',
+    copy: 'Ask something specific. Get an answer from someone who has solved it.',
+    empty: 'No questions yet.',
   },
   collaboration: {
     title: 'Collaboration',
-    copy: 'Posts using #collaboration. Add #collaboration when you are looking for people to build with.',
-    empty: 'No #collaboration posts yet.',
+    copy: 'Looking for a collaborator, or looking to be found.',
+    empty: 'No collaboration listings yet.',
   },
   topic: {
     title: 'Topic',
@@ -139,6 +157,17 @@ function CommunityPageContent() {
   const [replyingToReplyId, setReplyingToReplyId] = useState<string | null>(null);
   const [replyLikingId, setReplyLikingId] = useState('');
   const [mentionOptions, setMentionOptions] = useState<MentionProfile[]>([]);
+  const [questions, setQuestions] = useState<CommunityQuestion[]>([]);
+  const [collaborations, setCollaborations] = useState<CommunityCollaboration[]>([]);
+  const [questionAnswers, setQuestionAnswers] = useState<Record<string, CommunityQuestionAnswer[]>>({});
+  const [questionVotes, setQuestionVotes] = useState<Record<string, CommunityQuestionVote[]>>({});
+  const [collaborationResponses, setCollaborationResponses] = useState<Record<string, CommunityCollaborationResponse[]>>({});
+  const [openStructuredId, setOpenStructuredId] = useState<string | null>(null);
+  const [structuredReplyBody, setStructuredReplyBody] = useState('');
+  const [structuredSubmitting, setStructuredSubmitting] = useState(false);
+  const [structuredVotingId, setStructuredVotingId] = useState('');
+  const [structuredAcceptingId, setStructuredAcceptingId] = useState('');
+  const [structuredRequiresSetup, setStructuredRequiresSetup] = useState(false);
   const [error, setError] = useState('');
   const [setupGateOpen, setSetupGateOpen] = useState(false);
 
@@ -146,6 +175,10 @@ function CommunityPageContent() {
   const requestedTopic = normalizeTaxonomyValue(searchParams.get('topic') ?? '');
   const activeCommunityTab = requestedView === 'following'
     ? 'following'
+    : requestedView === 'questions'
+      ? 'questions'
+      : requestedView === 'collaboration'
+        ? 'collaboration'
     : requestedTopic === 'question'
       ? 'questions'
       : requestedTopic === 'collaboration'
@@ -189,6 +222,25 @@ function CommunityPageContent() {
     }
     fetchCommunity();
   }, []);
+
+  useEffect(() => {
+    if (activeCommunityTab !== 'questions' && activeCommunityTab !== 'collaboration') return;
+    async function loadStructured() {
+      if (activeCommunityTab === 'questions') {
+        const result = await loadCommunityQuestions('recent');
+        setQuestions(result.rows);
+        setStructuredRequiresSetup(result.requiresSetup);
+        if (result.error) setError(result.error);
+        return;
+      }
+
+      const result = await loadCommunityCollaborations();
+      setCollaborations(result.rows);
+      setStructuredRequiresSetup(result.requiresSetup);
+      if (result.error) setError(result.error);
+    }
+    void loadStructured();
+  }, [activeCommunityTab]);
 
   useEffect(() => {
     if (!user) {
@@ -292,6 +344,48 @@ function CommunityPageContent() {
     action();
   }
 
+  async function openQuestion(question: CommunityQuestion) {
+    if (openStructuredId === question.id) {
+      setOpenStructuredId(null);
+      setStructuredReplyBody('');
+      return;
+    }
+    setOpenStructuredId(question.id);
+    setStructuredReplyBody('');
+    if (!questionAnswers[question.id]) {
+      const answerResult = await loadQuestionAnswers(question.id);
+      if (answerResult.error) {
+        setError(answerResult.error);
+        return;
+      }
+      setQuestionAnswers(current => ({ ...current, [question.id]: answerResult.rows }));
+      const voteResult = await loadQuestionVotes(question.id, answerResult.rows.map(answer => answer.id));
+      if (voteResult.error) {
+        setError(voteResult.error);
+        return;
+      }
+      setQuestionVotes(current => ({ ...current, [question.id]: voteResult.rows }));
+    }
+  }
+
+  async function openCollaboration(collaboration: CommunityCollaboration) {
+    if (openStructuredId === collaboration.id) {
+      setOpenStructuredId(null);
+      setStructuredReplyBody('');
+      return;
+    }
+    setOpenStructuredId(collaboration.id);
+    setStructuredReplyBody('');
+    if (!collaborationResponses[collaboration.id]) {
+      const responseResult = await loadCollaborationResponses(collaboration.id);
+      if (responseResult.error) {
+        setError(responseResult.error);
+        return;
+      }
+      setCollaborationResponses(current => ({ ...current, [collaboration.id]: responseResult.rows }));
+    }
+  }
+
   async function submitPost(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!user || posting || !postBody.trim()) return;
@@ -303,6 +397,54 @@ function CommunityPageContent() {
     setPosting(true);
     setError('');
     const body = postBody.trim();
+
+    if (activeCommunityTab === 'questions') {
+      const title = buildPostTitle(body);
+      const result = await createCommunityQuestion({
+        authorId: user.id,
+        title,
+        body,
+        tags: extractHashtags(body),
+      });
+
+      if (result.error) {
+        setError(result.error.message);
+        setPosting(false);
+        return;
+      }
+
+      setQuestions(current => [result.data as CommunityQuestion, ...current]);
+      setPostBody('');
+      setPostComposerOpen(false);
+      setPosting(false);
+      return;
+    }
+
+    if (activeCommunityTab === 'collaboration') {
+      const title = buildPostTitle(body);
+      const roleMatch = body.match(/(?:need|looking for|seeking)\s+([a-z0-9 _-]{3,40})/i);
+      const projectMatch = body.match(/(?:for|on)\s+([a-z0-9 _-]{3,40})/i);
+      const result = await createCommunityCollaboration({
+        authorId: user.id,
+        title,
+        body,
+        roleNeeded: roleMatch?.[1]?.trim() ?? '',
+        projectType: projectMatch?.[1]?.trim() ?? '',
+      });
+
+      if (result.error) {
+        setError(result.error.message);
+        setPosting(false);
+        return;
+      }
+
+      setCollaborations(current => [result.data as CommunityCollaboration, ...current]);
+      setPostBody('');
+      setPostComposerOpen(false);
+      setPosting(false);
+      return;
+    }
+
     const finalBody = forcedTopic ? composeLockedBody(body, forcedTopic).trim() : body;
     const { data, error: insertError } = await supabase
       .from('posts')
@@ -328,6 +470,135 @@ function CommunityPageContent() {
     setPostBody('');
     setPostComposerOpen(false);
     setPosting(false);
+  }
+
+  async function submitQuestionAnswer(event: React.FormEvent<HTMLFormElement>, question: CommunityQuestion) {
+    event.preventDefault();
+    if (!user || structuredSubmitting || !structuredReplyBody.trim()) return;
+    if (!canInteract) {
+      setSetupGateOpen(true);
+      return;
+    }
+    setStructuredSubmitting(true);
+    setError('');
+    const result = await createQuestionAnswer({
+      questionId: question.id,
+      authorId: user.id,
+      body: structuredReplyBody.trim(),
+    });
+    if (result.error) {
+      setError(result.error.message);
+      setStructuredSubmitting(false);
+      return;
+    }
+    const nextAnswer = result.data as CommunityQuestionAnswer;
+    setQuestionAnswers(current => ({ ...current, [question.id]: [...(current[question.id] ?? []), nextAnswer] }));
+    setQuestions(current => current.map(item => item.id === question.id ? { ...item, answer_count: item.answer_count + 1 } : item));
+    setStructuredReplyBody('');
+    setStructuredSubmitting(false);
+  }
+
+  async function submitCollaborationResponse(event: React.FormEvent<HTMLFormElement>, collaboration: CommunityCollaboration) {
+    event.preventDefault();
+    if (!user || structuredSubmitting || !structuredReplyBody.trim()) return;
+    if (!canInteract) {
+      setSetupGateOpen(true);
+      return;
+    }
+    setStructuredSubmitting(true);
+    setError('');
+    const result = await createCollaborationResponse({
+      collaborationId: collaboration.id,
+      authorId: user.id,
+      body: structuredReplyBody.trim(),
+    });
+    if (result.error) {
+      setError(result.error.message);
+      setStructuredSubmitting(false);
+      return;
+    }
+    const nextResponse = result.data as CommunityCollaborationResponse;
+    setCollaborationResponses(current => ({ ...current, [collaboration.id]: [nextResponse, ...(current[collaboration.id] ?? [])] }));
+    setStructuredReplyBody('');
+    setStructuredSubmitting(false);
+  }
+
+  async function voteOnQuestion(question: CommunityQuestion) {
+    if (!user || structuredVotingId) return;
+    if (!canInteract) {
+      setSetupGateOpen(true);
+      return;
+    }
+    const existingVotes = questionVotes[question.id] ?? [];
+    if (existingVotes.some(vote => vote.profile_id === user.id && vote.question_id === question.id)) return;
+    setStructuredVotingId(question.id);
+    setError('');
+    const result = await addQuestionVote({ profileId: user.id, questionId: question.id });
+    if (result.error) {
+      setError(result.error.message);
+    } else {
+      const optimisticVote: CommunityQuestionVote = {
+        id: `local-question-${question.id}-${user.id}`,
+        question_id: question.id,
+        answer_id: null,
+        profile_id: user.id,
+        value: 1,
+      };
+      setQuestionVotes(current => ({ ...current, [question.id]: [optimisticVote, ...(current[question.id] ?? [])] }));
+      setQuestions(current => current.map(item => item.id === question.id ? { ...item, vote_count: item.vote_count + 1 } : item));
+    }
+    setStructuredVotingId('');
+  }
+
+  async function voteOnAnswer(questionId: string, answer: CommunityQuestionAnswer) {
+    if (!user || structuredVotingId) return;
+    if (!canInteract) {
+      setSetupGateOpen(true);
+      return;
+    }
+    const existingVotes = questionVotes[questionId] ?? [];
+    if (existingVotes.some(vote => vote.profile_id === user.id && vote.answer_id === answer.id)) return;
+    setStructuredVotingId(answer.id);
+    setError('');
+    const result = await addQuestionVote({ profileId: user.id, answerId: answer.id });
+    if (result.error) {
+      setError(result.error.message);
+    } else {
+      const optimisticVote: CommunityQuestionVote = {
+        id: `local-answer-${answer.id}-${user.id}`,
+        question_id: null,
+        answer_id: answer.id,
+        profile_id: user.id,
+        value: 1,
+      };
+      setQuestionVotes(current => ({ ...current, [questionId]: [optimisticVote, ...(current[questionId] ?? [])] }));
+      setQuestionAnswers(current => ({
+        ...current,
+        [questionId]: (current[questionId] ?? []).map(item => item.id === answer.id ? { ...item, vote_count: item.vote_count + 1 } : item),
+      }));
+    }
+    setStructuredVotingId('');
+  }
+
+  async function acceptAnswer(question: CommunityQuestion, answer: CommunityQuestionAnswer) {
+    if (!user || structuredAcceptingId || question.author_id !== user.id) return;
+    setStructuredAcceptingId(answer.id);
+    setError('');
+    const result = await acceptQuestionAnswer({
+      questionId: question.id,
+      answerId: answer.id,
+      ownerId: user.id,
+    });
+    if (result.error) {
+      setError(result.error.message);
+    } else {
+      setQuestionAnswers(current => ({
+        ...current,
+        [question.id]: (current[question.id] ?? []).map(item => ({ ...item, is_accepted: item.id === answer.id })),
+      }));
+      setQuestions(current => current.map(item => item.id === question.id ? { ...item, accepted_answer_id: answer.id, has_accepted_answer: true } : item));
+    }
+    setStructuredAcceptingId('');
   }
 
   async function loadReplies(postId: string) {
@@ -597,11 +868,19 @@ function CommunityPageContent() {
               <textarea
                 value={postComposerValue}
                 onChange={event => setPostBody(parseLockedBody(event.target.value, forcedTopic))}
-                placeholder={user ? "What's happening on 44?" : 'Sign in to post to Community.'}
+                placeholder={
+                  user
+                    ? activeCommunityTab === 'questions'
+                      ? 'What do you need help with?'
+                      : activeCommunityTab === 'collaboration'
+                        ? 'Who are you looking for, and what are you building?'
+                        : "What's happening on 44?"
+                    : 'Sign in to post to Community.'
+                }
                 rows={3}
                 disabled={!user || posting}
               />
-              {forcedTopic && <div className="social-composer-lock">This post will publish with #{forcedTopic}.</div>}
+              {forcedTopic && activeCommunityTab === 'feed' && <div className="social-composer-lock">This post will publish with #{forcedTopic}.</div>}
               {mentionOptions.length > 0 && (
                 <div className="social-mention-list">
                   {mentionOptions.map(option => (
@@ -640,6 +919,167 @@ function CommunityPageContent() {
           </form>
         )}
 
+        {activeCommunityTab === 'questions' ? (
+          <section className="dashboard-list-surface social-feed social-feed-list social-feed-panel" aria-label="Community questions">
+            {structuredRequiresSetup ? (
+              <div className="dashboard-empty">Questions needs the reviewed Community SQL applied in Supabase first.</div>
+            ) : questions.length === 0 ? (
+              <div className="dashboard-empty">{pageCopy.empty}</div>
+            ) : (
+              questions.map(question => (
+                <article key={question.id} className="social-feed-post">
+                  <div className="social-row social-structured-row">
+                    <SocialAvatar profile={question.authors} />
+                    <div className="social-row-main">
+                      <div className="social-structured-topline">
+                        <SocialAuthorLine author={question.authors} createdAt={question.created_at} handleOnly />
+                        <div className="social-structured-metrics">
+                          <span>{question.vote_count} votes</span>
+                          <span>{question.answer_count} answers</span>
+                          {question.has_accepted_answer ? <span>Accepted answer</span> : null}
+                        </div>
+                      </div>
+                      <h2 className="social-structured-title">{question.title}</h2>
+                      <p className="social-row-body"><SocialRichText text={question.body} /></p>
+                      {question.tags.length ? (
+                        <div className="social-structured-tags">
+                          {question.tags.map(tag => <span key={tag} className="social-structured-tag">#{tag}</span>)}
+                        </div>
+                      ) : null}
+                      <div className="social-structured-actions">
+                        <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => requireCommunityAction(() => { void voteOnQuestion(question); })} disabled={structuredVotingId === question.id}>
+                          Upvote
+                        </button>
+                        <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => requireCommunityAction(() => { void openQuestion(question); })}>
+                          {openStructuredId === question.id ? 'Hide Answers' : 'View Answers'}
+                        </button>
+                      </div>
+                      {openStructuredId === question.id && (
+                        <div className="social-structured-thread">
+                          {(questionAnswers[question.id] ?? []).length ? (
+                            <div className="social-structured-list">
+                              {(questionAnswers[question.id] ?? []).map(answer => (
+                                <div key={answer.id} className={answer.is_accepted ? 'social-structured-item social-structured-item-accepted' : 'social-structured-item'}>
+                                  <div className="social-structured-topline">
+                                    <SocialAuthorLine author={answer.authors} createdAt={answer.created_at} handleOnly />
+                                    <div className="social-structured-metrics">
+                                      <span>{answer.vote_count} votes</span>
+                                      {answer.is_accepted ? <span>Accepted</span> : null}
+                                    </div>
+                                  </div>
+                                  <p className="social-row-body"><SocialRichText text={answer.body} /></p>
+                                  <div className="social-structured-actions">
+                                    <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => requireCommunityAction(() => { void voteOnAnswer(question.id, answer); })} disabled={structuredVotingId === answer.id}>
+                                      Upvote
+                                    </button>
+                                    {user && question.author_id === user.id && !answer.is_accepted ? (
+                                      <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => { void acceptAnswer(question, answer); }} disabled={structuredAcceptingId === answer.id}>
+                                        Accept
+                                      </button>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="social-reply-empty">No answers yet.</p>
+                          )}
+                          <form className="social-feed-composer social-feed-composer-open social-structured-composer" onSubmit={event => submitQuestionAnswer(event, question)}>
+                            <div className="social-feed-composer-box">
+                              <textarea
+                                value={structuredReplyBody}
+                                onChange={event => setStructuredReplyBody(event.target.value)}
+                                placeholder="Write an answer..."
+                                rows={3}
+                                disabled={structuredSubmitting}
+                              />
+                              <div className="social-feed-composer-actions">
+                                <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => setStructuredReplyBody('')}>
+                                  Clear
+                                </button>
+                                <button className="os-button os-button-primary os-button-compact" type="submit" disabled={structuredSubmitting || !structuredReplyBody.trim()}>
+                                  {structuredSubmitting ? 'Posting...' : 'Post Answer'}
+                                </button>
+                              </div>
+                            </div>
+                          </form>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              ))
+            )}
+          </section>
+        ) : activeCommunityTab === 'collaboration' ? (
+          <section className="dashboard-list-surface social-feed social-feed-list social-feed-panel" aria-label="Community collaboration">
+            {structuredRequiresSetup ? (
+              <div className="dashboard-empty">Collaboration needs the reviewed Community SQL applied in Supabase first.</div>
+            ) : collaborations.length === 0 ? (
+              <div className="dashboard-empty">{pageCopy.empty}</div>
+            ) : (
+              collaborations.map(collaboration => (
+                <article key={collaboration.id} className="social-feed-post">
+                  <div className="social-row social-structured-row">
+                    <SocialAvatar profile={collaboration.authors} />
+                    <div className="social-row-main">
+                      <div className="social-structured-topline">
+                        <SocialAuthorLine author={collaboration.authors} createdAt={collaboration.created_at} handleOnly />
+                        <span className="dashboard-status-pill">{collaboration.status}</span>
+                      </div>
+                      <h2 className="social-structured-title">{collaboration.title}</h2>
+                      <p className="social-row-body"><SocialRichText text={collaboration.body} /></p>
+                      <div className="social-structured-tags">
+                        {collaboration.role_needed ? <span className="social-structured-tag">{collaboration.role_needed}</span> : null}
+                        {collaboration.project_type ? <span className="social-structured-tag">{collaboration.project_type}</span> : null}
+                      </div>
+                      <div className="social-structured-actions">
+                        <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => requireCommunityAction(() => { void openCollaboration(collaboration); })}>
+                          {openStructuredId === collaboration.id ? 'Hide Responses' : 'Respond'}
+                        </button>
+                      </div>
+                      {openStructuredId === collaboration.id && (
+                        <div className="social-structured-thread">
+                          {(collaborationResponses[collaboration.id] ?? []).length ? (
+                            <div className="social-structured-list">
+                              {(collaborationResponses[collaboration.id] ?? []).map(response => (
+                                <div key={response.id} className="social-structured-item">
+                                  <SocialAuthorLine author={response.authors} createdAt={response.created_at} handleOnly />
+                                  <p className="social-row-body"><SocialRichText text={response.body} /></p>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="social-reply-empty">No responses yet.</p>
+                          )}
+                          <form className="social-feed-composer social-feed-composer-open social-structured-composer" onSubmit={event => submitCollaborationResponse(event, collaboration)}>
+                            <div className="social-feed-composer-box">
+                              <textarea
+                                value={structuredReplyBody}
+                                onChange={event => setStructuredReplyBody(event.target.value)}
+                                placeholder="Introduce yourself and explain why you're a fit..."
+                                rows={3}
+                                disabled={structuredSubmitting}
+                              />
+                              <div className="social-feed-composer-actions">
+                                <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => setStructuredReplyBody('')}>
+                                  Clear
+                                </button>
+                                <button className="os-button os-button-primary os-button-compact" type="submit" disabled={structuredSubmitting || !structuredReplyBody.trim()}>
+                                  {structuredSubmitting ? 'Sending...' : 'Send Response'}
+                                </button>
+                              </div>
+                            </div>
+                          </form>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              ))
+            )}
+          </section>
+        ) : (
         <section className="dashboard-list-surface social-feed social-feed-list social-feed-panel" aria-label="Community feed">
           {visiblePosts.length === 0 ? (
             <div className="dashboard-empty">{pageCopy.empty}</div>
@@ -819,6 +1259,7 @@ function CommunityPageContent() {
             })
           )}
         </section>
+        )}
       </main>
       <CommunitySetupGate open={setupGateOpen} onClose={() => setSetupGateOpen(false)} />
     </PageShell>

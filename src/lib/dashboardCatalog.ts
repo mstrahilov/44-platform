@@ -1,7 +1,7 @@
 import type { Product } from '@/lib/products';
 import { getProductExperience } from '@/lib/experience';
 
-export type DashboardCatalogSectionId = 'music' | 'books' | 'assets';
+export type DashboardCatalogSectionId = 'music' | 'books' | 'assets' | 'merch';
 
 export type DashboardCatalogSection = {
   id: DashboardCatalogSectionId;
@@ -46,16 +46,29 @@ export const DASHBOARD_CATALOG_SECTIONS: DashboardCatalogSection[] = [
   },
   {
     id: 'assets',
-    label: 'Assets',
+    label: 'Sample Packs',
     href: '/dashboard/products?section=assets',
-    itemLabel: 'asset',
-    itemLabelPlural: 'assets',
-    newLabel: 'New Asset',
-    editTitle: 'Edit Asset',
-    createTitle: 'New Asset',
+    itemLabel: 'sample pack',
+    itemLabelPlural: 'sample packs',
+    newLabel: 'New Sample Pack',
+    editTitle: 'Edit Sample Pack',
+    createTitle: 'New Sample Pack',
     createCopy: 'Create a sample pack, template, preset, or creative tool.',
-    typeLabel: 'Asset Type',
+    typeLabel: 'Sample Pack Type',
     typeOptions: ['Sample Pack', 'Remix Stems'],
+  },
+  {
+    id: 'merch',
+    label: 'Merch',
+    href: '/dashboard/products?section=merch',
+    itemLabel: 'merch item',
+    itemLabelPlural: 'merch',
+    newLabel: 'New Merch Item',
+    editTitle: 'Edit Merch Item',
+    createTitle: 'New Merch Item',
+    createCopy: 'Create a local-fulfillment merch item that creators deliver directly.',
+    typeLabel: 'Merch Type',
+    typeOptions: ['T-Shirt', 'Hoodie', 'Sweatshirt', 'Jacket', 'Hat', 'Beanie', 'Poster', 'Print', 'Bag', 'Accessory', 'Sticker Pack', 'Other'],
   },
 ];
 
@@ -65,6 +78,7 @@ export function getDashboardCatalogSection(id: string | null | undefined) {
 
 export function getDashboardCatalogSectionForProduct(product: Pick<Product, 'category' | 'product_type' | 'runtime_type' | 'experience_type' | 'fulfillment_type'>) {
   const experience = getProductExperience(product);
+  if (experience === 'physical') return getDashboardCatalogSection('merch');
   if (experience === 'book') return getDashboardCatalogSection('books');
   if (experience === 'asset') return getDashboardCatalogSection('assets');
   return getDashboardCatalogSection('music');
