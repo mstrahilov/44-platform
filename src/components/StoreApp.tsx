@@ -9,7 +9,7 @@ import type { StoreCategory } from '@/lib/storeRoutes';
 import { supabase } from '@/lib/supabase';
 
 const STORE_TABS: Array<{ id: StoreCategory; label: string; href: string }> = [
-  { id: 'all', label: 'Discover', href: '/store' },
+  { id: 'all', label: 'Discover', href: '/' },
   { id: 'music', label: 'Music', href: '/store/music' },
   { id: 'books', label: 'Books', href: '/store/books' },
   { id: 'assets', label: 'Assets', href: '/store/assets' },
@@ -25,8 +25,8 @@ const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
 
 const CATEGORY_COPY: Record<StoreCategory, { title: string; copy: string; empty: string }> = {
   all: {
-    title: 'Discover',
-    copy: 'Explore music, books, assets, and merch from our community.',
+    title: 'Home',
+    copy: 'Discover music, books, assets, and merch from creators on 44.',
     empty: 'No items are published yet.',
   },
   music: {
@@ -146,7 +146,7 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
                   </ProductGrid>
                 )}
               </HubSection>
-              <HubSection title="Explore Apparel" href="/store/merch">
+              <HubSection title="Explore Merch" href="/store/merch">
                 {apparelProducts.length === 0 ? (
                   <EmptyMessage>No merch is published yet.</EmptyMessage>
                 ) : (

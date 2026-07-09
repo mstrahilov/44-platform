@@ -2,8 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { PageShell, GlassPanel, HubHero, HubSection } from '@/components/Ui';
+import { PageShell, GlassPanel, HubHero, HubSection, EmptyMessage } from '@/components/Ui';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
@@ -33,7 +32,6 @@ const APPAREL_SECTION = {
 
 export default function DashboardPage() {
   useDashboardTabs('overview');
-  const router = useRouter();
   const { user, loading } = useAuth();
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [overview, setOverview] = useState<OverviewState>({
@@ -41,12 +39,6 @@ export default function DashboardPage() {
     libraryItems: [],
     metricsError: '',
   });
-
-  useEffect(() => {
-    if (!loading && user === null) {
-      router.replace('/login');
-    }
-  }, [loading, router, user]);
 
   useEffect(() => {
     async function fetchOverview() {
@@ -90,8 +82,25 @@ export default function DashboardPage() {
     fetchOverview();
   }, [user]);
 
-  if (loading || !user) {
+  if (loading) {
     return <PageShell><div style={{ minHeight: '40vh' }} /></PageShell>;
+  }
+
+  if (!user) {
+    return (
+      <PageShell>
+        <div className="dashboard-page">
+          <HubHero
+            title="Dashboard"
+            copy="Creator tools, catalog health, and earnings live here once you sign in."
+          />
+          <EmptyMessage>Log in to use your creator Dashboard.</EmptyMessage>
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--os-space-4)' }}>
+            <Link href="/login" className="os-button os-button-primary">Log In</Link>
+          </div>
+        </div>
+      </PageShell>
+    );
   }
 
   if (profile && !isCreatorProfile(profile)) {

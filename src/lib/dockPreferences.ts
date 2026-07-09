@@ -27,8 +27,8 @@ export const DOCK_HIDDEN_STORAGE_KEY = '44-dock-hidden';
 export const DOCK_ORDER_STORAGE_KEY = '44-dock-order';
 export const DOCK_PINNED_STORAGE_KEY = '44-dock-pinned';
 const DOCK_PREFERENCES_UPDATED = '44-dock-preferences-updated';
-const DEFAULT_HIDDEN_DOCK_APP_IDS: OSAppId[] = ['resources', 'services'];
-const DEFAULT_DOCK_ORDER: OSAppId[] = ['store', 'library', 'community', 'dashboard', 'resources', 'services'];
+const DEFAULT_HIDDEN_DOCK_APP_IDS: OSAppId[] = [];
+const DEFAULT_DOCK_ORDER: OSAppId[] = ['store', 'library', 'community', 'dashboard', 'resources', 'services', 'radio'];
 const MAX_PINNED_DOCK_ITEMS = 5;
 
 export function getDockMode(): DockMode {

@@ -11,8 +11,9 @@ import { ContextMenuProvider } from '@/components/ContextMenu';
 
 // Applies the saved theme before first paint to avoid a flash of the wrong theme.
 const THEME_BOOTSTRAP = `(function(){try{
-  var m = localStorage.getItem('44-theme-mode') || 'light';
-  var a = localStorage.getItem('44-theme-accent') || 'amber';
+  var signedIn = localStorage.getItem('44-auth-session-present') === 'true';
+  var m = signedIn ? (localStorage.getItem('44-theme-mode') || 'light') : 'light';
+  var a = signedIn ? (localStorage.getItem('44-theme-accent') || 'amber') : 'amber';
   var resolved = m === 'system' ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : m;
   document.body.className = 'theme-' + resolved + ' accent-' + a;
 }catch(e){}})();`;

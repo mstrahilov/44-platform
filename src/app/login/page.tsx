@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { getLandingPageHref } from '@/lib/landingPage';
+import { getSitePathUrl } from '@/lib/siteUrl';
 
 function authMessage(message?: string) {
   const normalized = message?.toLowerCase() ?? '';
@@ -62,7 +63,7 @@ export default function LoginPage() {
         email: cleanEmail,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/settings?tab=account`,
+          emailRedirectTo: getSitePathUrl('/settings?tab=account'),
           data: {
             name: cleanName,
             display_name: cleanName,
@@ -101,7 +102,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOtp({
       email: cleanEmail,
       options: {
-        emailRedirectTo: `${window.location.origin}/settings?tab=account`,
+        emailRedirectTo: getSitePathUrl('/settings?tab=account'),
       },
     });
 
@@ -119,7 +120,7 @@ export default function LoginPage() {
       type: 'signup',
       email: cleanEmail,
       options: {
-        emailRedirectTo: `${window.location.origin}/settings?tab=account`,
+        emailRedirectTo: getSitePathUrl('/settings?tab=account'),
       },
     });
     setResendingConfirmation(false);
@@ -143,7 +144,7 @@ export default function LoginPage() {
           gap: 0,
         }}>
           <p className="os-type-eyebrow" style={{ color: 'var(--os-color-ink-muted)', marginBottom: 12 }}>
-            44 Platform
+            44OS
           </p>
 
           <h1 className="os-type-page-title" style={{ marginBottom: 10 }}>

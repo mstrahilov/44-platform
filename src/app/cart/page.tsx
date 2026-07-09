@@ -17,7 +17,7 @@ export default function CartPage() {
   const { items, count, subtotalCents } = useCart();
   const currency = items[0]?.currency ?? 'USD';
 
-  useTopbarBack({ href: '/store', label: 'Store' });
+  useTopbarBack({ href: '/store', label: 'Home' });
 
   if (items.length === 0) {
     return (
@@ -26,9 +26,9 @@ export default function CartPage() {
           <HubHero title="Cart" copy="Items you have added while browsing 44." />
           <div className="dashboard-list-surface">
             <div className="dashboard-empty">
-              Your cart is empty. Browse Merch or an app Store to add items.
+              Your cart is empty. Browse merch or Home to add items.
               <div style={{ marginTop: 'var(--os-space-4)' }}>
-                <Link className="os-button os-button-primary os-button-compact" href="/store">Open Store</Link>
+                <Link className="os-button os-button-primary os-button-compact" href="/">Open Home</Link>
               </div>
             </div>
           </div>
@@ -63,7 +63,7 @@ export default function CartPage() {
                 <div className="dashboard-row-copy">
                   <div className="dashboard-row-title">
                     <Link
-                      href={item.href || '/store'}
+                      href={item.href || '/'}
                       style={{ color: 'inherit', textDecoration: 'none' }}
                     >
                       {item.title}
@@ -121,7 +121,7 @@ export default function CartPage() {
             </span>
           </div>
           <div className="cart-summary-actions">
-            <Link className="os-button os-button-secondary" href="/store">
+            <Link className="os-button os-button-secondary" href="/">
               Keep Browsing
             </Link>
             <Link className="os-button os-button-primary" href="/checkout">

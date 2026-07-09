@@ -193,7 +193,8 @@ export default function Sidebar() {
     signedIn: Boolean(user),
     isCreator: isCreatorProfile(profile),
   });
-  const dockApps = availableApps.filter(app => app.locked || !hiddenIds.includes(app.id));
+  const effectiveHiddenIds = user ? hiddenIds : [];
+  const dockApps = availableApps.filter(app => app.locked || !effectiveHiddenIds.includes(app.id));
   const activePinnedItem = pinnedItems.find(item => isPinnedDockItemActive(pathname, item.href));
   const mainActiveAppId = activePinnedItem ? '' : activeAppId;
   const orderedMainApps = dockApps
@@ -241,20 +242,6 @@ export default function Sidebar() {
 
         <div className="sidebar-spacer" />
 
-        {!user && (
-          <>
-            <Link
-              href="/login"
-              className={pathname.startsWith('/login') ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}
-              title={compact ? 'Log In' : undefined}
-              aria-label="Log In"
-            >
-              <span className="os-icon os-icon-user" aria-hidden="true" />
-              <span className="sidebar-item-label">Log In</span>
-            </Link>
-          </>
-        )}
-
         {/* Support (account group) sits at the bottom, directly above the system divider. */}
         {accountApps.map(app => (
           <DockItem key={app.id} app={app} active={mainActiveAppId === app.id} compact={compact} />
@@ -262,9 +249,21 @@ export default function Sidebar() {
 
         <div className="sidebar-divider" />
 
-        {systemApps.map(app => (
-          <DockItem key={app.id} app={app} active={mainActiveAppId === app.id} compact={compact} />
-        ))}
+        {user ? (
+          systemApps.map(app => (
+            <DockItem key={app.id} app={app} active={mainActiveAppId === app.id} compact={compact} />
+          ))
+        ) : (
+          <Link
+            href="/login"
+            className={pathname.startsWith('/login') ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}
+            title={compact ? 'Log In' : undefined}
+            aria-label="Log In"
+          >
+            <span className="os-icon os-icon-user" aria-hidden="true" />
+            <span className="sidebar-item-label">Log In</span>
+          </Link>
+        )}
       </nav>
     </aside>
   );

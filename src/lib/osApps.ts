@@ -88,10 +88,10 @@ export const OS_APPS: OSApp[] = [
   },
   {
     id: 'store',
-    label: 'Store',
-    description: 'Browse music, books, assets, and merch from creators on 44.',
-    href: '/store',
-    iconClass: 'os-icon-store',
+    label: 'Home',
+    description: 'Discover music, books, assets, and merch from creators on 44.',
+    href: '/',
+    iconClass: 'os-icon-home',
     group: 'media',
   },
   {
@@ -136,8 +136,7 @@ export const OS_APPS: OSApp[] = [
     description: 'Live mixes, creator stations, and listening rooms for 44.',
     href: '/radio',
     iconClass: 'os-icon-radio',
-    group: 'legacy',
-    hidden: true,
+    group: 'media',
   },
   {
     id: 'community',
@@ -230,7 +229,6 @@ export const OS_APPS: OSApp[] = [
     iconClass: 'os-icon-dashboard',
     group: 'studio',
     requiresAuth: true,
-    requiresCreator: true,
   },
   {
     id: 'settings',
@@ -239,6 +237,7 @@ export const OS_APPS: OSApp[] = [
     href: '/settings',
     iconClass: 'os-icon-settings',
     group: 'system',
+    requiresAuth: true,
     locked: true,
   },
 

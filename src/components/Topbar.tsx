@@ -59,7 +59,7 @@ const SCROLL_PREFIX = '44-scroll:';
 function labelForPath(path: string | null | undefined) {
   if (!path) return null;
   if (path.startsWith('/library')) return 'Library';
-  if (path.startsWith('/store') || path.startsWith('/product') || path.startsWith('/cart')) return 'Store';
+  if (path.startsWith('/store') || path.startsWith('/product') || path.startsWith('/cart')) return 'Home';
   if (path.startsWith('/community')) return 'Community';
   if (path.startsWith('/dashboard')) return 'Dashboard';
   if (path.startsWith('/profile')) return 'Profile';

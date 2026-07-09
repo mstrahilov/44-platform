@@ -31,7 +31,7 @@ const EXPERIENCE_CONFIG: Record<ExperienceConfig['id'], ExperienceConfig> = {
     id: 'music',
     title: 'Music',
     libraryTitle: 'Music Library',
-    storeTitle: 'Music Store',
+    storeTitle: 'Music',
     noun: 'release',
     pluralNoun: 'releases',
     experience: 'music',
@@ -44,7 +44,7 @@ const EXPERIENCE_CONFIG: Record<ExperienceConfig['id'], ExperienceConfig> = {
     id: 'books',
     title: 'Books',
     libraryTitle: 'Books Library',
-    storeTitle: 'Book Store',
+    storeTitle: 'Books',
     noun: 'book',
     pluralNoun: 'books',
     experience: 'book',
@@ -57,7 +57,7 @@ const EXPERIENCE_CONFIG: Record<ExperienceConfig['id'], ExperienceConfig> = {
     id: 'assets',
     title: 'Assets',
     libraryTitle: 'Asset Library',
-    storeTitle: 'Asset Store',
+    storeTitle: 'Assets',
     noun: 'asset',
     pluralNoun: 'assets',
     experience: 'asset',
@@ -248,7 +248,7 @@ export function ExperienceApp({ app, route }: { app: ExperienceConfig['id']; rou
               <EmptyMessage>No {config.pluralNoun} in your Library yet.</EmptyMessage>
               <div style={{ marginTop: 'var(--os-space-4)' }}>
                 <Link className="os-button os-button-primary" href={`/${config.id}/store`}>
-                  Open {config.title} Store
+                  Explore {config.title}
                 </Link>
               </div>
             </>

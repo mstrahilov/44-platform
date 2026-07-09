@@ -1,10 +1,11 @@
 'use client';
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
-import { PageShell, HubHero } from '@/components/Ui';
+import { PageShell, HubHero, EmptyMessage } from '@/components/Ui';
 import { useTopbarTabs } from '@/components/TopbarContext';
 import {
   ACCENTS,
@@ -27,6 +28,7 @@ import {
 } from '@/lib/marketPreferences';
 import { getLandingPageId, setLandingPageId, type LandingPageId } from '@/lib/landingPage';
 import { isMissingColumnError } from '@/lib/schemaCompat';
+import { getSitePathUrl } from '@/lib/siteUrl';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { getAvailableDockApps, type OSAppId } from '@/lib/osApps';
 import { resetDockPreferences, setDockAppHidden, setDockMode, useDockPreferences, type DockMode } from '@/lib/dockPreferences';
@@ -77,6 +79,7 @@ export default function SettingsPage() {
 }
 
 function SettingsContent() {
+  const { user, loading } = useAuth();
   const tabs = TABS;
   const searchParams = useSearchParams();
   const requestedTab = normalizeSettingsTab(searchParams.get('tab'));
@@ -103,6 +106,26 @@ function SettingsContent() {
   );
 
   const activeMeta = tabs.find(tab => tab.id === activeTab) ?? tabs[0];
+
+  if (loading) {
+    return <PageShell><div style={{ minHeight: '40vh' }} /></PageShell>;
+  }
+
+  if (!user) {
+    return (
+      <PageShell>
+        <main className="dashboard-page">
+          <HubHero title="Settings" copy="System, Dock, region, and account controls." />
+          <EmptyMessage>Log in to manage your 44OS settings.</EmptyMessage>
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--os-space-4)' }}>
+            <Link href="/login" className="os-button os-button-primary">
+              Log In
+            </Link>
+          </div>
+        </main>
+      </PageShell>
+    );
+  }
 
   return (
     <PageShell>
@@ -442,7 +465,7 @@ function AccountSettings() {
     setSendingReset(true);
     setStatus('');
     const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-      redirectTo: `${window.location.origin}/settings?tab=account`,
+      redirectTo: getSitePathUrl('/settings?tab=account'),
     });
     setSendingReset(false);
     setStatus(error ? error.message : 'Password reset email sent.');

@@ -17,7 +17,7 @@ export default async function StoreItemPage({ params }: { params: Promise<{ cate
     <ProductStoreDetail
       identifier={slug}
       backHref={`/store/${category}`}
-      backLabel={BACK_LABEL[category] ?? 'Store'}
+      backLabel={BACK_LABEL[category] ?? 'Home'}
       releasePage={category === 'music'}
       merchPage={category === 'merch'}
     />

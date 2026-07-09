@@ -65,7 +65,7 @@ export function ProductStoreDetail({
   const [inferredTrackDurations, setInferredTrackDurations] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
-  useTopbarBack({ href: backHref ?? '/', label: backLabel ?? 'Store' });
+  useTopbarBack({ href: backHref ?? '/', label: backLabel ?? 'Home' });
 
   useEffect(() => {
     async function fetchProduct() {

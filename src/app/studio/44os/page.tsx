@@ -17,7 +17,7 @@ const swatches = [
 ];
 
 const typeSamples = [
-  ['Display', 'os-type-display', 'Store'],
+  ['Display', 'os-type-display', 'Home'],
   ['Page Title', 'os-type-page-title', 'Dashboard'],
   ['Panel Title', 'os-type-panel-title', 'Community Profile'],
   ['Section Title', 'os-type-section-title', 'Recent Content'],

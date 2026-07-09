@@ -31,7 +31,7 @@ const CATEGORY_COPY: Record<LibraryCategory, { title: string; copy: string; empt
     title: 'Library',
     copy: 'Everything you have added or purchased on 44.',
     empty: 'Your library is empty.',
-    storeHref: '/store',
+    storeHref: '/',
   },
   music: {
     title: 'Music',
@@ -130,14 +130,10 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
     return (
       <PageShell>
         <main className="app-page">
-          <HubHero title="Library" copy="Sign in to see everything you have added or purchased on 44." />
-          <div className="dashboard-list-surface">
-            <div className="dashboard-empty">
-              Sign in to open your Library.
-              <div style={{ marginTop: 'var(--os-space-4)' }}>
-                <Link className="os-button os-button-primary os-button-compact" href="/login">Log In</Link>
-              </div>
-            </div>
+          <HubHero title="Library" copy="Saved music, books, assets, and purchases live here once you sign in." />
+          <EmptyMessage>Log in to save items to your Library.</EmptyMessage>
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--os-space-4)' }}>
+            <Link className="os-button os-button-primary" href="/login">Log In</Link>
           </div>
         </main>
       </PageShell>
@@ -255,7 +251,7 @@ function getDockIconForProduct(product: Product) {
   if (experience === 'music') return 'os-icon-music';
   if (experience === 'book') return 'os-icon-books';
   if (experience === 'asset') return 'os-icon-assets';
-  return 'os-icon-store';
+  return 'os-icon-home';
 }
 
 function getLibraryTileShape(product: Product): 'square' | 'book' | 'landscape' {

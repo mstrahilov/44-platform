@@ -20,7 +20,7 @@ export const LANDING_PAGE_STORAGE_KEY = '44-setting-landing-page';
 export const DEFAULT_LANDING_PAGE: LandingPageId = 'store';
 
 export const LANDING_PAGES: Array<{ id: LandingPageId; label: string; href: string }> = [
-  { id: 'store', label: 'Store', href: '/store' },
+  { id: 'store', label: 'Home', href: '/' },
   { id: 'library', label: 'Library', href: '/library' },
   { id: 'community', label: 'Community', href: '/community' },
   { id: 'dashboard', label: 'Dashboard', href: '/dashboard' },
@@ -28,7 +28,7 @@ export const LANDING_PAGES: Array<{ id: LandingPageId; label: string; href: stri
 
 const LEGACY_LANDING_PAGE_HREFS: Partial<Record<LandingPageId, string>> = {
   shop: '/store/merch',
-  home: '/store',
+  home: '/',
 };
 
 export function isLandingPageId(value: string | null): value is LandingPageId {
