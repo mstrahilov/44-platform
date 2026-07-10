@@ -93,3 +93,6 @@ alter table public.product_updates
   drop column if exists legacy_post_id;
 
 drop table if exists public.friend_requests cascade;
+-- Applied historical migration. Retained for clean database replay.
+-- Do not run this file manually against an existing database; use the ordered
+-- Supabase migration workflow with a current backup.

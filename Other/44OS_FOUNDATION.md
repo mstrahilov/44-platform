@@ -109,7 +109,7 @@ Current code state:
 - `src/lib/achievementCatalog.ts` filters Library display/tracking to the eight v1 music codes.
 - `src/components/DashboardReleaseFeatures.tsx` exposes Release Features for music: the eight achievement templates plus optional Overachiever Bonus Content.
 - Dashboard create/edit pages show release achievements only for music.
-- Reviewed manual SQL exists at `supabase/migrations/20260709230000_44os_v1_music_achievements.sql`.
+- The reviewed achievement migration is `supabase/migrations/20260709230000_44os_v1_music_achievements.sql`.
 - Launch foundation SQL exists at `supabase/migrations/20260710143000_44os_launch_foundation_alignment.sql`.
 
 Supabase is still staging-only before public launch. Back up first, run dry runs, then apply reviewed repo migrations directly through the Supabase CLI.
@@ -239,13 +239,16 @@ Current concept-to-table map:
 
 Known Supabase state from the launch cleanup:
 
-- Migration history has been repaired so local and remote migration versions match.
+- Migration history has been repaired so all ten local and remote migration versions match through `20260710174500`.
 - Backups exist under ignored `supabase/backups/`.
 - Message RLS cleanup, product asset vocabulary, table comments, and points ledger are handled by `20260710143000_44os_launch_foundation_alignment.sql`.
 - Resource removal and service workflow retirement are handled by `20260710161500_remove_resources_and_service_workflows.sql`.
 - Final category split, product-column consolidation, and speculative-table cleanup are handled by `20260710174500_final_schema_normalization.sql`.
-- `supabase/migrations/20260704164154_remote_schema.sql` is empty and must be classified before migration replay.
-- `20260704201500_44os_steam_foundation.sql` includes destructive statements and must not be replayed casually.
+- `20260704164154_remote_schema.sql` is an intentionally empty migration-history anchor and is labeled accordingly.
+- `20260704201500_44os_steam_foundation.sql` is retained for ordered clean-database replay and is labeled as unsafe to run manually against an existing database.
+- Final live read probes verified 5 product categories, 38 normalized products, 21 posts, 109 Radio playlist entries, and 8 achievement templates. Retired tables and product columns return not-found errors as expected.
+- Anonymous access to the dormant `services` table returns zero rows; its data remains available only through admin/service-role access.
+- `supabase db push --linked --dry-run` reports the remote database is up to date.
 
 Auth redirect target:
 

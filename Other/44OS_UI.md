@@ -200,6 +200,12 @@ Community tab copy:
 - Questions: ask practical creative questions and get answers.
 - Collaboration: find or offer help on creative work.
 
+Community state rules:
+
+- Posts, Questions, and Collaboration show loading states until their first Supabase request completes.
+- Never render an empty-state message while the initial request is still pending.
+- Read failures surface as errors; they must not silently look like an empty community.
+
 ---
 
 ## 8. Workspace Patterns

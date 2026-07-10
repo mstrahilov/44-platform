@@ -153,6 +153,7 @@ function CommunityPageContent() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
   const [posts, setPosts] = useState<SocialPost[]>([]);
+  const [postsLoading, setPostsLoading] = useState(true);
   const [replyCounts, setReplyCounts] = useState<CountMap>({});
   const [repliersMap, setRepliersMap] = useState<LikersMap>({});
   const [likes, setLikes] = useState<PostLike[]>([]);
@@ -183,6 +184,7 @@ function CommunityPageContent() {
   const [structuredVotingId, setStructuredVotingId] = useState('');
   const [structuredAcceptingId, setStructuredAcceptingId] = useState('');
   const [structuredRequiresSetup, setStructuredRequiresSetup] = useState(false);
+  const [structuredLoading, setStructuredLoading] = useState(true);
   const [error, setError] = useState('');
   const [setupGateOpen, setSetupGateOpen] = useState(false);
 
@@ -213,7 +215,7 @@ function CommunityPageContent() {
 
   useEffect(() => {
     async function fetchCommunity() {
-      const [{ data: postRows }, { data: replyRows }, { data: likeRows }] = await Promise.all([
+      const [postResult, replyResult, likeResult] = await Promise.all([
         supabase
           .from('posts')
           .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type, country_code, home_country_code)')
@@ -230,11 +232,13 @@ function CommunityPageContent() {
           .select('post_id, profile_id, profiles:profiles!profile_id(id, display_name, username, avatar_url)')
           .order('created_at', { ascending: false }),
       ]);
-      setPosts((postRows as SocialPost[] | null) ?? []);
-      const replies = (replyRows as ReplyEngagerRow[] | null) ?? [];
+      if (postResult.error) setError(postResult.error.message);
+      setPosts((postResult.data as SocialPost[] | null) ?? []);
+      const replies = (replyResult.data as ReplyEngagerRow[] | null) ?? [];
       setReplyCounts(countById(replies, 'post_id'));
       setRepliersMap(repliersByPost(replies));
-      setLikes((likeRows as PostLike[] | null) ?? []);
+      setLikes((likeResult.data as PostLike[] | null) ?? []);
+      setPostsLoading(false);
     }
     fetchCommunity();
   }, []);
@@ -242,11 +246,13 @@ function CommunityPageContent() {
   useEffect(() => {
     if (activeCommunityTab !== 'questions' && activeCommunityTab !== 'collaboration') return;
     async function loadStructured() {
+      setStructuredLoading(true);
       if (activeCommunityTab === 'questions') {
         const result = await loadCommunityQuestions('recent');
         setQuestions(result.rows);
         setStructuredRequiresSetup(result.requiresSetup);
         if (result.error) setError(result.error);
+        setStructuredLoading(false);
         return;
       }
 
@@ -254,6 +260,7 @@ function CommunityPageContent() {
       setCollaborations(result.rows);
       setStructuredRequiresSetup(result.requiresSetup);
       if (result.error) setError(result.error);
+      setStructuredLoading(false);
     }
     void loadStructured();
   }, [activeCommunityTab]);
@@ -1019,7 +1026,9 @@ function CommunityPageContent() {
 
         {activeCommunityTab === 'questions' ? (
           <section className="dashboard-list-surface social-feed social-feed-list social-feed-panel" aria-label="Community questions">
-            {structuredRequiresSetup ? (
+            {structuredLoading ? (
+              <div className="dashboard-empty">Loading questions...</div>
+            ) : structuredRequiresSetup ? (
               <div className="dashboard-empty">Questions needs the reviewed Community SQL applied in Supabase first.</div>
             ) : questions.length === 0 ? (
               <div className="dashboard-empty">{pageCopy.empty}</div>
@@ -1121,7 +1130,9 @@ function CommunityPageContent() {
           </section>
         ) : activeCommunityTab === 'collaboration' ? (
           <section className="dashboard-list-surface social-feed social-feed-list social-feed-panel" aria-label="Community collaboration">
-            {structuredRequiresSetup ? (
+            {structuredLoading ? (
+              <div className="dashboard-empty">Loading collaborations...</div>
+            ) : structuredRequiresSetup ? (
               <div className="dashboard-empty">Collaboration needs the reviewed Community SQL applied in Supabase first.</div>
             ) : collaborations.length === 0 ? (
               <div className="dashboard-empty">{pageCopy.empty}</div>
@@ -1204,7 +1215,9 @@ function CommunityPageContent() {
           </section>
         ) : (
         <section className="dashboard-list-surface social-feed social-feed-list social-feed-panel" aria-label="Community feed">
-          {visiblePosts.length === 0 ? (
+          {postsLoading ? (
+            <div className="dashboard-empty">Loading posts...</div>
+          ) : visiblePosts.length === 0 ? (
             <div className="dashboard-empty">{pageCopy.empty}</div>
           ) : (
             visiblePosts.map(post => {

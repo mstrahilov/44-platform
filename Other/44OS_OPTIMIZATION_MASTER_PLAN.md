@@ -105,9 +105,11 @@ Acceptance:
 - `[done]` Re-audit retained foundations by live row count and app usage; remove speculative systems that are not part of the settled launch model.
 - `[done]` Split `categories` into `product_categories` and private `service_categories`; retire obsolete post categories.
 - `[done]` Consolidate products onto `status`, `experience_type`, and `product_category_id`.
-- `[pending]` Classify empty migration `20260704164154_remote_schema.sql`.
-- `[pending]` Mark destructive historical migration as do-not-replay without backup and approval.
-- `[pending]` Document production Auth Site URL and redirect allow-list settings.
+- `[done]` Classify `20260704164154_remote_schema.sql` as an intentionally empty migration-history anchor.
+- `[done]` Mark the destructive historical foundation migration as ordered-replay-only, not a manual script.
+- `[done]` Document production Auth Site URL and redirect allow-list settings in Foundation.
+- `[done]` Repair the manually applied final-normalization migration marker and confirm all ten local/remote versions match.
+- `[done]` Verify normalized live REST reads and expected failures for retired tables/columns.
 
 Acceptance:
 
@@ -136,6 +138,7 @@ Acceptance:
 - `[done]` Fix Dashboard overview cards so helper text does not wrap awkwardly inside tight metric cards.
 - `[done]` Remove negative letter spacing and viewport-scaled global font sizes from shared CSS.
 - `[done]` Stabilize shared button and product tile hover states so controls do not jump or scale.
+- `[done]` Prevent Community Posts, Questions, and Collaboration from flashing false empty states while Supabase loads.
 - `[in progress]` Restore visual screenshot QA for desktop and mobile.
 - `[pending]` Verify achievement artwork renders from Supabase Storage after the SQL is applied.
 
@@ -181,7 +184,7 @@ Acceptance:
 
 ## 7. Current Known Blockers
 
-- Launch foundation migration needs dry-run/push to staging.
-- Supabase messaging, follows, and release feature uploads need browser QA after migration.
-- Browser screenshot QA tooling still needs to be run against the updated app.
-- Full visual QA requires a running local app and desktop/mobile screenshots.
+- No known schema or migration blockers remain.
+- Signed-in messaging, follows, and creator release-feature uploads still need final end-to-end browser QA.
+- Full responsive visual QA still needs desktop/mobile screenshots across the priority screens.
+- Apex/www/http redirect behavior and production Auth redirects still need final infrastructure QA.
