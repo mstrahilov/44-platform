@@ -168,9 +168,9 @@ export function ExperienceApp({ app, route }: { app: ExperienceConfig['id']; rou
   async function playProduct(product: Product, fallbackHref: string) {
     const { data } = await supabase
       .from('tracks')
-      .select('id,title,track_number,duration_seconds,audio_url')
+      .select('id,title,number,duration_seconds,audio_url')
       .eq('product_id', product.id)
-      .order('track_number');
+      .order('number');
     const queue: MusicQueueTrack[] = (data ?? [])
       .filter(track => track.audio_url)
       .map(track => ({

@@ -15,7 +15,7 @@ import {
 const REFRESH_MS = 15000;
 
 export default function RadioPage() {
-  const { playQueue, currentTrack, isPlaying, clear } = useMusicPlayer();
+  const { playQueue, currentTrack, isPlaying, clear, togglePlayback } = useMusicPlayer();
   const [bundle, setBundle] = useState<RadioBundle | null>(null);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(() => new Date());
@@ -49,7 +49,8 @@ export default function RadioPage() {
   );
 
   const syncedTrack = playback.index >= 0 ? bundle?.tracks[playback.index] ?? null : null;
-  const isSyncedTrackLive = currentTrack?.id === syncedTrack?.trackId && isPlaying;
+  const isCurrentSyncedTrack = currentTrack?.id === syncedTrack?.trackId;
+  const isSyncedTrackLive = isCurrentSyncedTrack && isPlaying;
 
   function handlePlayLive() {
     if (!queue.length || playback.index < 0) return;
@@ -59,6 +60,10 @@ export default function RadioPage() {
   function handleRadioAction() {
     if (isSyncedTrackLive) {
       clear();
+      return;
+    }
+    if (isCurrentSyncedTrack) {
+      togglePlayback();
       return;
     }
     handlePlayLive();
@@ -97,7 +102,7 @@ export default function RadioPage() {
                 {bundle.status ? <p className="os-type-body-small">{bundle.status}</p> : null}
               </div>
               <div className="radio-setup-actions">
-                <Link href="/dashboard/radio" className="os-button os-button-primary">Open Radio Dashboard</Link>
+                <Link href="/studio/radio" className="os-button os-button-primary">Open Radio Studio</Link>
               </div>
             </GlassPanel>
           </HubSection>

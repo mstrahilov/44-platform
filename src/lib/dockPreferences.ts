@@ -4,7 +4,7 @@
  * Dock preferences — localStorage-first (Supabase `user_dock_items` /
  * Server persistence can be added later when cross-device Dock sync is built.
  *
- * All reads/writes go through this module so the Dock and Settings > Dock
+ * All reads/writes go through this module so the Dock and Settings Appearance
  * stay in sync via a window event.
  */
 
@@ -28,8 +28,13 @@ export const DOCK_ORDER_STORAGE_KEY = '44-dock-order';
 export const DOCK_PINNED_STORAGE_KEY = '44-dock-pinned';
 const DOCK_PREFERENCES_UPDATED = '44-dock-preferences-updated';
 const DEFAULT_HIDDEN_DOCK_APP_IDS: OSAppId[] = [];
-const DEFAULT_DOCK_ORDER: OSAppId[] = ['library', 'search', 'store', 'radio', 'community', 'dashboard', 'support', 'settings'];
+const DEFAULT_DOCK_ORDER: OSAppId[] = ['library', 'store', 'radio', 'community', 'search', 'studio', 'support', 'settings'];
 const MAX_PINNED_DOCK_ITEMS = 5;
+
+function normalizeStoredDockAppId(value: unknown): OSAppId | null {
+  if (value === 'dashboard') return 'studio';
+  return typeof value === 'string' ? (value as OSAppId) : null;
+}
 
 export function getDockMode(): DockMode {
   if (typeof window === 'undefined') return 'full';
@@ -47,7 +52,7 @@ export function getHiddenDockAppIds(): OSAppId[] {
   try {
     const raw = window.localStorage.getItem(DOCK_HIDDEN_STORAGE_KEY);
     const parsed = raw ? (JSON.parse(raw) as unknown) : DEFAULT_HIDDEN_DOCK_APP_IDS;
-    return Array.isArray(parsed) ? (parsed as OSAppId[]) : [];
+    return Array.isArray(parsed) ? parsed.map(normalizeStoredDockAppId).filter((id): id is OSAppId => Boolean(id)) : [];
   } catch {
     return DEFAULT_HIDDEN_DOCK_APP_IDS;
   }
@@ -67,7 +72,9 @@ export function getDockAppOrder(): OSAppId[] {
   try {
     const raw = window.localStorage.getItem(DOCK_ORDER_STORAGE_KEY);
     const parsed = raw ? (JSON.parse(raw) as unknown) : DEFAULT_DOCK_ORDER;
-    return Array.isArray(parsed) ? (parsed as OSAppId[]) : DEFAULT_DOCK_ORDER;
+    return Array.isArray(parsed)
+      ? parsed.map(normalizeStoredDockAppId).filter((id): id is OSAppId => Boolean(id))
+      : DEFAULT_DOCK_ORDER;
   } catch {
     return DEFAULT_DOCK_ORDER;
   }

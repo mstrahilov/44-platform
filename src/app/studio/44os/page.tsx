@@ -18,7 +18,7 @@ const swatches = [
 
 const typeSamples = [
   ['Display', 'os-type-display', 'Home'],
-  ['Page Title', 'os-type-page-title', 'Dashboard'],
+  ['Page Title', 'os-type-page-title', 'Studio'],
   ['Panel Title', 'os-type-panel-title', 'Community Profile'],
   ['Section Title', 'os-type-section-title', 'Recent Content'],
   ['Field Title', 'os-type-field-title', 'Theme'],
@@ -64,7 +64,7 @@ export default function Studio44OSPage() {
             <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', marginBottom: 18 }}>
               44OS reference pages are internal development tools.
             </p>
-            <Link href="/browse" className="os-button os-button-secondary">Back to Browse</Link>
+            <Link href="/store" className="os-button os-button-secondary">Back to Store</Link>
           </GlassPanel>
         </div>
       </PageShell>
@@ -78,11 +78,8 @@ export default function Studio44OSPage() {
           <div className="dashboard-header-copy">
             <div className="os-type-eyebrow" style={{ color: 'var(--os-color-ink-muted)', marginBottom: 8 }}>44OS Reference</div>
             <h1 className="os-type-display">44OS UI</h1>
-            <p className="os-type-body">
-              A hidden styleboard for building new 44 features with the same typography, materials, controls, and spacing.
-            </p>
           </div>
-          <Link href="/dashboard" className="os-button os-button-secondary os-button-compact">Dashboard</Link>
+          <Link href="/studio" className="os-button os-button-secondary os-button-compact">Studio</Link>
         </header>
 
         <section className="dashboard-section">

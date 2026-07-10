@@ -16,11 +16,11 @@ const ARTICLES: SupportArticle[] = [
     category: 'Account & Login',
     question: 'Reset your password',
     answer: [
-      'Open Settings, choose Account, then send a reset link to your login email.',
+      'Open the Account section in Settings, then send a reset link to your login email.',
       'Use the newest reset email if you requested more than one. Reset links can expire, so request a fresh one if the link fails.',
       'If the link opens in a different browser than the one you normally use, sign in again there or copy the link into your main browser.',
     ],
-    actions: [{ label: 'Open Account Settings', href: '/settings?tab=account' }],
+    actions: [{ label: 'Open Account Settings', href: '/settings#account' }],
   },
   {
     category: 'Account & Login',
@@ -35,10 +35,10 @@ const ARTICLES: SupportArticle[] = [
     question: 'Find merch and item orders',
     answer: [
       'Digital items appear in your Library after purchase or save.',
-      'Merch orders are fulfilled by the creator. Creators manage paid local-fulfillment orders from Dashboard orders.',
+      'Merch orders are fulfilled by the creator. Creators manage paid local-fulfillment orders from Studio orders.',
       'If an order looks wrong, include the item name, buyer email, creator name, and checkout time when contacting support.',
     ],
-    actions: [{ label: 'Open Orders', href: '/dashboard/orders' }],
+    actions: [{ label: 'Open Orders', href: '/studio/orders' }],
   },
   {
     category: 'Library',
@@ -54,21 +54,21 @@ const ARTICLES: SupportArticle[] = [
     category: 'Dock & Settings',
     question: 'Customize the Dock',
     answer: [
-      'Open Settings, then Dock, to switch between Full and Compact mode, choose visible apps, and select your landing app.',
-      'Library, Search, Browse, Radio, Community, Support, and Settings are the signed-in Dock surfaces.',
-      'Creator accounts also see Dashboard. Signed-out visitors see Search, Browse, Radio, Community, Support, and Log In.',
+      'Open the Appearance section in Settings to switch between Full and Compact Dock mode and select your landing app.',
+      'Library, Store, Community, Radio, Support, and Settings are the signed-in Dock surfaces.',
+      'Signed-out visitors see Store, Community, Radio, Support, and Log In. Search lives in the desktop topbar and mobile Dock.',
     ],
-    actions: [{ label: 'Open Dock Settings', href: '/settings?tab=dock' }],
+    actions: [{ label: 'Open Dock Settings', href: '/settings#dock' }],
   },
   {
     category: 'Creator Uploads',
     question: 'Publish music, books, assets, or merch',
     answer: [
-      'Creators publish and manage work from Dashboard. Use the profile shortcut buttons for fast access to new releases, books, assets, and merch.',
+      'Creators publish and manage work from Studio. Use the profile shortcut buttons for fast access to new releases, books, assets, and merch.',
       'Music releases can include v1.0 achievements and Overachiever bonus content. Books, assets, and merch use simpler publishing flows until their experiences are fully built.',
       'Future formats will be added to the same catalog model after the launch foundation is stable.',
     ],
-    actions: [{ label: 'Open Dashboard', href: '/dashboard' }],
+    actions: [{ label: 'Open Studio', href: '/studio' }],
   },
   {
     category: 'Radio',

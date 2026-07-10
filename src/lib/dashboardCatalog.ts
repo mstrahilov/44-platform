@@ -1,93 +1,11 @@
-import type { Product } from '@/lib/products';
-import { getProductExperience } from '@/lib/experience';
+export {
+  STUDIO_CATALOG_SECTIONS as DASHBOARD_CATALOG_SECTIONS,
+  getStudioCatalogSection as getDashboardCatalogSection,
+  getStudioCatalogSectionForProduct as getDashboardCatalogSectionForProduct,
+  productBelongsToStudioSection as productBelongsToDashboardSection,
+} from '@/lib/studioCatalog';
 
-export type DashboardCatalogSectionId = 'music' | 'books' | 'assets' | 'merch';
-
-export type DashboardCatalogSection = {
-  id: DashboardCatalogSectionId;
-  label: string;
-  href: string;
-  itemLabel: string;
-  itemLabelPlural: string;
-  newLabel: string;
-  editTitle: string;
-  createTitle: string;
-  createCopy: string;
-  typeLabel: string;
-  typeOptions: string[];
-};
-
-export const DASHBOARD_CATALOG_SECTIONS: DashboardCatalogSection[] = [
-  {
-    id: 'music',
-    label: 'Music',
-    href: '/dashboard/products',
-    itemLabel: 'release',
-    itemLabelPlural: 'releases',
-    newLabel: 'New Release',
-    editTitle: 'Edit Release',
-    createTitle: 'New Release',
-    createCopy: 'Create an album, EP, single, or track release directly from inside the app.',
-    typeLabel: 'Release Type',
-    typeOptions: ['Album', 'EP', 'Single'],
-  },
-  {
-    id: 'books',
-    label: 'Books',
-    href: '/dashboard/products?section=books',
-    itemLabel: 'book',
-    itemLabelPlural: 'books',
-    newLabel: 'New Book',
-    editTitle: 'Edit Book',
-    createTitle: 'New Book',
-    createCopy: 'Create a digital book or artbook for readers inside 44OS.',
-    typeLabel: 'Book Type',
-    typeOptions: ['Lyrics Book', 'Art Book', 'Novel'],
-  },
-  {
-    id: 'assets',
-    label: 'Assets',
-    href: '/dashboard/products?section=assets',
-    itemLabel: 'asset',
-    itemLabelPlural: 'assets',
-    newLabel: 'New Asset',
-    editTitle: 'Edit Asset',
-    createTitle: 'New Asset',
-    createCopy: 'Create an asset pack, template, preset, or creative tool.',
-    typeLabel: 'Asset Type',
-    typeOptions: ['Asset Pack', 'Remix Stems'],
-  },
-  {
-    id: 'merch',
-    label: 'Merch',
-    href: '/dashboard/products?section=merch',
-    itemLabel: 'merch item',
-    itemLabelPlural: 'merch',
-    newLabel: 'New Merch Item',
-    editTitle: 'Edit Merch Item',
-    createTitle: 'New Merch Item',
-    createCopy: 'Create a local-fulfillment merch item that creators deliver directly.',
-    typeLabel: 'Merch Type',
-    typeOptions: ['T-Shirt', 'Hoodie', 'Sweatshirt', 'Jacket', 'Hat', 'Beanie', 'Poster', 'Print', 'Bag', 'Accessory', 'Sticker Pack', 'Other'],
-  },
-];
-
-export function getDashboardCatalogSection(id: string | null | undefined) {
-  return DASHBOARD_CATALOG_SECTIONS.find(section => section.id === id) ?? DASHBOARD_CATALOG_SECTIONS[0];
-}
-
-export function getDashboardCatalogSectionForProduct(product: Pick<Product, 'product_type' | 'experience_type' | 'fulfillment_type'>) {
-  const experience = getProductExperience(product);
-  if (experience === 'physical') return getDashboardCatalogSection('merch');
-  if (experience === 'book') return getDashboardCatalogSection('books');
-  if (experience === 'asset') return getDashboardCatalogSection('assets');
-  return getDashboardCatalogSection('music');
-}
-
-export function productBelongsToDashboardSection(
-  product: Pick<Product, 'product_type' | 'experience_type' | 'fulfillment_type'>,
-  sectionId: DashboardCatalogSectionId,
-) {
-  const productSection = getDashboardCatalogSectionForProduct(product);
-  return productSection.id === sectionId;
-}
+export type {
+  StudioCatalogSection as DashboardCatalogSection,
+  StudioCatalogSectionId as DashboardCatalogSectionId,
+} from '@/lib/studioCatalog';

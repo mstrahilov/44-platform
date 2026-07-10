@@ -20,11 +20,11 @@ Do not revive deleted planning documents or old SQL notes as active references. 
 
 The launch mental model is:
 
-- **Browse**: the user-facing discovery and acquisition app.
+- **Store**: the user-facing discovery and acquisition app.
 - **Library**: the signed-in user's owned, saved, purchased, or added items.
 - **Community**: public posts, questions, collaboration, follows, and creator/fan connection.
 - **Radio**: public listening surface.
-- **Dashboard**: signed-in creator workspace for publishing and catalog health.
+- **Studio**: signed-in creator workspace for publishing and catalog health; canonical routes live under `/studio`.
 - **Settings**: signed-in system, Dock, region, and account controls.
 - **Support**: public help surface.
 
@@ -32,10 +32,10 @@ Resources and the old Services/Projects workflow are removed. Messages and stand
 
 Language rules:
 
-- User-facing copy says Browse, Library, Community, release, item, music, book, sample pack, merch, review, creator update, bonus content, earnings, and orders.
-- UI copy should not use "Store" or "Collection" as the visible product model.
+- User-facing copy says Store, Library, Community, release, item, music, book, sample pack, merch, review, creator update, bonus content, earnings, and orders.
+- UI copy should not use "Browse" or "Collection" as the visible product model.
 - `products` is the permanent internal catalog noun. User-facing copy should use "items" or format-specific nouns.
-- Services are excluded from the v1 polished Browse surface.
+- Services are excluded from the v1 polished Store surface.
 
 ---
 
@@ -57,7 +57,7 @@ Core doctrine:
 - **Global reach, local fairness**: creators can sell globally at a fair global price while optionally offering local pricing that respects their home community and currency.
 - **Flagship experiences lead the system**: 44 should use major releases to prove new capabilities, then productize those capabilities for other creators.
 
-Version 1.0 should establish the correct foundation: Browse, Library, profiles, Community, Dashboard publishing, global/local pricing groundwork, music achievements, Overachiever Bonus Content, and a visual/technical system that can grow into future interactive releases.
+Version 1.0 should establish the correct foundation: Store, Library, profiles, Community, Studio publishing, global/local pricing groundwork, music achievements, Overachiever Bonus Content, and a visual/technical system that can grow into future interactive releases.
 
 ---
 
@@ -65,16 +65,16 @@ Version 1.0 should establish the correct foundation: Browse, Library, profiles, 
 
 Important launch journeys:
 
-- **Fan journey**: discover work in Browse, add it to Library, follow the creator, read creator updates, unlock achievements, discuss it in Community, and come back as the release evolves.
+- **Fan journey**: discover work in Store, add it to Library, follow the creator, read creator updates, unlock achievements, discuss it in Community, and come back as the release evolves.
 - **Early creator journey**: join Community, ask practical questions, learn how publishing works, find collaborators, build confidence, publish a first release, then use updates and Library features to keep improving it.
-- **Working creator journey**: publish music/books/sample packs/merch, configure fair global/local pricing, add music achievements/bonus content where supported, post updates, interact with fans, and track catalog health in Dashboard.
+- **Working creator journey**: publish music/books/sample packs/merch, configure fair global/local pricing, add music achievements/bonus content where supported, post updates, interact with fans, and track catalog health in Studio.
 - **Collaborator journey**: find people through Community questions/collaboration, profiles, posts, and eventually Services/Projects.
 - **Flagship release journey**: experience a 44 release that demonstrates achievements, bonus content, behind-the-scenes material, Library memory, and eventually interactive 3D/Unity/WebGL unlocks.
 
 Creator-fan distance should be low:
 
 - Creator profiles connect posts, releases, Library items, updates, and future services.
-- Browse item pages explain the release and acquisition.
+- Store item pages explain the release and acquisition.
 - Library item pages show the deeper relationship: owned status, play/read/download, achievements, updates, bonus content, and future Launch actions.
 - Creator Updates are the 44OS version of patch notes, release notes, dev logs, and album/project updates.
 - Community is where fans and creators talk, ask, answer, collaborate, and build scenes without algorithmic pressure.
@@ -107,8 +107,8 @@ Rules:
 Current code state:
 
 - `src/lib/achievementCatalog.ts` filters Library display/tracking to the eight v1 music codes.
-- `src/components/DashboardReleaseFeatures.tsx` exposes Release Features for music: the eight achievement templates plus optional Overachiever Bonus Content.
-- Dashboard create/edit pages show release achievements only for music.
+- `src/components/StudioReleaseFeatures.tsx` exposes Release Features for music: the eight achievement templates plus optional Overachiever Bonus Content. `DashboardReleaseFeatures.tsx` remains only as a compatibility export.
+- Studio create/edit pages show release achievements only for music.
 - The reviewed achievement migration is `supabase/migrations/20260709230000_44os_v1_music_achievements.sql`.
 - Launch foundation SQL exists at `supabase/migrations/20260710143000_44os_launch_foundation_alignment.sql`.
 
@@ -125,7 +125,7 @@ Supabase is still staging-only before public launch. Back up first, run dry runs
 - Local scripts: `npm run dev`, `npm run lint`, `npm run build`, `npm run start`.
 - Shell entry: `src/app/layout.tsx`.
 - App registry: `src/lib/osApps.ts`.
-- Browse/category route helpers: `src/lib/experience.ts` and compatibility category helpers in `src/lib/storeRoutes.ts`.
+- Store/category route helpers: `src/lib/experience.ts` and category helpers in `src/lib/storeRoutes.ts`.
 - Library routes: `src/lib/libraryRoutes.ts`.
 
 Quality gates for production-facing work:
@@ -153,18 +153,20 @@ Core shell files:
 Navigation rules:
 
 - `src/lib/osApps.ts` is the single source of truth for Dock apps.
-- The Dock, Dock settings, route ownership, app labels, app descriptions, and app visibility should derive from the registry.
+- The Dock, Dock settings, route ownership, app labels, archived app descriptions, and app visibility derive from the registry.
+- Dock child routes may define `iconClass`, but desktop and mobile dropdowns render text-only child rows aligned under the parent label axis.
 - `getActiveOSAppId(pathname)` must map every route to exactly one owning app.
-- Search is a Dock app, not a persistent topbar search field.
+- Desktop Search is a topbar control immediately left of Notifications. Mobile Search is a fixed bottom-Dock destination.
 - Notifications are a topbar control, not a Dock app.
 - Signed-out users see public destinations only.
 
 Current Dock order:
 
-- Signed in: Library, divider, Search, Browse, Radio, Community, Dashboard for creators, spacer, Support, Settings.
-- Signed out: Search, Browse, Radio, Community, spacer, Support, Log In.
+- Signed in desktop: Library, divider, Store, Radio, Community, spacer, Support, divider, Settings.
+- Signed out desktop: Store, Radio, Community, spacer, Support, Log In.
+- Mobile: Store, Library, Search, Radio, Community. The full menu opens from the left.
 
-Library and Settings are signed-in Dock destinations. Dashboard appears only for creator accounts. Signed-out users see public destinations plus Support and Log In. Messages and Profile are hidden from the v1 Dock. Keep profile/account access through avatar/profile/community surfaces where supported.
+Library and Settings are signed-in Dock destinations. Library sits alone at the top of the signed-in Dock. Studio does not appear in the Dock; creators enter through `Open Studio` on their own profile. Messages and Profile remain account-level surfaces. Support sits directly above the Settings divider.
 
 ---
 
@@ -172,11 +174,13 @@ Library and Settings are signed-in Dock destinations. Dashboard appears only for
 
 Canonical public routes:
 
-- `/browse` - Browse front door.
-- `/browse/[category]` - Browse category: music, books, assets, merch.
-- `/browse/item/[identifier]` - Browse item detail. Resolve by slug first where available; id fallback is supported.
+- `/store` - Store front door.
+- `/store/[category]` - Store category: music, books, assets, merch.
+- `/store/item/[identifier]` - Store item detail. Resolve by slug first where available; id fallback is supported.
 - `/cart` and `/checkout` - acquisition flow.
 - `/community` - Community front door.
+- `/community` - Community posts with an All Posts / Following filter.
+- `/community/questions` and `/community/collaboration` - dedicated Community views.
 - `/radio` - Radio.
 - `/support` - Support.
 - `/search` - Search.
@@ -188,17 +192,19 @@ Canonical signed-in routes:
 - `/library/[category]` - Library category.
 - `/library/item/[id]` - owned Library item detail using `library_items.id`.
 - `/profile` and `/profile/[username]` - profile surfaces.
-- `/dashboard` and dashboard subroutes - creator workspace.
-- `/settings?tab=account` - default Settings entry.
+- `/studio` and Studio subroutes - creator workspace.
+- `/settings` - Settings entry. The page is sectioned into Account, Notifications, Region, and Appearance; legacy `?tab=` links are compatibility anchors only.
 
 Compatibility and legacy policy:
 
-- `/` redirects to `/browse`.
-- `/store`, `/store/[category]`, and `/store/[category]/[slug]` redirect to Browse equivalents.
-- `/product/[id]` resolves as a compatibility hop to `/browse/item/[identifier]`.
+- `/` redirects to `/store`.
+- `/browse`, `/browse/[category]`, and `/browse/item/[identifier]` redirect to Store equivalents.
+- `/product/[id]` resolves as a compatibility hop to `/store/item/[identifier]`.
 - `/collection` redirects to `/library`; `/collection/item/[kind]/[id]` redirects to `/library/item/[id]`.
-- `/music`, `/books`, `/assets`, `/merch`, `/shop`, and old typed `/discover`/`/store` paths redirect to Browse categories.
+- `/music`, `/books`, `/assets`, `/merch`, `/shop`, and old typed `/discover` paths redirect to Store categories.
 - `/library/item/[kind]/[id]` remains as a legacy compatibility route and redirects to `/library/item/[id]`.
+- `/dashboard` and dashboard subroutes redirect to Studio equivalents.
+- `/community/following` redirects to `/community?filter=following`.
 - Removed Resources and Services/Projects URLs intentionally return not found; they are not compatibility surfaces.
 - Do not add vanity redirects unless there is a real public link to preserve.
 
@@ -218,7 +224,7 @@ Rules:
 
 Current concept-to-table map:
 
-- Canonical catalog items: `products`. `status` is the publication lifecycle and `experience_type` controls runtime behavior. UI may call the surface Browse or Store; Library views still point to the same product row.
+- Canonical catalog items: `products`. `status` is the publication lifecycle and `experience_type` controls runtime behavior. The UI calls the acquisition surface Store; Library views still point to the same product row.
 - Product category lookup: `product_categories`, referenced by `products.product_category_id`.
 - Creator profiles and public member profiles: `profiles`.
 - Music tracks: `tracks`.
@@ -247,6 +253,8 @@ Known Supabase state from the launch cleanup:
 - `20260704164154_remote_schema.sql` is an intentionally empty migration-history anchor and is labeled accordingly.
 - `20260704201500_44os_steam_foundation.sql` is retained for ordered clean-database replay and is labeled as unsafe to run manually against an existing database.
 - Final live read probes verified 5 product categories, 38 normalized products, 21 posts, 109 Radio playlist entries, and 8 achievement templates. Retired tables and product columns return not-found errors as expected.
+- July 10, 2026 app sweep was read-only against Supabase: `supabase migration list` matched local/remote migrations through `20260710174500`; anon reads saw 38 products, 142 tracks, 109 Radio playlist entries, 5 product categories, 21 posts, and 13 profiles.
+- The canonical track ordering column is `tracks.number`; `tracks.track_number` is absent in the live schema and should not be selected by app code.
 - Anonymous access to the dormant `services` table returns zero rows; its data remains available only through admin/service-role access.
 - `supabase db push --linked --dry-run` reports the remote database is up to date.
 
@@ -283,9 +291,9 @@ Vercel/domain target:
 
 - Keep only the three active `/Other` handoff docs.
 - Keep Dock app behavior centralized in `src/lib/osApps.ts`.
-- Keep Browse category/detail behavior centralized in route helpers.
+- Keep Store category/detail behavior centralized in route helpers.
 - Keep Library ownership behavior centralized in Library primitives and route helpers.
 - Add shared UI primitives before adding page-specific styling.
 - Avoid one-off inline styles unless the value is genuinely dynamic.
-- Keep shell chrome glassy; keep dense content readable.
+- Glass is exclusive to the single unified `.app-shell`. Menus, popovers, filters, modals, panels, cards, and content surfaces are solid and readable.
 - Keep lint/build green before visual polish work is considered done.

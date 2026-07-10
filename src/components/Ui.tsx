@@ -357,18 +357,18 @@ export function CategoryCard({ label, href, icon }: { label: string; href: strin
 
 export function HubHero({
   title,
-  copy,
   actions,
+  className = '',
 }: {
   title: string;
   copy?: string;
   actions?: ReactNode;
+  className?: string;
 }) {
   return (
-    <header className="app-header">
+    <header className={`app-header ${className}`.trim()}>
       <div className="app-header-copy">
         <h1 className="os-type-display">{title}</h1>
-        {copy && <p className="os-type-body">{copy}</p>}
       </div>
       {actions}
     </header>

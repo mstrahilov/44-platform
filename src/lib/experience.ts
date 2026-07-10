@@ -79,17 +79,17 @@ export function getExperienceAppSlug(product: ProductExperienceShape): Experienc
 }
 
 export function browseIndexHref(productOrCategory?: ProductExperienceShape | ExperienceAppSlug | 'merch' | 'all' | null) {
-  if (!productOrCategory || productOrCategory === 'all') return '/browse';
-  if (typeof productOrCategory === 'string') return `/browse/${productOrCategory}`;
+  if (!productOrCategory || productOrCategory === 'all') return '/store';
+  if (typeof productOrCategory === 'string') return `/store/${productOrCategory}`;
   const app = getExperienceAppSlug(productOrCategory);
-  if (app) return `/browse/${app}`;
-  if (getProductExperience(productOrCategory) === 'physical') return '/browse/merch';
-  return '/browse';
+  if (app) return `/store/${app}`;
+  if (getProductExperience(productOrCategory) === 'physical') return '/store/merch';
+  return '/store';
 }
 
 export function productBrowseHref(product: ProductRouteShape) {
   const identifier = product.slug || product.id;
-  return `/browse/item/${identifier}`;
+  return `/store/item/${identifier}`;
 }
 
 export function libraryItemHref(libraryItem: { id: string }) {
@@ -105,7 +105,7 @@ export function productLibraryHref(
   product: ProductExperienceShape,
   libraryItemId: string,
 ) {
-  if (getProductExperience(product) === 'physical') return '/browse/merch';
+  if (getProductExperience(product) === 'physical') return '/store/merch';
   return libraryItemHref({ id: libraryItemId });
 }
 

@@ -85,7 +85,7 @@ export default function LoginPage() {
         setStatus(authMessage(error.message));
         return;
       }
-      router.push('/browse');
+      router.push('/store');
       return;
     }
 
@@ -101,7 +101,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOtp({
       email: cleanEmail,
       options: {
-        emailRedirectTo: getSitePathUrl('/browse'),
+        emailRedirectTo: getSitePathUrl('/store'),
       },
     });
 
@@ -278,8 +278,8 @@ export default function LoginPage() {
               marginTop: 20,
               padding: '12px 16px',
               borderRadius: 'var(--os-radius-3)',
-              background: 'var(--os-glass-recessed-bg)',
-              border: '1px solid var(--os-glass-recessed-border)',
+              background: 'var(--os-paper-bg-soft)',
+              border: '1px solid var(--os-paper-border)',
               color: 'var(--os-color-ink-secondary)',
             }}>
               {status}

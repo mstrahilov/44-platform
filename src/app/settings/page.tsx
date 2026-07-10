@@ -1,12 +1,11 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
-import { PageShell, HubHero, EmptyMessage } from '@/components/Ui';
-import { useTopbarTabs } from '@/components/TopbarContext';
+import { PageShell, HubHero, EmptyMessage, SectionHeader } from '@/components/Ui';
 import {
   ACCENTS,
   MODES,
@@ -21,7 +20,6 @@ import {
   COUNTRIES,
   CURRENCIES,
   currencyForCountry,
-  getDetectedViewerCountry,
   getStoredViewerCountry,
   getStoredViewerCurrency,
   setStoredViewerPreferences,
@@ -32,16 +30,9 @@ import { getSitePathUrl } from '@/lib/siteUrl';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { getAvailableDockApps } from '@/lib/osApps';
 import { setDockMode, useDockPreferences, type DockMode } from '@/lib/dockPreferences';
-import { getNotificationPreference, resetNotificationPreferences, setNotificationPreference, type NotificationPreferenceKind } from '@/lib/notificationPreferences';
+import { getNotificationPreference, setNotificationPreference, type NotificationPreferenceKind } from '@/lib/notificationPreferences';
 
-type SettingsTabId = 'system' | 'dock' | 'region' | 'account';
-
-const TABS: Array<{ id: SettingsTabId; label: string; copy: string }> = [
-  { id: 'account', label: 'Account', copy: 'Email, password, privacy, and notifications.' },
-  { id: 'system', label: 'System', copy: 'Theme, accent, and the way 44OS opens.' },
-  { id: 'dock', label: 'Dock', copy: 'Control Dock layout, visible apps, and where 44OS opens.' },
-  { id: 'region', label: 'Region', copy: 'Region, currency, and local pricing defaults.' },
-];
+type SettingsAnchorId = 'account' | 'notifications' | 'appearance' | 'dock';
 
 const ACCOUNT_KEYS = {
   mentions: 'mentions',
@@ -50,10 +41,14 @@ const ACCOUNT_KEYS = {
   achievements: 'achievements',
 } as const;
 
-function normalizeSettingsTab(value: string | null): SettingsTabId {
-  if (value === 'appearance' || value === 'clock' || value === 'accessibility' || value === 'advanced') return 'system';
-  if (value === 'privacy' || value === 'notifications' || value === 'orders') return 'account';
-  return TABS.some(tab => tab.id === value) ? (value as SettingsTabId) : 'account';
+function normalizeSettingsAnchor(value: string | null | undefined): SettingsAnchorId | null {
+  if (!value) return null;
+  if (value === 'dock') return 'dock';
+  if (value === 'system' || value === 'appearance' || value === 'clock' || value === 'accessibility' || value === 'advanced') return 'appearance';
+  if (value === 'notifications') return 'notifications';
+  if (value === 'region') return 'account';
+  if (value === 'account' || value === 'privacy' || value === 'orders') return 'account';
+  return null;
 }
 
 export default function SettingsPage() {
@@ -66,32 +61,27 @@ export default function SettingsPage() {
 
 function SettingsContent() {
   const { user, loading } = useAuth();
-  const tabs = TABS;
   const searchParams = useSearchParams();
-  const requestedTab = normalizeSettingsTab(searchParams.get('tab'));
-  const initialTab: SettingsTabId = requestedTab;
-  const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
 
   useEffect(() => {
-    Promise.resolve().then(() => setActiveTab(requestedTab));
-  }, [requestedTab, tabs]);
-
-  useEffect(() => {
-    if (!tabs.some(tab => tab.id === activeTab)) {
-      Promise.resolve().then(() => setActiveTab(tabs[0]?.id ?? 'system'));
+    if (loading || typeof window === 'undefined') return;
+    let frame = 0;
+    function scrollToRequestedSection() {
+      const hash = window.location.hash.replace(/^#/, '');
+      const anchor = normalizeSettingsAnchor(hash) ?? normalizeSettingsAnchor(searchParams.get('tab'));
+      if (!anchor) return;
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        document.getElementById(anchor)?.scrollIntoView({ block: 'start' });
+      });
     }
-  }, [activeTab, tabs]);
-
-  useTopbarTabs(
-    tabs.map(tab => ({
-      id: tab.id,
-      label: tab.label,
-      href: `/settings?tab=${tab.id}`,
-      active: tab.id === activeTab,
-    })),
-  );
-
-  const activeMeta = tabs.find(tab => tab.id === activeTab) ?? tabs[0];
+    scrollToRequestedSection();
+    window.addEventListener('hashchange', scrollToRequestedSection);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('hashchange', scrollToRequestedSection);
+    };
+  }, [loading, searchParams]);
 
   if (loading) {
     return <PageShell><div style={{ minHeight: '40vh' }} /></PageShell>;
@@ -101,7 +91,7 @@ function SettingsContent() {
     return (
       <PageShell>
         <main className="dashboard-page">
-          <HubHero title="Settings" copy="System, Dock, region, and account controls." />
+          <HubHero title="Settings" />
           <EmptyMessage>Log in to manage your 44OS settings.</EmptyMessage>
           <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--os-space-4)' }}>
             <Link href="/login" className="os-button os-button-primary">
@@ -116,17 +106,63 @@ function SettingsContent() {
   return (
     <PageShell>
       <main className="dashboard-page">
-        <HubHero title="Settings" copy={activeMeta?.copy} />
-        {activeTab === 'system' && <SystemSettings />}
-        {activeTab === 'dock' && <DockSettings />}
-        {activeTab === 'region' && <RegionSettings />}
-        {activeTab === 'account' && <AccountSettings />}
+        <HubHero title="Settings" />
+        <div className="settings-page-stack">
+          <SettingsPageSection
+            id="appearance"
+            title="Appearance"
+          >
+            <AppearanceSettings />
+          </SettingsPageSection>
+          <SettingsPageSection
+            id="account"
+            title="Account"
+          >
+            <AccountSettings />
+          </SettingsPageSection>
+          <SettingsPageSection
+            id="notifications"
+            title="Notifications"
+          >
+            <NotificationSettings />
+          </SettingsPageSection>
+        </div>
       </main>
     </PageShell>
   );
 }
 
-function SystemSettings() {
+function SettingsPageSection({
+  id,
+  title,
+  description,
+  action,
+  children,
+}: {
+  id: SettingsAnchorId;
+  title: string;
+  description?: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="settings-page-section" id={id} aria-label={title}>
+      <SectionHeader title={title} description={description} action={action} />
+      {children}
+    </section>
+  );
+}
+
+function AppearanceSettings() {
+  return (
+    <div className="settings-section settings-section-wide settings-two-column" id="dock">
+      <ThemeSettings />
+      <DockSettings />
+    </div>
+  );
+}
+
+function ThemeSettings() {
   const [mode, setModeState] = useState<ThemeMode>('light');
   const [accent, setAccentState] = useState<ThemeAccent>('amber');
 
@@ -146,17 +182,12 @@ function SystemSettings() {
     setAccent(a);
   }
 
-  function resetSystemDefaults() {
-    chooseMode('light');
-    chooseAccent('amber');
-  }
-
   return (
-    <div className="settings-section">
+    <>
       <div className="settings-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Theme</div>
-          <p className="os-type-body-small">Light, dark, or match your system.</p>
+          <p className="os-type-body-small">Choose the system color mode.</p>
         </div>
         <div className="settings-segment" role="group" aria-label="Theme mode">
           {MODES.map(m => (
@@ -175,7 +206,7 @@ function SystemSettings() {
       <div className="settings-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Accent</div>
-          <p className="os-type-body-small">The color of the glass and ambient background.</p>
+          <p className="os-type-body-small">Set the active system accent color.</p>
         </div>
         <div className="settings-swatches" role="group" aria-label="Accent color">
           {ACCENTS.map(a => (
@@ -192,20 +223,14 @@ function SystemSettings() {
           ))}
         </div>
       </div>
-      <div className="settings-section-actions">
-        <button className="os-button os-button-secondary os-button-compact" type="button" onClick={resetSystemDefaults}>
-          Reset Defaults
-        </button>
-      </div>
-    </div>
+    </>
   );
 }
 
-function RegionSettings() {
+function RegionSettingsFields({ onStatus }: { onStatus: (status: string) => void }) {
   const { user } = useAuth();
   const [countryCode, setCountryCode] = useState('US');
   const [displayCurrency, setDisplayCurrency] = useState('USD');
-  const [marketStatus, setMarketStatus] = useState('');
 
   useEffect(() => {
     Promise.resolve().then(() => {
@@ -241,10 +266,10 @@ function RegionSettings() {
     setCountryCode(nextCountry);
     setDisplayCurrency(nextCurrency);
     setStoredViewerPreferences(nextCountry, nextCurrency);
-    setMarketStatus('');
+    onStatus('');
 
     if (!user) {
-      setMarketStatus('Saved on this device.');
+      onStatus('Saved on this device.');
       return;
     }
 
@@ -257,24 +282,19 @@ function RegionSettings() {
       .eq('id', user.id);
 
     if (isMissingColumnError(error)) {
-      setMarketStatus('Saved on this device.');
+      onStatus('Saved on this device.');
       return;
     }
 
-    setMarketStatus(error ? error.message : 'System preferences saved.');
-  }
-
-  function resetRegionDefaults() {
-    const detectedCountry = getDetectedViewerCountry();
-    void saveMarketPreferences(detectedCountry, currencyForCountry(detectedCountry));
+    onStatus(error ? error.message : 'System preferences saved.');
   }
 
   return (
-    <div className="settings-section">
+    <>
       <div className="settings-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Region</div>
-          <p className="os-type-body-small">Choose your local market. Creator item forms use this region when you add a local price.</p>
+          <p className="os-type-body-small">Set your local market.</p>
         </div>
         <select
           className="os-input-field"
@@ -293,7 +313,7 @@ function RegionSettings() {
       <div className="settings-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Display Currency</div>
-          <p className="os-type-body-small">Set the currency used for browsing and for local-price defaults when your region does not provide one automatically.</p>
+          <p className="os-type-body-small">Choose prices shown across Store.</p>
         </div>
         <select
           className="os-input-field"
@@ -307,18 +327,7 @@ function RegionSettings() {
           ))}
         </select>
       </div>
-
-      {marketStatus && (
-        <span className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>
-          {marketStatus}
-        </span>
-      )}
-      <div className="settings-section-actions">
-        <button className="os-button os-button-secondary os-button-compact" type="button" onClick={resetRegionDefaults}>
-          Reset Defaults
-        </button>
-      </div>
-    </div>
+    </>
   );
 }
 
@@ -356,11 +365,11 @@ function DockSettings() {
   }
 
   return (
-    <div className="settings-section settings-section-wide">
+    <>
       <div className="settings-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Landing App</div>
-          <p className="os-type-body-small">Choose which visible Dock app opens after login.</p>
+          <p className="os-type-body-small">Choose where 44OS opens.</p>
         </div>
         <div className="settings-segment" role="group" aria-label="Landing app">
           {landingApps.map(app => (
@@ -379,7 +388,7 @@ function DockSettings() {
       <div className="settings-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Dock</div>
-          <p className="os-type-body-small">Full shows icons and labels. Compact shows icons only.</p>
+          <p className="os-type-body-small">Set the Dock display density.</p>
         </div>
         <div className="settings-segment" role="group" aria-label="Dock mode">
           {DOCK_MODES.map(m => (
@@ -394,7 +403,7 @@ function DockSettings() {
           ))}
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -402,11 +411,8 @@ function AccountSettings() {
   const { user } = useAuth();
   const [sendingReset, setSendingReset] = useState(false);
   const [savingEmail, setSavingEmail] = useState(false);
-  const [savingPassword, setSavingPassword] = useState(false);
   const [newEmail, setNewEmail] = useState('');
-  const [newPassword, setNewPassword] = useState('');
   const [status, setStatus] = useState('');
-  const [resetSignal, setResetSignal] = useState(0);
 
   useEffect(() => {
     Promise.resolve().then(() => setNewEmail(user?.email ?? ''));
@@ -423,24 +429,10 @@ function AccountSettings() {
     setStatus('');
     const { error } = await supabase.auth.updateUser(
       { email: newEmail.trim() },
-      { emailRedirectTo: getSitePathUrl('/settings?tab=account') },
+      { emailRedirectTo: getSitePathUrl('/settings') },
     );
     setSavingEmail(false);
     setStatus(error ? error.message : 'Check your new email to confirm the change.');
-  }
-
-  async function changePassword(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (newPassword.length < 8 || savingPassword) {
-      setStatus('Password must be at least 8 characters.');
-      return;
-    }
-    setSavingPassword(true);
-    setStatus('');
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    setSavingPassword(false);
-    setStatus(error ? error.message : 'Password updated.');
-    if (!error) setNewPassword('');
   }
 
   async function sendPasswordReset() {
@@ -448,24 +440,18 @@ function AccountSettings() {
     setSendingReset(true);
     setStatus('');
     const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-      redirectTo: getSitePathUrl('/settings?tab=account'),
+      redirectTo: getSitePathUrl('/settings'),
     });
     setSendingReset(false);
     setStatus(error ? error.message : 'Password reset email sent.');
   }
 
-  function resetAccountDefaults() {
-    resetNotificationPreferences();
-    setStatus('Account preferences reset.');
-    setResetSignal(current => current + 1);
-  }
-
   return (
-    <div className="settings-section settings-section-wide">
+    <div className="settings-section settings-section-wide settings-two-column">
       <div className="settings-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Email</div>
-          <p className="os-type-body-small">Your login and account recovery email. Changes require email confirmation.</p>
+          <p className="os-type-body-small">Your login and recovery email.</p>
         </div>
         <form className="settings-inline-form" onSubmit={changeEmail}>
           <input
@@ -485,42 +471,30 @@ function AccountSettings() {
       <div className="settings-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Password</div>
-          <p className="os-type-body-small">Update your current password, or send a reset link to your email.</p>
+          <p className="os-type-body-small">Send a secure reset link to your email.</p>
         </div>
-        <form className="settings-inline-form" onSubmit={changePassword}>
-          <input
-            className="os-input-field"
-            type="password"
-            value={newPassword}
-            onChange={event => setNewPassword(event.target.value)}
-            placeholder="New password"
-            autoComplete="new-password"
-            minLength={8}
-          />
-          <button className="os-button os-button-primary" type="submit" disabled={savingPassword || newPassword.length < 8}>
-            {savingPassword ? 'Saving...' : 'Change Password'}
-          </button>
+        <div className="settings-inline-form">
           <button className="os-button os-button-secondary" type="button" onClick={sendPasswordReset} disabled={!user?.email || sendingReset}>
             {sendingReset ? 'Sending...' : 'Send Reset Link'}
           </button>
-        </form>
-        {status && <p className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>{status}</p>}
+        </div>
       </div>
 
-      <div className="settings-field">
-        <div className="settings-field-head">
-          <div className="os-type-field-title">Notifications</div>
-          <p className="os-type-body-small">Choose which account activity should reach you.</p>
-        </div>
-        <ToggleRow preferenceKind={ACCOUNT_KEYS.mentions} title="Mentions" desc="When someone mentions you in Community." defaultOn resetSignal={resetSignal} />
-        <ToggleRow preferenceKind={ACCOUNT_KEYS.replies} title="Replies" desc="When someone replies to your posts or comments." defaultOn resetSignal={resetSignal} />
-        <ToggleRow preferenceKind={ACCOUNT_KEYS.likes} title="Likes" desc="When someone likes your post or reply." defaultOn resetSignal={resetSignal} />
-        <ToggleRow preferenceKind={ACCOUNT_KEYS.achievements} title="Achievements" desc="When you unlock achievements across 44OS." defaultOn resetSignal={resetSignal} />
-      </div>
-      <div className="settings-section-actions">
-        <button className="os-button os-button-secondary os-button-compact" type="button" onClick={resetAccountDefaults}>
-          Reset Defaults
-        </button>
+      <RegionSettingsFields onStatus={setStatus} />
+
+      {status && <p className="settings-status os-type-body-small">{status}</p>}
+    </div>
+  );
+}
+
+function NotificationSettings() {
+  return (
+    <div className="settings-section settings-section-wide">
+      <div className="settings-list">
+        <ToggleRow preferenceKind={ACCOUNT_KEYS.mentions} title="Mentions" defaultOn />
+        <ToggleRow preferenceKind={ACCOUNT_KEYS.replies} title="Replies" defaultOn />
+        <ToggleRow preferenceKind={ACCOUNT_KEYS.likes} title="Likes" defaultOn />
+        <ToggleRow preferenceKind={ACCOUNT_KEYS.achievements} title="Achievements" defaultOn />
       </div>
     </div>
   );
@@ -528,13 +502,11 @@ function AccountSettings() {
 
 function ToggleRow({
   title,
-  desc,
   preferenceKind,
   defaultOn = false,
   resetSignal = 0,
 }: {
   title: string;
-  desc: string;
   preferenceKind: NotificationPreferenceKind;
   defaultOn?: boolean;
   resetSignal?: number;
@@ -557,7 +529,6 @@ function ToggleRow({
     <div className="settings-row">
       <div className="settings-row-copy">
         <div className="os-type-card-title">{title}</div>
-        <p className="os-type-body-small">{desc}</p>
       </div>
       <button
         type="button"

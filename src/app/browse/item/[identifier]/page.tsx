@@ -1,13 +1,7 @@
-import { ProductStoreDetail } from '@/app/product/[id]/page';
+import { permanentRedirect } from 'next/navigation';
 
 export default async function BrowseItemPage({ params }: { params: Promise<{ identifier: string }> }) {
   const { identifier } = await params;
 
-  return (
-    <ProductStoreDetail
-      identifier={identifier}
-      backHref="/browse"
-      backLabel="Browse"
-    />
-  );
+  permanentRedirect(`/store/item/${identifier}`);
 }

@@ -2,19 +2,10 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { PageShell, ProductCard, ProductGrid, HubHero, HubSection, EmptyMessage } from '@/components/Ui';
-import { useTopbarTabs } from '@/components/TopbarContext';
 import { browseIndexHref, getProductExperience, type ProductExperience } from '@/lib/experience';
 import type { Product } from '@/lib/products';
 import type { StoreCategory } from '@/lib/storeRoutes';
 import { supabase } from '@/lib/supabase';
-
-const STORE_TABS: Array<{ id: StoreCategory; label: string; href: string }> = [
-  { id: 'all', label: 'Browse', href: '/browse' },
-  { id: 'music', label: 'Music', href: browseIndexHref('music') },
-  { id: 'books', label: 'Books', href: browseIndexHref('books') },
-  { id: 'merch', label: 'Merch', href: browseIndexHref('merch') },
-  { id: 'assets', label: 'Assets', href: browseIndexHref('assets') },
-];
 
 const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
   music: 'music',
@@ -25,7 +16,7 @@ const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
 
 const CATEGORY_COPY: Record<StoreCategory, { title: string; copy: string; empty: string }> = {
   all: {
-    title: 'Browse',
+    title: 'Store',
     copy: 'Find releases, books, assets, and merch from independent creators.',
     empty: 'No items are published yet.',
   },
@@ -55,8 +46,6 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-
-  useTopbarTabs(STORE_TABS.map(tab => ({ ...tab, active: tab.id === category })));
 
   useEffect(() => {
     let alive = true;
@@ -114,7 +103,7 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
           ) : (
             <>
               {musicProducts.length > 0 && (
-                <HubSection title="Explore Music" href={browseIndexHref('music')}>
+                <HubSection title="Music" href={browseIndexHref('music')}>
                   <ProductGrid>
                     {musicProducts.map(product => (
                       <ProductCard key={product.id} product={product} />
@@ -123,7 +112,7 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
                 </HubSection>
               )}
               {bookProducts.length > 0 && (
-                <HubSection title="Explore Books" href={browseIndexHref('books')}>
+                <HubSection title="Books" href={browseIndexHref('books')}>
                   <ProductGrid>
                     {bookProducts.map(product => (
                       <ProductCard key={product.id} product={product} />
@@ -132,7 +121,7 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
                 </HubSection>
               )}
               {apparelProducts.length > 0 && (
-                <HubSection title="Explore Merch" href={browseIndexHref('merch')}>
+                <HubSection title="Merch" href={browseIndexHref('merch')}>
                   <ProductGrid>
                     {apparelProducts.map(product => (
                       <ProductCard key={product.id} product={product} />
@@ -141,7 +130,7 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
                 </HubSection>
               )}
               {assetProducts.length > 0 && (
-                <HubSection title="Explore Assets" href={browseIndexHref('assets')}>
+                <HubSection title="Assets" href={browseIndexHref('assets')}>
                   <ProductGrid>
                     {assetProducts.map(product => (
                       <ProductCard key={product.id} product={product} />

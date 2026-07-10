@@ -1,5 +1,5 @@
 import { permanentRedirect } from 'next/navigation';
 
 export default function AssetsDiscoverPage() {
-  permanentRedirect('/browse/assets');
+  permanentRedirect('/store/assets');
 }

@@ -8,8 +8,7 @@ import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
 import { getProductExperience } from '@/lib/experience';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
-import { useDashboardTabs } from '@/lib/dashboardTabs';
-import { DASHBOARD_CATALOG_SECTIONS } from '@/lib/dashboardCatalog';
+import { STUDIO_CATALOG_SECTIONS } from '@/lib/studioCatalog';
 
 type LibraryMetricRow = {
   id: string;
@@ -24,8 +23,7 @@ type OverviewState = {
   metricsError: string;
 };
 
-export default function DashboardPage() {
-  useDashboardTabs('overview');
+export default function StudioPage() {
   const { user, loading } = useAuth();
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [overview, setOverview] = useState<OverviewState>({
@@ -85,10 +83,10 @@ export default function DashboardPage() {
       <PageShell>
         <div className="dashboard-page">
           <HubHero
-            title="Dashboard"
+            title="Studio"
             copy="Creator tools, catalog health, and earnings live here once you sign in."
           />
-          <EmptyMessage>Log in to use your creator Dashboard.</EmptyMessage>
+          <EmptyMessage>Log in to use your creator Studio.</EmptyMessage>
           <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--os-space-4)' }}>
             <Link href="/login" className="os-button os-button-primary">Log In</Link>
           </div>
@@ -104,11 +102,11 @@ export default function DashboardPage() {
           <GlassPanel style={{ padding: 40 }}>
             <h1 className="os-type-panel-title" style={{ marginBottom: 8 }}>Creator Access Required</h1>
             <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', marginBottom: 18 }}>
-              Dashboard is for creator accounts. You can update your public profile first, then switch your role in Supabase when you are ready to publish.
+              Studio is for creator accounts. You can update your public profile first, then switch your role in Supabase when you are ready to publish.
             </p>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <Link href="/profile" className="os-button os-button-primary">Open Public Profile</Link>
-              <Link href="/browse" className="os-button os-button-ghost">Back to Browse</Link>
+              <Link href="/store" className="os-button os-button-ghost">Back to Store</Link>
             </div>
           </GlassPanel>
         </div>
@@ -119,7 +117,7 @@ export default function DashboardPage() {
   const productById = new Map(overview.products.map(product => [product.id, product]));
 
   const catalogCards = [
-    ...DASHBOARD_CATALOG_SECTIONS.map(section => {
+    ...STUDIO_CATALOG_SECTIONS.map(section => {
       const items = overview.products.filter(item => {
         const experience = getProductExperience(item);
         if (section.id === 'music') return experience === 'music';
@@ -152,7 +150,7 @@ export default function DashboardPage() {
     <PageShell>
       <div className="dashboard-page">
         <HubHero
-          title="Dashboard"
+          title="Studio"
           copy="Your creator workspace for catalog health, sales signals, and what should go live next."
         />
 

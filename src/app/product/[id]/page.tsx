@@ -24,7 +24,6 @@ type ProductTrack = {
   id: string;
   title: string;
   number?: number | null;
-  track_number?: number | null;
   duration_seconds?: number | null;
   audio_url?: string | null;
   download_url?: string | null;
@@ -68,7 +67,7 @@ export function ProductStoreDetail({
   const [inferredTrackDurations, setInferredTrackDurations] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
-  useTopbarBack({ href: backHref ?? '/browse', label: backLabel ?? 'Browse' });
+  useTopbarBack({ href: backHref ?? '/store', label: backLabel ?? 'Store' });
 
   useEffect(() => {
     async function fetchProduct() {
@@ -269,7 +268,7 @@ export function ProductStoreDetail({
   const creatorLink = creatorHref(product.creators ?? product.creator);
   const creatorTabLink = `${creatorLink}${creatorLink.includes('?') ? '&' : '?'}tab=${creatorProfileTab(productExperience)}${product.id ? `&fromProduct=${encodeURIComponent(product.id)}` : ''}`;
   const creatorMoreLink = `${creatorLink}${creatorLink.includes('?') ? '&' : '?'}tab=${creatorProfileTab(productExperience)}`;
-  const libraryHref = ownedLibraryItemId ? productLibraryHref(product, ownedLibraryItemId) : browseIndexHref(product).replace('/browse', '/library');
+  const libraryHref = ownedLibraryItemId ? productLibraryHref(product, ownedLibraryItemId) : browseIndexHref(product).replace('/store', '/library');
 
   const hasDescription = Boolean(product.long_description || product.short_description);
   const description = product.long_description || product.short_description || '';
@@ -503,7 +502,7 @@ export function ProductStoreDetail({
 }
 
 function trackOrder(track: ProductTrack) {
-  return track.track_number ?? track.number ?? 0;
+  return track.number ?? 0;
 }
 
 function canSaveProductToLibrary(product: Product) {

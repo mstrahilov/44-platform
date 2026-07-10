@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { PageShell } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
@@ -15,7 +15,6 @@ import {
   SocialRichText,
   SocialTrashIcon,
 } from '@/components/Social';
-import { useCommunityTopbarTabs } from '@/components/CommunityTopbarTabs';
 import {
   acceptQuestionAnswer,
   createCommunityCollaboration,
@@ -67,16 +66,11 @@ type FollowingState = {
   ids: Set<string>;
 };
 
-const COMMUNITY_COPY: Record<'feed' | 'following' | 'questions' | 'collaboration' | 'topic', { title: string; copy: string; empty: string }> = {
+const COMMUNITY_COPY: Record<'feed' | 'questions' | 'collaboration' | 'topic', { title: string; copy: string; empty: string }> = {
   feed: {
     title: 'Posts',
     copy: 'General posts from creators and fans.',
     empty: 'No posts yet.',
-  },
-  following: {
-    title: 'Following',
-    copy: 'Posts from people you follow.',
-    empty: 'No posts from people you follow yet.',
   },
   questions: {
     title: 'Questions',
@@ -149,6 +143,7 @@ function replaceTrailingMention(value: string, username: string, topic: string |
 
 function CommunityPageContent() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { user } = useAuth();
   const userId = user?.id ?? null;
@@ -188,11 +183,19 @@ function CommunityPageContent() {
   const [error, setError] = useState('');
   const [setupGateOpen, setSetupGateOpen] = useState(false);
 
-  const requestedView = searchParams.get('view');
-  const requestedTopic = normalizeTaxonomyValue(searchParams.get('topic') ?? '');
-  const activeCommunityTab = requestedView === 'following'
+  const routeView = pathname === '/community/following'
+    ? 'feed'
+    : pathname === '/community/questions'
+      ? 'questions'
+      : pathname === '/community/collaboration'
+        ? 'collaboration'
+        : null;
+  const requestedView = routeView ?? searchParams.get('view');
+  const postFilter = searchParams.get('filter') === 'following' || searchParams.get('view') === 'following'
     ? 'following'
-    : requestedView === 'questions'
+    : 'all';
+  const requestedTopic = normalizeTaxonomyValue(searchParams.get('topic') ?? '');
+  const activeCommunityTab = requestedView === 'questions'
       ? 'questions'
       : requestedView === 'collaboration'
         ? 'collaboration'
@@ -211,7 +214,14 @@ function CommunityPageContent() {
       : '';
   const visibleMentionOptions = activeMentionQuery ? mentionOptions : [];
 
-  useCommunityTopbarTabs(activeCommunityTab);
+  useEffect(() => {
+    if (pathname !== '/community' || routeView || !requestedView) return;
+    if (requestedView === 'following') {
+      router.replace('/community?filter=following');
+    } else if (requestedView === 'questions' || requestedView === 'collaboration') {
+      router.replace(`/community/${requestedView}`);
+    }
+  }, [pathname, requestedView, routeView, router]);
 
   useEffect(() => {
     async function fetchCommunity() {
@@ -324,23 +334,25 @@ function CommunityPageContent() {
   const generalPosts = posts;
   const visiblePosts = useMemo(() => {
     let next = generalPosts;
-    if (requestedView === 'following') {
+    if (postFilter === 'following') {
       next = next.filter(post => typeof post.author_id === 'string' && followingIds.has(post.author_id));
     }
     if (requestedTopic) {
       next = next.filter(post => extractHashtags(post.body).includes(requestedTopic));
     }
     return next;
-  }, [followingIds, generalPosts, requestedTopic, requestedView]);
-  const pageCopy = requestedView === 'following'
-    ? COMMUNITY_COPY.following
-    : requestedTopic === 'question'
+  }, [followingIds, generalPosts, postFilter, requestedTopic]);
+  const pageCopy = activeCommunityTab === 'questions'
       ? COMMUNITY_COPY.questions
-      : requestedTopic === 'collaboration'
+      : activeCommunityTab === 'collaboration'
         ? COMMUNITY_COPY.collaboration
         : requestedTopic
           ? { ...COMMUNITY_COPY.topic, title: titleFromTopic(requestedTopic), copy: `Posts using #${requestedTopic}.` }
-          : COMMUNITY_COPY.feed;
+          : {
+              ...COMMUNITY_COPY.feed,
+              title: 'Community',
+              empty: postFilter === 'following' ? 'No posts from people you follow yet.' : COMMUNITY_COPY.feed.empty,
+            };
   const openReplyLikes = useMemo(
     () => (openRepliesPostId ? (inlineReplyLikes[openRepliesPostId] ?? []) : []),
     [inlineReplyLikes, openRepliesPostId],
@@ -936,22 +948,46 @@ function CommunityPageContent() {
           <div className="social-title-row">
             <div>
               <h1 className="os-type-display">{pageCopy.title}</h1>
-              <p className="social-title-copy os-type-body">
-                {pageCopy.copy}
-              </p>
             </div>
-            <button
-              type="button"
-              className="os-button os-button-primary os-button-compact"
-              onClick={() => requireCommunityAction(() => {
-                setPostComposerOpen(true);
-                setPostTitle('');
-                setPostBody('');
-                setMentionOptions([]);
-              })}
-            >
-              New Post
-            </button>
+            <div className="social-title-actions">
+              {activeCommunityTab === 'feed' && !requestedTopic ? (
+                <details className="library-filter-menu">
+                  <summary className="library-filter-button" aria-label="Filter Community" title="Filter Community">
+                    <span className="library-filter-icon" aria-hidden="true"><i /><i /><i /></span>
+                  </summary>
+                  <div className="library-filter-popover">
+                    {[
+                      { id: 'all', label: 'All Posts', href: '/community' },
+                      { id: 'following', label: 'Following', href: '/community?filter=following' },
+                    ].map(option => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={postFilter === option.id ? 'library-filter-option library-filter-option-active' : 'library-filter-option'}
+                        onClick={event => {
+                          event.currentTarget.closest('details')?.removeAttribute('open');
+                          router.push(option.href);
+                        }}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </details>
+              ) : null}
+              <button
+                type="button"
+                className="os-button os-button-primary os-button-compact"
+                onClick={() => requireCommunityAction(() => {
+                  setPostComposerOpen(true);
+                  setPostTitle('');
+                  setPostBody('');
+                  setMentionOptions([]);
+                })}
+              >
+                New Post
+              </button>
+            </div>
           </div>
         </header>
 

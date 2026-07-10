@@ -111,7 +111,7 @@ export default function CheckoutPage() {
             <div className="dashboard-empty">
               Add items to your cart to check out.
               <div style={{ marginTop: 'var(--os-space-4)' }}>
-                <Link className="os-button os-button-primary os-button-compact" href="/browse/merch">Browse Merch</Link>
+                <Link className="os-button os-button-primary os-button-compact" href="/store/merch">Store Merch</Link>
               </div>
             </div>
           </div>
@@ -234,8 +234,8 @@ export default function CheckoutPage() {
             <div className="dashboard-empty">
               A confirmation email will be sent to {email}. Digital items appear in Library.
               <div style={{ marginTop: 'var(--os-space-4)', display: 'flex', gap: 'var(--os-space-3)' }}>
-                <Link className="os-button os-button-primary os-button-compact" href="/browse/merch">Back to Merch</Link>
-                <Link className="os-button os-button-secondary os-button-compact" href="/browse">Keep Browsing</Link>
+                <Link className="os-button os-button-primary os-button-compact" href="/store/merch">Back to Merch</Link>
+                <Link className="os-button os-button-secondary os-button-compact" href="/store">Keep Shopping</Link>
               </div>
             </div>
           </div>

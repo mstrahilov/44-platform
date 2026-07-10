@@ -306,7 +306,8 @@ export const DEFAULT_MARKET_MODE: MarketMode = 'global';
 
 export const VIEWER_COUNTRY_STORAGE_KEY = '44-setting-country';
 export const VIEWER_CURRENCY_STORAGE_KEY = '44-setting-display-currency';
-export const CREATOR_PREFERENCES_STORAGE_KEY = '44-dashboard-market-preferences';
+export const CREATOR_PREFERENCES_STORAGE_KEY = '44-studio-market-preferences';
+const LEGACY_CREATOR_PREFERENCES_STORAGE_KEY = '44-dashboard-market-preferences';
 
 export function countryName(code?: string | null) {
   return COUNTRIES.find(country => country.code === code)?.name ?? 'United States';
@@ -360,7 +361,9 @@ export type StoredCreatorPreferences = {
 
 export function getStoredCreatorPreferences(): StoredCreatorPreferences | null {
   if (typeof window === 'undefined') return null;
-  const raw = window.localStorage.getItem(CREATOR_PREFERENCES_STORAGE_KEY);
+  const raw =
+    window.localStorage.getItem(CREATOR_PREFERENCES_STORAGE_KEY) ||
+    window.localStorage.getItem(LEGACY_CREATOR_PREFERENCES_STORAGE_KEY);
   if (!raw) return null;
 
   try {

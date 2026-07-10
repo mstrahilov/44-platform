@@ -124,8 +124,8 @@ export default function HomePage() {
         {isCreator && (
           <HubSection title="Creator">
             <div style={{ display: 'flex', gap: 'var(--os-space-3)', flexWrap: 'wrap' }}>
-              <Link href="/dashboard" className="os-button os-button-primary">Open Dashboard</Link>
-              <Link href="/dashboard/products/new" className="os-button os-button-secondary">New Release</Link>
+              <Link href="/studio" className="os-button os-button-primary">Open Studio</Link>
+              <Link href="/studio/products/new" className="os-button os-button-secondary">New Release</Link>
             </div>
           </HubSection>
         )}

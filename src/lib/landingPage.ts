@@ -8,7 +8,7 @@ export type LandingPageId =
   | 'shop'
   | 'community'
   | 'notifications'
-  | 'dashboard'
+  | 'studio'
   | 'account'
   | 'settings'
   | 'store'
@@ -19,14 +19,16 @@ export const DEFAULT_LANDING_PAGE: LandingPageId = 'store';
 
 export const LANDING_PAGES: Array<{ id: LandingPageId; label: string; href: string }> = [
   { id: 'library', label: 'Library', href: '/library' },
-  { id: 'store', label: 'Browse', href: '/' },
+  { id: 'store', label: 'Store', href: '/' },
   { id: 'radio', label: 'Radio', href: '/radio' },
   { id: 'community', label: 'Community', href: '/community' },
 ];
 
-const LEGACY_LANDING_PAGE_HREFS: Partial<Record<LandingPageId, string>> = {
-  shop: '/browse/merch',
+const LEGACY_LANDING_PAGE_HREFS: Partial<Record<LandingPageId | 'dashboard', string>> = {
+  shop: '/store/merch',
   home: '/',
+  dashboard: '/studio',
+  studio: '/studio',
 };
 
 export function isLandingPageId(value: string | null): value is LandingPageId {
@@ -40,6 +42,7 @@ export function getLandingPageId(): LandingPageId {
   if (stored === 'home') return 'store';
   if (stored === 'friends' || stored === 'inbox') return 'community';
   if (stored === 'account') return 'settings';
+  if (stored === 'dashboard') return 'studio';
   return isLandingPageId(stored) ? stored : DEFAULT_LANDING_PAGE;
 }
 

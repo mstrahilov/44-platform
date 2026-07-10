@@ -427,6 +427,16 @@ export function MusicPlayerBar() {
           </div>
         </>
       ) : null}
+      {isRadioPlayback ? (
+        <button
+          type="button"
+          className="music-player-button music-player-button-primary"
+          onClick={togglePlayback}
+          aria-label={isPlaying ? 'Pause live radio' : 'Play live radio'}
+        >
+          {isPlaying ? 'Pause' : 'Play'}
+        </button>
+      ) : null}
       <div className="music-player-volume">
         <button type="button" className="music-player-button" onClick={toggleMute} aria-label={muted ? 'Unmute' : 'Mute'}>
           {muted || volume === 0 ? 'Muted' : 'Vol'}
@@ -442,7 +452,7 @@ export function MusicPlayerBar() {
         />
       </div>
       {isRadioPlayback ? (
-        <button type="button" className="music-player-button music-player-button-primary" onClick={clear} aria-label="Stop live radio">
+        <button type="button" className="music-player-button" onClick={clear} aria-label="Stop live radio">
           Stop
         </button>
       ) : (

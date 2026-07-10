@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageShell } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
-import { useCommunityTopbarTabs } from '@/components/CommunityTopbarTabs';
 import { OnboardingTip } from '@/components/OnboardingTip';
 import { SocialAvatar, SocialProfileRow } from '@/components/Social';
 import { useAuth } from '@/lib/useAuth';
@@ -88,15 +87,12 @@ function MessagesContent() {
   const [body, setBody] = useState('');
   const [schemaReady, setSchemaReady] = useState(true);
   const [sending, setSending] = useState(false);
-  const [error, setError] = useState('');
   const [setupGateOpen, setSetupGateOpen] = useState(false);
   const [readMap, setReadMap] = useState<Record<string, string>>(() => getReadMap());
   const [composing, setComposing] = useState(false);
   const [recipientQuery, setRecipientQuery] = useState('');
   const [recipientProfiles, setRecipientProfiles] = useState<MessageProfile[]>([]);
   const [selectedRecipient, setSelectedRecipient] = useState<MessageProfile | null>(null);
-
-  useCommunityTopbarTabs('messages');
 
   useEffect(() => {
     if (!userId) return;
@@ -269,11 +265,10 @@ function MessagesContent() {
         return;
       }
       setSending(true);
-      setError('');
       const result = await createOrOpenConversation(user.id, selectedRecipient.id);
       if (result.error && isMissingRelationError(result.error)) {
         setSchemaReady(false);
-        setError('Messages need the social SQL enabled in Supabase before conversations can be created.');
+        console.warn('Messages schema is unavailable.', result.error);
         setSending(false);
         return;
       }
@@ -286,9 +281,9 @@ function MessagesContent() {
             sender_id: user.id,
             body: body.trim(),
             status: 'sent',
-          });
+        });
         if (insertError) {
-          setError(insertError.message);
+          console.warn('Message send failed.', insertError);
           setSending(false);
           return;
         }
@@ -310,7 +305,6 @@ function MessagesContent() {
     }
 
     setSending(true);
-    setError('');
     const { data, error: insertError } = await supabase
       .from('messages')
       .insert({
@@ -325,7 +319,7 @@ function MessagesContent() {
     if (isMissingRelationError(insertError)) {
       setSchemaReady(false);
     } else if (insertError) {
-      setError(insertError.message);
+      console.warn('Message send failed.', insertError);
     } else if (data) {
       setMessages(current => [...current, data as Message]);
       setConversations(current => {
@@ -375,9 +369,6 @@ function MessagesContent() {
           <div className="social-title-row">
             <div>
               <h1 className="os-type-display">Messages</h1>
-              <p className="social-title-copy os-type-body">
-                Direct conversations with 44 members.
-              </p>
             </div>
             <button type="button" className="os-button os-button-primary" onClick={() => setComposing(true)}>
               New Message
@@ -385,17 +376,7 @@ function MessagesContent() {
           </div>
         </header>
 
-        {!canInteract && (
-          <div className="dashboard-status dashboard-status-error">
-            {communityIdentityMessage()}
-          </div>
-        )}
-
-        {!schemaReady && (
-          <div className="dashboard-status dashboard-status-error">
-            Messages need the social SQL enabled in Supabase before live conversations can be created.
-          </div>
-        )}
+        {!canInteract && <div className="app-empty-text">{communityIdentityMessage()}</div>}
 
           <section className="social-inbox" aria-label="Messages">
             <aside className="social-inbox-list">
@@ -482,7 +463,7 @@ function MessagesContent() {
                             setSelectedRecipient(result);
                             setRecipientQuery('');
                           }}
-                          disabled={!schemaReady}
+                          disabled={false}
                         >
                           <SocialProfileRow
                             profile={result}
@@ -503,7 +484,7 @@ function MessagesContent() {
                       disabled={sending || !selectedRecipient}
                       style={{ minHeight: 54, flex: 1 }}
                     />
-                    <button className="os-button os-button-primary os-button-compact" type="submit" disabled={!body.trim() || sending || !selectedRecipient || !schemaReady}>
+                    <button className="os-button os-button-primary os-button-compact" type="submit" disabled={!body.trim() || sending || !selectedRecipient}>
                       Send
                     </button>
                   </form>
@@ -547,9 +528,8 @@ function MessagesContent() {
                   </form>
                 </>
               ) : (
-                <div className="app-empty-text">Select a conversation.</div>
+                <div className="app-empty-text">{schemaReady ? 'Select a conversation.' : 'Messages are not available yet.'}</div>
               )}
-              {error && <div className="dashboard-status dashboard-status-error" style={{ margin: 18 }}>{error}</div>}
             </div>
           </section>
       </main>

@@ -1,5 +1,5 @@
 import { permanentRedirect } from 'next/navigation';
 
 export default function BooksRedirect() {
-  permanentRedirect('/browse/books');
+  permanentRedirect('/store/books');
 }

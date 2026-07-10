@@ -13,7 +13,7 @@ import { PageShell, CenteredMessage } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
 import { SocialArtifactCard, SocialAvatar, SocialPostRow } from '@/components/Social';
 import { getOwnershipKeys, isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
-import { useTopbarBack, useTopbarTabs } from '@/components/TopbarContext';
+import { useTopbarBack } from '@/components/TopbarContext';
 import { authorHandle, countById, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type ReplyEngagerRow, type SocialPost } from '@/lib/social';
 import { useContextMenu } from '@/components/ContextMenu';
 import { pinDockItem } from '@/lib/dockPreferences';
@@ -168,7 +168,6 @@ export default function PublicProfilePage() {
 
   const isOwn = user?.id === profile?.id;
   const sourceProductId = searchParams.get('fromProduct');
-  useTopbarTabs(undefined);
   useTopbarBack(isOwn ? undefined : { href: '/community', label: 'Community' });
 
   async function handleFollowAction() {
@@ -348,7 +347,10 @@ export default function PublicProfilePage() {
 
             <div className="social-profile-actions">
               {isOwn ? (
-                <Link href="/profile/edit" className="os-button os-button-secondary">Edit Profile</Link>
+                <>
+                  {isCreator && <Link href="/studio" className="os-button os-button-primary">Open Studio</Link>}
+                  <Link href="/profile/edit" className="os-button os-button-secondary">Edit Profile</Link>
+                </>
               ) : (
                 <>
                   <button type="button" className="os-button os-button-secondary" onClick={openMessage} disabled={busy === 'message'}>
@@ -380,14 +382,6 @@ export default function PublicProfilePage() {
             </nav>
           )}
 
-          {isOwn && isCreator && (
-            <div className="social-profile-tab-actions" aria-label="Creator shortcuts">
-              <Link href="/dashboard/products/new?section=music" className="os-button os-button-primary os-button-compact">New Release</Link>
-              <Link href="/dashboard/products/new?section=books" className="os-button os-button-secondary os-button-compact">New Book</Link>
-              <Link href="/dashboard/products/new?section=assets" className="os-button os-button-secondary os-button-compact">New Asset</Link>
-              <Link href="/dashboard/products/new?section=merch" className="os-button os-button-secondary os-button-compact">New Merch</Link>
-            </div>
-          )}
         </section>
 
         {tabs.length === 0 && (

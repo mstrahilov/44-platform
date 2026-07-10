@@ -4,7 +4,7 @@ import { PageShell } from '@/components/Ui';
 const quickApps = [
   { label: 'Music', meta: 'Library and store', href: '/music' },
   { label: 'Community', meta: 'Posts, friends, replies', href: '/community' },
-  { label: 'Browse', meta: 'Releases and creator items', href: '/browse' },
+  { label: 'Store', meta: 'Releases and creator items', href: '/store' },
   { label: 'Library', meta: 'Saved and owned items', href: '/library' },
 ];
 
@@ -30,9 +30,6 @@ export default function Studio44OSHomeConceptPage() {
           <div className="os-home-hero-copy">
             <div className="os-type-eyebrow">44OS Home Concept</div>
             <h1>Welcome back, Austin.</h1>
-            <p>
-              A calm starting surface for music, community, and the work waiting inside 44OS.
-            </p>
           </div>
 
           <div className="os-home-now">
@@ -110,7 +107,7 @@ export default function Studio44OSHomeConceptPage() {
             <div>
               <div className="os-type-eyebrow">Creator Workspace</div>
               <h2>Release dashboard</h2>
-              <p>Catalog items, release features, files, and updates live together in Dashboard.</p>
+              <p>Catalog items, release features, files, and updates live together in Studio.</p>
             </div>
             <div className="os-home-progress" aria-label="Project progress">
               <span style={{ width: '58%' }} />

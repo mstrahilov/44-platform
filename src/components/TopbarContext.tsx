@@ -35,14 +35,10 @@ export function useTopbar(): TopbarContextValue {
   return useContext(TopbarContext);
 }
 
-/**
- * Register a set of tabs to appear in the global topbar.
- * Passing undefined clears them. Cleanup on unmount clears too.
- */
 export function useTopbarTabs(tabs: TopbarTab[] | undefined) {
   const { setTabs } = useContext(TopbarContext);
-  const key = useMemo(() => JSON.stringify(tabs?.map(t => [t.id, t.label, t.href, t.active])), [tabs]);
-  const stableSet = useCallback((t: TopbarTab[] | undefined) => setTabs(t), [setTabs]);
+  const key = useMemo(() => JSON.stringify(tabs?.map(tab => [tab.id, tab.label, tab.href, tab.active])), [tabs]);
+  const stableSet = useCallback((nextTabs: TopbarTab[] | undefined) => setTabs(nextTabs), [setTabs]);
   useEffect(() => {
     stableSet(tabs);
     return () => stableSet(undefined);
@@ -51,7 +47,7 @@ export function useTopbarTabs(tabs: TopbarTab[] | undefined) {
 }
 
 /**
- * Register a back link that appears in the topbar's left area when no tabs are set.
+ * Register a back link that appears in the topbar's left area.
  */
 export function useTopbarBack(back: { href: string; label?: string } | undefined) {
   const { setBack } = useContext(TopbarContext);

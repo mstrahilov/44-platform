@@ -8,6 +8,8 @@ import { MusicPlayerBar, MusicPlayerProvider } from '@/components/MusicPlayer';
 import ThemeSync from '@/components/ThemeSync';
 import SystemShell from '@/components/SystemShell';
 import { ContextMenuProvider } from '@/components/ContextMenu';
+import { MobileMenuProvider } from '@/components/MobileMenuContext';
+import { Suspense } from 'react';
 
 // Applies the saved theme before first paint to avoid a flash of the wrong theme.
 const THEME_BOOTSTRAP = `(function(){try{
@@ -41,11 +43,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <MusicPlayerProvider>
           <TopbarProvider>
-           <ContextMenuProvider>
+           <MobileMenuProvider>
+            <ContextMenuProvider>
             <SystemShell />
             <div className="app-frame">
               <div className="app-shell">
-                <Sidebar />
+                <Suspense fallback={null}>
+                  <Sidebar />
+                </Suspense>
                 <main className="app-main">
                   <Topbar />
                   <div className="app-main-content">
@@ -55,7 +60,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 </main>
               </div>
             </div>
-           </ContextMenuProvider>
+            </ContextMenuProvider>
+           </MobileMenuProvider>
           </TopbarProvider>
         </MusicPlayerProvider>
 

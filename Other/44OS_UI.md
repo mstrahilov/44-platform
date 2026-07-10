@@ -31,14 +31,14 @@ Every shipped screen must pass these checks:
 
 - Premium, quiet, and focused.
 - Editorial enough for creative work, but operational enough for repeated use.
-- Glassy in shell chrome, readable in content.
+- Glassy only in the unified app shell, solid and readable everywhere else.
 - Spatially consistent.
 - Minimal without feeling empty.
 
 44OS is not:
 
 - A landing page.
-- A purple/blue gradient dashboard.
+- A purple/blue gradient admin panel.
 - A pile of nested cards.
 - A theme demo.
 - A set of separate mobile pages.
@@ -57,11 +57,11 @@ Creator-facing rules:
 - Local/global pricing should read as fairness and reach, not as a finance tool.
 - Achievement setup should describe what fans can unlock or experience, not how event tracking works.
 - Bonus Content is the first v1 unlockable release extra and can be attached to Overachiever.
-- Dashboard screens should prioritize clarity, previews, validation, and confidence.
+- Studio screens should prioritize clarity, previews, validation, and confidence.
 
 Fan-facing rules:
 
-- Browse should invite discovery without feeling algorithmic or manipulative.
+- Store should invite discovery without feeling algorithmic or manipulative.
 - Library should feel personal and durable, like a shelf, archive, and activity record.
 - Profiles should make a creator's work, posts, and identity feel connected.
 - Community should feel useful and human.
@@ -75,18 +75,18 @@ Fan-facing rules:
 Use three material roles:
 
 - **Environment**: the fixed background behind the OS window.
-- **Shell glass**: Dock, Topbar, menus, popovers, modals, and system overlays.
+- **Shell glass**: the single unified `.app-shell` surface behind Dock, Topbar, and workspace.
 - **Content surface**: readable pages, lists, forms, cards, detail bodies, and dense work areas.
 
 Use three content surface families:
 
-- **Elevated clickable cards**: Browse cards, Library cards, radio cards, and product search results.
-- **Recessed interactive lists**: tracklists, social rows, replies, notifications, editable dashboard rows, and selectable rows.
+- **Elevated clickable cards**: Store cards, Library cards, radio cards, and product search results.
+- **Recessed interactive lists**: tracklists, social rows, replies, notifications, editable Studio rows, and selectable rows.
 - **Flat information lists**: metadata/details/settings summaries that do not need hover or card treatment.
 
 Rules:
 
-- Glass belongs to shell chrome and overlays.
+- Glass and transparency belong only to the unified app shell. Menus, popovers, filters, modals, cards, panels, and overlays use solid semantic paper surfaces.
 - Dense content should use readable paper/material surfaces.
 - Do not place cards inside cards.
 - Page sections are layout regions, not floating cards.
@@ -127,7 +127,7 @@ Rules:
 - Do not use negative letter spacing.
 - Do not scale body text with viewport width.
 - Reserve hero-scale type for app front doors and true hero/detail moments.
-- Dense panels, cards, settings, and dashboard controls use compact type.
+- Dense panels, cards, settings, and Studio controls use compact type.
 
 ---
 
@@ -137,24 +137,26 @@ The Dock is the OS taskbar and app launcher. It renders from `src/lib/osApps.ts`
 
 Current Dock order:
 
-- Signed in: Library, divider, Search, Browse, Radio, Community, Dashboard for creators, spacer, Support, Settings.
-- Signed out: Search, Browse, Radio, Community, spacer, Support, Log In.
+- Signed in desktop: Library, divider, Store, Radio, Community, spacer, Support, divider, Settings.
+- Signed out desktop: Store, Radio, Community, spacer, Support, Log In.
+- Mobile fixed Dock: Store, Library, Search, Radio, Community.
 
 Rules:
 
-- Browse is the visible catalog app.
-- Library and Settings are signed-in Dock destinations. Dashboard appears only for creator accounts. Signed-out users see Support and Log In at the bottom.
-- Search is a Dock app.
+- Store is the visible catalog app.
+- Library and Settings are signed-in Dock destinations. Studio opens from the creator's own profile and is not a Dock app.
+- Search is immediately left of Notifications on desktop and remains a page destination in the mobile Dock.
 - Notifications stay in the Topbar.
 - Messages and Profile are hidden from the v1 Dock.
 - Resources and the old Services/Projects flows are removed from the v1 app.
-- Compact Dock items are square.
-- Full Dock rows and compact Dock targets keep a 56px rhythm.
+- Full Dock rows keep a 56px rhythm; child routes use substantial 40px rows.
+- Expanded Dock child routes are text-only and align child labels under the parent row label axis.
+- Compact Dock targets are slightly landscape-shaped at 56 by 52px.
+- The mobile full menu is a compact inset drawer, not a full-width navigation panel.
 - Pinned items should use artwork/profile imagery when available.
 
 The Topbar owns:
 
-- Local tabs.
 - Back label.
 - Cart when it has items.
 - Notifications.
@@ -162,28 +164,46 @@ The Topbar owns:
 
 Topbar rules:
 
-- Topbar tabs are local filters, not primary app navigation.
-- Do not show tabs and back label in the same slot.
-- Do not add Search back to the Topbar.
-- Tabs must be visually discoverable with clear contrast and active state.
-- The Dock answers "Where am I going?" The Topbar tabs answer "What part of this app am I viewing?"
+- Do not use Topbar tabs for primary app sections. Prefer in-page sections and filters.
+- Do not show tab-like local filters and back label in the same slot.
+- Desktop Search expands in place without a halo or rectangular highlight and must remain left of Notifications.
+- Any local filters must be visually discoverable with clear contrast and active state.
+- The Dock answers "Where am I going?" In-page sections answer "What part of this app am I viewing?"
 
 ---
 
 ## 7. Page Copy And Information Architecture
 
-Every primary page needs three layers of orientation:
+Every primary page uses concise orientation:
 
-- **Dock/app label**: Browse, Library, Community, Dashboard.
-- **Page hero**: title plus one sentence that explains the current surface.
-- **Tab/section context**: title and optional description for the selected tab or section.
+- **Dock/app label**: Store, Library, Radio, Community.
+- **Page hero**: title only. Do not render descriptive copy beneath primary page titles.
+- **Section context**: title and optional description only when the section itself needs guidance.
 
 Page hero rules:
 
-- Titles are nouns or clear destinations: Browse, Library, Questions, Collaboration, Dashboard, Settings.
-- Descriptions tell the user what they can do there.
-- Descriptions should be human and useful, not marketing blurbs.
-- Avoid vague copy like "manage your content" when the page can say "publish releases, update pricing, and review catalog health."
+- Titles are nouns or clear destinations: Store, Library, Questions, Collaboration, Studio, Settings.
+- Primary title descriptions are archived below for possible future reuse and are not rendered in the current UI.
+
+Archived primary-page descriptions (saved July 10, 2026):
+
+- Store: Find releases, books, assets, and merch from independent creators.
+- Library: Everything you have saved, added, or purchased.
+- Music: Explore albums, EPs, singles, and releases built to grow over time.
+- Books: Explore art books, poetry, and stories from independent creators.
+- Merch: Explore apparel, accessories, and physical goods from creators.
+- Assets: Explore assets, remix stems, and creative tools for your work.
+- Community: General posts from creators and fans.
+- Community feed filter: All Posts and Following.
+- Questions: Ask something specific and get an answer from someone who has solved it.
+- Collaboration: Find collaborators or make yourself available to creative work.
+- Radio: Tune in to 44 Radio, a live 24/7 station playing around the world.
+- Search: Find items, creators, posts, questions, and collaborations.
+- Support: Find help for account access, orders, Library, Dock settings, Radio, creator tools, and troubleshooting.
+- Settings: Account, region, appearance, and Dock controls.
+- Studio: Creator tools, catalog health, and earnings.
+
+Keep this archive in documentation rather than rendering it under titles. Revive individual descriptions only after an explicit product decision.
 
 Section heading primitive:
 
@@ -196,7 +216,7 @@ Section heading primitive:
 Community tab copy:
 
 - Posts: general conversation from creators and fans.
-- Following: posts from people you follow.
+- Following: a filter on the Community landing page, not a separate visible route.
 - Questions: ask practical creative questions and get answers.
 - Collaboration: find or offer help on creative work.
 
@@ -212,31 +232,42 @@ Community state rules:
 
 Use existing/shared containers:
 
-- `.app-page` for Browse, Library, Search, Support, and hub pages.
-- `.dashboard-page` for Dashboard and Settings.
+- `.app-page` for Store, Library, Search, Support, and hub pages.
+- `.dashboard-page` for Studio and Settings.
 - `.social-shell` for Community, profiles, and inbox.
-- Detail layout classes for Browse and Library item detail pages.
+- Detail layout classes for Store and Library item detail pages.
 
 Rules:
 
 - Primary app front screens open with `HubHero`.
+- Settings is a single sectioned page ordered Appearance, Account, then Notifications. Appearance and Account use two-column field grids; Region and Display Currency live under Account. Dock controls live inside Appearance.
 - Sections use `HubSection` or `SectionHeader`.
 - Empty states use shared message primitives.
 - Forms use shared field, label, helper, and action-row classes.
 - Lists should prefer row surfaces with clear dividers over decorative cards.
 - Repeated cards must have consistent image ratio, title line behavior, metadata rhythm, and action placement.
 
-Dashboard publishing rules:
+Studio publishing rules:
 
 - Release Type, Release Year, and Price belong in the same 3-column field group.
 - Track editors use the recessed editable list primitive, not nested glass cards.
 - Book achievements are hidden for v1.
 - Music release features start with the eight v1 achievement templates and optional Overachiever Bonus Content.
 - Destructive buttons should align with system action rows and use confirmation copy.
+- Studio overview is a consolidated landing page: flat metric cards first, catalog sections for Music, Books, Assets, and Merch next, and Earnings at the bottom. Catalog metric cards are informational, not navigation.
 
 ---
 
 ## 9. Controls, Icons, And Imagery
+
+Dock icon sources are fixed to public assets where available:
+
+- Store: `public/icons/sidebar/STORE.svg`
+- Library: `public/icons/sidebar/COLLECTION.svg`
+- Community: `public/icons/sidebar/COMMUNITY.svg`
+- Radio: `public/icons/sidebar/RADIO.svg`
+- Store child routes use legacy category icons for Music, Books, Assets, and Merch.
+- Community child routes expose Questions and Collaboration only; Following is available through the Community feed filter.
 
 Use familiar controls:
 
@@ -266,12 +297,12 @@ Rules:
 
 Visual QA target pages:
 
-- Browse
-- Browse item
+- Store
+- Store item
 - Library
 - Library item
-- Dashboard overview
-- Dashboard release editor
+- Studio overview
+- Studio release editor
 - Community Posts/Questions/Collaboration
 - Search
 - Radio

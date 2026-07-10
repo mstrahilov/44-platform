@@ -14,6 +14,7 @@ import { notificationIsEnabled } from '@/lib/notificationPreferences';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTopbar } from './TopbarContext';
 import { useCart } from '@/lib/cart';
+import { useMobileMenu } from './MobileMenuContext';
 
 export type { TopbarTab } from './TopbarContext';
 
@@ -35,7 +36,7 @@ const IconProfile = () => (
   </svg>
 );
 
-const IconAccount = () => <span className="os-icon os-icon-settings os-icon-sm" aria-hidden="true" />;
+const IconStudio = () => <span className="os-icon os-icon-dashboard os-icon-sm" aria-hidden="true" />;
 
 const IconMessages = () => (
   <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -69,15 +70,15 @@ type NotificationState = {
 function labelForPath(path: string | null | undefined) {
   if (!path) return null;
   if (path.startsWith('/library')) return 'Library';
-  if (path.startsWith('/browse') || path.startsWith('/store') || path.startsWith('/product') || path.startsWith('/cart')) return 'Browse';
+  if (path.startsWith('/browse') || path.startsWith('/store') || path.startsWith('/product') || path.startsWith('/cart')) return 'Store';
   if (path.startsWith('/community')) return 'Community';
-  if (path.startsWith('/dashboard')) return 'Dashboard';
+  if (path.startsWith('/studio') || path.startsWith('/dashboard')) return 'Studio';
   if (path.startsWith('/profile')) return 'Profile';
   if (path.startsWith('/music')) return 'Music';
   if (path.startsWith('/books')) return 'Books';
   if (path.startsWith('/assets')) return 'Assets';
   if (path.startsWith('/merch') || path.startsWith('/shop')) return 'Merch';
-  if (path === '/' || path.startsWith('/home')) return 'Browse';
+  if (path === '/' || path.startsWith('/home')) return 'Store';
   return null;
 }
 
@@ -113,6 +114,7 @@ export function Topbar() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
   const { tabs, back } = useTopbar();
+  const { open: mobileMenuOpen, toggle: toggleMobileMenu } = useMobileMenu();
   const { count: cartCount } = useCart();
   const [profileState, setProfileState] = useState<ProfileState | null>(null);
   const [notificationState, setNotificationState] = useState<NotificationState | null>(null);
@@ -120,12 +122,15 @@ export function Topbar() {
   const [hiddenNotificationIds, setHiddenNotificationIds] = useState<Set<string>>(() => loadHiddenNotificationIds());
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notifMenuOpen, setNotifMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchDraft, setSearchDraft] = useState('');
   const [previousPath, setPreviousPath] = useState<string | null>(null);
   const [searchKey, setSearchKey] = useState(() => (
     typeof window === 'undefined' ? '' : window.location.search.replace(/^\?/, '')
   ));
   const userWrapRef = useRef<HTMLDivElement | null>(null);
   const notifWrapRef = useRef<HTMLDivElement | null>(null);
+  const searchWrapRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -177,6 +182,7 @@ export function Topbar() {
     Promise.resolve().then(() => {
       setUserMenuOpen(false);
       setNotifMenuOpen(false);
+      setSearchOpen(false);
     });
   }, [pathname]);
 
@@ -237,14 +243,15 @@ export function Topbar() {
   }
 
   useEffect(() => {
-    if (!userMenuOpen && !notifMenuOpen) return;
+    if (!userMenuOpen && !notifMenuOpen && !searchOpen) return;
     function onClick(e: MouseEvent) {
       if (userMenuOpen && userWrapRef.current && !userWrapRef.current.contains(e.target as Node)) setUserMenuOpen(false);
       if (notifMenuOpen && notifWrapRef.current && !notifWrapRef.current.contains(e.target as Node)) setNotifMenuOpen(false);
+      if (searchOpen && searchWrapRef.current && !searchWrapRef.current.contains(e.target as Node)) setSearchOpen(false);
     }
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
-  }, [userMenuOpen, notifMenuOpen]);
+  }, [userMenuOpen, notifMenuOpen, searchOpen]);
 
   const profile = profileState && profileState.userId === userId ? profileState.profile : null;
   const notifications = notificationState && notificationState.userId === userId ? notificationState.rows : [];
@@ -262,7 +269,7 @@ export function Topbar() {
   async function handleSignOut() {
     setUserMenuOpen(false);
     await supabase.auth.signOut();
-    router.push('/browse');
+    router.push('/store');
     router.refresh();
   }
 
@@ -280,18 +287,25 @@ export function Topbar() {
     saveHiddenNotificationIds(next);
   }
 
-  function rememberTabHref(href: string) {
-    if (typeof window === 'undefined') return;
-    try {
-      const url = new URL(href, window.location.href);
-      setSearchKey(url.search.replace(/^\?/, ''));
-    } catch {}
+  function submitSearch(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const query = searchDraft.trim();
+    router.push(query ? `/search?q=${encodeURIComponent(query)}` : '/search');
   }
 
   return (
     <div className="os-topbar">
       <div className="os-topbar-left">
-        {!tabs && back && (
+        <button
+          type="button"
+          className="os-mobile-menu-button"
+          aria-label="Open menu"
+          aria-expanded={mobileMenuOpen}
+          onClick={toggleMobileMenu}
+        >
+          <span /><span /><span />
+        </button>
+        {back && (
           <button
             type="button"
             className="os-topbar-back"
@@ -311,13 +325,10 @@ export function Topbar() {
         )}
         {tabs?.map(tab => {
           const className = tab.active ? 'os-topbar-tab os-topbar-tab-active' : 'os-topbar-tab';
-          if (tab.href) {
-            return <Link key={tab.id} href={tab.href} className={className} scroll={false} onClick={() => rememberTabHref(tab.href!)}>{tab.label}</Link>;
-          }
-          return (
-            <button key={tab.id} type="button" className={className} onClick={tab.onClick}>
-              {tab.label}
-            </button>
+          return tab.href ? (
+            <Link key={tab.id} href={tab.href} className={className} scroll={false}>{tab.label}</Link>
+          ) : (
+            <button key={tab.id} type="button" className={className} onClick={tab.onClick}>{tab.label}</button>
           );
         })}
       </div>
@@ -329,6 +340,31 @@ export function Topbar() {
             <span className="os-topbar-cart-count">{cartCount}</span>
           </Link>
         )}
+
+        <div className="os-topbar-search" ref={searchWrapRef}>
+          {searchOpen ? (
+            <form className="os-topbar-search-form" role="search" onSubmit={submitSearch}>
+              <span className="os-topbar-search-icon os-icon os-icon-search os-icon-sm" aria-hidden="true" />
+              <input
+                autoFocus
+                className="os-topbar-search-input"
+                value={searchDraft}
+                onChange={event => setSearchDraft(event.target.value)}
+                placeholder="Search"
+                aria-label="Search"
+              />
+              {searchDraft && <button type="button" className="os-topbar-search-clear" aria-label="Clear search" onClick={() => setSearchDraft('')}>×</button>}
+            </form>
+          ) : (
+            <button type="button" className="os-topbar-icon-button" aria-label="Search" onClick={() => {
+              setSearchOpen(true);
+              setUserMenuOpen(false);
+              setNotifMenuOpen(false);
+            }}>
+              <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
+            </button>
+          )}
+        </div>
 
         {user && (
           <div ref={notifWrapRef} style={{ position: 'relative' }}>
@@ -406,15 +442,15 @@ export function Topbar() {
                 <Link href={profileHref} className="os-popover-item" role="menuitem">
                   <IconProfile /> Profile
                 </Link>
-                <Link href="/settings?tab=account" className="os-popover-item" role="menuitem">
-                  <IconAccount /> Account
+                <Link href="/studio" className="os-popover-item" role="menuitem">
+                  <IconStudio /> Studio
                 </Link>
                 <Link href="/inbox" className="os-popover-item" role="menuitem">
                   <IconMessages /> Messages
                 </Link>
                 <div className="os-popover-divider" />
                 <button type="button" className="os-popover-item" role="menuitem" onClick={handleSignOut}>
-                  <IconSignOut /> Sign Out
+                  <IconSignOut /> Log Out
                 </button>
               </div>
             )}

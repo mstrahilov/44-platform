@@ -35,17 +35,13 @@ interface MusicLibraryRow {
   products: Product | null;
 }
 
-type MusicTrack = Track & {
-  track_number?: number | null;
-};
-
 export default function MusicLibraryItemPage() {
   const { id } = useParams<{ id: string }>();
   const { user, loading: authLoading } = useAuth();
   const userId = user?.id ?? null;
   useTopbarBack({ href: '/library/music', label: 'Music Library' });
   const [row, setRow] = useState<MusicLibraryRow | null>(null);
-  const [tracks, setTracks] = useState<MusicTrack[]>([]);
+  const [tracks, setTracks] = useState<Track[]>([]);
   const [achievements, setAchievements] = useState<ProductAchievement[]>([]);
   const [bonusAssets, setBonusAssets] = useState<LibraryBonusAsset[]>([]);
   const [unlockedAchievementIds, setUnlockedAchievementIds] = useState<Set<string>>(new Set());
@@ -101,7 +97,7 @@ export default function MusicLibraryItemPage() {
           .in('asset_type', ['bonus_content', 'bonus_achievement']),
       ]);
 
-      const orderedTracks = ((trackRows as MusicTrack[] | null) ?? []).sort((a, b) => trackOrder(a) - trackOrder(b));
+      const orderedTracks = ((trackRows as Track[] | null) ?? []).sort((a, b) => trackOrder(a) - trackOrder(b));
       setTracks(orderedTracks);
       setAchievements(((achievementRows as ProductAchievement[] | null) ?? []).filter(achievement => isV1AchievementCode(achievement.code)));
       setBonusAssets((assetRows as LibraryBonusAsset[] | null) ?? []);
@@ -141,7 +137,7 @@ function OwnedMusicRelease({
 }: {
   userId: string;
   row: MusicLibraryRow;
-  tracks: MusicTrack[];
+  tracks: Track[];
   achievements: ProductAchievement[];
   bonusAssets: LibraryBonusAsset[];
   unlockedAchievementIds: Set<string>;
@@ -176,7 +172,7 @@ function OwnedMusicRelease({
   const overachieverAchievement = achievements.find(achievement => achievement.code === 'overachiever');
   const hasOverachieverUnlocked = Boolean(overachieverAchievement && localUnlockedAchievementIds.has(overachieverAchievement.id));
 
-  async function toggleTrack(track: MusicTrack) {
+  async function toggleTrack(track: Track) {
     if (!track.audio_url) return;
     const trackIndex = musicQueue.findIndex(item => item.id === track.id);
     if (trackIndex < 0) return;
@@ -193,7 +189,7 @@ function OwnedMusicRelease({
     togglePlayerTrack(musicQueue, trackIndex);
   }
 
-  function queueTrackNext(track: MusicTrack) {
+  function queueTrackNext(track: Track) {
     if (!track.audio_url) return;
     const trackIndex = musicQueue.findIndex(item => item.id === track.id);
     if (trackIndex < 0) return;
@@ -430,8 +426,8 @@ function ReleaseStateMessage({ children }: { children: React.ReactNode }) {
   return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>{children}</div>;
 }
 
-function trackOrder(track: MusicTrack) {
-  return track.track_number ?? track.number ?? 999;
+function trackOrder(track: Track) {
+  return track.number ?? 999;
 }
 
 function runProductAction(action: ReturnType<typeof getProductLibraryPrimaryAction>) {
@@ -450,7 +446,7 @@ function formatDuration(seconds: number | null) {
   return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
 }
 
-function getTrackDurationSeconds(track: MusicTrack, inferredTrackDurations: Record<string, number>) {
+function getTrackDurationSeconds(track: Track, inferredTrackDurations: Record<string, number>) {
   return track.duration_seconds && track.duration_seconds > 0
     ? track.duration_seconds
     : inferredTrackDurations[track.id] ?? null;

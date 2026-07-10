@@ -4,8 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useContextMenu, type ContextMenuEntry } from '@/components/ContextMenu';
 import { PageShell, HubHero, HubSection, CenteredMessage, EmptyMessage } from '@/components/Ui';
-import { useTopbarTabs } from '@/components/TopbarContext';
-import { browseIndexHref, getProductExperience, productLibraryHref, type ProductExperience } from '@/lib/experience';
+import { getProductExperience, productLibraryHref, type ProductExperience } from '@/lib/experience';
 import { pinDockItem } from '@/lib/dockPreferences';
 import type { LibraryCategory } from '@/lib/libraryRoutes';
 import type { Product } from '@/lib/products';
@@ -13,44 +12,19 @@ import { creatorHref } from '@/lib/platform';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 
-const LIBRARY_TABS: Array<{ id: LibraryCategory; label: string; href: string }> = [
-  { id: 'all', label: 'All', href: '/library' },
-  { id: 'music', label: 'Music', href: '/library/music' },
-  { id: 'books', label: 'Books', href: '/library/books' },
-  { id: 'assets', label: 'Assets', href: '/library/assets' },
-];
-
 const CATEGORY_EXPERIENCE: Partial<Record<LibraryCategory, ProductExperience>> = {
   music: 'music',
   books: 'book',
   assets: 'asset',
 };
 
-const CATEGORY_COPY: Record<LibraryCategory, { title: string; copy: string; empty: string; storeHref: string }> = {
-  all: {
-    title: 'Library',
-    copy: 'Everything you have saved, added, or purchased.',
-    empty: 'Your library is empty.',
-    storeHref: '/browse',
-  },
-  music: {
-    title: 'Music',
-    copy: 'Saved releases. Purchased music unlocks downloads.',
-    empty: 'No saved music yet.',
-    storeHref: browseIndexHref('music'),
-  },
-  books: {
-    title: 'Books',
-    copy: 'Books and artbooks you own.',
-    empty: 'No books in your library yet.',
-    storeHref: browseIndexHref('books'),
-  },
-  assets: {
-    title: 'Assets',
-    copy: 'Assets, remix stems, and creative files you own.',
-    empty: 'No assets in your library yet.',
-    storeHref: browseIndexHref('assets'),
-  },
+type LibraryFilter = 'all' | 'music' | 'book' | 'asset';
+
+const FILTER_LABELS: Record<LibraryFilter, string> = {
+  all: 'All',
+  music: 'Music',
+  book: 'Books',
+  asset: 'Assets',
 };
 
 interface LibraryRow {
@@ -67,6 +41,10 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
   const [rows, setRows] = useState<LibraryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [query, setQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<LibraryFilter>(() => (
+    (CATEGORY_EXPERIENCE[category] as LibraryFilter | undefined) ?? 'all'
+  ));
 
   const ownedExperiences = useMemo(() => new Set(
     rows
@@ -75,13 +53,14 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
       .filter((experience): experience is ProductExperience => ['music', 'book', 'asset'].includes(experience)),
   ), [rows]);
 
-  const libraryTabs = useMemo(() => (
-    LIBRARY_TABS
-      .filter(tab => tab.id === 'all' || ownedExperiences.has(CATEGORY_EXPERIENCE[tab.id]!))
-      .map(tab => ({ ...tab, active: tab.id === category }))
-  ), [category, ownedExperiences]);
+  const availableFilters = useMemo(() => (
+    (['music', 'book', 'asset'] as LibraryFilter[]).filter(filter => ownedExperiences.has(filter as ProductExperience))
+  ), [ownedExperiences]);
 
-  useTopbarTabs(libraryTabs);
+  useEffect(() => {
+    const requested = (CATEGORY_EXPERIENCE[category] as LibraryFilter | undefined) ?? 'all';
+    Promise.resolve().then(() => setActiveFilter(requested));
+  }, [category]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -116,20 +95,27 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
   }, [authLoading, user]);
 
   const visibleRows = useMemo(() => {
-    const expected = CATEGORY_EXPERIENCE[category];
     const productRows = rows.filter(row => row.products);
-    if (!expected) return productRows.filter(row => ['music', 'book', 'asset'].includes(getProductExperience(row.products!)));
-    return productRows.filter(row => getProductExperience(row.products!) === expected);
-  }, [category, rows]);
+    const normalizedQuery = query.trim().toLowerCase();
+    return productRows.filter(row => {
+      const product = row.products!;
+      const experience = getProductExperience(product);
+      if (!['music', 'book', 'asset'].includes(experience)) return false;
+      if (activeFilter !== 'all' && experience !== activeFilter) return false;
+      if (!normalizedQuery) return true;
+      const creator = product.creators?.display_name || product.creator || '';
+      return `${product.title} ${creator}`.toLowerCase().includes(normalizedQuery);
+    });
+  }, [activeFilter, query, rows]);
 
   const groupedRows = useMemo(() => {
-    if (category !== 'all') return [];
+    if (activeFilter !== 'all') return [];
     return [
       { id: 'music', title: 'Music', rows: visibleRows.filter(row => getProductExperience(row.products!) === 'music') },
       { id: 'books', title: 'Books', rows: visibleRows.filter(row => getProductExperience(row.products!) === 'book') },
       { id: 'assets', title: 'Assets', rows: visibleRows.filter(row => getProductExperience(row.products!) === 'asset') },
     ].filter(group => group.rows.length > 0);
-  }, [category, visibleRows]);
+  }, [activeFilter, visibleRows]);
 
   if (authLoading) {
     return <PageShell><CenteredMessage>Loading...</CenteredMessage></PageShell>;
@@ -153,8 +139,6 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
     return <PageShell><CenteredMessage>Loading...</CenteredMessage></PageShell>;
   }
 
-  const copy = CATEGORY_COPY[category];
-
   async function removeLibraryRow(row: LibraryRow) {
     if (!user) return;
     const result = await supabase
@@ -172,12 +156,39 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
   return (
     <PageShell>
       <main className="app-page">
-        <HubHero title={copy.title} copy={copy.copy} />
+        <HubHero
+          title="Library"
+          copy="Everything you have saved, added, or purchased."
+          className="library-app-header"
+          actions={(
+            <div className="library-header-tools">
+              <label className="library-search-control">
+                <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
+                <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search Library" aria-label="Search Library" />
+              </label>
+              <details className="library-filter-menu">
+                <summary className="library-filter-button" aria-label="Filter Library" title="Filter Library">
+                  <span className="library-filter-icon" aria-hidden="true"><i /><i /><i /></span>
+                </summary>
+                <div className="library-filter-popover">
+                  {(['all', ...availableFilters] as LibraryFilter[]).map(filter => (
+                    <button key={filter} type="button" className={activeFilter === filter ? 'library-filter-option library-filter-option-active' : 'library-filter-option'} onClick={event => {
+                      setActiveFilter(filter);
+                      event.currentTarget.closest('details')?.removeAttribute('open');
+                    }}>
+                      {FILTER_LABELS[filter]}
+                    </button>
+                  ))}
+                </div>
+              </details>
+            </div>
+          )}
+        />
         {error ? (
           <EmptyMessage>{error}</EmptyMessage>
         ) : visibleRows.length === 0 ? (
-          <EmptyMessage>{copy.empty}</EmptyMessage>
-        ) : category === 'all' ? (
+          <EmptyMessage>{query ? 'No Library items match your search.' : activeFilter === 'all' ? 'Your library is empty.' : `No ${FILTER_LABELS[activeFilter].toLowerCase()} in your Library.`}</EmptyMessage>
+        ) : activeFilter === 'all' ? (
           <>
             {groupedRows.map(group => (
               <HubSection key={group.id} title={group.title}>

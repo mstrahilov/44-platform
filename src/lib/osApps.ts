@@ -2,7 +2,7 @@
  * 44OS App Registry
  *
  * The single source of truth for every app in the 44OS shell. The Dock,
- * Settings > Dock, Home quick-launch, and (later) context menus and the
+ * Settings Appearance/Dock controls, Home quick-launch, and (later) context menus and the
  * Electron app menu all render from this registry — never from local
  * nav arrays.
  *
@@ -27,11 +27,18 @@ export type OSAppId =
   | 'inbox'
   | 'library'
   | 'store'
-  | 'dashboard'
+  | 'studio'
   | 'settings'
   | 'support';
 
 export type OSAppGroup = 'media' | 'community' | 'studio' | 'account' | 'system' | 'legacy';
+
+export type OSAppChild = {
+  id: string;
+  label: string;
+  href: string;
+  iconClass?: string;
+};
 
 export type OSApp = {
   id: OSAppId;
@@ -39,6 +46,7 @@ export type OSApp = {
   description: string;
   href: string;
   iconClass: string;
+  children?: OSAppChild[];
   /** Dock cluster: media, community, studio, account, system, or hidden legacy. */
   group: OSAppGroup;
   /** Only rendered for signed-in users. */
@@ -82,17 +90,23 @@ export const OS_APPS: OSApp[] = [
   },
   {
     id: 'store',
-    label: 'Browse',
+    label: 'Store',
     description: 'Find releases, books, assets, and merch from independent creators.',
-    href: '/browse',
-    iconClass: 'os-icon-grid',
+    href: '/store',
+    iconClass: 'os-icon-store',
     group: 'media',
+    children: [
+      { id: 'music', label: 'Music', href: '/store/music', iconClass: 'os-icon-music' },
+      { id: 'books', label: 'Books', href: '/store/books', iconClass: 'os-icon-books' },
+      { id: 'merch', label: 'Merch', href: '/store/merch', iconClass: 'os-icon-merch' },
+      { id: 'assets', label: 'Assets', href: '/store/assets', iconClass: 'os-icon-assets' },
+    ],
   },
   {
     id: 'music',
     label: 'Music',
     description: 'New releases from independent creators.',
-    href: '/browse/music',
+    href: '/store/music',
     iconClass: 'os-icon-music',
     group: 'legacy',
     hidden: true,
@@ -101,7 +115,7 @@ export const OS_APPS: OSApp[] = [
     id: 'books',
     label: 'Books',
     description: 'Digital books and artbooks from independent creators.',
-    href: '/browse/books',
+    href: '/store/books',
     iconClass: 'os-icon-books',
     group: 'legacy',
     hidden: true,
@@ -110,7 +124,7 @@ export const OS_APPS: OSApp[] = [
     id: 'assets',
     label: 'Assets',
     description: 'Assets, stems, presets, and creative tools for your work.',
-    href: '/browse/assets',
+    href: '/store/assets',
     iconClass: 'os-icon-assets',
     group: 'legacy',
     hidden: true,
@@ -119,7 +133,7 @@ export const OS_APPS: OSApp[] = [
     id: 'merch',
     label: 'Merch',
     description: 'Physical goods from creators: apparel, merch, and shipped items.',
-    href: '/browse/merch',
+    href: '/store/merch',
     iconClass: 'os-icon-merch',
     group: 'legacy',
     hidden: true,
@@ -137,8 +151,12 @@ export const OS_APPS: OSApp[] = [
     label: 'Community',
     description: 'Posts, questions, and collaboration threads from creators and fans.',
     href: '/community',
-    iconClass: 'os-icon-friends',
+    iconClass: 'os-icon-community',
     group: 'community',
+    children: [
+      { id: 'questions', label: 'Questions', href: '/community/questions', iconClass: 'os-icon-questions' },
+      { id: 'collaboration', label: 'Collaboration', href: '/community/collaboration', iconClass: 'os-icon-collaboration' },
+    ],
   },
   {
     id: 'inbox',
@@ -184,7 +202,7 @@ export const OS_APPS: OSApp[] = [
     id: 'account',
     label: 'Account',
     description: 'Legacy account route. Account controls now live in Settings.',
-    href: '/settings?tab=account',
+    href: '/settings#account',
     iconClass: 'os-icon-account',
     group: 'legacy',
     requiresAuth: true,
@@ -199,20 +217,27 @@ export const OS_APPS: OSApp[] = [
     group: 'system',
   },
   {
-    id: 'dashboard',
-    label: 'Dashboard',
+    id: 'studio',
+    label: 'Studio',
     description: 'Your creator workspace for publishing catalog items and tracking earnings.',
-    href: '/dashboard',
-    iconClass: 'os-icon-showcase',
-    group: 'account',
+    href: '/studio',
+    iconClass: 'os-icon-dashboard',
+    group: 'studio',
     requiresAuth: true,
     requiresCreator: true,
+    children: [
+      { id: 'overview', label: 'Overview', href: '/studio', iconClass: 'os-icon-dashboard' },
+      { id: 'music', label: 'Music', href: '/studio/products', iconClass: 'os-icon-music' },
+      { id: 'books', label: 'Books', href: '/studio/products?section=books', iconClass: 'os-icon-books' },
+      { id: 'assets', label: 'Assets', href: '/studio/products?section=assets', iconClass: 'os-icon-assets' },
+      { id: 'merch', label: 'Merch', href: '/studio/products?section=merch', iconClass: 'os-icon-merch' },
+    ],
   },
   {
     id: 'settings',
     label: 'Settings',
-    description: 'System, Dock, region, and account controls.',
-    href: '/settings?tab=account',
+    description: 'Account, region, appearance, and Dock controls.',
+    href: '/settings',
     iconClass: 'os-icon-settings',
     group: 'system',
     requiresAuth: true,
@@ -223,14 +248,14 @@ export const OS_APPS: OSApp[] = [
     id: 'shop',
     label: 'Shop',
     description: 'Legacy shop route.',
-    href: '/browse/merch',
+    href: '/store/merch',
     iconClass: 'os-icon-shop',
     group: 'legacy',
     hidden: true,
   },
 ];
 
-export const DOCK_APP_IDS: OSAppId[] = ['library', 'search', 'store', 'radio', 'community', 'dashboard', 'support', 'settings'];
+export const DOCK_APP_IDS: OSAppId[] = ['library', 'store', 'radio', 'community', 'support', 'settings'];
 
 export function getOSApp(id: OSAppId): OSApp | undefined {
   return OS_APPS.find(app => app.id === id);
@@ -270,7 +295,7 @@ export function getActiveOSAppId(pathname: string): OSAppId | '' {
   if (pathname.startsWith('/inbox')) return 'inbox';
   if (pathname.startsWith('/notifications')) return 'notifications';
   if (pathname.startsWith('/account')) return 'settings';
-  if (pathname.startsWith('/dashboard') || pathname.startsWith('/studio')) return 'dashboard';
+  if (pathname.startsWith('/dashboard') || pathname.startsWith('/studio')) return 'studio';
   if (pathname.startsWith('/settings')) return 'settings';
   if (pathname.startsWith('/support')) return 'support';
   return '';
