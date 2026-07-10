@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { PageShell, HubHero, CenteredMessage } from '@/components/Ui';
+import { PageShell, HubHero, CenteredMessage, SectionHeader } from '@/components/Ui';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { UploadField } from '@/components/UploadField';
 import {
@@ -380,13 +380,10 @@ function NewProductContent() {
 
         <div className="dashboard-section">
           <form onSubmit={handleSubmit} className="dashboard-form">
-            <section className="dashboard-form-step">
-              <div className="dashboard-form-section-head">
-                <div className="dashboard-form-section-copy">
-                  <div className="dashboard-field-label">{isMerchProduct ? 'Item Information' : 'Release Information'}</div>
-                  <p>Set the core title, type, pricing, artwork, and main details for this item.</p>
-                </div>
-              </div>
+            <section className="dashboard-form-section">
+              <SectionHeader title="Details" description="Set the core title, type, pricing, artwork, and main details for this item." />
+
+              <div className="dashboard-form-step">
 
               <label className="dashboard-field">
                 <div className="dashboard-field-label">{isMerchProduct ? 'Product Name' : 'Title'}</div>
@@ -578,60 +575,60 @@ function NewProductContent() {
                 onChange={setItemFileUrl}
                 />
               ) : null}
+              </div>
             </section>
 
             {isMusicProduct ? (
-              <div className="dashboard-form-section">
-                <div className="dashboard-form-section-head">
-                  <div className="dashboard-form-section-copy">
-                    <div className="dashboard-field-label">Tracks</div>
-                    <p>
-                      Add up to 30 tracks for this release. Each track should have a title and an audio upload.
-                    </p>
-                  </div>
-
-                  <label className="dashboard-field" style={{ minWidth: 140 }}>
+              <section className="dashboard-form-section">
+                <SectionHeader
+                  title="Tracks"
+                  description="Add up to 30 tracks for this release. Each track should have a title and an audio upload."
+                  action={(
+                    <label className="dashboard-field" style={{ minWidth: 140 }}>
                     <div className="dashboard-field-label">Track Count</div>
                     <select className="os-input-field" value={trackCount} onChange={event => setTrackCount(event.target.value)}>
                       {Array.from({ length: 30 }, (_, index) => index + 1).map(count => (
                         <option key={count} value={count}>{count}</option>
                       ))}
                     </select>
-                  </label>
-                </div>
+                    </label>
+                  )}
+                />
 
-                <div className="dashboard-track-editor-list">
-                  {tracks.slice(0, Number(trackCount || '0')).map((track, index) => (
-                    <div key={`track-${index}`} className="dashboard-track-editor-row">
-                      <div className="dashboard-track-editor-copy">
-                        <div className="dashboard-field-label">{index + 1}. Track Title</div>
+                <div className="dashboard-form-step">
+                  <div className="dashboard-track-editor-list">
+                    {tracks.slice(0, Number(trackCount || '0')).map((track, index) => (
+                      <div key={`track-${index}`} className="dashboard-track-editor-row">
+                        <div className="dashboard-track-editor-copy">
+                          <div className="dashboard-field-label">{index + 1}. Track Title</div>
 
-                        <div className="dashboard-form-grid">
-                          <label className="dashboard-field">
-                            <input
-                              className="os-input-field"
-                              value={track.title}
-                              onChange={event => updateTrack(index, { title: event.target.value })}
-                              placeholder={`Track ${index + 1} title`}
-                            />
-                          </label>
+                          <div className="dashboard-form-grid">
+                            <label className="dashboard-field">
+                              <input
+                                className="os-input-field"
+                                value={track.title}
+                                onChange={event => updateTrack(index, { title: event.target.value })}
+                                placeholder={`Track ${index + 1} title`}
+                              />
+                            </label>
+                          </div>
+
+                          <UploadField
+                            label="Audio File"
+                            folder="tracks/audio"
+                            userId={user.id}
+                            value={track.audioUrl}
+                            accept="audio/*"
+                            buttonLabel="Upload audio"
+                            previewKind="none"
+                            onChange={nextValue => updateTrack(index, { audioUrl: nextValue })}
+                          />
                         </div>
-
-                        <UploadField
-                          label="Audio File"
-                          folder="tracks/audio"
-                          userId={user.id}
-                          value={track.audioUrl}
-                          accept="audio/*"
-                          buttonLabel="Upload audio"
-                          previewKind="none"
-                          onChange={nextValue => updateTrack(index, { audioUrl: nextValue })}
-                        />
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              </section>
             ) : null}
 
             {section.id === 'music' ? (

@@ -12,6 +12,7 @@ export interface AchievementNotification extends AchievementToastData {
   kind?: 'achievement' | 'reply' | 'mention' | 'like' | 'message';
   actorUserId?: string | null;
   actorAvatarUrl?: string | null;
+  achievementCode?: string | null;
   achievementIcon?: string | null;
 }
 
@@ -27,7 +28,7 @@ function broadcastAchievementNotification(notification: AchievementNotification)
 export async function unlockAchievementForUser(
   userId: string,
   productId: string,
-  achievement: Pick<ProductAchievement, 'id' | 'code' | 'title' | 'description' | 'points' | 'trigger_type'>,
+  achievement: Pick<ProductAchievement, 'id' | 'code' | 'title' | 'description' | 'trigger_type'>,
   metadata?: Record<string, unknown>,
 ) {
   const { data: existingUnlock } = await supabase
@@ -63,7 +64,7 @@ export async function unlockAchievementForUser(
     id: achievement.id,
     title: achievement.title,
     description: achievement.description,
-    points: achievement.points,
+    achievementCode: achievement.code,
   } satisfies AchievementNotification;
 
   broadcastAchievementNotification(notification);
@@ -94,15 +95,15 @@ export async function loadAchievementNotifications(userId: string): Promise<Achi
         .filter((value): value is string => Boolean(value)),
     ),
   );
-  const achievementMap = new Map<string, Pick<ProductAchievement, 'id' | 'code' | 'title' | 'description' | 'points' | 'icon'>>();
+  const achievementMap = new Map<string, Pick<ProductAchievement, 'id' | 'code' | 'title' | 'description' | 'icon'>>();
 
   if (achievementIds.length > 0) {
     const { data: achievements } = await supabase
       .from('product_achievements')
-      .select('id,code,title,description,points,icon')
+      .select('id,code,title,description,icon')
       .in('id', achievementIds);
 
-    ((achievements as Array<Pick<ProductAchievement, 'id' | 'code' | 'title' | 'description' | 'points' | 'icon'>> | null) ?? []).forEach(item => {
+    ((achievements as Array<Pick<ProductAchievement, 'id' | 'code' | 'title' | 'description' | 'icon'>> | null) ?? []).forEach(item => {
       if (!isV1AchievementCode(item.code)) return;
       achievementMap.set(item.id, item);
     });
@@ -135,10 +136,10 @@ export async function loadAchievementNotifications(userId: string): Promise<Achi
         id: event.id,
         title: achievement.title,
         description: achievement.description,
-        points: achievement.points,
         createdAt: event.created_at,
         productId: event.product_id,
         kind: 'achievement',
+        achievementCode: achievement.code,
         achievementIcon: achievement.icon,
       });
       continue;

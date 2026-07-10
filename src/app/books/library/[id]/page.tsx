@@ -181,7 +181,7 @@ function OwnedBook({
 
       <LibraryProductDetailsSection product={product} />
 
-      <ProductUpdatesSection productId={product.id} emptyMessage="No updates from the creator yet." />
+      <ProductUpdatesSection productId={product.id} emptyMessage="No updates from this creator yet." />
     </div>
   );
 }

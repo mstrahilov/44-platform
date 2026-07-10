@@ -20,11 +20,10 @@ export const LANDING_PAGE_STORAGE_KEY = '44-setting-landing-page';
 export const DEFAULT_LANDING_PAGE: LandingPageId = 'store';
 
 export const LANDING_PAGES: Array<{ id: LandingPageId; label: string; href: string }> = [
-  { id: 'store', label: 'Browse', href: '/' },
   { id: 'library', label: 'Library', href: '/library' },
-  { id: 'community', label: 'Community', href: '/community' },
+  { id: 'store', label: 'Browse', href: '/' },
   { id: 'radio', label: 'Radio', href: '/radio' },
-  { id: 'dashboard', label: 'Dashboard', href: '/dashboard' },
+  { id: 'community', label: 'Community', href: '/community' },
 ];
 
 const LEGACY_LANDING_PAGE_HREFS: Partial<Record<LandingPageId, string>> = {

@@ -55,15 +55,15 @@ const EXPERIENCE_CONFIG: Record<ExperienceConfig['id'], ExperienceConfig> = {
   },
   assets: {
     id: 'assets',
-    title: 'Sample Packs',
-    libraryTitle: 'Sample Pack Library',
-    storeTitle: 'Sample Packs',
-    noun: 'sample pack',
-    pluralNoun: 'sample packs',
+    title: 'Assets',
+    libraryTitle: 'Assets Library',
+    storeTitle: 'Assets',
+    noun: 'asset',
+    pluralNoun: 'assets',
     experience: 'asset',
     copy: {
       library: 'Samples, templates, presets, and creator tools you own.',
-      store: 'Browse useful sample packs and creator tools and add them to your Sample Pack Library.',
+      store: 'Browse useful assets and creator tools and add them to your Assets Library.',
     },
   },
 };

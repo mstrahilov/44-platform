@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect } from 'react';
+import { AchievementIconGlyph } from '@/components/AchievementIconGlyph';
 
 export interface AchievementToastData {
   id: string;
   title: string;
   description?: string | null;
-  points?: number | null;
+  achievementCode?: string | null;
 }
 
 export function AchievementToast({
@@ -27,13 +28,14 @@ export function AchievementToast({
 
   return (
     <div className="achievement-toast" role="status" aria-live="polite">
-      <div className="achievement-toast-icon">44</div>
+      <div className="achievement-toast-icon" aria-hidden="true">
+        <AchievementIconGlyph code={toast.achievementCode} label={toast.title} />
+      </div>
       <div className="achievement-toast-copy">
         <div className="achievement-toast-eyebrow">Achievement Unlocked</div>
         <strong>{toast.title}</strong>
         {toast.description && <p>{toast.description}</p>}
       </div>
-      {Boolean(toast.points) && <div className="achievement-toast-points">{toast.points} pts</div>}
     </div>
   );
 }

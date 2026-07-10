@@ -21,7 +21,7 @@ Status legend:
 - `[pending]` Review remaining Dashboard publishing flows against the rule: technology hidden, creator power exposed.
 - `[pending]` Review Library detail pages as durable homes for achievements, bonus content, creator updates, hidden files, and future interactive artifacts.
 - `[pending]` Review global/local pricing UI so it communicates reach and local fairness clearly.
-- `[pending]` Design the flagship-release template: album/release page, achievements, bonus content, hidden unlocks, and future Launch action.
+- `[pending]` Design the flagship-release template: album/release page, achievements, bonus content, and future Launch action.
 - `[pending]` Define the future interactive-experience event bridge before building Unity/WebGL/Spline-style unlocks.
 - `[pending]` Revisit Services after v1 as a creator earning surface with local/global pricing and simple project workflows.
 
@@ -58,7 +58,7 @@ Acceptance:
 - `[done]` Redirect `/` to `/browse`.
 - `[done]` Redirect `/store*`, `/product/[id]`, `/collection*`, and old typed category routes to Browse/Library equivalents.
 - `[done]` Update route helpers with `browseIndexHref`, `productBrowseHref`, and `libraryItemHref`.
-- `[done]` Update Dock order to Search, Browse, Radio, Community, Library, Dashboard, Support, Settings, with signed-out auth gates for Library/Dashboard/Settings.
+- `[done]` Update Dock order to Library, Search, Browse, Radio, Community, optional creator Dashboard, Support, Settings/Log In.
 - `[done]` Hide Messages and Profile from the v1 Dock.
 - `[pending]` Verify all active routes map to one Dock owner through `getActiveOSAppId`.
 - `[pending]` Verify production apex/www/http redirects and canonical app routes.
@@ -81,8 +81,8 @@ Canonical launch routes:
 
 Acceptance:
 
-- Public Dock shows Search, Browse, Radio, Community, Library, Dashboard, Support, Settings, and Log In.
-- Signed-in Dock shows Search, Browse, Radio, Community, Library, Dashboard, Support, and Settings.
+- Public Dock shows Search, Browse, Radio, Community, Support, and Log In.
+- Signed-in Dock shows Library, Search, Browse, Radio, Community, optional creator Dashboard, Support, and Settings.
 - Services and Resources are not visible v1 app destinations.
 - Legacy route redirects are intentional and documented.
 
@@ -122,7 +122,7 @@ Acceptance:
 - `[done]` Define elevated card, recessed interactive list, and flat information list surface families.
 - `[done]` Align Dashboard release edit/create field grouping so Release Type, Release Year, and Price share the same row.
 - `[done]` Replace nested glass track editor cards with a recessed editable list primitive.
-- `[done]` Add guided descriptions to Creator Updates and Community Reviews.
+- `[done]` Add guided descriptions to Creator Updates and Reviews.
 - `[done]` Sweep major Browse/Library/Search/Community copy away from Store/Collection/self-referential language.
 - `[pending]` Continue refactoring remaining inline-style pages into shared classes/primitives.
 - `[pending]` Consolidate icon usage around the existing `os-icon` mask system or one intentionally chosen replacement.

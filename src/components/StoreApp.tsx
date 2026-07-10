@@ -13,7 +13,7 @@ const STORE_TABS: Array<{ id: StoreCategory; label: string; href: string }> = [
   { id: 'music', label: 'Music', href: browseIndexHref('music') },
   { id: 'books', label: 'Books', href: browseIndexHref('books') },
   { id: 'merch', label: 'Merch', href: browseIndexHref('merch') },
-  { id: 'assets', label: 'Sample Packs', href: browseIndexHref('assets') },
+  { id: 'assets', label: 'Assets', href: browseIndexHref('assets') },
 ];
 
 const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
@@ -26,7 +26,7 @@ const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
 const CATEGORY_COPY: Record<StoreCategory, { title: string; copy: string; empty: string }> = {
   all: {
     title: 'Browse',
-    copy: 'Find releases, books, sample packs, and merch from independent creators.',
+    copy: 'Find releases, books, assets, and merch from independent creators.',
     empty: 'No items are published yet.',
   },
   music: {
@@ -40,9 +40,9 @@ const CATEGORY_COPY: Record<StoreCategory, { title: string; copy: string; empty:
     empty: 'No books are published yet.',
   },
   assets: {
-    title: 'Sample Packs',
-    copy: 'Explore sample packs, remix stems, and creative tools for your work.',
-    empty: 'No sample packs are published yet.',
+    title: 'Assets',
+    copy: 'Explore assets, remix stems, and creative tools for your work.',
+    empty: 'No assets are published yet.',
   },
   merch: {
     title: 'Merch',
@@ -141,7 +141,7 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
                 </HubSection>
               )}
               {assetProducts.length > 0 && (
-                <HubSection title="Explore Sample Packs" href={browseIndexHref('assets')}>
+                <HubSection title="Explore Assets" href={browseIndexHref('assets')}>
                   <ProductGrid>
                     {assetProducts.map(product => (
                       <ProductCard key={product.id} product={product} />

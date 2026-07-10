@@ -137,13 +137,13 @@ The Dock is the OS taskbar and app launcher. It renders from `src/lib/osApps.ts`
 
 Current Dock order:
 
-- Signed in: Search, Browse, Radio, divider, Community, divider, Library, Dashboard, spacer, Support, Settings.
-- Signed out: Search, Browse, Radio, divider, Community, divider, Library, Dashboard, spacer, Support, Settings, divider, Log In.
+- Signed in: Library, divider, Search, Browse, Radio, Community, Dashboard for creators, spacer, Support, Settings.
+- Signed out: Search, Browse, Radio, Community, spacer, Support, Log In.
 
 Rules:
 
 - Browse is the visible catalog app.
-- Library, Dashboard, and Settings stay visible when signed out; their pages show intentional auth gates.
+- Library and Settings are signed-in Dock destinations. Dashboard appears only for creator accounts. Signed-out users see Support and Log In at the bottom.
 - Search is a Dock app.
 - Notifications stay in the Topbar.
 - Messages and Profile are hidden from the v1 Dock.

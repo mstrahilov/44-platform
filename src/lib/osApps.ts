@@ -73,6 +73,7 @@ export const OS_APPS: OSApp[] = [
     href: '/library',
     iconClass: 'os-icon-library',
     group: 'media',
+    requiresAuth: true,
   },
   {
     id: 'search',
@@ -85,7 +86,7 @@ export const OS_APPS: OSApp[] = [
   {
     id: 'store',
     label: 'Browse',
-    description: 'Find releases, books, sample packs, and merch from independent creators.',
+    description: 'Find releases, books, assets, and merch from independent creators.',
     href: '/browse',
     iconClass: 'os-icon-grid',
     group: 'media',
@@ -110,8 +111,8 @@ export const OS_APPS: OSApp[] = [
   },
   {
     id: 'assets',
-    label: 'Sample Packs',
-    description: 'Sample packs, stems, presets, and creative tools for your work.',
+    label: 'Assets',
+    description: 'Assets, stems, presets, and creative tools for your work.',
     href: '/browse/assets',
     iconClass: 'os-icon-assets',
     group: 'legacy',
@@ -225,6 +226,8 @@ export const OS_APPS: OSApp[] = [
     href: '/dashboard',
     iconClass: 'os-icon-showcase',
     group: 'account',
+    requiresAuth: true,
+    requiresCreator: true,
   },
   {
     id: 'settings',
@@ -233,6 +236,7 @@ export const OS_APPS: OSApp[] = [
     href: '/settings?tab=account',
     iconClass: 'os-icon-settings',
     group: 'system',
+    requiresAuth: true,
     locked: true,
   },
 
@@ -258,6 +262,8 @@ export const OS_APPS: OSApp[] = [
     hidden: true,
   },
 ];
+
+export const DOCK_APP_IDS: OSAppId[] = ['library', 'search', 'store', 'radio', 'community', 'dashboard', 'support', 'settings'];
 
 export function getOSApp(id: OSAppId): OSApp | undefined {
   return OS_APPS.find(app => app.id === id);
@@ -312,9 +318,10 @@ export function getAvailableDockApps(options: {
   isCreator: boolean;
 }): OSApp[] {
   return OS_APPS.filter(app => {
+    if (!DOCK_APP_IDS.includes(app.id)) return false;
     if (app.hidden) return false;
     if (app.requiresAuth && !options.signedIn) return false;
     if (app.requiresCreator && !options.isCreator) return false;
     return true;
-  });
+  }).sort((a, b) => DOCK_APP_IDS.indexOf(a.id) - DOCK_APP_IDS.indexOf(b.id));
 }

@@ -23,7 +23,8 @@ import { getProductLibraryPrimaryAction, getProductRuntimeKind } from '@/lib/lib
 import type { Product } from '@/lib/products';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
-import { type ProductAchievement, type Track, type UserAchievement } from '@/lib/platform';
+import { creatorHref, type ProductAchievement, type Track, type UserAchievement } from '@/lib/platform';
+import Link from 'next/link';
 
 interface MusicLibraryRow {
   id: string;
@@ -41,6 +42,7 @@ type MusicTrack = Track & {
 export default function MusicLibraryItemPage() {
   const { id } = useParams<{ id: string }>();
   const { user, loading: authLoading } = useAuth();
+  const userId = user?.id ?? null;
   useTopbarBack({ href: '/library/music', label: 'Music Library' });
   const [row, setRow] = useState<MusicLibraryRow | null>(null);
   const [tracks, setTracks] = useState<MusicTrack[]>([]);
@@ -51,7 +53,7 @@ export default function MusicLibraryItemPage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) return;
+    if (!userId) return;
 
     async function fetchRelease(userId: string) {
       setLoading(true);
@@ -100,8 +102,8 @@ export default function MusicLibraryItemPage() {
       setLoading(false);
     }
 
-    fetchRelease(user.id);
-  }, [authLoading, id, user]);
+    fetchRelease(userId);
+  }, [authLoading, id, userId]);
 
   if (authLoading) return <ReleaseStateMessage>Loading...</ReleaseStateMessage>;
   if (!user) return <ReleaseStateMessage>Sign in to view this release.</ReleaseStateMessage>;
@@ -112,7 +114,7 @@ export default function MusicLibraryItemPage() {
   return (
     <OwnedMusicRelease
       key={row.id}
-      userId={user.id}
+      userId={userId}
       row={row}
       tracks={tracks}
       achievements={achievements}
@@ -144,6 +146,7 @@ function OwnedMusicRelease({
   const [fullReleaseHandled, setFullReleaseHandled] = useState(false);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [toast, setToast] = useState<AchievementToastData | null>(null);
+  const [inferredTrackDurations, setInferredTrackDurations] = useState<Record<string, number>>({});
   const downloadsUnlocked = row.acquisition_type === 'purchase';
 
   const musicQueue = useMemo<MusicQueueTrack[]>(() => (
@@ -227,6 +230,34 @@ function OwnedMusicRelease({
 
   const playableTrackIds = useMemo(() => tracks.filter(track => Boolean(track.audio_url)).map(track => track.id), [tracks]);
 
+  useEffect(() => {
+    const missingDurationTracks = tracks.filter(track => track.audio_url && (!track.duration_seconds || track.duration_seconds <= 0));
+    if (missingDurationTracks.length === 0) return;
+
+    let alive = true;
+    const audioElements = missingDurationTracks.map(track => {
+      const audio = new Audio();
+      audio.preload = 'metadata';
+      audio.src = track.audio_url!;
+      audio.addEventListener('loadedmetadata', () => {
+        if (!alive || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
+        setInferredTrackDurations(current => ({
+          ...current,
+          [track.id]: Math.round(audio.duration),
+        }));
+      });
+      return audio;
+    });
+
+    return () => {
+      alive = false;
+      audioElements.forEach(audio => {
+        audio.removeAttribute('src');
+        audio.load();
+      });
+    };
+  }, [tracks]);
+
   async function unlockTrigger(triggerType: string, metadata?: Record<string, unknown>) {
     const result = await trackProductAchievementTrigger({
       userId,
@@ -284,6 +315,8 @@ function OwnedMusicRelease({
   const heroImage = product.hero_url || product.cover_url;
   const releaseType = product.product_type || 'Release';
   const creatorDisplayName = product.creators?.display_name || product.creator || '44 Creator';
+  const creatorLink = creatorHref(product.creators ?? creatorDisplayName);
+  const description = product.long_description || product.short_description || '';
 
   return (
     <div className="view-detail-single library-detail-page">
@@ -310,9 +343,17 @@ function OwnedMusicRelease({
             {downloadsUnlocked && product.download_url && (
               <a className="os-button os-button-secondary" href={product.download_url} target="_blank" rel="noreferrer">Download</a>
             )}
+            <Link className="os-button os-button-ghost" href={creatorLink}>View Creator</Link>
           </div>
         </div>
       </div>
+
+      {description.length > 0 && (
+        <div className="view-section">
+          <h2 className="view-section-title">Description</h2>
+          <p className="os-type-body view-description">{description}</p>
+        </div>
+      )}
 
       <div className="view-section">
         <h2 className="view-section-title">Tracklist</h2>
@@ -353,7 +394,7 @@ function OwnedMusicRelease({
                   </button>
                 </div>
                 <span className={currentTrack?.id === track.id && isPlaying ? 'view-track-title view-track-title-active' : 'view-track-title'}>{track.title}</span>
-                <span className="view-track-duration">{formatDuration(track.duration_seconds)}</span>
+                <span className="view-track-duration">{formatDuration(getTrackDurationSeconds(track, inferredTrackDurations))}</span>
               </div>
             ))}
           </div>
@@ -363,9 +404,9 @@ function OwnedMusicRelease({
       </div>
 
       <LibraryAchievementsSection achievements={achievements} unlockedAchievementIds={localUnlockedAchievementIds} />
-      <LibraryProductDetailsSection product={product} tracks={tracks} />
+      <LibraryProductDetailsSection product={product} tracks={tracks} inferredTrackDurations={inferredTrackDurations} />
 
-      <ProductUpdatesSection productId={product.id} emptyMessage="No updates from the creator yet." />
+      <ProductUpdatesSection productId={product.id} emptyMessage="No updates from this creator yet." />
 
       <AchievementToast toast={toast} onDone={() => setToast(null)} />
     </div>
@@ -394,6 +435,12 @@ function formatDuration(seconds: number | null) {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
   return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
+}
+
+function getTrackDurationSeconds(track: MusicTrack, inferredTrackDurations: Record<string, number>) {
+  return track.duration_seconds && track.duration_seconds > 0
+    ? track.duration_seconds
+    : inferredTrackDurations[track.id] ?? null;
 }
 
 function isWithinLaunchWindow(createdAt: string | null | undefined) {

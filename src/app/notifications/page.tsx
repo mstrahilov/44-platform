@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageShell, HubHero, CenteredMessage } from '@/components/Ui';
+import { AchievementIconGlyph } from '@/components/AchievementIconGlyph';
 import { useAuth } from '@/lib/useAuth';
 import {
   ACHIEVEMENT_NOTIFICATIONS_UPDATED,
@@ -158,7 +159,9 @@ function NotificationArt({ item }: { item: AchievementNotification }) {
 
   return (
     <div className={item.kind === 'achievement' ? 'notification-art notification-art-achievement' : 'notification-art notification-art-user'} aria-hidden="true">
-      {image ? (
+      {item.kind === 'achievement' ? (
+        <AchievementIconGlyph code={item.achievementCode} label={item.title} />
+      ) : image ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={image} alt="" />
       ) : (

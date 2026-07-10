@@ -30,8 +30,8 @@ import { getLandingPageId, setLandingPageId, type LandingPageId } from '@/lib/la
 import { isMissingColumnError } from '@/lib/schemaCompat';
 import { getSitePathUrl } from '@/lib/siteUrl';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
-import { getAvailableDockApps, type OSAppId } from '@/lib/osApps';
-import { resetDockPreferences, setDockAppHidden, setDockMode, useDockPreferences, type DockMode } from '@/lib/dockPreferences';
+import { getAvailableDockApps } from '@/lib/osApps';
+import { setDockMode, useDockPreferences, type DockMode } from '@/lib/dockPreferences';
 import { getNotificationPreference, resetNotificationPreferences, setNotificationPreference, type NotificationPreferenceKind } from '@/lib/notificationPreferences';
 
 type SettingsTabId = 'system' | 'dock' | 'region' | 'account';
@@ -331,7 +331,7 @@ function DockSettings() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [landingPage, setLandingPage] = useState<LandingPageId>('store');
-  const { mode, hiddenIds, order } = useDockPreferences();
+  const { mode } = useDockPreferences();
 
   useEffect(() => {
     if (!user) { Promise.resolve().then(() => setProfile(null)); return; }
@@ -346,22 +346,13 @@ function DockSettings() {
     signedIn: Boolean(user),
     isCreator: isCreatorProfile(profile),
   });
-  const hideableApps = availableApps
-    .filter(app => !app.locked)
-    .sort((a, b) => orderIndex(order, a.id) - orderIndex(order, b.id));
-  const landingApps = availableApps
-    .filter(app => ['store', 'library', 'community', 'radio', 'dashboard'].includes(app.id))
-    .sort((a, b) => orderIndex(order, a.id) - orderIndex(order, b.id));
+  const landingApps = ['library', 'store', 'radio', 'community']
+    .map(id => availableApps.find(app => app.id === id))
+    .filter((app): app is NonNullable<typeof app> => Boolean(app));
 
   function chooseLandingPage(id: LandingPageId) {
     setLandingPage(id);
     setLandingPageId(id);
-  }
-
-  function resetDockDefaults() {
-    resetDockPreferences();
-    setLandingPage('store');
-    setLandingPageId('store');
   }
 
   return (
@@ -402,39 +393,6 @@ function DockSettings() {
             </button>
           ))}
         </div>
-      </div>
-
-      <div className="settings-field">
-        <div className="settings-field-head">
-          <div className="os-type-field-title">Dock Apps</div>
-          <p className="os-type-body-small">Choose which apps appear in your Dock. Settings always stays available.</p>
-        </div>
-        <div>
-          {hideableApps.map(app => {
-            const visible = !hiddenIds.includes(app.id);
-            return (
-              <div key={app.id} className="settings-row">
-                <div className="settings-row-copy">
-                  <div className="os-type-card-title">{app.label}</div>
-                  <p className="os-type-body-small">{app.description}</p>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={visible}
-                  aria-label={`Show ${app.label} in Dock`}
-                  className={visible ? 'settings-toggle settings-toggle-on' : 'settings-toggle'}
-                  onClick={() => setDockAppHidden(app.id, visible)}
-                />
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      <div className="settings-section-actions">
-        <button className="os-button os-button-secondary os-button-compact" type="button" onClick={resetDockDefaults}>
-          Reset Defaults
-        </button>
       </div>
     </div>
   );
@@ -611,9 +569,4 @@ function ToggleRow({
       />
     </div>
   );
-}
-
-function orderIndex(order: OSAppId[], id: string) {
-  const index = order.indexOf(id as OSAppId);
-  return index === -1 ? Number.MAX_SAFE_INTEGER : index;
 }

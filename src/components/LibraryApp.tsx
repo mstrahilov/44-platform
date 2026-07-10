@@ -17,7 +17,7 @@ const LIBRARY_TABS: Array<{ id: LibraryCategory; label: string; href: string }> 
   { id: 'all', label: 'All', href: '/library' },
   { id: 'music', label: 'Music', href: '/library/music' },
   { id: 'books', label: 'Books', href: '/library/books' },
-  { id: 'assets', label: 'Sample Packs', href: '/library/assets' },
+  { id: 'assets', label: 'Assets', href: '/library/assets' },
 ];
 
 const CATEGORY_EXPERIENCE: Partial<Record<LibraryCategory, ProductExperience>> = {
@@ -46,9 +46,9 @@ const CATEGORY_COPY: Record<LibraryCategory, { title: string; copy: string; empt
     storeHref: browseIndexHref('books'),
   },
   assets: {
-    title: 'Sample Packs',
-    copy: 'Sample packs, remix stems, and creative files you own.',
-    empty: 'No sample packs in your library yet.',
+    title: 'Assets',
+    copy: 'Assets, remix stems, and creative files you own.',
+    empty: 'No assets in your library yet.',
     storeHref: browseIndexHref('assets'),
   },
 };
@@ -68,7 +68,20 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useTopbarTabs(LIBRARY_TABS.map(tab => ({ ...tab, active: tab.id === category })));
+  const ownedExperiences = useMemo(() => new Set(
+    rows
+      .filter(row => row.products)
+      .map(row => getProductExperience(row.products!))
+      .filter((experience): experience is ProductExperience => ['music', 'book', 'asset'].includes(experience)),
+  ), [rows]);
+
+  const libraryTabs = useMemo(() => (
+    LIBRARY_TABS
+      .filter(tab => tab.id === 'all' || ownedExperiences.has(CATEGORY_EXPERIENCE[tab.id]!))
+      .map(tab => ({ ...tab, active: tab.id === category }))
+  ), [category, ownedExperiences]);
+
+  useTopbarTabs(libraryTabs);
 
   useEffect(() => {
     if (authLoading) return;
@@ -114,7 +127,7 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
     return [
       { id: 'music', title: 'Music', rows: visibleRows.filter(row => getProductExperience(row.products!) === 'music') },
       { id: 'books', title: 'Books', rows: visibleRows.filter(row => getProductExperience(row.products!) === 'book') },
-      { id: 'assets', title: 'Sample Packs', rows: visibleRows.filter(row => getProductExperience(row.products!) === 'asset') },
+      { id: 'assets', title: 'Assets', rows: visibleRows.filter(row => getProductExperience(row.products!) === 'asset') },
     ].filter(group => group.rows.length > 0);
   }, [category, visibleRows]);
 
@@ -126,7 +139,7 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
     return (
       <PageShell>
         <main className="app-page">
-          <HubHero title="Library" copy="Saved music, books, sample packs, and purchases live here once you sign in." />
+          <HubHero title="Library" copy="Saved music, books, assets, and purchases live here once you sign in." />
           <EmptyMessage>Log in to save items to your Library.</EmptyMessage>
           <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--os-space-4)' }}>
             <Link className="os-button os-button-primary" href="/login">Log In</Link>
@@ -242,7 +255,7 @@ function getLibraryItemLabel(product: Product) {
   const experience = getProductExperience(product);
   if (experience === 'music') return 'Release';
   if (experience === 'book') return 'Book';
-  if (experience === 'asset') return 'Sample Pack';
+  if (experience === 'asset') return 'Asset';
   return 'Item';
 }
 

@@ -115,8 +115,7 @@ export function ProductReviewsSection({
   return (
     <div className="view-section">
       <SectionHeader
-        title="Community Reviews"
-        description="Reviews help fans decide whether this item belongs in their Library."
+        title="Reviews"
         action={
           <button
             type="button"
@@ -161,7 +160,7 @@ export function ProductReviewsSection({
       {error && <div className="dashboard-status dashboard-status-error" style={{ marginBottom: 16 }}>{error}</div>}
 
       {reviews.length === 0 ? (
-        <p className="os-type-body view-description view-content-empty">No reviews yet.</p>
+        <p className="app-empty-text view-content-empty">No reviews yet.</p>
       ) : (
         <div className="dashboard-list-surface item-community-surface product-review-list-surface">
           {reviews.map(review => {

@@ -289,7 +289,7 @@ export default function PublicProfilePage() {
           { id: 'posts', label: 'Posts' },
           { id: 'music', label: 'Music' },
           { id: 'books', label: 'Books' },
-          { id: 'assets', label: 'Sample Packs' },
+          { id: 'assets', label: 'Assets' },
           { id: 'services', label: 'Services' },
         ] satisfies Array<{ id: ProfileTab; label: string }>;
       }
@@ -399,7 +399,7 @@ export default function PublicProfilePage() {
             <div className="social-profile-tab-actions" aria-label="Creator shortcuts">
               <Link href="/dashboard/products/new?section=music" className="os-button os-button-primary os-button-compact">New Release</Link>
               <Link href="/dashboard/products/new?section=books" className="os-button os-button-secondary os-button-compact">New Book</Link>
-              <Link href="/dashboard/products/new?section=assets" className="os-button os-button-secondary os-button-compact">New Sample Pack</Link>
+              <Link href="/dashboard/products/new?section=assets" className="os-button os-button-secondary os-button-compact">New Asset</Link>
               <Link href="/dashboard/products/new?section=merch" className="os-button os-button-secondary os-button-compact">New Merch</Link>
               <Link href="/dashboard/services/new" className="os-button os-button-secondary os-button-compact">New Service</Link>
             </div>
@@ -466,13 +466,13 @@ export default function PublicProfilePage() {
         )}
 
         {tab === 'assets' && (
-          <ArtifactGrid empty="No sample packs published yet.">
+          <ArtifactGrid empty="No assets published yet.">
             {assetProducts.map(product => (
               <SocialArtifactCard
                 key={product.id}
                 href={productBrowseHref(product)}
                 title={product.title}
-                meta={profileProductMeta(product, 'Sample Pack')}
+                meta={profileProductMeta(product, 'Asset')}
                 image={product.cover_url}
               />
             ))}

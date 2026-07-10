@@ -56,7 +56,6 @@ const HIDDEN_NOTIF_KEY = '44-hidden-notification-ids';
 const CURRENT_PATH_KEY = '44-current-path';
 const PREVIOUS_PATH_KEY = '44-previous-path';
 const SCROLL_PREFIX = '44-scroll:';
-
 type ProfileState = {
   userId: string;
   profile: StudioProfile | null;
@@ -76,7 +75,7 @@ function labelForPath(path: string | null | undefined) {
   if (path.startsWith('/profile')) return 'Profile';
   if (path.startsWith('/music')) return 'Music';
   if (path.startsWith('/books')) return 'Books';
-  if (path.startsWith('/assets')) return 'Sample Packs';
+  if (path.startsWith('/assets')) return 'Assets';
   if (path.startsWith('/merch') || path.startsWith('/shop')) return 'Merch';
   if (path.startsWith('/resources')) return 'Community';
   if (path.startsWith('/services') || path.startsWith('/service')) return 'Services';
@@ -124,8 +123,20 @@ export function Topbar() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notifMenuOpen, setNotifMenuOpen] = useState(false);
   const [previousPath, setPreviousPath] = useState<string | null>(null);
+  const [searchKey, setSearchKey] = useState(() => (
+    typeof window === 'undefined' ? '' : window.location.search.replace(/^\?/, '')
+  ));
   const userWrapRef = useRef<HTMLDivElement | null>(null);
   const notifWrapRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const updateSearchKey = () => setSearchKey(window.location.search.replace(/^\?/, ''));
+    updateSearchKey();
+    window.addEventListener('popstate', updateSearchKey);
+    return () => window.removeEventListener('popstate', updateSearchKey);
+  }, [pathname]);
 
   useEffect(() => {
     if (!userId) return;
@@ -173,7 +184,7 @@ export function Topbar() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const pathWithQuery = `${pathname}${window.location.search}`;
+    const pathWithQuery = searchKey ? `${pathname}?${searchKey}` : pathname;
     const current = window.sessionStorage.getItem(CURRENT_PATH_KEY);
     let nextPreviousPath: string | null;
     if (current && current !== pathWithQuery) {
@@ -185,11 +196,11 @@ export function Topbar() {
     window.sessionStorage.setItem(CURRENT_PATH_KEY, pathWithQuery);
     const frame = window.requestAnimationFrame(() => setPreviousPath(nextPreviousPath));
     return () => window.cancelAnimationFrame(frame);
-  }, [pathname]);
+  }, [pathname, searchKey]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const pathWithQuery = `${pathname}${window.location.search}`;
+    const pathWithQuery = searchKey ? `${pathname}?${searchKey}` : pathname;
     const saved = window.sessionStorage.getItem(`${SCROLL_PREFIX}${pathWithQuery}`);
     if (saved) {
       const y = Number(saved);
@@ -213,7 +224,7 @@ export function Topbar() {
       window.removeEventListener('scroll', saveScroll);
       window.removeEventListener('pagehide', saveScroll);
     };
-  }, [pathname]);
+  }, [pathname, searchKey]);
 
   function openNotifMenu() {
     const nextOpen = !notifMenuOpen;
@@ -271,6 +282,14 @@ export function Topbar() {
     saveHiddenNotificationIds(next);
   }
 
+  function rememberTabHref(href: string) {
+    if (typeof window === 'undefined') return;
+    try {
+      const url = new URL(href, window.location.href);
+      setSearchKey(url.search.replace(/^\?/, ''));
+    } catch {}
+  }
+
   return (
     <div className="os-topbar">
       <div className="os-topbar-left">
@@ -295,7 +314,7 @@ export function Topbar() {
         {tabs?.map(tab => {
           const className = tab.active ? 'os-topbar-tab os-topbar-tab-active' : 'os-topbar-tab';
           if (tab.href) {
-            return <Link key={tab.id} href={tab.href} className={className}>{tab.label}</Link>;
+            return <Link key={tab.id} href={tab.href} className={className} scroll={false} onClick={() => rememberTabHref(tab.href!)}>{tab.label}</Link>;
           }
           return (
             <button key={tab.id} type="button" className={className} onClick={tab.onClick}>

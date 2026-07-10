@@ -161,16 +161,16 @@ body {
   background: var(--os-color-app-environment);
 }
 
-/* Ambient background: restrained system wash that supports the shell without
-   competing with content. */
+/* Ambient background: three-point theme wash restored from the earlier 44OS theme system. */
 .app-environment-image {
   position: absolute;
   inset: -4%;
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--os-color-accent) 10%, transparent), transparent 34%),
-    linear-gradient(315deg, color-mix(in srgb, var(--os-color-accent) 8%, transparent), transparent 42%),
+    radial-gradient(circle at 18% 12%, var(--theme-orb-a, color-mix(in srgb, var(--os-color-accent) 42%, transparent)), transparent 36%),
+    radial-gradient(circle at 80% 16%, var(--theme-orb-b, color-mix(in srgb, var(--os-color-accent) 22%, transparent)), transparent 34%),
+    radial-gradient(circle at 52% 82%, var(--theme-orb-c, color-mix(in srgb, var(--os-color-accent) 26%, transparent)), transparent 44%),
     var(--os-color-app-environment);
-  filter: saturate(1.02);
+  filter: saturate(1.08);
   transform: scale(1.04);
 }
 
@@ -824,6 +824,7 @@ body.theme-light .app-environment-image { opacity: 0.6; }
 
 /* Theme presets */
 
+body.accent-amber,
 .theme-amber {
   --theme-bg-a: #160c07;
   --theme-bg-b: #25140d;
@@ -833,6 +834,7 @@ body.theme-light .app-environment-image { opacity: 0.6; }
   --theme-orb-c: rgba(115, 65, 34, 0.36);
 }
 
+body.accent-violet,
 .theme-graphite {
   --theme-bg-a: #080a12;
   --theme-bg-b: #101421;
@@ -842,6 +844,7 @@ body.theme-light .app-environment-image { opacity: 0.6; }
   --theme-orb-c: rgba(255, 255, 255, 0.045);
 }
 
+body.accent-ocean,
 .theme-blue {
   --theme-bg-a: #06101d;
   --theme-bg-b: #081a2e;
@@ -851,6 +854,7 @@ body.theme-light .app-environment-image { opacity: 0.6; }
   --theme-orb-c: rgba(60, 90, 180, 0.24);
 }
 
+body.accent-sage,
 .theme-green {
   --theme-bg-a: #07130d;
   --theme-bg-b: #0d1d13;
@@ -1086,7 +1090,7 @@ body.theme-light .app-environment-image { opacity: 0.6; }
 }
 
 .hub-section-head-described {
-  align-items: flex-end;
+  align-items: flex-start;
 }
 
 .hub-section-copy {
@@ -1096,11 +1100,7 @@ body.theme-light .app-environment-image { opacity: 0.6; }
 }
 
 .hub-section-head-described .hub-section-copy {
-  width: 100%;
-  grid-template-columns: minmax(0, max-content) minmax(280px, 680px);
-  align-items: end;
-  justify-content: space-between;
-  column-gap: var(--os-space-8);
+  max-width: 760px;
 }
 
 .hub-section-title {
@@ -1124,8 +1124,6 @@ body.theme-light .app-environment-image { opacity: 0.6; }
 }
 
 .hub-section-head-described .hub-section-description {
-  justify-self: end;
-  padding-bottom: 2px;
   text-align: left;
 }
 
@@ -1844,7 +1842,7 @@ body.theme-light .app-environment-image { opacity: 0.6; }
   place-items: center;
   border: 1px solid var(--os-state-owned-border);
   background: var(--os-state-owned-bg);
-  color: var(--os-color-accent);
+  color: var(--os-color-ink);
   font-size: 12px;
   font-weight: 850;
   letter-spacing: 0;
@@ -1876,17 +1874,6 @@ body.theme-light .app-environment-image { opacity: 0.6; }
   color: var(--os-color-ink-secondary);
   font-size: 12px;
   line-height: 1.4;
-}
-
-.achievement-toast-points {
-  border-radius: var(--os-radius-pill);
-  border: 1px solid var(--os-pill-border);
-  background: var(--os-pill-bg);
-  padding: 7px 9px;
-  color: var(--os-color-ink-secondary);
-  font-size: 11px;
-  font-weight: 800;
-  white-space: nowrap;
 }
 
 @keyframes achievement-toast-in {
@@ -4158,11 +4145,9 @@ body.theme-dark .product-tile:hover .product-tile-art {
 .view-track-row:first-child { border-top: 0; }
 .view-track-row:hover {
   background: color-mix(in srgb, var(--os-color-ink) 5%, transparent);
-  border-radius: 10px;
 }
 .view-track-row-selected {
   background: color-mix(in srgb, var(--os-color-ink) 7%, transparent);
-  border-radius: 10px;
 }
 
 .view-track-leading {
@@ -4284,17 +4269,6 @@ body.theme-dark .product-tile:hover .product-tile-art {
 }
 .view-achievement-row:first-of-type { border-top: 0; }
 
-.library-section-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--os-space-4);
-  margin-bottom: var(--os-space-7);
-}
-.library-section-head .view-section-title {
-  margin: 0;
-}
-.library-section-head .os-type-body-small,
 .library-empty-text {
   color: var(--os-color-ink-muted);
   font-size: 15px;
@@ -4313,27 +4287,41 @@ body.theme-dark .product-tile:hover .product-tile-art {
   grid-template-columns: 56px minmax(0, 1fr) auto;
 }
 .library-achievement-icon {
+  position: relative;
   width: 44px;
   height: 44px;
   border-radius: 8px;
   border: 1px solid var(--os-color-hairline);
   background: color-mix(in srgb, var(--os-color-ink) 5%, var(--os-paper-bg));
   overflow: hidden;
+  display: grid;
+  place-items: center;
+  color: var(--os-color-ink);
+  font-size: 11px;
+  font-weight: 760;
 }
-.library-achievement-icon img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+
+.achievement-icon-mask {
+  width: 64%;
+  height: 64%;
   display: block;
+  background: currentColor;
+  -webkit-mask: var(--achievement-icon-url) center / contain no-repeat;
+  mask: var(--achievement-icon-url) center / contain no-repeat;
 }
-.library-achievement-row-unlocked .library-achievement-icon {
-  border-color: color-mix(in srgb, var(--os-color-accent) 48%, var(--os-color-hairline));
-  background: color-mix(in srgb, var(--os-color-accent) 18%, var(--os-paper-bg));
+.achievement-icon-fallback {
+  position: relative;
+  color: currentColor;
 }
-.library-achievement-status-unlocked {
-  color: color-mix(in srgb, var(--os-color-owned, var(--os-color-accent)) 86%, var(--os-color-ink));
-  border-color: color-mix(in srgb, var(--os-color-owned, var(--os-color-accent)) 34%, var(--os-paper-border));
-  background: color-mix(in srgb, var(--os-color-owned, var(--os-color-accent)) 14%, var(--os-paper-bg));
+.project-status-pill.library-achievement-status-unlocked {
+  color: var(--os-color-success);
+  border-color: color-mix(in srgb, var(--os-color-success) 34%, var(--os-paper-border));
+  background: color-mix(in srgb, var(--os-color-success) 14%, var(--os-paper-bg));
+}
+.project-status-pill.library-achievement-status-locked {
+  color: var(--os-color-ink-secondary);
+  border-color: var(--os-color-hairline);
+  background: color-mix(in srgb, var(--os-color-ink) 5%, var(--os-paper-bg));
 }
 
 /* ── 44OS Home concept: hidden prototype route at /studio/44os-home ── */
@@ -5856,9 +5844,9 @@ body.theme-dark .os-home-panel {
   gap: 20px;
   padding: 22px;
   border-radius: 24px;
-  border: 1px solid rgba(17, 24, 39, 0.08);
-  background: rgba(255, 255, 255, 0.38);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
+  border: 1px solid var(--os-paper-border);
+  background: var(--os-paper-bg);
+  box-shadow: var(--os-paper-shadow);
 }
 
 .dashboard-form-section-head {
@@ -5927,6 +5915,11 @@ body.theme-dark .os-home-panel {
   font-size: 14px;
 }
 
+.dashboard-form-note-warning {
+  color: var(--os-color-warning);
+  font-weight: 700;
+}
+
 .dashboard-feature-list {
   display: grid;
   gap: 12px;
@@ -5949,30 +5942,14 @@ body.theme-dark .os-home-panel {
 }
 
 .dashboard-achievement-row {
-  grid-template-columns: minmax(0, 1fr) auto;
-  cursor: default;
-}
-
-.dashboard-achievement-enable,
-.dashboard-achievement-secret {
-  display: inline-flex;
-  align-items: flex-start;
-  gap: 12px;
+  grid-template-columns: 28px 52px minmax(0, 1fr);
+  align-items: center;
+  cursor: pointer;
 }
 
 .dashboard-achievement-copy {
   display: grid;
   gap: 4px;
-}
-
-.dashboard-achievement-secret {
-  align-items: center;
-  color: var(--os-color-ink-muted);
-  font-size: 12px;
-  font-weight: 720;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  white-space: nowrap;
 }
 
 .dashboard-feature-row > span {
@@ -6820,6 +6797,9 @@ body.theme-dark .os-home-panel {
 
 .view-section:last-child { padding-bottom: 60px; }
 .view-section:first-child { padding-top: 32px; }
+.view-section > .hub-section-head {
+  margin-bottom: var(--os-space-7);
+}
 
 .library-detail-page .view-section {
   max-width: none;
@@ -8540,6 +8520,7 @@ body.theme-dark .dashboard-status-dot {
 
 .notification-art-achievement {
   border-radius: 14px;
+  color: var(--os-color-ink);
 }
 
 .settings-segment {
@@ -8787,9 +8768,9 @@ body.theme-dark .social-profile-tabs button[aria-selected="true"] {
 }
 
 .dashboard-achievement-row {
-  grid-template-columns: 52px minmax(0, 1fr) auto;
+  grid-template-columns: 28px 52px minmax(0, 1fr);
   align-items: center;
-  cursor: default;
+  cursor: pointer;
 }
 
 .dashboard-achievement-art {
@@ -8805,13 +8786,6 @@ body.theme-dark .social-profile-tabs button[aria-selected="true"] {
   overflow: hidden;
 }
 
-.dashboard-achievement-art img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
 .dashboard-achievement-copy {
   display: grid;
   gap: 3px;
@@ -8824,6 +8798,18 @@ body.theme-dark .social-profile-tabs button[aria-selected="true"] {
 .dashboard-achievement-toggle {
   display: grid;
   place-items: center;
+}
+
+.dashboard-achievement-toggle input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--os-color-ink);
+}
+
+.dashboard-achievement-toggle input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .dashboard-bonus-unlock-note {

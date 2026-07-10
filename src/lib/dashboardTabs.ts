@@ -6,7 +6,7 @@ export const DASHBOARD_TABS: Array<{ id: string; label: string; href: string }> 
   { id: 'overview', label: 'Overview', href: '/dashboard' },
   { id: 'music', label: 'Music', href: '/dashboard/products' },
   { id: 'books', label: 'Books', href: '/dashboard/products?section=books' },
-  { id: 'assets', label: 'Sample Packs', href: '/dashboard/products?section=assets' },
+  { id: 'assets', label: 'Assets', href: '/dashboard/products?section=assets' },
   { id: 'merch', label: 'Merch', href: '/dashboard/products?section=merch' },
 ];
 

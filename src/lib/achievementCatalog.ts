@@ -1,5 +1,6 @@
 export const V1_ACHIEVEMENT_CODES = [
   'front_to_back',
+  'first_wave',
   'no_skips',
   'nightbird',
   'heavy_rotation',

@@ -5,5 +5,5 @@ import { LibraryItemDetail } from '@/components/LibraryItemDetail';
 
 export default function AssetsLibraryItemPage() {
   const { id } = useParams<{ id: string }>();
-  return <LibraryItemDetail kind="product" id={id} backHref="/library/assets" backLabel="Sample Pack Library" />;
+  return <LibraryItemDetail kind="product" id={id} backHref="/library/assets" backLabel="Assets Library" />;
 }

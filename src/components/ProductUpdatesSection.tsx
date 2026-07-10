@@ -26,7 +26,7 @@ function resolveAuthor(update: ProductUpdate) {
 
 export function ProductUpdatesSection({
   productId,
-  emptyMessage = 'No updates from the creator yet.',
+  emptyMessage = 'No updates from this creator yet.',
 }: {
   productId: string;
   emptyMessage?: string;
@@ -57,15 +57,12 @@ export function ProductUpdatesSection({
 
   return (
     <div className="view-section">
-      <SectionHeader
-        title="Creator Updates"
-        description="Updates are the creator's living notes for this release: changes, context, fixes, and new material."
-      />
+      <SectionHeader title="Creator Updates" />
 
       {error && <div className="dashboard-status dashboard-status-error" style={{ marginBottom: 16 }}>{error}</div>}
 
       {updates.length === 0 ? (
-        <p className="library-empty-text">{emptyMessage}</p>
+        <p className="app-empty-text view-content-empty">{emptyMessage}</p>
       ) : (
         <div className="dashboard-list-surface item-domain-surface">
           {updates.map(update => {

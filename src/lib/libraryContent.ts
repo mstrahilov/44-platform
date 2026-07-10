@@ -115,10 +115,10 @@ export function getProductLibraryContent(product: Product): ProductLibraryConten
   if (runtimeKind === 'sample_pack') {
     return {
       runtimeKind,
-      detailsTitle: 'Sample Pack',
+      detailsTitle: 'Asset',
       contentTitle: 'Pack Contents',
       accessLabel: 'Downloadable files',
-      emptyCopy: 'Sample pack contents, file types, and usage notes will live here.',
+      emptyCopy: 'Asset contents, file types, and usage notes will live here.',
       notes: ['Samples, presets, stems, or project files', 'Creator usage/license notes', 'Download history can be added later'],
     };
   }
@@ -130,7 +130,7 @@ export function getProductLibraryContent(product: Product): ProductLibraryConten
       contentTitle: 'Launch Notes',
       accessLabel: 'Launchable experience',
       emptyCopy: 'Controls, requirements, and experience details will live here.',
-      notes: ['Unity/WebGL launch target', 'Achievements and hidden unlocks can connect here', 'Save/progress bridge can be added later'],
+      notes: ['Unity/WebGL launch target', 'Achievements and bonus unlocks can connect here', 'Save/progress bridge can be added later'],
     };
   }
 

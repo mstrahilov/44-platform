@@ -44,7 +44,7 @@ const ARTICLES: SupportArticle[] = [
     category: 'Library',
     question: 'What belongs in your Library',
     answer: [
-      'Your Library contains music, books, sample packs, and items you saved or purchased.',
+      'Your Library contains music, books, assets, and items you saved or purchased.',
       'Free saves unlock streaming or reading where supported. Paid purchases unlock downloads only when the creator enabled downloadable files.',
       'Removing an item hides it from your Library. Re-adding it should restore the existing Library item.',
     ],
@@ -55,17 +55,17 @@ const ARTICLES: SupportArticle[] = [
     question: 'Customize the Dock',
     answer: [
       'Open Settings, then Dock, to switch between Full and Compact mode, choose visible apps, and select your landing app.',
-      'Library, Search, Browse, Community, Radio, Support, Dashboard, and Settings are the current Dock surfaces where your account can access them.',
-      'Signed-out visitors see public surfaces and Log In instead of personal apps.',
+      'Library, Search, Browse, Radio, Community, Support, and Settings are the signed-in Dock surfaces.',
+      'Creator accounts also see Dashboard. Signed-out visitors see Search, Browse, Radio, Community, Support, and Log In.',
     ],
     actions: [{ label: 'Open Dock Settings', href: '/settings?tab=dock' }],
   },
   {
     category: 'Creator Uploads',
-    question: 'Publish music, books, sample packs, merch, or services',
+    question: 'Publish music, books, assets, merch, or services',
     answer: [
-      'Creators publish and manage work from Dashboard. Use the profile shortcut buttons for fast access to new releases, books, sample packs, merch, and services.',
-      'Music releases can include v1.0 achievements and Overachiever bonus content. Books, sample packs, and merch use simpler publishing flows until their experiences are fully built.',
+      'Creators publish and manage work from Dashboard. Use the profile shortcut buttons for fast access to new releases, books, assets, merch, and services.',
+      'Music releases can include v1.0 achievements and Overachiever bonus content. Books, assets, and merch use simpler publishing flows until their experiences are fully built.',
       'Services are 44-operated project intake flows, not a general creator marketplace.',
     ],
     actions: [{ label: 'Open Dashboard', href: '/dashboard' }],

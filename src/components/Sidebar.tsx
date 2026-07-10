@@ -7,8 +7,8 @@
  * for this surface is "Dock".
  *
  * OS behaviors owned here:
- * - Right-click on a Dock item → context menu (Open / Hide from Dock /
- *   Dock mode / Dock Settings). Right-click on empty Dock → mode + settings.
+ * - Right-click on a Dock item → context menu (Open / Dock mode /
+ *   Dock Settings). Right-click on empty Dock → mode + settings.
  * - Horizontal drag on the Dock (≈56px) toggles full ↔ compact mode;
  *   the drag never resizes the Dock freely, it snaps between the two modes.
  */
@@ -19,7 +19,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { getActiveOSAppId, getAvailableDockApps, type OSApp } from '@/lib/osApps';
-import { setDockAppHidden, setDockMode, unpinDockItem, useDockPreferences, type PinnedDockItem } from '@/lib/dockPreferences';
+import { setDockMode, unpinDockItem, useDockPreferences, type PinnedDockItem } from '@/lib/dockPreferences';
 import { useContextMenu, type ContextMenuEntry } from '@/components/ContextMenu';
 
 const DRAG_TOGGLE_DISTANCE = 56;
@@ -60,9 +60,6 @@ function DockItem({
   const entries: ContextMenuEntry[] = [
     { id: 'open', label: `Open ${app.label}`, href: app.href },
     { kind: 'divider', id: 'divider-1' },
-    ...(app.locked
-      ? []
-      : ([{ id: 'hide', label: 'Hide from Dock', onSelect: () => setDockAppHidden(app.id, true) }] as ContextMenuEntry[])),
     ...dockModeEntries(compact),
   ];
 
@@ -134,7 +131,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { user } = useAuth();
   const [profile, setProfile] = useState<StudioProfile | null>(null);
-  const { mode, hiddenIds, pinnedItems } = useDockPreferences();
+  const { mode, pinnedItems } = useDockPreferences();
   const now = useNow();
   const activeAppId = getActiveOSAppId(pathname);
   const { openContextMenu } = useContextMenu();
@@ -196,17 +193,11 @@ export default function Sidebar() {
     signedIn: Boolean(user),
     isCreator: isCreatorProfile(profile),
   });
-  const effectiveHiddenIds = user ? hiddenIds : [];
-  const dockApps = availableApps.filter(app => app.locked || !effectiveHiddenIds.includes(app.id));
+  const dockApps = availableApps;
   const activePinnedItem = pinnedItems.find(item => isPinnedDockItemActive(pathname, item.href));
   const mainActiveAppId = activePinnedItem ? '' : activeAppId;
-  const primaryApps = ['search', 'store', 'radio']
-    .map(id => dockApps.find(app => app.id === id))
-    .filter((app): app is OSApp => Boolean(app));
-  const communityApps = ['community']
-    .map(id => dockApps.find(app => app.id === id))
-    .filter((app): app is OSApp => Boolean(app));
-  const workspaceApps = ['library', 'dashboard']
+  const libraryApp = dockApps.find(app => app.id === 'library') ?? null;
+  const primaryApps = ['search', 'store', 'radio', 'community', 'dashboard']
     .map(id => dockApps.find(app => app.id === id))
     .filter((app): app is OSApp => Boolean(app));
   const supportApp = dockApps.find(app => app.id === 'support') ?? null;
@@ -239,21 +230,14 @@ export default function Sidebar() {
       </div>
 
       <nav className="sidebar-nav" aria-label="Dock">
+        {libraryApp && (
+          <>
+            <DockItem app={libraryApp} active={mainActiveAppId === libraryApp.id} compact={compact} />
+            <div className="sidebar-divider" />
+          </>
+        )}
+
         <DockSection apps={primaryApps} activeAppId={mainActiveAppId} compact={compact} />
-
-        {primaryApps.length > 0 && communityApps.length > 0 && (
-          <>
-            <div className="sidebar-divider" />
-            <DockSection apps={communityApps} activeAppId={mainActiveAppId} compact={compact} />
-          </>
-        )}
-
-        {workspaceApps.length > 0 && (
-          <>
-            <div className="sidebar-divider" />
-            <DockSection apps={workspaceApps} activeAppId={mainActiveAppId} compact={compact} />
-          </>
-        )}
 
         {pinnedItems.length > 0 && (
           <>
@@ -270,11 +254,9 @@ export default function Sidebar() {
           <DockItem app={supportApp} active={mainActiveAppId === supportApp.id} compact={compact} />
         )}
 
-        {settingsApp && (
+        {user && settingsApp && (
           <DockItem app={settingsApp} active={mainActiveAppId === settingsApp.id} compact={compact} />
         )}
-
-        {!user && <div className="sidebar-divider" />}
 
         {!user ? (
           <Link

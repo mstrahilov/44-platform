@@ -9,8 +9,8 @@ import { useAuth } from '@/lib/useAuth';
 import { isV1AchievementCode } from '@/lib/achievementCatalog';
 import type { Product } from '@/lib/products';
 import { productLibraryHref } from '@/lib/experience';
-import { getProductLibraryContent, getProductLibraryPrimaryAction, getProductRuntimeKind, isFreeLibraryClaim } from '@/lib/libraryContent';
-import { type ProductAchievement, type Resource, type ServiceRequest, type Track, type UserAchievement } from '@/lib/platform';
+import { getProductLibraryContent, getProductLibraryPrimaryAction, getProductRuntimeKind } from '@/lib/libraryContent';
+import { creatorHref, type ProductAchievement, type Resource, type ServiceRequest, type Track, type UserAchievement } from '@/lib/platform';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
 import { LibraryAchievementsSection, LibraryCreatorChip, LibraryProductDetailsSection } from '@/components/LibraryDetailPrimitives';
 import { ProductUpdatesSection } from '@/components/ProductUpdatesSection';
@@ -43,6 +43,7 @@ export function LibraryItemDetail({
   legacyRedirect?: boolean;
 }) {
   const { user, loading: authLoading } = useAuth();
+  const userId = user?.id ?? null;
   const router = useRouter();
   useTopbarBack({ href: backHref, label: backLabel });
   const [productRow, setProductRow] = useState<LibraryItemRow | null>(null);
@@ -57,7 +58,7 @@ export function LibraryItemDetail({
   useEffect(() => {
     if (authLoading) return;
 
-    if (!user) {
+    if (!userId) {
       Promise.resolve().then(() => {
         setLoading(false);
         setError('Sign in to view this library item.');
@@ -145,15 +146,15 @@ export function LibraryItemDetail({
       setLoading(false);
     }
 
-    fetchItem(user.id);
-  }, [authLoading, id, kind, legacyRedirect, router, user]);
+    fetchItem(userId);
+  }, [authLoading, id, kind, legacyRedirect, router, userId]);
 
   if (authLoading || loading) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Loading…</div>;
   if (error) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>{error}</div>;
   if (!user) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Sign in to view this library item.</div>;
 
   if (kind === 'product' && productRow?.products) {
-    return <ProductLibraryDetail userId={user.id} row={productRow} tracks={tracks} achievements={achievements} unlockedAchievementIds={unlockedAchievementIds} />;
+    return <ProductLibraryDetail userId={userId} row={productRow} tracks={tracks} achievements={achievements} unlockedAchievementIds={unlockedAchievementIds} />;
   }
 
   if (kind === 'resource' && resourceRow?.resources) {
@@ -180,7 +181,6 @@ function ProductLibraryDetail({
   achievements: ProductAchievement[];
   unlockedAchievementIds: Set<string>;
 }) {
-  const router = useRouter();
   const product = row.products!;
   const action = getProductLibraryPrimaryAction(product);
   const runtimeKind = getProductRuntimeKind(product);
@@ -193,10 +193,37 @@ function ProductLibraryDetail({
   const [playedTrackIds, setPlayedTrackIds] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<AchievementToastData | null>(null);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
-  const [removing, setRemoving] = useState(false);
+  const [inferredTrackDurations, setInferredTrackDurations] = useState<Record<string, number>>({});
 
   useEffect(() => { Promise.resolve().then(() => setPlayedTrackIds(new Set())); }, [product.id]);
   useEffect(() => { Promise.resolve().then(() => setLocalUnlockedAchievementIds(unlockedAchievementIds)); }, [unlockedAchievementIds]);
+  useEffect(() => {
+    const missingDurationTracks = tracks.filter(track => track.audio_url && (!track.duration_seconds || track.duration_seconds <= 0));
+    if (missingDurationTracks.length === 0) return;
+
+    let alive = true;
+    const audioElements = missingDurationTracks.map(track => {
+      const audio = new Audio();
+      audio.preload = 'metadata';
+      audio.src = track.audio_url!;
+      audio.addEventListener('loadedmetadata', () => {
+        if (!alive || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
+        setInferredTrackDurations(current => ({
+          ...current,
+          [track.id]: Math.round(audio.duration),
+        }));
+      });
+      return audio;
+    });
+
+    return () => {
+      alive = false;
+      audioElements.forEach(audio => {
+        audio.removeAttribute('src');
+        audio.load();
+      });
+    };
+  }, [tracks]);
 
   const musicQueue = useMemo<MusicQueueTrack[]>(() => (
     tracks
@@ -282,24 +309,11 @@ function ProductLibraryDetail({
   const content = getProductLibraryContent(product);
   const creatorDisplayName = product.creators?.display_name || product.creator || '44 Creator';
   const canDownload = Boolean(product.download_url || product.read_url);
-  const freeLibraryItem = row.acquisition_type === 'free' || isFreeLibraryClaim(product);
   const trackNumbers = useMemo(
     () => new Map(tracks.map((track, index) => [track.id, track.number ?? index + 1])),
     [tracks],
   );
-
-  async function removeFromLibrary() {
-    setRemoving(true);
-    const result = freeLibraryItem
-      ? await supabase.from('library_items').delete().eq('id', row.id).eq('user_id', userId)
-      : await supabase.from('library_items').update({ status: 'hidden' }).eq('id', row.id).eq('user_id', userId);
-    setRemoving(false);
-    if (result.error) {
-      alert(result.error.message);
-      return;
-    }
-    router.push('/library');
-  }
+  const creatorLink = creatorHref(product.creators ?? creatorDisplayName);
 
   return (
     <div className="view-detail-single library-detail-page">
@@ -333,16 +347,15 @@ function ProductLibraryDetail({
                 Download
               </a>
             )}
-            <button className="os-button os-button-ghost" type="button" onClick={() => { void removeFromLibrary(); }} disabled={removing}>
-              {removing ? 'Removing…' : 'Remove from Library'}
-            </button>
+            <Link className="os-button os-button-ghost" href={creatorLink}>View Creator</Link>
           </div>
         </div>
       </div>
 
       {/* Description */}
-      {description.length > 40 && (
+      {description.length > 0 && (
         <div className="view-section">
+          <h2 className="view-section-title">Description</h2>
           <p className="os-type-body view-description">
             {description}
           </p>
@@ -389,14 +402,14 @@ function ProductLibraryDetail({
                   </button>
                 </div>
                 <span className={currentTrack?.id === track.id && isPlaying ? 'view-track-title view-track-title-active' : 'view-track-title'}>{track.title}</span>
-                <span className="view-track-duration">{formatDuration(track.duration_seconds)}</span>
+                <span className="view-track-duration">{formatDuration(getTrackDurationSeconds(track, inferredTrackDurations))}</span>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {!isMusic && description.length <= 40 && (
+      {!isMusic && description.length === 0 && (
         <div className="view-section">
           <h2 className="view-section-title">{content.contentTitle}</h2>
           <p className="os-type-body view-description">
@@ -406,9 +419,9 @@ function ProductLibraryDetail({
       )}
 
       {isMusic && <LibraryAchievementsSection achievements={achievements} unlockedAchievementIds={localUnlockedAchievementIds} />}
-      <LibraryProductDetailsSection product={product} tracks={tracks} />
+      <LibraryProductDetailsSection product={product} tracks={tracks} inferredTrackDurations={inferredTrackDurations} />
 
-      <ProductUpdatesSection productId={product.id} emptyMessage="No updates from the creator yet." />
+      <ProductUpdatesSection productId={product.id} emptyMessage="No updates from this creator yet." />
 
       <AchievementToast toast={toast} onDone={() => setToast(null)} />
     </div>
@@ -547,4 +560,10 @@ function formatDuration(seconds: number | null) {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
   return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
+}
+
+function getTrackDurationSeconds(track: Track, inferredTrackDurations: Record<string, number>) {
+  return track.duration_seconds && track.duration_seconds > 0
+    ? track.duration_seconds
+    : inferredTrackDurations[track.id] ?? null;
 }

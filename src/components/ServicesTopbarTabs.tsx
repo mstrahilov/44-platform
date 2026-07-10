@@ -9,7 +9,7 @@ const HOME_SERVICE_TABS = [
   { id: 'music', label: 'Music', href: '/browse/music' },
   { id: 'books', label: 'Books', href: '/browse/books' },
   { id: 'merch', label: 'Merch', href: '/browse/merch' },
-  { id: 'assets', label: 'Sample Packs', href: '/browse/assets' },
+  { id: 'assets', label: 'Assets', href: '/browse/assets' },
   { id: 'services', label: 'Services', href: '/services' },
 ] as const;
 

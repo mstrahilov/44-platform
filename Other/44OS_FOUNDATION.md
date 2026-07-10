@@ -160,10 +160,10 @@ Navigation rules:
 
 Current Dock order:
 
-- Signed in: Search, Browse, Radio, divider, Community, divider, Library, Dashboard, spacer, Support, Settings.
-- Signed out: Search, Browse, Radio, divider, Community, divider, Library, Dashboard, spacer, Support, Settings, divider, Log In.
+- Signed in: Library, divider, Search, Browse, Radio, Community, Dashboard for creators, spacer, Support, Settings.
+- Signed out: Search, Browse, Radio, Community, spacer, Support, Log In.
 
-Library, Dashboard, and Settings remain visible when signed out because they are core OS destinations; their pages render auth gates instead of disappearing from the shell. Messages and Profile are hidden from the v1 Dock. Keep profile/account access through avatar/profile/community surfaces where supported.
+Library and Settings are signed-in Dock destinations. Dashboard appears only for creator accounts. Signed-out users see public destinations plus Support and Log In. Messages and Profile are hidden from the v1 Dock. Keep profile/account access through avatar/profile/community surfaces where supported.
 
 ---
 

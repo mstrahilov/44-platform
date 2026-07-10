@@ -6,7 +6,6 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { getAvailableDockApps } from '@/lib/osApps';
-import { useDockPreferences } from '@/lib/dockPreferences';
 import { loadAchievementNotifications, type AchievementNotification } from '@/lib/achievementNotifications';
 import type { Product } from '@/lib/products';
 import { PageShell, HubHero, HubSection, Shelf, ProductCard, CenteredMessage, EmptyMessage } from '@/components/Ui';
@@ -37,7 +36,6 @@ function greetingForHour(hour: number): string {
 export default function HomePage() {
   const { user, loading } = useAuth();
   const userId = user?.id ?? null;
-  const { hiddenIds } = useDockPreferences();
   const [profileState, setProfileState] = useState<HomeProfileState | null>(null);
   const [activityState, setActivityState] = useState<HomeActivityState | null>(null);
 
@@ -105,8 +103,7 @@ export default function HomePage() {
   const greeting = `${greetingForHour(new Date().getHours())}, ${displayName}. Pick up where you left off.`;
   const isCreator = isCreatorProfile(profile);
 
-  const launchApps = getAvailableDockApps({ signedIn: true, isCreator })
-    .filter(app => app.id !== 'home' && (app.locked || !hiddenIds.includes(app.id)));
+  const launchApps = getAvailableDockApps({ signedIn: true, isCreator });
 
   return (
     <PageShell>
@@ -135,7 +132,7 @@ export default function HomePage() {
 
         <HubSection title="Recent in Library">
           {recentItems.length === 0 ? (
-            <EmptyMessage>Nothing in your Library yet. Explore Music, Books, or Sample Packs to add something.</EmptyMessage>
+            <EmptyMessage>Nothing in your Library yet. Explore Music, Books, or Assets to add something.</EmptyMessage>
           ) : (
             <Shelf>
               {recentItems.map(row => (
