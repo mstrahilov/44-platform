@@ -203,7 +203,7 @@ export default function Sidebar() {
   const primaryApps = ['search', 'store', 'radio']
     .map(id => dockApps.find(app => app.id === id))
     .filter((app): app is OSApp => Boolean(app));
-  const communityApps = ['community', 'inbox', 'profile']
+  const communityApps = ['community']
     .map(id => dockApps.find(app => app.id === id))
     .filter((app): app is OSApp => Boolean(app));
   const workspaceApps = ['library', 'dashboard']
@@ -232,7 +232,7 @@ export default function Sidebar() {
       }}
     >
       <div className="sidebar-top">
-        <Link href="/" className="sidebar-logo" aria-label="44 Home">
+        <Link href="/browse" className="sidebar-logo" aria-label="44 Browse">
           <span className="os-logo-44" aria-hidden="true" />
         </Link>
         <span className="sidebar-clock" aria-live="polite">{time}</span>
@@ -241,7 +241,7 @@ export default function Sidebar() {
       <nav className="sidebar-nav" aria-label="Dock">
         <DockSection apps={primaryApps} activeAppId={mainActiveAppId} compact={compact} />
 
-        {communityApps.length > 0 && (
+        {primaryApps.length > 0 && communityApps.length > 0 && (
           <>
             <div className="sidebar-divider" />
             <DockSection apps={communityApps} activeAppId={mainActiveAppId} compact={compact} />
@@ -270,11 +270,13 @@ export default function Sidebar() {
           <DockItem app={supportApp} active={mainActiveAppId === supportApp.id} compact={compact} />
         )}
 
-        {(settingsApp || !user) && <div className="sidebar-divider" />}
-
-        {user && settingsApp ? (
+        {settingsApp && (
           <DockItem app={settingsApp} active={mainActiveAppId === settingsApp.id} compact={compact} />
-        ) : !user ? (
+        )}
+
+        {!user && <div className="sidebar-divider" />}
+
+        {!user ? (
           <Link
             href="/login"
             className={pathname.startsWith('/login') ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}

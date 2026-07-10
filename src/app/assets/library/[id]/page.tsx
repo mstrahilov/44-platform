@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { LibraryItemDetail } from '@/app/library/item/[kind]/[id]/page';
+import { LibraryItemDetail } from '@/components/LibraryItemDetail';
 
 export default function AssetsLibraryItemPage() {
   const { id } = useParams<{ id: string }>();

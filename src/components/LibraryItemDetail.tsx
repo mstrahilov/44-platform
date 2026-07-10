@@ -1,10 +1,8 @@
 'use client';
 
-export const dynamic = 'force-dynamic';
-
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useContextMenu } from '@/components/ContextMenu';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
@@ -29,11 +27,6 @@ interface LibraryItemRow {
   acquired_at: string;
   status: string;
   products: Product | null;
-}
-
-export default function LibraryItemPage() {
-  const { kind, id } = useParams<{ kind: LibraryKind; id: string }>();
-  return <LibraryItemDetail kind={kind} id={id} legacyRedirect />;
 }
 
 export function LibraryItemDetail({

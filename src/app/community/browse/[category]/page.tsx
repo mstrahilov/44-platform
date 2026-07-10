@@ -87,7 +87,7 @@ export default function CommunityBrowseCategoryPage({ params }: { params: Promis
             <div>
               <h1 className="os-type-display">{label}</h1>
               <p className="social-title-copy os-type-body">
-                Browse {label.toLowerCase()} posts from the 44 community.
+                Browse {label.toLowerCase()} posts from creators and fans.
               </p>
             </div>
             <Link href="/community/new" className="os-button os-button-primary os-button-compact">

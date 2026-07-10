@@ -17,18 +17,18 @@ export default function CartPage() {
   const { items, count, subtotalCents } = useCart();
   const currency = items[0]?.currency ?? 'USD';
 
-  useTopbarBack({ href: '/store', label: 'Home' });
+  useTopbarBack({ href: '/browse', label: 'Browse' });
 
   if (items.length === 0) {
     return (
       <PageShell>
         <main className="dashboard-page">
-          <HubHero title="Cart" copy="Items you have added while browsing 44." />
+          <HubHero title="Cart" copy="Items you have added while browsing." />
           <div className="dashboard-list-surface">
             <div className="dashboard-empty">
-              Your cart is empty. Browse merch or Home to add items.
+              Your cart is empty. Browse merch or creator items to add something.
               <div style={{ marginTop: 'var(--os-space-4)' }}>
-                <Link className="os-button os-button-primary os-button-compact" href="/">Open Home</Link>
+                <Link className="os-button os-button-primary os-button-compact" href="/browse">Open Browse</Link>
               </div>
             </div>
           </div>
@@ -121,7 +121,7 @@ export default function CartPage() {
             </span>
           </div>
           <div className="cart-summary-actions">
-            <Link className="os-button os-button-secondary" href="/">
+            <Link className="os-button os-button-secondary" href="/browse">
               Keep Browsing
             </Link>
             <Link className="os-button os-button-primary" href="/checkout">

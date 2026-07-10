@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
-import { getProductExperience, productLibraryHref, type ProductExperience } from '@/lib/experience';
+import { browseIndexHref, getProductExperience, productLibraryHref, type ProductExperience } from '@/lib/experience';
 import { isFreeLibraryClaim } from '@/lib/libraryContent';
 import { creatorHref } from '@/lib/platform';
 import { PageShell, HubHero, ProductCard, ProductGrid, CenteredMessage, EmptyMessage } from '@/components/Ui';
@@ -36,8 +36,8 @@ const EXPERIENCE_CONFIG: Record<ExperienceConfig['id'], ExperienceConfig> = {
     pluralNoun: 'releases',
     experience: 'music',
     copy: {
-      library: 'Albums, singles, EPs, and owned releases you have added to 44OS.',
-      store: 'Browse releases from creators on 44 and add them to your Music Library.',
+      library: 'Albums, singles, EPs, and owned releases you have saved or purchased.',
+      store: 'Browse releases from creators and add them to your Music Library.',
     },
   },
   books: {
@@ -49,8 +49,8 @@ const EXPERIENCE_CONFIG: Record<ExperienceConfig['id'], ExperienceConfig> = {
     pluralNoun: 'books',
     experience: 'book',
     copy: {
-      library: 'Digital books and artbooks you own inside 44OS.',
-      store: 'Browse digital books and artbooks from creators on 44.',
+      library: 'Digital books and artbooks you own.',
+      store: 'Browse digital books and artbooks from creators.',
     },
   },
   assets: {
@@ -62,7 +62,7 @@ const EXPERIENCE_CONFIG: Record<ExperienceConfig['id'], ExperienceConfig> = {
     pluralNoun: 'sample packs',
     experience: 'asset',
     copy: {
-      library: 'Samples, templates, presets, and creator tools you own inside 44OS.',
+      library: 'Samples, templates, presets, and creator tools you own.',
       store: 'Browse useful sample packs and creator tools and add them to your Sample Pack Library.',
     },
   },
@@ -252,7 +252,7 @@ export function ExperienceApp({ app, route }: { app: ExperienceConfig['id']; rou
             <>
               <EmptyMessage>No {config.pluralNoun} in your Library yet.</EmptyMessage>
               <div style={{ marginTop: 'var(--os-space-4)' }}>
-                <Link className="os-button os-button-primary" href={`/${config.id}/store`}>
+                <Link className="os-button os-button-primary" href={browseIndexHref(config.id)}>
                   Explore {config.title}
                 </Link>
               </div>

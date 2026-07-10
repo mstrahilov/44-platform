@@ -61,8 +61,8 @@ export default function ResourcesCategoryPage({ params }: { params: Promise<{ ca
 }
 
 const RESOURCE_CATEGORY_DESCRIPTIONS: Record<string, string> = {
-  guides: 'Step-by-step guides and reference material from 44 creators.',
-  articles: 'Essays and long-form writing from the 44 community.',
+  guides: 'Step-by-step guides and reference material from creators.',
+  articles: 'Essays and long-form writing from the community.',
   templates: 'Reusable templates and starter files for your own projects.',
   downloads: 'Files, packs, and assets to grab and use.',
   lessons: 'Structured lessons that teach a specific skill or process.',

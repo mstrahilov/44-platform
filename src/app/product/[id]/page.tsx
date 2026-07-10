@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { notFound, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useContextMenu, COPY_TO_CLIPBOARD_TOAST_EVENT } from '@/components/ContextMenu';
 import { supabase } from '@/lib/supabase';
@@ -9,7 +9,7 @@ import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
 import { browseHref, formatProductPrice, productMeta } from '@/lib/products';
 import { isFreeLibraryClaim } from '@/lib/libraryContent';
-import { getProductExperience, productLibraryHref, productStoreHref, storeIndexHref } from '@/lib/experience';
+import { browseIndexHref, getProductExperience, productBrowseHref, productLibraryHref } from '@/lib/experience';
 import { creatorHref } from '@/lib/platform';
 import { ProductGrid, ProductCard } from '@/components/Ui';
 import { ProductReviewsSection } from '@/components/ProductReviewsSection';
@@ -30,7 +30,8 @@ type ProductTrack = {
 };
 
 export default function ProductPage() {
-  notFound();
+  const { id } = useParams<{ id: string }>();
+  return <ProductStoreDetail identifier={id} legacyRedirect />;
 }
 
 export function ProductStoreDetail({
@@ -65,7 +66,7 @@ export function ProductStoreDetail({
   const [inferredTrackDurations, setInferredTrackDurations] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
-  useTopbarBack({ href: backHref ?? '/', label: backLabel ?? 'Home' });
+  useTopbarBack({ href: backHref ?? '/browse', label: backLabel ?? 'Browse' });
 
   useEffect(() => {
     async function fetchProduct() {
@@ -83,12 +84,12 @@ export function ProductStoreDetail({
       setLoading(false);
 
       if (data && merchPage && getProductExperience(data) !== 'physical') {
-        router.replace(productStoreHref(data));
+        router.replace(productBrowseHref(data));
         return;
       }
 
       if (data && legacyRedirect) {
-        const target = productStoreHref(data);
+        const target = productBrowseHref(data);
         router.replace(target);
         return;
       }
@@ -201,7 +202,7 @@ export function ProductStoreDetail({
       price_cents: price.cents,
       currency: price.currency,
       slug: product.slug ?? null,
-      href: productStoreHref(product),
+      href: productBrowseHref(product),
     });
   }
 
@@ -249,7 +250,7 @@ export function ProductStoreDetail({
   const creatorLink = creatorHref(product.creators ?? product.creator);
   const creatorTabLink = `${creatorLink}${creatorLink.includes('?') ? '&' : '?'}tab=${creatorProfileTab(productExperience)}${product.id ? `&fromProduct=${encodeURIComponent(product.id)}` : ''}`;
   const creatorMoreLink = `${creatorLink}${creatorLink.includes('?') ? '&' : '?'}tab=${creatorProfileTab(productExperience)}`;
-  const libraryHref = ownedLibraryItemId ? productLibraryHref(product, ownedLibraryItemId) : storeIndexHref(product).replace('/store', '/library');
+  const libraryHref = ownedLibraryItemId ? productLibraryHref(product, ownedLibraryItemId) : browseIndexHref(product).replace('/browse', '/library');
 
   const hasDescription = Boolean(product.long_description || product.short_description);
   const description = product.long_description || product.short_description || '';
@@ -285,7 +286,7 @@ export function ProductStoreDetail({
 
   function shareTrackLink(track: ProductTrack) {
     if (!product) return;
-    const url = typeof window !== 'undefined' ? new URL(productStoreHref(product), window.location.origin) : null;
+    const url = typeof window !== 'undefined' ? new URL(productBrowseHref(product), window.location.origin) : null;
     if (!url) return;
     url.searchParams.set('track', track.id);
     if (user?.id) url.searchParams.set('ref', user.id);
@@ -509,7 +510,7 @@ function getStoreHeroCopy(experience: ReturnType<typeof getProductExperience>) {
   if (experience === 'asset') {
     return 'Purchase this asset pack to unlock the full download and keep it in your creative library.';
   }
-  return 'Purchase this item to support the creator and keep it with your 44 collection.';
+  return 'Purchase this item to support the creator and keep it with your Library.';
 }
 
 function resolveStoreActions({
@@ -549,7 +550,7 @@ function resolveStoreActions({
 
   if (experience === 'book') {
     return [
-      { label: 'Read Sample', href: product.read_url || productStoreHref(product) },
+      { label: 'Read Sample', href: product.read_url || productBrowseHref(product) },
       canClaimToLibrary
         ? owned
           ? { label: 'View in Library', href: libraryHref, secondary: true }

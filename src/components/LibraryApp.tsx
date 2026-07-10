@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useContextMenu, type ContextMenuEntry } from '@/components/ContextMenu';
 import { PageShell, HubHero, HubSection, CenteredMessage, EmptyMessage } from '@/components/Ui';
 import { useTopbarTabs } from '@/components/TopbarContext';
-import { getProductExperience, productLibraryHref, type ProductExperience } from '@/lib/experience';
+import { browseIndexHref, getProductExperience, productLibraryHref, type ProductExperience } from '@/lib/experience';
 import { pinDockItem } from '@/lib/dockPreferences';
 import type { LibraryCategory } from '@/lib/libraryRoutes';
 import type { Product } from '@/lib/products';
@@ -29,27 +29,27 @@ const CATEGORY_EXPERIENCE: Partial<Record<LibraryCategory, ProductExperience>> =
 const CATEGORY_COPY: Record<LibraryCategory, { title: string; copy: string; empty: string; storeHref: string }> = {
   all: {
     title: 'Library',
-    copy: 'Everything you have added or purchased on 44.',
+    copy: 'Everything you have saved, added, or purchased.',
     empty: 'Your library is empty.',
-    storeHref: '/',
+    storeHref: '/browse',
   },
   music: {
     title: 'Music',
     copy: 'Saved releases. Purchased music unlocks downloads.',
     empty: 'No saved music yet.',
-    storeHref: '/store/music',
+    storeHref: browseIndexHref('music'),
   },
   books: {
     title: 'Books',
-    copy: 'Books and artbooks you own on 44.',
+    copy: 'Books and artbooks you own.',
     empty: 'No books in your library yet.',
-    storeHref: '/store/books',
+    storeHref: browseIndexHref('books'),
   },
   assets: {
     title: 'Sample Packs',
-    copy: 'Sample packs, remix stems, and creative files you own on 44.',
+    copy: 'Sample packs, remix stems, and creative files you own.',
     empty: 'No sample packs in your library yet.',
-    storeHref: '/store/assets',
+    storeHref: browseIndexHref('assets'),
   },
 };
 

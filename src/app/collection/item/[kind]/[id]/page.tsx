@@ -5,6 +5,6 @@ export default async function LegacyLibraryItemRedirect({
 }: {
   params: Promise<{ kind: string; id: string }>;
 }) {
-  const { kind, id } = await params;
-  permanentRedirect(`/library/item/${kind}/${id}`);
+  const { id } = await params;
+  permanentRedirect(`/library/item/${id}`);
 }

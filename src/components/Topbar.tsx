@@ -70,7 +70,7 @@ type NotificationState = {
 function labelForPath(path: string | null | undefined) {
   if (!path) return null;
   if (path.startsWith('/library')) return 'Library';
-  if (path.startsWith('/store') || path.startsWith('/product') || path.startsWith('/cart')) return 'Home';
+  if (path.startsWith('/browse') || path.startsWith('/store') || path.startsWith('/product') || path.startsWith('/cart')) return 'Browse';
   if (path.startsWith('/community')) return 'Community';
   if (path.startsWith('/dashboard')) return 'Dashboard';
   if (path.startsWith('/profile')) return 'Profile';
@@ -80,7 +80,7 @@ function labelForPath(path: string | null | undefined) {
   if (path.startsWith('/merch') || path.startsWith('/shop')) return 'Merch';
   if (path.startsWith('/resources')) return 'Community';
   if (path.startsWith('/services') || path.startsWith('/service')) return 'Services';
-  if (path === '/' || path.startsWith('/home')) return 'Home';
+  if (path === '/' || path.startsWith('/home')) return 'Browse';
   return null;
 }
 
@@ -253,7 +253,7 @@ export function Topbar() {
   async function handleSignOut() {
     setUserMenuOpen(false);
     await supabase.auth.signOut();
-    router.push('/');
+    router.push('/browse');
     router.refresh();
   }
 

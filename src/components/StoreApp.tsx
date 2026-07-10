@@ -3,17 +3,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { PageShell, ProductCard, ProductGrid, HubHero, HubSection, EmptyMessage } from '@/components/Ui';
 import { useTopbarTabs } from '@/components/TopbarContext';
-import { getProductExperience, type ProductExperience } from '@/lib/experience';
+import { browseIndexHref, getProductExperience, type ProductExperience } from '@/lib/experience';
 import type { Product } from '@/lib/products';
 import type { StoreCategory } from '@/lib/storeRoutes';
 import { supabase } from '@/lib/supabase';
 
 const STORE_TABS: Array<{ id: StoreCategory; label: string; href: string }> = [
-  { id: 'all', label: 'Discover', href: '/' },
-  { id: 'music', label: 'Music', href: '/store/music' },
-  { id: 'books', label: 'Books', href: '/store/books' },
-  { id: 'merch', label: 'Merch', href: '/store/merch' },
-  { id: 'assets', label: 'Sample Packs', href: '/store/assets' },
+  { id: 'all', label: 'Browse', href: '/browse' },
+  { id: 'music', label: 'Music', href: browseIndexHref('music') },
+  { id: 'books', label: 'Books', href: browseIndexHref('books') },
+  { id: 'merch', label: 'Merch', href: browseIndexHref('merch') },
+  { id: 'assets', label: 'Sample Packs', href: browseIndexHref('assets') },
 ];
 
 const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
@@ -25,28 +25,28 @@ const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
 
 const CATEGORY_COPY: Record<StoreCategory, { title: string; copy: string; empty: string }> = {
   all: {
-    title: 'Discover',
-    copy: 'Discover music, books, sample packs, and merch on 44.',
+    title: 'Browse',
+    copy: 'Find releases, books, sample packs, and merch from independent creators.',
     empty: 'No items are published yet.',
   },
   music: {
     title: 'Music',
-    copy: 'Explore the latest music releases from our community.',
+    copy: 'Explore albums, EPs, singles, and releases built to grow over time.',
     empty: 'No music releases are published yet.',
   },
   books: {
     title: 'Books',
-    copy: 'Explore art books, poetry, and short stories from our community.',
+    copy: 'Explore art books, poetry, and stories from independent creators.',
     empty: 'No books are published yet.',
   },
   assets: {
     title: 'Sample Packs',
-    copy: 'Explore sample packs, remix stems, and other creative tools from our community.',
+    copy: 'Explore sample packs, remix stems, and creative tools for your work.',
     empty: 'No sample packs are published yet.',
   },
   merch: {
     title: 'Merch',
-    copy: 'Explore apparel, accessories and other goods from our community.',
+    copy: 'Explore apparel, accessories, and physical goods from creators.',
     empty: 'No merch is published yet.',
   },
 };
@@ -114,7 +114,7 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
           ) : (
             <>
               {musicProducts.length > 0 && (
-                <HubSection title="Explore Music" href="/store/music">
+                <HubSection title="Explore Music" href={browseIndexHref('music')}>
                   <ProductGrid>
                     {musicProducts.map(product => (
                       <ProductCard key={product.id} product={product} />
@@ -123,7 +123,7 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
                 </HubSection>
               )}
               {bookProducts.length > 0 && (
-                <HubSection title="Explore Books" href="/store/books">
+                <HubSection title="Explore Books" href={browseIndexHref('books')}>
                   <ProductGrid>
                     {bookProducts.map(product => (
                       <ProductCard key={product.id} product={product} />
@@ -132,7 +132,7 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
                 </HubSection>
               )}
               {apparelProducts.length > 0 && (
-                <HubSection title="Explore Merch" href="/store/merch">
+                <HubSection title="Explore Merch" href={browseIndexHref('merch')}>
                   <ProductGrid>
                     {apparelProducts.map(product => (
                       <ProductCard key={product.id} product={product} />
@@ -141,7 +141,7 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
                 </HubSection>
               )}
               {assetProducts.length > 0 && (
-                <HubSection title="Explore Sample Packs" href="/store/assets">
+                <HubSection title="Explore Sample Packs" href={browseIndexHref('assets')}>
                   <ProductGrid>
                     {assetProducts.map(product => (
                       <ProductCard key={product.id} product={product} />

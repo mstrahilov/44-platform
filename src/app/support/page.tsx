@@ -55,7 +55,7 @@ const ARTICLES: SupportArticle[] = [
     question: 'Customize the Dock',
     answer: [
       'Open Settings, then Dock, to switch between Full and Compact mode, choose visible apps, and select your landing app.',
-      'Search, Browse, Radio, Community, Messages, Profile, Library, Dashboard, Support, and Settings are the current Dock surfaces where your account can access them.',
+      'Library, Search, Browse, Community, Radio, Support, Dashboard, and Settings are the current Dock surfaces where your account can access them.',
       'Signed-out visitors see public surfaces and Log In instead of personal apps.',
     ],
     actions: [{ label: 'Open Dock Settings', href: '/settings?tab=dock' }],

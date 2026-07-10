@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { formatServicePrice, type Profile, type Service } from '@/lib/platform';
 import type { Product } from '@/lib/products';
-import { getProductExperience, productStoreHref } from '@/lib/experience';
+import { getProductExperience, productBrowseHref } from '@/lib/experience';
 import { PageShell, CenteredMessage } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
 import { SocialArtifactCard, SocialAvatar, SocialPostRow } from '@/components/Social';
@@ -442,7 +442,7 @@ export default function PublicProfilePage() {
             {musicProducts.map(product => (
               <SocialArtifactCard
                 key={product.id}
-                href={productStoreHref(product)}
+                href={productBrowseHref(product)}
                 title={product.title}
                 meta={profileProductMeta(product, 'Release')}
                 image={product.cover_url}
@@ -456,7 +456,7 @@ export default function PublicProfilePage() {
             {bookProducts.map(product => (
               <SocialArtifactCard
                 key={product.id}
-                href={productStoreHref(product)}
+                href={productBrowseHref(product)}
                 title={product.title}
                 meta={profileProductMeta(product, 'Book')}
                 image={product.cover_url}
@@ -470,7 +470,7 @@ export default function PublicProfilePage() {
             {assetProducts.map(product => (
               <SocialArtifactCard
                 key={product.id}
-                href={productStoreHref(product)}
+                href={productBrowseHref(product)}
                 title={product.title}
                 meta={profileProductMeta(product, 'Sample Pack')}
                 image={product.cover_url}

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { PageShell, GlassPanel, HubHero } from '@/components/Ui';
+import { PageShell, HubHero } from '@/components/Ui';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { UploadField } from '@/components/UploadField';
@@ -444,7 +444,7 @@ export default function EditProductPage() {
       }
     }
 
-      const featureError = (section.id === 'music' || section.id === 'books') ? await saveReleaseFeatures({
+      const featureError = section.id === 'music' ? await saveReleaseFeatures({
         supabaseClient: supabase,
         productId: id,
         sectionId: section.id,
@@ -511,13 +511,13 @@ export default function EditProductPage() {
 
   const hasTracks = tracks.some(track => track.title.trim() || track.audioUrl.trim());
   const deleteDescription = hasTracks || isMusicProduct
-    ? 'Delete this release? This will permanently remove the release and its tracklist from 44.'
-    : `Delete this ${section.itemLabel}? This will permanently remove it from 44.`;
+    ? 'Delete this release? This will permanently remove the release and its tracklist.'
+    : `Delete this ${section.itemLabel}? This will permanently remove it.`;
 
   return (
     <PageShell>
       <div className="dashboard-editor">
-        <HubHero title={section.editTitle} copy={`Update this ${section.itemLabel} inside 44.`} />
+        <HubHero title={section.editTitle} copy={`Update this ${section.itemLabel} for Browse and Library.`} />
         <div className="dashboard-section">
           <form onSubmit={handleSubmit} className="dashboard-form">
             <label className="dashboard-field"><div className="dashboard-field-label">{isMerchProduct ? 'Product Name' : 'Title'}</div><input className="os-input-field" value={title} onChange={e => setTitle(e.target.value)} /></label>
@@ -537,6 +537,15 @@ export default function EditProductPage() {
                 </select>
               </label>
               <label className="dashboard-field"><div className="dashboard-field-label">{isMerchProduct ? 'Drop Year' : 'Release Year'}</div><input className="os-input-field" value={year} onChange={e => setYear(e.target.value.replace(/\D/g, '').slice(0, 4))} /></label>
+              {!merchUsesLocalOnlyPricing ? (
+                <label className="dashboard-field">
+                  <div className="dashboard-field-label">{isMerchProduct ? 'Global Price' : 'Price'}</div>
+                  <span className="dashboard-price-input">
+                    <span>{currencySymbol('USD')}</span>
+                    <input className="os-input-field" value={price} onChange={e => setPrice(formatPriceInput(e.target.value))} />
+                  </span>
+                </label>
+              ) : null}
             </div>
 
             {isMerchProduct ? (
@@ -595,15 +604,6 @@ export default function EditProductPage() {
             ) : null}
 
             <div className="dashboard-form-grid dashboard-form-grid-3">
-              {!merchUsesLocalOnlyPricing ? (
-                <label className="dashboard-field">
-                  <div className="dashboard-field-label">{isMerchProduct ? 'Global Price' : 'Price'}</div>
-                  <span className="dashboard-price-input">
-                    <span>{currencySymbol('USD')}</span>
-                    <input className="os-input-field" value={price} onChange={e => setPrice(formatPriceInput(e.target.value))} />
-                  </span>
-                </label>
-              ) : null}
               {(isMerchProduct ? merchUsesLocalOnlyPricing : marketMode !== 'global') && (
                 <label className="dashboard-field">
                   <div className="dashboard-field-label">{merchUsesLocalOnlyPricing ? `Price (${localCurrency})` : `Local Price (${localCurrency})`}</div>
@@ -683,10 +683,10 @@ export default function EditProductPage() {
                   </label>
                 </div>
 
-                <div style={{ display: 'grid', gap: 16 }}>
+                <div className="dashboard-track-editor-list">
                   {tracks.slice(0, Number(trackCount || '0')).map((track, index) => (
-                    <GlassPanel key={track.id ?? `track-${index}`} style={{ padding: 18 }}>
-                      <div style={{ display: 'grid', gap: 16 }}>
+                    <div key={track.id ?? `track-${index}`} className="dashboard-track-editor-row">
+                      <div className="dashboard-track-editor-copy">
                         <div className="dashboard-field-label">{index + 1}. Track Title</div>
 
                         <div className="dashboard-form-grid">
@@ -711,13 +711,13 @@ export default function EditProductPage() {
                           onChange={nextValue => updateTrack(index, { audioUrl: nextValue })}
                         />
                       </div>
-                    </GlassPanel>
+                    </div>
                   ))}
                 </div>
               </div>
             ) : null}
 
-            {(section.id === 'music' || section.id === 'books') ? (
+            {section.id === 'music' ? (
               <DashboardReleaseFeatures
                 sectionId={section.id}
                 userId={user.id}

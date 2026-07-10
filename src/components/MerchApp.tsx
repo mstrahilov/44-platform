@@ -34,7 +34,7 @@ export function MerchApp({ route }: { route: MerchRoute }) {
   return (
     <PageShell>
       <main className="app-page">
-        <HubHero title="Merch" copy="Physical goods from 44 and creators: apparel, merch, and shipped items." />
+        <HubHero title="Merch" copy="Physical goods from creators: apparel, merch, and shipped items." />
 
         {loading ? (
           <EmptyMessage>Loading...</EmptyMessage>

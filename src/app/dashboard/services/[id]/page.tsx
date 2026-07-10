@@ -254,7 +254,7 @@ export default function EditServicePage() {
         <ConfirmDialog
           open={showDeleteConfirm}
           title="Delete Service"
-          description="Delete this service? This will permanently remove it from 44."
+          description="Delete this service? This will permanently remove it."
           confirmLabel="Delete Service"
           destructive
           busy={deleting}

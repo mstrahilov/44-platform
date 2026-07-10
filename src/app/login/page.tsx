@@ -85,7 +85,7 @@ export default function LoginPage() {
         setStatus(authMessage(error.message));
         return;
       }
-      router.push('/');
+      router.push('/browse');
       return;
     }
 
@@ -101,7 +101,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOtp({
       email: cleanEmail,
       options: {
-        emailRedirectTo: getSitePathUrl('/'),
+        emailRedirectTo: getSitePathUrl('/browse'),
       },
     });
 
@@ -152,7 +152,7 @@ export default function LoginPage() {
 
           <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', marginBottom: 32, maxWidth: 380 }}>
             {mode === 'signup'
-              ? 'Use your name, email, and password to create access to 44. After verification, you will choose a username and profile photo for community.'
+              ? 'Use your name, email, and password to create your account. After verification, you will choose a username and profile photo for Community.'
               : 'Log in to use your library, community identity, and creator tools.'}
           </p>
 

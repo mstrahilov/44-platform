@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { creatorHref, type Profile } from '@/lib/platform';
 import Link from 'next/link';
+import { SectionHeader } from '@/components/Ui';
 
 type UpdateProfile = Pick<Profile, 'id' | 'slug' | 'username' | 'display_name' | 'avatar_url'>;
 
@@ -56,9 +57,10 @@ export function ProductUpdatesSection({
 
   return (
     <div className="view-section">
-      <div className="item-community-header" style={{ marginBottom: 16 }}>
-        <h2 className="view-section-title" style={{ margin: 0 }}>Creator Updates</h2>
-      </div>
+      <SectionHeader
+        title="Creator Updates"
+        description="Updates are the creator's living notes for this release: changes, context, fixes, and new material."
+      />
 
       {error && <div className="dashboard-status dashboard-status-error" style={{ marginBottom: 16 }}>{error}</div>}
 

@@ -28,7 +28,7 @@ export const LANDING_PAGES: Array<{ id: LandingPageId; label: string; href: stri
 ];
 
 const LEGACY_LANDING_PAGE_HREFS: Partial<Record<LandingPageId, string>> = {
-  shop: '/store/merch',
+  shop: '/browse/merch',
   home: '/',
 };
 

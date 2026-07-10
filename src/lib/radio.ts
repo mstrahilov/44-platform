@@ -1,4 +1,5 @@
 import { creatorHref } from '@/lib/platform';
+import { productBrowseHref } from '@/lib/experience';
 import { isMissingRelationError } from '@/lib/schemaCompat';
 import { supabase } from '@/lib/supabase';
 
@@ -143,8 +144,8 @@ export async function loadRadioBundle(): Promise<RadioBundle> {
       durationSeconds: track.duration_seconds,
       productId: product.id,
       releaseTitle: product.title,
-      releaseHref: `/product/${product.id}`,
-      trackHref: `/product/${product.id}?track=${track.id}`,
+      releaseHref: productBrowseHref(product),
+      trackHref: `${productBrowseHref(product)}?track=${track.id}`,
       trackNumber: track.number ?? null,
       sortOrder: entry.sort_order,
     }];

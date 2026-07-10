@@ -191,7 +191,7 @@ export default function EditResourcePage() {
         <ConfirmDialog
           open={showDeleteConfirm}
           title="Delete Resource"
-          description="Delete this resource? This will permanently remove it from 44."
+          description="Delete this resource? This will permanently remove it."
           confirmLabel="Delete Resource"
           destructive
           busy={deleting}

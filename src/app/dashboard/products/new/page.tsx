@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { PageShell, GlassPanel, HubHero, CenteredMessage } from '@/components/Ui';
+import { PageShell, HubHero, CenteredMessage } from '@/components/Ui';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { UploadField } from '@/components/UploadField';
 import {
@@ -347,7 +347,7 @@ function NewProductContent() {
       }
     }
 
-    if (insertedProduct?.id && (section.id === 'music' || section.id === 'books')) {
+    if (insertedProduct?.id && section.id === 'music') {
       const featureError = await saveReleaseFeatures({
         supabaseClient: supabase,
         productId: insertedProduct.id,
@@ -399,18 +399,27 @@ function NewProductContent() {
               </label>
 
               <div className="dashboard-form-grid dashboard-form-grid-3">
-              <label className="dashboard-field">
-                <div className="dashboard-field-label">{section.typeLabel}</div>
-                <select className="os-input-field" value={productType} onChange={event => setProductType(event.target.value)}>
-                  {section.typeOptions.map(option => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="dashboard-field">
-                <div className="dashboard-field-label">{isMerchProduct ? 'Drop Year' : 'Release Year'}</div>
-                <input className="os-input-field" value={year} onChange={event => setYear(event.target.value.replace(/[^0-9]/g, '').slice(0, 4))} placeholder="2026" />
-              </label>
+                <label className="dashboard-field">
+                  <div className="dashboard-field-label">{section.typeLabel}</div>
+                  <select className="os-input-field" value={productType} onChange={event => setProductType(event.target.value)}>
+                    {section.typeOptions.map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="dashboard-field">
+                  <div className="dashboard-field-label">{isMerchProduct ? 'Drop Year' : 'Release Year'}</div>
+                  <input className="os-input-field" value={year} onChange={event => setYear(event.target.value.replace(/[^0-9]/g, '').slice(0, 4))} placeholder="2026" />
+                </label>
+                {!merchUsesLocalOnlyPricing ? (
+                  <label className="dashboard-field">
+                    <div className="dashboard-field-label">{isMerchProduct ? 'Global Price' : 'Price'}</div>
+                    <span className="dashboard-price-input">
+                      <span>{currencySymbol('USD')}</span>
+                      <input className="os-input-field" value={price} onChange={event => setPrice(formatPriceInput(event.target.value))} />
+                    </span>
+                  </label>
+                ) : null}
               </div>
 
               {isMerchProduct ? (
@@ -469,16 +478,6 @@ function NewProductContent() {
               ) : null}
 
               <div className="dashboard-form-grid dashboard-form-grid-3">
-              {!merchUsesLocalOnlyPricing ? (
-                <label className="dashboard-field">
-                  <div className="dashboard-field-label">{isMerchProduct ? 'Global Price' : 'Price'}</div>
-                  <span className="dashboard-price-input">
-                    <span>{currencySymbol('USD')}</span>
-                    <input className="os-input-field" value={price} onChange={event => setPrice(formatPriceInput(event.target.value))} />
-                  </span>
-                </label>
-              ) : null}
-
               {(isMerchProduct ? merchUsesLocalOnlyPricing : marketMode !== 'global') && (
                 <label className="dashboard-field">
                   <div className="dashboard-field-label">{merchUsesLocalOnlyPricing ? `Price (${localCurrency})` : `Local Price (${localCurrency})`}</div>
@@ -601,10 +600,10 @@ function NewProductContent() {
                   </label>
                 </div>
 
-                <div style={{ display: 'grid', gap: 16 }}>
+                <div className="dashboard-track-editor-list">
                   {tracks.slice(0, Number(trackCount || '0')).map((track, index) => (
-                    <GlassPanel key={`track-${index}`} style={{ padding: 18 }}>
-                      <div style={{ display: 'grid', gap: 16 }}>
+                    <div key={`track-${index}`} className="dashboard-track-editor-row">
+                      <div className="dashboard-track-editor-copy">
                         <div className="dashboard-field-label">{index + 1}. Track Title</div>
 
                         <div className="dashboard-form-grid">
@@ -629,13 +628,13 @@ function NewProductContent() {
                           onChange={nextValue => updateTrack(index, { audioUrl: nextValue })}
                         />
                       </div>
-                    </GlassPanel>
+                    </div>
                   ))}
                 </div>
               </div>
             ) : null}
 
-            {(section.id === 'music' || section.id === 'books') ? (
+            {section.id === 'music' ? (
               <DashboardReleaseFeatures
                 sectionId={section.id}
                 userId={user.id}

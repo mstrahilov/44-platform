@@ -70,12 +70,12 @@ type FollowingState = {
 const COMMUNITY_COPY: Record<'feed' | 'following' | 'questions' | 'collaboration' | 'topic', { title: string; copy: string; empty: string }> = {
   feed: {
     title: 'Posts',
-    copy: 'General posts from the 44 community.',
+    copy: 'General posts from creators and fans.',
     empty: 'No posts yet.',
   },
   following: {
     title: 'Following',
-    copy: 'Posts from people you follow on 44.',
+    copy: 'Posts from people you follow.',
     empty: 'No posts from people you follow yet.',
   },
   questions: {
@@ -973,7 +973,7 @@ function CommunityPageContent() {
                       ? 'What do you need help with?'
                       : activeCommunityTab === 'collaboration'
                         ? 'Who are you looking for, and what are you building?'
-                        : "What's happening on 44?"
+                        : "What are you working on?"
                     : 'Sign in to post to Community.'
                 }
                 rows={3}

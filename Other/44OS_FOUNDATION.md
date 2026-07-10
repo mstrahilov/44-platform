@@ -16,31 +16,30 @@ Do not revive deleted planning documents or old SQL notes as active references. 
 
 44 is the parent creative company. 44OS is a web-first creative operating system for fans, creators, collaborators, and clients. It ships first as a Next.js app on Vercel and will later be wrapped for macOS and Windows.
 
+44OS exists to give underground creatives and their fans a home outside ad-driven, algorithm-driven platforms. The product should feel closer to a creator operating system than a social app: a place where people publish, collect, listen, read, explore, ask questions, follow each other, collaborate, sell work, and build cultural memory around releases.
+
 The launch mental model is:
 
 - **Browse**: the user-facing discovery and acquisition app.
-- **Store**: the underlying route/system name for Browse. Keep `/store` stable under the hood.
 - **Library**: the signed-in user's owned, saved, purchased, or added items.
-- **Community**: public social and creator-knowledge surface.
+- **Community**: public posts, questions, collaboration, follows, and creator/fan connection.
 - **Radio**: public listening surface.
-- **Dashboard**: signed-in creator workspace.
+- **Dashboard**: signed-in creator workspace for publishing and catalog health.
 - **Settings**: signed-in system, Dock, region, and account controls.
 - **Support**: public help surface.
 
-Services, Resources, Projects, Friends, and older category app routes are not v1 Dock destinations. They may exist as hidden or compatibility surfaces, but they should not appear as polished launch apps until their product strategy is intentionally restored.
+Services, Resources, Projects, Friends, Messages, and standalone Profile are not v1 Dock destinations. They may exist as hidden, account-menu, profile, or compatibility surfaces, but they should not appear as polished launch apps until their strategy is intentionally restored.
 
 Language rules:
 
-- User-facing copy says Browse, Store item, Library, music, books, sample packs, merch, releases, items, reviews, updates, earnings, and sold items.
-- UI copy should not use "products" as the generic catalog word. The database table can remain `products`.
-- UI copy should not use "collection"; use Library.
+- User-facing copy says Browse, Library, Community, release, item, music, book, sample pack, merch, review, creator update, bonus content, earnings, and orders.
+- UI copy should not use "Store" or "Collection" as the visible product model.
+- The database table can remain `products`; user-facing copy should prefer "items" or format-specific nouns.
 - Services are excluded from the v1 polished Browse surface.
 
 ---
 
 ## 2. North Star
-
-44OS exists to give underground creatives and their fans a home outside ad-driven, algorithm-driven platforms. The product should feel closer to a creator operating system than a social app: a place where people publish, collect, listen, read, explore, ask questions, follow each other, collaborate, sell work, and build cultural memory around releases.
 
 The closest strategic reference is Steam/Valve, adapted for music, books, art, services, games, interactive releases, and local creative economies:
 
@@ -52,103 +51,67 @@ The closest strategic reference is Steam/Valve, adapted for music, books, art, s
 Core doctrine:
 
 - **Creator-first, fan-respecting**: no dark patterns, no algorithmic addiction loops, no ad-first design.
-- **Technology hidden, power exposed**: creators should not need to understand achievement tracking, local/global pricing, Supabase events, file unlocks, or interactive-experience APIs. The Dashboard should expose clear choices and 44OS should handle the machinery.
-- **Library as memory**: when a fan adds a release, finds a hidden item, unlocks an achievement, watches bonus content, or joins an experience, the Library should become the durable record of that relationship.
-- **Community as infrastructure**: posts, follows, questions, collaboration, profiles, and messages are not engagement bait. They exist so people can learn, find each other, support each other, and build creative scenes.
-- **Global reach, local fairness**: creators should be able to sell globally at a fair global price while optionally offering local pricing that respects their home community and currency.
+- **Technology hidden, power exposed**: creators should not need to understand achievement tracking, local/global pricing, Supabase events, file unlocks, or interactive-experience APIs.
+- **Library as memory**: when a fan adds a release, unlocks an achievement, receives bonus content, or joins an experience, the Library becomes the durable record of that relationship.
+- **Community as infrastructure**: posts, follows, questions, collaboration, profiles, and later messages exist so people can learn, find each other, support each other, and build creative scenes.
+- **Global reach, local fairness**: creators can sell globally at a fair global price while optionally offering local pricing that respects their home community and currency.
 - **Flagship experiences lead the system**: 44 should use major releases to prove new capabilities, then productize those capabilities for other creators.
 
-Long-term capability model:
-
-- Music, books, sample packs, merch, games, tools, and future creative formats live in the Store/Browse catalog.
-- The Library stores owned/saved items, bonus files, achievements, creator updates, commentary, behind-the-scenes material, hidden unlocks, and future interactive artifacts.
-- Achievements should feel automatic to creators. They define intent; 44OS tracks listening, reading, unlocks, timing, progress, and events.
-- Interactive experiences can eventually send trusted events back to 44OS. Example: a Unity-built museum experience lets a fan discover a hidden book; the experience reports the event; Supabase records the unlock; the fan later sees that book in their Library.
-- Services eventually return as a creator earning surface, with local/global pricing and simple project workflows.
-- Dashboard publishing should stay boring in the best way: clear fields, clear previews, clear pricing, clear release tools, no unnecessary technical burden.
-
-Version 1.0 should not try to ship every long-term capability. It should establish the correct foundation: Store/Browse, Library, profiles, Community, Dashboard publishing, global/local pricing groundwork, achievements groundwork, and a visual/technical system that can grow into the fuller vision.
+Version 1.0 should establish the correct foundation: Browse, Library, profiles, Community, Dashboard publishing, global/local pricing groundwork, music achievements, Overachiever Bonus Content, and a visual/technical system that can grow into future interactive releases.
 
 ---
 
-## 3. Launch Doctrine
-
-44OS 1.0 is not only for established creators. It should also support the person who has been drawing, writing, producing, coding, filming, or making music privately for years and has never published because the current creative industries feel expensive, confusing, gatekept, or socially intimidating.
+## 3. Launch Journeys
 
 Important launch journeys:
 
 - **Fan journey**: discover work in Browse, add it to Library, follow the creator, read creator updates, unlock achievements, discuss it in Community, and come back as the release evolves.
 - **Early creator journey**: join Community, ask practical questions, learn how publishing works, find collaborators, build confidence, publish a first release, then use updates and Library features to keep improving it.
-- **Working creator journey**: publish music/books/sample packs/merch, configure fair global/local pricing, add achievements/bonus content, post updates, interact with fans, and track catalog health in Dashboard.
+- **Working creator journey**: publish music/books/sample packs/merch, configure fair global/local pricing, add music achievements/bonus content where supported, post updates, interact with fans, and track catalog health in Dashboard.
 - **Collaborator journey**: find people through Community questions/collaboration, profiles, posts, and eventually Services/Projects.
 - **Flagship release journey**: experience a 44 release that demonstrates achievements, bonus content, behind-the-scenes material, Library memory, and eventually interactive 3D/Unity/WebGL unlocks.
 
 Creator-fan distance should be low:
 
 - Creator profiles connect posts, releases, Library items, updates, and future services.
-- Store item pages explain the release and acquisition.
+- Browse item pages explain the release and acquisition.
 - Library item pages show the deeper relationship: owned status, play/read/download, achievements, updates, bonus content, and future Launch actions.
-- Creator Updates are the 44OS version of patch notes, release notes, dev logs, and album/project updates. They make a release feel alive instead of frozen after distribution.
+- Creator Updates are the 44OS version of patch notes, release notes, dev logs, and album/project updates.
 - Community is where fans and creators talk, ask, answer, collaborate, and build scenes without algorithmic pressure.
-
-Learning curve doctrine:
-
-- Do not assume creators know music distribution, mastering, LUFS, collaborators, pricing, file packaging, achievement logic, or release operations.
-- Dashboard should guide without patronizing: clear fields, plain explanations, previews, validation, and safe defaults.
-- Practical creator knowledge belongs in Community and future guided resource surfaces, not hidden in support tickets.
-- The system should turn hard technical ideas into simple creator choices.
-
-Global/local pricing doctrine:
-
-- A creator can sell to a global audience at a global price.
-- The same creator can offer a fair local price for their own region/community.
-- UI should explain this as reach plus fairness, not as a complicated finance model.
-- Supabase and pricing code should preserve both global and local pricing intent cleanly for products and, later, services.
-
-Launch copy doctrine:
-
-- Sidebar/Dock is primary navigation.
-- Topbar tabs are local navigation inside the current app.
-- Every primary page needs a clear title and one-sentence description.
-- Every tab view needs a title and description that tells the user what they can do there.
-- Sections that are obvious can use title-only headings. Sections that introduce a 44OS concept, such as Achievements, Creator Updates, Bonus Content, Collaboration, Questions, Local Pricing, or Library unlocks, should include a short explanatory description.
 
 ---
 
-## 4. Achievement Foundation Target
+## 4. Achievement Foundation
 
-Current state:
+V1.0 ships music achievements only.
 
-- Achievement tracking exists through `product_achievements`, `user_achievements`, `achievement_events`, and `achievement_progress`.
-- Dashboard achievement templates are hardcoded in `src/components/DashboardReleaseFeatures.tsx`.
-- Product achievement rows are product-specific and currently duplicate title, description, trigger, points, secret state, and icon.
-- The builder currently writes `icon: null`, which blocks the unified artwork direction.
-- Existing migrations seeded product-specific defaults for music/books, but v1.0 now ships music achievements only.
+The v1 music achievement set is:
 
-Target state for launch:
+- Front to Back
+- No Skips
+- Nightbird
+- Heavy Rotation
+- Joined the Orbit
+- Left Your Mark
+- Signal Boost
+- Overachiever
 
-- 44OS owns one central achievement template catalog with 8 v1.0 music achievement slots: Front to Back, No Skips, Nightbird, Heavy Rotation, Joined the Orbit, Left Your Mark, Signal Boost, and Overachiever.
-- Each template has one stable code, title, description, point value, sort order, secret/default state, trigger mapping, and shared artwork URL from Supabase Storage.
-- Product achievements become per-product enablement rows that reference the central template instead of acting as the source of truth for copy/artwork.
-- Creators do not hand-edit achievement text or artwork during v1. They choose whether a music release supports the 44OS achievement set and can attach Bonus Content.
-- Bonus Content is the only v1 release extra. It unlocks from Overachiever only.
-- `First Wave` is removed from v1.0 because time-limited achievements can permanently block Overachiever for late listeners.
-- Books, sample packs, merch, games, and interactive experiences can join later when their core experiences and triggers are real.
+Rules:
+
+- `First Wave` is removed from v1 because time-limited achievements can permanently block Overachiever for late listeners.
+- Book achievements are removed/hidden until the reader experience and trigger model are real.
+- Creators do not hand-edit achievement text or artwork during v1.
+- Bonus Content is the only v1 release extra and unlocks from Overachiever only.
 - Existing user unlocks must be preserved during any migration.
 
-Recommended Supabase path:
+Current code state:
 
-- Add `achievement_templates` as the central catalog.
-- Add nullable `template_id` to `product_achievements`.
-- Backfill `product_achievements.template_id` by `code`.
-- Backfill `product_achievements.icon` from the template icon URL for compatibility.
-- Keep existing `product_achievements.id` values for remaining v1 rows so `user_achievements` remains valid.
-- Remove non-v1 achievement rows, including book achievements, `First Wave`, Commentary/Director's Cut, and any future-only feature achievements.
-- Update Dashboard code to expose music achievements and Overachiever Bonus Content only.
-- Update Library/Notification code to show v1 music achievements only while preserving existing row compatibility.
-- Only after verification, consider whether legacy duplicated fields should become snapshots, overrides, or compatibility-only fields.
+- `src/lib/achievementCatalog.ts` filters Library display/tracking to the eight v1 music codes.
+- `src/components/DashboardReleaseFeatures.tsx` exposes the eight music templates and Overachiever-only Bonus Content.
+- Dashboard create/edit pages show release achievements only for music.
+- Reviewed manual SQL exists at `supabase/migrations/20260709230000_44os_v1_music_achievements.sql`.
 
-Do not run this migration directly from an agent. Create reviewed SQL first, inspect remote data, back up affected tables, and let the user run the SQL.
+Do not run this migration directly from an agent. The user should back up affected tables, confirm Supabase Storage filenames, then run the reviewed SQL manually.
 
 ---
 
@@ -161,7 +124,7 @@ Do not run this migration directly from an agent. Create reviewed SQL first, ins
 - Local scripts: `npm run dev`, `npm run lint`, `npm run build`, `npm run start`.
 - Shell entry: `src/app/layout.tsx`.
 - App registry: `src/lib/osApps.ts`.
-- Store routes: `src/lib/storeRoutes.ts`.
+- Browse/category route helpers: `src/lib/experience.ts` and compatibility category helpers in `src/lib/storeRoutes.ts`.
 - Library routes: `src/lib/libraryRoutes.ts`.
 
 Quality gates for production-facing work:
@@ -170,8 +133,6 @@ Quality gates for production-facing work:
 - `npm run build` must pass.
 - `npm run dev` should start without Turbopack root warnings.
 - Route and auth changes require manual browser QA at desktop and mobile widths.
-
-Do not delete files just because they look old. First verify references with `rg`, route ownership, and tracked status.
 
 ---
 
@@ -196,29 +157,13 @@ Navigation rules:
 - Search is a Dock app, not a persistent topbar search field.
 - Notifications are a topbar control, not a Dock app.
 - Signed-out users see public destinations only.
-- Signed-in users may see personal destinations such as Messages, Profile, Library, Dashboard, and Settings.
 
-Current public Dock target:
+Current Dock order:
 
-- Search
-- Browse
-- Radio
-- Community
-- Support
-- Log In system action
+- Signed in: Search, Browse, Radio, divider, Community, divider, Library, Dashboard, spacer, Support, Settings.
+- Signed out: Search, Browse, Radio, divider, Community, divider, Library, Dashboard, spacer, Support, Settings, divider, Log In.
 
-Current signed-in Dock target:
-
-- Search
-- Browse
-- Radio
-- Community
-- Messages
-- Profile
-- Library
-- Dashboard
-- Support
-- Settings
+Library, Dashboard, and Settings remain visible when signed out because they are core OS destinations; their pages render auth gates instead of disappearing from the shell. Messages and Profile are hidden from the v1 Dock. Keep profile/account access through avatar/profile/community surfaces where supported.
 
 ---
 
@@ -226,11 +171,9 @@ Current signed-in Dock target:
 
 Canonical public routes:
 
-- `/` - Browse front door at the apex domain.
-- `/store` - Store/Browse index.
-- `/store/[category]` - Store category: music, books, assets, merch.
-- `/store/[category]/[slug]` - Store item detail.
-- `/product/[id]` - compatibility item detail route owned by Store.
+- `/browse` - Browse front door.
+- `/browse/[category]` - Browse category: music, books, assets, merch.
+- `/browse/item/[identifier]` - Browse item detail. Resolve by slug first where available; id fallback is supported.
 - `/cart` and `/checkout` - acquisition flow.
 - `/community` - Community front door.
 - `/radio` - Radio.
@@ -242,17 +185,19 @@ Canonical signed-in routes:
 
 - `/library` - Library front door.
 - `/library/[category]` - Library category.
-- `/library/item/[kind]/[id]` and category detail routes - owned Library item detail.
-- `/inbox` - Messages.
+- `/library/item/[id]` - owned Library item detail using `library_items.id`.
 - `/profile` and `/profile/[username]` - profile surfaces.
 - `/dashboard` and dashboard subroutes - creator workspace.
 - `/settings?tab=account` - default Settings entry.
 
 Compatibility and legacy policy:
 
-- `/collection` redirects to `/library` for legacy compatibility.
-- `/browse` is not canonical.
-- `/music`, `/books`, `/assets`, `/merch`, and `/shop` are not canonical app roots.
+- `/` redirects to `/browse`.
+- `/store`, `/store/[category]`, and `/store/[category]/[slug]` redirect to Browse equivalents.
+- `/product/[id]` resolves as a compatibility hop to `/browse/item/[identifier]`.
+- `/collection` redirects to `/library`; `/collection/item/[kind]/[id]` redirects to `/library/item/[id]`.
+- `/music`, `/books`, `/assets`, `/merch`, `/shop`, and old typed `/discover`/`/store` paths redirect to Browse categories.
+- `/library/item/[kind]/[id]` remains as a legacy compatibility route and redirects to `/library/item/[id]`.
 - `/resources`, `/services`, `/service`, and `/projects` are non-launch secondary surfaces.
 - Do not add vanity redirects unless there is a real public link to preserve.
 
@@ -272,23 +217,22 @@ Rules:
 
 Current concept-to-table map:
 
-- Achievement templates: planned central table `achievement_templates`.
 - Catalog/Browse items: `products`.
 - Creator profiles and public member profiles: `profiles`.
 - Music tracks: `tracks`.
 - Files and extras: `product_assets`.
 - User-owned/saved items: `library_items`.
-- Store reviews: `product_reviews`.
+- Reviews: `product_reviews`.
 - Creator updates: `product_updates`.
-- Achievements: `product_achievements`, `user_achievements`, `achievement_events`, `achievement_progress`.
+- Achievements: `achievement_templates` target catalog plus `product_achievements`, `user_achievements`, `achievement_events`, `achievement_progress`.
 - Community: `posts`, `post_replies`, `post_likes`, `reply_likes`, `profile_follows`.
 - Messaging: `conversations`, `conversation_members`, `messages`.
 - Non-v1 Services/Projects spine: `services`, `service_requests`, `project_messages`.
 - Preferences: `user_os_preferences`, `user_app_preferences`, plus localStorage while persistence is unfinished.
 
-Known Supabase issues from the current audit:
+Known Supabase issues from the audit:
 
-- Achievements need a central template/catalog migration before launch polish.
+- User still needs to run the reviewed v1 music achievement SQL after backup/storage verification.
 - `conversation_members/messages` currently return an RLS recursion error through the REST API.
 - `friend_requests` is referenced by code but does not exist remotely.
 - `supabase/migrations/20260704164154_remote_schema.sql` is empty and must be classified before migration replay.
@@ -327,7 +271,7 @@ Vercel/domain target:
 
 - Keep only the three active `/Other` handoff docs.
 - Keep Dock app behavior centralized in `src/lib/osApps.ts`.
-- Keep Store/Browse category behavior centralized in Store primitives and route helpers.
+- Keep Browse category/detail behavior centralized in route helpers.
 - Keep Library ownership behavior centralized in Library primitives and route helpers.
 - Add shared UI primitives before adding page-specific styling.
 - Avoid one-off inline styles unless the value is genuinely dynamic.

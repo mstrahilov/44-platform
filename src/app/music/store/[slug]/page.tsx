@@ -1,5 +1,6 @@
-import { notFound } from 'next/navigation';
+import { permanentRedirect } from 'next/navigation';
 
-export default function LegacyMusicStoreItemPage() {
-  notFound();
+export default async function LegacyMusicStoreItemPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  permanentRedirect(`/browse/item/${slug}`);
 }

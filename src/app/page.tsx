@@ -1,5 +1,5 @@
-import StoreApp from '@/components/StoreApp';
+import { permanentRedirect } from 'next/navigation';
 
 export default function HomeRootPage() {
-  return <StoreApp category="all" />;
+  permanentRedirect('/browse');
 }

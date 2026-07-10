@@ -5,11 +5,11 @@ import { useTopbarTabs } from '@/components/TopbarContext';
 export type ServicesSection = 'services' | 'projects' | 'requests';
 
 const HOME_SERVICE_TABS = [
-  { id: 'all', label: 'Discover', href: '/' },
-  { id: 'music', label: 'Music', href: '/store/music' },
-  { id: 'books', label: 'Books', href: '/store/books' },
-  { id: 'merch', label: 'Merch', href: '/store/merch' },
-  { id: 'assets', label: 'Sample Packs', href: '/store/assets' },
+  { id: 'all', label: 'Browse', href: '/browse' },
+  { id: 'music', label: 'Music', href: '/browse/music' },
+  { id: 'books', label: 'Books', href: '/browse/books' },
+  { id: 'merch', label: 'Merch', href: '/browse/merch' },
+  { id: 'assets', label: 'Sample Packs', href: '/browse/assets' },
   { id: 'services', label: 'Services', href: '/services' },
 ] as const;
 

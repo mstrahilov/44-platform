@@ -1,5 +1,5 @@
-import { notFound } from 'next/navigation';
+import { permanentRedirect } from 'next/navigation';
 
 export default function MusicStorePage() {
-  notFound();
+  permanentRedirect('/browse/music');
 }

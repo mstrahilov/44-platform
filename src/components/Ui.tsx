@@ -7,7 +7,7 @@ import { communityThreadHref, creatorHref, resourceHref, serviceHref } from '@/l
 import { useContextMenu } from '@/components/ContextMenu';
 import type { Product } from '@/lib/products';
 import { formatProductPrice } from '@/lib/products';
-import { getProductExperience, productStoreHref } from '@/lib/experience';
+import { getProductExperience, productBrowseHref } from '@/lib/experience';
 import { getPostMetaLabel } from '@/lib/social';
 import { useAuth } from '@/lib/useAuth';
 import { COPY_TO_CLIPBOARD_TOAST_EVENT } from '@/components/ContextMenu';
@@ -32,6 +32,26 @@ export function GlassPanel({
     <section className={`glass-panel ${className}`} style={style}>
       {children}
     </section>
+  );
+}
+
+export function SectionHeader({
+  title,
+  description,
+  action,
+}: {
+  title: string;
+  description?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className={description ? 'hub-section-head hub-section-head-described' : 'hub-section-head'}>
+      <div className="hub-section-copy">
+        <h2 className="hub-section-title">{title}</h2>
+        {description && <p className="hub-section-description">{description}</p>}
+      </div>
+      {action}
+    </div>
   );
 }
 
@@ -84,7 +104,7 @@ export function ProductCard({ product, owned: _owned }: { product: Product; owne
   const { openContextMenu } = useContextMenu();
   const { user } = useAuth();
   const cart = useCart();
-  const href = productStoreHref(product);
+  const href = productBrowseHref(product);
   const image = product.cover_url || product.hero_url;
   const shape = getProductTileShape(product);
   const subtitle = getProductTileSubtitle(product);
@@ -249,7 +269,7 @@ function getProductTileSubtitle(product: Product): string {
   if (experience === 'physical' || experience === 'asset') {
     return formatProductPrice(product);
   }
-  return product.creator || '44 Creator';
+  return product.creator || 'Creator';
 }
 
 export function ServiceCard({ service }: { service: Service }) {
@@ -401,8 +421,8 @@ export function HubHero({
   actions?: ReactNode;
 }) {
   return (
-    <header className="dashboard-header">
-      <div className="dashboard-header-copy">
+    <header className="app-header">
+      <div className="app-header-copy">
         <h1 className="os-type-display">{title}</h1>
         {copy && <p className="os-type-body">{copy}</p>}
       </div>
@@ -411,13 +431,26 @@ export function HubHero({
   );
 }
 
-export function HubSection({ title, href, children }: { title: string; href?: string; children: ReactNode }) {
+export function HubSection({
+  title,
+  description,
+  href,
+  action,
+  children,
+}: {
+  title: string;
+  description?: string;
+  href?: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <section className="app-section">
-      <div className="hub-section-head">
-        <h2 className="hub-section-title">{title}</h2>
-        {href && <Link href={href} className="os-button os-button-primary">View All</Link>}
-      </div>
+      <SectionHeader
+        title={title}
+        description={description}
+        action={action ?? (href ? <Link href={href} className="os-button os-button-primary">View All</Link> : undefined)}
+      />
       {children}
     </section>
   );

@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/useAuth';
 import { creatorHref, type Profile } from '@/lib/platform';
 import { trackProductAchievementTrigger } from '@/lib/achievementTracking';
 import Link from 'next/link';
+import { SectionHeader } from '@/components/Ui';
 
 type ReviewProfile = Pick<Profile, 'id' | 'slug' | 'username' | 'display_name' | 'avatar_url'>;
 
@@ -113,23 +114,26 @@ export function ProductReviewsSection({
 
   return (
     <div className="view-section">
-      <div className="item-community-header" style={{ marginBottom: 28 }}>
-        <h2 className="view-section-title" style={{ margin: 0 }}>Community Reviews</h2>
-        <button
-          type="button"
-          className="os-button os-button-secondary os-button-compact"
-          onClick={() => {
-            if (!user) {
-              router.push('/login');
-              return;
-            }
-            setComposerOpen(open => !open);
-          }}
-          disabled={!canPost}
-        >
-          {composerOpen ? 'Cancel' : ownReview ? 'Edit Review' : 'Post Review'}
-        </button>
-      </div>
+      <SectionHeader
+        title="Community Reviews"
+        description="Reviews help fans decide whether this item belongs in their Library."
+        action={
+          <button
+            type="button"
+            className="os-button os-button-secondary os-button-compact"
+            onClick={() => {
+              if (!user) {
+                router.push('/login');
+                return;
+              }
+              setComposerOpen(open => !open);
+            }}
+            disabled={!canPost}
+          >
+            {composerOpen ? 'Cancel' : ownReview ? 'Edit Review' : 'Post Review'}
+          </button>
+        }
+      />
 
       {composerOpen && canPost && (
         <div className="dashboard-list-surface item-community-surface" style={{ marginBottom: 16 }}>

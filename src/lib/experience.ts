@@ -1,5 +1,3 @@
-import type { Product } from '@/lib/products';
-
 export type ProductExperience = 'music' | 'book' | 'asset' | 'radio' | 'physical' | 'interactive' | 'other';
 export type ExperienceAppSlug = 'music' | 'books' | 'assets';
 
@@ -7,7 +5,19 @@ function normalize(value: string | null | undefined) {
   return (value ?? '').trim().toLowerCase().replace(/[-_]+/g, ' ');
 }
 
-export function getProductExperience(product: Pick<Product, 'category' | 'product_type' | 'runtime_type' | 'experience_type' | 'fulfillment_type'>): ProductExperience {
+type ProductExperienceShape = {
+  category?: string | null;
+  product_type?: string | null;
+  runtime_type?: string | null;
+  experience_type?: string | null;
+  fulfillment_type?: string | null;
+};
+type ProductRouteShape = ProductExperienceShape & {
+  id: string;
+  slug?: string | null;
+};
+
+export function getProductExperience(product: ProductExperienceShape): ProductExperience {
   const experience = normalize(product.experience_type ?? '');
   const fulfillment = normalize(product.fulfillment_type ?? '');
   const category = normalize(product.category);
@@ -80,13 +90,13 @@ export function getProductExperience(product: Pick<Product, 'category' | 'produc
 }
 
 export function productMatchesExperience(
-  product: Pick<Product, 'category' | 'product_type' | 'runtime_type' | 'experience_type' | 'fulfillment_type'>,
+  product: ProductExperienceShape,
   experience: ProductExperience,
 ) {
   return getProductExperience(product) === experience;
 }
 
-export function getExperienceAppSlug(product: Pick<Product, 'category' | 'product_type' | 'runtime_type' | 'experience_type' | 'fulfillment_type'>): ExperienceAppSlug | null {
+export function getExperienceAppSlug(product: ProductExperienceShape): ExperienceAppSlug | null {
   const experience = getProductExperience(product);
   if (experience === 'music') return 'music';
   if (experience === 'book') return 'books';
@@ -94,25 +104,38 @@ export function getExperienceAppSlug(product: Pick<Product, 'category' | 'produc
   return null;
 }
 
-export function productStoreHref(product: Pick<Product, 'id' | 'slug' | 'category' | 'product_type' | 'runtime_type' | 'experience_type' | 'fulfillment_type'>) {
-  const app = getExperienceAppSlug(product);
+export function browseIndexHref(productOrCategory?: ProductExperienceShape | ExperienceAppSlug | 'merch' | 'all' | null) {
+  if (!productOrCategory || productOrCategory === 'all') return '/browse';
+  if (typeof productOrCategory === 'string') return `/browse/${productOrCategory}`;
+  const app = getExperienceAppSlug(productOrCategory);
+  if (app) return `/browse/${app}`;
+  if (getProductExperience(productOrCategory) === 'physical') return '/browse/merch';
+  return '/browse';
+}
+
+export function productBrowseHref(product: ProductRouteShape) {
   const identifier = product.slug || product.id;
-  if (getProductExperience(product) === 'physical') return `/store/merch/${identifier}`;
-  return app ? `/store/${app}/${identifier}` : `/store`;
+  return `/browse/item/${identifier}`;
+}
+
+export function libraryItemHref(libraryItem: { id: string }) {
+  return `/library/item/${libraryItem.id}`;
+}
+
+/** @deprecated Use productBrowseHref. Kept so legacy call sites keep a stable redirect target while they are migrated. */
+export function productStoreHref(product: ProductRouteShape) {
+  return productBrowseHref(product);
 }
 
 export function productLibraryHref(
-  product: Pick<Product, 'category' | 'product_type' | 'runtime_type' | 'experience_type' | 'fulfillment_type'>,
+  product: ProductExperienceShape,
   libraryItemId: string,
 ) {
-  const app = getExperienceAppSlug(product);
-  if (getProductExperience(product) === 'physical') return '/store/merch';
-  return app ? `/library/${app}/${libraryItemId}` : `/library`;
+  if (getProductExperience(product) === 'physical') return '/browse/merch';
+  return libraryItemHref({ id: libraryItemId });
 }
 
-export function storeIndexHref(product: Pick<Product, 'category' | 'product_type' | 'runtime_type' | 'experience_type' | 'fulfillment_type'>) {
-  const app = getExperienceAppSlug(product);
-  if (app) return `/store/${app}`;
-  if (getProductExperience(product) === 'physical') return '/store/merch';
-  return '/store';
+/** @deprecated Use browseIndexHref. */
+export function storeIndexHref(product: ProductExperienceShape) {
+  return browseIndexHref(product);
 }

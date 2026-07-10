@@ -93,7 +93,7 @@ function SearchContent() {
       <main className="app-page">
         <HubHero
           title="Search"
-          copy={query ? `Results for "${query}" across 44OS.` : 'Find items, creators, posts, questions, collaborations, and services across 44OS.'}
+          copy={query ? `Results for "${query}".` : 'Find items, creators, posts, questions, and collaborations.'}
         />
 
         <form className="search-page-form" onSubmit={submitSearch} role="search">
@@ -102,7 +102,7 @@ function SearchContent() {
               className="search-page-input"
               value={draft}
               onChange={event => setDraft(event.target.value)}
-              placeholder="Search 44OS"
+              placeholder="Search items, creators, and posts"
               aria-label="Search"
             />
             <button className="search-page-submit" type="submit" aria-label="Search">
@@ -114,7 +114,7 @@ function SearchContent() {
         {loading ? (
           <EmptyMessage>Searching...</EmptyMessage>
         ) : !query ? (
-          <EmptyMessage>Enter a search term to look across 44OS.</EmptyMessage>
+          <EmptyMessage>Enter a search term to look across items, creators, and posts.</EmptyMessage>
         ) : !hasResults ? (
           <EmptyMessage>No results found.</EmptyMessage>
         ) : (

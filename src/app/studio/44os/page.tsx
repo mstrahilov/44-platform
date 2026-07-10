@@ -64,7 +64,7 @@ export default function Studio44OSPage() {
             <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', marginBottom: 18 }}>
               44OS reference pages are internal development tools.
             </p>
-            <Link href="/" className="os-button os-button-secondary">Back Home</Link>
+            <Link href="/browse" className="os-button os-button-secondary">Back to Browse</Link>
           </GlassPanel>
         </div>
       </PageShell>
