@@ -2,7 +2,7 @@
 
 /**
  * Dock preferences — localStorage-first (Supabase `user_dock_items` /
- * `user_os_preferences` take over later, see Other/44OS_FOUNDATION.md §6).
+ * Server persistence can be added later when cross-device Dock sync is built.
  *
  * All reads/writes go through this module so the Dock and Settings > Dock
  * stay in sync via a window event.

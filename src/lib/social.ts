@@ -54,9 +54,7 @@ export function repliersByPost(rows: ReplyEngagerRow[]): LikersMap {
   }, {});
 }
 
-export type SubjectType = 'product' | 'service' | 'resource' | 'library_item' | 'profile';
-export type PostIntent = 'general' | 'review' | 'update';
-
+export type SubjectType = 'product' | 'library_item' | 'profile';
 export type CountMap = Record<string, number>;
 
 export function countById<T extends object>(rows: T[], key: keyof T) {
@@ -110,48 +108,6 @@ export function normalizeConversationKey(a: string, b: string) {
   return [a, b].sort().join(':');
 }
 
-export function getPostIntent(post?: Pick<CommunityPost, 'post_type' | 'categories'> | null): PostIntent {
-  const postType = (post?.post_type || '').toLowerCase();
-  const categorySlug = (post?.categories?.slug || '').toLowerCase();
-
-  if (postType === 'update' || postType === 'updates' || categorySlug === 'updates') return 'update';
-  if (postType === 'review' || postType === 'reviews' || categorySlug === 'reviews') return 'review';
-  return 'general';
-}
-
-export function isGeneralPost(post?: Pick<CommunityPost, 'post_type' | 'categories'> | null) {
-  return getPostIntent(post) === 'general';
-}
-
-export function isReviewPost(post?: Pick<CommunityPost, 'post_type' | 'categories'> | null) {
-  return getPostIntent(post) === 'review';
-}
-
-export function isUpdatePost(post?: Pick<CommunityPost, 'post_type' | 'categories'> | null) {
-  return getPostIntent(post) === 'update';
-}
-
-export function getGeneralTopicSlug(post?: Pick<CommunityPost, 'post_type' | 'categories'> | null) {
-  if (!isGeneralPost(post)) return null;
-
-  const postType = (post?.post_type || '').toLowerCase();
-  const categorySlug = (post?.categories?.slug || '').toLowerCase();
-
-  if (postType === 'question' || postType === 'questions') return 'questions';
-  if (postType === 'collaboration') return 'collaboration';
-  if (categorySlug) return categorySlug;
-  return 'discussions';
-}
-
-export function getPostMetaLabel(post?: Pick<CommunityPost, 'post_type' | 'categories'> | null) {
-  const intent = getPostIntent(post);
-  if (intent === 'update') return 'Update';
-  if (intent === 'review') return 'Review';
-
-  const categoryName = post?.categories?.name;
-  const categorySlug = getGeneralTopicSlug(post);
-  if (categoryName) return categoryName;
-  if (categorySlug === 'questions') return 'Questions';
-  if (categorySlug === 'collaboration') return 'Collaboration';
+export function getPostMetaLabel() {
   return 'General';
 }

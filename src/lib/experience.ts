@@ -6,9 +6,7 @@ function normalize(value: string | null | undefined) {
 }
 
 type ProductExperienceShape = {
-  category?: string | null;
   product_type?: string | null;
-  runtime_type?: string | null;
   experience_type?: string | null;
   fulfillment_type?: string | null;
 };
@@ -20,9 +18,7 @@ type ProductRouteShape = ProductExperienceShape & {
 export function getProductExperience(product: ProductExperienceShape): ProductExperience {
   const experience = normalize(product.experience_type ?? '');
   const fulfillment = normalize(product.fulfillment_type ?? '');
-  const category = normalize(product.category);
   const productType = normalize(product.product_type);
-  const runtime = normalize(product.runtime_type ?? '');
 
   if (fulfillment === 'physical' || experience === 'merch') return 'physical';
   if (experience === 'music') return 'music';
@@ -31,25 +27,14 @@ export function getProductExperience(product: ProductExperienceShape): ProductEx
   if (experience === 'radio') return 'radio';
   if (experience === 'game') return 'interactive';
 
-  if (
-    runtime === 'radio' ||
-    category === 'radio' ||
-    productType.includes('radio')
-  ) return 'radio';
+  if (productType.includes('radio')) return 'radio';
 
   if (
-    runtime === 'book' ||
-    category === 'books' ||
-    category === 'book' ||
     productType.includes('book') ||
     productType.includes('artbook')
   ) return 'book';
 
   if (
-    runtime === 'asset' ||
-    runtime === 'sample pack' ||
-    category === 'assets' ||
-    category === 'sample packs' ||
     productType.includes('asset') ||
     productType.includes('sample') ||
     productType.includes('stem') ||
@@ -58,19 +43,10 @@ export function getProductExperience(product: ProductExperienceShape): ProductEx
   ) return 'asset';
 
   if (
-    runtime === 'interactive' ||
-    runtime === 'game' ||
-    category === 'interactive' ||
-    category === 'games' ||
     productType.includes('game')
   ) return 'interactive';
 
   if (
-    runtime === 'physical' ||
-    runtime === 'merch' ||
-    category === 'apparel' ||
-    category === 'merch' ||
-    category === 'shop' ||
     productType.includes('shirt') ||
     productType.includes('hoodie') ||
     productType.includes('poster') ||
@@ -78,8 +54,6 @@ export function getProductExperience(product: ProductExperienceShape): ProductEx
   ) return 'physical';
 
   if (
-    runtime === 'music' ||
-    category === 'music' ||
     productType.includes('album') ||
     productType.includes('ep') ||
     productType.includes('single') ||

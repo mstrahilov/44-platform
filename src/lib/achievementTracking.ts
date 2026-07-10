@@ -104,31 +104,12 @@ export async function loadProductAchievements(productId: string) {
 async function productSupportsV1Achievements(productId: string) {
   const { data } = await supabase
     .from('products')
-    .select('experience_type,runtime_type,category,product_type')
+    .select('experience_type')
     .eq('id', productId)
     .maybeSingle();
 
   if (!data) return false;
-  const product = data as {
-    experience_type?: string | null;
-    runtime_type?: string | null;
-    category?: string | null;
-    product_type?: string | null;
-  };
-  const values = [
-    product.experience_type,
-    product.runtime_type,
-    product.category,
-    product.product_type,
-  ].map(value => (value ?? '').toLowerCase());
-
-  return values.some(value =>
-    value === 'music'
-    || value.includes('album')
-    || value.includes('ep')
-    || value.includes('single')
-    || value.includes('track'),
-  );
+  return (data.experience_type ?? '').toLowerCase() === 'music';
 }
 
 export async function loadUnlockedAchievementIds(userId: string, productId: string) {

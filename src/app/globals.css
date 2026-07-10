@@ -30,8 +30,6 @@
 
 /* Sidebar section icons */
 .os-icon-store       { --os-icon-url: url('/icons/sidebar/STORE.svg'); }
-.os-icon-services    { --os-icon-url: url('/icons/sidebar/SERVICES.svg'); }
-.os-icon-resources   { --os-icon-url: url('/icons/sidebar/RESOURCES.svg'); }
 .os-icon-community   { --os-icon-url: url('/icons/sidebar/COMMUNITY.svg'); }
 .os-icon-library  { --os-icon-url: url('/icons/sidebar/COLLECTION.svg'); }
 .os-icon-dashboard   { --os-icon-url: url('/icons/sidebar/DASHBOARD.svg'); }
@@ -1393,8 +1391,6 @@ body.accent-sage,
   gap: var(--os-space-5);
 }
 
-.service-grid,
-.resource-grid,
 .post-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
@@ -1411,10 +1407,6 @@ body.accent-sage,
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 12px;
   align-items: stretch;
-}
-
-.services-home-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .library-release-hero,
@@ -2036,14 +2028,10 @@ body.accent-sage,
   }
 
   .product-grid,
-  .service-grid,
-  .resource-grid,
   .post-grid {
     grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
   }
 
-  .service-grid,
-  .resource-grid,
   .post-grid {
     grid-template-columns: 1fr;
   }

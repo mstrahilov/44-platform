@@ -19,8 +19,6 @@ export type OSAppId =
   | 'radio'
   | 'merch'
   | 'shop'
-  | 'services'
-  | 'resources'
   | 'community'
   | 'profile'
   | 'friends'
@@ -31,8 +29,7 @@ export type OSAppId =
   | 'store'
   | 'dashboard'
   | 'settings'
-  | 'support'
-  | 'projects';
+  | 'support';
 
 export type OSAppGroup = 'media' | 'community' | 'studio' | 'account' | 'system' | 'legacy';
 
@@ -164,24 +161,6 @@ export const OS_APPS: OSApp[] = [
     hidden: true,
   },
   {
-    id: 'resources',
-    label: 'Resources',
-    description: 'Guides, templates, and useful references for creatives.',
-    href: '/resources',
-    iconClass: 'os-icon-resources',
-    group: 'legacy',
-    hidden: true,
-  },
-  {
-    id: 'services',
-    label: 'Services',
-    description: 'Professional creative services, produced and delivered through 44.',
-    href: '/services',
-    iconClass: 'os-icon-services',
-    group: 'legacy',
-    hidden: true,
-  },
-  {
     id: 'friends',
     label: 'Friends',
     description: 'Manage private friendships and requests.',
@@ -240,18 +219,6 @@ export const OS_APPS: OSApp[] = [
     locked: true,
   },
 
-  // ── Registered, not shipped yet ─────────────────────────────────────
-  // These become visible as their phases land (see Other/44OS_FOUNDATION.md §4).
-  {
-    id: 'projects',
-    label: 'Projects',
-    description: 'Your creative projects with 44 — briefs, files, and progress.',
-    href: '/projects',
-    iconClass: 'os-icon-services',
-    group: 'legacy',
-    requiresAuth: true,
-    hidden: true,
-  },
   {
     id: 'shop',
     label: 'Shop',
@@ -297,15 +264,12 @@ export function getActiveOSAppId(pathname: string): OSAppId | '' {
     pathname.startsWith('/shop')
   ) return 'store';
   if (pathname.startsWith('/radio')) return 'radio';
-  if (pathname.startsWith('/services') || pathname.startsWith('/service')) return 'store';
-  if (pathname.startsWith('/resources')) return 'community';
   if (pathname.startsWith('/friends')) return 'community';
   if (pathname.startsWith('/community')) return 'community';
   if (pathname.startsWith('/profile')) return 'profile';
   if (pathname.startsWith('/inbox')) return 'inbox';
   if (pathname.startsWith('/notifications')) return 'notifications';
   if (pathname.startsWith('/account')) return 'settings';
-  if (pathname.startsWith('/projects')) return 'store';
   if (pathname.startsWith('/dashboard') || pathname.startsWith('/studio')) return 'dashboard';
   if (pathname.startsWith('/settings')) return 'settings';
   if (pathname.startsWith('/support')) return 'support';

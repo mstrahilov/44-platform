@@ -127,7 +127,7 @@ export default function DashboardPage() {
         if (section.id === 'assets') return experience === 'asset';
         return experience === 'physical';
       });
-      const published = items.filter(item => item.is_published || item.status === 'published').length;
+      const published = items.filter(item => item.status === 'published').length;
       return {
         id: section.id,
         title: section.label,

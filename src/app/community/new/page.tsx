@@ -71,11 +71,9 @@ function NewCommunityThreadContent() {
       .from('posts')
       .insert({
         author_id: user.id,
-        category_id: null,
         slug: buildSlug(body),
         title: buildPostTitle(body),
         body: body.trim(),
-        post_type: 'general',
         status: 'published',
       })
       .select('id, slug')

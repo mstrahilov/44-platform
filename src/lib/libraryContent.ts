@@ -23,19 +23,17 @@ export function isFreeLibraryClaim(product: Pick<Product, 'is_free' | 'price_cen
 }
 
 export function getProductRuntimeKind(product: Product): ProductRuntimeKind {
-  const category = normalize(product.category);
   const productType = normalize(product.product_type);
-  const runtime = normalize(product.runtime_type ?? '');
   const experience = normalize(product.experience_type ?? '');
 
   if (experience === 'music') return 'music';
   if (experience === 'book') return 'book';
   if (experience === 'asset') return 'sample_pack';
 
-  if (runtime === 'book' || category === 'books' || productType.includes('book')) return 'book';
-  if (runtime === 'sample pack' || category === 'sample packs' || productType.includes('sample') || productType.includes('stem')) return 'sample_pack';
-  if (runtime === 'interactive' || runtime === 'game' || category === 'interactive' || category === 'games' || productType.includes('game')) return 'interactive';
-  if (runtime === 'music' || category === 'music' || productType.includes('album') || productType.includes('ep') || productType.includes('single')) return 'music';
+  if (productType.includes('book')) return 'book';
+  if (productType.includes('sample') || productType.includes('stem')) return 'sample_pack';
+  if (productType.includes('game')) return 'interactive';
+  if (productType.includes('album') || productType.includes('ep') || productType.includes('single')) return 'music';
 
   return 'product';
 }

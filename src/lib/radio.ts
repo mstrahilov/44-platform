@@ -25,9 +25,7 @@ export type RadioProductRow = {
   title: string;
   creator: string;
   slug?: string | null;
-  category?: string | null;
   product_type?: string | null;
-  runtime_type?: string | null;
   experience_type?: string | null;
   fulfillment_type?: string | null;
   cover_url: string | null;
@@ -115,7 +113,7 @@ export async function loadRadioBundle(): Promise<RadioBundle> {
   const productIds = Array.from(new Set(trackRows.map(track => track.product_id).filter(Boolean)));
   const productsResult = await supabase
     .from('products')
-    .select('id,title,creator,slug,category,product_type,runtime_type,experience_type,fulfillment_type,cover_url,hero_url,author_id,creators:profiles!author_id(display_name,username,slug,avatar_url)')
+    .select('id,title,creator,slug,product_type,experience_type,fulfillment_type,cover_url,hero_url,author_id,creators:profiles!author_id(display_name,username,slug,avatar_url)')
     .in('id', productIds);
 
   if (productsResult.error) {

@@ -68,13 +68,13 @@ function DashboardProductsContent() {
   );
 
   async function togglePublish(product: Product) {
-    const published = product.is_published || product.status === 'published';
+    const published = product.status === 'published';
     const nextPublished = !published;
     const nextStatus = nextPublished ? 'published' : 'draft';
 
     const { error } = await supabase
       .from('products')
-      .update({ is_published: nextPublished, status: nextStatus })
+      .update({ status: nextStatus })
       .eq('id', product.id);
 
     if (error) {
@@ -84,7 +84,7 @@ function DashboardProductsContent() {
     }
 
     setProducts(current => current.map(item => (
-      item.id === product.id ? { ...item, is_published: nextPublished, status: nextStatus } : item
+      item.id === product.id ? { ...item, status: nextStatus } : item
     )));
     setStatus(nextPublished ? `${product.title} is published.` : `${product.title} is unpublished.`);
     setStatusKind('success');
@@ -142,7 +142,7 @@ function DashboardProductsContent() {
               >
                 <div className="dashboard-row-copy">
                   <div className="dashboard-row-title-wrap">
-                    <span className={product.is_published || product.status === 'published' ? 'dashboard-status-dot dashboard-status-dot-published' : 'dashboard-status-dot dashboard-status-dot-draft'} aria-hidden="true" />
+                    <span className={product.status === 'published' ? 'dashboard-status-dot dashboard-status-dot-published' : 'dashboard-status-dot dashboard-status-dot-draft'} aria-hidden="true" />
                     <div className="dashboard-row-title">{product.title}</div>
                   </div>
                   <div className="dashboard-row-subtitle">{product.product_type || section.itemLabel}</div>
@@ -153,7 +153,7 @@ function DashboardProductsContent() {
                     Edit
                   </Link>
                   <button type="button" className="os-button os-button-secondary os-button-compact" onClick={() => togglePublish(product)}>
-                    {product.is_published || product.status === 'published' ? 'Unpublish' : 'Publish'}
+                    {product.status === 'published' ? 'Unpublish' : 'Publish'}
                   </button>
                 </div>
               </div>

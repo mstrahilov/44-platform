@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageShell, HubHero, CenteredMessage, SectionHeader } from '@/components/Ui';
 import { useTopbarBack } from '@/components/TopbarContext';
@@ -14,9 +14,8 @@ import {
 } from '@/components/DashboardReleaseFeatures';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
-import type { Category } from '@/lib/platform';
+import type { ProductCategory } from '@/lib/platform';
 import { currencyForCountry, type MarketMode } from '@/lib/marketPreferences';
-import { isMissingColumnError } from '@/lib/schemaCompat';
 import { getStudioDisplayName, isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { normalizeTaxonomyValue } from '@/lib/taxonomy';
 import { getDashboardCatalogSection, type DashboardCatalogSectionId } from '@/lib/dashboardCatalog';
@@ -65,13 +64,6 @@ function ensureTrackCount(current: DraftTrack[], nextCount: number) {
   return [...current, ...Array.from({ length: clamped - current.length }, createDraftTrack)];
 }
 
-function runtimeTypeForSection(sectionId: DashboardCatalogSectionId) {
-  if (sectionId === 'merch') return 'merch';
-  if (sectionId === 'books') return 'book';
-  if (sectionId === 'assets') return 'sample_pack';
-  return 'music';
-}
-
 function experienceTypeForSection(sectionId: DashboardCatalogSectionId) {
   if (sectionId === 'merch') return 'merch';
   if (sectionId === 'books') return 'book';
@@ -94,7 +86,7 @@ export default function NewProductPage() {
   );
 }
 
-function categoryMatchesSection(category: Category, sectionId: DashboardCatalogSectionId) {
+function categoryMatchesSection(category: ProductCategory, sectionId: DashboardCatalogSectionId) {
   const name = `${category.name} ${category.slug}`.toLowerCase();
   if (sectionId === 'merch') return name.includes('merch') || name.includes('apparel') || name.includes('shop');
   if (sectionId === 'books') return name.includes('book');
@@ -108,7 +100,6 @@ function NewProductContent() {
   useTopbarBack({ href: section.href, label: section.label });
   const router = useRouter();
   const { user, loading } = useAuth();
-  const [categories, setCategories] = useState<Category[]>([]);
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [creatorName, setCreatorName] = useState('');
   const [title, setTitle] = useState('');
@@ -143,12 +134,11 @@ function NewProductContent() {
       if (!user) return;
 
       const [{ data: categoryRows }, profileResult] = await Promise.all([
-        supabase.from('categories').select('*').eq('scope', 'products').order('sort_order'),
+        supabase.from('product_categories').select('*').order('sort_order'),
         loadStudioProfile(user.id),
       ]);
 
-      const resolvedCategories = (categoryRows as Category[] | null) ?? [];
-      setCategories(resolvedCategories);
+      const resolvedCategories = (categoryRows as ProductCategory[] | null) ?? [];
       setCategoryId(resolvedCategories.find(category => categoryMatchesSection(category, section.id))?.id ?? resolvedCategories[0]?.id ?? '');
 
       setProfile(profileResult.profile);
@@ -164,11 +154,6 @@ function NewProductContent() {
 
     loadFormData();
   }, [section.id, section.typeOptions, user]);
-
-  const selectedCategory = useMemo(
-    () => categories.find(category => category.id === categoryId) ?? null,
-    [categories, categoryId],
-  );
 
   const isMusicProduct = section.id === 'music';
   const isMerchProduct = section.id === 'merch';
@@ -234,12 +219,11 @@ function NewProductContent() {
 
     const insertPayload = {
       author_id: profile?.id ?? user.id,
-      category_id: categoryId,
+      product_category_id: categoryId,
       slug,
       title: cleanTitle,
       creator: creatorName,
       product_type: cleanType,
-      category: selectedCategory?.name ?? section.label,
       short_description: null,
       long_description: cleanDescription,
       price_cents: merchUsesLocalOnlyPricing ? 0 : priceCents,
@@ -250,7 +234,6 @@ function NewProductContent() {
       is_free: isFree,
       cover_url: coverUrl.trim() || null,
       hero_url: null,
-      runtime_type: runtimeTypeForSection(section.id),
       experience_type: experienceTypeForSection(section.id),
       fulfillment_type: isMerchProduct ? 'physical' : 'digital',
       merch_fulfillment_mode: isMerchProduct ? merchFulfillmentMode : null,
@@ -259,31 +242,15 @@ function NewProductContent() {
       download_url: needsDigitalFile ? itemFileUrl.trim() : null,
       featured: false,
       status: publishStatus,
-      is_published: publishStatus === 'published',
       year: year ? Number(year) : null,
       sort_order: sortOrder,
     };
 
-    let { data: insertedProduct, error: insertError } = await supabase
+    const { data: insertedProduct, error: insertError } = await supabase
       .from('products')
       .insert(insertPayload)
       .select('id')
       .single();
-
-    if (isMissingColumnError(insertError)) {
-      const legacyPayload: Record<string, unknown> = { ...insertPayload };
-      delete legacyPayload.market_mode;
-      delete legacyPayload.local_price_cents;
-      delete legacyPayload.local_currency;
-      delete legacyPayload.available_locally_only;
-      delete legacyPayload.experience_type;
-      delete legacyPayload.fulfillment_type;
-      delete legacyPayload.merch_fulfillment_mode;
-      delete legacyPayload.merch_shipping_scope;
-      const retry = await supabase.from('products').insert(legacyPayload).select('id').single();
-      insertedProduct = retry.data;
-      insertError = retry.error;
-    }
 
     if (insertError) {
       setSaving(false);

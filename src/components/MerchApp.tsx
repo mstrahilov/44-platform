@@ -20,7 +20,7 @@ export function MerchApp({ route }: { route: MerchRoute }) {
       const { data } = await supabase
         .from('products')
         .select('*, creators:profiles!author_id(*)')
-        .eq('is_published', true)
+        .eq('status', 'published')
         .order('created_at', { ascending: false })
         .limit(120);
 

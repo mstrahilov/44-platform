@@ -6,8 +6,6 @@ export type LandingPageId =
   | 'radio'
   | 'merch'
   | 'shop'
-  | 'resources'
-  | 'services'
   | 'community'
   | 'notifications'
   | 'dashboard'

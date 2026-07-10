@@ -68,7 +68,7 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
       const productResult = await supabase
         .from('products')
         .select('*, creators:profiles!author_id(*)')
-        .eq('is_published', true)
+        .eq('status', 'published')
         .order('sort_order', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false })
         .limit(160);

@@ -27,10 +27,7 @@ export default function DashboardPayoutsPage() {
       setProfile(profileResult.profile);
       const profileId = profileResult.profile?.id ?? user.id;
 
-      await Promise.all([
-        supabase.from('products').select('id').eq('author_id', profileId).limit(1),
-        supabase.from('services').select('id').eq('author_id', profileId).limit(1),
-      ]);
+      await supabase.from('products').select('id').eq('author_id', profileId).limit(1);
       setFetching(false);
     }
 

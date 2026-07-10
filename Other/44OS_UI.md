@@ -56,7 +56,7 @@ Creator-facing rules:
 - Advanced systems should be explained through creator outcomes, not implementation language.
 - Local/global pricing should read as fairness and reach, not as a finance tool.
 - Achievement setup should describe what fans can unlock or experience, not how event tracking works.
-- Bonus Content is Overachiever-only in v1.
+- Bonus Content is the first v1 unlockable release extra and can be attached to Overachiever.
 - Dashboard screens should prioritize clarity, previews, validation, and confidence.
 
 Fan-facing rules:
@@ -147,7 +147,7 @@ Rules:
 - Search is a Dock app.
 - Notifications stay in the Topbar.
 - Messages and Profile are hidden from the v1 Dock.
-- Services and Resources are not v1 Dock destinations.
+- Resources and the old Services/Projects flows are removed from the v1 app.
 - Compact Dock items are square.
 - Full Dock rows and compact Dock targets keep a 56px rhythm.
 - Pinned items should use artwork/profile imagery when available.
@@ -225,7 +225,7 @@ Dashboard publishing rules:
 - Release Type, Release Year, and Price belong in the same 3-column field group.
 - Track editors use the recessed editable list primitive, not nested glass cards.
 - Book achievements are hidden for v1.
-- Music achievements use the eight v1 templates and Overachiever-only Bonus Content.
+- Music release features start with the eight v1 achievement templates and optional Overachiever Bonus Content.
 - Destructive buttons should align with system action rows and use confirmation copy.
 
 ---

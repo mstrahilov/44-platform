@@ -2,6 +2,7 @@
 
 import { AchievementIconGlyph } from '@/components/AchievementIconGlyph';
 import { SectionHeader } from '@/components/Ui';
+import { UploadField } from '@/components/UploadField';
 import type { DashboardCatalogSectionId } from '@/lib/dashboardCatalog';
 import { getAchievementIconPath } from '@/lib/achievementIcons';
 import { supabase } from '@/lib/supabase';
@@ -18,7 +19,7 @@ export type DraftAchievement = {
 export type DraftBonusContent = {
   title: string;
   fileUrl: string;
-  visibility: 'free' | 'achievement';
+  visibility: 'achievement';
   achievementCode: string;
 };
 
@@ -48,6 +49,12 @@ function supportsAchievementsForSection(sectionId: DashboardCatalogSectionId) {
 
 const REQUIRED_SELECTED_ACHIEVEMENTS = 3;
 const OVERACHIEVER_CODE = 'overachiever';
+const EMPTY_BONUS_ITEM: DraftBonusContent = {
+  title: '',
+  fileUrl: '',
+  visibility: 'achievement',
+  achievementCode: OVERACHIEVER_CODE,
+};
 
 export function createReleaseFeatureState(sectionId: DashboardCatalogSectionId): ReleaseFeatureState {
   const achievements = achievementTemplates(sectionId);
@@ -57,7 +64,7 @@ export function createReleaseFeatureState(sectionId: DashboardCatalogSectionId):
     behindTheScenesEnabled: false,
     behindTheScenesUrl: '',
     achievements,
-    bonusItems: [],
+    bonusItems: [EMPTY_BONUS_ITEM],
   };
 }
 
@@ -65,7 +72,6 @@ export function achievementTemplates(sectionId: DashboardCatalogSectionId): Draf
   if (sectionId === 'music') {
     return [
       { code: 'front_to_back', title: 'Front to Back', description: 'Listen to every track on this release.', triggerType: 'all_tracks_listened', enabled: true, iconUrl: getAchievementIconPath('front_to_back') },
-      { code: 'first_wave', title: 'First Wave', description: 'Listen to this release during its launch window.', triggerType: 'release_completed_launch_window', enabled: true, iconUrl: getAchievementIconPath('first_wave') },
       { code: 'no_skips', title: 'No Skips', description: 'Listen from the first track to the last without skipping.', triggerType: 'album_no_skips', enabled: true, iconUrl: getAchievementIconPath('no_skips') },
       { code: 'nightbird', title: 'Nightbird', description: 'Listen to the release between 10 PM and 4 AM.', triggerType: 'release_completed_at_night', enabled: true, iconUrl: getAchievementIconPath('nightbird') },
       { code: 'heavy_rotation', title: 'Heavy Rotation', description: 'Listen to the full release three times.', triggerType: 'release_completed_three_sessions', enabled: true, iconUrl: getAchievementIconPath('heavy_rotation') },
@@ -96,21 +102,49 @@ export function normalizeFeatureStateForSection(state: ReleaseFeatureState, sect
   return {
     ...state,
     achievementsEnabled: supportsAchievements ? state.achievementsEnabled : false,
-    bonusItems: state.bonusItems.map(item => ({
+    bonusItems: normalizeBonusItems(state.bonusItems).map(item => ({
       ...item,
-      visibility: supportsAchievements ? 'achievement' : 'free',
-      achievementCode: supportsAchievements ? 'overachiever' : '',
+      visibility: 'achievement',
+      achievementCode: supportsAchievements ? OVERACHIEVER_CODE : '',
     })),
     achievements,
   };
 }
 
+function normalizeBonusItems(items: DraftBonusContent[]) {
+  const normalized = items.length ? items : [EMPTY_BONUS_ITEM];
+  return normalized.slice(0, 1).map(item => ({
+    title: item.title,
+    fileUrl: item.fileUrl,
+    visibility: 'achievement' as const,
+    achievementCode: OVERACHIEVER_CODE,
+  }));
+}
+
+function enabledBonusItems(state: ReleaseFeatureState) {
+  return normalizeBonusItems(state.bonusItems)
+    .filter(item => item.title.trim() && item.fileUrl.trim())
+    .map(item => ({
+      title: item.title.trim(),
+      fileUrl: item.fileUrl.trim(),
+      visibility: 'achievement' as const,
+      achievementCode: OVERACHIEVER_CODE,
+    }));
+}
+
 export function validateReleaseFeatureState(state: ReleaseFeatureState, sectionId: DashboardCatalogSectionId) {
   const supportsAchievements = supportsAchievementsForSection(sectionId);
   const selectedAchievementCount = state.achievements.filter(achievement => achievement.enabled && achievement.code !== OVERACHIEVER_CODE).length;
+  const hasIncompleteBonusContent = supportsAchievements
+    && state.achievementsEnabled
+    && normalizeBonusItems(state.bonusItems).some(item => Boolean(item.title.trim()) !== Boolean(item.fileUrl.trim()));
 
   if (supportsAchievements && state.achievementsEnabled && selectedAchievementCount < REQUIRED_SELECTED_ACHIEVEMENTS) {
     return `Select at least ${REQUIRED_SELECTED_ACHIEVEMENTS} achievements plus Overachiever.`;
+  }
+
+  if (hasIncompleteBonusContent) {
+    return 'Bonus Content needs both a title and an uploaded file.';
   }
 
   return '';
@@ -118,6 +152,7 @@ export function validateReleaseFeatureState(state: ReleaseFeatureState, sectionI
 
 export function buildAchievementRows(productId: string, state: ReleaseFeatureState, sectionId: DashboardCatalogSectionId) {
   if (!supportsAchievementsForSection(sectionId) || !state.achievementsEnabled) return [];
+  const bonusItems = enabledBonusItems(state);
 
   return state.achievements
     .filter(achievement => achievement.enabled)
@@ -133,7 +168,7 @@ export function buildAchievementRows(productId: string, state: ReleaseFeatureSta
         reward_config: {
           commentary_enabled: state.commentaryEnabled,
           final_reward_required: achievement.code === 'overachiever',
-          bonus_items: [],
+          bonus_items: achievement.code === OVERACHIEVER_CODE ? bonusItems : [],
         },
         points: 0,
         icon: getAchievementIconPath(achievement.code) ?? achievement.iconUrl ?? null,
@@ -143,21 +178,37 @@ export function buildAchievementRows(productId: string, state: ReleaseFeatureSta
     });
 }
 
-export function buildFeatureAssetRows(_productId: string, _state: ReleaseFeatureState) {
-  return [];
+export function buildFeatureAssetRows(productId: string, state: ReleaseFeatureState) {
+  return enabledBonusItems(state).map((item, index) => ({
+    product_id: productId,
+    asset_type: 'bonus_content',
+    title: item.title,
+    file_url: item.fileUrl,
+    storage_path: null,
+    is_downloadable: true,
+    sort_order: index,
+  }));
 }
 
 export function featureAssetTypes() {
-  return ['behind_the_scenes', 'bonus_free', 'bonus_achievement'];
+  return ['bonus_content', 'commentary_audio', 'behind_the_scenes', 'bonus_free', 'bonus_achievement'];
 }
 
 export function hydrateReleaseFeatureState(
   sectionId: DashboardCatalogSectionId,
   achievementRows: SavedProductAchievement[],
-  _assetRows: SavedProductAsset[],
+  assetRows: SavedProductAsset[],
 ) {
   const base = createReleaseFeatureState(sectionId);
   const achievementByCode = new Map(achievementRows.map(achievement => [achievement.code, achievement]));
+  const savedBonusItems = assetRows
+    .filter(asset => ['bonus_content', 'bonus_achievement', 'bonus_free'].includes(asset.asset_type ?? ''))
+    .map(asset => ({
+      title: asset.title ?? 'Bonus Content',
+      fileUrl: asset.file_url ?? '',
+      visibility: 'achievement' as const,
+      achievementCode: OVERACHIEVER_CODE,
+    }));
   let commentaryEnabled = false;
 
   achievementRows.forEach(achievement => {
@@ -184,7 +235,7 @@ export function hydrateReleaseFeatureState(
         enabled: template.code === OVERACHIEVER_CODE,
       };
     }),
-    bonusItems: [],
+    bonusItems: normalizeBonusItems(savedBonusItems),
   }, sectionId);
 }
 
@@ -232,6 +283,7 @@ export async function saveReleaseFeatures({
 
 export function DashboardReleaseFeatures({
   sectionId,
+  userId,
   state,
   onChange,
 }: {
@@ -244,6 +296,7 @@ export function DashboardReleaseFeatures({
   const selectedAchievementCount = state.achievements.filter(achievement => achievement.enabled && achievement.code !== OVERACHIEVER_CODE).length;
   const achievementsOn = supportsAchievements && state.achievementsEnabled;
   const minimumSelectionReached = selectedAchievementCount >= REQUIRED_SELECTED_ACHIEVEMENTS;
+  const bonusItem = normalizeBonusItems(state.bonusItems)[0];
 
   function patch(patchState: Partial<ReleaseFeatureState>) {
     onChange({ ...state, ...patchState });
@@ -288,11 +341,22 @@ export function DashboardReleaseFeatures({
     });
   }
 
+  function updateBonusItem(patchState: Partial<DraftBonusContent>) {
+    patch({
+      bonusItems: [{
+        ...bonusItem,
+        ...patchState,
+        visibility: 'achievement',
+        achievementCode: OVERACHIEVER_CODE,
+      }],
+    });
+  }
+
   return (
     <section className="dashboard-form-section">
       <SectionHeader
-        title="Achievements"
-        description="Choose which achievements fans can earn from this music release."
+        title="Release Features"
+        description="Choose the extra systems this music release supports in Library."
         action={supportsAchievements ? (
           <button
             type="button"
@@ -305,6 +369,10 @@ export function DashboardReleaseFeatures({
       />
 
       <div className="dashboard-form-step">
+        <SectionHeader
+          title="Achievements"
+          description="Achievements are the first 44OS release feature. Overachiever unlocks after fans complete every selected achievement."
+        />
         {!supportsAchievements ? (
           <p className="library-empty-text">Achievements are limited to music releases in v1.0.</p>
         ) : achievementsOn ? (
@@ -334,6 +402,33 @@ export function DashboardReleaseFeatures({
             {!minimumSelectionReached && (
               <p className="dashboard-form-note dashboard-form-note-warning">Select at least {REQUIRED_SELECTED_ACHIEVEMENTS} achievements plus Overachiever.</p>
             )}
+            <div className="dashboard-list-surface" style={{ marginTop: 20 }}>
+              <div className="dashboard-list-row">
+                <span className="dashboard-row-copy">
+                  <span className="dashboard-row-title">Overachiever Bonus Content</span>
+                  <span className="dashboard-row-subtitle">Optional downloadable content unlocked when a fan completes every selected achievement.</span>
+                </span>
+              </div>
+              <div className="dashboard-form-grid dashboard-form-grid-2" style={{ padding: 16 }}>
+                <label className="dashboard-field">
+                  <span className="dashboard-field-label">Bonus Title</span>
+                  <input
+                    value={bonusItem.title}
+                    onChange={event => updateBonusItem({ title: event.target.value })}
+                    placeholder="Bonus Content"
+                  />
+                </label>
+                <UploadField
+                  label="Bonus File"
+                  folder="products/bonus-content"
+                  userId={userId}
+                  value={bonusItem.fileUrl}
+                  buttonLabel="Upload bonus"
+                  previewKind="file"
+                  onChange={nextValue => updateBonusItem({ fileUrl: nextValue })}
+                />
+              </div>
+            </div>
           </>
         ) : (
           <p className="library-empty-text">Achievements are turned off for this release.</p>

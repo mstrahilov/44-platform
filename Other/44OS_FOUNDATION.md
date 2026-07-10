@@ -28,13 +28,13 @@ The launch mental model is:
 - **Settings**: signed-in system, Dock, region, and account controls.
 - **Support**: public help surface.
 
-Services, Resources, Projects, Friends, Messages, and standalone Profile are not v1 Dock destinations. They may exist as hidden, account-menu, profile, or compatibility surfaces, but they should not appear as polished launch apps until their strategy is intentionally restored.
+Resources and the old Services/Projects workflow are removed. Messages and standalone Profile remain account-level surfaces rather than v1 Dock destinations.
 
 Language rules:
 
 - User-facing copy says Browse, Library, Community, release, item, music, book, sample pack, merch, review, creator update, bonus content, earnings, and orders.
 - UI copy should not use "Store" or "Collection" as the visible product model.
-- The database table can remain `products`; user-facing copy should prefer "items" or format-specific nouns.
+- `products` is the permanent internal catalog noun. User-facing copy should use "items" or format-specific nouns.
 - Services are excluded from the v1 polished Browse surface.
 
 ---
@@ -101,17 +101,18 @@ Rules:
 - `First Wave` is removed from v1 because time-limited achievements can permanently block Overachiever for late listeners.
 - Book achievements are removed/hidden until the reader experience and trigger model are real.
 - Creators do not hand-edit achievement text or artwork during v1.
-- Bonus Content is the only v1 release extra and unlocks from Overachiever only.
+- Bonus Content is the only v1 release extra and can unlock from Overachiever.
 - Existing user unlocks must be preserved during any migration.
 
 Current code state:
 
 - `src/lib/achievementCatalog.ts` filters Library display/tracking to the eight v1 music codes.
-- `src/components/DashboardReleaseFeatures.tsx` exposes the eight music templates and Overachiever-only Bonus Content.
+- `src/components/DashboardReleaseFeatures.tsx` exposes Release Features for music: the eight achievement templates plus optional Overachiever Bonus Content.
 - Dashboard create/edit pages show release achievements only for music.
 - Reviewed manual SQL exists at `supabase/migrations/20260709230000_44os_v1_music_achievements.sql`.
+- Launch foundation SQL exists at `supabase/migrations/20260710143000_44os_launch_foundation_alignment.sql`.
 
-Do not run this migration directly from an agent. The user should back up affected tables, confirm Supabase Storage filenames, then run the reviewed SQL manually.
+Supabase is still staging-only before public launch. Back up first, run dry runs, then apply reviewed repo migrations directly through the Supabase CLI.
 
 ---
 
@@ -198,43 +199,51 @@ Compatibility and legacy policy:
 - `/collection` redirects to `/library`; `/collection/item/[kind]/[id]` redirects to `/library/item/[id]`.
 - `/music`, `/books`, `/assets`, `/merch`, `/shop`, and old typed `/discover`/`/store` paths redirect to Browse categories.
 - `/library/item/[kind]/[id]` remains as a legacy compatibility route and redirects to `/library/item/[id]`.
-- `/resources`, `/services`, `/service`, and `/projects` are non-launch secondary surfaces.
+- Removed Resources and Services/Projects URLs intentionally return not found; they are not compatibility surfaces.
 - Do not add vanity redirects unless there is a real public link to preserve.
 
 ---
 
 ## 8. Supabase Contract
 
-Supabase is the live source of auth, user, catalog, community, messaging, and commerce state. Treat it as production data.
+Supabase is the staging source of auth, user, catalog, community, messaging, and commerce state until public launch. Treat it carefully, but optimize for settling the correct foundation before testers return.
 
 Rules:
 
-- Do not run Supabase schema or data changes from an agent unless the user explicitly approves that exact SQL.
-- Prefer creating reviewed SQL files for the user to run manually after backup.
+- Do not run Supabase schema or data changes without a current backup and a reviewed repo migration.
+- Prefer normal Supabase migrations, dry runs, then `supabase db push` from the linked project.
 - Never rename live tables casually.
 - UI language can change without database table renames.
 - Destructive migrations require backup, rollback notes, and explicit approval.
 
 Current concept-to-table map:
 
-- Catalog/Browse items: `products`.
+- Canonical catalog items: `products`. `status` is the publication lifecycle and `experience_type` controls runtime behavior. UI may call the surface Browse or Store; Library views still point to the same product row.
+- Product category lookup: `product_categories`, referenced by `products.product_category_id`.
 - Creator profiles and public member profiles: `profiles`.
 - Music tracks: `tracks`.
-- Files and extras: `product_assets`.
-- User-owned/saved items: `library_items`.
+- Files, galleries, and release feature unlocks: `product_assets`.
+- User-owned/saved/purchased relationship to a product: `library_items`.
 - Reviews: `product_reviews`.
 - Creator updates: `product_updates`.
-- Achievements: `achievement_templates` target catalog plus `product_achievements`, `user_achievements`, `achievement_events`, `achievement_progress`.
-- Community: `posts`, `post_replies`, `post_likes`, `reply_likes`, `profile_follows`.
+- Achievements: `achievement_templates` 44-defined catalog plus `product_achievements`, `user_achievements`, `achievement_events`, `achievement_progress`.
+- Release features: achievements first, with optional `product_assets` unlocks such as `bonus_content`; future features include `commentary_audio` and `behind_the_scenes`.
+- Points foundation: `user_points_ledger`.
+- Community: `posts`, `post_replies`, `post_likes`, `reply_likes`, `profile_follows`, `community_questions`, `community_question_answers`, `community_question_votes`, `community_collaborations`, `community_collaboration_responses`.
 - Messaging: `conversations`, `conversation_members`, `messages`.
-- Non-v1 Services/Projects spine: `services`, `service_requests`, `project_messages`.
-- Preferences: `user_os_preferences`, `user_app_preferences`, plus localStorage while persistence is unfinished.
+- Future services placeholder: `services` and `service_categories` are private and dormant. When services return, migrate them into canonical `products` rows with service fulfillment instead of restoring a parallel commerce system.
+- Resources were replaced by Community Questions. The old resource tables and app routes are removed.
+- Radio queue: `radio_playlist_entries` references canonical product `tracks` directly.
+- Local UI preferences remain in localStorage until cross-device persistence is intentionally built.
+- Removed speculative systems: generic categories, post categories, item/product components, product relations, generic unlockables, Library activity, unused Radio scheduling tables, and empty preference/icon registries.
 
-Known Supabase issues from the audit:
+Known Supabase state from the launch cleanup:
 
-- User still needs to run the reviewed v1 music achievement SQL after backup/storage verification.
-- `conversation_members/messages` currently return an RLS recursion error through the REST API.
-- `friend_requests` is referenced by code but does not exist remotely.
+- Migration history has been repaired so local and remote migration versions match.
+- Backups exist under ignored `supabase/backups/`.
+- Message RLS cleanup, product asset vocabulary, table comments, and points ledger are handled by `20260710143000_44os_launch_foundation_alignment.sql`.
+- Resource removal and service workflow retirement are handled by `20260710161500_remove_resources_and_service_workflows.sql`.
+- Final category split, product-column consolidation, and speculative-table cleanup are handled by `20260710174500_final_schema_normalization.sql`.
 - `supabase/migrations/20260704164154_remote_schema.sql` is empty and must be classified before migration replay.
 - `20260704201500_44os_steam_foundation.sql` includes destructive statements and must not be replayed casually.
 

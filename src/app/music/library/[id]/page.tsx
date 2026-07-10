@@ -7,7 +7,7 @@ import type { CSSProperties } from 'react';
 import { useParams } from 'next/navigation';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
 import { useContextMenu } from '@/components/ContextMenu';
-import { LibraryAchievementsSection, LibraryCreatorChip, LibraryProductDetailsSection } from '@/components/LibraryDetailPrimitives';
+import { LibraryAchievementsSection, LibraryBonusContentSection, LibraryCreatorChip, LibraryProductDetailsSection, type LibraryBonusAsset } from '@/components/LibraryDetailPrimitives';
 import {
   MUSIC_TRACK_COMPLETED_EVENT,
   MUSIC_TRACK_STARTED_EVENT,
@@ -47,6 +47,7 @@ export default function MusicLibraryItemPage() {
   const [row, setRow] = useState<MusicLibraryRow | null>(null);
   const [tracks, setTracks] = useState<MusicTrack[]>([]);
   const [achievements, setAchievements] = useState<ProductAchievement[]>([]);
+  const [bonusAssets, setBonusAssets] = useState<LibraryBonusAsset[]>([]);
   const [unlockedAchievementIds, setUnlockedAchievementIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,7 +82,7 @@ export default function MusicLibraryItemPage() {
 
       setRow(libraryRow);
 
-      const [{ data: trackRows }, { data: achievementRows }, { data: unlockedRows }] = await Promise.all([
+      const [{ data: trackRows }, { data: achievementRows }, { data: unlockedRows }, { data: assetRows }] = await Promise.all([
         supabase.from('tracks').select('*').eq('product_id', libraryRow.product_id),
         supabase
           .from('product_achievements')
@@ -93,11 +94,17 @@ export default function MusicLibraryItemPage() {
           .select('id,user_id,achievement_id,product_id,unlocked_at')
           .eq('user_id', userId)
           .eq('product_id', libraryRow.product_id),
+        supabase
+          .from('product_assets')
+          .select('asset_type,title,file_url')
+          .eq('product_id', libraryRow.product_id)
+          .in('asset_type', ['bonus_content', 'bonus_achievement']),
       ]);
 
       const orderedTracks = ((trackRows as MusicTrack[] | null) ?? []).sort((a, b) => trackOrder(a) - trackOrder(b));
       setTracks(orderedTracks);
       setAchievements(((achievementRows as ProductAchievement[] | null) ?? []).filter(achievement => isV1AchievementCode(achievement.code)));
+      setBonusAssets((assetRows as LibraryBonusAsset[] | null) ?? []);
       setUnlockedAchievementIds(new Set(((unlockedRows as UserAchievement[] | null) ?? []).map(item => item.achievement_id)));
       setLoading(false);
     }
@@ -114,10 +121,11 @@ export default function MusicLibraryItemPage() {
   return (
     <OwnedMusicRelease
       key={row.id}
-      userId={userId}
+      userId={user.id}
       row={row}
       tracks={tracks}
       achievements={achievements}
+      bonusAssets={bonusAssets}
       unlockedAchievementIds={unlockedAchievementIds}
     />
   );
@@ -128,12 +136,14 @@ function OwnedMusicRelease({
   row,
   tracks,
   achievements,
+  bonusAssets,
   unlockedAchievementIds,
 }: {
   userId: string;
   row: MusicLibraryRow;
   tracks: MusicTrack[];
   achievements: ProductAchievement[];
+  bonusAssets: LibraryBonusAsset[];
   unlockedAchievementIds: Set<string>;
 }) {
   const product = row.products!;
@@ -163,6 +173,8 @@ function OwnedMusicRelease({
         productId: product.id,
       }))
   ), [product.cover_url, product.creator, product.creators?.display_name, product.hero_url, product.id, product.title, tracks]);
+  const overachieverAchievement = achievements.find(achievement => achievement.code === 'overachiever');
+  const hasOverachieverUnlocked = Boolean(overachieverAchievement && localUnlockedAchievementIds.has(overachieverAchievement.id));
 
   async function toggleTrack(track: MusicTrack) {
     if (!track.audio_url) return;
@@ -404,6 +416,7 @@ function OwnedMusicRelease({
       </div>
 
       <LibraryAchievementsSection achievements={achievements} unlockedAchievementIds={localUnlockedAchievementIds} />
+      <LibraryBonusContentSection bonusAssets={bonusAssets} unlocked={hasOverachieverUnlocked} />
       <LibraryProductDetailsSection product={product} tracks={tracks} inferredTrackDurations={inferredTrackDurations} />
 
       <ProductUpdatesSection productId={product.id} emptyMessage="No updates from this creator yet." />

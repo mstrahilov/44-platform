@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
-import type { Service, Resource, CommunityPost } from '@/lib/platform';
-import { communityThreadHref, creatorHref, resourceHref, serviceHref } from '@/lib/platform';
+import type { CommunityPost } from '@/lib/platform';
+import { communityThreadHref, creatorHref } from '@/lib/platform';
 import { useContextMenu } from '@/components/ContextMenu';
 import type { Product } from '@/lib/products';
 import { formatProductPrice } from '@/lib/products';
@@ -272,62 +272,6 @@ function getProductTileSubtitle(product: Product): string {
   return product.creator || 'Creator';
 }
 
-export function ServiceCard({ service }: { service: Service }) {
-  const creator = service.creators?.name || '44 Creator';
-  return (
-    <Link className="product-tile" href={serviceHref(service)}>
-      <div className="product-tile-art product-tile-art-square">
-        {service.cover_url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={service.cover_url} alt="" />
-        )}
-      </div>
-      <div className="product-tile-info">
-        <div className="product-tile-title">{service.title}</div>
-        <div className="product-tile-subtitle">{creator}</div>
-      </div>
-    </Link>
-  );
-}
-
-export function ResourceCard({
-  resource,
-  saved,
-  onSave,
-}: {
-  resource: Resource;
-  saved?: boolean;
-  onSave?: (resource: Resource) => void;
-}) {
-  const { openContextMenu } = useContextMenu();
-  const creator = resource.creators?.name || '44 Community';
-  const href = resourceHref(resource);
-  return (
-    <Link
-      className="product-tile"
-      href={href}
-      onContextMenu={event =>
-        openContextMenu(event, [
-          { id: 'open', label: 'Open Resource', href },
-          ...(onSave ? [{ id: 'save', label: saved ? 'Saved' : 'Save Resource', onSelect: () => onSave(resource), disabled: saved }] : []),
-          { id: 'creator', label: 'View Creator', href: creatorHref(resource.creators ?? creator) },
-        ])
-      }
-    >
-      <div className="product-tile-art product-tile-art-square">
-        {resource.cover_url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={resource.cover_url} alt="" />
-        )}
-      </div>
-      <div className="product-tile-info">
-        <div className="product-tile-title">{resource.title}</div>
-        <div className="product-tile-subtitle">{creator}</div>
-      </div>
-    </Link>
-  );
-}
-
 export function PostCard({ post }: { post: CommunityPost }) {
   const { openContextMenu } = useContextMenu();
   const href = communityThreadHref(post);
@@ -343,7 +287,7 @@ export function PostCard({ post }: { post: CommunityPost }) {
       }
     >
       <div className="app-card-body">
-        <span className="os-pill os-type-pill app-card-chip">{getPostMetaLabel(post)}</span>
+        <span className="os-pill os-type-pill app-card-chip">{getPostMetaLabel()}</span>
         <div className="app-card-creator os-type-meta">by {post.creators?.name ?? '44 Community'}</div>
         <div className="app-card-desc os-type-body-small">{post.body}</div>
       </div>
@@ -363,7 +307,7 @@ export function ThreadRow({
   pinned?: boolean;
 }) {
   const author = post.creators?.name ?? '44 Community';
-  const meta = getPostMetaLabel(post);
+  const meta = getPostMetaLabel();
 
   return (
     <Link href={communityThreadHref(post)} className="thread-row">

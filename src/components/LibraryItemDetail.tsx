@@ -10,15 +10,15 @@ import { isV1AchievementCode } from '@/lib/achievementCatalog';
 import type { Product } from '@/lib/products';
 import { productLibraryHref } from '@/lib/experience';
 import { getProductLibraryContent, getProductLibraryPrimaryAction, getProductRuntimeKind } from '@/lib/libraryContent';
-import { creatorHref, type ProductAchievement, type Resource, type ServiceRequest, type Track, type UserAchievement } from '@/lib/platform';
+import { creatorHref, type ProductAchievement, type Track, type UserAchievement } from '@/lib/platform';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
-import { LibraryAchievementsSection, LibraryCreatorChip, LibraryProductDetailsSection } from '@/components/LibraryDetailPrimitives';
+import { LibraryAchievementsSection, LibraryBonusContentSection, LibraryCreatorChip, LibraryProductDetailsSection, type LibraryBonusAsset } from '@/components/LibraryDetailPrimitives';
 import { ProductUpdatesSection } from '@/components/ProductUpdatesSection';
 import { unlockAchievementForUser } from '@/lib/achievementNotifications';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { useMusicPlayer, type MusicQueueTrack } from '@/components/MusicPlayer';
 
-type LibraryKind = 'product' | 'resource' | 'service';
+type LibraryKind = 'product';
 
 interface LibraryItemRow {
   id: string;
@@ -47,10 +47,9 @@ export function LibraryItemDetail({
   const router = useRouter();
   useTopbarBack({ href: backHref, label: backLabel });
   const [productRow, setProductRow] = useState<LibraryItemRow | null>(null);
-  const [resourceRow, setResourceRow] = useState<{ id: string; saved_at: string; resources: Resource | null } | null>(null);
-  const [serviceRow, setServiceRow] = useState<ServiceRequest | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [achievements, setAchievements] = useState<ProductAchievement[]>([]);
+  const [bonusAssets, setBonusAssets] = useState<LibraryBonusAsset[]>([]);
   const [unlockedAchievementIds, setUnlockedAchievementIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -93,7 +92,7 @@ export function LibraryItemDetail({
         }
 
         if (row.product_id) {
-          const [{ data: trackRows }, { data: achievementRows }, { data: unlockedRows }] = await Promise.all([
+          const [{ data: trackRows }, { data: achievementRows }, { data: unlockedRows }, { data: assetRows }] = await Promise.all([
             supabase
               .from('tracks')
               .select('id,product_id,number,title,duration_seconds,audio_url,download_url')
@@ -109,38 +108,20 @@ export function LibraryItemDetail({
               .select('id,user_id,achievement_id,product_id,unlocked_at')
               .eq('user_id', userId)
               .eq('product_id', row.product_id),
+            supabase
+              .from('product_assets')
+              .select('asset_type,title,file_url')
+              .eq('product_id', row.product_id)
+              .in('asset_type', ['bonus_content', 'bonus_achievement']),
           ]);
 
           setTracks((trackRows as Track[] | null) ?? []);
           setAchievements(row.products && getProductRuntimeKind(row.products) === 'music'
             ? ((achievementRows as ProductAchievement[] | null) ?? []).filter(achievement => isV1AchievementCode(achievement.code))
             : []);
+          setBonusAssets((assetRows as LibraryBonusAsset[] | null) ?? []);
           setUnlockedAchievementIds(new Set(((unlockedRows as UserAchievement[] | null) ?? []).map(item => item.achievement_id)));
         }
-      }
-
-      if (kind === 'resource') {
-        const { data, error: itemError } = await supabase
-          .from('saved_resources')
-          .select('id,saved_at,resources(*, creators:profiles!author_id(*, name:display_name), categories(id, slug, name))')
-          .eq('id', id)
-          .eq('user_id', userId)
-          .maybeSingle();
-
-        if (itemError || !data) setError(itemError?.message ?? 'Saved resource not found.');
-        setResourceRow((data as { id: string; saved_at: string; resources: Resource | null } | null) ?? null);
-      }
-
-      if (kind === 'service') {
-        const { data, error: itemError } = await supabase
-          .from('service_requests')
-          .select('id,service_id,message,status,created_at,services(*, creators:profiles!author_id(*, name:display_name), categories(id, slug, name))')
-          .eq('id', id)
-          .eq('user_id', userId)
-          .maybeSingle();
-
-        if (itemError || !data) setError(itemError?.message ?? 'Service request not found.');
-        setServiceRow((data as ServiceRequest | null) ?? null);
       }
 
       setLoading(false);
@@ -154,15 +135,7 @@ export function LibraryItemDetail({
   if (!user) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Sign in to view this library item.</div>;
 
   if (kind === 'product' && productRow?.products) {
-    return <ProductLibraryDetail userId={userId} row={productRow} tracks={tracks} achievements={achievements} unlockedAchievementIds={unlockedAchievementIds} />;
-  }
-
-  if (kind === 'resource' && resourceRow?.resources) {
-    return <ResourceLibraryDetail row={resourceRow} />;
-  }
-
-  if (kind === 'service' && serviceRow?.services) {
-    return <ServiceLibraryDetail row={serviceRow} />;
+    return <ProductLibraryDetail userId={user.id} row={productRow} tracks={tracks} achievements={achievements} bonusAssets={bonusAssets} unlockedAchievementIds={unlockedAchievementIds} />;
   }
 
   return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Library item not found.</div>;
@@ -173,12 +146,14 @@ function ProductLibraryDetail({
   row,
   tracks,
   achievements,
+  bonusAssets,
   unlockedAchievementIds,
 }: {
   userId: string;
   row: LibraryItemRow;
   tracks: Track[];
   achievements: ProductAchievement[];
+  bonusAssets: LibraryBonusAsset[];
   unlockedAchievementIds: Set<string>;
 }) {
   const product = row.products!;
@@ -239,6 +214,8 @@ function ProductLibraryDetail({
         productId: product.id,
       }))
   ), [product.cover_url, product.creator, product.creators?.display_name, product.hero_url, product.id, product.title, tracks]);
+  const overachieverAchievement = achievements.find(achievement => achievement.code === 'overachiever');
+  const hasOverachieverUnlocked = Boolean(overachieverAchievement && localUnlockedAchievementIds.has(overachieverAchievement.id));
 
   async function toggleTrack(track: Track) {
     if (!track.audio_url) return;
@@ -419,6 +396,7 @@ function ProductLibraryDetail({
       )}
 
       {isMusic && <LibraryAchievementsSection achievements={achievements} unlockedAchievementIds={localUnlockedAchievementIds} />}
+      {isMusic && <LibraryBonusContentSection bonusAssets={bonusAssets} unlocked={hasOverachieverUnlocked} />}
       <LibraryProductDetailsSection product={product} tracks={tracks} inferredTrackDurations={inferredTrackDurations} />
 
       <ProductUpdatesSection productId={product.id} emptyMessage="No updates from this creator yet." />
@@ -428,131 +406,9 @@ function ProductLibraryDetail({
   );
 }
 
-function ResourceLibraryDetail({ row }: { row: { id: string; saved_at: string; resources: Resource | null } }) {
-  const resource = row.resources!;
-  const creatorName = resource.creators?.name ?? '44 Community';
-  const creatorLink = resource.creators?.slug ? `/community/${resource.creators.slug}` : '/community';
-  const infoCopy = resource.long_description ?? resource.short_description ?? 'Resource content coming soon.';
-
-  return (
-    <div className="view-detail-single">
-      <div className="view-hero">
-        {resource.cover_url ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={resource.cover_url} alt={resource.title} />
-            <div className="view-hero-overlay">
-              <div className="os-type-eyebrow" style={{ opacity: 0.72, marginBottom: 10 }}>{resource.resource_type}</div>
-              <h1 className="os-type-display">{resource.title}</h1>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="view-hero-gradient" />
-            <div className="view-hero-overlay" style={{ background: 'none' }}>
-              <div className="os-type-eyebrow" style={{ color: 'var(--os-color-ink-muted)', marginBottom: 10 }}>{resource.resource_type}</div>
-              <h1 className="os-type-display">{resource.title}</h1>
-            </div>
-          </>
-        )}
-      </div>
-
-      <div className="view-section">
-        <div className="view-action-bar">
-          <div>
-            <div className="os-type-eyebrow" style={{ color: 'var(--os-color-ink-muted)', marginBottom: 4 }}>{resource.categories?.name ?? 'Resource'}</div>
-            <div className="os-type-panel-title">by {creatorName}</div>
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <Link className="os-button os-button-secondary" href={creatorLink}>View Creator</Link>
-            <button className="os-button os-button-primary" type="button" onClick={() => openTarget(resource.download_url)}>Download</button>
-          </div>
-        </div>
-      </div>
-
-      <div className="view-section">
-        <h2 className="view-section-title">About</h2>
-        <p className="os-type-body view-description">{infoCopy}</p>
-      </div>
-
-      {resource.long_description && (
-        <div className="view-section">
-          <h2 className="view-section-title">Content</h2>
-          <div style={{ display: 'grid', gap: 16, maxWidth: 720 }}>
-            {resource.long_description.split('\n').filter(Boolean).map((paragraph, i) => (
-              <p key={i} className="os-type-body view-description-line">{paragraph}</p>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ServiceLibraryDetail({ row }: { row: ServiceRequest }) {
-  const service = row.services!;
-  const creatorName = service.creators?.name ?? '44 Creator';
-  const creatorLink = service.creators?.slug ? `/community/${service.creators.slug}` : '/community';
-  const infoCopy = service.long_description || service.short_description || 'Service details coming soon.';
-
-  return (
-    <div className="view-detail-single">
-      <div className="view-hero">
-        {service.cover_url ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={service.cover_url} alt={service.title} />
-            <div className="view-hero-overlay">
-              <div className="os-type-eyebrow" style={{ opacity: 0.72, marginBottom: 10 }}>{service.categories?.name ?? 'Service'}</div>
-              <h1 className="os-type-display">{service.title}</h1>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="view-hero-gradient" />
-            <div className="view-hero-overlay" style={{ background: 'none' }}>
-              <div className="os-type-eyebrow" style={{ color: 'var(--os-color-ink-muted)', marginBottom: 10 }}>{service.categories?.name ?? 'Service'}</div>
-              <h1 className="os-type-display">{service.title}</h1>
-            </div>
-          </>
-        )}
-      </div>
-
-      <div className="view-section">
-        <div className="view-action-bar">
-          <div>
-            <div className="os-type-eyebrow" style={{ color: 'var(--os-color-ink-muted)', marginBottom: 4 }}>{service.categories?.name ?? 'Service'}</div>
-            <div className="os-type-panel-title">{creatorName}</div>
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <Link className="os-button os-button-primary" href={creatorLink}>View Creator</Link>
-          </div>
-        </div>
-      </div>
-
-      <div className="view-section">
-        <h2 className="view-section-title">About</h2>
-        <p className="os-type-body view-description">{infoCopy}</p>
-      </div>
-
-      <div className="view-section">
-        <h2 className="view-section-title">Your Note</h2>
-        <p className="os-type-body view-description">
-          {row.message || 'No request note added yet.'}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function runProductAction(action: ReturnType<typeof getProductLibraryPrimaryAction>) {
   if (action.href) { window.open(action.href, '_blank', 'noopener,noreferrer'); return; }
   alert(action.missingMessage);
-}
-
-function openTarget(url?: string | null) {
-  if (url) { window.open(url, '_blank', 'noopener,noreferrer'); return; }
-  alert('Download file coming soon.');
 }
 
 function formatDuration(seconds: number | null) {

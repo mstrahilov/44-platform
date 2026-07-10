@@ -4,8 +4,8 @@ import { PageShell } from '@/components/Ui';
 const quickApps = [
   { label: 'Music', meta: 'Library and store', href: '/music' },
   { label: 'Community', meta: 'Posts, friends, replies', href: '/community' },
-  { label: 'Projects', meta: 'Briefs and active work', href: '/projects/demo' },
-  { label: 'Resources', meta: 'Guides and templates', href: '/resources' },
+  { label: 'Browse', meta: 'Releases and creator items', href: '/browse' },
+  { label: 'Library', meta: 'Saved and owned items', href: '/library' },
 ];
 
 const activity = [
@@ -16,7 +16,7 @@ const activity = [
 
 const systemStats = [
   ['Music', '15 releases'],
-  ['Projects', '1 active'],
+  ['Library', '15 items'],
   ['Messages', '2 unread'],
 ];
 
@@ -31,7 +31,7 @@ export default function Studio44OSHomeConceptPage() {
             <div className="os-type-eyebrow">44OS Home Concept</div>
             <h1>Welcome back, Austin.</h1>
             <p>
-              A calm starting surface for music, projects, community, and the work waiting inside 44OS.
+              A calm starting surface for music, community, and the work waiting inside 44OS.
             </p>
           </div>
 
@@ -108,9 +108,9 @@ export default function Studio44OSHomeConceptPage() {
 
           <div className="os-home-panel os-home-project">
             <div>
-              <div className="os-type-eyebrow">Project Workspace</div>
-              <h2>Website rebuild brief</h2>
-              <p>Files, messages, timeline, and approvals will live together when a client enters 44OS for work.</p>
+              <div className="os-type-eyebrow">Creator Workspace</div>
+              <h2>Release dashboard</h2>
+              <p>Catalog items, release features, files, and updates live together in Dashboard.</p>
             </div>
             <div className="os-home-progress" aria-label="Project progress">
               <span style={{ width: '58%' }} />

@@ -76,7 +76,7 @@ export function getDashboardCatalogSection(id: string | null | undefined) {
   return DASHBOARD_CATALOG_SECTIONS.find(section => section.id === id) ?? DASHBOARD_CATALOG_SECTIONS[0];
 }
 
-export function getDashboardCatalogSectionForProduct(product: Pick<Product, 'category' | 'product_type' | 'runtime_type' | 'experience_type' | 'fulfillment_type'>) {
+export function getDashboardCatalogSectionForProduct(product: Pick<Product, 'product_type' | 'experience_type' | 'fulfillment_type'>) {
   const experience = getProductExperience(product);
   if (experience === 'physical') return getDashboardCatalogSection('merch');
   if (experience === 'book') return getDashboardCatalogSection('books');
@@ -85,7 +85,7 @@ export function getDashboardCatalogSectionForProduct(product: Pick<Product, 'cat
 }
 
 export function productBelongsToDashboardSection(
-  product: Pick<Product, 'category' | 'product_type' | 'runtime_type' | 'experience_type' | 'fulfillment_type'>,
+  product: Pick<Product, 'product_type' | 'experience_type' | 'fulfillment_type'>,
   sectionId: DashboardCatalogSectionId,
 ) {
   const productSection = getDashboardCatalogSectionForProduct(product);

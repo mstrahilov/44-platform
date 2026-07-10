@@ -197,9 +197,9 @@ export default function Studio44OSPage() {
                 >
                   <div className="dashboard-row-copy">
                     <div className="dashboard-row-title">{title}</div>
-                    <div className="dashboard-row-subtitle">{index === 2 ? 'Service' : 'Album'}</div>
+                    <div className="dashboard-row-subtitle">{index === 2 ? 'Asset' : 'Album'}</div>
                   </div>
-                  <div className="dashboard-row-meta">{index === 2 ? 'Services' : 'Music'}</div>
+                  <div className="dashboard-row-meta">{index === 2 ? 'Assets' : 'Music'}</div>
                   <div className="dashboard-row-actions">
                     <div className="dashboard-status-pill">Published</div>
                     <button className="os-button os-button-ghost os-button-compact" type="button">Open</button>

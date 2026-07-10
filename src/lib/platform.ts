@@ -1,18 +1,5 @@
-import { formatStartingPrice } from '@/lib/pricing';
-
-export type PlatformScope = 'products' | 'services' | 'resources' | 'posts' | 'creators';
-
-export interface Category {
+export interface ProductCategory {
   id: string;
-  scope: PlatformScope;
-  slug: string;
-  name: string;
-  sort_order: number;
-}
-
-export interface Tag {
-  id: string;
-  category_id: string;
   slug: string;
   name: string;
   sort_order: number;
@@ -45,7 +32,6 @@ export interface Profile {
 export interface Creator {
   id: string;
   profile_id: string | null;
-  category_id?: string | null;
   slug: string;
   name: string;
   bio: string | null;
@@ -59,51 +45,9 @@ export interface Creator {
   home_currency?: string | null;
   product_market_mode?: string | null;
   service_market_mode?: string | null;
-  categories?: Pick<Category, 'id' | 'slug' | 'name'> | null;
 }
 
 export type ProfileLinkTarget = Pick<Profile, 'slug' | 'username'>;
-
-export interface Service {
-  id: string;
-  author_id: string | null;
-  category_id: string | null;
-  slug: string;
-  title: string;
-  short_description: string | null;
-  long_description: string | null;
-  service_type?: string | null;
-  starting_price_cents: number;
-  market_mode?: string | null;
-  local_price_cents?: number | null;
-  local_currency?: string | null;
-  available_locally_only?: boolean | null;
-  delivery_estimate: string | null;
-  cover_url: string | null;
-  feature_description?: string | null;
-  featured: boolean;
-  status: string;
-  created_at: string;
-  creators?: Pick<Creator, 'id' | 'slug' | 'name' | 'avatar_url' | 'country_code' | 'display_currency' | 'home_country_code' | 'home_currency'> | null;
-  categories?: Pick<Category, 'id' | 'slug' | 'name'> | null;
-}
-
-export interface Resource {
-  id: string;
-  author_id: string | null;
-  category_id: string | null;
-  slug: string;
-  title: string;
-  short_description: string | null;
-  long_description: string | null;
-  resource_type: string;
-  cover_url: string | null;
-  download_url?: string | null;
-  status: string;
-  created_at: string;
-  creators?: Pick<Creator, 'id' | 'slug' | 'name' | 'avatar_url'> | null;
-  categories?: Pick<Category, 'id' | 'slug' | 'name'> | null;
-}
 
 export interface Track {
   id: string;
@@ -154,14 +98,11 @@ export interface CommunityPost {
   id: string;
   slug?: string | null;
   author_id?: string | null;
-  category_id: string | null;
   title: string;
   body: string | null;
-  post_type: string;
   status: string;
   created_at: string;
   creators?: Pick<Creator, 'id' | 'slug' | 'name' | 'avatar_url'> | null;
-  categories?: Pick<Category, 'id' | 'slug' | 'name'> | null;
 }
 
 export interface CommunityReply {
@@ -174,69 +115,6 @@ export interface CommunityReply {
   created_at: string;
   updated_at?: string | null;
   authors?: Pick<Profile, 'id' | 'slug' | 'display_name' | 'username' | 'avatar_url'> | null;
-}
-
-export interface SavedResource {
-  id: string;
-  resource_id: string;
-  saved_at: string;
-  resources: Resource | null;
-}
-
-export interface ServiceRequest {
-  id: string;
-  user_id?: string | null;
-  service_id: string;
-  message: string | null;
-  status: string;
-  created_at: string;
-  brief_title?: string | null;
-  brief_body?: string | null;
-  budget_cents?: number | null;
-  timeline?: string | null;
-  agreed_price_cents?: number | null;
-  agreed_currency?: string | null;
-  responded_at?: string | null;
-  paid_at?: string | null;
-  completed_at?: string | null;
-  updated_at?: string | null;
-  services: Service | null;
-}
-
-export interface ProjectMessage {
-  id: string;
-  request_id: string;
-  author_id: string;
-  body: string;
-  created_at: string;
-  authors?: {
-    id: string;
-    display_name?: string | null;
-    username?: string | null;
-    avatar_url?: string | null;
-  } | null;
-}
-
-export type ProjectStatus =
-  | 'inquiry'
-  | 'pending'
-  | 'accepted'
-  | 'declined'
-  | 'in_progress'
-  | 'awaiting_payment'
-  | 'completed'
-  | 'canceled';
-
-export function formatServicePrice(service: Pick<Service, 'starting_price_cents'> & Partial<Service>) {
-  return formatStartingPrice(service);
-}
-
-export function serviceHref(service: Pick<Service, 'id' | 'slug'>) {
-  return `/service/${service.slug || service.id}`;
-}
-
-export function resourceHref(resource: Pick<Resource, 'slug' | 'id'>) {
-  return `/resources/${resource.slug || resource.id}`;
 }
 
 export function creatorHref(creator: ProfileLinkTarget | Pick<Creator, 'slug'> | string | null | undefined) {

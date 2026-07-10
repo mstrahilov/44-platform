@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
-import { formatServicePrice, type Profile, type Service } from '@/lib/platform';
+import type { Profile } from '@/lib/platform';
 import type { Product } from '@/lib/products';
 import { getProductExperience, productBrowseHref } from '@/lib/experience';
 import { PageShell, CenteredMessage } from '@/components/Ui';
@@ -14,7 +14,7 @@ import { CommunitySetupGate } from '@/components/CommunitySetupGate';
 import { SocialArtifactCard, SocialAvatar, SocialPostRow } from '@/components/Social';
 import { getOwnershipKeys, isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { useTopbarBack, useTopbarTabs } from '@/components/TopbarContext';
-import { authorHandle, countById, isGeneralPost, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type ReplyEngagerRow, type SocialPost } from '@/lib/social';
+import { authorHandle, countById, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type ReplyEngagerRow, type SocialPost } from '@/lib/social';
 import { useContextMenu } from '@/components/ContextMenu';
 import { pinDockItem } from '@/lib/dockPreferences';
 import { hasCommunityIdentity } from '@/lib/communityProfile';
@@ -22,7 +22,7 @@ import { isMissingRelationError } from '@/lib/schemaCompat';
 import { createOrOpenConversation } from '@/lib/messages';
 import { trackProductAchievementTrigger } from '@/lib/achievementTracking';
 
-type ProfileTab = 'posts' | 'music' | 'books' | 'assets' | 'services';
+type ProfileTab = 'posts' | 'music' | 'books' | 'assets';
 type CurrentProfileState = {
   userId: string;
   profile: StudioProfile | null;
@@ -36,7 +36,6 @@ function parseProfileTab(value: string | null, isCreator: boolean): ProfileTab |
   if (normalized === 'music' || normalized === 'releases' || normalized === 'products') return 'music';
   if (normalized === 'books') return 'books';
   if (normalized === 'assets') return 'assets';
-  if (normalized === 'services') return 'services';
   return null;
 }
 
@@ -48,7 +47,6 @@ export default function PublicProfilePage() {
   const userId = user?.id ?? null;
   const [profile, setProfile] = useState<Profile | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [replyCounts, setReplyCounts] = useState<CountMap>({});
   const [repliersMap, setRepliersMap] = useState<LikersMap>({});
@@ -79,7 +77,6 @@ export default function PublicProfilePage() {
 
       if (!resolvedProfile) {
         setProducts([]);
-        setServices([]);
         setPosts([]);
         setIsFollowing(false);
         setLoading(false);
@@ -101,7 +98,6 @@ export default function PublicProfilePage() {
 
       const [
         productResult,
-        serviceResult,
         postResult,
         replyCountResult,
         likeResult,
@@ -112,13 +108,8 @@ export default function PublicProfilePage() {
           .eq('author_id', profileId)
           .order('created_at', { ascending: false }),
         supabase
-          .from('services')
-          .select('*, creators:profiles!author_id(id, slug, username, name:display_name, avatar_url, country_code, display_currency, home_country_code, home_currency)')
-          .eq('author_id', profileId)
-          .order('created_at', { ascending: false }),
-        supabase
           .from('posts')
-          .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type), categories(id, slug, name)')
+          .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type)')
           .in('author_id', ids)
           .eq('status', 'published')
           .order('created_at', { ascending: false }),
@@ -134,7 +125,6 @@ export default function PublicProfilePage() {
       ]);
 
       setProducts(((productResult.data as Product[] | null) ?? []).filter(Boolean));
-      setServices(((serviceResult.data as Service[] | null) ?? []).filter(Boolean));
       setPosts(((postResult.data as SocialPost[] | null) ?? []).filter(Boolean));
       const replyRowsData = (replyCountResult.data as ReplyEngagerRow[] | null) ?? [];
       setReplyCounts(countById(replyRowsData, 'post_id'));
@@ -262,7 +252,7 @@ export default function PublicProfilePage() {
   const currentProfile = currentProfileState && currentProfileState.userId === userId ? currentProfileState.profile : null;
   const isCreator = Boolean(profileForRoleCheck && isCreatorProfile(profileForRoleCheck));
   const publishedProducts = useMemo(
-    () => products.filter(product => product.is_published || product.status === 'published'),
+    () => products.filter(product => product.status === 'published'),
     [products],
   );
   const musicProducts = useMemo(
@@ -277,11 +267,7 @@ export default function PublicProfilePage() {
     () => publishedProducts.filter(product => getProductExperience(product) === 'asset'),
     [publishedProducts],
   );
-  const publishedServices = useMemo(
-    () => services.filter(service => service.status === 'published' || service.status === 'active'),
-    [services],
-  );
-  const generalPosts = useMemo(() => posts.filter(post => isGeneralPost(post)), [posts]);
+  const generalPosts = posts;
   const tabs = useMemo(
     () => {
       if (isCreator) {
@@ -290,7 +276,6 @@ export default function PublicProfilePage() {
           { id: 'music', label: 'Music' },
           { id: 'books', label: 'Books' },
           { id: 'assets', label: 'Assets' },
-          { id: 'services', label: 'Services' },
         ] satisfies Array<{ id: ProfileTab; label: string }>;
       }
       return generalPosts.length > 0 ? [{ id: 'posts' as const, label: 'Posts' }] : [];
@@ -401,7 +386,6 @@ export default function PublicProfilePage() {
               <Link href="/dashboard/products/new?section=books" className="os-button os-button-secondary os-button-compact">New Book</Link>
               <Link href="/dashboard/products/new?section=assets" className="os-button os-button-secondary os-button-compact">New Asset</Link>
               <Link href="/dashboard/products/new?section=merch" className="os-button os-button-secondary os-button-compact">New Merch</Link>
-              <Link href="/dashboard/services/new" className="os-button os-button-secondary os-button-compact">New Service</Link>
             </div>
           )}
         </section>
@@ -479,19 +463,6 @@ export default function PublicProfilePage() {
           </ArtifactGrid>
         )}
 
-        {tab === 'services' && (
-          <ArtifactGrid empty="No services published yet.">
-            {publishedServices.map(service => (
-              <SocialArtifactCard
-                key={service.id}
-                href={`/service/${service.slug || service.id}`}
-                title={service.title}
-                meta={`${service.service_type || 'Service'} · ${formatServicePrice(service)}`}
-                image={service.cover_url}
-              />
-            ))}
-          </ArtifactGrid>
-        )}
       </main>
       <CommunitySetupGate open={setupGateOpen} onClose={() => setSetupGateOpen(false)} />
     </PageShell>
@@ -499,7 +470,7 @@ export default function PublicProfilePage() {
 }
 
 function profileProductMeta(product: Product, fallbackType: string) {
-  const type = product.product_type || product.category || fallbackType;
+  const type = product.product_type || product.experience_type || fallbackType;
   const year = product.year || (product.created_at ? new Date(product.created_at).getFullYear() : null);
   return year ? `${type} · ${year}` : type;
 }

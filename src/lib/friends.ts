@@ -2,95 +2,91 @@ import { isMissingRelationError } from './schemaCompat';
 import { supabase } from './supabase';
 import type { SocialAuthor } from './social';
 
-export type FriendRequestStatus = 'pending' | 'accepted' | 'declined' | 'canceled';
+export type FollowState = 'none' | 'following' | 'self';
 
-export type FriendRequestRow = {
-  id: string;
-  requester_id: string;
-  addressee_id: string;
-  status: FriendRequestStatus;
+export type FollowRow = {
+  follower_id: string;
+  following_id: string;
   created_at: string;
-  responded_at: string | null;
-  requester?: SocialAuthor | null;
-  addressee?: SocialAuthor | null;
+  profile?: SocialAuthor | null;
 };
 
-export type FriendshipState =
-  | 'none'
-  | 'friends'
-  | 'incoming'
-  | 'outgoing';
+export async function loadFollowState(currentUserId: string, profileId: string) {
+  if (currentUserId === profileId) {
+    return { state: 'self' as FollowState, row: null, schemaReady: true, error: null };
+  }
 
-export function otherFriendProfile(row: FriendRequestRow, currentUserId: string) {
-  return row.requester_id === currentUserId ? row.addressee : row.requester;
-}
-
-export async function loadFriendshipState(currentUserId: string, profileId: string) {
   const { data, error } = await supabase
-    .from('friend_requests')
-    .select('id,requester_id,addressee_id,status,created_at,responded_at')
-    .or(`and(requester_id.eq.${currentUserId},addressee_id.eq.${profileId}),and(requester_id.eq.${profileId},addressee_id.eq.${currentUserId})`)
-    .in('status', ['pending', 'accepted'])
+    .from('profile_follows')
+    .select('follower_id,following_id,created_at')
+    .eq('follower_id', currentUserId)
+    .eq('following_id', profileId)
     .maybeSingle();
 
-  if (isMissingRelationError(error)) return { state: 'none' as FriendshipState, request: null, schemaReady: false, error };
-  if (error) return { state: 'none' as FriendshipState, request: null, schemaReady: true, error };
-  const request = (data as FriendRequestRow | null) ?? null;
-  if (!request) return { state: 'none' as FriendshipState, request: null, schemaReady: true, error: null };
-  if (request.status === 'accepted') return { state: 'friends' as FriendshipState, request, schemaReady: true, error: null };
-  if (request.addressee_id === currentUserId) return { state: 'incoming' as FriendshipState, request, schemaReady: true, error: null };
-  return { state: 'outgoing' as FriendshipState, request, schemaReady: true, error: null };
+  if (isMissingRelationError(error)) return { state: 'none' as FollowState, row: null, schemaReady: false, error };
+  if (error) return { state: 'none' as FollowState, row: null, schemaReady: true, error };
+
+  return {
+    state: data ? 'following' as FollowState : 'none' as FollowState,
+    row: (data as FollowRow | null) ?? null,
+    schemaReady: true,
+    error: null,
+  };
 }
 
-export async function sendFriendRequest(currentUserId: string, profileId: string) {
+export async function followProfile(currentUserId: string, profileId: string) {
   return supabase
-    .from('friend_requests')
-    .insert({ requester_id: currentUserId, addressee_id: profileId, status: 'pending' })
-    .select('id,requester_id,addressee_id,status,created_at,responded_at')
+    .from('profile_follows')
+    .upsert({ follower_id: currentUserId, following_id: profileId }, { onConflict: 'follower_id,following_id' })
+    .select('follower_id,following_id,created_at')
     .single();
 }
 
-export async function acceptFriendRequest(requestId: string) {
+export async function unfollowProfile(currentUserId: string, profileId: string) {
   return supabase
-    .from('friend_requests')
-    .update({ status: 'accepted', responded_at: new Date().toISOString() })
-    .eq('id', requestId)
-    .select('id,requester_id,addressee_id,status,created_at,responded_at')
-    .single();
+    .from('profile_follows')
+    .delete()
+    .eq('follower_id', currentUserId)
+    .eq('following_id', profileId);
 }
 
-export async function cancelFriendRequest(requestId: string) {
-  return supabase
-    .from('friend_requests')
-    .update({ status: 'canceled', responded_at: new Date().toISOString() })
-    .eq('id', requestId);
-}
-
-export async function removeFriend(requestId: string) {
-  return supabase
-    .from('friend_requests')
-    .update({ status: 'canceled', responded_at: new Date().toISOString() })
-    .eq('id', requestId);
-}
-
-export async function loadFriendRequests(currentUserId: string) {
+export async function loadFollowing(currentUserId: string) {
   const { data, error } = await supabase
-    .from('friend_requests')
+    .from('profile_follows')
     .select(`
-      id,requester_id,addressee_id,status,created_at,responded_at,
-      requester:profiles!friend_requests_requester_id_fkey(id, slug, username, display_name, avatar_url, role, creator_type),
-      addressee:profiles!friend_requests_addressee_id_fkey(id, slug, username, display_name, avatar_url, role, creator_type)
+      follower_id,following_id,created_at,
+      profile:profiles!profile_follows_following_id_fkey(id, slug, username, display_name, avatar_url, role, creator_type)
     `)
-    .or(`requester_id.eq.${currentUserId},addressee_id.eq.${currentUserId}`)
-    .in('status', ['pending', 'accepted'])
+    .eq('follower_id', currentUserId)
     .order('created_at', { ascending: false });
 
   if (isMissingRelationError(error)) {
-    return { rows: [] as FriendRequestRow[], schemaReady: false, error };
+    return { rows: [] as FollowRow[], schemaReady: false, error };
   }
 
   return {
-    rows: ((data as FriendRequestRow[] | null) ?? []).filter(Boolean),
+    rows: ((data as FollowRow[] | null) ?? []).filter(Boolean),
+    schemaReady: true,
+    error,
+  };
+}
+
+export async function loadFollowers(profileId: string) {
+  const { data, error } = await supabase
+    .from('profile_follows')
+    .select(`
+      follower_id,following_id,created_at,
+      profile:profiles!profile_follows_follower_id_fkey(id, slug, username, display_name, avatar_url, role, creator_type)
+    `)
+    .eq('following_id', profileId)
+    .order('created_at', { ascending: false });
+
+  if (isMissingRelationError(error)) {
+    return { rows: [] as FollowRow[], schemaReady: false, error };
+  }
+
+  return {
+    rows: ((data as FollowRow[] | null) ?? []).filter(Boolean),
     schemaReady: true,
     error,
   };

@@ -39,12 +39,12 @@ function SearchContent() {
         supabase
           .from('products')
           .select('*, creators:profiles!author_id(*)')
-          .eq('is_published', true)
+          .eq('status', 'published')
           .order('created_at', { ascending: false })
           .limit(120),
         supabase
           .from('posts')
-          .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type), categories(id, slug, name)')
+          .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type)')
           .eq('status', 'published')
           .order('created_at', { ascending: false })
           .limit(120),

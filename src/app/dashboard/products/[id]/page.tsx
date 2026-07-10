@@ -19,10 +19,9 @@ import {
 } from '@/components/DashboardReleaseFeatures';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
-import type { Category, Track } from '@/lib/platform';
+import type { ProductCategory, Track } from '@/lib/platform';
 import type { Product } from '@/lib/products';
 import { currencyForCountry, normalizeMarketMode, type MarketMode } from '@/lib/marketPreferences';
-import { isMissingColumnError } from '@/lib/schemaCompat';
 import { getStudioDisplayName, loadStudioProfile } from '@/lib/studioProfiles';
 import { getDashboardCatalogSectionForProduct, type DashboardCatalogSectionId } from '@/lib/dashboardCatalog';
 
@@ -66,13 +65,6 @@ function ensureTrackCount(current: DraftTrack[], nextCount: number) {
   return [...current, ...Array.from({ length: clamped - current.length }, createDraftTrack)];
 }
 
-function runtimeTypeForSection(sectionId: DashboardCatalogSectionId) {
-  if (sectionId === 'merch') return 'merch';
-  if (sectionId === 'books') return 'book';
-  if (sectionId === 'assets') return 'sample_pack';
-  return 'music';
-}
-
 function experienceTypeForSection(sectionId: DashboardCatalogSectionId) {
   if (sectionId === 'merch') return 'merch';
   if (sectionId === 'books') return 'book';
@@ -97,7 +89,7 @@ export default function EditProductPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { user, loading } = useAuth();
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [creatorName, setCreatorName] = useState('');
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -134,11 +126,11 @@ export default function EditProductPage() {
       if (!user) return;
 
       const [{ data: categoryRows }, profileResult] = await Promise.all([
-        supabase.from('categories').select('*').eq('scope', 'products').order('sort_order'),
+        supabase.from('product_categories').select('*').order('sort_order'),
         loadStudioProfile(user.id),
       ]);
 
-      setCategories((categoryRows as Category[] | null) ?? []);
+      setCategories((categoryRows as ProductCategory[] | null) ?? []);
       setCreatorName(getStudioDisplayName(profileResult.profile, user.email));
       const profileId = profileResult.profile?.id ?? user.id;
       const fallbackLocalCurrency =
@@ -176,7 +168,7 @@ export default function EditProductPage() {
       const featureAssets = ((assetRows as ProductAssetRow[] | null) ?? []).filter(asset => featureAssetTypes().includes(asset.asset_type ?? ''));
 
       setTitle(product.title ?? '');
-      setCategoryId(product.category_id ?? '');
+      setCategoryId(product.product_category_id ?? '');
       setProductType(product.product_type ?? '');
       setDescription(product.long_description || product.short_description || '');
       setPrice(product.price_cents ? (product.price_cents / 100).toFixed(2) : '');
@@ -188,7 +180,7 @@ export default function EditProductPage() {
       setCoverUrl(product.cover_url ?? '');
       setItemFileUrl(product.read_url || product.download_url || ((assetRows as ProductAssetRow[] | null) ?? []).find(asset => !featureAssetTypes().includes(asset.asset_type ?? ''))?.file_url || '');
       setYear(product.year ? String(product.year) : '');
-      setPublishStatus(product.status === 'published' || product.is_published ? 'published' : product.status === 'scheduled' ? 'scheduled' : 'draft');
+      setPublishStatus(product.status === 'published' ? 'published' : 'draft');
       setFeatureState(hydrateReleaseFeatureState(
         productSection.id,
         ((achievementRows as Array<{
@@ -233,16 +225,13 @@ export default function EditProductPage() {
     [categories, categoryId],
   );
 
-  const section = useMemo(
-    () => getDashboardCatalogSectionForProduct({
-      category: selectedCategory?.name ?? '',
-      product_type: productType,
-      runtime_type: null,
-      experience_type: null,
-      fulfillment_type: null,
-    }),
-    [productType, selectedCategory],
-  );
+  const section = useMemo(() => {
+    const slug = selectedCategory?.slug;
+    if (slug === 'books') return getDashboardCatalogSectionForProduct({ product_type: productType, experience_type: 'book', fulfillment_type: 'digital' });
+    if (slug === 'assets') return getDashboardCatalogSectionForProduct({ product_type: productType, experience_type: 'asset', fulfillment_type: 'digital' });
+    if (slug === 'merch') return getDashboardCatalogSectionForProduct({ product_type: productType, experience_type: 'merch', fulfillment_type: 'physical' });
+    return getDashboardCatalogSectionForProduct({ product_type: productType, experience_type: 'music', fulfillment_type: 'digital' });
+  }, [productType, selectedCategory]);
   const deleteLabel = `Delete ${section.itemLabel.replace(/\b\w/g, char => char.toUpperCase())}`;
   const isMusicProduct = section.id === 'music';
   const isMerchProduct = section.id === 'merch';
@@ -315,8 +304,7 @@ export default function EditProductPage() {
 
     const updatePayload = {
       title: title.trim(),
-      category_id: categoryId,
-      category: selectedCategory?.name ?? section.label,
+      product_category_id: categoryId,
       product_type: productType.trim(),
       short_description: null,
       long_description: description.trim(),
@@ -327,7 +315,6 @@ export default function EditProductPage() {
       available_locally_only: isMerchProduct ? merchUsesLocalOnlyPricing : false,
       is_free: isFree,
       cover_url: coverUrl.trim() || null,
-      runtime_type: runtimeTypeForSection(section.id),
       experience_type: experienceTypeForSection(section.id),
       fulfillment_type: isMerchProduct ? 'physical' : 'digital',
       merch_fulfillment_mode: isMerchProduct ? merchFulfillmentMode : null,
@@ -336,33 +323,14 @@ export default function EditProductPage() {
       download_url: needsDigitalFile ? itemFileUrl.trim() : null,
       year: year ? Number(year) : null,
       status: publishStatus,
-      is_published: publishStatus === 'published',
       creator: creatorName,
     };
 
-    let { error: updateError } = await supabase
+    const { error: updateError } = await supabase
       .from('products')
       .update(updatePayload)
       .eq('id', id)
       .eq('author_id', profileId);
-
-    if (isMissingColumnError(updateError)) {
-      const legacyPayload: Record<string, unknown> = { ...updatePayload };
-      delete legacyPayload.market_mode;
-      delete legacyPayload.local_price_cents;
-      delete legacyPayload.local_currency;
-      delete legacyPayload.available_locally_only;
-      delete legacyPayload.experience_type;
-      delete legacyPayload.fulfillment_type;
-      delete legacyPayload.merch_fulfillment_mode;
-      delete legacyPayload.merch_shipping_scope;
-      const retry = await supabase
-        .from('products')
-        .update(legacyPayload)
-        .eq('id', id)
-        .eq('author_id', profileId);
-      updateError = retry.error;
-    }
 
     if (updateError) {
       setSaving(false);

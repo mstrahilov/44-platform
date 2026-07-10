@@ -68,7 +68,7 @@ export default function CommunityThreadPage() {
       setLoading(true);
 
       const selectClause =
-        '*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type), categories(id, slug, name)';
+        '*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type)';
       let post: SocialPost | null = null;
 
       const { data: slugMatch } = await supabase

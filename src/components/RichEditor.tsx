@@ -121,7 +121,7 @@ export function RichEditor({ value, onChange, userId, placeholder, disabled }: P
     setUploading(true);
     setError('');
     try {
-      const result = await uploadPublicFile({ file, folder: 'resources/content', userId });
+      const result = await uploadPublicFile({ file, folder: 'editor/content', userId });
       editor.chain().focus().setImage({ src: result.publicUrl, alt: file.name }).run();
     } catch (uploadError) {
       setError(getUploadErrorMessage(uploadError));

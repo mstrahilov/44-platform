@@ -14,6 +14,12 @@ type ProductDetailTrack = {
   duration_seconds?: number | null;
 };
 
+export type LibraryBonusAsset = {
+  title: string | null;
+  file_url: string | null;
+  asset_type: string | null;
+};
+
 export function LibraryCreatorChip({
   creator,
   fallbackName,
@@ -111,6 +117,47 @@ export function LibraryAchievementsSection({
   );
 }
 
+export function LibraryBonusContentSection({
+  bonusAssets,
+  unlocked,
+}: {
+  bonusAssets: LibraryBonusAsset[];
+  unlocked: boolean;
+}) {
+  if (bonusAssets.length === 0) return null;
+
+  return (
+    <div className="view-section">
+      <SectionHeader
+        title="Bonus Content"
+        description="Overachiever unlocks creator-selected extras for this item."
+      />
+      <div className="dashboard-list-surface">
+        {bonusAssets.map((asset, index) => {
+          const title = asset.title || `Bonus Content ${index + 1}`;
+          return (
+            <div className="dashboard-list-row" key={`${title}-${index}`}>
+              <span className="dashboard-row-copy">
+                <span className="dashboard-row-title">{title}</span>
+                <span className="dashboard-row-subtitle">
+                  {unlocked ? 'Unlocked and ready to download.' : 'Locked until Overachiever is unlocked.'}
+                </span>
+              </span>
+              {unlocked && asset.file_url ? (
+                <Link className="os-button os-button-secondary os-button-compact" href={asset.file_url} target="_blank" rel="noreferrer">
+                  Download
+                </Link>
+              ) : (
+                <span className="project-status-pill library-achievement-status-locked">Locked</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function LibraryProductDetailsSection({
   product,
   tracks = [],
@@ -143,7 +190,7 @@ function buildLibraryProductDetails(product: Product, tracks: ProductDetailTrack
   const uploadDate = product.created_at
     ? new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(product.created_at))
     : 'N/A';
-  const type = product.experience_type || product.category || product.product_type || '';
+  const type = product.experience_type || product.product_type || '';
   const normalizedType = type.toLowerCase();
 
   if (normalizedType.includes('music') || ['album', 'ep', 'single'].some(value => product.product_type?.toLowerCase().includes(value))) {

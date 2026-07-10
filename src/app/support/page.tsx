@@ -62,11 +62,11 @@ const ARTICLES: SupportArticle[] = [
   },
   {
     category: 'Creator Uploads',
-    question: 'Publish music, books, assets, merch, or services',
+    question: 'Publish music, books, assets, or merch',
     answer: [
-      'Creators publish and manage work from Dashboard. Use the profile shortcut buttons for fast access to new releases, books, assets, merch, and services.',
+      'Creators publish and manage work from Dashboard. Use the profile shortcut buttons for fast access to new releases, books, assets, and merch.',
       'Music releases can include v1.0 achievements and Overachiever bonus content. Books, assets, and merch use simpler publishing flows until their experiences are fully built.',
-      'Services are 44-operated project intake flows, not a general creator marketplace.',
+      'Future formats will be added to the same catalog model after the launch foundation is stable.',
     ],
     actions: [{ label: 'Open Dashboard', href: '/dashboard' }],
   },

@@ -1,6 +1,5 @@
 export const ACHIEVEMENT_ICON_PATHS: Record<string, string> = {
   front_to_back: '/achivements/Front%20to%20Back.png',
-  first_wave: '/achivements/First%20Wave.png',
   no_skips: '/achivements/No%20Skips.png',
   nightbird: '/achivements/Nightbird.png',
   heavy_rotation: '/achivements/Heavy%20Rotation.png',

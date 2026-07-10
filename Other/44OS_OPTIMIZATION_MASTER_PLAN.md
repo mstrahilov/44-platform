@@ -23,7 +23,7 @@ Status legend:
 - `[pending]` Review global/local pricing UI so it communicates reach and local fairness clearly.
 - `[pending]` Design the flagship-release template: album/release page, achievements, bonus content, and future Launch action.
 - `[pending]` Define the future interactive-experience event bridge before building Unity/WebGL/Spline-style unlocks.
-- `[pending]` Revisit Services after v1 as a creator earning surface with local/global pricing and simple project workflows.
+- `[pending]` Revisit Services after v1 by modeling them as canonical products with service fulfillment.
 
 Acceptance:
 
@@ -83,22 +83,28 @@ Acceptance:
 
 - Public Dock shows Search, Browse, Radio, Community, Support, and Log In.
 - Signed-in Dock shows Library, Search, Browse, Radio, Community, optional creator Dashboard, Support, and Settings.
-- Services and Resources are not visible v1 app destinations.
+- Resources and the old Services/Projects routes do not exist in the v1 app.
 - Legacy route redirects are intentional and documented.
 
 ---
 
 ## 4. Supabase
 
-- `[blocked]` Do not apply Supabase SQL automatically.
+- `[done]` Link Supabase CLI to the 44OS staging project and repair migration history.
+- `[done]` Back up staging schema/data under ignored `supabase/backups/`.
 - `[done]` Decide and document the exact v1 achievement set: music only, 8 achievements, no `First Wave`, no book achievements.
 - `[done]` Create reviewed SQL for central `achievement_templates`, v1 music icon URLs, non-v1 achievement pruning, and Overachiever-only Bonus Content cleanup: `supabase/migrations/20260709230000_44os_v1_music_achievements.sql`.
-- `[done]` Update Dashboard achievement setup so creators configure music achievements and Overachiever Bonus Content only.
+- `[done]` Update Dashboard release feature setup so creators configure music achievements and optional Overachiever Bonus Content.
 - `[done]` Update Library/Notification achievement display and tracking to filter to v1 music achievement codes.
-- `[pending]` User runs reviewed v1 music achievement SQL in Supabase after confirming storage filenames match the SQL.
-- `[pending]` Re-probe Supabase achievement tables after the SQL is applied.
-- `[pending]` Create a reviewed SQL fix for recursive `conversation_members/messages` RLS.
-- `[pending]` Resolve `friend_requests` drift by restoring the table with RLS or removing/rebasing code to `profile_follows`.
+- `[done]` Create launch foundation migration for message RLS cleanup, product asset vocabulary, table comments, and `user_points_ledger`.
+- `[done]` Remove live app code dependency on missing `friend_requests`; follow state uses `profile_follows`.
+- `[done]` Dry-run and push `20260710143000_44os_launch_foundation_alignment.sql` to Supabase staging.
+- `[done]` Re-probe Supabase achievement, product asset, follow, and messaging tables after the migration is applied.
+- `[done]` Remove Resources routes/tables and obsolete resource columns.
+- `[done]` Remove service request/project workflows and make `services` a private future placeholder.
+- `[done]` Re-audit retained foundations by live row count and app usage; remove speculative systems that are not part of the settled launch model.
+- `[done]` Split `categories` into `product_categories` and private `service_categories`; retire obsolete post categories.
+- `[done]` Consolidate products onto `status`, `experience_type`, and `product_category_id`.
 - `[pending]` Classify empty migration `20260704164154_remote_schema.sql`.
 - `[pending]` Mark destructive historical migration as do-not-replay without backup and approval.
 - `[pending]` Document production Auth Site URL and redirect allow-list settings.
@@ -109,7 +115,7 @@ Acceptance:
 - Messaging no longer returns RLS recursion errors.
 - No live code references a missing table.
 - Achievement templates exist as the central source of truth for the 8 v1 music achievements.
-- Any SQL file is reviewed before the user runs it.
+- Supabase changes are reviewed as repo migrations, dry-run, then pushed through the linked CLI.
 
 ---
 
@@ -175,8 +181,7 @@ Acceptance:
 
 ## 7. Current Known Blockers
 
-- User still needs to run the reviewed v1 music achievement SQL after backing up and confirming storage filenames.
-- Supabase messaging RLS recursion needs reviewed SQL and user approval before it can be fixed remotely.
-- Remote `friend_requests` table is absent while code references it.
+- Launch foundation migration needs dry-run/push to staging.
+- Supabase messaging, follows, and release feature uploads need browser QA after migration.
 - Browser screenshot QA tooling still needs to be run against the updated app.
 - Full visual QA requires a running local app and desktop/mobile screenshots.

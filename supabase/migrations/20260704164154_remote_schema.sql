@@ -1,0 +1,2 @@
+-- Applied migration-history anchor from the original remote schema import.
+-- Intentionally contains no schema operations. Do not delete or reuse this version.

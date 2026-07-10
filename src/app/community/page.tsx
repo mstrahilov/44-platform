@@ -42,7 +42,7 @@ import {
 import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { useAuth } from '@/lib/useAuth';
-import { countById, isGeneralPost, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type ReplyEngagerRow, type SocialLiker, type SocialPost, type SocialReply } from '@/lib/social';
+import { countById, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type ReplyEngagerRow, type SocialLiker, type SocialPost, type SocialReply } from '@/lib/social';
 import { normalizeTaxonomyValue } from '@/lib/taxonomy';
 
 type PostLike = LikeRow;
@@ -216,7 +216,7 @@ function CommunityPageContent() {
       const [{ data: postRows }, { data: replyRows }, { data: likeRows }] = await Promise.all([
         supabase
           .from('posts')
-          .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type, country_code, home_country_code), categories(id, slug, name)')
+          .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type, country_code, home_country_code)')
           .eq('status', 'published')
           .order('created_at', { ascending: false })
           .limit(80),
@@ -314,7 +314,7 @@ function CommunityPageContent() {
     followingState && followingState.userId === userId ? followingState.ids : new Set<string>()
   ), [followingState, userId]);
   const canInteract = hasCommunityIdentity(profile);
-  const generalPosts = useMemo(() => posts.filter(post => isGeneralPost(post)), [posts]);
+  const generalPosts = posts;
   const visiblePosts = useMemo(() => {
     let next = generalPosts;
     if (requestedView === 'following') {
@@ -477,14 +477,12 @@ function CommunityPageContent() {
       .from('posts')
       .insert({
         author_id: user.id,
-        category_id: null,
         slug: buildSlug(finalBody),
         title: buildPostTitle(finalBody),
         body: finalBody,
-        post_type: 'general',
         status: 'published',
       })
-      .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type, country_code, home_country_code), categories(id, slug, name)')
+      .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type, country_code, home_country_code)')
       .single();
 
     if (insertError) {
