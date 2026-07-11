@@ -14,7 +14,6 @@ import { creatorHref } from '@/lib/platform';
 import { ProductGrid, ProductCard } from '@/components/Ui';
 import { ProductReviewsSection } from '@/components/ProductReviewsSection';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
-import { buildReleaseFeatureBadges, ReleaseFeatureBadges, type ReleaseFeatureBadge } from '@/components/ReleaseFeatureBadges';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { addToCart, useCart } from '@/lib/cart';
 import { resolvePrice } from '@/lib/pricing';
@@ -58,7 +57,6 @@ export function ProductStoreDetail({
   const [product, setProduct] = useState<Product | null>(null);
   const [tracks, setTracks] = useState<ProductTrack[]>([]);
   const [related, setRelated] = useState<Product[]>([]);
-  const [featureBadges, setFeatureBadges] = useState<ReleaseFeatureBadge[]>([]);
   const [toast, setToast] = useState<AchievementToastData | null>(null);
   const [owned, setOwned] = useState(false);
   const [ownedLibraryItemId, setOwnedLibraryItemId] = useState<string | null>(null);
@@ -73,7 +71,6 @@ export function ProductStoreDetail({
     async function fetchProduct() {
       setLoading(true);
       setTracks([]);
-      setFeatureBadges([]);
       const productQuery = supabase
         .from('products')
         .select('*, creators:profiles!author_id(*)');
@@ -97,22 +94,6 @@ export function ProductStoreDetail({
       }
 
       if (data) {
-        const [{ count: achievementCount }, { data: featureAssets }] = await Promise.all([
-          supabase
-            .from('product_achievements')
-            .select('id', { count: 'exact', head: true })
-            .eq('product_id', data.id),
-          supabase
-            .from('product_assets')
-            .select('asset_type')
-            .eq('product_id', data.id)
-            .in('asset_type', ['bonus_content', 'bonus_achievement', 'commentary_audio', 'behind_the_scenes']),
-        ]);
-        setFeatureBadges(buildReleaseFeatureBadges({
-          achievementCount: achievementCount ?? 0,
-          assetTypes: ((featureAssets as Array<{ asset_type: string | null }> | null) ?? []).map(asset => asset.asset_type ?? ''),
-        }));
-
         if (releasePage || getProductExperience(data) === 'music') {
           const { data: trackRows } = await supabase
             .from('tracks')
@@ -364,7 +345,6 @@ export function ProductStoreDetail({
             </span>
             <span>{creatorDisplayName}</span>
           </Link>
-          <p className="view-description view-store-hero-copy">{heroCopy}</p>
           <div className="view-album-actions">
             {primaryActions.map(action =>
               action.href ? (
@@ -387,13 +367,6 @@ export function ProductStoreDetail({
           {hasDescription && description.length > 0 ? description : heroCopy}
         </p>
       </div>
-
-      {featureBadges.length > 0 && (
-        <div className="view-section">
-          <h2 className="view-section-title">Features</h2>
-          <ReleaseFeatureBadges badges={featureBadges} />
-        </div>
-      )}
 
       <div className="view-section">
         <div className="item-community-header" style={{ marginBottom: 28 }}>

@@ -160,7 +160,7 @@ export const OS_APPS: OSApp[] = [
   },
   {
     id: 'inbox',
-    label: 'Messages',
+    label: 'Inbox',
     description: 'Direct messages and project communication.',
     href: '/inbox',
     iconClass: 'os-icon-inbox',

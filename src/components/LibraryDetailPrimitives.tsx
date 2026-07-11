@@ -105,9 +105,6 @@ export function LibraryAchievementsSection({
                   <span className="dashboard-row-title">{achievement.title}</span>
                   {achievement.description && <span className="dashboard-row-subtitle">{achievement.description}</span>}
                 </span>
-                <span className={isUnlocked ? 'project-status-pill library-achievement-status-unlocked' : 'project-status-pill library-achievement-status-locked'}>
-                  {isUnlocked ? 'Unlocked' : 'Locked'}
-                </span>
               </div>
             );
           })}

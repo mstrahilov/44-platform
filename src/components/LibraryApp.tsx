@@ -159,20 +159,19 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
         <HubHero
           title="Library"
           copy="Everything you have saved, added, or purchased."
-          className="library-app-header"
           actions={(
-            <div className="library-header-tools">
-              <label className="library-search-control">
+            <div className="page-header-tools">
+              <label className="page-search-control">
                 <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
                 <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search Library" aria-label="Search Library" />
               </label>
-              <details className="library-filter-menu">
-                <summary className="library-filter-button" aria-label="Filter Library" title="Filter Library">
-                  <span className="library-filter-icon" aria-hidden="true"><i /><i /><i /></span>
+              <details className="page-filter-menu">
+                <summary className="page-filter-button" aria-label="Filter Library" title="Filter Library">
+                  <span className="page-filter-icon" aria-hidden="true"><i /><i /><i /></span>
                 </summary>
-                <div className="library-filter-popover">
+                <div className="page-filter-popover">
                   {(['all', ...availableFilters] as LibraryFilter[]).map(filter => (
-                    <button key={filter} type="button" className={activeFilter === filter ? 'library-filter-option library-filter-option-active' : 'library-filter-option'} onClick={event => {
+                    <button key={filter} type="button" className={activeFilter === filter ? 'page-filter-option page-filter-option-active' : 'page-filter-option'} onClick={event => {
                       setActiveFilter(filter);
                       event.currentTarget.closest('details')?.removeAttribute('open');
                     }}>

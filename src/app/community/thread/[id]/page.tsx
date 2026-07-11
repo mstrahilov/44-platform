@@ -411,7 +411,7 @@ export default function CommunityThreadPage() {
 
   return (
     <PageShell>
-      <main className="social-shell">
+      <main className="social-shell social-thread-page">
         <section aria-label="Replies">
           {error && <div className="dashboard-status dashboard-status-error" style={{ marginTop: 14 }}>{error}</div>}
 

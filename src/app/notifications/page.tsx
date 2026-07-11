@@ -23,6 +23,7 @@ const TABS: Array<{ id: TabId; label: string }> = [
 ];
 
 const SEEN_NOTIF_KEY = '44-seen-notification-ids';
+const HIDDEN_NOTIF_KEY = '44-hidden-notification-ids';
 
 function markNotificationsSeen(notifications: AchievementNotification[]) {
   if (typeof window === 'undefined' || notifications.length === 0) return;
@@ -36,11 +37,31 @@ function markNotificationsSeen(notifications: AchievementNotification[]) {
   }
 }
 
+function loadHiddenNotificationIds(): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = window.localStorage.getItem(HIDDEN_NOTIF_KEY);
+    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveHiddenNotificationIds(ids: Set<string>) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(HIDDEN_NOTIF_KEY, JSON.stringify(Array.from(ids)));
+  } catch {
+    // Notification dismissal is a local convenience only.
+  }
+}
+
 export default function NotificationsPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [notifications, setNotifications] = useState<AchievementNotification[]>([]);
   const [activeTab, setActiveTab] = useState<TabId>('all');
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => loadHiddenNotificationIds());
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
@@ -72,7 +93,7 @@ export default function NotificationsPage() {
     return () => window.removeEventListener(ACHIEVEMENT_NOTIFICATIONS_UPDATED, onAchievementUpdate);
   }, [user]);
 
-  const enabledNotifications = notifications.filter(item => item.kind !== 'message' && notificationIsEnabled(item));
+  const enabledNotifications = notifications.filter(item => item.kind !== 'message' && notificationIsEnabled(item) && !hiddenIds.has(item.id));
 
   useEffect(() => {
     markNotificationsSeen(enabledNotifications);
@@ -97,6 +118,15 @@ export default function NotificationsPage() {
     replies: 'Replies to your posts and comments will appear here.',
     likes: 'Likes on your posts will appear here.',
   };
+  function hideNotification(id: string) {
+    setHiddenIds(current => {
+      const next = new Set(current);
+      next.add(id);
+      saveHiddenNotificationIds(next);
+      return next;
+    });
+  }
+
   return (
     <PageShell>
       <main className="dashboard-page">
@@ -120,25 +150,30 @@ export default function NotificationsPage() {
               {visibleNotifications.map(item => (
                 <article
                   key={item.id}
-                  className="dashboard-list-row"
-                  style={{ gridTemplateColumns: 'auto minmax(0, 1fr) auto', cursor: item.href ? 'pointer' : 'default' }}
+                  className="dashboard-list-row notification-page-row"
+                  style={{ cursor: item.href ? 'pointer' : 'default' }}
                   onClick={() => {
                     if (item.href) router.push(item.href);
                   }}
                 >
                   <NotificationArt item={item} />
                   <div className="dashboard-row-copy">
-                    <div className="os-type-eyebrow" style={{ color: item.kind === 'reply' ? 'var(--os-color-ink-secondary)' : 'var(--os-color-accent)' }}>
-                      {item.kind === 'reply' ? 'Reply' : item.kind === 'mention' ? 'Mention' : item.kind === 'like' ? 'Like' : 'Achievement Unlocked'}
-                    </div>
                     <div className="dashboard-row-title">{item.title}</div>
                     {item.description && (
                       <div className="dashboard-row-subtitle">{item.description}</div>
                     )}
                   </div>
-                  <div className="dashboard-row-meta">
-                    {item.createdAt ? new Date(item.createdAt).toLocaleString() : 'Just now'}
-                  </div>
+                  <button
+                    type="button"
+                    className="notification-page-remove"
+                    aria-label={`Dismiss ${item.title}`}
+                    onClick={event => {
+                      event.stopPropagation();
+                      hideNotification(item.id);
+                    }}
+                  >
+                    ×
+                  </button>
                 </article>
               ))}
             </div>

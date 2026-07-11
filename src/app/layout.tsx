@@ -23,8 +23,19 @@ const THEME_BOOTSTRAP = `(function(){try{
 export const metadata: Metadata = {
   title: '44',
   description: 'A platform for independent creative work.',
+  manifest: '/manifest.webmanifest',
+  applicationName: '44',
+  appleWebApp: {
+    capable: true,
+    title: '44',
+    statusBarStyle: 'default',
+  },
+  formatDetection: {
+    telephone: false,
+  },
   icons: {
     icon: process.env.VERCEL ? '/favicon-live.svg' : '/favicon-local.svg',
+    apple: '/favicon.png',
   },
 };
 

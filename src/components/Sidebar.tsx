@@ -244,12 +244,12 @@ export default function Sidebar() {
     .filter((app): app is OSApp => Boolean(app));
   const supportApp = dockApps.find(app => app.id === 'support') ?? null;
   const settingsApp = dockApps.find(app => app.id === 'settings') ?? null;
+  const studioApp = dockApps.find(app => app.id === 'studio') ?? getOSApp('studio') ?? null;
   const menuLibraryApp = libraryApp ?? getOSApp('library') ?? null;
-  const menuSearchApp = getOSApp('search') ?? null;
-  const menuApps = [getOSApp('store'), menuLibraryApp, menuSearchApp, getOSApp('radio'), getOSApp('community'), supportApp, settingsApp]
+  const menuApps = [menuLibraryApp, getOSApp('store'), getOSApp('radio'), getOSApp('community'), studioApp, supportApp, settingsApp]
     .filter((app): app is OSApp => Boolean(app))
     .filter((app, index, apps) => apps.findIndex(candidate => candidate.id === app.id) === index);
-  const mobileDockApps = ['store', 'library', 'search', 'radio', 'community']
+  const mobileDockApps = ['store', 'community', 'radio', 'library', 'search']
     .map(id => getOSApp(id as OSApp['id']))
     .filter((app): app is OSApp => Boolean(app));
 
@@ -354,7 +354,7 @@ export default function Sidebar() {
                 aria-expanded={app.children ? expanded : undefined}
                 onClick={() => {
                   if (app.children) openApp(app);
-                  else setMobileMenuOpen(false);
+                  setMobileMenuOpen(false);
                 }}>
                 <span className={`os-icon ${app.iconClass}`} aria-hidden="true" />
                 <span>{app.label}</span>

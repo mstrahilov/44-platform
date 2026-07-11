@@ -160,6 +160,51 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     }
   }, [currentTrack, isPlaying, muted, volume]);
 
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('mediaSession' in navigator) || !currentTrack) return;
+
+    const artwork = currentTrack.artworkUrl
+      ? [
+          { src: currentTrack.artworkUrl, sizes: '96x96', type: 'image/png' },
+          { src: currentTrack.artworkUrl, sizes: '256x256', type: 'image/png' },
+          { src: currentTrack.artworkUrl, sizes: '512x512', type: 'image/png' },
+        ]
+      : [];
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: currentTrack.title,
+      artist: currentTrack.artist,
+      album: currentTrack.releaseTitle || '44',
+      artwork,
+    });
+    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+
+    try {
+      navigator.mediaSession.setActionHandler('play', () => {
+        const audio = audioRef.current;
+        if (!audio || !currentTrack) return;
+        setPlaybackError('');
+        setIsPlaying(true);
+        void audio.play().catch(error => {
+          setPlaybackError(error instanceof Error ? error.message : 'Playback failed.');
+          setIsPlaying(false);
+        });
+      });
+      navigator.mediaSession.setActionHandler('pause', () => {
+        audioRef.current?.pause();
+        setIsPlaying(false);
+      });
+      navigator.mediaSession.setActionHandler('previoustrack', playPrevious);
+      navigator.mediaSession.setActionHandler('nexttrack', playNext);
+      navigator.mediaSession.setActionHandler('seekto', details => {
+        if (typeof details.seekTime === 'number') seek(details.seekTime);
+      });
+    } catch {
+      // Some browsers expose Media Session metadata without every action.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTrack, isPlaying]);
+
   function startTrack(
     nextQueue: MusicQueueTrack[],
     index: number,

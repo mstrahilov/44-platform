@@ -368,7 +368,7 @@ function MessagesContent() {
         <header className="social-header">
           <div className="social-title-row">
             <div>
-              <h1 className="os-type-display">Messages</h1>
+              <h1 className="os-type-display">Inbox</h1>
             </div>
             <button type="button" className="os-button os-button-primary" onClick={() => setComposing(true)}>
               New Message
@@ -378,10 +378,10 @@ function MessagesContent() {
 
         {!canInteract && <div className="app-empty-text">{communityIdentityMessage()}</div>}
 
-          <section className="social-inbox" aria-label="Messages">
+          <section className="social-inbox" aria-label="Inbox">
             <aside className="social-inbox-list">
               <OnboardingTip id="messages-refresh">
-                Messages refresh when you return to this window. Open a profile to start a new conversation.
+                Inbox refreshes when you return to this window. Open a profile to start a new conversation.
               </OnboardingTip>
               {composing && (
                 <button

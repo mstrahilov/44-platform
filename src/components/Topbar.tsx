@@ -14,7 +14,6 @@ import { notificationIsEnabled } from '@/lib/notificationPreferences';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTopbar } from './TopbarContext';
 import { useCart } from '@/lib/cart';
-import { useMobileMenu } from './MobileMenuContext';
 
 export type { TopbarTab } from './TopbarContext';
 
@@ -37,6 +36,7 @@ const IconProfile = () => (
 );
 
 const IconStudio = () => <span className="os-icon os-icon-dashboard os-icon-sm" aria-hidden="true" />;
+const IconSettings = () => <span className="os-icon os-icon-settings os-icon-sm" aria-hidden="true" />;
 
 const IconMessages = () => (
   <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -114,7 +114,6 @@ export function Topbar() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
   const { tabs, back } = useTopbar();
-  const { open: mobileMenuOpen, toggle: toggleMobileMenu } = useMobileMenu();
   const { count: cartCount } = useCart();
   const [profileState, setProfileState] = useState<ProfileState | null>(null);
   const [notificationState, setNotificationState] = useState<NotificationState | null>(null);
@@ -296,19 +295,15 @@ export function Topbar() {
   return (
     <div className="os-topbar">
       <div className="os-topbar-left">
-        <button
-          type="button"
-          className="os-mobile-menu-button"
-          aria-label="Open menu"
-          aria-expanded={mobileMenuOpen}
-          onClick={toggleMobileMenu}
-        >
-          <span /><span /><span />
-        </button>
+        <Link href="/store" className="os-mobile-logo" aria-label="44 Store">
+          <span className="os-logo-44" aria-hidden="true" />
+        </Link>
         {back && (
           <button
             type="button"
             className="os-topbar-back"
+            aria-label={backLabel}
+            title={backLabel}
             onClick={() => {
               if (typeof window !== 'undefined' && window.history.length > 1) {
                 router.back();
@@ -320,7 +315,6 @@ export function Topbar() {
             <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M13 5l-6 6 6 6"/>
             </svg>
-            {backLabel}
           </button>
         )}
         {tabs?.map(tab => {
@@ -442,20 +436,27 @@ export function Topbar() {
                 <Link href={profileHref} className="os-popover-item" role="menuitem">
                   <IconProfile /> Profile
                 </Link>
+                <Link href="/inbox" className="os-popover-item" role="menuitem">
+                  <IconMessages /> Inbox
+                </Link>
                 <Link href="/studio" className="os-popover-item" role="menuitem">
                   <IconStudio /> Studio
                 </Link>
-                <Link href="/inbox" className="os-popover-item" role="menuitem">
-                  <IconMessages /> Messages
+                <Link href="/settings" className="os-popover-item os-popover-item-mobile-only" role="menuitem">
+                  <IconSettings /> Settings
                 </Link>
-                <div className="os-popover-divider" />
-                <button type="button" className="os-popover-item" role="menuitem" onClick={handleSignOut}>
+                <div className="os-popover-divider os-popover-divider-mobile-hidden" />
+                <button type="button" className="os-popover-item os-popover-item-mobile-hidden" role="menuitem" onClick={handleSignOut}>
                   <IconSignOut /> Log Out
                 </button>
               </div>
             )}
           </div>
-        ) : null}
+        ) : (
+          <Link href="/login" className="os-topbar-avatar os-topbar-login-avatar" aria-label="Log in">
+            <IconUser />
+          </Link>
+        )}
       </div>
     </div>
   );

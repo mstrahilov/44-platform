@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { PageShell, GlassPanel, HubHero, HubSection, EmptyMessage } from '@/components/Ui';
+import { PageShell, GlassPanel, HubSection, EmptyMessage } from '@/components/Ui';
 import { useMusicPlayer, type MusicQueueTrack } from '@/components/MusicPlayer';
 import {
   getSyncedRadioPlayback,
@@ -49,6 +49,8 @@ export default function RadioPage() {
   );
 
   const syncedTrack = playback.index >= 0 ? bundle?.tracks[playback.index] ?? null : null;
+  const heroImage = syncedTrack?.coverUrl ?? null;
+  const heroStyle = heroImage ? { backgroundImage: `url(${JSON.stringify(heroImage)})` } : undefined;
   const isCurrentSyncedTrack = currentTrack?.id === syncedTrack?.trackId;
   const isSyncedTrackLive = isCurrentSyncedTrack && isPlaying;
 
@@ -71,22 +73,7 @@ export default function RadioPage() {
 
   return (
     <PageShell>
-      <main className="app-page">
-        <HubHero
-          title="44 Radio"
-          copy="Tune in to 44 Radio, a live 24/7 station playing around the world."
-          actions={(
-            <button
-              type="button"
-              className="os-button os-button-primary"
-              onClick={handleRadioAction}
-              disabled={!queue.length || playback.index < 0}
-            >
-              {isSyncedTrackLive ? 'Stop' : 'Play Live'}
-            </button>
-          )}
-        />
-
+      <main className="radio-page">
         {loading ? (
           <HubSection title="Now Playing">
             <EmptyMessage>Loading Radio…</EmptyMessage>
@@ -114,40 +101,56 @@ export default function RadioPage() {
               </div>
             ) : null}
 
-            <GlassPanel className="radio-now-card">
+            <section
+              className={heroImage ? 'view-album-header radio-hero' : 'view-album-header view-album-header-fallback radio-hero'}
+              style={heroStyle}
+              aria-label="Now Playing"
+            >
+              {syncedTrack ? (
+                <Link href={syncedTrack.releaseHref} className="view-album-cover radio-hero-cover" aria-label={`Open ${syncedTrack.releaseTitle}`}>
+                  {syncedTrack.coverUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={syncedTrack.coverUrl} alt="" />
+                  ) : null}
+                </Link>
+              ) : (
+                <div className="view-album-cover radio-hero-cover radio-hero-cover-empty" aria-hidden="true" />
+              )}
+
+              <div className="view-album-copy radio-hero-copy">
+                <div className="view-album-eyebrow radio-hero-eyebrow">Now Playing</div>
                 {syncedTrack ? (
-                  <div className="radio-now-layout">
-                    <Link href={syncedTrack.releaseHref} className="radio-now-art" aria-label={`Open ${syncedTrack.releaseTitle}`}>
-                      {syncedTrack.coverUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={syncedTrack.coverUrl} alt="" />
-                      ) : null}
-                    </Link>
-                    <div className="radio-now-info">
-                      <div className="radio-now-eyebrow">Now Playing</div>
-                      <Link href={syncedTrack.trackHref} className="radio-now-title-link">
-                        <div className="radio-now-title">{syncedTrack.title}</div>
-                      </Link>
-                      <div className="radio-now-meta">
-                        <Link href={radioArtistHref(syncedTrack)} className="radio-now-artist-link">
-                          <span className="radio-now-avatar">
-                            {syncedTrack.artistAvatarUrl ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={syncedTrack.artistAvatarUrl} alt="" />
-                            ) : null}
-                          </span>
-                          {syncedTrack.artistName}
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
+                  <Link href={syncedTrack.trackHref} className="radio-now-title-link">
+                    <h1 className="view-album-title radio-hero-title">{syncedTrack.title}</h1>
+                  </Link>
                 ) : (
-                  <>
-                    <div className="radio-now-eyebrow">Now Playing</div>
-                    <div className="radio-now-title">No track in rotation</div>
-                  </>
+                  <h1 className="view-album-title radio-hero-title">No track in rotation</h1>
                 )}
-              </GlassPanel>
+
+                {syncedTrack ? (
+                  <Link href={radioArtistHref(syncedTrack)} className="library-creator-chip radio-hero-artist">
+                    <span className="library-creator-avatar">
+                      {syncedTrack.artistAvatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={syncedTrack.artistAvatarUrl} alt="" />
+                      ) : null}
+                    </span>
+                    {syncedTrack.artistName}
+                  </Link>
+                ) : null}
+
+                <div className="view-album-actions radio-hero-actions">
+                  <button
+                    type="button"
+                    className="os-button os-button-primary"
+                    onClick={handleRadioAction}
+                    disabled={!queue.length || playback.index < 0}
+                  >
+                    {isSyncedTrackLive ? 'Stop Radio' : 'Play Radio'}
+                  </button>
+                </div>
+              </div>
+            </section>
           </>
         )}
       </main>

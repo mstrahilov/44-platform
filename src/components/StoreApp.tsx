@@ -42,10 +42,22 @@ const CATEGORY_COPY: Record<StoreCategory, { title: string; copy: string; empty:
   },
 };
 
+type StoreFilter = 'all' | 'music' | 'book' | 'asset' | 'physical';
+
+const STORE_FILTER_LABELS: Record<StoreFilter, string> = {
+  all: 'All',
+  music: 'Music',
+  book: 'Books',
+  asset: 'Assets',
+  physical: 'Merch',
+};
+
 export default function StoreApp({ category }: { category: StoreCategory }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [query, setQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<StoreFilter>('all');
 
   useEffect(() => {
     let alive = true;
@@ -76,30 +88,68 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
     return () => { alive = false; };
   }, []);
 
+  const availableStoreFilters = useMemo(() => {
+    const expected = CATEGORY_EXPERIENCE[category] as StoreFilter | undefined;
+    return expected ? ['all', expected] as StoreFilter[] : (Object.keys(STORE_FILTER_LABELS) as StoreFilter[]);
+  }, [category]);
+  const effectiveFilter = availableStoreFilters.includes(activeFilter) ? activeFilter : 'all';
+
   const visibleProducts = useMemo(() => {
     const expected = CATEGORY_EXPERIENCE[category];
-    if (!expected) {
-      return products.filter(product => ['music', 'book', 'asset', 'physical'].includes(getProductExperience(product)));
-    }
-    return products.filter(product => getProductExperience(product) === expected);
-  }, [category, products]);
+    const normalizedQuery = query.trim().toLowerCase();
+    return products.filter(product => {
+      const experience = getProductExperience(product);
+      if (!['music', 'book', 'asset', 'physical'].includes(experience)) return false;
+      if (expected && experience !== expected) return false;
+      if (effectiveFilter !== 'all' && experience !== effectiveFilter) return false;
+      if (!normalizedQuery) return true;
+      const creator = product.creators?.display_name || product.creator || '';
+      return `${product.title} ${creator}`.toLowerCase().includes(normalizedQuery);
+    });
+  }, [category, effectiveFilter, products, query]);
+
+  const storeTools = (
+    <div className="page-header-tools">
+      <label className="page-search-control">
+        <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
+        <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search Store" aria-label="Search Store" />
+      </label>
+      <details className="page-filter-menu">
+        <summary className="page-filter-button" aria-label="Filter Store" title="Filter Store">
+          <span className="page-filter-icon" aria-hidden="true"><i /><i /><i /></span>
+        </summary>
+        <div className="page-filter-popover">
+          {availableStoreFilters.map(filter => (
+            <button key={filter} type="button" className={effectiveFilter === filter ? 'page-filter-option page-filter-option-active' : 'page-filter-option'} onClick={event => {
+              setActiveFilter(filter);
+              event.currentTarget.closest('details')?.removeAttribute('open');
+            }}>
+              {STORE_FILTER_LABELS[filter]}
+            </button>
+          ))}
+        </div>
+      </details>
+    </div>
+  );
 
   const copy = CATEGORY_COPY[category];
 
   if (category === 'all') {
-    const musicProducts = products.filter(product => getProductExperience(product) === 'music').slice(0, 8);
-    const bookProducts = products.filter(product => getProductExperience(product) === 'book').slice(0, 8);
-    const apparelProducts = products.filter(product => getProductExperience(product) === 'physical').slice(0, 8);
-    const assetProducts = products.filter(product => getProductExperience(product) === 'asset').slice(0, 8);
+    const musicProducts = visibleProducts.filter(product => getProductExperience(product) === 'music').slice(0, 8);
+    const bookProducts = visibleProducts.filter(product => getProductExperience(product) === 'book').slice(0, 8);
+    const apparelProducts = visibleProducts.filter(product => getProductExperience(product) === 'physical').slice(0, 8);
+    const assetProducts = visibleProducts.filter(product => getProductExperience(product) === 'asset').slice(0, 8);
 
     return (
       <PageShell>
         <main className="app-page">
-          <HubHero title={copy.title} copy={copy.copy} />
+          <HubHero title={copy.title} copy={copy.copy} actions={storeTools} />
           {loading ? (
             <EmptyMessage>Loading...</EmptyMessage>
           ) : error ? (
             <EmptyMessage>{error}</EmptyMessage>
+          ) : visibleProducts.length === 0 ? (
+            <EmptyMessage>{query ? 'No Store items match your search.' : 'No Store items match this filter.'}</EmptyMessage>
           ) : (
             <>
               {musicProducts.length > 0 && (
@@ -148,13 +198,13 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
   return (
     <PageShell>
       <main className="app-page">
-        <HubHero title={copy.title} copy={copy.copy} />
+        <HubHero title={copy.title} copy={copy.copy} actions={storeTools} />
         {loading ? (
           <EmptyMessage>Loading...</EmptyMessage>
         ) : error ? (
           <EmptyMessage>{error}</EmptyMessage>
         ) : visibleProducts.length === 0 ? (
-          <EmptyMessage>{copy.empty}</EmptyMessage>
+          <EmptyMessage>{query ? 'No Store items match your search.' : effectiveFilter === 'all' ? copy.empty : `No ${STORE_FILTER_LABELS[effectiveFilter].toLowerCase()} match this view.`}</EmptyMessage>
         ) : (
           <ProductGrid>
             {visibleProducts.map(product => (

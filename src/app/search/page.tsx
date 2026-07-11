@@ -90,31 +90,26 @@ function SearchContent() {
 
   return (
     <PageShell>
-      <main className="app-page">
+      <main className="app-page search-page">
         <HubHero
           title="Search"
           copy={query ? `Results for "${query}".` : 'Find items, creators, posts, questions, and collaborations.'}
         />
 
-        <form className="search-page-form" onSubmit={submitSearch} role="search">
-          <div className="search-page-input-wrap">
-            <input
-              className="search-page-input"
-              value={draft}
-              onChange={event => setDraft(event.target.value)}
-              placeholder="Search items, creators, and posts"
-              aria-label="Search"
-            />
-            <button className="search-page-submit" type="submit" aria-label="Search">
-              <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
-            </button>
-          </div>
+        <form className="page-search-control search-page-form" onSubmit={submitSearch} role="search">
+          <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
+          <input
+            value={draft}
+            onChange={event => setDraft(event.target.value)}
+            placeholder=""
+            aria-label="Search"
+          />
         </form>
 
         {loading ? (
           <EmptyMessage>Searching...</EmptyMessage>
         ) : !query ? (
-          <EmptyMessage>Enter a search term to look across items, creators, and posts.</EmptyMessage>
+          <EmptyMessage>Enter any term to start a search.</EmptyMessage>
         ) : !hasResults ? (
           <EmptyMessage>No results found.</EmptyMessage>
         ) : (
