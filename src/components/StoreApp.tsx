@@ -6,6 +6,7 @@ import { browseIndexHref, getProductExperience, type ProductExperience } from '@
 import type { Product } from '@/lib/products';
 import type { StoreCategory } from '@/lib/storeRoutes';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/useAuth';
 
 const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
   music: 'music',
@@ -52,8 +53,10 @@ const STORE_FILTER_LABELS: Record<StoreFilter, string> = {
   physical: 'Merch',
 };
 
-export default function StoreApp({ category }: { category: StoreCategory }) {
+export default function StoreApp({ category, frontDoor = false }: { category: StoreCategory; frontDoor?: boolean }) {
+  const { user, loading: authLoading } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
+  const [ownedProductIds, setOwnedProductIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
@@ -88,6 +91,29 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
     return () => { alive = false; };
   }, []);
 
+  useEffect(() => {
+    let alive = true;
+    if (authLoading) return () => { alive = false; };
+    if (!user) {
+      Promise.resolve().then(() => {
+        if (alive) setOwnedProductIds(new Set());
+      });
+      return () => { alive = false; };
+    }
+
+    void supabase
+      .from('library_items')
+      .select('product_id')
+      .eq('user_id', user.id)
+      .neq('status', 'hidden')
+      .then(({ data }) => {
+        if (!alive) return;
+        setOwnedProductIds(new Set((data ?? []).map(row => row.product_id).filter(Boolean)));
+      });
+
+    return () => { alive = false; };
+  }, [authLoading, user]);
+
   const availableStoreFilters = useMemo(() => {
     const expected = CATEGORY_EXPERIENCE[category] as StoreFilter | undefined;
     return expected ? ['all', expected] as StoreFilter[] : (Object.keys(STORE_FILTER_LABELS) as StoreFilter[]);
@@ -108,14 +134,15 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
     });
   }, [category, effectiveFilter, products, query]);
 
+  const surfaceName = frontDoor && category === 'all' ? '44OS' : 'Store';
   const storeTools = (
     <div className="page-header-tools">
       <label className="page-search-control">
         <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
-        <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search Store" aria-label="Search Store" />
+        <input value={query} onChange={event => setQuery(event.target.value)} placeholder={`Search ${surfaceName}`} aria-label={`Search ${surfaceName}`} />
       </label>
       <details className="page-filter-menu">
-        <summary className="page-filter-button" aria-label="Filter Store" title="Filter Store">
+        <summary className="page-filter-button" aria-label={`Filter ${surfaceName}`} title={`Filter ${surfaceName}`}>
           <span className="page-filter-icon" aria-hidden="true"><i /><i /><i /></span>
         </summary>
         <div className="page-filter-popover">
@@ -133,6 +160,7 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
   );
 
   const copy = CATEGORY_COPY[category];
+  const pageTitle = frontDoor && category === 'all' ? '44OS' : copy.title;
 
   if (category === 'all') {
     const musicProducts = visibleProducts.filter(product => getProductExperience(product) === 'music').slice(0, 8);
@@ -143,7 +171,7 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
     return (
       <PageShell>
         <main className="app-page">
-          <HubHero title={copy.title} copy={copy.copy} actions={storeTools} />
+          <HubHero title={pageTitle} copy={copy.copy} actions={storeTools} />
           {loading ? (
             <EmptyMessage>Loading...</EmptyMessage>
           ) : error ? (
@@ -156,7 +184,7 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
                 <HubSection title="Music" href={browseIndexHref('music')}>
                   <ProductGrid>
                     {musicProducts.map(product => (
-                      <ProductCard key={product.id} product={product} />
+                      <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />
                     ))}
                   </ProductGrid>
                 </HubSection>
@@ -165,7 +193,7 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
                 <HubSection title="Books" href={browseIndexHref('books')}>
                   <ProductGrid>
                     {bookProducts.map(product => (
-                      <ProductCard key={product.id} product={product} />
+                      <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />
                     ))}
                   </ProductGrid>
                 </HubSection>
@@ -174,7 +202,7 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
                 <HubSection title="Merch" href={browseIndexHref('merch')}>
                   <ProductGrid>
                     {apparelProducts.map(product => (
-                      <ProductCard key={product.id} product={product} />
+                      <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />
                     ))}
                   </ProductGrid>
                 </HubSection>
@@ -183,7 +211,7 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
                 <HubSection title="Assets" href={browseIndexHref('assets')}>
                   <ProductGrid>
                     {assetProducts.map(product => (
-                      <ProductCard key={product.id} product={product} />
+                      <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />
                     ))}
                   </ProductGrid>
                 </HubSection>
@@ -198,7 +226,7 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
   return (
     <PageShell>
       <main className="app-page">
-        <HubHero title={copy.title} copy={copy.copy} actions={storeTools} />
+        <HubHero title={pageTitle} copy={copy.copy} actions={storeTools} />
         {loading ? (
           <EmptyMessage>Loading...</EmptyMessage>
         ) : error ? (
@@ -208,7 +236,7 @@ export default function StoreApp({ category }: { category: StoreCategory }) {
         ) : (
           <ProductGrid>
             {visibleProducts.map(product => (
-              <ProductCard key={product.id} product={product} />
+              <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />
             ))}
           </ProductGrid>
         )}

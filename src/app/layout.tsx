@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Script from 'next/script';
 import './globals.css';
 import Sidebar from '@/components/Sidebar';
 import { Topbar } from '@/components/Topbar';
@@ -25,9 +24,9 @@ export const metadata: Metadata = {
     default: '44OS',
     template: '%s · 44OS',
   },
-  description: 'A creative operating system for independent releases, libraries, community, and radio.',
+  description: 'A creative operating system to discover, collect, create, and connect through independent music, books, art, community, and radio.',
   alternates: {
-    canonical: absoluteMetadataUrl('/store'),
+    canonical: absoluteMetadataUrl('/'),
   },
   manifest: '/manifest.webmanifest',
   applicationName: '44OS',
@@ -51,8 +50,8 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: '44OS',
-    description: 'A creative operating system for independent releases, libraries, community, and radio.',
-    url: absoluteMetadataUrl('/store'),
+    description: 'A creative operating system to discover, collect, create, and connect through independent music, books, art, community, and radio.',
+    url: absoluteMetadataUrl('/'),
     siteName: '44OS',
     type: 'website',
     images: [
@@ -67,7 +66,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: '44OS',
-    description: 'A creative operating system for independent releases, libraries, community, and radio.',
+    description: 'A creative operating system to discover, collect, create, and connect through independent music, books, art, community, and radio.',
     images: [absoluteMetadataUrl('/og.png')],
   },
 };
@@ -76,14 +75,16 @@ export const viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  themeColor: '#f6f0e7',
+  themeColor: '#0b0b0b',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
+      </head>
       <body className="theme-dark accent-ocean" suppressHydrationWarning>
-        <Script id="theme-bootstrap" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
         <ThemeSync />
 
         <div className="app-environment" aria-hidden="true">

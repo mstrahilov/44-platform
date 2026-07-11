@@ -11,10 +11,13 @@ import {
   type ThemeMode,
 } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/useAuth';
 
 // Signed-out chrome is always dark/ocean. Signed-in preferences come only from
 // Supabase so the same account has the same theme on every device.
 export default function ThemeSync() {
+  const { user, loading } = useAuth();
+  const userId = user?.id ?? null;
   const signedInRef = useRef(false);
   const userIdRef = useRef<string | null>(null);
   const modeRef = useRef<ThemeMode>(DEFAULT_THEME_MODE);
@@ -62,24 +65,18 @@ export default function ThemeSync() {
       applyTheme(mode, accent);
     }
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (!alive) return;
-      void applyForSession(data.session?.user.id ?? null);
-    });
+    if (!loading) void applyForSession(userId);
+    return () => { alive = false; };
+  }, [loading, userId]);
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      void applyForSession(session?.user.id ?? null);
-    });
-
+  useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: light)');
     const onChange = () => {
       if (signedInRef.current && modeRef.current === 'system') applyTheme('system', accentRef.current);
     };
     mq.addEventListener('change', onChange);
     return () => {
-      alive = false;
       mq.removeEventListener('change', onChange);
-      listener.subscription.unsubscribe();
     };
   }, []);
 

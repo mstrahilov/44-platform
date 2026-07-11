@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     id: '/',
     name: '44OS',
     short_name: '44OS',
-    description: 'A creative operating system for independent releases, libraries, community, and radio.',
+    description: 'A creative operating system to discover, collect, create, and connect through independent music, books, art, community, and radio.',
     start_url: '/',
     scope: '/',
     display: 'standalone',

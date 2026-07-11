@@ -178,9 +178,7 @@ export default function NotificationsPage() {
               ))}
             </div>
           ) : (
-            <div className="dashboard-list-surface" style={{ padding: 24 }}>
-              <div className="app-empty-text">{emptyCopyByTab[activeTab]}</div>
-            </div>
+            <div className="app-empty-text">{emptyCopyByTab[activeTab]}</div>
           )}
         </section>
       </main>

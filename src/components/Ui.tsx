@@ -99,8 +99,7 @@ export function PanelListItem({
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function ProductCard({ product, owned: _owned }: { product: Product; owned?: boolean }) {
+export function ProductCard({ product, owned: ownedProp }: { product: Product; owned?: boolean }) {
   const { openContextMenu } = useContextMenu();
   const { user } = useAuth();
   const cart = useCart();
@@ -109,11 +108,15 @@ export function ProductCard({ product, owned: _owned }: { product: Product; owne
   const shape = getProductTileShape(product);
   const subtitle = getProductTileSubtitle(product);
   const experience = getProductExperience(product);
-  const [owned, setOwned] = useState(false);
+  const [owned, setOwned] = useState(Boolean(ownedProp));
 
   useEffect(() => {
     let alive = true;
     async function loadOwned() {
+      if (typeof ownedProp === 'boolean') {
+        setOwned(ownedProp);
+        return;
+      }
       if (!user) {
         setOwned(false);
         return;
@@ -129,7 +132,7 @@ export function ProductCard({ product, owned: _owned }: { product: Product; owne
     }
     loadOwned();
     return () => { alive = false; };
-  }, [product.id, user]);
+  }, [ownedProp, product.id, user]);
 
   async function addProductToLibrary() {
     if (!user) return;
@@ -187,7 +190,7 @@ export function ProductCard({ product, owned: _owned }: { product: Product; owne
       <div className={`product-tile-art product-tile-art-${shape}`}>
         {image && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" />
+          <img src={image} alt="" loading="lazy" decoding="async" />
         )}
       </div>
       <div className="product-tile-info">

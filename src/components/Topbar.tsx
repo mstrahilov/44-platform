@@ -268,7 +268,7 @@ export function Topbar() {
   async function handleSignOut() {
     setUserMenuOpen(false);
     await supabase.auth.signOut();
-    router.push('/store');
+    router.push('/');
     router.refresh();
   }
 
@@ -295,7 +295,7 @@ export function Topbar() {
   return (
     <div className="os-topbar">
       <div className="os-topbar-left">
-        <Link href="/store" className="os-mobile-logo" aria-label="44 Store">
+        <Link href="/" className="os-mobile-logo" aria-label="44OS Home">
           <span className="os-logo-44" aria-hidden="true" />
         </Link>
         {back && (

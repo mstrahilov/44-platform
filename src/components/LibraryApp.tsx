@@ -250,7 +250,7 @@ function LibraryCard({ row, onRemove }: { row: LibraryRow; onRemove: (row: Libra
       <span className={`product-tile-art product-tile-art-${shape}`}>
         {image && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" />
+          <img src={image} alt="" loading="lazy" decoding="async" />
         )}
       </span>
       <span className="product-tile-info">

@@ -96,12 +96,7 @@ export default function PublicProfilePage() {
       };
       const { ids } = getOwnershipKeys(ownershipProfile, profileId);
 
-      const [
-        productResult,
-        postResult,
-        replyCountResult,
-        likeResult,
-      ] = await Promise.all([
+      const [productResult, postResult] = await Promise.all([
         supabase
           .from('products')
           .select('*, creators:profiles!author_id(*)')
@@ -113,19 +108,25 @@ export default function PublicProfilePage() {
           .in('author_id', ids)
           .eq('status', 'published')
           .order('created_at', { ascending: false }),
+      ]);
+
+      setProducts(((productResult.data as Product[] | null) ?? []).filter(Boolean));
+      const nextPosts = ((postResult.data as SocialPost[] | null) ?? []).filter(Boolean);
+      setPosts(nextPosts);
+      const postIds = nextPosts.map(post => post.id);
+      const [replyCountResult, likeResult] = postIds.length > 0 ? await Promise.all([
         supabase
           .from('post_replies')
           .select('post_id, author_id, authors:profiles!author_id(id, display_name, username, avatar_url)')
+          .in('post_id', postIds)
           .eq('status', 'published')
           .order('created_at', { ascending: false }),
         supabase
           .from('post_likes')
           .select('post_id, profile_id, profiles:profiles!profile_id(id, display_name, username, avatar_url)')
+          .in('post_id', postIds)
           .order('created_at', { ascending: false }),
-      ]);
-
-      setProducts(((productResult.data as Product[] | null) ?? []).filter(Boolean));
-      setPosts(((postResult.data as SocialPost[] | null) ?? []).filter(Boolean));
+      ]) : [{ data: [], error: null }, { data: [], error: null }];
       const replyRowsData = (replyCountResult.data as ReplyEngagerRow[] | null) ?? [];
       setReplyCounts(countById(replyRowsData, 'post_id'));
       setRepliersMap(repliersByPost(replyRowsData));

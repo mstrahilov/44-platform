@@ -682,9 +682,8 @@ function InlineReplyForm({
 }) {
   return (
     <form
-      className="social-inline-composer"
+      className={nested ? 'social-inline-composer social-inline-composer-nested' : 'social-inline-composer'}
       onSubmit={onSubmit}
-      style={nested ? { marginLeft: 62 } : undefined}
     >
       <div className="social-inline-composer-box">
         <textarea

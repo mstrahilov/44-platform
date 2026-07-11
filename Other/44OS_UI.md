@@ -1,17 +1,18 @@
 # 44OS UI Principles
 
-This is one of the three active handoff documents for 44OS. Read it before changing layout, styling, app chrome, component primitives, or visual behavior.
+This is one of the two active handoff documents for 44OS. Read it before changing layout, styling, app chrome, component primitives, or visual behavior.
 
 44OS should feel like a premium operating system: calm, spatially consistent, tactile, legible, and fast. It is not a marketing site and should not look like a stack of unrelated pages.
 
 The local screenshot reference folder is `UI Elements/`. Treat those images as reference material, not production assets.
 
-Current implementation snapshot, July 10, 2026:
+Current implementation snapshot, July 11, 2026:
 
 - Store, Community, Library, Radio, Search, Notifications, Settings, and Inbox have been through the mobile polish pass.
 - Verified in the app after the pass: `npm run lint`, `npx tsc --noEmit`, and route smoke checks for `/store`, `/community`, `/library`, `/radio`, `/search`, and `/notifications`.
-- Mobile rendered checks confirmed the Store title/filter row, hidden local mobile search, visible Search page title with no placeholder, and the former mobile Dock order; the current mobile Dock order is Discover (`/store`), Library, Radio, Community, Search.
+- Mobile rendered checks confirmed the root and Store title/filter rows, hidden local mobile search, visible Search page title with no placeholder, and the current mobile Dock order: Home (`/`), Library, Radio, Community, Search.
 - Radio and Notifications also have source-level implementation aligned with this document; their live visual state may depend on signed-in/session data or Radio playlist setup.
+- The root URL is the branded 44OS discovery front door. It may reuse Store catalog sections, but the page title, metadata, search label, and shared-link identity say 44OS rather than Store.
 
 ---
 
@@ -138,6 +139,16 @@ Rules:
 - Reserve hero-scale type for app front doors and true hero/detail moments.
 - Dense panels, cards, settings, and Studio controls use compact type.
 
+Mobile geometry contract:
+
+- QA at both 390px and 430px. No page may rely on one iPhone width.
+- `--os-content-inset` owns normal mobile page padding. Do not add a second page-specific inset around an already inset container.
+- Hub headers and forms stay inside the content inset. Repeated list rows may bleed to the workspace edges when that surface is intentionally full width.
+- Full-width mobile lists place dividers on the list/row boundary, spanning the available workspace width. Text and controls remain inset inside the row; do not shorten the divider to the text column.
+- Reply indentation is applied once. A nested reply may indent its row content, but its composer must use the full remaining row width and must never combine parent padding with an additional inline margin.
+- Textareas, composers, segmented controls, search fields, and action rows use `width: 100%` with `min-width: 0`; controls may not force horizontal scrolling.
+- Mobile page content clears the fixed Dock, the optional music player, and `env(safe-area-inset-bottom)` through shared shell spacing.
+
 ---
 
 ## 6. Dock And Topbar
@@ -146,9 +157,9 @@ The Dock is the OS taskbar and app launcher. It renders from `src/lib/osApps.ts`
 
 Current Dock order:
 
-- Signed in desktop: Library, divider, Discover (`/store`), Radio, Community, spacer, Support, divider, Settings.
-- Signed out desktop: Discover (`/store`), Radio, Community, spacer, Support, Log In.
-- Mobile fixed Dock: Discover (`/store`), Library, Radio, Community, Search.
+- Signed in desktop: Library, divider, Home (`/`), Radio, Community, spacer, Support, divider, Settings.
+- Signed out desktop: Home (`/`), Radio, Community, spacer, Support, Log In.
+- Mobile fixed Dock: Home (`/`), Library, Radio, Community, Search.
 
 Rules:
 
@@ -181,7 +192,7 @@ Topbar rules:
 - Do not use Topbar tabs for primary app sections. Prefer in-page sections and filters.
 - Do not show tab-like local filters and back label in the same slot.
 - Desktop Search expands in place without a halo or rectangular highlight and must remain left of Notifications.
-- Mobile top-left shows the 44 logo linking to `/store`; contextual detail pages show a circular back button immediately to the right of the logo.
+- Mobile top-left shows the 44 logo linking to `/`; contextual detail pages show a circular back button immediately to the right of the logo.
 - Signed-out mobile shows a default profile icon linking to `/login`.
 - Account menu labels are Profile, Inbox, Studio; mobile also exposes Settings and hides Log Out.
 - Any local filters must be visually discoverable with clear contrast and active state.
@@ -196,6 +207,7 @@ Every primary page uses concise orientation:
 - **Dock/app label**: Store, Library, Radio, Community.
 - **Page hero**: title only. Do not render descriptive copy beneath primary page titles.
 - **Section context**: title and optional description only when the section itself needs guidance.
+- **Root identity**: `/` uses `44OS` as its hero/document identity while retaining discovery sections. `/store` uses `Store`.
 
 Page hero rules:
 
@@ -246,6 +258,7 @@ Community state rules:
 - Read failures surface as errors; they must not silently look like an empty community.
 - Regular Community feed posts are links to `/community/thread/[id-or-slug]`; do not reintroduce inline reply drawers on the feed.
 - Inline reply forms live on the thread page only.
+- On mobile, thread posts, replies, and their dividers use the full thread width. Nested replies indent content once; all reply composers expand to the full remaining width.
 - The feed composer placeholder is `Start a new post...` for the general feed.
 
 Search rules:

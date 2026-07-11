@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 const DEFAULT_SITE_URL = 'https://44os.com';
 const DEFAULT_TITLE = '44OS';
-const DEFAULT_DESCRIPTION = 'A creative operating system for independent releases, libraries, community, and radio.';
+const DEFAULT_DESCRIPTION = 'A creative operating system to discover, collect, create, and connect through independent music, books, art, community, and radio.';
 const DEFAULT_OG_IMAGE = '/og.png';
 
 function stripTrailingSlash(value: string) {

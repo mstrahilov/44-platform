@@ -1,14 +1,15 @@
 # 44OS Foundation
 
-This is one of the three active handoff documents for 44OS. Read it before changing architecture, routes, authentication, Supabase, desktop packaging, or deployment behavior.
+This is one of the two active handoff documents for 44OS. Read it before changing architecture, routes, authentication, Supabase, mobile/PWA behavior, desktop packaging, or deployment behavior.
 
 The active handoff set is:
 
 - `Other/44OS_FOUNDATION.md` - architecture, routes, data, auth, deployment, desktop stance.
 - `Other/44OS_UI.md` - visual system, interaction principles, and quality bar.
-- `Other/44OS_OPTIMIZATION_MASTER_PLAN.md` - living implementation checklist and acceptance status.
 
 Do not revive deleted planning documents or old SQL notes as active references. If a decision changes, update the relevant active docs in the same change.
+
+Current launch-readiness source of truth: July 11, 2026. Foundation changes must be evaluated as one system across browser, iOS home-screen installation, authentication, streaming audio, Supabase, metadata, and route ownership.
 
 ---
 
@@ -136,6 +137,8 @@ Quality gates for production-facing work:
 - `npm run build` must pass.
 - `npm run dev` should start without Turbopack root warnings.
 - Route and auth changes require manual browser QA at desktop and mobile widths.
+- Mobile launch QA targets 390px and 430px widths and must include normal Safari plus an iOS home-screen installation.
+- Performance work must remove request fan-out before adding caches. Shared session state is subscribed once per app runtime; repeated cards must not independently call `getSession()` or query ownership one row at a time.
 
 ---
 
@@ -161,6 +164,15 @@ Playback reliability rules:
 - Radio reloads its bundle when the app becomes visible and when the page is restored. Missing legacy track durations are inferred from audio metadata; new Studio audio uploads capture duration at upload time.
 - iOS/PWA QA must cover first play, pause/resume, background/foreground, reopen after a terminated session, offline/reconnect, queue advance, last-track behavior, Radio stop/resume, and Media Session controls.
 
+Mobile/PWA runtime rules:
+
+- `/` is the branded 44OS public front door and PWA start URL. It renders the discovery catalog directly without redirecting or showing `Store` as the page identity.
+- `/store` remains the explicit catalog route and may retain Store-specific title and metadata.
+- The manifest uses standalone display, portrait orientation, maskable artwork, dark launch colors, and scope `/`.
+- Audio and Supabase API responses must never be blindly cached by a service worker. Any offline/runtime cache must be allow-listed to app-shell static assets and versioned so a new deployment cannot strand an installed iOS app on stale code.
+- Returning through `pageshow`, BFCache, visibility changes, or reconnect must revalidate time-sensitive state without duplicating listeners or requests.
+- Safe areas, the mobile Topbar, player, and Dock are structural layout inputs; pages must not hardcode viewport offsets independently.
+
 Navigation rules:
 
 - `src/lib/osApps.ts` is the single source of truth for Dock apps.
@@ -173,15 +185,15 @@ Navigation rules:
 
 Current Dock order:
 
-- Signed in desktop: Library, divider, Discover (`/store`), Radio, Community, spacer, Support, divider, Settings.
-- Signed out desktop: Discover (`/store`), Radio, Community, spacer, Support, Log In.
-- Mobile: Discover (`/store`), Library, Radio, Community, Search.
+- Signed in desktop: Library, divider, Home (`/`), Radio, Community, spacer, Support, divider, Settings.
+- Signed out desktop: Home (`/`), Radio, Community, spacer, Support, Log In.
+- Mobile: Home (`/`), Library, Radio, Community, Search.
 
 Library and Settings are signed-in desktop Dock destinations. Library sits alone at the top of the signed-in desktop Dock. Studio does not appear in the Dock; creators enter through `Open Studio` on their own profile or the account menu. Inbox and Profile remain account-level surfaces. Support sits directly above the Settings divider on desktop. On mobile, Search replaces Settings in the Dock, and Settings is available from the avatar/account menu.
 
 Current topbar/account behavior:
 
-- Mobile top-left shows the 44 logo linking to `/store`; contextual detail pages show a circular back button immediately beside it.
+- Mobile top-left shows the 44 logo linking to `/`; contextual detail pages show a circular back button immediately beside it.
 - Signed-out mobile top-right shows a default profile icon linking to `/login`.
 - Signed-in account menu order is Profile, Inbox, Studio; mobile additionally shows Settings and hides Log Out.
 - The user-facing account label is Inbox, not Messages.
@@ -192,6 +204,7 @@ Current topbar/account behavior:
 
 Canonical public routes:
 
+- `/` - branded 44OS discovery front door. It shares the catalog data and sections used by Store but presents 44OS—not Store—as the document/page identity.
 - `/store` - Store front door.
 - `/store/[category]` - Store category: music, books, assets, merch.
 - `/store/item/[identifier]` - Store item detail. Resolve by slug first where available; id fallback is supported.
@@ -217,7 +230,7 @@ Canonical signed-in routes:
 
 Compatibility and legacy policy:
 
-- `/` redirects to `/store`.
+- `/` does not redirect. Links shared from the root stay at `https://44os.com/` and use branded 44OS metadata.
 - `/browse`, `/browse/[category]`, and `/browse/item/[identifier]` redirect to Store equivalents.
 - `/product/[id]` resolves as a compatibility hop to `/store/item/[identifier]`.
 - `/collection` redirects to `/library`; `/collection/item/[kind]/[id]` redirects to `/library/item/[id]`.
@@ -267,15 +280,16 @@ Current concept-to-table map:
 
 Known Supabase state from the launch cleanup:
 
-- Migration history has been repaired so all ten local and remote migration versions match through `20260710174500`.
+- Migration history is aligned locally and remotely through `20260711235500`.
 - Backups exist under ignored `supabase/backups/`.
 - Message RLS cleanup, product asset vocabulary, table comments, and points ledger are handled by `20260710143000_44os_launch_foundation_alignment.sql`.
 - Resource removal and service workflow retirement are handled by `20260710161500_remove_resources_and_service_workflows.sql`.
 - Final category split, product-column consolidation, and speculative-table cleanup are handled by `20260710174500_final_schema_normalization.sql`.
+- Email lookup, cross-device theme preferences, sign-up profile metadata, direct-message RPC repair, and descriptionless releases are covered by the reviewed July 11 migrations through `20260711235500_allow_descriptionless_releases.sql`.
 - `20260704164154_remote_schema.sql` is an intentionally empty migration-history anchor and is labeled accordingly.
 - `20260704201500_44os_steam_foundation.sql` is retained for ordered clean-database replay and is labeled as unsafe to run manually against an existing database.
 - Final live read probes verified 5 product categories, 38 normalized products, 21 posts, 109 Radio playlist entries, and 8 achievement templates. Retired tables and product columns return not-found errors as expected.
-- July 10, 2026 app sweep was read-only against Supabase: `supabase migration list` matched local/remote migrations through `20260710174500`; anon reads saw 38 products, 142 tracks, 109 Radio playlist entries, 5 product categories, 21 posts, and 13 profiles.
+- The July 10 read-only content probe saw 38 products, 142 tracks, 109 Radio playlist entries, 5 product categories, 21 posts, and 13 profiles. Migration state was subsequently advanced and aligned through the July 11 release migration.
 - The canonical track ordering column is `tracks.number`; `tracks.track_number` is absent in the live schema and should not be selected by app code.
 - Anonymous access to the dormant `services` table returns zero rows; its data remains available only through admin/service-role access.
 - `supabase db push --linked --dry-run` reports the remote database is up to date.
@@ -310,15 +324,23 @@ Vercel/domain target:
 - `http://44os.com` redirects to HTTPS.
 - Production route behavior must match the canonical route table above.
 
+Search and sharing contract:
+
+- Root metadata title is `44OS`; the description explains the whole platform rather than only Store.
+- Canonicals and Open Graph URLs must match the requested canonical route. Root sharing must resolve to `/`, never `/store`.
+- Public item and profile pages use their own server-generated metadata and real artwork where available.
+- `robots.txt` and `sitemap.xml` are generated by the app. Private/account surfaces are not promoted as crawl targets.
+- Metadata, icons, manifest, and launch artwork must be served without authentication or client-side redirects.
+
 ---
 
 ## 10. Maintenance Rules
 
-- Keep only the three active `/Other` handoff docs.
+- Keep the two active `/Other` handoff docs current: this Foundation document and `44OS_UI.md`.
 - Keep Dock app behavior centralized in `src/lib/osApps.ts`.
 - Keep Store category/detail behavior centralized in route helpers.
 - Keep Library ownership behavior centralized in Library primitives and route helpers.
 - Add shared UI primitives before adding page-specific styling.
 - Avoid one-off inline styles unless the value is genuinely dynamic.
-- Glass is exclusive to the single unified `.app-shell`. Menus, popovers, filters, modals, panels, cards, and content surfaces are solid and readable.
+- Glass is anchored by the unified `.app-shell`. Menus, popovers, filters, modals, and true cards remain solid/readable; reviewed desktop content lists may be theme-through and mobile uses its own flat full-width list treatment.
 - Keep lint/build green before visual polish work is considered done.

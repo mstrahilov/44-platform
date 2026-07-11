@@ -1,63 +1,85 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { ensureProfileForUser } from '@/lib/studioProfiles';
 
 export const AUTH_SESSION_MARKER_KEY = '44-auth-session-present';
 
+type AuthSnapshot = { user: User | null; loading: boolean };
+
+const INITIAL_AUTH_SNAPSHOT: AuthSnapshot = Object.freeze({ user: null, loading: true });
+const authListeners = new Set<() => void>();
+let authSnapshot: AuthSnapshot = INITIAL_AUTH_SNAPSHOT;
+let authStarted = false;
+let ensuredUserId: string | null = null;
+
+function publishAuth(next: AuthSnapshot) {
+  if (authSnapshot.user === next.user && authSnapshot.loading === next.loading) return;
+  authSnapshot = next;
+  authListeners.forEach(listener => listener());
+}
+
+function markSession(signedIn: boolean) {
+  try {
+    window.localStorage.setItem(AUTH_SESSION_MARKER_KEY, signedIn ? 'true' : 'false');
+  } catch {
+    // Authentication must still work when storage is unavailable.
+  }
+}
+
+function acceptUser(user: User | null) {
+  markSession(Boolean(user));
+  publishAuth({ user, loading: false });
+  if (!user) ensuredUserId = null;
+  if (user && ensuredUserId !== user.id) {
+    ensuredUserId = user.id;
+    void ensureProfileForUser(user).catch(() => {
+      ensuredUserId = null;
+    // Profile repair is best effort and must never turn a valid session into a logout.
+    });
+  }
+}
+
+function startAuth() {
+  if (authStarted || typeof window === 'undefined') return;
+  authStarted = true;
+
+  const fallback = window.setTimeout(() => {
+    if (authSnapshot.loading) publishAuth({ user: authSnapshot.user, loading: false });
+  }, 3500);
+
+  void supabase.auth.getSession()
+    .then(({ data }) => {
+      window.clearTimeout(fallback);
+      acceptUser(data.session?.user ?? null);
+    })
+    .catch(() => {
+      window.clearTimeout(fallback);
+      acceptUser(null);
+    });
+
+  supabase.auth.onAuthStateChange((_event, session) => {
+    window.clearTimeout(fallback);
+    acceptUser(session?.user ?? null);
+  });
+}
+
+function subscribe(listener: () => void) {
+  authListeners.add(listener);
+  startAuth();
+  return () => authListeners.delete(listener);
+}
+
+function getAuthSnapshot() {
+  return authSnapshot;
+}
+
+function getServerAuthSnapshot() {
+  return INITIAL_AUTH_SNAPSHOT;
+}
+
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let mounted = true;
-    let settled = false;
-    const fallback = window.setTimeout(() => {
-      if (!mounted || settled) return;
-      setLoading(false);
-    }, 3500);
-
-    function markSession(signedIn: boolean) {
-      window.localStorage.setItem(AUTH_SESSION_MARKER_KEY, signedIn ? 'true' : 'false');
-    }
-
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!mounted) return;
-      settled = true;
-      window.clearTimeout(fallback);
-      const sessionUser = data.session?.user ?? null;
-      markSession(Boolean(sessionUser));
-      if (sessionUser) {
-        await ensureProfileForUser(sessionUser);
-      }
-      setUser(sessionUser);
-      setLoading(false);
-    }).catch(() => {
-      if (!mounted) return;
-      settled = true;
-      window.clearTimeout(fallback);
-      markSession(false);
-      setUser(null);
-      setLoading(false);
-    });
-
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      markSession(Boolean(session?.user));
-      if (session?.user) {
-        await ensureProfileForUser(session.user);
-      }
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => {
-      mounted = false;
-      window.clearTimeout(fallback);
-      listener.subscription.unsubscribe();
-    };
-  }, []);
-
-  return { user, loading };
+  return useSyncExternalStore(subscribe, getAuthSnapshot, getServerAuthSnapshot);
 }

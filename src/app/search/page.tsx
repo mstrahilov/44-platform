@@ -14,6 +14,52 @@ import type { SocialPost } from '@/lib/social';
 
 type SearchProfile = Pick<Profile, 'id' | 'slug' | 'username' | 'display_name' | 'avatar_url' | 'bio' | 'role' | 'creator_type'>;
 
+type SearchIndex = {
+  products: Product[];
+  posts: SocialPost[];
+  profiles: SearchProfile[];
+};
+
+let searchIndexCache: SearchIndex | null = null;
+let searchIndexRequest: Promise<SearchIndex> | null = null;
+
+function loadSearchIndex() {
+  if (searchIndexCache) return Promise.resolve(searchIndexCache);
+  if (searchIndexRequest) return searchIndexRequest;
+
+  searchIndexRequest = Promise.all([
+    supabase
+      .from('products')
+      .select('*, creators:profiles!author_id(*)')
+      .eq('status', 'published')
+      .order('created_at', { ascending: false })
+      .limit(120),
+    supabase
+      .from('posts')
+      .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type)')
+      .eq('status', 'published')
+      .order('created_at', { ascending: false })
+      .limit(120),
+    supabase
+      .from('profiles')
+      .select('id, slug, username, display_name, avatar_url, bio, role, creator_type')
+      .order('display_name', { ascending: true })
+      .limit(120),
+  ]).then(([productResult, postResult, profileResult]) => {
+    const index = {
+      products: (productResult.data as Product[] | null) ?? [],
+      posts: (postResult.data as SocialPost[] | null) ?? [],
+      profiles: (profileResult.data as SearchProfile[] | null) ?? [],
+    };
+    searchIndexCache = index;
+    return index;
+  }).finally(() => {
+    searchIndexRequest = null;
+  });
+
+  return searchIndexRequest;
+}
+
 export default function SearchPage() {
   return (
     <Suspense fallback={<PageShell><EmptyMessage>Searching...</EmptyMessage></PageShell>}>
@@ -30,39 +76,29 @@ function SearchContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [profiles, setProfiles] = useState<SearchProfile[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(query));
 
   useEffect(() => {
-    async function loadSearchIndex() {
-      setLoading(true);
-      const [productResult, postResult, profileResult] = await Promise.all([
-        supabase
-          .from('products')
-          .select('*, creators:profiles!author_id(*)')
-          .eq('status', 'published')
-          .order('created_at', { ascending: false })
-          .limit(120),
-        supabase
-          .from('posts')
-          .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type)')
-          .eq('status', 'published')
-          .order('created_at', { ascending: false })
-          .limit(120),
-        supabase
-          .from('profiles')
-          .select('id, slug, username, display_name, avatar_url, bio, role, creator_type')
-          .order('display_name', { ascending: true })
-          .limit(120),
-      ]);
-
-      setProducts((productResult.data as Product[] | null) ?? []);
-      setPosts((postResult.data as SocialPost[] | null) ?? []);
-      setProfiles((profileResult.data as SearchProfile[] | null) ?? []);
-      setLoading(false);
+    let alive = true;
+    if (!query) {
+      Promise.resolve().then(() => {
+        if (alive) setLoading(false);
+      });
+      return () => { alive = false; };
     }
 
-    loadSearchIndex();
-  }, []);
+    void Promise.resolve().then(async () => {
+      if (!alive) return;
+      setLoading(true);
+      const index = await loadSearchIndex();
+      if (!alive) return;
+      setProducts(index.products);
+      setPosts(index.posts);
+      setProfiles(index.profiles);
+      setLoading(false);
+    });
+    return () => { alive = false; };
+  }, [query]);
 
   useEffect(() => {
     Promise.resolve().then(() => setDraft(query));

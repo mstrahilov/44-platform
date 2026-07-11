@@ -244,7 +244,7 @@ export default function Sidebar() {
       }}
     >
       <div className="sidebar-top">
-        <Link href="/store" className="sidebar-logo" aria-label="44 Store">
+        <Link href="/" className="sidebar-logo" aria-label="44OS Home">
           <span className="os-logo-44" aria-hidden="true" />
         </Link>
         <span className="sidebar-clock" aria-live="polite">{time}</span>
