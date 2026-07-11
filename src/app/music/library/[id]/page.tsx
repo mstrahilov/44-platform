@@ -20,6 +20,7 @@ import { isV1AchievementCode } from '@/lib/achievementCatalog';
 import { incrementAchievementProgress, trackProductAchievementTrigger } from '@/lib/achievementTracking';
 import { getProductLibraryPrimaryAction, getProductRuntimeKind } from '@/lib/libraryContent';
 import type { Product } from '@/lib/products';
+import { productLibraryHref } from '@/lib/experience';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { creatorHref, type ProductAchievement, type Track, type UserAchievement } from '@/lib/platform';
@@ -165,8 +166,10 @@ function OwnedMusicRelease({
         audioUrl: track.audio_url!,
         durationSeconds: track.duration_seconds,
         productId: product.id,
+        artistHref: creatorHref(product.creators ?? product.creator),
+        releaseHref: productLibraryHref(product, row.id),
       }))
-  ), [product.cover_url, product.creator, product.creators?.display_name, product.hero_url, product.id, product.title, tracks]);
+  ), [product, row.id, tracks]);
   const overachieverAchievement = achievements.find(achievement => achievement.code === 'overachiever');
   const hasOverachieverUnlocked = Boolean(overachieverAchievement && localUnlockedAchievementIds.has(overachieverAchievement.id));
 

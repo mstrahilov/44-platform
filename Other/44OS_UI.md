@@ -186,6 +186,7 @@ Theme rules:
 
 - Signed-out visitors always see dark mode with the Ocean accent on desktop and mobile.
 - Signed-in theme mode and accent are account preferences loaded from Supabase; they are never persisted in browser local storage.
+- Accent labels are Amber, Sage, Ocean, Violet, Magma, and Polar. The stable stored IDs remain `amber`, `sage`, `ocean`, `violet`, `red`, and `cyan` for backward compatibility.
 
 Topbar rules:
 
@@ -290,6 +291,8 @@ Use existing/shared containers:
 Rules:
 
 - Primary app front screens open with `HubHero`.
+- Public catalog grids use a predictable editorial order: release year newest-first, then artist/profile name alphabetically. This applies to `/store`, Store Music and Books, and creator-profile Music and Books tabs. Releases from the same artist and year use stable catalog/date tie-breakers.
+- Desktop Home and Community do not show local search fields; global Search remains in the topbar. Library keeps one compact text filter labeled `Filter Library` beside its category filter.
 - Radio is the exception: its live state uses a full-bleed item-detail-style hero rather than a standard HubHero.
 - Settings is a single sectioned page ordered Appearance, Account, then Notifications. Appearance and Account use two-column field grids; Region and Display Currency live under Account. Dock controls live inside Appearance.
 - Sections use `HubSection` or `SectionHeader`.
@@ -300,6 +303,8 @@ Rules:
 - Lists should prefer row surfaces with clear dividers over decorative cards.
 - Repeated cards must have consistent image ratio, title line behavior, metadata rhythm, and action placement.
 - Track titles do not marquee. They stay single-line with truncation before the duration column.
+- The desktop mini-player keeps its close control at the far-right edge. Expanded Now Playing uses an opaque paper state filling the workspace below the topbar and beside the sidebar, with centered artwork and controls. Opening Queue shifts Now Playing into a 60/40 split and slides the Queue into the right column; opening Queue directly from the mini-player starts in this split state. The top-right X always closes/minimizes the full player. Queue opens and closes from the Queue control itself, and active Queue and Shuffle controls use the accent color.
+- The mini-player artwork and metadata always open expanded Now Playing; they are not navigation links. Inside expanded Now Playing on mobile and desktop, artist opens the creator profile, artwork opens the release at its playback source (Library or Store), and track title opens that release with the current track selected/highlighted.
 
 Radio rules:
 
@@ -312,6 +317,7 @@ Radio rules:
 
 Studio publishing rules:
 
+- Studio release lists are creator-management views, not public discovery grids, and remain ordered by when the release was added (`created_at` newest-first).
 - Release Type, Release Year, and Price belong in the same 3-column field group.
 - Track editors use the recessed editable list primitive, not nested glass cards.
 - Book achievements are hidden for v1.

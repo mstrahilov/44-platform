@@ -50,7 +50,6 @@ function StudioProductsContent() {
         .from('products')
         .select('*')
         .eq('author_id', profileId)
-        .order('sort_order', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false });
       const nextProducts = (productRows as Product[] | null) ?? [];
       setProducts(nextProducts);

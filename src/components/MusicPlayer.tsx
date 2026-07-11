@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 
 export type MusicQueueTrack = {
@@ -11,6 +12,8 @@ export type MusicQueueTrack = {
   audioUrl: string;
   durationSeconds?: number | null;
   productId?: string | null;
+  artistHref?: string | null;
+  releaseHref?: string | null;
   playbackMode?: 'standard' | 'radio';
 };
 
@@ -150,6 +153,12 @@ function formatPlayerTime(seconds: number) {
 function progressPercent(currentTime: number, duration: number) {
   if (!Number.isFinite(duration) || duration <= 0) return 0;
   return Math.max(0, Math.min(100, (currentTime / duration) * 100));
+}
+
+function trackHref(track: MusicQueueTrack) {
+  if (!track.releaseHref) return null;
+  const separator = track.releaseHref.includes('?') ? '&' : '?';
+  return `${track.releaseHref}${separator}track=${encodeURIComponent(track.id)}`;
 }
 
 function getPlaybackErrorMessage(error: unknown) {
@@ -871,6 +880,7 @@ export function MusicPlayerBar() {
   const canPlayNext = currentIndex < queue.length - 1;
   const percent = progressPercent(currentTime, effectiveDuration);
   const compactSubtitle = playbackError || currentTrack.artist;
+  const currentTrackHref = trackHref(currentTrack);
   const showingQueue = queueOpen && !isRadioPlayback;
   const playerClassName = [
     'music-player-bar',
@@ -883,9 +893,18 @@ export function MusicPlayerBar() {
     setQueueOpen(false);
   }
 
+  function openQueue() {
+    setExpanded(true);
+    setQueueOpen(true);
+  }
+
   function minimizeExpanded() {
     setExpanded(false);
     setQueueOpen(false);
+  }
+
+  function toggleExpandedQueue() {
+    setQueueOpen(!queueOpen);
   }
 
   function toggleShuffle() {
@@ -943,7 +962,7 @@ export function MusicPlayerBar() {
             <button type="button" className="music-player-button music-player-button-primary music-player-button-icon" onClick={togglePlayback} aria-label={isPlaying ? 'Pause' : 'Play'}>
               <PlayerIcon name={isPlaying ? 'pause' : 'play'} />
             </button>
-            <button type="button" className="music-player-button music-player-button-icon music-player-close" onClick={clear} aria-label="Close player">
+            <button type="button" className="music-player-button music-player-button-icon music-player-close music-player-close-mobile" onClick={clear} aria-label="Close player">
               <PlayerIcon name="remove" />
             </button>
             <button type="button" className="music-player-button music-player-button-icon" onClick={playNext} aria-label="Next track" disabled={!canPlayNext}>
@@ -980,10 +999,13 @@ export function MusicPlayerBar() {
         </div>
         <div className="music-player-actions">
           {!isRadioPlayback && (
-            <button type="button" className="music-player-button music-player-button-icon" onClick={openExpanded} aria-label="Open queue">
+            <button type="button" className="music-player-button music-player-button-icon" onClick={openQueue} aria-label="Open queue">
               <PlayerIcon name="queue" />
             </button>
           )}
+          <button type="button" className="music-player-button music-player-button-icon music-player-close music-player-close-desktop" onClick={clear} aria-label="Close player">
+            <PlayerIcon name="remove" />
+          </button>
         </div>
       </div>
 
@@ -1005,8 +1027,8 @@ export function MusicPlayerBar() {
               <button
                 type="button"
                 className="music-player-sheet-minimize"
-                onClick={showingQueue ? () => setQueueOpen(false) : minimizeExpanded}
-                aria-label={showingQueue ? 'Close queue' : 'Close player'}
+                onClick={minimizeExpanded}
+                aria-label="Close player"
               >
                 <PlayerIcon name="remove" />
               </button>
@@ -1014,7 +1036,14 @@ export function MusicPlayerBar() {
 
             <div className="music-player-sheet-main">
               <div className="music-player-sheet-art">
-                {currentTrack.artworkUrl ? (
+                {currentTrack.releaseHref ? <Link href={currentTrack.releaseHref} onClick={minimizeExpanded} aria-label={`Open ${currentTrack.releaseTitle || currentTrack.title}`}>
+                  {currentTrack.artworkUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={currentTrack.artworkUrl} alt="" />
+                  ) : (
+                    <span className="music-player-art-fallback" aria-hidden="true" />
+                  )}
+                </Link> : currentTrack.artworkUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={currentTrack.artworkUrl} alt="" />
                 ) : (
@@ -1022,8 +1051,8 @@ export function MusicPlayerBar() {
                 )}
               </div>
               <div className="music-player-sheet-copy">
-                <h2>{currentTrack.title}</h2>
-                <p>{currentTrack.artist}</p>
+                <h2>{currentTrackHref ? <Link href={currentTrackHref} onClick={minimizeExpanded}>{currentTrack.title}</Link> : currentTrack.title}</h2>
+                <p>{currentTrack.artistHref ? <Link href={currentTrack.artistHref} onClick={minimizeExpanded}>{currentTrack.artist}</Link> : currentTrack.artist}</p>
               </div>
               {!isRadioPlayback && <div className="music-player-sheet-progress">
                 <input
@@ -1073,7 +1102,7 @@ export function MusicPlayerBar() {
                   <button
                     type="button"
                     className={showingQueue ? 'music-player-sheet-button music-player-sheet-button-utility music-player-sheet-button-queue music-player-sheet-button-active' : 'music-player-sheet-button music-player-sheet-button-utility music-player-sheet-button-queue'}
-                    onClick={() => setQueueOpen(open => !open)}
+                    onClick={toggleExpandedQueue}
                     aria-label={showingQueue ? 'Hide queue' : 'Show queue'}
                   >
                     <PlayerIcon name="queue" />

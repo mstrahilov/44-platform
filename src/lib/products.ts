@@ -55,6 +55,41 @@ export function productMeta(product: Pick<Product, 'product_type' | 'experience_
   return `${product.product_type} · ${product.experience_type || 'item'}`;
 }
 
+const publicCatalogArtistCollator = new Intl.Collator(undefined, {
+  sensitivity: 'base',
+  numeric: true,
+});
+
+function publicCatalogArtistName(product: Product) {
+  return product.creators?.display_name
+    || product.creators?.username
+    || product.creator
+    || '';
+}
+
+/**
+ * Public discovery order: newest release year first, then artist/profile name.
+ * Remaining fields only provide deterministic ordering within the same artist/year.
+ */
+export function comparePublicCatalogProducts(a: Product, b: Product) {
+  const yearDifference = (b.year ?? Number.NEGATIVE_INFINITY) - (a.year ?? Number.NEGATIVE_INFINITY);
+  if (yearDifference !== 0) return yearDifference;
+
+  const artistDifference = publicCatalogArtistCollator.compare(
+    publicCatalogArtistName(a),
+    publicCatalogArtistName(b),
+  );
+  if (artistDifference !== 0) return artistDifference;
+
+  const sortOrderDifference = (b.sort_order ?? Number.NEGATIVE_INFINITY) - (a.sort_order ?? Number.NEGATIVE_INFINITY);
+  if (sortOrderDifference !== 0) return sortOrderDifference;
+
+  const createdAtDifference = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  if (createdAtDifference !== 0) return createdAtDifference;
+
+  return a.id.localeCompare(b.id);
+}
+
 export function browseHref(params: { category?: string; tag?: string; filter?: string; q?: string }) {
   const searchParams = new URLSearchParams();
 

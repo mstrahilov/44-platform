@@ -14,6 +14,11 @@ import { notificationIsEnabled } from '@/lib/notificationPreferences';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTopbar } from './TopbarContext';
 import { useCart } from '@/lib/cart';
+import {
+  loadNotificationReadState,
+  NOTIFICATION_STATE_UPDATED,
+  saveNotificationReadState,
+} from '@/lib/notificationState';
 
 export type { TopbarTab } from './TopbarContext';
 
@@ -52,8 +57,6 @@ const IconSignOut = () => (
   </svg>
 );
 
-const SEEN_NOTIF_KEY = '44-seen-notification-ids';
-const HIDDEN_NOTIF_KEY = '44-hidden-notification-ids';
 const CURRENT_PATH_KEY = '44-current-path';
 const PREVIOUS_PATH_KEY = '44-previous-path';
 const SCROLL_PREFIX = '44-scroll:';
@@ -82,32 +85,6 @@ function labelForPath(path: string | null | undefined) {
   return null;
 }
 
-function loadSeenIds(): Set<string> {
-  if (typeof window === 'undefined') return new Set();
-  try {
-    const raw = window.localStorage.getItem(SEEN_NOTIF_KEY);
-    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
-  } catch { return new Set(); }
-}
-
-function saveSeenIds(ids: Set<string>) {
-  if (typeof window === 'undefined') return;
-  try { window.localStorage.setItem(SEEN_NOTIF_KEY, JSON.stringify(Array.from(ids))); } catch {}
-}
-
-function loadHiddenNotificationIds(): Set<string> {
-  if (typeof window === 'undefined') return new Set();
-  try {
-    const raw = window.localStorage.getItem(HIDDEN_NOTIF_KEY);
-    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
-  } catch { return new Set(); }
-}
-
-function saveHiddenNotificationIds(ids: Set<string>) {
-  if (typeof window === 'undefined') return;
-  try { window.localStorage.setItem(HIDDEN_NOTIF_KEY, JSON.stringify(Array.from(ids))); } catch {}
-}
-
 export function Topbar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -117,8 +94,8 @@ export function Topbar() {
   const { count: cartCount } = useCart();
   const [profileState, setProfileState] = useState<ProfileState | null>(null);
   const [notificationState, setNotificationState] = useState<NotificationState | null>(null);
-  const [seenIds, setSeenIds] = useState<Set<string>>(() => loadSeenIds());
-  const [hiddenNotificationIds, setHiddenNotificationIds] = useState<Set<string>>(() => loadHiddenNotificationIds());
+  const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
+  const [hiddenNotificationIds, setHiddenNotificationIds] = useState<Set<string>>(new Set());
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notifMenuOpen, setNotifMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -148,6 +125,32 @@ export function Topbar() {
       if (alive) setProfileState({ userId: activeUserId, profile: r.profile });
     });
     return () => { alive = false; };
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) {
+      Promise.resolve().then(() => {
+        setSeenIds(new Set());
+        setHiddenNotificationIds(new Set());
+      });
+      return;
+    }
+    let alive = true;
+    const activeUserId = userId;
+
+    async function refreshReadState() {
+      const state = await loadNotificationReadState(activeUserId);
+      if (!alive) return;
+      setSeenIds(state.seenIds);
+      setHiddenNotificationIds(state.hiddenIds);
+    }
+
+    void refreshReadState();
+    window.addEventListener(NOTIFICATION_STATE_UPDATED, refreshReadState);
+    return () => {
+      alive = false;
+      window.removeEventListener(NOTIFICATION_STATE_UPDATED, refreshReadState);
+    };
   }, [userId]);
 
   useEffect(() => {
@@ -237,7 +240,7 @@ export function Topbar() {
       const merged = new Set(seenIds);
       visibleNotifications.forEach(n => merged.add(n.id));
       setSeenIds(merged);
-      saveSeenIds(merged);
+      if (userId) void saveNotificationReadState(userId, { seenIds: merged, hiddenIds: hiddenNotificationIds });
     }
   }
 
@@ -276,14 +279,14 @@ export function Topbar() {
     const next = new Set(hiddenNotificationIds);
     next.add(id);
     setHiddenNotificationIds(next);
-    saveHiddenNotificationIds(next);
+    if (userId) void saveNotificationReadState(userId, { seenIds, hiddenIds: next });
   }
 
   function clearNotifications() {
     const next = new Set(hiddenNotificationIds);
     visibleNotifications.forEach(notification => next.add(notification.id));
     setHiddenNotificationIds(next);
-    saveHiddenNotificationIds(next);
+    if (userId) void saveNotificationReadState(userId, { seenIds, hiddenIds: next });
   }
 
   function submitSearch(event: React.FormEvent<HTMLFormElement>) {

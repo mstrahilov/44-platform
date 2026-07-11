@@ -12,8 +12,8 @@ export const ACCENTS: { id: ThemeAccent; label: string; swatch: string }[] = [
   { id: 'sage', label: 'Sage', swatch: '#7cff4f' },
   { id: 'ocean', label: 'Ocean', swatch: '#60a5fa' },
   { id: 'violet', label: 'Violet', swatch: '#b56cff' },
-  { id: 'red', label: 'Red', swatch: '#ff5a5f' },
-  { id: 'cyan', label: 'Cyan', swatch: '#22d3ee' },
+  { id: 'red', label: 'Magma', swatch: '#ff5a5f' },
+  { id: 'cyan', label: 'Polar', swatch: '#22d3ee' },
 ];
 
 export const MODES: { id: ThemeMode; label: string }[] = [

@@ -72,9 +72,8 @@ export async function unlockAchievementForUser(
   return notification;
 }
 
-// Reply, mention, like, and message notifications are created by Supabase
-// triggers on post_replies, posts, post_likes, and messages
-// (Other/44os-functional-sweep.sql). The client only reads them.
+// Reply, mention, like, and message events are created by the reviewed live
+// Supabase triggers. The client synthesizes notification rows from those events.
 
 export async function loadAchievementNotifications(userId: string): Promise<AchievementNotification[]> {
   const { data, error } = await supabase

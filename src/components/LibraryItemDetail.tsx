@@ -211,8 +211,10 @@ function ProductLibraryDetail({
         audioUrl: track.audio_url!,
         durationSeconds: track.duration_seconds,
         productId: product.id,
+        artistHref: creatorHref(product.creators ?? product.creator),
+        releaseHref: productLibraryHref(product, row.id),
       }))
-  ), [product.cover_url, product.creator, product.creators?.display_name, product.hero_url, product.id, product.title, tracks]);
+  ), [product, row.id, tracks]);
   const overachieverAchievement = achievements.find(achievement => achievement.code === 'overachiever');
   const hasOverachieverUnlocked = Boolean(overachieverAchievement && localUnlockedAchievementIds.has(overachieverAchievement.id));
 

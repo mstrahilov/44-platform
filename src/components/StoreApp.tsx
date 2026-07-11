@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { PageShell, ProductCard, ProductGrid, HubHero, HubSection, EmptyMessage } from '@/components/Ui';
 import { browseIndexHref, getProductExperience, type ProductExperience } from '@/lib/experience';
-import type { Product } from '@/lib/products';
+import { comparePublicCatalogProducts, type Product } from '@/lib/products';
 import type { StoreCategory } from '@/lib/storeRoutes';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
@@ -73,6 +73,8 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
         .from('products')
         .select('*, creators:profiles!author_id(*)')
         .eq('status', 'published')
+        .order('year', { ascending: false, nullsFirst: false })
+        .order('creator', { ascending: true, nullsFirst: false })
         .order('sort_order', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false })
         .limit(160);
@@ -131,16 +133,16 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
       if (!normalizedQuery) return true;
       const creator = product.creators?.display_name || product.creator || '';
       return `${product.title} ${creator}`.toLowerCase().includes(normalizedQuery);
-    });
+    }).sort(comparePublicCatalogProducts);
   }, [category, effectiveFilter, products, query]);
 
   const surfaceName = frontDoor && category === 'all' ? '44OS' : 'Store';
   const storeTools = (
     <div className="page-header-tools">
-      <label className="page-search-control">
+      {!frontDoor && <label className="page-search-control">
         <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
         <input value={query} onChange={event => setQuery(event.target.value)} placeholder={`Search ${surfaceName}`} aria-label={`Search ${surfaceName}`} />
-      </label>
+      </label>}
       <details className="page-filter-menu">
         <summary className="page-filter-button" aria-label={`Filter ${surfaceName}`} title={`Filter ${surfaceName}`}>
           <span className="page-filter-icon" aria-hidden="true"><i /><i /><i /></span>

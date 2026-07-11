@@ -149,7 +149,6 @@ function CommunityPageContent() {
   const [postComposerOpen, setPostComposerOpen] = useState(false);
   const [postTitle, setPostTitle] = useState('');
   const [postBody, setPostBody] = useState('');
-  const [query, setQuery] = useState('');
   const [posting, setPosting] = useState(false);
   const [mentionOptions, setMentionOptions] = useState<MentionProfile[]>([]);
   const [questions, setQuestions] = useState<CommunityQuestion[]>([]);
@@ -319,21 +318,14 @@ function CommunityPageContent() {
   const generalPosts = posts;
   const visiblePosts = useMemo(() => {
     let next = generalPosts;
-    const normalizedQuery = query.trim().toLowerCase();
     if (postFilter === 'following') {
       next = next.filter(post => typeof post.author_id === 'string' && followingIds.has(post.author_id));
     }
     if (requestedTopic) {
       next = next.filter(post => extractHashtags(post.body).includes(requestedTopic));
     }
-    if (normalizedQuery) {
-      next = next.filter(post => {
-        const author = post.creators?.display_name || post.creators?.username || '';
-        return `${post.title ?? ''} ${post.body ?? ''} ${author}`.toLowerCase().includes(normalizedQuery);
-      });
-    }
     return next;
-  }, [followingIds, generalPosts, postFilter, query, requestedTopic]);
+  }, [followingIds, generalPosts, postFilter, requestedTopic]);
   const pageCopy = activeCommunityTab === 'questions'
       ? COMMUNITY_COPY.questions
       : activeCommunityTab === 'collaboration'
@@ -345,34 +337,11 @@ function CommunityPageContent() {
               title: 'Community',
               empty: postFilter === 'following' ? 'No posts from people you follow yet.' : COMMUNITY_COPY.feed.empty,
             };
-  const filteredQuestions = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) return questions;
-    return questions.filter(question => {
-      const author = question.authors?.display_name || question.authors?.username || '';
-      return `${question.title} ${question.body} ${question.tags.join(' ')} ${author}`.toLowerCase().includes(normalizedQuery);
-    });
-  }, [query, questions]);
-  const filteredCollaborations = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) return collaborations;
-    return collaborations.filter(collaboration => {
-      const author = collaboration.authors?.display_name || collaboration.authors?.username || '';
-      return `${collaboration.title} ${collaboration.body} ${collaboration.role_needed ?? ''} ${collaboration.project_type ?? ''} ${author}`.toLowerCase().includes(normalizedQuery);
-    });
-  }, [collaborations, query]);
+  const filteredQuestions = questions;
+  const filteredCollaborations = collaborations;
 
   const communityTools = (
     <div className="page-header-tools">
-      <label className="page-search-control">
-        <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
-        <input
-          value={query}
-          onChange={event => setQuery(event.target.value)}
-          placeholder="Search Community"
-          aria-label="Search Community"
-        />
-      </label>
       {activeCommunityTab === 'feed' && !requestedTopic ? (
         <details className="page-filter-menu">
           <summary className="page-filter-button" aria-label="Filter Community" title="Filter Community">
@@ -863,7 +832,7 @@ function CommunityPageContent() {
             ) : structuredRequiresSetup ? (
               <div className="dashboard-empty">Questions needs the reviewed Community SQL applied in Supabase first.</div>
             ) : filteredQuestions.length === 0 ? (
-              <div className="dashboard-empty">{query ? 'No Community questions match your search.' : pageCopy.empty}</div>
+              <div className="dashboard-empty">{pageCopy.empty}</div>
             ) : (
               filteredQuestions.map(question => (
                 <article key={question.id} className="social-feed-post social-structured-clickable" onClick={() => { void openQuestion(question); }}>
@@ -967,7 +936,7 @@ function CommunityPageContent() {
             ) : structuredRequiresSetup ? (
               <div className="dashboard-empty">Collaboration needs the reviewed Community SQL applied in Supabase first.</div>
             ) : filteredCollaborations.length === 0 ? (
-              <div className="dashboard-empty">{query ? 'No Community collaborations match your search.' : pageCopy.empty}</div>
+              <div className="dashboard-empty">{pageCopy.empty}</div>
             ) : (
               filteredCollaborations.map(collaboration => (
                 <article key={collaboration.id} className="social-feed-post social-structured-clickable" onClick={() => { void openCollaboration(collaboration); }}>
@@ -1050,7 +1019,7 @@ function CommunityPageContent() {
           {postsLoading ? (
             <div className="dashboard-empty">Loading posts...</div>
           ) : visiblePosts.length === 0 ? (
-            <div className="dashboard-empty">{query ? 'No Community posts match your search.' : pageCopy.empty}</div>
+            <div className="dashboard-empty">{pageCopy.empty}</div>
           ) : (
             visiblePosts.map(post => (
               <div key={post.id} className="social-feed-post">

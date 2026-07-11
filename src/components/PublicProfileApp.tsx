@@ -7,7 +7,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Profile } from '@/lib/platform';
-import type { Product } from '@/lib/products';
+import { comparePublicCatalogProducts, type Product } from '@/lib/products';
 import { getProductExperience, productBrowseHref } from '@/lib/experience';
 import { PageShell, CenteredMessage } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
@@ -260,11 +260,15 @@ export default function PublicProfilePage() {
     [products],
   );
   const musicProducts = useMemo(
-    () => publishedProducts.filter(product => getProductExperience(product) === 'music'),
+    () => publishedProducts
+      .filter(product => getProductExperience(product) === 'music')
+      .sort(comparePublicCatalogProducts),
     [publishedProducts],
   );
   const bookProducts = useMemo(
-    () => publishedProducts.filter(product => getProductExperience(product) === 'book'),
+    () => publishedProducts
+      .filter(product => getProductExperience(product) === 'book')
+      .sort(comparePublicCatalogProducts),
     [publishedProducts],
   );
   const assetProducts = useMemo(

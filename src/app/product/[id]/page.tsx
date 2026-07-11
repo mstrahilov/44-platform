@@ -263,6 +263,8 @@ export function ProductStoreDetail({
         audioUrl: track.audio_url as string,
         durationSeconds: getTrackDurationSeconds(track, inferredTrackDurations),
         productId: product.id,
+        artistHref: creatorLink,
+        releaseHref: productBrowseHref(product),
       }))
   );
 

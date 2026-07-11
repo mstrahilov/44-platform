@@ -182,6 +182,8 @@ export function ExperienceApp({ app, route }: { app: ExperienceConfig['id']; rou
         audioUrl: track.audio_url as string,
         durationSeconds: track.duration_seconds,
         productId: product.id,
+        artistHref: creatorHref(product.creators ?? product.creator),
+        releaseHref: fallbackHref,
       }));
     if (queue.length > 0) playQueue(queue);
     else router.push(fallbackHref);

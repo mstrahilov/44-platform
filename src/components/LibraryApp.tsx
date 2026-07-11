@@ -161,9 +161,9 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
           copy="Everything you have saved, added, or purchased."
           actions={(
             <div className="page-header-tools">
-              <label className="page-search-control">
+              <label className="page-search-control library-filter-control">
                 <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
-                <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search Library" aria-label="Search Library" />
+                <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Filter Library" aria-label="Filter Library" />
               </label>
               <details className="page-filter-menu">
                 <summary className="page-filter-button" aria-label="Filter Library" title="Filter Library">

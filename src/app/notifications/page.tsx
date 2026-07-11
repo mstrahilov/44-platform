@@ -11,6 +11,11 @@ import {
   type AchievementNotification,
 } from '@/lib/achievementNotifications';
 import { notificationIsEnabled } from '@/lib/notificationPreferences';
+import {
+  loadNotificationReadState,
+  NOTIFICATION_STATE_UPDATED,
+  saveNotificationReadState,
+} from '@/lib/notificationState';
 
 type TabId = 'all' | 'mentions' | 'replies' | 'likes' | 'achievements';
 
@@ -22,46 +27,13 @@ const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'achievements', label: 'Achievements' },
 ];
 
-const SEEN_NOTIF_KEY = '44-seen-notification-ids';
-const HIDDEN_NOTIF_KEY = '44-hidden-notification-ids';
-
-function markNotificationsSeen(notifications: AchievementNotification[]) {
-  if (typeof window === 'undefined' || notifications.length === 0) return;
-  try {
-    const raw = window.localStorage.getItem(SEEN_NOTIF_KEY);
-    const seen = new Set(raw ? (JSON.parse(raw) as string[]) : []);
-    notifications.forEach(notification => seen.add(notification.id));
-    window.localStorage.setItem(SEEN_NOTIF_KEY, JSON.stringify(Array.from(seen)));
-  } catch {
-    // Local read-state should never block viewing notifications.
-  }
-}
-
-function loadHiddenNotificationIds(): Set<string> {
-  if (typeof window === 'undefined') return new Set();
-  try {
-    const raw = window.localStorage.getItem(HIDDEN_NOTIF_KEY);
-    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
-  } catch {
-    return new Set();
-  }
-}
-
-function saveHiddenNotificationIds(ids: Set<string>) {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(HIDDEN_NOTIF_KEY, JSON.stringify(Array.from(ids)));
-  } catch {
-    // Notification dismissal is a local convenience only.
-  }
-}
-
 export default function NotificationsPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [notifications, setNotifications] = useState<AchievementNotification[]>([]);
   const [activeTab, setActiveTab] = useState<TabId>('all');
-  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => loadHiddenNotificationIds());
+  const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
@@ -70,10 +42,34 @@ export default function NotificationsPage() {
   useEffect(() => {
     async function load() {
       if (!user) return;
-      const rows = await loadAchievementNotifications(user.id);
+      const [rows, readState] = await Promise.all([
+        loadAchievementNotifications(user.id),
+        loadNotificationReadState(user.id),
+      ]);
+      const nextSeen = new Set(readState.seenIds);
+      rows.forEach(item => {
+        if (item.kind !== 'message' && notificationIsEnabled(item) && !readState.hiddenIds.has(item.id)) nextSeen.add(item.id);
+      });
       setNotifications(rows);
+      setSeenIds(nextSeen);
+      setHiddenIds(readState.hiddenIds);
+      if (nextSeen.size !== readState.seenIds.size) {
+        await saveNotificationReadState(user.id, { seenIds: nextSeen, hiddenIds: readState.hiddenIds });
+      }
     }
-    load();
+    void load();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const userId = user.id;
+    async function refreshReadState() {
+      const state = await loadNotificationReadState(userId);
+      setSeenIds(state.seenIds);
+      setHiddenIds(state.hiddenIds);
+    }
+    window.addEventListener(NOTIFICATION_STATE_UPDATED, refreshReadState);
+    return () => window.removeEventListener(NOTIFICATION_STATE_UPDATED, refreshReadState);
   }, [user]);
 
   useEffect(() => {
@@ -94,10 +90,6 @@ export default function NotificationsPage() {
   }, [user]);
 
   const enabledNotifications = notifications.filter(item => item.kind !== 'message' && notificationIsEnabled(item) && !hiddenIds.has(item.id));
-
-  useEffect(() => {
-    markNotificationsSeen(enabledNotifications);
-  }, [enabledNotifications]);
 
   if (loading || !user) {
     return <PageShell><CenteredMessage>Loading…</CenteredMessage></PageShell>;
@@ -122,7 +114,7 @@ export default function NotificationsPage() {
     setHiddenIds(current => {
       const next = new Set(current);
       next.add(id);
-      saveHiddenNotificationIds(next);
+      if (user) void saveNotificationReadState(user.id, { seenIds, hiddenIds: next });
       return next;
     });
   }
