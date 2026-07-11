@@ -636,7 +636,7 @@ export default function EditProductPage() {
             </section>
 
             {isMusicProduct ? (
-              <section className="dashboard-form-section">
+              <section className="dashboard-form-section studio-tracks-section">
                 <SectionHeader
                   title="Tracks"
                   description="Add up to 30 tracks for this release. Each track should have a title and an audio upload."
@@ -652,23 +652,19 @@ export default function EditProductPage() {
                   )}
                 />
 
-                <div className="dashboard-form-step">
-                  <div className="dashboard-track-editor-list">
+                <div className="dashboard-track-editor-list">
                     {tracks.slice(0, Number(trackCount || '0')).map((track, index) => (
                       <div key={track.id ?? `track-${index}`} className="dashboard-track-editor-row">
                         <div className="dashboard-track-editor-copy">
-                          <div className="dashboard-field-label">{index + 1}. Track Title</div>
-
-                          <div className="dashboard-form-grid">
-                            <label className="dashboard-field">
-                              <input
-                                className="os-input-field"
-                                value={track.title}
-                                onChange={event => updateTrack(index, { title: event.target.value })}
-                                placeholder={`Track ${index + 1} title`}
-                              />
-                            </label>
-                          </div>
+                          <label className="dashboard-field studio-track-title-field">
+                            <span className="dashboard-field-label">{index + 1}. Track Title</span>
+                            <input
+                              className="os-input-field"
+                              value={track.title}
+                              onChange={event => updateTrack(index, { title: event.target.value })}
+                              placeholder={`Track ${index + 1} title`}
+                            />
+                          </label>
 
                           <UploadField
                             label="Audio File"
@@ -683,7 +679,6 @@ export default function EditProductPage() {
                         </div>
                       </div>
                     ))}
-                  </div>
                 </div>
               </section>
             ) : null}

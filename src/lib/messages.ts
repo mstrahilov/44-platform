@@ -1,56 +1,31 @@
-import { isMissingRelationError } from '@/lib/schemaCompat';
-import { normalizeConversationKey } from '@/lib/social';
 import { supabase } from '@/lib/supabase';
 
-export async function createOrOpenConversation(currentUserId: string, otherProfileId: string) {
-  const conversationKey = normalizeConversationKey(currentUserId, otherProfileId);
-
-  async function ensureMembers(conversationId: string) {
-    return supabase
-      .from('conversation_members')
-      .upsert([
-        { conversation_id: conversationId, profile_id: currentUserId },
-        { conversation_id: conversationId, profile_id: otherProfileId },
-      ], { onConflict: 'conversation_id,profile_id' });
-  }
-
-  const { data: existing, error: existingError } = await supabase
-    .from('conversations')
-    .select('id')
-    .eq('conversation_key', conversationKey)
-    .maybeSingle();
-
-  if (isMissingRelationError(existingError)) {
-    return { href: `/inbox?with=${otherProfileId}`, error: existingError };
-  }
-
-  if (existing?.id) {
-    const { error: memberError } = await ensureMembers(existing.id);
-    return { href: `/inbox?conversation=${existing.id}`, error: memberError };
-  }
-
-  const { data: created, error: createError } = await supabase
-    .from('conversations')
-    .insert({
-      conversation_key: conversationKey,
-      created_by: currentUserId,
-    })
-    .select('id')
-    .single();
-
-  if (isMissingRelationError(createError)) {
-    return { href: `/inbox?with=${otherProfileId}`, error: createError };
-  }
-
-  if (createError || !created?.id) {
-    return { href: '/inbox', error: createError };
-  }
-
-  const conversationId = (created as { id: string }).id;
-  const { error: memberError } = await ensureMembers(conversationId);
+export async function createOrOpenConversation(_currentUserId: string, otherProfileId: string) {
+  const { data, error } = await supabase.rpc('create_or_open_direct_conversation', {
+    other_profile_id: otherProfileId,
+  });
 
   return {
-    href: `/inbox?conversation=${conversationId}`,
-    error: memberError,
+    href: data ? `/inbox?conversation=${String(data)}` : '/inbox',
+    error,
   };
+}
+
+export async function sendDirectMessage(conversationId: string, body: string) {
+  return supabase.rpc('send_direct_message', {
+    target_conversation_id: conversationId,
+    message_body: body,
+  });
+}
+
+export function directMessageError(error: { message?: string } | null | undefined) {
+  const message = error?.message?.trim() ?? '';
+  if (!message) return '';
+  if (message.includes('create_or_open_direct_conversation') || message.includes('send_direct_message')) {
+    return 'Messages are being updated. Refresh the page and try again.';
+  }
+  if (message.toLowerCase().includes('row-level security')) {
+    return 'This conversation could not be opened. Refresh the page and try again.';
+  }
+  return message;
 }

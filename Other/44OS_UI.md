@@ -280,6 +280,8 @@ Rules:
 - Sections use `HubSection` or `SectionHeader`.
 - Empty states use shared message primitives.
 - Forms use shared field, label, helper, and action-row classes.
+- Inbox uses a two-column conversation list/thread layout on desktop and two distinct navigation states on mobile. Mobile threads use the global topbar back control, show the recipient avatar/name/username, anchor the composer above the Dock, and align outgoing bubbles right and incoming bubbles left.
+- New Message is a full-height state with recipient search at the top and the message composer at the bottom. Do not place a redundant Cancel control inside the recipient field.
 - Lists should prefer row surfaces with clear dividers over decorative cards.
 - Repeated cards must have consistent image ratio, title line behavior, metadata rhythm, and action placement.
 - Track titles do not marquee. They stay single-line with truncation before the duration column.

@@ -248,6 +248,7 @@ Current concept-to-table map:
 - Points foundation: `user_points_ledger`.
 - Community: `posts`, `post_replies`, `post_likes`, `reply_likes`, `profile_follows`, `community_questions`, `community_question_answers`, `community_question_votes`, `community_collaborations`, `community_collaboration_responses`.
 - Messaging: `conversations`, `conversation_members`, `messages`.
+- Direct conversation creation and message sending use authenticated security-definer RPCs so conversation rows, both memberships, the message, and thread timestamp are written atomically without an RLS ordering gap.
 - Future services placeholder: `services` and `service_categories` are private and dormant. When services return, migrate them into canonical `products` rows with service fulfillment instead of restoring a parallel commerce system.
 - Resources were replaced by Community Questions. The old resource tables and app routes are removed.
 - Radio queue: `radio_playlist_entries` references canonical product `tracks` directly.

@@ -6724,6 +6724,109 @@ body.theme-dark .os-home-panel {
   gap: 16px;
 }
 
+/* Studio release editor: Tracks and Achievements sit directly on the themed
+   workspace. Other Studio form sections intentionally retain their panels. */
+.studio-tracks-section .dashboard-track-editor-list {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.studio-tracks-section .dashboard-track-editor-row {
+  padding: 22px 0;
+  border-top: 1px solid var(--os-color-hairline);
+}
+
+.studio-tracks-section .dashboard-track-editor-row:last-child {
+  border-bottom: 1px solid var(--os-color-hairline);
+}
+
+.studio-tracks-section,
+.studio-achievements-section {
+  margin-top: 34px;
+}
+
+.studio-tracks-section .dashboard-track-editor-copy {
+  grid-template-columns: minmax(0, 1fr) minmax(250px, 0.42fr);
+  align-items: end;
+  gap: 24px;
+}
+
+.studio-achievements-content {
+  display: grid;
+  gap: 20px;
+}
+
+.studio-achievements-section .dashboard-form-note {
+  margin: 0;
+}
+
+.dashboard-achievement-picker {
+  display: grid;
+  border-top: 1px solid var(--os-color-hairline);
+}
+
+.dashboard-achievement-choice-row {
+  min-height: 92px;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--os-color-hairline);
+  cursor: pointer;
+}
+
+.studio-achievement-icon {
+  width: 48px;
+  height: 48px;
+  opacity: 1 !important;
+  color: #fff !important;
+  border-color: color-mix(in srgb, white 14%, transparent) !important;
+  background: color-mix(in srgb, black 34%, transparent) !important;
+}
+
+body.theme-light .studio-achievement-icon {
+  background: rgba(17, 17, 17, 0.86) !important;
+}
+
+.dashboard-achievement-choice-row .dashboard-achievement-toggle {
+  justify-self: end;
+  padding-left: 12px;
+}
+
+.dashboard-achievement-choice-row .dashboard-achievement-toggle input {
+  width: 20px;
+  height: 20px;
+  appearance: none;
+  border: 1px solid color-mix(in srgb, var(--os-color-ink) 36%, transparent);
+  border-radius: 5px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.dashboard-achievement-choice-row .dashboard-achievement-toggle input:checked {
+  border-color: #fff;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='m4 10 4 4 8-9' fill='none' stroke='%23111111' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 16px;
+}
+
+.studio-bonus-content-card {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid var(--os-glass-panel-border);
+  border-radius: 20px;
+  background: var(--os-glass-panel-bg);
+  box-shadow: var(--os-glass-highlight);
+  backdrop-filter: blur(var(--os-glass-blur-soft)) saturate(1.2);
+  -webkit-backdrop-filter: blur(var(--os-glass-blur-soft)) saturate(1.2);
+}
+
 .dashboard-form-actions {
   display: flex;
   align-items: center;
@@ -9164,7 +9267,7 @@ body.theme-dark .dashboard-status-dot {
 .social-inbox {
   display: grid;
   grid-template-columns: minmax(240px, 340px) minmax(0, 1fr);
-  min-height: min(680px, calc(100vh - 180px));
+  min-height: min(680px, calc(100dvh - 280px));
 }
 
 .social-inbox-list {
@@ -9174,7 +9277,7 @@ body.theme-dark .dashboard-status-dot {
 
 .social-inbox-thread {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   min-height: 0;
 }
 
@@ -9186,18 +9289,27 @@ body.theme-dark .dashboard-status-dot {
   padding: 18px;
 }
 
+.social-message-list::before {
+  content: '';
+  margin-top: auto;
+}
+
 .social-message {
   max-width: min(560px, 82%);
-  border-radius: 8px;
-  padding: 12px 14px;
-  background: color-mix(in srgb, var(--os-color-ink) 7%, transparent);
+  align-self: flex-start;
+  border-radius: 18px 18px 18px 5px;
+  padding: 10px 14px;
+  background: color-mix(in srgb, var(--os-color-ink) 9%, transparent);
   color: var(--os-color-ink);
+  line-height: 1.38;
+  overflow-wrap: anywhere;
 }
 
 .social-message-own {
   align-self: flex-end;
-  background: var(--os-color-ink);
-  color: var(--os-color-bg);
+  border-radius: 18px 18px 5px 18px;
+  background: var(--os-color-accent);
+  color: var(--os-color-accent-contrast, #fff);
 }
 
 .social-message-form {
@@ -9210,6 +9322,38 @@ body.theme-dark .dashboard-status-dot {
 
 .social-inbox-unread {
   background: color-mix(in srgb, var(--os-color-accent) 12%, transparent);
+}
+
+.social-new-message-icon {
+  display: none;
+}
+
+.social-compose-mobile-header {
+  min-height: 58px;
+  display: grid;
+  place-items: center;
+  border-bottom: 1px solid var(--os-color-hairline);
+}
+
+.social-compose-mobile-header h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.social-inbox-row-aside {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--os-color-ink-muted);
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.social-inbox-chevron {
+  font-size: 24px;
+  line-height: 1;
 }
 
 .social-unread-dot {
@@ -9241,6 +9385,7 @@ body.theme-dark .dashboard-status-dot {
 }
 
 .social-compose-results {
+  grid-row: 3;
   display: grid;
   gap: var(--os-space-2);
 }
@@ -9270,8 +9415,116 @@ body.theme-dark .dashboard-status-dot {
   .social-avatar-large { width: 92px; height: 92px; }
   .social-profile-main { margin-top: 0; padding-top: 18px; }
   .social-profile-identity { align-items: flex-start; flex-direction: column; }
-  .social-inbox { grid-template-columns: 1fr; }
-  .social-inbox-list { border-right: 0; border-bottom: 1px solid var(--os-color-hairline); }
+  .social-inbox {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: calc(100dvh - var(--os-topbar-height) - var(--os-mobile-dock-height) - 190px);
+  }
+  .social-messages-thread-open .social-header {
+    display: none;
+  }
+  .social-messages-thread-open .social-inbox,
+  .social-messages-thread-open .social-inbox-thread {
+    min-height: calc(100dvh - var(--os-topbar-height) - var(--os-mobile-dock-height) - 28px);
+  }
+  .social-new-message-button {
+    width: 48px;
+    min-width: 48px;
+    height: 48px;
+    min-height: 48px;
+    padding: 0;
+    border-radius: 50%;
+  }
+  .social-new-message-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .social-new-message-icon {
+    display: block;
+    font-size: 28px;
+    font-weight: 500;
+    line-height: 1;
+  }
+  .social-inbox-list {
+    border-right: 0;
+    border-bottom: 0;
+    padding: 0;
+  }
+  .social-inbox-list .social-row {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 14px;
+    padding: 16px 0;
+  }
+  .social-inbox-list .social-avatar {
+    width: 48px;
+    height: 48px;
+  }
+  .social-inbox-list .social-row-main {
+    gap: 4px;
+  }
+  .social-inbox-list .social-author-name {
+    font-size: 16px;
+  }
+  .social-inbox-list .social-handle {
+    display: none;
+  }
+  .social-inbox-list .social-note {
+    overflow: hidden;
+    color: var(--os-color-ink-secondary);
+    font-size: 14px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .social-inbox-mobile-list .social-inbox-thread,
+  .social-inbox-mobile-thread .social-inbox-list {
+    display: none;
+  }
+  .social-inbox-thread {
+    min-height: calc(100dvh - var(--os-topbar-height) - var(--os-mobile-dock-height) - 190px);
+  }
+  .social-row.social-message-thread-header {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    gap: 6px;
+    min-height: 0;
+    padding: 4px 0 12px;
+    border-bottom: 1px solid var(--os-color-hairline);
+    text-align: center;
+  }
+  .social-message-thread-header .social-avatar {
+    width: 56px;
+    height: 56px;
+    justify-self: center;
+  }
+  .social-message-thread-header .social-row-main {
+    justify-items: center;
+    gap: 2px;
+  }
+  .social-message-list {
+    padding: 14px 8px;
+  }
+  .social-message {
+    max-width: 88%;
+  }
+  .social-message-form {
+    position: sticky;
+    bottom: 0;
+    padding: 10px 0;
+    background: var(--os-color-bg);
+  }
+  .social-message .os-type-meta {
+    display: none;
+  }
+  .social-compose-panel {
+    padding: 0;
+    gap: var(--os-space-4);
+  }
+  .social-compose-to-row {
+    border-radius: var(--os-radius-3);
+  }
 }
 
 /* ── Detail hero text ── */
@@ -9820,14 +10073,16 @@ body.theme-dark .social-profile-tabs button[aria-selected="true"] {
 }
 
 .social-compose-panel {
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-row: 1 / -1;
+  height: 100%;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   align-content: stretch;
   min-height: 100%;
 }
 
 .social-compose-to-row {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: var(--os-space-3);
   align-items: center;
   min-height: 52px;
@@ -9864,6 +10119,7 @@ body.theme-dark .social-profile-tabs button[aria-selected="true"] {
 }
 
 .social-message-form-compose {
+  grid-row: 4;
   border-top: 0;
   padding: 0;
 }
@@ -13065,5 +13321,157 @@ body:is(.theme-light, .theme-dark) .view-album-actions .os-button.os-button-acti
   .profile-crop-controls label {
     grid-template-columns: 1fr;
     gap: 6px;
+  }
+}
+
+/* Desktop theme-through pass. Mobile already uses its own reviewed flat
+   layouts, so these material changes intentionally begin above 768px. */
+@media (min-width: 769px) {
+  :is(
+    .view-tracklist,
+    .library-achievement-list,
+    .social-feed-panel,
+    .social-feed-composer,
+    .social-reply-drawer-form,
+    .item-community-surface,
+    .item-domain-surface,
+    .thread-row
+  ) {
+    background: transparent;
+    border-color: var(--os-color-hairline);
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  :is(
+    .view-tracklist,
+    .library-achievement-list,
+    .social-feed-panel
+  ) {
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
+  }
+
+  .social-feed-composer {
+    background: color-mix(in srgb, var(--os-color-ink) 3%, transparent);
+  }
+
+  .view-track-row,
+  .library-achievement-row,
+  .social-feed-post {
+    background: transparent;
+  }
+
+  .radio-page {
+    min-height: calc(100dvh - var(--os-topbar-height) - (2 * var(--os-content-inset)));
+  }
+
+  .radio-hero {
+    min-height: calc(100dvh - var(--os-topbar-height) - (2 * var(--os-content-inset)));
+    padding: 28px var(--os-detail-inset);
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    justify-items: center;
+    align-content: center;
+    gap: 18px;
+    background: transparent !important;
+    color: var(--os-color-ink);
+  }
+
+  .radio-hero::before,
+  .radio-hero::after {
+    display: none;
+  }
+
+  .radio-hero-kicker {
+    display: flex;
+    justify-content: center;
+    color: var(--os-color-ink-secondary);
+  }
+
+  .radio-hero .radio-hero-cover,
+  .radio-hero .view-album-cover {
+    width: min(34vw, 360px);
+    height: min(34vw, 360px);
+    grid-row: 2;
+  }
+
+  .radio-hero-copy {
+    grid-row: 3;
+    align-items: center;
+    width: 100%;
+    max-width: 680px;
+    padding: 0;
+  }
+
+  .radio-hero-eyebrow {
+    display: none;
+  }
+
+  .radio-hero :is(.radio-hero-title, .radio-hero-artist),
+  .radio-hero :is(.radio-hero-title, .radio-hero-artist):hover {
+    color: var(--os-color-ink);
+  }
+
+  .music-player-overlay {
+    inset: calc(10px + var(--os-topbar-height)) 10px 10px calc(10px + var(--os-sidebar-width));
+    place-items: stretch;
+  }
+
+  body:has(.app-sidebar-compact) .music-player-overlay {
+    left: calc(10px + var(--os-sidebar-compact-width));
+  }
+
+  .music-player-sheet {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    grid-template-columns: minmax(320px, 0.9fr) minmax(340px, 1.1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    padding: 16px clamp(24px, 3vw, 52px) 28px;
+    border-radius: 0;
+    background: color-mix(in srgb, var(--os-shell-bg) 88%, transparent);
+    box-shadow: none;
+    backdrop-filter: blur(36px) saturate(1.35);
+    -webkit-backdrop-filter: blur(36px) saturate(1.35);
+  }
+
+  .music-player-sheet-main {
+    align-content: center;
+    padding: 0 clamp(16px, 2vw, 34px);
+  }
+
+  .music-player-sheet-art {
+    width: min(38vw, 430px, 48dvh);
+  }
+
+  .music-player-queue {
+    height: 100%;
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 768px) {
+  .studio-tracks-section,
+  .studio-achievements-section {
+    margin-top: 28px;
+  }
+
+  .studio-tracks-section .dashboard-track-editor-copy {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .dashboard-achievement-choice-row {
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+    gap: 14px;
+    padding: 18px 0;
+  }
+
+  .studio-bonus-content-card {
+    padding: 18px;
   }
 }

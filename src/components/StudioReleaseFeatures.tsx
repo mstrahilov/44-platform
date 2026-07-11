@@ -47,7 +47,6 @@ function supportsAchievementsForSection(sectionId: StudioCatalogSectionId) {
   return sectionId === 'music';
 }
 
-const REQUIRED_SELECTED_ACHIEVEMENTS = 3;
 const OVERACHIEVER_CODE = 'overachiever';
 const EMPTY_BONUS_ITEM: DraftBonusContent = {
   title: '',
@@ -134,14 +133,9 @@ function enabledBonusItems(state: ReleaseFeatureState) {
 
 export function validateReleaseFeatureState(state: ReleaseFeatureState, sectionId: StudioCatalogSectionId) {
   const supportsAchievements = supportsAchievementsForSection(sectionId);
-  const selectedAchievementCount = state.achievements.filter(achievement => achievement.enabled && achievement.code !== OVERACHIEVER_CODE).length;
   const hasIncompleteBonusContent = supportsAchievements
     && state.achievementsEnabled
     && normalizeBonusItems(state.bonusItems).some(item => Boolean(item.title.trim()) !== Boolean(item.fileUrl.trim()));
-
-  if (supportsAchievements && state.achievementsEnabled && selectedAchievementCount < REQUIRED_SELECTED_ACHIEVEMENTS) {
-    return `Select at least ${REQUIRED_SELECTED_ACHIEVEMENTS} achievements plus Overachiever.`;
-  }
 
   if (hasIncompleteBonusContent) {
     return 'Bonus Content needs both a title and an uploaded file.';
@@ -293,25 +287,11 @@ export function StudioReleaseFeatures({
   onChange: (next: ReleaseFeatureState) => void;
 }) {
   const supportsAchievements = supportsAchievementsForSection(sectionId);
-  const selectedAchievementCount = state.achievements.filter(achievement => achievement.enabled && achievement.code !== OVERACHIEVER_CODE).length;
   const achievementsOn = supportsAchievements && state.achievementsEnabled;
-  const minimumSelectionReached = selectedAchievementCount >= REQUIRED_SELECTED_ACHIEVEMENTS;
   const bonusItem = normalizeBonusItems(state.bonusItems)[0];
 
   function patch(patchState: Partial<ReleaseFeatureState>) {
     onChange({ ...state, ...patchState });
-  }
-
-  function ensureMinimumAchievements(achievements: DraftAchievement[]) {
-    let selectedCount = achievements.filter(achievement => achievement.enabled && achievement.code !== OVERACHIEVER_CODE).length;
-    if (selectedCount >= REQUIRED_SELECTED_ACHIEVEMENTS) return achievements;
-
-    return achievements.map(achievement => {
-      if (achievement.code === OVERACHIEVER_CODE) return { ...achievement, enabled: true };
-      if (achievement.enabled || selectedCount >= REQUIRED_SELECTED_ACHIEVEMENTS) return achievement;
-      selectedCount += 1;
-      return { ...achievement, enabled: true };
-    });
   }
 
   function toggleAchievements() {
@@ -320,7 +300,9 @@ export function StudioReleaseFeatures({
     patch({
       achievementsEnabled: nextEnabled,
       achievements: nextEnabled
-        ? ensureMinimumAchievements(state.achievements)
+        ? state.achievements.map(achievement => (
+          achievement.code === OVERACHIEVER_CODE ? { ...achievement, enabled: true } : achievement
+        ))
         : state.achievements.map(achievement => ({
           ...achievement,
           enabled: achievement.code === OVERACHIEVER_CODE,
@@ -332,8 +314,6 @@ export function StudioReleaseFeatures({
     if (code === OVERACHIEVER_CODE) return;
     const achievement = state.achievements.find(item => item.code === code);
     if (!achievement) return;
-    if (achievement.enabled && selectedAchievementCount <= REQUIRED_SELECTED_ACHIEVEMENTS) return;
-
     patch({
       achievements: state.achievements.map(item => (
         item.code === code ? { ...item, enabled: !item.enabled } : item.code === OVERACHIEVER_CODE ? { ...item, enabled: true } : item
@@ -353,10 +333,10 @@ export function StudioReleaseFeatures({
   }
 
   return (
-    <section className="dashboard-form-section">
+    <section className="dashboard-form-section studio-achievements-section">
       <SectionHeader
-        title="Release Features"
-        description="Choose the extra systems this music release supports in Library."
+        title="Achievements"
+        description="Enable achievements for listeners to unlock."
         action={supportsAchievements ? (
           <button
             type="button"
@@ -368,72 +348,58 @@ export function StudioReleaseFeatures({
         ) : undefined}
       />
 
-      <div className="dashboard-form-step">
-        <SectionHeader
-          title="Achievements"
-          description="Achievements are the first 44OS release feature. Overachiever unlocks after fans complete every selected achievement."
-        />
-        {!supportsAchievements ? (
-          <p className="library-empty-text">Achievements are limited to music releases in v1.0.</p>
-        ) : achievementsOn ? (
-          <>
-            <p className="dashboard-form-note">Select at least {REQUIRED_SELECTED_ACHIEVEMENTS} achievements. Overachiever is always included.</p>
-            <div className="dashboard-list-surface library-achievement-list dashboard-achievement-picker">
-              {state.achievements.map(achievement => (
-                <label key={achievement.code} className="dashboard-list-row library-achievement-row dashboard-achievement-choice-row">
-                  <span className="library-achievement-icon" aria-hidden="true">
-                    <AchievementIconGlyph code={achievement.code} label={achievement.title} />
-                  </span>
-                  <span className="dashboard-achievement-copy">
-                    <span className="os-type-card-title">{achievement.title}</span>
-                    <span className="os-type-body-small">{achievement.description}</span>
-                  </span>
-                  <span className="dashboard-achievement-toggle">
-                    <input
-                      type="checkbox"
-                      checked={achievement.enabled || achievement.code === OVERACHIEVER_CODE}
-                      disabled={achievement.code === OVERACHIEVER_CODE || (achievement.enabled && selectedAchievementCount <= REQUIRED_SELECTED_ACHIEVEMENTS)}
-                      onChange={() => toggleAchievement(achievement.code)}
-                    />
-                  </span>
-                </label>
-              ))}
-            </div>
-            {!minimumSelectionReached && (
-              <p className="dashboard-form-note dashboard-form-note-warning">Select at least {REQUIRED_SELECTED_ACHIEVEMENTS} achievements plus Overachiever.</p>
-            )}
-            <div className="dashboard-list-surface" style={{ marginTop: 20 }}>
-              <div className="dashboard-list-row">
-                <span className="dashboard-row-copy">
-                  <span className="dashboard-row-title">Overachiever Bonus Content</span>
-                  <span className="dashboard-row-subtitle">Optional downloadable content unlocked when a fan completes every selected achievement.</span>
+      {!supportsAchievements ? (
+        <p className="library-empty-text">Achievements are limited to music releases in v1.0.</p>
+      ) : achievementsOn ? (
+        <div className="studio-achievements-content">
+          <div className="dashboard-achievement-picker">
+            {state.achievements.map(achievement => (
+              <label key={achievement.code} className="dashboard-achievement-choice-row">
+                <span className="library-achievement-icon studio-achievement-icon" aria-hidden="true">
+                  <AchievementIconGlyph code={achievement.code} label={achievement.title} />
                 </span>
-              </div>
-              <div className="dashboard-form-grid dashboard-form-grid-2" style={{ padding: 16 }}>
-                <label className="dashboard-field">
-                  <span className="dashboard-field-label">Bonus Title</span>
+                <span className="dashboard-achievement-copy">
+                  <span className="os-type-card-title">{achievement.title}</span>
+                  <span className="os-type-body-small">{achievement.description}</span>
+                </span>
+                <span className="dashboard-achievement-toggle">
                   <input
-                    value={bonusItem.title}
-                    onChange={event => updateBonusItem({ title: event.target.value })}
-                    placeholder="Bonus Content"
+                    type="checkbox"
+                    checked={achievement.enabled || achievement.code === OVERACHIEVER_CODE}
+                    disabled={achievement.code === OVERACHIEVER_CODE}
+                    onChange={() => toggleAchievement(achievement.code)}
                   />
-                </label>
-                <UploadField
-                  label="Bonus File"
-                  folder="products/bonus-content"
-                  userId={userId}
-                  value={bonusItem.fileUrl}
-                  buttonLabel="Upload bonus"
-                  previewKind="file"
-                  onChange={nextValue => updateBonusItem({ fileUrl: nextValue })}
+                </span>
+              </label>
+            ))}
+          </div>
+          <div className="studio-bonus-content-card">
+            <span className="dashboard-row-copy">
+              <span className="dashboard-row-title">Overachiever Bonus Content</span>
+              <span className="dashboard-row-subtitle">Optional content unlocked after every selected achievement is complete.</span>
+            </span>
+            <div className="dashboard-form-grid dashboard-form-grid-2">
+              <label className="dashboard-field">
+                <span className="dashboard-field-label">Bonus Title</span>
+                <input
+                  value={bonusItem.title}
+                  onChange={event => updateBonusItem({ title: event.target.value })}
+                  placeholder="Bonus Content"
                 />
-              </div>
+              </label>
+              <UploadField
+                label="Bonus File"
+                folder="products/bonus-content"
+                userId={userId}
+                value={bonusItem.fileUrl}
+                buttonLabel="Upload bonus"
+                previewKind="file"
+                onChange={nextValue => updateBonusItem({ fileUrl: nextValue })}
+              />
             </div>
-          </>
-        ) : (
-          <p className="library-empty-text">Achievements are turned off for this release.</p>
-        )}
-      </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

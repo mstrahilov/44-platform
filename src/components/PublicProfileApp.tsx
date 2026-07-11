@@ -225,8 +225,12 @@ export default function PublicProfilePage() {
     setBusy('message');
     setError('');
     const result = await createOrOpenConversation(user.id, profile.id);
-    if (result.error && isMissingRelationError(result.error)) {
-      setError('Messages are ready in the app. Run the social SQL to enable conversations in Supabase.');
+    if (result.error) {
+      setError(isMissingRelationError(result.error)
+        ? 'Messages are being updated. Please try again shortly.'
+        : result.error.message);
+      setBusy('');
+      return;
     }
     router.push(result.href);
     setBusy('');

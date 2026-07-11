@@ -8,8 +8,9 @@ import { PageShell } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
 import { OnboardingTip } from '@/components/OnboardingTip';
 import { SocialAvatar, SocialProfileRow } from '@/components/Social';
+import { useTopbarBack } from '@/components/TopbarContext';
 import { useAuth } from '@/lib/useAuth';
-import { createOrOpenConversation } from '@/lib/messages';
+import { createOrOpenConversation, directMessageError, sendDirectMessage } from '@/lib/messages';
 import { hasCommunityIdentity, communityIdentityMessage } from '@/lib/communityProfile';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { isMissingRelationError } from '@/lib/schemaCompat';
@@ -93,6 +94,28 @@ function MessagesContent() {
   const [recipientQuery, setRecipientQuery] = useState('');
   const [recipientProfiles, setRecipientProfiles] = useState<MessageProfile[]>([]);
   const [selectedRecipient, setSelectedRecipient] = useState<MessageProfile | null>(null);
+  const [inboxError, setInboxError] = useState('');
+  const [mobileListOpen, setMobileListOpen] = useState(true);
+
+  useTopbarBack(mobileListOpen ? undefined : { href: '/inbox', label: 'Inbox' });
+
+  useEffect(() => {
+    const conversation = searchParams.get('conversation');
+    const withProfile = searchParams.get('with');
+    const compose = searchParams.get('compose');
+    Promise.resolve().then(() => {
+      if (compose === 'new') {
+        setComposing(true);
+        setMobileListOpen(false);
+        return;
+      }
+
+      if (!conversation && !withProfile) {
+        setComposing(false);
+        setMobileListOpen(true);
+      }
+    });
+  }, [searchParams]);
 
   useEffect(() => {
     if (!userId) return;
@@ -118,6 +141,10 @@ function MessagesContent() {
       setConversations([]);
       setMembers([]);
       setMessages([]);
+      return;
+    }
+    if (membershipError) {
+      setInboxError(directMessageError(membershipError));
       return;
     }
 
@@ -148,15 +175,23 @@ function MessagesContent() {
       return;
     }
 
+    const loadError = conversationResult.error || memberResult.error || messageResult.error;
+    if (loadError) {
+      setInboxError(directMessageError(loadError));
+      return;
+    }
+
     const rows = (conversationResult.data as Conversation[] | null) ?? [];
     setConversations(rows);
-    setMembers((memberResult.data as ConversationMember[] | null) ?? []);
+    setMembers((memberResult.data as unknown as ConversationMember[] | null) ?? []);
     setMessages((messageResult.data as Message[] | null) ?? []);
     setSchemaReady(true);
+    setInboxError('');
 
     const requested = searchParams.get('conversation');
     if (requested && rows.some(row => row.id === requested)) {
       setActiveId(requested);
+      setMobileListOpen(false);
     } else if (!activeId || !rows.some(row => row.id === activeId)) {
       setActiveId(rows[0]?.id ?? '');
     }
@@ -189,11 +224,12 @@ function MessagesContent() {
 
     async function openRequestedConversation() {
       const result = await createOrOpenConversation(userId, targetProfileId);
-      if (result.error && isMissingRelationError(result.error)) {
-        setSchemaReady(false);
-        setComposing(true);
+      if (result.error) {
+        if (isMissingRelationError(result.error)) setSchemaReady(false);
+        setInboxError(directMessageError(result.error));
         return;
       }
+      setMobileListOpen(false);
       router.replace(result.href);
       await loadInbox();
     }
@@ -218,8 +254,11 @@ function MessagesContent() {
         request = request.or(`display_name.ilike.%${query}%,username.ilike.%${query}%,slug.ilike.%${query}%`);
       }
 
-      const { data } = await request;
-      if (alive) setRecipientProfiles((data as MessageProfile[] | null) ?? []);
+      const { data, error } = await request;
+      if (alive) {
+        setRecipientProfiles((data as MessageProfile[] | null) ?? []);
+        if (error) setInboxError(directMessageError(error));
+      }
     }
 
     loadRecipients();
@@ -265,29 +304,22 @@ function MessagesContent() {
         return;
       }
       setSending(true);
+      setInboxError('');
       const result = await createOrOpenConversation(user.id, selectedRecipient.id);
-      if (result.error && isMissingRelationError(result.error)) {
-        setSchemaReady(false);
-        console.warn('Messages schema is unavailable.', result.error);
+      if (result.error) {
+        if (isMissingRelationError(result.error)) setSchemaReady(false);
+        setInboxError(directMessageError(result.error));
         setSending(false);
         return;
       }
       const conversationId = new URL(result.href, window.location.origin).searchParams.get('conversation');
       if (conversationId) {
-        const { error: insertError } = await supabase
-          .from('messages')
-          .insert({
-            conversation_id: conversationId,
-            sender_id: user.id,
-            body: body.trim(),
-            status: 'sent',
-        });
+        const { error: insertError } = await sendDirectMessage(conversationId, body);
         if (insertError) {
-          console.warn('Message send failed.', insertError);
+          setInboxError(directMessageError(insertError));
           setSending(false);
           return;
         }
-        await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', conversationId);
       }
       router.replace(result.href);
       await loadInbox();
@@ -305,23 +337,15 @@ function MessagesContent() {
     }
 
     setSending(true);
-    const { data, error: insertError } = await supabase
-      .from('messages')
-      .insert({
-        conversation_id: activeConversation.id,
-        sender_id: user.id,
-        body: body.trim(),
-        status: 'sent',
-      })
-      .select('*')
-      .single();
+    setInboxError('');
+    const { data, error: insertError } = await sendDirectMessage(activeConversation.id, body);
 
     if (isMissingRelationError(insertError)) {
       setSchemaReady(false);
     } else if (insertError) {
-      console.warn('Message send failed.', insertError);
+      setInboxError(directMessageError(insertError));
     } else if (data) {
-      setMessages(current => [...current, data as Message]);
+      setMessages(current => [...current, data as unknown as Message]);
       setConversations(current => {
         const updatedAt = new Date().toISOString();
         const next = current.map(conversation => (
@@ -333,7 +357,6 @@ function MessagesContent() {
         return next;
       });
       setBody('');
-      await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', activeConversation.id);
     }
     setSending(false);
   }
@@ -364,21 +387,28 @@ function MessagesContent() {
 
   return (
     <PageShell>
-      <main className="social-shell social-shell-wide">
+      <main className={`social-shell social-shell-wide social-messages-shell${composing ? ' social-messages-composing' : ''}${mobileListOpen ? '' : ' social-messages-thread-open'}`}>
         <header className="social-header">
           <div className="social-title-row">
             <div>
               <h1 className="os-type-display">Inbox</h1>
             </div>
-            <button type="button" className="os-button os-button-primary" onClick={() => setComposing(true)}>
-              New Message
+            <button type="button" className="os-button os-button-primary social-new-message-button" aria-label="New Message" onClick={() => {
+              setComposing(true);
+              setMobileListOpen(false);
+              setInboxError('');
+              router.push('/inbox?compose=new');
+            }}>
+              <span className="social-new-message-label">New Message</span>
+              <span className="social-new-message-icon" aria-hidden="true">＋</span>
             </button>
           </div>
         </header>
 
         {!canInteract && <div className="app-empty-text">{communityIdentityMessage()}</div>}
+        {inboxError && <div className="dashboard-status dashboard-status-error" role="alert">{inboxError}</div>}
 
-          <section className="social-inbox" aria-label="Inbox">
+          <section className={mobileListOpen ? 'social-inbox social-inbox-mobile-list' : 'social-inbox social-inbox-mobile-thread'} aria-label="Inbox">
             <aside className="social-inbox-list">
               <OnboardingTip id="messages-refresh">
                 Inbox refreshes when you return to this window. Open a profile to start a new conversation.
@@ -406,6 +436,8 @@ function MessagesContent() {
                     className={unread ? 'social-action social-inbox-unread' : 'social-action'}
                     onClick={() => {
                       setActiveId(conversation.id);
+                      setMobileListOpen(false);
+                      router.push(`/inbox?conversation=${conversation.id}`);
                       if (last?.created_at) {
                         setConversationReadAt(conversation.id, last.created_at);
                         setReadMap(getReadMap());
@@ -415,8 +447,13 @@ function MessagesContent() {
                   >
                     <SocialProfileRow
                       profile={other ?? { display_name: '44 Member' }}
-                      subtitle={last ? `${compactDate(last.created_at)} · ${last.body}` : 'No messages yet'}
-                      aside={unread ? <span className="social-unread-dot" aria-label="Unread" /> : conversation.id === activeConversation?.id ? <span className="os-pill os-type-pill">Open</span> : null}
+                      subtitle={last?.body || 'No messages yet'}
+                      aside={(
+                        <span className="social-inbox-row-aside">
+                          {last && <span>{compactDate(last.created_at)}</span>}
+                          <span className="social-inbox-chevron" aria-hidden="true">›</span>
+                        </span>
+                      )}
                     />
                   </button>
                 ))
@@ -426,6 +463,9 @@ function MessagesContent() {
             <div className="social-inbox-thread">
               {composing ? (
                 <div className="social-compose-panel">
+                  <div className="social-compose-mobile-header">
+                    <h2>New Message</h2>
+                  </div>
                   <div className="social-compose-to-row">
                     <span className="social-compose-to-label">To:</span>
                     {selectedRecipient ? (
@@ -441,13 +481,6 @@ function MessagesContent() {
                         autoFocus
                       />
                     )}
-                    <button type="button" className="os-button os-button-secondary os-button-compact" onClick={() => {
-                      setComposing(false);
-                      setSelectedRecipient(null);
-                      setRecipientQuery('');
-                    }}>
-                      Cancel
-                    </button>
                   </div>
                   {!selectedRecipient && recipientQuery.trim() && (
                     <div className="social-compose-results">
@@ -491,7 +524,7 @@ function MessagesContent() {
                 </div>
               ) : activeConversation ? (
                 <>
-                  <div className="social-row" style={{ paddingLeft: 18, paddingRight: 18 }}>
+                  <div className="social-row social-message-thread-header">
                     <SocialAvatar profile={otherMember} />
                     <div className="social-row-main">
                       <div className="social-author-name">{authorDisplayName(otherMember)}</div>
