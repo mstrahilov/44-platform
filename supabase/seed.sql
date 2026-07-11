@@ -1,0 +1,3 @@
+-- The canonical baseline intentionally contains schema only.
+-- Add reviewed, environment-safe development seed data here when a milestone
+-- requires it; never copy staging users, uploads, or private content into seed.

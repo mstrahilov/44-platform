@@ -6,7 +6,7 @@ const STORAGE_KEY = '44-cart-v1';
 const CHANGE_EVENT = '44-cart-changed';
 
 export type CartItem = {
-  product_id: string;
+  item_id: string;
   title: string;
   creator: string;
   cover_url: string | null;
@@ -32,7 +32,15 @@ function readCart(): CartItem[] {
   }
   try {
     const parsed = JSON.parse(raw);
-    cachedItems = Array.isArray(parsed) ? (parsed as CartItem[]) : [];
+    cachedItems = Array.isArray(parsed)
+      ? parsed.flatMap((entry: CartItem & { product_id?: string }) => {
+          const itemId = entry.item_id || entry.product_id;
+          if (!itemId) return [];
+          const current = { ...entry };
+          delete current.product_id;
+          return [{ ...current, item_id: itemId }];
+        })
+      : [];
   } catch {
     cachedItems = [];
   }
@@ -51,7 +59,7 @@ export function getCart(): CartItem[] {
 
 export function addToCart(item: Omit<CartItem, 'quantity'>, quantity = 1) {
   const items = readCart();
-  const existing = items.find(entry => entry.product_id === item.product_id);
+  const existing = items.find(entry => entry.item_id === item.item_id);
   if (existing) {
     existing.quantity += quantity;
   } else {
@@ -60,16 +68,16 @@ export function addToCart(item: Omit<CartItem, 'quantity'>, quantity = 1) {
   writeCart(items);
 }
 
-export function updateCartQuantity(productId: string, quantity: number) {
+export function updateCartQuantity(itemId: string, quantity: number) {
   const items = readCart();
   const next = items
-    .map(entry => (entry.product_id === productId ? { ...entry, quantity } : entry))
+    .map(entry => (entry.item_id === itemId ? { ...entry, quantity } : entry))
     .filter(entry => entry.quantity > 0);
   writeCart(next);
 }
 
-export function removeFromCart(productId: string) {
-  writeCart(readCart().filter(entry => entry.product_id !== productId));
+export function removeFromCart(itemId: string) {
+  writeCart(readCart().filter(entry => entry.item_id !== itemId));
 }
 
 export function clearCart() {
@@ -107,7 +115,7 @@ export function useCart() {
   const items = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   const has = useCallback(
-    (productId: string) => items.some(entry => entry.product_id === productId),
+    (itemId: string) => items.some(entry => entry.item_id === itemId),
     [items],
   );
 

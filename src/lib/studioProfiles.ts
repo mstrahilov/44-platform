@@ -3,6 +3,7 @@ import type { Profile } from '@/lib/platform';
 import { DEFAULT_CREATOR_COUNTRY, DEFAULT_CREATOR_CURRENCY, DEFAULT_MARKET_MODE } from '@/lib/marketPreferences';
 import { isMissingColumnError } from '@/lib/schemaCompat';
 import { supabase } from '@/lib/supabase';
+import type { Database } from '@/lib/database.types';
 
 export type StudioProfile = Pick<
   Profile,
@@ -18,12 +19,12 @@ export type StudioProfile = Pick<
   | 'display_currency'
   | 'home_country_code'
   | 'home_currency'
-  | 'product_market_mode'
+  | 'item_market_mode'
   | 'service_market_mode'
 >;
 
 const LEGACY_PROFILE_SELECT = 'id, display_name, username, role, slug, avatar_url, bio, creator_type';
-const EXTENDED_PROFILE_SELECT = `${LEGACY_PROFILE_SELECT}, country_code, display_currency, home_country_code, home_currency, product_market_mode, service_market_mode`;
+const EXTENDED_PROFILE_SELECT = `${LEGACY_PROFILE_SELECT}, country_code, display_currency, home_country_code, home_currency, item_market_mode, service_market_mode`;
 
 function normalizeStudioProfile(data: Partial<StudioProfile> | null): StudioProfile | null {
   if (!data?.id) return null;
@@ -40,7 +41,7 @@ function normalizeStudioProfile(data: Partial<StudioProfile> | null): StudioProf
     display_currency: data.display_currency ?? null,
     home_country_code: data.home_country_code ?? DEFAULT_CREATOR_COUNTRY,
     home_currency: data.home_currency ?? DEFAULT_CREATOR_CURRENCY,
-    product_market_mode: data.product_market_mode ?? DEFAULT_MARKET_MODE,
+    item_market_mode: data.item_market_mode ?? DEFAULT_MARKET_MODE,
     service_market_mode: data.service_market_mode ?? DEFAULT_MARKET_MODE,
   };
 }
@@ -112,12 +113,12 @@ export async function ensureProfileForUser(user: Pick<User, 'id' | 'email' | 'us
   const username = await resolveUniqueField('username', usernameSeed, user.id);
   const slug = await resolveUniqueField('slug', slugSeed, user.id);
 
-  const payload = {
+  const payload: Database['public']['Tables']['profiles']['Insert'] = {
     id: user.id,
     display_name: displayName,
     username,
     slug,
-    role: existingProfile?.role === 'admin' ? 'admin' : 'creator',
+    role: existingProfile?.role ?? 'member',
     avatar_url: existingProfile?.avatar_url ?? null,
     bio: existingProfile?.bio ?? null,
     creator_type: existingProfile?.creator_type ?? null,
@@ -125,8 +126,8 @@ export async function ensureProfileForUser(user: Pick<User, 'id' | 'email' | 'us
     display_currency: existingProfile?.display_currency ?? null,
     home_country_code: existingProfile?.home_country_code ?? null,
     home_currency: existingProfile?.home_currency ?? null,
-    product_market_mode: existingProfile?.product_market_mode ?? null,
-    service_market_mode: existingProfile?.service_market_mode ?? null,
+    item_market_mode: existingProfile?.item_market_mode ?? DEFAULT_MARKET_MODE,
+    service_market_mode: existingProfile?.service_market_mode ?? DEFAULT_MARKET_MODE,
   };
 
   const { data, error } = await supabase

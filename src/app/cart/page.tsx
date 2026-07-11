@@ -52,7 +52,7 @@ export default function CartPage() {
 
         <div className="dashboard-list-surface">
           {items.map(item => (
-            <div key={item.product_id} className="dashboard-list-row cart-row">
+            <div key={item.item_id} className="dashboard-list-row cart-row">
               <div className="cart-row-item">
                 <div className="cart-row-art">
                   {item.cover_url && (
@@ -77,7 +77,7 @@ export default function CartPage() {
                 <button
                   type="button"
                   className="os-button os-button-secondary os-button-compact"
-                  onClick={() => updateCartQuantity(item.product_id, item.quantity - 1)}
+                  onClick={() => updateCartQuantity(item.item_id, item.quantity - 1)}
                   aria-label="Decrease quantity"
                 >
                   −
@@ -86,7 +86,7 @@ export default function CartPage() {
                 <button
                   type="button"
                   className="os-button os-button-secondary os-button-compact"
-                  onClick={() => updateCartQuantity(item.product_id, item.quantity + 1)}
+                  onClick={() => updateCartQuantity(item.item_id, item.quantity + 1)}
                   aria-label="Increase quantity"
                 >
                   +
@@ -101,7 +101,7 @@ export default function CartPage() {
                 <button
                   type="button"
                   className="os-button os-button-ghost os-button-compact"
-                  onClick={() => removeFromCart(item.product_id)}
+                  onClick={() => removeFromCart(item.item_id)}
                 >
                   Remove
                 </button>

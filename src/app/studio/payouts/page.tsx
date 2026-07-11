@@ -25,7 +25,7 @@ export default function StudioPayoutsPage() {
       setProfile(profileResult.profile);
       const profileId = profileResult.profile?.id ?? user.id;
 
-      await supabase.from('products').select('id').eq('author_id', profileId).limit(1);
+      await supabase.from('catalog_items').select('id').eq('author_id', profileId).limit(1);
       setFetching(false);
     }
 

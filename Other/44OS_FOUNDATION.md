@@ -1,13 +1,14 @@
 # 44OS Foundation
 
-This is one of the two active handoff documents for 44OS. Read it before changing architecture, routes, authentication, Supabase, mobile/PWA behavior, desktop packaging, or deployment behavior.
+This is one of the three active handoff documents for 44OS. Read it before changing architecture, routes, authentication, Supabase, mobile/PWA behavior, desktop packaging, or deployment behavior.
 
 The active handoff set is:
 
 - `Other/44OS_FOUNDATION.md` - architecture, routes, data, auth, deployment, desktop stance.
 - `Other/44OS_UI.md` - visual system, interaction principles, and quality bar.
+- `Other/44OS_MILESTONES.md` - approved sequencing, current status, dependencies, and completion criteria.
 
-Do not revive deleted planning documents or old SQL notes as active references. If a decision changes, update the relevant active docs in the same change.
+Do not revive deleted proposal documents or old SQL notes as active references. If a decision changes, update the relevant active docs in the same change.
 
 Current launch-readiness source of truth: July 11, 2026. Foundation changes must be evaluated as one system across browser, iOS home-screen installation, authentication, streaming audio, Supabase, metadata, and route ownership.
 
@@ -36,7 +37,7 @@ Language rules:
 
 - User-facing copy says Store, Library, Community, release, item, music, book, sample pack, merch, review, creator update, bonus content, earnings, and orders.
 - UI copy should not use "Browse" or "Collection" as the visible product model.
-- `products` is the permanent internal catalog noun. User-facing copy should use "items" or format-specific nouns.
+- **Item** is the permanent domain noun. The canonical destination table is `catalog_items`, its application type is `Item`, and its universal foreign key is `item_id`. The current `products` name is migrated without changing UUIDs. User-facing copy should use "items" or format-specific nouns.
 - Services are excluded from the v1 polished Store surface.
 
 ---
@@ -111,9 +112,8 @@ Current code state:
 - `src/lib/achievementCatalog.ts` filters Library display/tracking to the eight v1 music codes.
 - `src/components/StudioReleaseFeatures.tsx` exposes a music-only Achievements section: one master switch, independently selectable v1 templates with no minimum count, plus optional Overachiever Bonus Content. `DashboardReleaseFeatures.tsx` remains only as a compatibility export.
 - Studio create/edit pages show release achievements only for music.
-- Studio create/edit pages no longer collect release descriptions. New products save an empty legacy description after `20260711235500_allow_descriptionless_releases.sql`; edits preserve any existing legacy copy without exposing the field.
-- The reviewed achievement migration is `supabase/migrations/20260709230000_44os_v1_music_achievements.sql`.
-- Launch foundation SQL exists at `supabase/migrations/20260710143000_44os_launch_foundation_alignment.sql`.
+- Studio create/edit pages no longer collect release descriptions. New Items save an empty legacy description under the canonical baseline schema; edits preserve any existing legacy copy without exposing the field.
+- The reviewed achievement and launch-foundation schema is captured in the canonical `supabase/migrations/20260712010000_44os_item_baseline.sql`.
 
 Supabase is still staging-only before public launch. Back up first, run dry runs, then apply reviewed repo migrations directly through the Supabase CLI.
 
@@ -222,7 +222,7 @@ Canonical signed-in routes:
 
 - `/library` - Library front door.
 - `/library/[category]` - Library category.
-- `/library/item/[id]` - owned Library item detail using `library_items.id`.
+- `/library/item/[id]` - owned Library item detail using `library_entries.id`.
 - `/profile` and `/profile/[username]` - profile surfaces.
 - `/inbox` - signed-in direct-message inbox, surfaced through the account menu.
 - `/studio` and Studio subroutes - creator workspace.
@@ -248,10 +248,12 @@ Compatibility and legacy policy:
 
 Supabase is the staging source of auth, user, catalog, community, messaging, and commerce state until public launch. Treat it carefully, but optimize for settling the correct foundation before testers return.
 
+The approved destination treats `catalog_items.id` as the permanent Item identity shared by Store, Library, and Community. Existing `products.id` values are preserved during the migration. The additive migration path, typed content spine, capability registry, entitlement separation, and retirement sequence are owned by `44OS_MILESTONES.md`. Current tables remain valid until their milestone cutover is verified; documentation of the destination does not authorize skipping preservation or rollback steps.
+
 Rules:
 
 - For schema and content inspection, the linked live Supabase project is the source of truth. Future chats should query it read-only with the Supabase CLI or public API before making claims about tables, columns, policies, storage objects, or catalog rows.
-- Files under `supabase/migrations/` are ordered execution history for clean replay, not a snapshot of the current schema. Later migrations intentionally supersede earlier definitions; do not treat an individual SQL file as current-state documentation.
+- `supabase/migrations/20260712010000_44os_item_baseline.sql` is the canonical replayable starting point. Every later schema change must be a new timestamped migration; do not edit the baseline after it has been adopted.
 - Do not add ad-hoc SQL probes, exports, or schema snapshots to the repository. Temporary read-only queries belong in the CLI, and disposable backups remain outside tracked source.
 - Do not run Supabase schema or data changes without a current backup and a reviewed repo migration.
 - Prefer normal Supabase migrations, dry runs, then `supabase db push` from the linked project.
@@ -261,39 +263,36 @@ Rules:
 
 Current concept-to-table map:
 
-- Canonical catalog items: `products`. `status` is the publication lifecycle and `experience_type` controls runtime behavior. The UI calls the acquisition surface Store; Library views still point to the same product row.
-- Product category lookup: `product_categories`, referenced by `products.product_category_id`.
+- Canonical Items: `catalog_items`. `status` is the publication lifecycle and `experience_type` controls runtime behavior. The UI calls the acquisition surface Store; Library views point to the same canonical Item row.
+- Item category lookup: `item_categories`, referenced by `catalog_items.item_category_id`.
 - Creator profiles and public member profiles: `profiles`.
-- Music tracks: `tracks`.
-- Files, galleries, and release feature unlocks: `product_assets`.
-- User-owned/saved/purchased relationship to a product: `library_items`.
-- Reviews: `product_reviews`.
-- Creator updates: `product_updates`.
-- Achievements: `achievement_templates` 44-defined catalog plus `product_achievements`, `user_achievements`, `achievement_events`, `achievement_progress`.
-- Release features: achievements first, with optional `product_assets` unlocks such as `bonus_content`; future features include `commentary_audio` and `behind_the_scenes`.
+- Music tracks: `tracks`, attached by `item_id`.
+- Files, galleries, and release feature unlocks: `item_assets`.
+- User Library relationship: `library_entries` with `item_id`. Future entitlements become the authority for access/acquisition; the Library entry owns display state.
+- Reviews: legacy `product_reviews` with `item_id`, scheduled to move onto the typed content spine in M4.
+- Creator updates: legacy `product_updates` with `item_id`, scheduled to move onto the typed content spine in M4.
+- Achievements: `achievement_templates` 44-defined catalog plus `item_achievements`, `user_achievements`, `achievement_events`, `achievement_progress`.
+- Item capabilities and collaborators: `item_capabilities` and `item_members`; structured outbound links use `item_external_links` and `profile_external_links`.
+- Release features: achievements first, with optional `item_assets` unlocks such as `bonus_content`; future features include `commentary_audio` and `behind_the_scenes`.
 - Points foundation: `user_points_ledger`.
 - Community: `posts`, `post_replies`, `post_likes`, `reply_likes`, `profile_follows`, `community_questions`, `community_question_answers`, `community_question_votes`, `community_collaborations`, `community_collaboration_responses`.
 - Messaging: `conversations`, `conversation_members`, `messages`.
 - Direct conversation creation and message sending use authenticated security-definer RPCs so conversation rows, both memberships, the message, and thread timestamp are written atomically without an RLS ordering gap.
-- Future services placeholder: `services` and `service_categories` are private and dormant. When services return, migrate them into canonical `products` rows with service fulfillment instead of restoring a parallel commerce system.
+- Future services placeholder: `services` and `service_categories` are private and dormant. When services return, migrate them into canonical Item rows with service fulfillment instead of restoring a parallel commerce system.
 - Resources were replaced by Community Questions. The old resource tables and app routes are removed.
-- Radio queue: `radio_playlist_entries` references canonical product `tracks` directly.
+- Radio queue: `radio_playlist_entries` references canonical Item `tracks` directly.
 - Theme mode and accent are stored only in the narrowly scoped `user_theme_preferences` table. Signed-out visitors always use dark mode with the Ocean accent; signed-in accounts load and save their theme through Supabase for cross-device consistency.
 - Notification content is synthesized from `achievement_events`; per-account seen and dismissed IDs persist in `user_notification_state` so the notification dot and dismissals survive sign-out, PWA/browser restarts, and device changes.
 - Removed speculative systems: generic categories, post categories, item/product components, product relations, generic unlockables, Library activity, unused Radio scheduling tables, and empty preference/icon registries.
 
 Known Supabase state from the launch cleanup:
 
-- Migration history is aligned locally and remotely through `20260712004500`.
-- Obsolete July 10-11 local SQL snapshots were removed. `supabase/backups/` is ignored and should contain only a deliberately created, short-lived safety backup for an imminent database write.
-- Message RLS cleanup, product asset vocabulary, table comments, and points ledger are handled by `20260710143000_44os_launch_foundation_alignment.sql`.
-- Resource removal and service workflow retirement are handled by `20260710161500_remove_resources_and_service_workflows.sql`.
-- Final category split, product-column consolidation, and speculative-table cleanup are handled by `20260710174500_final_schema_normalization.sql`.
-- Email lookup, cross-device theme preferences, sign-up profile metadata, direct-message RPC repair, and descriptionless releases are covered by the reviewed July 11 migrations through `20260711235500_allow_descriptionless_releases.sql`.
-- `20260704164154_remote_schema.sql` is an intentionally empty migration-history anchor and is labeled accordingly.
-- `20260704201500_44os_steam_foundation.sql` is retained for ordered clean-database replay and is labeled as unsafe to run manually against an existing database.
-- Final live read probes verified 5 product categories, 38 normalized products, 21 posts, 109 Radio playlist entries, and 8 achievement templates. Retired tables and product columns return not-found errors as expected.
-- The July 10 read-only content probe saw 38 products, 142 tracks, 109 Radio playlist entries, 5 product categories, 21 posts, and 13 profiles. Migration state was subsequently advanced and aligned through the July 11 release migration.
+- Migration history is aligned locally and remotely through `20260712010000`.
+- The prior incremental migration chain was consolidated into `20260712010000_44os_item_baseline.sql`. Its historical files remain available in Git history, but they are no longer active replay inputs.
+- The baseline includes the complete public schema, RLS, functions, triggers, auth profile hook, public storage buckets and policies, Item vocabulary, capabilities, membership, external links, and curated role mapping.
+- A clean local Supabase reset replays the baseline without a live snapshot, and a public-schema comparison against linked staging is empty.
+- `supabase/backups/` is ignored and should contain only a deliberately created, short-lived safety backup for an imminent database write.
+- The July 11 post-cutover probes verified 49 Items, 248 tracks, 32 Library entries, 14 profiles, 49 Item owners, 213 capability registrations, 5 Item categories, 24 posts, 109 Radio playlist entries, and 8 achievement templates.
 - The canonical track ordering column is `tracks.number`; `tracks.track_number` is absent in the live schema and should not be selected by app code.
 - Public Store discovery and creator-profile Music/Books tabs sort by release year descending, then creator profile name ascending. Studio release management is intentionally independent and sorts by `created_at` descending (order added).
 - Anonymous access to the dormant `services` table returns zero rows; its data remains available only through admin/service-role access.
@@ -341,10 +340,10 @@ Search and sharing contract:
 
 ## 10. Maintenance Rules
 
-- Keep the two active `/Other` handoff docs current: this Foundation document and `44OS_UI.md`.
+- Keep the three active `/Other` handoff docs current: this Foundation document, `44OS_UI.md`, and `44OS_MILESTONES.md`.
 - Keep Dock app behavior centralized in `src/lib/osApps.ts`.
 - Keep Store category/detail behavior centralized in route helpers.
-- Keep public catalog ordering centralized in `comparePublicCatalogProducts`; do not invent page-specific release sorting.
+- Keep public catalog ordering centralized in `comparePublicCatalogItems`; the old `comparePublicCatalogProducts` export is temporary compatibility only.
 - Keep Library ownership behavior centralized in Library primitives and route helpers.
 - Add shared UI primitives before adding page-specific styling.
 - Avoid one-off inline styles unless the value is genuinely dynamic.

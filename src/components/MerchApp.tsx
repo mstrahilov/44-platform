@@ -18,7 +18,7 @@ export function MerchApp({ route }: { route: MerchRoute }) {
     async function load() {
       setLoading(true);
       const { data } = await supabase
-        .from('products')
+        .from('catalog_items')
         .select('*, creators:profiles!author_id(*)')
         .eq('status', 'published')
         .order('created_at', { ascending: false })

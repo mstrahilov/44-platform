@@ -12,7 +12,7 @@ import { STUDIO_CATALOG_SECTIONS } from '@/lib/studioCatalog';
 
 type LibraryMetricRow = {
   id: string;
-  product_id: string | null;
+  item_id: string | null;
   acquisition_type: string | null;
   acquired_at: string | null;
 };
@@ -41,7 +41,7 @@ export default function StudioPage() {
       const profileId = profileResult.profile?.id ?? user.id;
 
       const productsResult = await supabase
-        .from('products')
+        .from('catalog_items')
         .select('*')
         .eq('author_id', profileId)
         .order('created_at', { ascending: false });
@@ -53,9 +53,9 @@ export default function StudioPage() {
 
       if (productIds.length > 0) {
         const libraryResult = await supabase
-          .from('library_items')
-          .select('id,product_id,acquisition_type,acquired_at')
-          .in('product_id', productIds);
+          .from('library_entries')
+          .select('id,item_id,acquisition_type,acquired_at')
+          .in('item_id', productIds);
 
         if (libraryResult.error) {
           metricsError = libraryResult.error.message;
@@ -138,7 +138,7 @@ export default function StudioPage() {
   const purchasedItems = overview.libraryItems.filter(item => item.acquisition_type === 'purchase');
   const soldItems = purchasedItems.length;
   const revenueCents = purchasedItems.reduce((total, item) => {
-    const product = item.product_id ? productById.get(item.product_id) : null;
+    const product = item.item_id ? productById.get(item.item_id) : null;
     return total + (product?.price_cents ?? 0);
   }, 0);
   const totalPlays = 0;
@@ -199,7 +199,7 @@ export default function StudioPage() {
           ) : (
             <div className="dashboard-list-surface">
               {purchasedItems.map((item, index) => {
-                const product = item.product_id ? productById.get(item.product_id) : null;
+                const product = item.item_id ? productById.get(item.item_id) : null;
                 return (
                   <div key={item.id} className="dashboard-list-row" style={{ borderTop: index === 0 ? 'none' : undefined }}>
                     <div className="dashboard-row-copy">
@@ -275,7 +275,7 @@ function StudioProductSection({
                   <span className={product.status === 'published' ? 'dashboard-status-dot dashboard-status-dot-published' : 'dashboard-status-dot dashboard-status-dot-draft'} aria-hidden="true" />
                   <div className="dashboard-row-title">{product.title}</div>
                 </div>
-                <div className="dashboard-row-subtitle">{product.product_type || itemLabel}</div>
+                <div className="dashboard-row-subtitle">{product.item_type || itemLabel}</div>
               </div>
               <div className="dashboard-row-actions">
                 <Link href={`/studio/products/${product.id}`} className="os-button os-button-ghost os-button-compact">Edit</Link>

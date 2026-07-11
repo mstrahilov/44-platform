@@ -70,7 +70,7 @@ const EXPERIENCE_CONFIG: Record<ExperienceConfig['id'], ExperienceConfig> = {
 
 type LibraryItemRow = {
   id: string;
-  product_id: string | null;
+  item_id: string | null;
   acquired_at: string | null;
   acquisition_type: string | null;
   products: Product | null;
@@ -93,7 +93,7 @@ export function ExperienceApp({ app, route }: { app: ExperienceConfig['id']; rou
     async function loadStore() {
       setLoading(true);
       const { data } = await supabase
-        .from('products')
+        .from('catalog_items')
         .select('*, creators:profiles!author_id(*)')
         .eq('status', 'published')
         .order('created_at', { ascending: false })
@@ -119,8 +119,8 @@ export function ExperienceApp({ app, route }: { app: ExperienceConfig['id']; rou
     async function loadLibrary(userId: string) {
       setLoading(true);
       const { data } = await supabase
-        .from('library_items')
-        .select('id,product_id,acquired_at,acquisition_type,products(*)')
+        .from('library_entries')
+        .select('id,item_id,acquired_at,acquisition_type,products:catalog_items(*)')
         .eq('user_id', userId)
         .neq('status', 'archived')
         .neq('status', 'hidden')
@@ -143,14 +143,14 @@ export function ExperienceApp({ app, route }: { app: ExperienceConfig['id']; rou
 
     async function loadOwned(userId: string) {
       const { data } = await supabase
-        .from('library_items')
-        .select('product_id,status')
+        .from('library_entries')
+        .select('item_id,status')
         .eq('user_id', userId);
 
       setOwnedProductIds(
         (data ?? [])
-          .filter(item => item.product_id && item.status !== 'hidden')
-          .map(item => item.product_id)
+          .filter(item => item.item_id && item.status !== 'hidden')
+          .map(item => item.item_id)
           .filter(Boolean),
       );
     }
@@ -169,7 +169,7 @@ export function ExperienceApp({ app, route }: { app: ExperienceConfig['id']; rou
     const { data } = await supabase
       .from('tracks')
       .select('id,title,number,duration_seconds,audio_url')
-      .eq('product_id', product.id)
+      .eq('item_id', product.id)
       .order('number');
     const queue: MusicQueueTrack[] = (data ?? [])
       .filter(track => track.audio_url)
@@ -192,8 +192,8 @@ export function ExperienceApp({ app, route }: { app: ExperienceConfig['id']; rou
   async function removeLibraryRow(row: LibraryItemRow, free: boolean) {
     if (!user) return;
     const result = free
-      ? await supabase.from('library_items').delete().eq('id', row.id).eq('user_id', user.id)
-      : await supabase.from('library_items').update({ status: 'hidden' }).eq('id', row.id).eq('user_id', user.id);
+      ? await supabase.from('library_entries').delete().eq('id', row.id).eq('user_id', user.id)
+      : await supabase.from('library_entries').update({ status: 'hidden' }).eq('id', row.id).eq('user_id', user.id);
     if (result.error) { alert(result.error.message); return; }
     setLibraryItems(current => current.filter(entry => entry.id !== row.id));
   }

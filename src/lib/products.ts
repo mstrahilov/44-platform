@@ -1,14 +1,15 @@
 import type { Profile } from '@/lib/platform';
 import { formatPrice } from '@/lib/pricing';
 
-export interface Product {
+/** Canonical 44OS publishable entity. Price and acquisition are separate concerns. */
+export interface Item {
   id: string;
   author_id?: string | null;
-  product_category_id?: string | null;
+  item_category_id?: string | null;
   slug?: string | null;
   title: string;
   creator: string;
-  product_type: string;
+  item_type: string;
   short_description: string | null;
   long_description: string | null;
   price_cents: number;
@@ -47,20 +48,29 @@ export interface Product {
   > | null;
 }
 
-export function formatProductPrice(product: Pick<Product, 'is_free' | 'price_cents'> & Partial<Product>) {
-  return formatPrice(product);
+/** @deprecated Use Item while route/component names are consolidated in M6. */
+export type Product = Item;
+
+export function formatItemPrice(item: Pick<Item, 'is_free' | 'price_cents'> & Partial<Item>) {
+  return formatPrice(item);
 }
 
-export function productMeta(product: Pick<Product, 'product_type' | 'experience_type'>) {
-  return `${product.product_type} · ${product.experience_type || 'item'}`;
+/** @deprecated Compatibility export for existing cards during the M3 cutover. */
+export const formatProductPrice = formatItemPrice;
+
+export function itemMeta(item: Pick<Item, 'item_type' | 'experience_type'>) {
+  return `${item.item_type} · ${item.experience_type || 'item'}`;
 }
+
+/** @deprecated Compatibility export for existing detail components during M3. */
+export const productMeta = itemMeta;
 
 const publicCatalogArtistCollator = new Intl.Collator(undefined, {
   sensitivity: 'base',
   numeric: true,
 });
 
-function publicCatalogArtistName(product: Product) {
+function publicCatalogArtistName(product: Item) {
   return product.creators?.display_name
     || product.creators?.username
     || product.creator
@@ -71,7 +81,7 @@ function publicCatalogArtistName(product: Product) {
  * Public discovery order: newest release year first, then artist/profile name.
  * Remaining fields only provide deterministic ordering within the same artist/year.
  */
-export function comparePublicCatalogProducts(a: Product, b: Product) {
+export function comparePublicCatalogItems(a: Item, b: Item) {
   const yearDifference = (b.year ?? Number.NEGATIVE_INFINITY) - (a.year ?? Number.NEGATIVE_INFINITY);
   if (yearDifference !== 0) return yearDifference;
 
@@ -89,6 +99,9 @@ export function comparePublicCatalogProducts(a: Product, b: Product) {
 
   return a.id.localeCompare(b.id);
 }
+
+/** @deprecated Compatibility export while route/component names are consolidated. */
+export const comparePublicCatalogProducts = comparePublicCatalogItems;
 
 export function browseHref(params: { category?: string; tag?: string; filter?: string; q?: string }) {
   const searchParams = new URLSearchParams();

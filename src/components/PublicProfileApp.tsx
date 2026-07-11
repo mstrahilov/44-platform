@@ -98,7 +98,7 @@ export default function PublicProfilePage() {
 
       const [productResult, postResult] = await Promise.all([
         supabase
-          .from('products')
+          .from('catalog_items')
           .select('*, creators:profiles!author_id(*)')
           .eq('author_id', profileId)
           .order('created_at', { ascending: false }),
@@ -250,7 +250,7 @@ export default function PublicProfilePage() {
     display_currency: profile.display_currency ?? null,
     home_country_code: profile.home_country_code ?? null,
     home_currency: profile.home_currency ?? null,
-    product_market_mode: profile.product_market_mode ?? null,
+    item_market_mode: profile.item_market_mode ?? null,
     service_market_mode: profile.service_market_mode ?? null,
   } : null;
   const currentProfile = currentProfileState && currentProfileState.userId === userId ? currentProfileState.profile : null;
@@ -473,7 +473,7 @@ export default function PublicProfilePage() {
 }
 
 function profileProductMeta(product: Product, fallbackType: string) {
-  const type = product.product_type || product.experience_type || fallbackType;
+  const type = product.item_type || product.experience_type || fallbackType;
   const year = product.year || (product.created_at ? new Date(product.created_at).getFullYear() : null);
   return year ? `${type} · ${year}` : type;
 }

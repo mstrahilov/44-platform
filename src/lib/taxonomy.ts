@@ -15,7 +15,7 @@ export function normalizeTaxonomyValue(value: string | null | undefined) {
 }
 
 export function itemTypeName(item: TaxonomyItem) {
-  if ('product_type' in item) return item.product_type;
+  if ('item_type' in item) return item.item_type;
   if ('creator_type' in item) return item.creator_type ?? null;
   return null;
 }

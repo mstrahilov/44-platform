@@ -152,13 +152,13 @@ export function buildAchievementRows(productId: string, state: ReleaseFeatureSta
     .filter(achievement => achievement.enabled)
     .map((achievement, index) => {
       return {
-        product_id: productId,
+        item_id: productId,
         code: achievement.code,
         title: achievement.title,
         description: achievement.description,
         trigger_type: achievement.triggerType,
         trigger_config: {},
-        reward_product_id: null,
+        reward_item_id: null,
         reward_config: {
           commentary_enabled: state.commentaryEnabled,
           final_reward_required: achievement.code === 'overachiever',
@@ -174,7 +174,7 @@ export function buildAchievementRows(productId: string, state: ReleaseFeatureSta
 
 export function buildFeatureAssetRows(productId: string, state: ReleaseFeatureState) {
   return enabledBonusItems(state).map((item, index) => ({
-    product_id: productId,
+    item_id: productId,
     asset_type: 'bonus_content',
     title: item.title,
     file_url: item.fileUrl,
@@ -248,27 +248,27 @@ export async function saveReleaseFeatures({
   if (validationError) return validationError;
 
   const { error: deleteAchievementsError } = await supabaseClient
-    .from('product_achievements')
+    .from('item_achievements')
     .delete()
-    .eq('product_id', productId);
+    .eq('item_id', productId);
   if (deleteAchievementsError) return deleteAchievementsError.message;
 
   const { error: deleteAssetsError } = await supabaseClient
-    .from('product_assets')
+    .from('item_assets')
     .delete()
-    .eq('product_id', productId)
+    .eq('item_id', productId)
     .in('asset_type', featureAssetTypes());
   if (deleteAssetsError) return deleteAssetsError.message;
 
   const achievementRows = buildAchievementRows(productId, state, sectionId);
   if (achievementRows.length) {
-    const { error } = await supabaseClient.from('product_achievements').insert(achievementRows);
+    const { error } = await supabaseClient.from('item_achievements').insert(achievementRows);
     if (error) return error.message;
   }
 
   const assetRows = buildFeatureAssetRows(productId, state);
   if (assetRows.length) {
-    const { error } = await supabaseClient.from('product_assets').insert(assetRows);
+    const { error } = await supabaseClient.from('item_assets').insert(assetRows);
     if (error) return error.message;
   }
 

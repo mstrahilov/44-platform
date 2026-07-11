@@ -29,7 +29,7 @@ function loadSearchIndex() {
 
   searchIndexRequest = Promise.all([
     supabase
-      .from('products')
+      .from('catalog_items')
       .select('*, creators:profiles!author_id(*)')
       .eq('status', 'published')
       .order('created_at', { ascending: false })

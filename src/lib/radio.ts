@@ -16,7 +16,7 @@ export type RadioTrackRow = {
   title: string;
   duration_seconds: number | null;
   audio_url: string | null;
-  product_id: string;
+  item_id: string;
   number?: number | null;
 };
 
@@ -25,7 +25,7 @@ export type RadioProductRow = {
   title: string;
   creator: string;
   slug?: string | null;
-  product_type?: string | null;
+  item_type?: string | null;
   experience_type?: string | null;
   fulfillment_type?: string | null;
   cover_url: string | null;
@@ -98,7 +98,7 @@ export async function loadRadioBundle(): Promise<RadioBundle> {
   const trackIds = playlistEntries.map(entry => entry.track_id);
   const tracksResult = await supabase
     .from('tracks')
-    .select('id,product_id,title,duration_seconds,audio_url,number')
+    .select('id,item_id,title,duration_seconds,audio_url,number')
     .in('id', trackIds);
 
   if (tracksResult.error) {
@@ -110,10 +110,10 @@ export async function loadRadioBundle(): Promise<RadioBundle> {
   }
 
   const trackRows = await hydrateMissingTrackDurations((tracksResult.data as RadioTrackRow[] | null) ?? []);
-  const productIds = Array.from(new Set(trackRows.map(track => track.product_id).filter(Boolean)));
+  const productIds = Array.from(new Set(trackRows.map(track => track.item_id).filter(Boolean)));
   const productsResult = await supabase
-    .from('products')
-    .select('id,title,creator,slug,product_type,experience_type,fulfillment_type,cover_url,hero_url,author_id,creators:profiles!author_id(display_name,username,slug,avatar_url)')
+    .from('catalog_items')
+    .select('id,title,creator,slug,item_type,experience_type,fulfillment_type,cover_url,hero_url,author_id,creators:profiles!author_id(display_name,username,slug,avatar_url)')
     .in('id', productIds);
 
   if (productsResult.error) {
@@ -128,7 +128,7 @@ export async function loadRadioBundle(): Promise<RadioBundle> {
   const tracks = playlistEntries.flatMap(entry => {
     const track = trackRows.find(row => row.id === entry.track_id);
     if (!track?.audio_url || !track.duration_seconds || track.duration_seconds <= 0) return [];
-    const product = products.get(track.product_id);
+    const product = products.get(track.item_id);
     if (!product) return [];
     return [{
       playlistEntryId: entry.id,

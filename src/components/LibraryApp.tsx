@@ -29,7 +29,7 @@ const FILTER_LABELS: Record<LibraryFilter, string> = {
 
 interface LibraryRow {
   id: string;
-  product_id: string;
+  item_id: string;
   acquisition_type: string;
   acquired_at: string;
   status: 'visible' | 'hidden' | 'archived';
@@ -73,8 +73,8 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
       setError('');
 
       const { data, error: fetchError } = await supabase
-        .from('library_items')
-        .select('id,product_id,acquisition_type,acquired_at,status,products(*, creators:profiles!author_id(*))')
+        .from('library_entries')
+        .select('id,item_id,acquisition_type,acquired_at,status,products:catalog_items(*, creators:profiles!author_id(*))')
         .eq('user_id', userId)
         .neq('status', 'archived')
         .neq('status', 'hidden')
@@ -142,7 +142,7 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
   async function removeLibraryRow(row: LibraryRow) {
     if (!user) return;
     const result = await supabase
-      .from('library_items')
+      .from('library_entries')
       .update({ status: 'hidden' })
       .eq('id', row.id)
       .eq('user_id', user.id);

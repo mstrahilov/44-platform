@@ -42,7 +42,7 @@ export async function unlockAchievementForUser(
 
   const { error } = await supabase.from('user_achievements').insert({
     user_id: userId,
-    product_id: productId,
+    item_id: productId,
     achievement_id: achievement.id,
   });
 
@@ -50,7 +50,7 @@ export async function unlockAchievementForUser(
 
   await supabase.from('achievement_events').insert({
     user_id: userId,
-    product_id: productId,
+    item_id: productId,
     achievement_id: achievement.id,
     event_type: 'achievement_unlocked',
     metadata: {
@@ -78,7 +78,7 @@ export async function unlockAchievementForUser(
 export async function loadAchievementNotifications(userId: string): Promise<AchievementNotification[]> {
   const { data, error } = await supabase
     .from('achievement_events')
-    .select('id,user_id,product_id,achievement_id,event_type,metadata,created_at')
+    .select('id,user_id,item_id,achievement_id,event_type,metadata,created_at')
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .limit(24);
@@ -98,7 +98,7 @@ export async function loadAchievementNotifications(userId: string): Promise<Achi
 
   if (achievementIds.length > 0) {
     const { data: achievements } = await supabase
-      .from('product_achievements')
+      .from('item_achievements')
       .select('id,code,title,description,icon')
       .in('id', achievementIds);
 
@@ -136,7 +136,7 @@ export async function loadAchievementNotifications(userId: string): Promise<Achi
         title: achievement.title,
         description: achievement.description,
         createdAt: event.created_at,
-        productId: event.product_id,
+        productId: event.item_id,
         kind: 'achievement',
         achievementCode: achievement.code,
         achievementIcon: achievement.icon,

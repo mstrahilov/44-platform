@@ -5,7 +5,7 @@ import type { Product } from '@/lib/products';
 
 export async function generateMetadata({ params }: { params: Promise<{ identifier: string }> }) {
   const { identifier } = await params;
-  const query = supabase.from('products').select('*, creators:profiles!author_id(*)');
+  const query = supabase.from('catalog_items').select('*, creators:profiles!author_id(*)');
   const { data } = await (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier)
     ? query.eq('id', identifier)
     : query.eq('slug', identifier)

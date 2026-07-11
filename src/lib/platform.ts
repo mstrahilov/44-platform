@@ -1,9 +1,12 @@
-export interface ProductCategory {
+export interface ItemCategory {
   id: string;
   slug: string;
   name: string;
   sort_order: number;
 }
+
+/** @deprecated Use ItemCategory. */
+export type ProductCategory = ItemCategory;
 
 // A 44 user. `profiles` is the single users table (member | creator | admin).
 // Content authors are profiles; joins alias the relation back to `creators`
@@ -25,7 +28,7 @@ export interface Profile {
   display_currency?: string | null;
   home_country_code?: string | null;
   home_currency?: string | null;
-  product_market_mode?: string | null;
+  item_market_mode?: string | null;
   service_market_mode?: string | null;
 }
 
@@ -43,7 +46,7 @@ export interface Creator {
   display_currency?: string | null;
   home_country_code?: string | null;
   home_currency?: string | null;
-  product_market_mode?: string | null;
+  item_market_mode?: string | null;
   service_market_mode?: string | null;
 }
 
@@ -51,7 +54,7 @@ export type ProfileLinkTarget = Pick<Profile, 'slug' | 'username'>;
 
 export interface Track {
   id: string;
-  product_id: string;
+  item_id: string;
   number: number;
   title: string;
   duration_seconds: number | null;
@@ -59,16 +62,16 @@ export interface Track {
   download_url: string | null;
 }
 
-export interface ProductAchievement {
+export interface ItemAchievement {
   id: string;
-  product_id: string;
+  item_id: string;
   template_id?: string | null;
   code: string;
   title: string;
   description: string | null;
   trigger_type: string;
   trigger_config: Record<string, unknown>;
-  reward_product_id: string | null;
+  reward_item_id: string | null;
   reward_config: Record<string, unknown>;
   points: number;
   icon: string | null;
@@ -76,18 +79,21 @@ export interface ProductAchievement {
   is_secret: boolean;
 }
 
+/** @deprecated Use ItemAchievement. */
+export type ProductAchievement = ItemAchievement;
+
 export interface UserAchievement {
   id: string;
   user_id: string;
   achievement_id: string;
-  product_id: string;
+  item_id: string;
   unlocked_at: string;
 }
 
 export interface AchievementEvent {
   id: string;
   user_id: string;
-  product_id: string | null;
+  item_id: string | null;
   achievement_id: string | null;
   event_type: string;
   metadata: Record<string, unknown> | null;

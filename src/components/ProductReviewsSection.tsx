@@ -14,7 +14,7 @@ type ReviewProfile = Pick<Profile, 'id' | 'slug' | 'username' | 'display_name' |
 type ProductReview = {
   id: string;
   user_id: string;
-  product_id: string;
+  item_id: string;
   title: string | null;
   body: string;
   sentiment: string;
@@ -45,8 +45,8 @@ export function ProductReviewsSection({
   async function loadReviews() {
     const { data, error: loadError } = await supabase
       .from('product_reviews')
-      .select('id,user_id,product_id,title,body,sentiment,status,created_at,reviewers:profiles!user_id(id,slug,username,display_name,avatar_url)')
-      .eq('product_id', productId)
+      .select('id,user_id,item_id,title,body,sentiment,status,created_at,reviewers:profiles!user_id(id,slug,username,display_name,avatar_url)')
+      .eq('item_id', productId)
       .eq('status', 'published')
       .order('created_at', { ascending: false });
 
@@ -88,12 +88,12 @@ export function ProductReviewsSection({
       .from('product_reviews')
       .upsert({
         user_id: user.id,
-        product_id: productId,
+        item_id: productId,
         title: null,
         body: body.trim(),
         sentiment: 'recommended',
         status: 'published',
-      }, { onConflict: 'user_id,product_id' });
+      }, { onConflict: 'user_id,item_id' });
 
     if (reviewError) {
       setSaving(false);

@@ -10,7 +10,7 @@ type UpdateProfile = Pick<Profile, 'id' | 'slug' | 'username' | 'display_name' |
 
 type ProductUpdate = {
   id: string;
-  product_id: string;
+  item_id: string;
   author_id: string;
   title: string;
   body: string;
@@ -38,8 +38,8 @@ export function ProductUpdatesSection({
       setError('');
       const { data, error: loadError } = await supabase
         .from('product_updates')
-        .select('id,product_id,author_id,title,body,version_label,status,created_at,authors:profiles!author_id(id,slug,username,display_name,avatar_url)')
-        .eq('product_id', productId)
+        .select('id,item_id,author_id,title,body,version_label,status,created_at,authors:profiles!author_id(id,slug,username,display_name,avatar_url)')
+        .eq('item_id', productId)
         .eq('status', 'published')
         .order('created_at', { ascending: false });
 

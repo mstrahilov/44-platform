@@ -73,7 +73,7 @@ export function ProductStoreDetail({
       setLoading(true);
       setTracks([]);
       const productQuery = supabase
-        .from('products')
+        .from('catalog_items')
         .select('*, creators:profiles!author_id(*)');
       const { data } = await (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier)
         ? productQuery.eq('id', identifier)
@@ -98,15 +98,15 @@ export function ProductStoreDetail({
         if (releasePage || getProductExperience(data) === 'music') {
           const { data: trackRows } = await supabase
             .from('tracks')
-            .select('id,product_id,number,title,duration_seconds,audio_url,download_url')
-            .eq('product_id', data.id)
+            .select('id,item_id,number,title,duration_seconds,audio_url,download_url')
+            .eq('item_id', data.id)
             .order('number');
           setTracks(((trackRows as ProductTrack[] | null) ?? []).sort((a, b) => trackOrder(a) - trackOrder(b)));
         }
 
         const relatedLimit = getProductExperience(data) === 'physical' ? 12 : 4;
         const relatedQuery = supabase
-          .from('products')
+          .from('catalog_items')
           .select('*, creators:profiles!author_id(*)')
           .eq('status', 'published')
           .neq('id', data.id)
@@ -132,10 +132,10 @@ export function ProductStoreDetail({
     async function fetchOwnership(userId: string) {
       if (!product) return;
       const { data } = await supabase
-        .from('library_items')
-        .select('id, product_id, acquisition_type')
+        .from('library_entries')
+        .select('id, item_id, acquisition_type')
         .eq('user_id', userId)
-        .eq('product_id', product.id)
+        .eq('item_id', product.id)
         .neq('status', 'hidden')
         .maybeSingle();
       setOwned(Boolean(data));
@@ -161,8 +161,8 @@ export function ProductStoreDetail({
       const referrerId = searchParams.get('ref');
       if (!referrerId || referrerId === user?.id) return;
 
-      await supabase.from('product_share_visits').insert({
-        product_id: product.id,
+      await supabase.from('item_share_visits').insert({
+        item_id: product.id,
         referrer_id: referrerId,
         visitor_id: user?.id ?? null,
       });
@@ -176,15 +176,15 @@ export function ProductStoreDetail({
     if (!product) return;
     if (!user) { alert('Sign in first, then add this to your library.'); return; }
     if (!canSaveProductToLibrary(product)) return;
-    const { error } = await supabase.from('library_items').upsert({ user_id: user.id, product_id: product.id, acquisition_type: 'free', status: 'visible' }, { onConflict: 'user_id,product_id' });
+    const { error } = await supabase.from('library_entries').upsert({ user_id: user.id, item_id: product.id, acquisition_type: 'free', status: 'visible' }, { onConflict: 'user_id,item_id' });
     if (error) { alert(error.message); return; }
     setOwned(true);
     setOwnedAcquisitionType('free');
     const { data } = await supabase
-      .from('library_items')
+      .from('library_entries')
       .select('id, acquisition_type')
       .eq('user_id', user.id)
-      .eq('product_id', product.id)
+      .eq('item_id', product.id)
       .neq('status', 'hidden')
       .maybeSingle();
     setOwnedLibraryItemId(data?.id ?? null);
@@ -195,7 +195,7 @@ export function ProductStoreDetail({
     if (!product) return;
     const price = resolvePrice(product);
     addToCart({
-      product_id: product.id,
+      item_id: product.id,
       title: product.title,
       creator: product.creators?.display_name || product.creator || '44 Creator',
       cover_url: product.cover_url,
@@ -315,7 +315,7 @@ export function ProductStoreDetail({
   const productDetails = buildProductDetails(product, tracks, inferredTrackDurations);
   const creatorDisplayName = product.creators?.display_name || product.creator || '44 Creator';
   const releaseMeta = [
-    (product.product_type || productMeta(product)).toUpperCase(),
+    (product.item_type || productMeta(product)).toUpperCase(),
     ...(product.year ? [String(product.year)] : []),
   ];
 
@@ -531,7 +531,7 @@ function getContentHeading(product: Product) {
   const experience = getProductExperience(product);
   if (experience === 'music') return 'Tracklist';
   if (experience === 'book') return 'Book Sample';
-  if (experience === 'asset') return product.product_type?.toLowerCase().includes('stem') ? 'Original Track' : 'Sample Preview';
+  if (experience === 'asset') return product.item_type?.toLowerCase().includes('stem') ? 'Original Track' : 'Sample Preview';
   return 'Product Gallery';
 }
 
@@ -543,7 +543,7 @@ function buildProductDetails(product: Product, tracks: ProductTrack[], inferredD
     const totalLengthSeconds = tracks.reduce((sum, track) => sum + (getTrackDurationSeconds(track, inferredDurations) ?? 0), 0);
     return [
       { label: 'Creator', value: creator },
-      { label: 'Product Type', value: product.product_type || 'Release' },
+      { label: 'Item Type', value: product.item_type || 'Release' },
       { label: 'Release Year', value: String(product.year ?? 'N/A') },
       { label: 'Total Tracks', value: String(tracks.length) },
       { label: 'Total Length', value: formatTrackDuration(totalLengthSeconds) },
@@ -553,7 +553,7 @@ function buildProductDetails(product: Product, tracks: ProductTrack[], inferredD
   if (experience === 'book') {
     return [
       { label: 'Creator', value: creator },
-      { label: 'Book Type', value: product.product_type || 'Book' },
+      { label: 'Book Type', value: product.item_type || 'Book' },
       { label: 'Publication Year', value: String(product.year ?? 'N/A') },
       { label: 'Total Pages', value: 'Coming soon' },
       { label: 'Language', value: 'Coming soon' },
@@ -563,7 +563,7 @@ function buildProductDetails(product: Product, tracks: ProductTrack[], inferredD
   if (experience === 'asset') {
     return [
       { label: 'Creator', value: creator },
-      { label: 'Asset Type', value: product.product_type || 'Asset' },
+      { label: 'Asset Type', value: product.item_type || 'Asset' },
       { label: 'Year', value: String(product.year ?? 'N/A') },
       { label: 'Total Samples', value: 'Coming soon' },
       { label: 'Sample Format', value: 'Coming soon' },
@@ -572,7 +572,7 @@ function buildProductDetails(product: Product, tracks: ProductTrack[], inferredD
   }
   return [
     { label: 'Creator', value: creator },
-    { label: 'Product Type', value: product.product_type || 'Product' },
+    { label: 'Item Type', value: product.item_type || 'Item' },
     { label: 'Release Year', value: String(product.year ?? 'N/A') },
     { label: 'Color', value: 'Coming soon' },
     { label: 'Available Sizes', value: 'Coming soon' },

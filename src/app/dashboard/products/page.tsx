@@ -47,7 +47,7 @@ function StudioProductsContent() {
       const profileId = profileResult.profile?.id ?? user.id;
 
       const { data: productRows } = await supabase
-        .from('products')
+        .from('catalog_items')
         .select('*')
         .eq('author_id', profileId)
         .order('sort_order', { ascending: false, nullsFirst: false })
@@ -71,7 +71,7 @@ function StudioProductsContent() {
     const nextStatus = nextPublished ? 'published' : 'draft';
 
     const { error } = await supabase
-      .from('products')
+      .from('catalog_items')
       .update({ status: nextStatus })
       .eq('id', product.id);
 
@@ -143,7 +143,7 @@ function StudioProductsContent() {
                     <span className={product.status === 'published' ? 'dashboard-status-dot dashboard-status-dot-published' : 'dashboard-status-dot dashboard-status-dot-draft'} aria-hidden="true" />
                     <div className="dashboard-row-title">{product.title}</div>
                   </div>
-                  <div className="dashboard-row-subtitle">{product.product_type || section.itemLabel}</div>
+                  <div className="dashboard-row-subtitle">{product.item_type || section.itemLabel}</div>
                 </div>
 
                 <div className="dashboard-row-actions">

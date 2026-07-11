@@ -133,7 +133,7 @@ function NewProductContent() {
       if (!user) return;
 
       const [{ data: categoryRows }, profileResult] = await Promise.all([
-        supabase.from('product_categories').select('*').order('sort_order'),
+        supabase.from('item_categories').select('*').order('sort_order'),
         loadStudioProfile(user.id),
       ]);
 
@@ -217,11 +217,11 @@ function NewProductContent() {
 
     const insertPayload = {
       author_id: profile?.id ?? user.id,
-      product_category_id: categoryId,
+      item_category_id: categoryId,
       slug,
       title: cleanTitle,
       creator: creatorName,
-      product_type: cleanType,
+      item_type: cleanType,
       short_description: null,
       long_description: '',
       price_cents: merchUsesLocalOnlyPricing ? 0 : priceCents,
@@ -245,7 +245,7 @@ function NewProductContent() {
     };
 
     const { data: insertedProduct, error: insertError } = await supabase
-      .from('products')
+      .from('catalog_items')
       .insert(insertPayload)
       .select('id')
       .single();
@@ -258,7 +258,7 @@ function NewProductContent() {
 
     if (isMusicProduct && insertedProduct?.id) {
       const trackRows = visibleTracks.map((track, index) => ({
-        product_id: insertedProduct.id,
+        item_id: insertedProduct.id,
         number: index + 1,
         title: track.title.trim(),
         duration_seconds: track.durationSeconds ? Number(track.durationSeconds) : null,
@@ -275,8 +275,8 @@ function NewProductContent() {
     }
 
     if (needsDigitalFile && insertedProduct?.id) {
-      const { error: assetInsertError } = await supabase.from('product_assets').insert({
-        product_id: insertedProduct.id,
+      const { error: assetInsertError } = await supabase.from('item_assets').insert({
+        item_id: insertedProduct.id,
         asset_type: productAssetTypeForSection(section.id),
         title: cleanType || cleanTitle,
         file_url: itemFileUrl.trim(),
@@ -293,9 +293,9 @@ function NewProductContent() {
     }
 
     if (isMerchProduct && insertedProduct?.id && galleryUrls.length > 0) {
-      const { error: galleryInsertError } = await supabase.from('product_assets').insert(
+      const { error: galleryInsertError } = await supabase.from('item_assets').insert(
         galleryUrls.map((url, index) => ({
-          product_id: insertedProduct.id,
+          item_id: insertedProduct.id,
           asset_type: 'gallery_image',
           title: `Gallery Image ${index + 1}`,
           file_url: url,

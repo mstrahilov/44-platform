@@ -266,14 +266,14 @@ function buildLibraryProductDetails(product: Product, tracks: ProductDetailTrack
   const uploadDate = product.created_at
     ? new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(product.created_at))
     : 'N/A';
-  const type = product.experience_type || product.product_type || '';
+  const type = product.experience_type || product.item_type || '';
   const normalizedType = type.toLowerCase();
 
-  if (normalizedType.includes('music') || ['album', 'ep', 'single'].some(value => product.product_type?.toLowerCase().includes(value))) {
+  if (normalizedType.includes('music') || ['album', 'ep', 'single'].some(value => product.item_type?.toLowerCase().includes(value))) {
     const totalLength = tracks.reduce((sum, track) => sum + getTrackDurationSeconds(track, inferredTrackDurations), 0);
     return [
       { label: 'Creator', value: creator },
-      { label: 'Product Type', value: product.product_type || 'Release' },
+      { label: 'Item Type', value: product.item_type || 'Release' },
       { label: 'Release Year', value: String(product.year ?? 'N/A') },
       { label: 'Total Tracks', value: String(tracks.length) },
       { label: 'Total Length', value: formatDuration(totalLength) },
@@ -281,10 +281,10 @@ function buildLibraryProductDetails(product: Product, tracks: ProductDetailTrack
     ];
   }
 
-  if (normalizedType.includes('book') || product.product_type?.toLowerCase().includes('book')) {
+  if (normalizedType.includes('book') || product.item_type?.toLowerCase().includes('book')) {
     return [
       { label: 'Creator', value: creator },
-      { label: 'Book Type', value: product.product_type || 'Book' },
+      { label: 'Book Type', value: product.item_type || 'Book' },
       { label: 'Publication Year', value: String(product.year ?? 'N/A') },
       { label: 'Upload Date', value: uploadDate },
     ];
@@ -292,7 +292,7 @@ function buildLibraryProductDetails(product: Product, tracks: ProductDetailTrack
 
   return [
     { label: 'Creator', value: creator },
-    { label: 'Product Type', value: product.product_type || 'Product' },
+    { label: 'Item Type', value: product.item_type || 'Item' },
     { label: 'Year', value: String(product.year ?? 'N/A') },
     { label: 'Upload Date', value: uploadDate },
   ];

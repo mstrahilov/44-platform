@@ -23,7 +23,7 @@ export function isFreeLibraryClaim(product: Pick<Product, 'is_free' | 'price_cen
 }
 
 export function getProductRuntimeKind(product: Product): ProductRuntimeKind {
-  const productType = normalize(product.product_type);
+  const productType = normalize(product.item_type);
   const experience = normalize(product.experience_type ?? '');
 
   if (experience === 'music') return 'music';

@@ -5,6 +5,7 @@ import type { AchievementNotification } from '@/lib/achievementNotifications';
 import { isV1AchievementCode } from '@/lib/achievementCatalog';
 import type { ProductAchievement } from '@/lib/platform';
 import { supabase } from '@/lib/supabase';
+import type { Json } from '@/lib/database.types';
 
 type TrackTriggerOptions = {
   userId: string;
@@ -93,9 +94,9 @@ export async function loadProductAchievements(productId: string) {
   if (!supportsAchievements) return [];
 
   const { data } = await supabase
-    .from('product_achievements')
-    .select('id,product_id,code,title,description,trigger_type,trigger_config,reward_product_id,reward_config,points,icon,sort_order,is_secret')
-    .eq('product_id', productId)
+    .from('item_achievements')
+    .select('id,item_id,code,title,description,trigger_type,trigger_config,reward_item_id,reward_config,points,icon,sort_order,is_secret')
+    .eq('item_id', productId)
     .order('sort_order');
 
   return ((data as ProductAchievement[] | null) ?? []).filter(achievement => isV1AchievementCode(achievement.code));
@@ -103,7 +104,7 @@ export async function loadProductAchievements(productId: string) {
 
 async function productSupportsV1Achievements(productId: string) {
   const { data } = await supabase
-    .from('products')
+    .from('catalog_items')
     .select('experience_type')
     .eq('id', productId)
     .maybeSingle();
@@ -117,7 +118,7 @@ export async function loadUnlockedAchievementIds(userId: string, productId: stri
     .from('user_achievements')
     .select('achievement_id')
     .eq('user_id', userId)
-    .eq('product_id', productId);
+    .eq('item_id', productId);
 
   return new Set(((data as Array<{ achievement_id: string }> | null) ?? []).map(item => item.achievement_id));
 }
@@ -137,7 +138,7 @@ export async function incrementAchievementProgress({
     .from('achievement_progress')
     .select('value,metadata')
     .eq('user_id', userId)
-    .eq('product_id', productId)
+    .eq('item_id', productId)
     .eq('metric', metric)
     .maybeSingle();
 
@@ -148,15 +149,15 @@ export async function incrementAchievementProgress({
     .from('achievement_progress')
     .upsert({
       user_id: userId,
-      product_id: productId,
+      item_id: productId,
       metric,
       value: nextValue,
       metadata: {
         ...(isRecord(existing?.metadata) ? existing.metadata : {}),
         ...(metadata ?? {}),
-      },
+      } as Json,
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id,product_id,metric' });
+    }, { onConflict: 'user_id,item_id,metric' });
 
   return nextValue;
 }
@@ -178,12 +179,12 @@ export async function rememberAchievementProgress({
     .from('achievement_progress')
     .upsert({
       user_id: userId,
-      product_id: productId,
+      item_id: productId,
       metric,
       value: value ?? 1,
-      metadata: metadata ?? {},
+      metadata: (metadata ?? {}) as Json,
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id,product_id,metric' });
+    }, { onConflict: 'user_id,item_id,metric' });
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

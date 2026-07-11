@@ -11,6 +11,7 @@ import type { Profile } from '@/lib/platform';
 import { authorHandle } from '@/lib/social';
 import { getUploadErrorMessage, uploadPublicFile } from '@/lib/uploads';
 import { ProfileImageCropDialog } from '@/components/ProfileImageCropDialog';
+import type { Database } from '@/lib/database.types';
 
 type PendingImage = { file: File; target: 'avatar' | 'hero' };
 
@@ -60,7 +61,7 @@ export default function EditProfilePage() {
     if (!user || saving) return;
     setSaving(true);
     setError('');
-    const payload: Partial<Profile> = {
+    const payload: Database['public']['Tables']['profiles']['Update'] = {
       display_name: displayName.trim() || null,
       username: username.trim() || null,
       bio: bio.trim() || null,

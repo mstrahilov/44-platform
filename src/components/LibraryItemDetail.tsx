@@ -21,7 +21,7 @@ type LibraryKind = 'product';
 
 interface LibraryItemRow {
   id: string;
-  product_id: string;
+  item_id: string;
   acquisition_type: string;
   acquired_at: string;
   status: string;
@@ -70,8 +70,8 @@ export function LibraryItemDetail({
 
       if (kind === 'product') {
         const { data, error: itemError } = await supabase
-          .from('library_items')
-          .select('id,product_id,acquisition_type,acquired_at,status,products(*, creators:profiles!author_id(*))')
+          .from('library_entries')
+          .select('id,item_id,acquisition_type,acquired_at,status,products:catalog_items(*, creators:profiles!author_id(*))')
           .eq('id', id)
           .eq('user_id', userId)
           .maybeSingle();
@@ -90,27 +90,27 @@ export function LibraryItemDetail({
           return;
         }
 
-        if (row.product_id) {
+        if (row.item_id) {
           const [{ data: trackRows }, { data: achievementRows }, { data: unlockedRows }, { data: assetRows }] = await Promise.all([
             supabase
               .from('tracks')
-              .select('id,product_id,number,title,duration_seconds,audio_url,download_url')
-              .eq('product_id', row.product_id)
+              .select('id,item_id,number,title,duration_seconds,audio_url,download_url')
+              .eq('item_id', row.item_id)
               .order('number'),
             supabase
-              .from('product_achievements')
-              .select('id,product_id,code,title,description,trigger_type,trigger_config,reward_product_id,reward_config,points,icon,sort_order,is_secret')
-              .eq('product_id', row.product_id)
+              .from('item_achievements')
+              .select('id,item_id,code,title,description,trigger_type,trigger_config,reward_item_id,reward_config,points,icon,sort_order,is_secret')
+              .eq('item_id', row.item_id)
               .order('sort_order'),
             supabase
               .from('user_achievements')
-              .select('id,user_id,achievement_id,product_id,unlocked_at')
+              .select('id,user_id,achievement_id,item_id,unlocked_at')
               .eq('user_id', userId)
-              .eq('product_id', row.product_id),
+              .eq('item_id', row.item_id),
             supabase
-              .from('product_assets')
+              .from('item_assets')
               .select('asset_type,title,file_url')
-              .eq('product_id', row.product_id)
+              .eq('item_id', row.item_id)
               .in('asset_type', ['bonus_content', 'bonus_achievement']),
           ]);
 
@@ -277,7 +277,7 @@ function ProductLibraryDetail({
       if (tracks.length === 0) return;
       const requiredTrackCount = tracks.filter(track => track.title?.trim()).length || tracks.length;
       if (playedTrackIds.size < requiredTrackCount) return;
-      if (!row.product_id) return;
+      if (!row.item_id) return;
       const achievement = achievements.find(
         item =>
           item.trigger_type === 'all_tracks_listened'
@@ -288,7 +288,7 @@ function ProductLibraryDetail({
       );
       if (!achievement) return;
       if (localUnlockedAchievementIds.has(achievement.id)) return;
-      const unlockedAchievement = await unlockAchievementForUser(userId, row.product_id, achievement, { source: 'library_playback' });
+      const unlockedAchievement = await unlockAchievementForUser(userId, row.item_id, achievement, { source: 'library_playback' });
       if (!unlockedAchievement) return;
       setLocalUnlockedAchievementIds(current => {
         const next = new Set(current);
@@ -298,7 +298,7 @@ function ProductLibraryDetail({
       setToast(unlockedAchievement);
     }
     maybeUnlockCasualListener();
-  }, [achievements, isMusic, localUnlockedAchievementIds, playedTrackIds, row.product_id, tracks, userId]);
+  }, [achievements, isMusic, localUnlockedAchievementIds, playedTrackIds, row.item_id, tracks, userId]);
 
   const content = getProductLibraryContent(product);
   const creatorDisplayName = product.creators?.display_name || product.creator || '44 Creator';
@@ -308,7 +308,7 @@ function ProductLibraryDetail({
   );
   const creatorLink = creatorHref(product.creators ?? creatorDisplayName);
   const releaseMeta = [
-    (product.product_type || content.detailsTitle).toUpperCase(),
+    (product.item_type || content.detailsTitle).toUpperCase(),
     ...(product.year ? [String(product.year)] : []),
   ];
   const primaryActions: ProductDetailAction[] = [

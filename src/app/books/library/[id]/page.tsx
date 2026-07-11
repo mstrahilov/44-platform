@@ -15,7 +15,7 @@ import { useAuth } from '@/lib/useAuth';
 
 interface BookLibraryRow {
   id: string;
-  product_id: string;
+  item_id: string;
   acquisition_type: string;
   acquired_at: string;
   status: string;
@@ -39,8 +39,8 @@ export default function BooksLibraryItemPage() {
       setError(null);
 
       const { data, error: itemError } = await supabase
-        .from('library_items')
-        .select('id,product_id,acquisition_type,acquired_at,status,products(*, creators:profiles!author_id(*))')
+        .from('library_entries')
+        .select('id,item_id,acquisition_type,acquired_at,status,products:catalog_items(*, creators:profiles!author_id(*))')
         .eq('id', id)
         .eq('user_id', userId)
         .maybeSingle();
@@ -132,7 +132,7 @@ function OwnedBook({
         </div>
         <div className="view-album-copy">
           <div className="view-album-eyebrow view-product-meta-line">
-            <span>{(product.product_type || 'Book').toUpperCase()}</span>
+            <span>{(product.item_type || 'Book').toUpperCase()}</span>
             {product.year && (<><span className="view-album-meta-sep" /><span>{product.year}</span></>)}
             <span className="view-album-meta-sep" />
             <span className="view-album-meta-strong view-album-meta-accent">OWNED</span>

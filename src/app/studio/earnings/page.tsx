@@ -10,7 +10,7 @@ import { loadStudioProfile } from '@/lib/studioProfiles';
 
 type LibraryPurchaseRow = {
   id: string;
-  product_id: string | null;
+  item_id: string | null;
   acquired_at: string | null;
   products?: Pick<Product, 'title' | 'price_cents'> | Pick<Product, 'title' | 'price_cents'>[] | null;
 };
@@ -33,7 +33,7 @@ export default function StudioEarningsPage() {
       const profileId = profileResult.profile?.id ?? user.id;
 
       const productResult = await supabase
-        .from('products')
+        .from('catalog_items')
         .select('id')
         .eq('author_id', profileId);
 
@@ -45,10 +45,10 @@ export default function StudioEarningsPage() {
       }
 
       const purchaseResult = await supabase
-        .from('library_items')
-        .select('id,product_id,acquired_at,products(title,price_cents)')
+        .from('library_entries')
+        .select('id,item_id,acquired_at,products:catalog_items(title,price_cents)')
         .eq('acquisition_type', 'purchase')
-        .in('product_id', productIds)
+        .in('item_id', productIds)
         .order('acquired_at', { ascending: false });
 
       if (purchaseResult.error) {

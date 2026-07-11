@@ -55,9 +55,9 @@ export default function CheckoutPage() {
   useEffect(() => {
     async function loadProducts() {
       if (!items.length) return;
-      const productIds = items.map(item => item.product_id);
+      const productIds = items.map(item => item.item_id);
       const { data } = await supabase
-        .from('products')
+        .from('catalog_items')
         .select('*')
         .in('id', productIds);
       const rows = (data as Product[] | null) ?? [];
@@ -70,11 +70,11 @@ export default function CheckoutPage() {
   }, [items]);
 
   const merchItems = items.filter(item => {
-    const product = catalogProducts[item.product_id];
+    const product = catalogProducts[item.item_id];
     return product ? getProductExperience(product) === 'physical' : false;
   });
   const digitalItems = items.filter(item => {
-    const product = catalogProducts[item.product_id];
+    const product = catalogProducts[item.item_id];
     return product ? getProductExperience(product) !== 'physical' : true;
   });
   const hasMerch = merchItems.length > 0;
@@ -141,13 +141,13 @@ export default function CheckoutPage() {
     if (digitalItems.length > 0) {
       const rows = digitalItems.map((item: CartItem) => ({
         user_id: user.id,
-        product_id: item.product_id,
+        item_id: item.item_id,
         acquisition_type: 'purchase',
       }));
 
       const { error } = await supabase
-        .from('library_items')
-        .upsert(rows, { onConflict: 'user_id,product_id' });
+        .from('library_entries')
+        .upsert(rows, { onConflict: 'user_id,item_id' });
 
       if (error) {
         setErrorMessage(error.message);
@@ -158,7 +158,7 @@ export default function CheckoutPage() {
 
     if (hasMerch) {
       const merchProducts = merchItems
-        .map(item => ({ item, product: catalogProducts[item.product_id] }))
+        .map(item => ({ item, product: catalogProducts[item.item_id] }))
         .filter((entry): entry is { item: CartItem; product: Product } => Boolean(entry.product));
 
       const merchByCreator = merchProducts.reduce<Record<string, Array<{ item: CartItem; product: Product }>>>((acc, entry) => {
@@ -206,7 +206,7 @@ export default function CheckoutPage() {
         const itemInsert = await supabase.from('merch_order_items').insert(
           creatorItems.map(entry => ({
             order_id: orderId,
-            product_id: entry.item.product_id,
+            item_id: entry.item.item_id,
             quantity: entry.item.quantity,
             unit_price_cents: entry.item.price_cents,
             line_total_cents: entry.item.price_cents * entry.item.quantity,
@@ -397,7 +397,7 @@ export default function CheckoutPage() {
             </div>
             <div className="checkout-summary-items">
               {items.map(item => (
-                <div key={item.product_id} className="checkout-summary-row">
+                <div key={item.item_id} className="checkout-summary-row">
                   <div className="checkout-summary-art">
                     {item.cover_url && (
                       // eslint-disable-next-line @next/next/no-img-element

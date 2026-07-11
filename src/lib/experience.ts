@@ -6,7 +6,7 @@ function normalize(value: string | null | undefined) {
 }
 
 type ProductExperienceShape = {
-  product_type?: string | null;
+  item_type?: string | null;
   experience_type?: string | null;
   fulfillment_type?: string | null;
 };
@@ -18,7 +18,7 @@ type ProductRouteShape = ProductExperienceShape & {
 export function getProductExperience(product: ProductExperienceShape): ProductExperience {
   const experience = normalize(product.experience_type ?? '');
   const fulfillment = normalize(product.fulfillment_type ?? '');
-  const productType = normalize(product.product_type);
+  const productType = normalize(product.item_type);
 
   if (fulfillment === 'physical' || experience === 'merch') return 'physical';
   if (experience === 'music') return 'music';

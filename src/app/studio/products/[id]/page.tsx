@@ -125,7 +125,7 @@ export default function EditProductPage() {
       if (!user) return;
 
       const [{ data: categoryRows }, profileResult] = await Promise.all([
-        supabase.from('product_categories').select('*').order('sort_order'),
+        supabase.from('item_categories').select('*').order('sort_order'),
         loadStudioProfile(user.id),
       ]);
 
@@ -140,7 +140,7 @@ export default function EditProductPage() {
       setOwnerId(profileId);
 
       const { data: productRow } = await supabase
-        .from('products')
+        .from('catalog_items')
         .select('*')
         .eq('id', id)
         .eq('author_id', profileId)
@@ -154,12 +154,12 @@ export default function EditProductPage() {
       }
 
       const [{ data: trackRows }, { data: assetRows }, { data: achievementRows }] = await Promise.all([
-        supabase.from('tracks').select('*').eq('product_id', id).order('number'),
-        supabase.from('product_assets').select('asset_type,title,file_url').eq('product_id', id).order('sort_order'),
+        supabase.from('tracks').select('*').eq('item_id', id).order('number'),
+        supabase.from('item_assets').select('asset_type,title,file_url').eq('item_id', id).order('sort_order'),
         supabase
-          .from('product_achievements')
+          .from('item_achievements')
           .select('code,title,description,trigger_type,reward_config,is_secret,icon')
-          .eq('product_id', id)
+          .eq('item_id', id)
           .order('sort_order'),
       ]);
 
@@ -167,8 +167,8 @@ export default function EditProductPage() {
       const featureAssets = ((assetRows as ProductAssetRow[] | null) ?? []).filter(asset => featureAssetTypes().includes(asset.asset_type ?? ''));
 
       setTitle(product.title ?? '');
-      setCategoryId(product.product_category_id ?? '');
-      setProductType(product.product_type ?? '');
+      setCategoryId(product.item_category_id ?? '');
+      setProductType(product.item_type ?? '');
       setPrice(product.price_cents ? (product.price_cents / 100).toFixed(2) : '');
       setMarketMode(normalizeMarketMode(product.market_mode));
       setLocalPrice(product.local_price_cents ? (product.local_price_cents / 100).toFixed(2) : '');
@@ -225,10 +225,10 @@ export default function EditProductPage() {
 
   const section = useMemo(() => {
     const slug = selectedCategory?.slug;
-    if (slug === 'books') return getStudioCatalogSectionForProduct({ product_type: productType, experience_type: 'book', fulfillment_type: 'digital' });
-    if (slug === 'assets') return getStudioCatalogSectionForProduct({ product_type: productType, experience_type: 'asset', fulfillment_type: 'digital' });
-    if (slug === 'merch') return getStudioCatalogSectionForProduct({ product_type: productType, experience_type: 'merch', fulfillment_type: 'physical' });
-    return getStudioCatalogSectionForProduct({ product_type: productType, experience_type: 'music', fulfillment_type: 'digital' });
+    if (slug === 'books') return getStudioCatalogSectionForProduct({ item_type: productType, experience_type: 'book', fulfillment_type: 'digital' });
+    if (slug === 'assets') return getStudioCatalogSectionForProduct({ item_type: productType, experience_type: 'asset', fulfillment_type: 'digital' });
+    if (slug === 'merch') return getStudioCatalogSectionForProduct({ item_type: productType, experience_type: 'merch', fulfillment_type: 'physical' });
+    return getStudioCatalogSectionForProduct({ item_type: productType, experience_type: 'music', fulfillment_type: 'digital' });
   }, [productType, selectedCategory]);
   const deleteLabel = `Delete ${section.itemLabel.replace(/\b\w/g, char => char.toUpperCase())}`;
   const isMusicProduct = section.id === 'music';
@@ -302,8 +302,8 @@ export default function EditProductPage() {
 
     const updatePayload = {
       title: title.trim(),
-      product_category_id: categoryId,
-      product_type: productType.trim(),
+      item_category_id: categoryId,
+      item_type: productType.trim(),
       price_cents: merchUsesLocalOnlyPricing ? 0 : priceCents,
       market_mode: isMerchProduct ? (merchUsesLocalOnlyPricing ? 'global_plus_local' : marketMode) : marketMode,
       local_price_cents: isMerchProduct ? (localPriceCents ?? priceCents) : (marketMode === 'global' ? null : localPriceCents),
@@ -323,7 +323,7 @@ export default function EditProductPage() {
     };
 
     const { error: updateError } = await supabase
-      .from('products')
+      .from('catalog_items')
       .update(updatePayload)
       .eq('id', id)
       .eq('author_id', profileId);
@@ -341,7 +341,7 @@ export default function EditProductPage() {
 
       for (const [index, track] of visibleTracks.entries()) {
         const payload = {
-          product_id: id,
+          item_id: id,
           number: index + 1,
           title: track.title.trim(),
           duration_seconds: track.durationSeconds ? Number(track.durationSeconds) : null,
@@ -350,7 +350,7 @@ export default function EditProductPage() {
         };
 
         if (track.id) {
-          const { error: trackUpdateError } = await supabase.from('tracks').update(payload).eq('id', track.id).eq('product_id', id);
+          const { error: trackUpdateError } = await supabase.from('tracks').update(payload).eq('id', track.id).eq('item_id', id);
           if (trackUpdateError) {
             setSaving(false);
             setError(trackUpdateError.message);
@@ -367,7 +367,7 @@ export default function EditProductPage() {
       }
 
       if (idsToDelete.length) {
-        const { error: deleteError } = await supabase.from('tracks').delete().in('id', idsToDelete).eq('product_id', id);
+        const { error: deleteError } = await supabase.from('tracks').delete().in('id', idsToDelete).eq('item_id', id);
         if (deleteError) {
           setSaving(false);
           setError(deleteError.message);
@@ -379,9 +379,9 @@ export default function EditProductPage() {
     if (needsDigitalFile) {
       const assetType = productAssetTypeForSection(section.id);
       const { error: deleteAssetError } = await supabase
-        .from('product_assets')
+        .from('item_assets')
         .delete()
-        .eq('product_id', id)
+        .eq('item_id', id)
         .eq('asset_type', assetType);
 
       if (deleteAssetError) {
@@ -390,8 +390,8 @@ export default function EditProductPage() {
         return;
       }
 
-      const { error: insertAssetError } = await supabase.from('product_assets').insert({
-        product_id: id,
+      const { error: insertAssetError } = await supabase.from('item_assets').insert({
+        item_id: id,
         asset_type: assetType,
         title: productType.trim() || title.trim(),
         file_url: itemFileUrl.trim(),
@@ -437,7 +437,7 @@ export default function EditProductPage() {
     const profileId = ownerId || profileResult?.profile?.id || user.id;
 
     const { data: ownedProduct, error: ownershipError } = await supabase
-      .from('products')
+      .from('catalog_items')
       .select('id')
       .eq('id', id)
       .eq('author_id', profileId)
@@ -449,7 +449,7 @@ export default function EditProductPage() {
       return;
     }
 
-    const { error: tracksError } = await supabase.from('tracks').delete().eq('product_id', id);
+    const { error: tracksError } = await supabase.from('tracks').delete().eq('item_id', id);
     if (tracksError) {
       setDeleting(false);
       setError(tracksError.message);
@@ -457,7 +457,7 @@ export default function EditProductPage() {
     }
 
     const { error: deleteError } = await supabase
-      .from('products')
+      .from('catalog_items')
       .delete()
       .eq('id', id)
       .eq('author_id', profileId);

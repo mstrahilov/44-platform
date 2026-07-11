@@ -122,10 +122,10 @@ export function ProductCard({ product, owned: ownedProp }: { product: Product; o
         return;
       }
       const { data } = await supabase
-        .from('library_items')
+        .from('library_entries')
         .select('id')
         .eq('user_id', user.id)
-        .eq('product_id', product.id)
+        .eq('item_id', product.id)
         .neq('status', 'hidden')
         .maybeSingle();
       if (alive) setOwned(Boolean(data));
@@ -136,12 +136,12 @@ export function ProductCard({ product, owned: ownedProp }: { product: Product; o
 
   async function addProductToLibrary() {
     if (!user) return;
-    await supabase.from('library_items').upsert({
+    await supabase.from('library_entries').upsert({
       user_id: user.id,
-      product_id: product.id,
+      item_id: product.id,
       acquisition_type: 'free',
       status: 'visible',
-    }, { onConflict: 'user_id,product_id' });
+    }, { onConflict: 'user_id,item_id' });
     setOwned(true);
   }
 
@@ -167,7 +167,7 @@ export function ProductCard({ product, owned: ownedProp }: { product: Product; o
       onToggleCart: () => {
         if (cart.has(product.id)) removeFromCart(product.id);
         else addToCart({
-          product_id: product.id,
+          item_id: product.id,
           title: product.title,
           creator: product.creators?.display_name || product.creator || '44 Creator',
           cover_url: product.cover_url,

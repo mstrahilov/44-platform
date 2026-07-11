@@ -70,7 +70,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
       setError('');
 
       const productResult = await supabase
-        .from('products')
+        .from('catalog_items')
         .select('*, creators:profiles!author_id(*)')
         .eq('status', 'published')
         .order('year', { ascending: false, nullsFirst: false })
@@ -104,13 +104,13 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     }
 
     void supabase
-      .from('library_items')
-      .select('product_id')
+      .from('library_entries')
+      .select('item_id')
       .eq('user_id', user.id)
       .neq('status', 'hidden')
       .then(({ data }) => {
         if (!alive) return;
-        setOwnedProductIds(new Set((data ?? []).map(row => row.product_id).filter(Boolean)));
+        setOwnedProductIds(new Set((data ?? []).map(row => row.item_id).filter(Boolean)));
       });
 
     return () => { alive = false; };

@@ -27,7 +27,7 @@ import { creatorHref, type ProductAchievement, type Track, type UserAchievement 
 
 interface MusicLibraryRow {
   id: string;
-  product_id: string;
+  item_id: string;
   acquisition_type: string;
   acquired_at: string;
   status: string;
@@ -56,8 +56,8 @@ export default function MusicLibraryItemPage() {
       setError(null);
 
       const { data, error: itemError } = await supabase
-        .from('library_items')
-        .select('id,product_id,acquisition_type,acquired_at,status,products(*, creators:profiles!author_id(*))')
+        .from('library_entries')
+        .select('id,item_id,acquisition_type,acquired_at,status,products:catalog_items(*, creators:profiles!author_id(*))')
         .eq('id', id)
         .eq('user_id', userId)
         .maybeSingle();
@@ -78,21 +78,21 @@ export default function MusicLibraryItemPage() {
       setRow(libraryRow);
 
       const [{ data: trackRows }, { data: achievementRows }, { data: unlockedRows }, { data: assetRows }] = await Promise.all([
-        supabase.from('tracks').select('*').eq('product_id', libraryRow.product_id),
+        supabase.from('tracks').select('*').eq('item_id', libraryRow.item_id),
         supabase
-          .from('product_achievements')
-          .select('id,product_id,code,title,description,trigger_type,trigger_config,reward_product_id,reward_config,points,icon,sort_order,is_secret')
-          .eq('product_id', libraryRow.product_id)
+          .from('item_achievements')
+          .select('id,item_id,code,title,description,trigger_type,trigger_config,reward_item_id,reward_config,points,icon,sort_order,is_secret')
+          .eq('item_id', libraryRow.item_id)
           .order('sort_order'),
         supabase
           .from('user_achievements')
-          .select('id,user_id,achievement_id,product_id,unlocked_at')
+          .select('id,user_id,achievement_id,item_id,unlocked_at')
           .eq('user_id', userId)
-          .eq('product_id', libraryRow.product_id),
+          .eq('item_id', libraryRow.item_id),
         supabase
-          .from('product_assets')
+          .from('item_assets')
           .select('asset_type,title,file_url')
-          .eq('product_id', libraryRow.product_id)
+          .eq('item_id', libraryRow.item_id)
           .in('asset_type', ['bonus_content', 'bonus_achievement']),
       ]);
 
@@ -286,7 +286,7 @@ function OwnedMusicRelease({
   async function unlockTrigger(triggerType: string, metadata?: Record<string, unknown>) {
     const result = await trackProductAchievementTrigger({
       userId,
-      productId: row.product_id,
+      productId: row.item_id,
       triggerType,
       achievements,
       unlockedAchievementIds: localUnlockedAchievementIds,
@@ -337,7 +337,7 @@ function OwnedMusicRelease({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [completedTrackIds, fullReleaseHandled, noSkipsEligible, playableTrackIds, product.created_at, product.id, userId]);
 
-  const releaseType = product.product_type || 'Release';
+  const releaseType = product.item_type || 'Release';
   const creatorDisplayName = product.creators?.display_name || product.creator || '44 Creator';
   const creatorLink = creatorHref(product.creators ?? creatorDisplayName);
   const releaseMeta = [

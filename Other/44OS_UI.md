@@ -1,6 +1,6 @@
 # 44OS UI Principles
 
-This is one of the two active handoff documents for 44OS. Read it before changing layout, styling, app chrome, component primitives, or visual behavior.
+This is one of the three active handoff documents for 44OS. Read it before changing layout, styling, app chrome, component primitives, or visual behavior. Architecture and sequencing live in `44OS_FOUNDATION.md` and `44OS_MILESTONES.md`; this document remains the visual and interaction contract.
 
 44OS should feel like a premium operating system: calm, spatially consistent, tactile, legible, and fast. It is not a marketing site and should not look like a stack of unrelated pages.
 

@@ -12,7 +12,7 @@ import { PageShell, HubHero, HubSection, Shelf, ProductCard, CenteredMessage, Em
 
 type LibraryRow = {
   id: string;
-  product_id: string | null;
+  item_id: string | null;
   acquired_at: string | null;
   products: Product | null;
 };
@@ -57,8 +57,8 @@ export default function HomePage() {
     async function loadActivity() {
       const [{ data }, rows] = await Promise.all([
         supabase
-          .from('library_items')
-          .select('id,product_id,acquired_at,products(*)')
+          .from('library_entries')
+          .select('id,item_id,acquired_at,products:catalog_items(*)')
           .eq('user_id', activeUserId)
           .neq('status', 'archived')
           .neq('status', 'hidden')

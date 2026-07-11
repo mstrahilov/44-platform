@@ -76,7 +76,7 @@ export function getStudioCatalogSection(id: string | null | undefined) {
   return STUDIO_CATALOG_SECTIONS.find(section => section.id === id) ?? STUDIO_CATALOG_SECTIONS[0];
 }
 
-export function getStudioCatalogSectionForProduct(product: Pick<Product, 'product_type' | 'experience_type' | 'fulfillment_type'>) {
+export function getStudioCatalogSectionForProduct(product: Pick<Product, 'item_type' | 'experience_type' | 'fulfillment_type'>) {
   const experience = getProductExperience(product);
   if (experience === 'physical') return getStudioCatalogSection('merch');
   if (experience === 'book') return getStudioCatalogSection('books');
@@ -85,7 +85,7 @@ export function getStudioCatalogSectionForProduct(product: Pick<Product, 'produc
 }
 
 export function productBelongsToStudioSection(
-  product: Pick<Product, 'product_type' | 'experience_type' | 'fulfillment_type'>,
+  product: Pick<Product, 'item_type' | 'experience_type' | 'fulfillment_type'>,
   sectionId: StudioCatalogSectionId,
 ) {
   const productSection = getStudioCatalogSectionForProduct(product);
