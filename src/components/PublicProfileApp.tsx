@@ -270,16 +270,16 @@ export default function PublicProfilePage() {
   const tabs = useMemo(
     () => {
       if (isCreator) {
-        return [
-          { id: 'posts', label: 'Posts' },
-          { id: 'music', label: 'Music' },
-          { id: 'books', label: 'Books' },
-          { id: 'assets', label: 'Assets' },
-        ] satisfies Array<{ id: ProfileTab; label: string }>;
+        const creatorTabs: Array<{ id: ProfileTab; label: string }> = [];
+        if (generalPosts.length > 0) creatorTabs.push({ id: 'posts', label: 'Posts' });
+        if (musicProducts.length > 0) creatorTabs.push({ id: 'music', label: 'Music' });
+        if (bookProducts.length > 0) creatorTabs.push({ id: 'books', label: 'Books' });
+        if (assetProducts.length > 0) creatorTabs.push({ id: 'assets', label: 'Assets' });
+        return creatorTabs;
       }
       return generalPosts.length > 0 ? [{ id: 'posts' as const, label: 'Posts' }] : [];
     },
-    [generalPosts.length, isCreator],
+    [assetProducts.length, bookProducts.length, generalPosts.length, isCreator, musicProducts.length],
   );
 
   useEffect(() => {

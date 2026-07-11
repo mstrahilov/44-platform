@@ -45,6 +45,7 @@ type MusicPlayerContextValue = {
   removeFromQueue: (index: number) => void;
   clearQueue: () => void;
   togglePlayback: () => void;
+  toggleRadioPlayback: () => void;
   playNext: () => void;
   playPrevious: () => void;
   seek: (time: number) => void;
@@ -537,6 +538,36 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  function toggleRadioPlayback() {
+    const currentQueue = queueRef.current;
+    const activeTrack = currentQueue[currentIndexRef.current];
+    if (!activeTrack || activeTrack.playbackMode !== 'radio') return;
+
+    if (isPlaying) {
+      audioRef.current?.pause();
+      setIsPlaying(false);
+      return;
+    }
+
+    const totalDuration = currentQueue.reduce((sum, track) => sum + Math.max(0, track.durationSeconds ?? 0), 0);
+    if (totalDuration <= 0) {
+      startTrack(currentQueue, Math.max(0, currentIndexRef.current), 'queue');
+      return;
+    }
+
+    const anchorSeconds = Date.parse('2026-01-01T00:00:00.000Z') / 1000;
+    const loopedSeconds = Math.max(0, Math.floor(Date.now() / 1000) - anchorSeconds) % totalDuration;
+    let cursor = 0;
+    for (let index = 0; index < currentQueue.length; index += 1) {
+      const trackDuration = Math.max(0, currentQueue[index].durationSeconds ?? 0);
+      if (loopedSeconds < cursor + trackDuration) {
+        startTrack(currentQueue, index, 'queue', loopedSeconds - cursor);
+        return;
+      }
+      cursor += trackDuration;
+    }
+  }
+
   function setVolume(nextVolume: number) {
     const normalizedVolume = Math.max(0, Math.min(1, nextVolume));
     setVolumeState(normalizedVolume);
@@ -610,6 +641,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     removeFromQueue,
     clearQueue: clear,
     togglePlayback,
+    toggleRadioPlayback,
     playNext,
     playPrevious,
     seek,
@@ -659,7 +691,7 @@ export function useMusicPlayer() {
   return context;
 }
 
-function PlayerIcon({ name }: { name: 'play' | 'pause' | 'previous' | 'next' | 'shuffle' | 'queue' | 'volume' | 'muted' | 'chevron' | 'remove' }) {
+function PlayerIcon({ name }: { name: 'play' | 'pause' | 'stop' | 'previous' | 'next' | 'shuffle' | 'queue' | 'volume' | 'muted' | 'chevron' | 'remove' }) {
   return <span className={`music-player-icon music-player-icon-${name}`} aria-hidden="true" />;
 }
 
@@ -677,6 +709,7 @@ export function MusicPlayerBar() {
     expanded,
     setExpanded,
     togglePlayback,
+    toggleRadioPlayback,
     shuffleQueue,
     playNext,
     playPrevious,
@@ -685,7 +718,6 @@ export function MusicPlayerBar() {
     seek,
     setVolume,
     toggleMute,
-    clear,
   } = useMusicPlayer();
   const [queueOpen, setQueueOpen] = useState(false);
   const dragStartYRef = useRef<number | null>(null);
@@ -697,7 +729,8 @@ export function MusicPlayerBar() {
   const canPlayPrevious = currentIndex > 0;
   const canPlayNext = currentIndex < queue.length - 1;
   const percent = progressPercent(currentTime, effectiveDuration);
-  const subtitle = playbackError || `${currentTrack.artist}${currentTrack.releaseTitle ? ` - ${currentTrack.releaseTitle}` : ''}`;
+  const compactSubtitle = playbackError || currentTrack.artist;
+  const showingQueue = queueOpen && !isRadioPlayback;
   const playerClassName = [
     'music-player-bar',
     isRadioPlayback ? 'music-player-bar-radio' : '',
@@ -743,21 +776,30 @@ export function MusicPlayerBar() {
         </button>
         <button type="button" className="music-player-copy music-player-open-target" onClick={openExpanded} aria-label="Open Now Playing">
           <span className="music-player-title">{currentTrack.title}</span>
-          <span className="music-player-subtitle">{subtitle}</span>
+          <span className="music-player-subtitle">{compactSubtitle}</span>
         </button>
         <div className="music-player-controls" aria-label="Playback controls">
-          {!isRadioPlayback && (
+          {isRadioPlayback ? (
+            <button
+              type="button"
+              className="music-player-button music-player-button-primary music-player-button-icon music-player-radio-stop"
+              onClick={toggleRadioPlayback}
+              aria-label={isPlaying ? 'Pause live radio' : 'Resume live radio'}
+            >
+              <PlayerIcon name={isPlaying ? 'stop' : 'play'} />
+            </button>
+          ) : (
+            <>
             <button type="button" className="music-player-button music-player-button-icon" onClick={playPrevious} aria-label="Previous track" disabled={!canPlayPrevious}>
               <PlayerIcon name="previous" />
             </button>
-          )}
-          <button type="button" className="music-player-button music-player-button-primary music-player-button-icon" onClick={togglePlayback} aria-label={isPlaying ? 'Pause' : 'Play'}>
-            <PlayerIcon name={isPlaying ? 'pause' : 'play'} />
-          </button>
-          {!isRadioPlayback && (
+            <button type="button" className="music-player-button music-player-button-primary music-player-button-icon" onClick={togglePlayback} aria-label={isPlaying ? 'Pause' : 'Play'}>
+              <PlayerIcon name={isPlaying ? 'pause' : 'play'} />
+            </button>
             <button type="button" className="music-player-button music-player-button-icon" onClick={playNext} aria-label="Next track" disabled={!canPlayNext}>
               <PlayerIcon name="next" />
             </button>
+            </>
           )}
         </div>
         <div className="music-player-progress">
@@ -787,12 +829,9 @@ export function MusicPlayerBar() {
           />
         </div>
         <div className="music-player-actions">
-          <button type="button" className="music-player-button music-player-button-icon" onClick={openExpanded} aria-label="Open queue">
-            <PlayerIcon name="queue" />
-          </button>
-          {isRadioPlayback && (
-            <button type="button" className="music-player-button" onClick={clear} aria-label="Stop live radio">
-              Stop
+          {!isRadioPlayback && (
+            <button type="button" className="music-player-button music-player-button-icon" onClick={openExpanded} aria-label="Open queue">
+              <PlayerIcon name="queue" />
             </button>
           )}
         </div>
@@ -802,7 +841,7 @@ export function MusicPlayerBar() {
         <div className="music-player-overlay" role="presentation">
           <button type="button" className="music-player-scrim" aria-label="Minimize Now Playing" onClick={minimizeExpanded} />
           <section
-            className="music-player-sheet"
+            className={showingQueue ? 'music-player-sheet music-player-sheet-queue-open' : 'music-player-sheet'}
             role="dialog"
             aria-modal="true"
             aria-label="Now Playing"
@@ -811,12 +850,16 @@ export function MusicPlayerBar() {
             style={{ '--music-progress': String(percent / 100) } as CSSProperties}
           >
             <div className="music-player-sheet-header">
-              <button type="button" className="music-player-sheet-minimize" onClick={minimizeExpanded} aria-label="Minimize player">
-                <span className="music-player-grabber" aria-hidden="true" />
-                <PlayerIcon name="chevron" />
-              </button>
-              <div className="music-player-sheet-heading">Now Playing</div>
               <span className="music-player-sheet-header-spacer" aria-hidden="true" />
+              <span className="music-player-sheet-header-spacer" aria-hidden="true" />
+              <button
+                type="button"
+                className="music-player-sheet-minimize"
+                onClick={showingQueue ? () => setQueueOpen(false) : minimizeExpanded}
+                aria-label={showingQueue ? 'Close queue' : 'Close player'}
+              >
+                <PlayerIcon name="remove" />
+              </button>
             </div>
 
             <div className="music-player-sheet-main">
@@ -830,9 +873,9 @@ export function MusicPlayerBar() {
               </div>
               <div className="music-player-sheet-copy">
                 <h2>{currentTrack.title}</h2>
-                <p>{subtitle}</p>
+                <p>{currentTrack.artist}</p>
               </div>
-              <div className="music-player-sheet-progress">
+              {!isRadioPlayback && <div className="music-player-sheet-progress">
                 <input
                   type="range"
                   min="0"
@@ -845,51 +888,55 @@ export function MusicPlayerBar() {
                   <span>{formatPlayerTime(currentTime)}</span>
                   <span>-{formatPlayerTime(Math.max(0, effectiveDuration - currentTime))}</span>
                 </div>
-              </div>
+              </div>}
               <div className="music-player-sheet-controls">
-                {!isRadioPlayback && (
+                {isRadioPlayback ? (
+                  <button
+                    type="button"
+                    className="music-player-sheet-button music-player-sheet-button-primary music-player-sheet-radio-stop"
+                    onClick={toggleRadioPlayback}
+                    aria-label={isPlaying ? 'Pause live radio' : 'Resume live radio'}
+                  >
+                    <PlayerIcon name={isPlaying ? 'stop' : 'play'} />
+                  </button>
+                ) : (
+                  <>
                   <button type="button" className="music-player-sheet-button music-player-sheet-button-utility" onClick={shuffleQueue} aria-label="Shuffle queue" disabled={queue.length < 3}>
                     <PlayerIcon name="shuffle" />
                   </button>
-                )}
-                {!isRadioPlayback && (
                   <button type="button" className="music-player-sheet-button" onClick={playPrevious} aria-label="Previous track" disabled={!canPlayPrevious}>
                     <PlayerIcon name="previous" />
                   </button>
-                )}
-                <button type="button" className="music-player-sheet-button music-player-sheet-button-primary" onClick={togglePlayback} aria-label={isPlaying ? 'Pause' : 'Play'}>
-                  <PlayerIcon name={isPlaying ? 'pause' : 'play'} />
-                </button>
-                {!isRadioPlayback && (
+                  <button type="button" className="music-player-sheet-button music-player-sheet-button-primary" onClick={togglePlayback} aria-label={isPlaying ? 'Pause' : 'Play'}>
+                    <PlayerIcon name={isPlaying ? 'pause' : 'play'} />
+                  </button>
                   <button type="button" className="music-player-sheet-button" onClick={playNext} aria-label="Next track" disabled={!canPlayNext}>
                     <PlayerIcon name="next" />
                   </button>
+                  <button
+                    type="button"
+                    className={showingQueue ? 'music-player-sheet-button music-player-sheet-button-utility music-player-sheet-button-queue music-player-sheet-button-active' : 'music-player-sheet-button music-player-sheet-button-utility music-player-sheet-button-queue'}
+                    onClick={() => setQueueOpen(open => !open)}
+                    aria-label={showingQueue ? 'Hide queue' : 'Show queue'}
+                  >
+                    <PlayerIcon name="queue" />
+                  </button>
+                  </>
                 )}
-                <button
-                  type="button"
-                  className={queueOpen ? 'music-player-sheet-button music-player-sheet-button-utility music-player-sheet-button-queue music-player-sheet-button-active' : 'music-player-sheet-button music-player-sheet-button-utility music-player-sheet-button-queue'}
-                  onClick={() => setQueueOpen(open => !open)}
-                  aria-label={queueOpen ? 'Hide queue' : 'Show queue'}
-                >
-                  <PlayerIcon name="queue" />
-                </button>
               </div>
-              {isRadioPlayback && (
-                <button type="button" className="music-player-stop-button" onClick={clear}>
-                  Stop Radio
-                </button>
-              )}
             </div>
 
-            <div className={queueOpen ? 'music-player-queue music-player-queue-open' : 'music-player-queue'}>
+            {!isRadioPlayback && <div className={showingQueue ? 'music-player-queue music-player-queue-open' : 'music-player-queue'}>
               <div className="music-player-queue-head">
                 <span>Queue</span>
-                <span>{isRadioPlayback ? 'Live Radio' : `${queue.length} track${queue.length === 1 ? '' : 's'}`}</span>
+                <span>{isRadioPlayback ? 'Live Radio' : `${Math.max(0, queue.length - currentIndex - 1)} next`}</span>
               </div>
               <div className="music-player-queue-list">
-                {queue.map((track, index) => (
-                  <div key={`${track.id}:${index}`} className={index === currentIndex ? 'music-player-queue-row music-player-queue-row-active' : 'music-player-queue-row'}>
-                    <button type="button" className="music-player-queue-play" onClick={() => playQueueIndex(index)} aria-label={`Play ${track.title}`}>
+                {queue.slice(currentIndex + 1).map((track, upcomingIndex) => {
+                  const queueIndex = currentIndex + 1 + upcomingIndex;
+                  return (
+                  <div key={`${track.id}:${queueIndex}`} className="music-player-queue-row">
+                    <button type="button" className="music-player-queue-play" onClick={() => playQueueIndex(queueIndex)} aria-label={`Play ${track.title}`}>
                       <span className="music-player-queue-art" aria-hidden="true">
                         {track.artworkUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -902,14 +949,18 @@ export function MusicPlayerBar() {
                       </span>
                     </button>
                     {track.playbackMode !== 'radio' && (
-                      <button type="button" className="music-player-queue-remove" onClick={() => removeFromQueue(index)} aria-label={`Remove ${track.title} from queue`}>
+                      <button type="button" className="music-player-queue-remove" onClick={() => removeFromQueue(queueIndex)} aria-label={`Remove ${track.title} from queue`}>
                         <PlayerIcon name="remove" />
                       </button>
                     )}
                   </div>
-                ))}
+                  );
+                })}
+                {queue.length - currentIndex - 1 <= 0 && (
+                  <div className="music-player-queue-empty">Nothing else is queued.</div>
+                )}
               </div>
-            </div>
+            </div>}
           </section>
         </div>
       )}

@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useContextMenu } from '@/components/ContextMenu';
 import { supabase } from '@/lib/supabase';
@@ -12,7 +11,7 @@ import { productLibraryHref } from '@/lib/experience';
 import { getProductLibraryContent, getProductLibraryPrimaryAction, getProductRuntimeKind } from '@/lib/libraryContent';
 import { creatorHref, type ProductAchievement, type Track, type UserAchievement } from '@/lib/platform';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
-import { LibraryAchievementsSection, LibraryBonusContentSection, LibraryCreatorChip, LibraryProductDetailsSection, type LibraryBonusAsset } from '@/components/LibraryDetailPrimitives';
+import { LibraryAchievementsSection, LibraryBonusContentSection, LibraryProductDetailsSection, ProductDetailHeader, type LibraryBonusAsset, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
 import { ProductUpdatesSection } from '@/components/ProductUpdatesSection';
 import { unlockAchievementForUser } from '@/lib/achievementNotifications';
 import { useTopbarBack } from '@/components/TopbarContext';
@@ -161,7 +160,6 @@ function ProductLibraryDetail({
   const runtimeKind = getProductRuntimeKind(product);
   const isMusic = runtimeKind === 'music';
   const isBook = runtimeKind === 'book';
-  const isAsset = runtimeKind === 'sample_pack';
   const { currentTrack, isPlaying, playQueue, toggleTrack: togglePlayerTrack, queueNext } = useMusicPlayer();
   const { openContextMenu } = useContextMenu();
   const [localUnlockedAchievementIds, setLocalUnlockedAchievementIds] = useState(unlockedAchievementIds);
@@ -169,6 +167,7 @@ function ProductLibraryDetail({
   const [toast, setToast] = useState<AchievementToastData | null>(null);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [inferredTrackDurations, setInferredTrackDurations] = useState<Record<string, number>>({});
+  const [shuffleEnabled, setShuffleEnabled] = useState(false);
 
   useEffect(() => { Promise.resolve().then(() => setPlayedTrackIds(new Set())); }, [product.id]);
   useEffect(() => { Promise.resolve().then(() => setLocalUnlockedAchievementIds(unlockedAchievementIds)); }, [unlockedAchievementIds]);
@@ -250,6 +249,24 @@ function ProductLibraryDetail({
       next.add(musicQueue[0].id);
       return next;
     });
+    setShuffleEnabled(false);
+  }
+
+  function shuffleRelease() {
+    if (!musicQueue.length) return;
+    if (shuffleEnabled) {
+      playRelease();
+      return;
+    }
+    const shuffled = shuffleMusicQueue(musicQueue);
+    playQueue(shuffled, 0);
+    setSelectedTrackId(shuffled[0]?.id ?? null);
+    setPlayedTrackIds(current => {
+      const next = new Set(current);
+      next.add(shuffled[0].id);
+      return next;
+    });
+    setShuffleEnabled(true);
   }
 
   useEffect(() => {
@@ -281,74 +298,51 @@ function ProductLibraryDetail({
     maybeUnlockCasualListener();
   }, [achievements, isMusic, localUnlockedAchievementIds, playedTrackIds, row.product_id, tracks, userId]);
 
-  const heroImage = product.hero_url || product.cover_url;
-  const description = product.long_description || product.short_description || '';
   const content = getProductLibraryContent(product);
   const creatorDisplayName = product.creators?.display_name || product.creator || '44 Creator';
-  const canDownload = Boolean(product.download_url || product.read_url);
   const trackNumbers = useMemo(
     () => new Map(tracks.map((track, index) => [track.id, track.number ?? index + 1])),
     [tracks],
   );
   const creatorLink = creatorHref(product.creators ?? creatorDisplayName);
+  const releaseMeta = [
+    (product.product_type || content.detailsTitle).toUpperCase(),
+    ...(product.year ? [String(product.year)] : []),
+  ];
+  const primaryActions: ProductDetailAction[] = [
+    {
+      label: isMusic ? 'Play' : isBook ? 'Read' : action.label,
+      onClick: isMusic ? playRelease : () => runProductAction(action),
+    },
+    isMusic
+      ? { label: 'Shuffle', onClick: shuffleRelease, active: shuffleEnabled }
+      : { label: 'View Creator', href: creatorLink, secondary: true },
+  ];
 
   return (
     <div className="view-detail-single library-detail-page">
 
-      {/* Album header */}
-      <div
-        className={heroImage ? 'view-album-header' : 'view-album-header view-album-header-fallback'}
-        style={heroImage ? { backgroundImage: `url(${heroImage})` } as React.CSSProperties : undefined}
-      >
-        <div className="view-album-cover">
-          {heroImage && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={heroImage} alt={product.title} />
-          )}
-        </div>
-        <div className="view-album-copy">
-          <div className="view-album-eyebrow view-product-meta-line">
-            <span>{(product.product_type || content.detailsTitle).toUpperCase()}</span>
-            {product.year && (<><span className="view-album-meta-sep" /><span>{product.year}</span></>)}
-            <span className="view-album-meta-sep" />
-            <span className="view-album-meta-strong view-album-meta-accent">OWNED</span>
-          </div>
-          <h1 className="view-album-title">{product.title}</h1>
-          <LibraryCreatorChip creator={product.creators ?? null} fallbackName={creatorDisplayName} sourceProductId={product.id} />
-          <div className="view-album-actions">
-            <button className="os-button os-button-primary" type="button" onClick={isMusic ? playRelease : () => runProductAction(action)}>
-              {isBook ? 'Read' : action.label}
-            </button>
-            {(isBook || isAsset || (isMusic && row.acquisition_type === 'purchase')) && canDownload && (
-              <a className="os-button os-button-secondary" href={product.download_url || product.read_url || '#'} target="_blank" rel="noreferrer">
-                Download
-              </a>
-            )}
-            <Link className="os-button os-button-ghost" href={creatorLink}>View Creator</Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Description */}
-      {description.length > 0 && (
-        <div className="view-section">
-          <h2 className="view-section-title">Description</h2>
-          <p className="os-type-body view-description">
-            {description}
-          </p>
-        </div>
-      )}
+      <ProductDetailHeader
+        product={product}
+        creatorName={creatorDisplayName}
+        creatorHrefValue={creatorLink}
+        meta={releaseMeta}
+        actions={primaryActions}
+      />
 
       {/* Tracklist (music) */}
       {isMusic && tracks.length > 0 && (
-        <div className="view-section">
+        <div className="view-section view-tracklist-section">
           <h2 className="view-section-title">Tracklist</h2>
           <div className="view-tracklist">
             {tracks.map((track, index) => (
               <div
                 className={selectedTrackId === track.id ? 'view-track-row view-track-row-selected' : 'view-track-row'}
                 key={track.id}
-                onClick={() => setSelectedTrackId(track.id)}
+                onClick={() => {
+                  setSelectedTrackId(track.id);
+                  void toggleTrack(track);
+                }}
                 onContextMenu={event => openContextMenu(event, [
                   { id: 'play', label: 'Play', onSelect: () => { void toggleTrack(track); } },
                   { id: 'play-next', label: 'Play Next', onSelect: () => queueTrackNext(track), disabled: !track.audio_url },
@@ -359,11 +353,12 @@ function ProductLibraryDetail({
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
                     setSelectedTrackId(track.id);
+                    void toggleTrack(track);
                   }
                 }}
               >
                 <div className="view-track-leading">
-                  <span className="view-track-number">{String(trackNumbers.get(track.id) ?? index + 1).padStart(2, '0')}</span>
+                  <span className="view-track-number">{trackNumbers.get(track.id) ?? index + 1}</span>
                   <button
                     type="button"
                     className="view-track-play"
@@ -386,7 +381,7 @@ function ProductLibraryDetail({
         </div>
       )}
 
-      {!isMusic && description.length === 0 && (
+      {!isMusic && (
         <div className="view-section">
           <h2 className="view-section-title">{content.contentTitle}</h2>
           <p className="os-type-body view-description">
@@ -409,6 +404,15 @@ function ProductLibraryDetail({
 function runProductAction(action: ReturnType<typeof getProductLibraryPrimaryAction>) {
   if (action.href) { window.open(action.href, '_blank', 'noopener,noreferrer'); return; }
   alert(action.missingMessage);
+}
+
+function shuffleMusicQueue(queue: MusicQueueTrack[]) {
+  const shuffled = [...queue];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
 }
 
 function formatDuration(seconds: number | null) {

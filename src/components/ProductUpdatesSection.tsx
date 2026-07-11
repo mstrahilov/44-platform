@@ -26,7 +26,6 @@ function resolveAuthor(update: ProductUpdate) {
 
 export function ProductUpdatesSection({
   productId,
-  emptyMessage = 'No updates from this creator yet.',
 }: {
   productId: string;
   emptyMessage?: string;
@@ -55,40 +54,38 @@ export function ProductUpdatesSection({
     loadUpdates();
   }, [productId]);
 
+  if (updates.length === 0) return null;
+
   return (
     <div className="view-section">
       <SectionHeader title="Creator Updates" />
 
       {error && <div className="dashboard-status dashboard-status-error" style={{ marginBottom: 16 }}>{error}</div>}
 
-      {updates.length === 0 ? (
-        <p className="app-empty-text view-content-empty">{emptyMessage}</p>
-      ) : (
-        <div className="dashboard-list-surface item-domain-surface">
-          {updates.map(update => {
-            const author = resolveAuthor(update);
-            return (
-              <article key={update.id} className="product-update-row">
-                <div className="product-domain-head">
-                  <div>
-                    <h3 className="os-type-card-title">{update.title}</h3>
-                    <div className="product-domain-meta">
-                      {author ? (
-                        <Link href={creatorHref(author)}>{author.display_name || author.username || '44 Creator'}</Link>
-                      ) : (
-                        <span>44 Creator</span>
-                      )}
-                      <span>{formatDate(update.created_at)}</span>
-                    </div>
+      <div className="dashboard-list-surface item-domain-surface">
+        {updates.map(update => {
+          const author = resolveAuthor(update);
+          return (
+            <article key={update.id} className="product-update-row">
+              <div className="product-domain-head">
+                <div>
+                  <h3 className="os-type-card-title">{update.title}</h3>
+                  <div className="product-domain-meta">
+                    {author ? (
+                      <Link href={creatorHref(author)}>{author.display_name || author.username || '44 Creator'}</Link>
+                    ) : (
+                      <span>44 Creator</span>
+                    )}
+                    <span>{formatDate(update.created_at)}</span>
                   </div>
-                  {update.version_label && <span className="os-pill os-status-owned">{update.version_label}</span>}
                 </div>
-                <p className="os-type-body product-domain-body">{update.body}</p>
-              </article>
-            );
-          })}
-        </div>
-      )}
+                {update.version_label && <span className="os-pill os-status-owned">{update.version_label}</span>}
+              </div>
+              <p className="os-type-body product-domain-body">{update.body}</p>
+            </article>
+          );
+        })}
+      </div>
     </div>
   );
 }

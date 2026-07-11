@@ -137,7 +137,6 @@ function SearchContent() {
                       <span className="search-profile-copy">
                         <span className="social-author-name">{profile.display_name || profile.username || '44 Creator'}</span>
                         {profile.username && <span className="social-handle">@{profile.username}</span>}
-                        <span className="social-note os-type-body-small">{profile.bio || profile.creator_type || '44 Creator'}</span>
                       </span>
                     </Link>
                   ))}

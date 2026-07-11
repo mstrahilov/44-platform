@@ -1,18 +1,19 @@
 'use client';
 
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useContextMenu, COPY_TO_CLIPBOARD_TOAST_EVENT } from '@/components/ContextMenu';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
-import { browseHref, formatProductPrice, productMeta } from '@/lib/products';
+import { browseHref, productMeta } from '@/lib/products';
 import { isFreeLibraryClaim } from '@/lib/libraryContent';
 import { browseIndexHref, getProductExperience, productBrowseHref, productLibraryHref } from '@/lib/experience';
 import { creatorHref } from '@/lib/platform';
 import { ProductGrid, ProductCard } from '@/components/Ui';
 import { ProductReviewsSection } from '@/components/ProductReviewsSection';
+import { ProductDetailHeader, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { addToCart, useCart } from '@/lib/cart';
@@ -241,7 +242,6 @@ export function ProductStoreDetail({
   if (loading) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Loading…</div>;
   if (!product) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Item not found</div>;
 
-  const heroImage = product.hero_url || product.cover_url;
   const productExperience = getProductExperience(product);
   const isReleasePage = releasePage || productExperience === 'music';
   const canClaimToLibrary = canSaveProductToLibrary(product);
@@ -251,8 +251,6 @@ export function ProductStoreDetail({
   const creatorMoreLink = `${creatorLink}${creatorLink.includes('?') ? '&' : '?'}tab=${creatorProfileTab(productExperience)}`;
   const libraryHref = ownedLibraryItemId ? productLibraryHref(product, ownedLibraryItemId) : browseIndexHref(product).replace('/store', '/library');
 
-  const hasDescription = Boolean(product.long_description || product.short_description);
-  const description = product.long_description || product.short_description || '';
   const playableTracks: MusicQueueTrack[] = (
     tracks
       .filter(track => track.audio_url)
@@ -295,8 +293,11 @@ export function ProductStoreDetail({
     }));
   }
 
-  const heroCopy = getStoreHeroCopy(productExperience);
-  const primaryActions = resolveStoreActions({
+  function playReleasePreview() {
+    if (playableTracks.length > 0) toggleTrack(playableTracks, 0);
+  }
+
+  const primaryActions: ProductDetailAction[] = resolveStoreActions({
     product,
     userSignedIn: Boolean(user),
     owned,
@@ -304,71 +305,31 @@ export function ProductStoreDetail({
     hasDownloadUnlock,
     libraryHref,
     cartHasItem: cart.has(product.id),
+    onPlay: playReleasePreview,
     onAddToLibrary: addToLibrary,
     onAddToCart: addProductToCart,
   });
-  const aboutHeading = getAboutHeading();
   const contentHeading = getContentHeading(product);
   const productDetails = buildProductDetails(product, tracks, inferredTrackDurations);
   const creatorDisplayName = product.creators?.display_name || product.creator || '44 Creator';
+  const releaseMeta = [
+    (product.product_type || productMeta(product)).toUpperCase(),
+    ...(product.year ? [String(product.year)] : []),
+  ];
 
   return (
     <div className="view-detail-single">
 
-      {/* Album-style header */}
-      <div
-        className={heroImage ? 'view-album-header' : 'view-album-header view-album-header-fallback'}
-        style={heroImage ? { backgroundImage: `url(${heroImage})` } as CSSProperties : undefined}
-      >
-        <div className={`view-album-cover view-album-cover-${productExperience}`}>
-          {heroImage && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={heroImage} alt={product.title} />
-          )}
-        </div>
-        <div className="view-album-copy">
-          <div className="view-album-eyebrow view-product-meta-line">
-            <span>{(product.product_type || productMeta(product)).toUpperCase()}</span>
-            {product.year && (<><span className="view-album-meta-sep" /><span>{product.year}</span></>)}
-            <span className="view-album-meta-sep" />
-            <span className="view-album-meta-strong view-album-meta-accent">{formatProductPrice(product)}</span>
-          </div>
-          <h1 className="view-album-title">{product.title}</h1>
-          <Link className="library-creator-chip" href={creatorTabLink}>
-            <span className="library-creator-avatar">
-              {product.creators?.avatar_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={product.creators.avatar_url} alt="" />
-              ) : (
-                <span>{creatorDisplayName.slice(0, 2).toUpperCase()}</span>
-              )}
-            </span>
-            <span>{creatorDisplayName}</span>
-          </Link>
-          <div className="view-album-actions">
-            {primaryActions.map(action =>
-              action.href ? (
-                <Link key={action.label} className={action.secondary ? 'os-button os-button-secondary' : 'os-button os-button-primary'} href={action.href}>
-                  {action.label}
-                </Link>
-              ) : (
-                <button key={action.label} className={action.secondary ? 'os-button os-button-secondary' : 'os-button os-button-primary'} type="button" onClick={action.onClick}>
-                  {action.label}
-                </button>
-              ),
-            )}
-          </div>
-        </div>
-      </div>
+      <ProductDetailHeader
+        product={product}
+        creatorName={creatorDisplayName}
+        creatorHrefValue={creatorTabLink}
+        meta={releaseMeta}
+        actions={primaryActions}
+        coverClassName={`view-album-cover-${productExperience}`}
+      />
 
-      <div className="view-section">
-        <h2 className="view-section-title">{aboutHeading}</h2>
-        <p className="os-type-body view-description">
-          {hasDescription && description.length > 0 ? description : heroCopy}
-        </p>
-      </div>
-
-      <div className="view-section">
+      <div className="view-section view-tracklist-section">
         <div className="item-community-header" style={{ marginBottom: 28 }}>
           <h2 className="view-section-title" style={{ margin: 0 }}>{contentHeading}</h2>
         </div>
@@ -384,7 +345,10 @@ export function ProductStoreDetail({
                   <div
                     className={selected ? 'view-track-row view-track-row-selected' : 'view-track-row'}
                     key={track.id}
-                    onClick={() => setSelectedTrackId(track.id)}
+                    onClick={() => {
+                      setSelectedTrackId(track.id);
+                      toggleReleaseTrack(track);
+                    }}
                     onContextMenu={event => openContextMenu(event, [
                       { id: 'play', label: 'Play', onSelect: () => toggleReleaseTrack(track), disabled: !track.audio_url },
                       { id: 'play-next', label: 'Play Next', onSelect: () => queueReleaseTrackNext(track), disabled: !track.audio_url },
@@ -398,6 +362,7 @@ export function ProductStoreDetail({
                       if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
                         setSelectedTrackId(track.id);
+                        toggleReleaseTrack(track);
                       }
                     }}
                   >
@@ -498,19 +463,6 @@ function getTrackDurationSeconds(track: ProductTrack, inferredDurations: Record<
     : inferredDurations[track.id] ?? null;
 }
 
-function getStoreHeroCopy(experience: ReturnType<typeof getProductExperience>) {
-  if (experience === 'music') {
-    return 'Add this release to your library for free or support the creator by purchasing a digital copy that includes unlimited high-quality downloads.';
-  }
-  if (experience === 'book') {
-    return 'Purchase a copy of this book to add it to your library. All purchases include unlimited downloads in ePub or PDF.';
-  }
-  if (experience === 'asset') {
-    return 'Purchase this asset pack to unlock the full download and keep it in your creative library.';
-  }
-  return 'Purchase this item to support the creator and keep it with your Library.';
-}
-
 function resolveStoreActions({
   product,
   userSignedIn,
@@ -519,6 +471,7 @@ function resolveStoreActions({
   hasDownloadUnlock,
   libraryHref,
   cartHasItem,
+  onPlay,
   onAddToLibrary,
   onAddToCart,
 }: {
@@ -529,27 +482,31 @@ function resolveStoreActions({
   hasDownloadUnlock: boolean;
   libraryHref: string;
   cartHasItem: boolean;
+  onPlay: () => void;
   onAddToLibrary: () => void;
   onAddToCart: () => void;
 }) {
   const experience = getProductExperience(product);
+  const free = isFreeLibraryClaim(product);
   if (experience === 'music') {
     return [
-      owned
-        ? { label: 'View in Library', href: libraryHref }
-        : userSignedIn
-          ? { label: 'Add to Library', onClick: onAddToLibrary }
-          : { label: 'Sign In to Save', href: '/login' },
-      hasDownloadUnlock
-        ? { label: 'View in Library', href: libraryHref, secondary: true }
-        : { label: 'Add to Cart', onClick: onAddToCart, secondary: true },
+      { label: 'Play', onClick: onPlay },
+      free
+        ? owned || hasDownloadUnlock
+          ? { label: 'View in Library', href: libraryHref, secondary: true }
+          : userSignedIn
+            ? { label: 'Add to Library', onClick: onAddToLibrary, secondary: true }
+            : { label: 'Sign In to Save', href: '/login', secondary: true }
+        : cartHasItem
+          ? { label: 'View Cart', href: '/cart', secondary: true }
+          : { label: 'Add to Cart', onClick: onAddToCart, secondary: true },
     ];
   }
 
   if (experience === 'book') {
     return [
       { label: 'Read Sample', href: product.read_url || productBrowseHref(product) },
-      canClaimToLibrary
+      free && canClaimToLibrary
         ? owned
           ? { label: 'View in Library', href: libraryHref, secondary: true }
           : userSignedIn
@@ -566,10 +523,6 @@ function resolveStoreActions({
       ? { label: 'View Cart', href: '/cart' }
       : { label: 'Add to Cart', onClick: onAddToCart },
   ];
-}
-
-function getAboutHeading() {
-  return 'Description';
 }
 
 function getContentHeading(product: Product) {

@@ -2,16 +2,18 @@
 // Two independent axes: MODE (light/dark, or system) and ACCENT (the glass /
 // ambient color). Everything is driven by body classes that swap --os-* tokens:
 //   body.theme-light | body.theme-dark      -> readability (ink/paper/glass)
-//   body.accent-amber | -sage | -ocean | -violet -> --os-color-accent (+ ambient glow)
+//   body.accent-* -> --os-color-accent (+ ambient glow)
 
 export type ThemeMode = 'system' | 'light' | 'dark';
-export type ThemeAccent = 'amber' | 'sage' | 'ocean' | 'violet';
+export type ThemeAccent = 'amber' | 'sage' | 'ocean' | 'violet' | 'red' | 'cyan';
 
 export const ACCENTS: { id: ThemeAccent; label: string; swatch: string }[] = [
   { id: 'amber', label: 'Amber', swatch: '#f59e0b' },
   { id: 'sage', label: 'Sage', swatch: '#7cff4f' },
   { id: 'ocean', label: 'Ocean', swatch: '#60a5fa' },
-  { id: 'violet', label: 'Violet', swatch: '#a78bfa' },
+  { id: 'violet', label: 'Violet', swatch: '#b56cff' },
+  { id: 'red', label: 'Red', swatch: '#ff5a5f' },
+  { id: 'cyan', label: 'Cyan', swatch: '#22d3ee' },
 ];
 
 export const MODES: { id: ThemeMode; label: string }[] = [
@@ -34,7 +36,7 @@ export function getStoredMode(): ThemeMode {
 export function getStoredAccent(): ThemeAccent {
   if (typeof window === 'undefined') return DEFAULT_ACCENT;
   const v = window.localStorage.getItem(ACCENT_KEY);
-  return v === 'amber' || v === 'sage' || v === 'ocean' || v === 'violet' ? v : DEFAULT_ACCENT;
+  return ACCENTS.some(accent => accent.id === v) ? v as ThemeAccent : DEFAULT_ACCENT;
 }
 
 export function resolveMode(mode: ThemeMode): 'light' | 'dark' {

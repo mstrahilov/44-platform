@@ -1,5 +1,6 @@
 'use client';
 
+import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { AchievementIconGlyph } from '@/components/AchievementIconGlyph';
 import { useContextMenu } from '@/components/ContextMenu';
@@ -14,11 +15,89 @@ type ProductDetailTrack = {
   duration_seconds?: number | null;
 };
 
+export type ProductDetailAction = {
+  label: string;
+  href?: string;
+  onClick?: () => void;
+  secondary?: boolean;
+  active?: boolean;
+};
+
 export type LibraryBonusAsset = {
   title: string | null;
   file_url: string | null;
   asset_type: string | null;
 };
+
+export function ProductDetailHeader({
+  product,
+  creatorName,
+  creatorHrefValue,
+  meta,
+  actions,
+  coverClassName = '',
+}: {
+  product: Product;
+  creatorName: string;
+  creatorHrefValue: string;
+  meta: string[];
+  actions: ProductDetailAction[];
+  coverClassName?: string;
+}) {
+  const heroImage = product.hero_url || product.cover_url;
+  const coverClasses = ['view-album-cover', coverClassName].filter(Boolean).join(' ');
+
+  return (
+    <div
+      className={heroImage ? 'view-album-header' : 'view-album-header view-album-header-fallback'}
+      style={heroImage ? { '--release-artwork': `url(${heroImage})` } as CSSProperties : undefined}
+    >
+      <div className={coverClasses}>
+        {heroImage && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={heroImage} alt={product.title} />
+        )}
+      </div>
+      <div className="view-album-copy">
+        <h1 className="view-album-title">{product.title}</h1>
+        <Link className="library-creator-chip" href={creatorHrefValue} aria-label={`View ${creatorName}`}>
+          <span className="library-creator-avatar">
+            {product.creators?.avatar_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={product.creators.avatar_url} alt="" />
+            ) : (
+              <span>{initials(creatorName)}</span>
+            )}
+          </span>
+          <span>{creatorName}</span>
+        </Link>
+        {meta.length > 0 && (
+          <div className="view-album-eyebrow view-product-meta-line">
+            {meta.map((item, index) => (
+              <span className="view-album-meta-token" key={`${item}-${index}`}>
+                {index > 0 && <span className="view-album-meta-sep" aria-hidden="true" />}
+                <span>{item}</span>
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="view-album-actions">
+          {actions.map(action =>
+            action.href ? (
+              <Link key={action.label} className={`${action.secondary ? 'os-button os-button-secondary' : 'os-button os-button-primary'}${action.active ? ' os-button-active' : ''}`} href={action.href}>
+                {action.label}
+              </Link>
+            ) : (
+              <button key={action.label} className={`${action.secondary ? 'os-button os-button-secondary' : 'os-button os-button-primary'}${action.active ? ' os-button-active' : ''}`} type="button" onClick={action.onClick} aria-pressed={action.label === 'Shuffle' ? action.active : undefined}>
+                {action.label}
+              </button>
+            ),
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function LibraryCreatorChip({
   creator,
@@ -84,7 +163,7 @@ export function LibraryAchievementsSection({
   const orderedAchievements = [...unlocked, ...locked];
 
   return (
-    <div className="view-section">
+    <div className="view-section library-achievements-section">
       <SectionHeader title="Achievements" />
 
       {achievements.length === 0 ? (

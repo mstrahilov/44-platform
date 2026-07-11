@@ -15,7 +15,7 @@ import {
 const REFRESH_MS = 15000;
 
 export default function RadioPage() {
-  const { playQueue, currentTrack, isPlaying, clear, togglePlayback } = useMusicPlayer();
+  const { playQueue, currentTrack, isPlaying, toggleRadioPlayback } = useMusicPlayer();
   const [bundle, setBundle] = useState<RadioBundle | null>(null);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(() => new Date());
@@ -60,12 +60,8 @@ export default function RadioPage() {
   }
 
   function handleRadioAction() {
-    if (isSyncedTrackLive) {
-      clear();
-      return;
-    }
     if (isCurrentSyncedTrack) {
-      togglePlayback();
+      toggleRadioPlayback();
       return;
     }
     handlePlayLive();
@@ -106,6 +102,7 @@ export default function RadioPage() {
               style={heroStyle}
               aria-label="Now Playing"
             >
+              <div className="view-album-eyebrow radio-hero-kicker">Now Playing</div>
               {syncedTrack ? (
                 <Link href={syncedTrack.releaseHref} className="view-album-cover radio-hero-cover" aria-label={`Open ${syncedTrack.releaseTitle}`}>
                   {syncedTrack.coverUrl ? (
@@ -146,7 +143,7 @@ export default function RadioPage() {
                     onClick={handleRadioAction}
                     disabled={!queue.length || playback.index < 0}
                   >
-                    {isSyncedTrackLive ? 'Stop Radio' : 'Play Radio'}
+                    {isSyncedTrackLive ? 'Pause Radio' : 'Play Radio'}
                   </button>
                 </div>
               </div>

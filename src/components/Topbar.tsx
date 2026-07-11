@@ -432,7 +432,7 @@ export function Topbar() {
               )}
             </button>
             {userMenuOpen && (
-              <div className="os-popover" role="menu">
+              <div className="os-popover os-account-popover" role="menu">
                 <Link href={profileHref} className="os-popover-item" role="menuitem">
                   <IconProfile /> Profile
                 </Link>
@@ -445,8 +445,8 @@ export function Topbar() {
                 <Link href="/settings" className="os-popover-item os-popover-item-mobile-only" role="menuitem">
                   <IconSettings /> Settings
                 </Link>
-                <div className="os-popover-divider os-popover-divider-mobile-hidden" />
-                <button type="button" className="os-popover-item os-popover-item-mobile-hidden" role="menuitem" onClick={handleSignOut}>
+                <div className="os-popover-divider" />
+                <button type="button" className="os-popover-item" role="menuitem" onClick={handleSignOut}>
                   <IconSignOut /> Log Out
                 </button>
               </div>

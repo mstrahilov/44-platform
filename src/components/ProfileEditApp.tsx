@@ -10,6 +10,9 @@ import { SocialAvatar } from '@/components/Social';
 import type { Profile } from '@/lib/platform';
 import { authorHandle } from '@/lib/social';
 import { getUploadErrorMessage, uploadPublicFile } from '@/lib/uploads';
+import { ProfileImageCropDialog } from '@/components/ProfileImageCropDialog';
+
+type PendingImage = { file: File; target: 'avatar' | 'hero' };
 
 export default function EditProfilePage() {
   const router = useRouter();
@@ -25,6 +28,7 @@ export default function EditProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState('');
+  const [pendingImage, setPendingImage] = useState<PendingImage | null>(null);
   const [error, setError] = useState('');
   const avatarInputId = useId();
   const heroInputId = useId();
@@ -76,11 +80,15 @@ export default function EditProfilePage() {
     router.push(targetHandle ? `/profile/${targetHandle}` : '/profile');
   }
 
-  async function uploadImage(event: ChangeEvent<HTMLInputElement>, target: 'avatar' | 'hero') {
-    if (!user) return;
+  function selectImage(event: ChangeEvent<HTMLInputElement>, target: 'avatar' | 'hero') {
     const file = event.target.files?.[0];
     if (!file) return;
+    setPendingImage({ file, target });
+    event.target.value = '';
+  }
 
+  async function uploadCroppedImage(file: File, target: 'avatar' | 'hero') {
+    if (!user) return;
     setUploading(target);
     setError('');
     try {
@@ -91,11 +99,11 @@ export default function EditProfilePage() {
       });
       if (target === 'avatar') setAvatarUrl(result.publicUrl);
       else setHeroUrl(result.publicUrl);
+      setPendingImage(null);
     } catch (uploadError) {
       setError(getUploadErrorMessage(uploadError));
     } finally {
       setUploading('');
-      event.target.value = '';
     }
   }
 
@@ -130,41 +138,40 @@ export default function EditProfilePage() {
   return (
     <PageShell>
       <main className="social-shell social-shell-wide">
-        <section
-          className="social-profile-cover"
+        <label
+          htmlFor={heroInputId}
+          className="social-profile-cover profile-cover-edit-control"
           style={{ backgroundImage: heroUrl ? `url(${heroUrl})` : undefined }}
           aria-label="Cover preview"
         >
-          <label htmlFor={heroInputId} className="profile-image-edit-button profile-image-edit-button-cover">
-            {uploading === 'hero' ? 'Uploading...' : 'Change Cover'}
-          </label>
-          <input
-            id={heroInputId}
-            type="file"
-            accept="image/*"
-            onChange={event => uploadImage(event, 'hero')}
-            disabled={Boolean(uploading)}
-            className="profile-image-input"
-          />
-        </section>
+          <span className="profile-image-edit-icon" aria-hidden="true" />
+          <span className="profile-edit-visually-hidden">Choose a new cover image</span>
+        </label>
+        <input
+          id={heroInputId}
+          type="file"
+          accept="image/*"
+          onChange={event => selectImage(event, 'hero')}
+          disabled={Boolean(uploading)}
+          className="profile-image-input"
+        />
 
         <section className="social-profile-head">
           <div className="social-profile-main">
             <div className="social-profile-identity">
-              <div className="profile-avatar-edit-wrap">
+              <label htmlFor={avatarInputId} className="profile-avatar-edit-wrap profile-avatar-edit-control">
                 <SocialAvatar profile={previewProfile} size="large" />
-                <label htmlFor={avatarInputId} className="profile-image-edit-button profile-image-edit-button-avatar">
-                  {uploading === 'avatar' ? '...' : 'Change'}
-                </label>
-                <input
-                  id={avatarInputId}
-                  type="file"
-                  accept="image/*"
-                  onChange={event => uploadImage(event, 'avatar')}
-                  disabled={Boolean(uploading)}
-                  className="profile-image-input"
-                />
-              </div>
+                <span className="profile-image-edit-icon" aria-hidden="true" />
+                <span className="profile-edit-visually-hidden">Choose a new profile photo</span>
+              </label>
+              <input
+                id={avatarInputId}
+                type="file"
+                accept="image/*"
+                onChange={event => selectImage(event, 'avatar')}
+                disabled={Boolean(uploading)}
+                className="profile-image-input"
+              />
               <div className="social-profile-text">
                 <h1 className="social-profile-name">{displayName || 'Your name'}</h1>
                 {username && <div className="social-handle">@{username}</div>}
@@ -228,6 +235,17 @@ export default function EditProfilePage() {
           </div>
         </section>
       </main>
+      {pendingImage && (
+        <ProfileImageCropDialog
+          file={pendingImage.file}
+          target={pendingImage.target}
+          busy={Boolean(uploading)}
+          onCancel={() => {
+            if (!uploading) setPendingImage(null);
+          }}
+          onConfirm={file => uploadCroppedImage(file, pendingImage.target)}
+        />
+      )}
     </PageShell>
   );
 }

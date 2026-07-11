@@ -3,11 +3,10 @@
 export const dynamic = 'force-dynamic';
 
 import { useEffect, useMemo, useState } from 'react';
-import type { CSSProperties } from 'react';
 import { useParams } from 'next/navigation';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
 import { useContextMenu } from '@/components/ContextMenu';
-import { LibraryAchievementsSection, LibraryBonusContentSection, LibraryCreatorChip, LibraryProductDetailsSection, type LibraryBonusAsset } from '@/components/LibraryDetailPrimitives';
+import { LibraryAchievementsSection, LibraryBonusContentSection, LibraryProductDetailsSection, ProductDetailHeader, type LibraryBonusAsset, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
 import {
   MUSIC_TRACK_COMPLETED_EVENT,
   MUSIC_TRACK_STARTED_EVENT,
@@ -24,7 +23,6 @@ import type { Product } from '@/lib/products';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { creatorHref, type ProductAchievement, type Track, type UserAchievement } from '@/lib/platform';
-import Link from 'next/link';
 
 interface MusicLibraryRow {
   id: string;
@@ -153,7 +151,7 @@ function OwnedMusicRelease({
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [toast, setToast] = useState<AchievementToastData | null>(null);
   const [inferredTrackDurations, setInferredTrackDurations] = useState<Record<string, number>>({});
-  const downloadsUnlocked = row.acquisition_type === 'purchase';
+  const [shuffleEnabled, setShuffleEnabled] = useState(false);
 
   const musicQueue = useMemo<MusicQueueTrack[]>(() => (
     tracks
@@ -207,6 +205,22 @@ function OwnedMusicRelease({
     setCompletedTrackIds(new Set());
     setNoSkipsEligible(true);
     setFullReleaseHandled(false);
+    setShuffleEnabled(false);
+  }
+
+  function shuffleRelease() {
+    if (!musicQueue.length) return;
+    if (shuffleEnabled) {
+      playRelease();
+      return;
+    }
+    const shuffled = shuffleMusicQueue(musicQueue);
+    playQueue(shuffled, 0);
+    setSelectedTrackId(shuffled[0]?.id ?? null);
+    setCompletedTrackIds(new Set());
+    setNoSkipsEligible(false);
+    setFullReleaseHandled(false);
+    setShuffleEnabled(true);
   }
 
   useEffect(() => {
@@ -320,50 +334,29 @@ function OwnedMusicRelease({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [completedTrackIds, fullReleaseHandled, noSkipsEligible, playableTrackIds, product.created_at, product.id, userId]);
 
-  const heroImage = product.hero_url || product.cover_url;
   const releaseType = product.product_type || 'Release';
   const creatorDisplayName = product.creators?.display_name || product.creator || '44 Creator';
   const creatorLink = creatorHref(product.creators ?? creatorDisplayName);
-  const description = product.long_description || product.short_description || '';
+  const releaseMeta = [
+    releaseType.toUpperCase(),
+    ...(product.year ? [String(product.year)] : []),
+  ];
+  const primaryActions: ProductDetailAction[] = [
+    { label: 'Play', onClick: playRelease },
+    { label: 'Shuffle', onClick: shuffleRelease, active: shuffleEnabled },
+  ];
 
   return (
     <div className="view-detail-single library-detail-page">
-      <div
-        className={heroImage ? 'view-album-header' : 'view-album-header view-album-header-fallback'}
-        style={heroImage ? { backgroundImage: `url(${heroImage})` } as CSSProperties : undefined}
-      >
-        <div className="view-album-cover">
-          {heroImage && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={heroImage} alt={product.title} />
-          )}
-        </div>
-        <div className="view-album-copy">
-          <div className="view-album-eyebrow view-product-meta-line">
-            <span>{releaseType.toUpperCase()}</span>
-            {product.year && (<><span className="view-album-meta-sep" /><span>{product.year}</span></>)}
-            {downloadsUnlocked && (<><span className="view-album-meta-sep" /><span className="view-album-meta-strong view-album-meta-accent">OWNED</span></>)}
-          </div>
-          <h1 className="view-album-title">{product.title}</h1>
-          <LibraryCreatorChip creator={product.creators ?? null} fallbackName={creatorDisplayName} sourceProductId={product.id} />
-          <div className="view-album-actions">
-            <button className="os-button os-button-primary" type="button" onClick={playRelease}>{musicQueue.length ? 'Play' : action.label}</button>
-            {downloadsUnlocked && product.download_url && (
-              <a className="os-button os-button-secondary" href={product.download_url} target="_blank" rel="noreferrer">Download</a>
-            )}
-            <Link className="os-button os-button-ghost" href={creatorLink}>View Creator</Link>
-          </div>
-        </div>
-      </div>
+      <ProductDetailHeader
+        product={product}
+        creatorName={creatorDisplayName}
+        creatorHrefValue={creatorLink}
+        meta={releaseMeta}
+        actions={primaryActions}
+      />
 
-      {description.length > 0 && (
-        <div className="view-section">
-          <h2 className="view-section-title">Description</h2>
-          <p className="os-type-body view-description">{description}</p>
-        </div>
-      )}
-
-      <div className="view-section">
+      <div className="view-section view-tracklist-section">
         <h2 className="view-section-title">Tracklist</h2>
 
         {tracks.length > 0 ? (
@@ -372,7 +365,10 @@ function OwnedMusicRelease({
               <div
                 className={selectedTrackId === track.id ? 'view-track-row view-track-row-selected' : 'view-track-row'}
                 key={track.id}
-                onClick={() => setSelectedTrackId(track.id)}
+                onClick={() => {
+                  setSelectedTrackId(track.id);
+                  toggleTrack(track);
+                }}
                 onContextMenu={event => openContextMenu(event, [
                   { id: 'play', label: 'Play', onSelect: () => { void toggleTrack(track); } },
                   { id: 'play-next', label: 'Play Next', onSelect: () => queueTrackNext(track), disabled: !track.audio_url },
@@ -383,11 +379,12 @@ function OwnedMusicRelease({
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
                     setSelectedTrackId(track.id);
+                    toggleTrack(track);
                   }
                 }}
               >
                 <div className="view-track-leading">
-                  <span className="view-track-number">{String(index + 1).padStart(2, '0')}</span>
+                  <span className="view-track-number">{index + 1}</span>
                   <button
                     type="button"
                     className="view-track-play"
@@ -420,6 +417,15 @@ function OwnedMusicRelease({
       <AchievementToast toast={toast} onDone={() => setToast(null)} />
     </div>
   );
+}
+
+function shuffleMusicQueue(queue: MusicQueueTrack[]) {
+  const shuffled = [...queue];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
 }
 
 function ReleaseStateMessage({ children }: { children: React.ReactNode }) {
