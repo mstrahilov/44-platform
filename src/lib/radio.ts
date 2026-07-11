@@ -109,7 +109,7 @@ export async function loadRadioBundle(): Promise<RadioBundle> {
     };
   }
 
-  const trackRows = (tracksResult.data as RadioTrackRow[] | null) ?? [];
+  const trackRows = await hydrateMissingTrackDurations((tracksResult.data as RadioTrackRow[] | null) ?? []);
   const productIds = Array.from(new Set(trackRows.map(track => track.product_id).filter(Boolean)));
   const productsResult = await supabase
     .from('products')
@@ -154,6 +154,54 @@ export async function loadRadioBundle(): Promise<RadioBundle> {
     requiresSetup: false,
     status: tracks.length ? '' : 'No playable Radio tracks were found in the playlist.',
   };
+}
+
+async function hydrateMissingTrackDurations(tracks: RadioTrackRow[]) {
+  const resolved = [...tracks];
+  const pendingIndexes = tracks
+    .map((track, index) => ({ track, index }))
+    .filter(({ track }) => Boolean(track.audio_url && (!track.duration_seconds || track.duration_seconds <= 0)))
+    .map(({ index }) => index);
+  const workerCount = Math.min(4, pendingIndexes.length);
+  await Promise.all(Array.from({ length: workerCount }, async () => {
+    while (pendingIndexes.length > 0) {
+      const index = pendingIndexes.shift();
+      if (typeof index !== 'number') return;
+      const track = tracks[index];
+      if (!track.audio_url) continue;
+      const durationSeconds = await readRemoteAudioDuration(track.audio_url);
+      if (durationSeconds > 0) resolved[index] = { ...track, duration_seconds: durationSeconds };
+    }
+  }));
+  return resolved;
+}
+
+function readRemoteAudioDuration(audioUrl: string) {
+  if (typeof document === 'undefined') return Promise.resolve(0);
+  return new Promise<number>(resolve => {
+    const audio = document.createElement('audio');
+    let settled = false;
+    const finish = (duration: number) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      audio.removeAttribute('src');
+      try {
+        audio.load();
+      } catch {
+        // Older WebKit builds can reject loading an empty media source.
+      }
+      resolve(duration);
+    };
+    const timeout = window.setTimeout(() => finish(0), 12_000);
+    audio.preload = 'metadata';
+    audio.addEventListener('loadedmetadata', () => {
+      finish(Number.isFinite(audio.duration) && audio.duration > 0 ? Math.ceil(audio.duration) : 0);
+    }, { once: true });
+    audio.addEventListener('error', () => finish(0), { once: true });
+    audio.src = audioUrl;
+    audio.load();
+  });
 }
 
 export function getSyncedRadioPlayback(args: {

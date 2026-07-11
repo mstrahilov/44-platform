@@ -94,7 +94,6 @@ export default function EditProductPage() {
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [productType, setProductType] = useState('');
-  const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [marketMode, setMarketMode] = useState<MarketMode>('global');
   const [localPrice, setLocalPrice] = useState('');
@@ -170,7 +169,6 @@ export default function EditProductPage() {
       setTitle(product.title ?? '');
       setCategoryId(product.product_category_id ?? '');
       setProductType(product.product_type ?? '');
-      setDescription(product.long_description || product.short_description || '');
       setPrice(product.price_cents ? (product.price_cents / 100).toFixed(2) : '');
       setMarketMode(normalizeMarketMode(product.market_mode));
       setLocalPrice(product.local_price_cents ? (product.local_price_cents / 100).toFixed(2) : '');
@@ -306,8 +304,6 @@ export default function EditProductPage() {
       title: title.trim(),
       product_category_id: categoryId,
       product_type: productType.trim(),
-      short_description: null,
-      long_description: description.trim(),
       price_cents: merchUsesLocalOnlyPricing ? 0 : priceCents,
       market_mode: isMerchProduct ? (merchUsesLocalOnlyPricing ? 'global_plus_local' : marketMode) : marketMode,
       local_price_cents: isMerchProduct ? (localPriceCents ?? priceCents) : (marketMode === 'global' ? null : localPriceCents),
@@ -492,11 +488,6 @@ export default function EditProductPage() {
               <div className="dashboard-form-step">
             <label className="dashboard-field"><div className="dashboard-field-label">{isMerchProduct ? 'Product Name' : 'Title'}</div><input className="os-input-field" value={title} onChange={e => setTitle(e.target.value)} /></label>
 
-            <label className="dashboard-field">
-              <div className="dashboard-field-label">{isMerchProduct ? 'Product Description' : 'Description'}</div>
-              <textarea className="os-input-textarea" rows={6} value={description} onChange={event => setDescription(event.target.value)} />
-            </label>
-
             <div className="dashboard-form-grid dashboard-form-grid-3">
               <label className="dashboard-field">
                 <div className="dashboard-field-label">{section.typeLabel}</div>
@@ -675,6 +666,7 @@ export default function EditProductPage() {
                             buttonLabel="Upload audio"
                             previewKind="none"
                             onChange={nextValue => updateTrack(index, { audioUrl: nextValue })}
+                            onAudioMetadata={durationSeconds => updateTrack(index, { durationSeconds: String(durationSeconds) })}
                           />
                         </div>
                       </div>

@@ -93,7 +93,9 @@ Use three content surface families:
 
 Rules:
 
-- Glass and transparency belong only to the unified app shell. Menus, popovers, filters, modals, cards, panels, and overlays use solid semantic paper surfaces.
+- Glass belongs only to the unified app shell. Menus, popovers, filters, modals, and true cards use solid semantic paper surfaces.
+- On desktop, content-first list surfaces may be transparent so the shell theme reads through them. This applies to Library tracklists/achievements, Community feed rows/composer, related detail lists, and similar repeated content; it does not turn controls or modal surfaces into glass.
+- Mobile keeps its established surface treatment outside the Studio editor. Do not apply desktop transparency sweeps to mobile pages.
 - Dense content should use readable paper/material surfaces.
 - Do not place cards inside cards.
 - Page sections are layout regions, not floating cards.
@@ -293,6 +295,7 @@ Radio rules:
 - Radio content is centered: artwork, Now Playing, title, artist, then Play Radio/Stop Radio.
 - Keep the radio title smaller than item-detail hero titles so long track names do not wrap awkwardly.
 - Use symmetrical vertical spacing around Now Playing, artist, and Play Radio; avoid a top-heavy card.
+- Desktop Radio uses the same centered composition inside the workspace: app-shell background, centered bounded artwork, then track, artist, and action. Do not add a separate opaque hero panel or blurred artwork backdrop.
 
 Studio publishing rules:
 
@@ -300,6 +303,10 @@ Studio publishing rules:
 - Track editors use the recessed editable list primitive, not nested glass cards.
 - Book achievements are hidden for v1.
 - Music release features start with the eight v1 achievement templates and optional Overachiever Bonus Content.
+- New and edit release forms do not collect a description. Existing legacy descriptions may remain readable, but Studio does not display or overwrite them during edits.
+- Music Tracks are a flat section rather than a nested paper card. Desktop track rows use a wide title column and a narrower Audio File/upload column; mobile stacks those fields. Keep generous section spacing between Details, Tracks, and Achievements.
+- Achievements use a single master switch in the section header. Off hides the picker; on reveals flat rows with white editor icons and right-aligned checkboxes. There is no minimum selection count.
+- Checked achievement controls must keep a black checkmark on the light checked fill. Overachiever Bonus Content is its own card below the flat achievement list.
 - Destructive buttons should align with system action rows and use confirmation copy.
 - Studio overview is a consolidated landing page: flat metric cards first, catalog sections for Music, Books, Assets, and Merch next, and Earnings at the bottom. Catalog metric cards are informational, not navigation.
 

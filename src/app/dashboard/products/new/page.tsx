@@ -105,7 +105,6 @@ function NewProductContent() {
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [productType, setProductType] = useState(section.typeOptions[0]);
-  const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [marketMode, setMarketMode] = useState<MarketMode>('global');
   const [localPrice, setLocalPrice] = useState('');
@@ -182,11 +181,10 @@ function NewProductContent() {
     if (!user) return;
 
     const cleanTitle = title.trim();
-    const cleanDescription = description.trim();
     const cleanType = productType.trim();
 
-    if (!cleanTitle || !categoryId || !cleanType || !cleanDescription) {
-      setError('Please fill out the title, type, and description.');
+    if (!cleanTitle || !categoryId || !cleanType) {
+      setError('Please fill out the title and type.');
       return;
     }
 
@@ -225,7 +223,7 @@ function NewProductContent() {
       creator: creatorName,
       product_type: cleanType,
       short_description: null,
-      long_description: cleanDescription,
+      long_description: '',
       price_cents: merchUsesLocalOnlyPricing ? 0 : priceCents,
       market_mode: isMerchProduct ? (merchUsesLocalOnlyPricing ? 'global_plus_local' : marketMode) : marketMode,
       local_price_cents: isMerchProduct ? (localPriceCents ?? priceCents) : (marketMode === 'global' ? null : localPriceCents),
@@ -263,7 +261,7 @@ function NewProductContent() {
         product_id: insertedProduct.id,
         number: index + 1,
         title: track.title.trim(),
-        duration_seconds: null,
+        duration_seconds: track.durationSeconds ? Number(track.durationSeconds) : null,
         audio_url: track.audioUrl.trim(),
         download_url: null,
       }));
@@ -355,11 +353,6 @@ function NewProductContent() {
               <label className="dashboard-field">
                 <div className="dashboard-field-label">{isMerchProduct ? 'Product Name' : 'Title'}</div>
                 <input className="os-input-field" value={title} onChange={event => setTitle(event.target.value)} placeholder={isMerchProduct ? 'Example: 44 Studio Hoodie' : 'Example: Here Comes The Feeling'} />
-              </label>
-
-              <label className="dashboard-field">
-                <div className="dashboard-field-label">{isMerchProduct ? 'Product Description' : 'Description'}</div>
-                <textarea className="os-input-textarea" rows={6} value={description} onChange={event => setDescription(event.target.value)} />
               </label>
 
               <div className="dashboard-form-grid dashboard-form-grid-3">
@@ -589,6 +582,7 @@ function NewProductContent() {
                             buttonLabel="Upload audio"
                             previewKind="none"
                             onChange={nextValue => updateTrack(index, { audioUrl: nextValue })}
+                            onAudioMetadata={durationSeconds => updateTrack(index, { durationSeconds: String(durationSeconds) })}
                           />
                         </div>
                       </div>

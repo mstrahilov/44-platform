@@ -108,8 +108,9 @@ Rules:
 Current code state:
 
 - `src/lib/achievementCatalog.ts` filters Library display/tracking to the eight v1 music codes.
-- `src/components/StudioReleaseFeatures.tsx` exposes Release Features for music: the eight achievement templates plus optional Overachiever Bonus Content. `DashboardReleaseFeatures.tsx` remains only as a compatibility export.
+- `src/components/StudioReleaseFeatures.tsx` exposes a music-only Achievements section: one master switch, independently selectable v1 templates with no minimum count, plus optional Overachiever Bonus Content. `DashboardReleaseFeatures.tsx` remains only as a compatibility export.
 - Studio create/edit pages show release achievements only for music.
+- Studio create/edit pages no longer collect release descriptions. New products save an empty legacy description after `20260711235500_allow_descriptionless_releases.sql`; edits preserve any existing legacy copy without exposing the field.
 - The reviewed achievement migration is `supabase/migrations/20260709230000_44os_v1_music_achievements.sql`.
 - Launch foundation SQL exists at `supabase/migrations/20260710143000_44os_launch_foundation_alignment.sql`.
 
@@ -150,6 +151,15 @@ Core shell files:
 - `src/components/MusicPlayer.tsx`: persistent music player provider and bar.
 - `src/components/SystemShell.tsx`: global shell behavior.
 - `src/components/ContextMenu.tsx`: shared right-click menu primitive.
+
+Playback reliability rules:
+
+- The shared DOM audio element is the only playback engine. A user action must not start competing `load()`/`play()` paths.
+- Media source comparisons normalize URLs before deciding to reload; WebKit-normalized public URLs must not create false source changes.
+- Standard queues persist locally and restore only after storage hydration. Live Radio queues do not persist because they must be reloaded from the canonical playlist and resynchronized to the current live offset.
+- Returning from a long background suspension, BFCache restore, or offline transition marks the source for a one-time refresh on the next play action. Recovery preserves the standard-track position where possible.
+- Radio reloads its bundle when the app becomes visible and when the page is restored. Missing legacy track durations are inferred from audio metadata; new Studio audio uploads capture duration at upload time.
+- iOS/PWA QA must cover first play, pause/resume, background/foreground, reopen after a terminated session, offline/reconnect, queue advance, last-track behavior, Radio stop/resume, and Media Session controls.
 
 Navigation rules:
 

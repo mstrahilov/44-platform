@@ -12,6 +12,7 @@ type UploadFieldProps = {
   buttonLabel?: string;
   previewKind?: 'image' | 'file' | 'none';
   onChange: (nextValue: string) => void;
+  onAudioMetadata?: (durationSeconds: number) => void;
 };
 
 export function UploadField({
@@ -23,6 +24,7 @@ export function UploadField({
   buttonLabel = 'Upload file',
   previewKind,
   onChange,
+  onAudioMetadata,
 }: UploadFieldProps) {
   const inputId = useId();
   const [uploading, setUploading] = useState(false);
@@ -36,8 +38,11 @@ export function UploadField({
     setMessage('');
 
     try {
+      const durationPromise = accept?.includes('audio') ? readAudioDuration(file) : Promise.resolve(null);
       const result = await uploadPublicFile({ file, folder, userId });
+      const durationSeconds = await durationPromise;
       onChange(result.publicUrl);
+      if (durationSeconds && onAudioMetadata) onAudioMetadata(durationSeconds);
       setMessage('Upload complete.');
     } catch (error) {
       setMessage(getUploadErrorMessage(error));
@@ -89,4 +94,34 @@ export function UploadField({
       ) : null}
     </div>
   );
+}
+
+function readAudioDuration(file: File) {
+  return new Promise<number | null>(resolve => {
+    const audio = document.createElement('audio');
+    const objectUrl = URL.createObjectURL(file);
+    let settled = false;
+    const finish = (duration: number | null) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      audio.removeAttribute('src');
+      try {
+        audio.load();
+      } catch {
+        // Loading an empty source can throw in older WebKit builds.
+      }
+      URL.revokeObjectURL(objectUrl);
+      resolve(duration);
+    };
+    const timeout = window.setTimeout(() => finish(null), 15_000);
+    audio.preload = 'metadata';
+    audio.addEventListener('loadedmetadata', () => {
+      const duration = Number.isFinite(audio.duration) && audio.duration > 0 ? Math.ceil(audio.duration) : null;
+      finish(duration);
+    }, { once: true });
+    audio.addEventListener('error', () => finish(null), { once: true });
+    audio.src = objectUrl;
+    audio.load();
+  });
 }

@@ -27,14 +27,23 @@ export default function RadioPage() {
       const nextBundle = await loadRadioBundle();
       if (!alive) return;
       setBundle(nextBundle);
+      setNow(new Date());
       setLoading(false);
     }
 
     void load();
     const timer = window.setInterval(() => setNow(new Date()), REFRESH_MS);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') void load();
+    };
+    const handlePageShow = () => void load();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('pageshow', handlePageShow);
     return () => {
       alive = false;
       window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pageshow', handlePageShow);
     };
   }, []);
 
@@ -60,7 +69,7 @@ export default function RadioPage() {
   }
 
   function handleRadioAction() {
-    if (isCurrentSyncedTrack) {
+    if (isCurrentSyncedTrack && isPlaying) {
       toggleRadioPlayback();
       return;
     }
