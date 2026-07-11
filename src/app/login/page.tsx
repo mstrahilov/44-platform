@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { getSitePathUrl } from '@/lib/siteUrl';
 
 type AuthStep = 'email' | 'password';
+
+const USERNAME_PATTERN = /^[a-z0-9_]{3,32}$/;
 
 function authMessage(message?: string) {
   const normalized = message?.toLowerCase() ?? '';
@@ -28,15 +30,18 @@ export default function LoginPage() {
   const [step, setStep] = useState<AuthStep>('email');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [username, setUsername] = useState('');
   const [accountExists, setAccountExists] = useState<boolean | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [linkSubmitting, setLinkSubmitting] = useState(false);
   const [resendingConfirmation, setResendingConfirmation] = useState(false);
   const [signupComplete, setSignupComplete] = useState(false);
+  const authenticatedDestination = useRef('/store');
 
   useEffect(() => {
-    if (!loading && user) router.replace('/store');
+    if (!loading && user) router.replace(authenticatedDestination.current);
   }, [loading, router, user]);
 
   async function findAccount(cleanEmail: string) {
@@ -80,10 +85,24 @@ export default function LoginPage() {
       return;
     }
 
+    const cleanDisplayName = displayName.trim();
+    const cleanUsername = username.trim().toLowerCase();
+
+    if (!accountExists && !cleanDisplayName) {
+      setStatus('Enter your name to create your account.');
+      return;
+    }
+
+    if (!accountExists && !USERNAME_PATTERN.test(cleanUsername)) {
+      setStatus('Use 3–32 lowercase letters, numbers, or underscores for your username.');
+      return;
+    }
+
     setSubmitting(true);
     setStatus(null);
 
     if (accountExists) {
+      authenticatedDestination.current = '/store';
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       setSubmitting(false);
       if (error) {
@@ -94,18 +113,50 @@ export default function LoginPage() {
       return;
     }
 
-    const { error } = await supabase.auth.signUp({
+    const { data: existingUsername, error: usernameError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('username', cleanUsername)
+      .maybeSingle();
+
+    if (usernameError) {
+      setSubmitting(false);
+      setStatus('We could not check that username right now. Please try again.');
+      return;
+    }
+
+    if (existingUsername) {
+      setSubmitting(false);
+      setStatus('That username is already taken. Choose another one.');
+      return;
+    }
+
+    authenticatedDestination.current = '/profile';
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: getSitePathUrl('/store') },
+      options: {
+        emailRedirectTo: getSitePathUrl('/profile'),
+        data: {
+          display_name: cleanDisplayName,
+          name: cleanDisplayName,
+          username: cleanUsername,
+        },
+      },
     });
     setSubmitting(false);
     if (error) {
+      authenticatedDestination.current = '/store';
       setStatus(authMessage(error.message));
       return;
     }
+
+    if (data.session) {
+      router.replace('/profile');
+      return;
+    }
     setSignupComplete(true);
-    setStatus('Account created. Check your email to verify your address.');
+    setStatus('Check your email to verify your address. The link will take you straight to your profile.');
   }
 
   async function sendEmailLink() {
@@ -127,7 +178,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email,
-      options: { emailRedirectTo: getSitePathUrl('/store') },
+      options: { emailRedirectTo: getSitePathUrl('/profile') },
     });
     setResendingConfirmation(false);
     setStatus(error ? authMessage(error.message) : 'Verification email resent. Check your inbox and spam folder.');
@@ -136,6 +187,8 @@ export default function LoginPage() {
   function changeEmail() {
     setStep('email');
     setPassword('');
+    setDisplayName('');
+    setUsername('');
     setAccountExists(null);
     setSignupComplete(false);
     setStatus(null);
@@ -155,7 +208,7 @@ export default function LoginPage() {
               ? 'Enter your email to get started.'
               : isLogin
                 ? 'Enter your password to log in.'
-                : 'Choose a password to create your account.'}
+                : 'Add your public name and username, then choose a password. We’ll email you if verification is required.'}
           </p>
         </div>
 
@@ -184,6 +237,45 @@ export default function LoginPage() {
                 <span>{email}</span>
                 <button type="button" onClick={changeEmail}>Change</button>
               </div>
+              {!isLogin && (
+                <label className="login-field">
+                  <span className="os-type-field-title">Name</span>
+                  <input
+                    className="os-input-field os-input-large"
+                    type="text"
+                    value={displayName}
+                    autoComplete="name"
+                    maxLength={80}
+                    required
+                    autoFocus
+                    onChange={event => {
+                      setDisplayName(event.target.value);
+                      setStatus(null);
+                    }}
+                  />
+                </label>
+              )}
+              {!isLogin && (
+                <label className="login-field">
+                  <span className="os-type-field-title">Username</span>
+                  <input
+                    className="os-input-field os-input-large"
+                    type="text"
+                    value={username}
+                    autoComplete="username"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    minLength={3}
+                    maxLength={32}
+                    pattern="[a-z0-9_]{3,32}"
+                    required
+                    onChange={event => {
+                      setUsername(event.target.value.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase());
+                      setStatus(null);
+                    }}
+                  />
+                </label>
+              )}
               <label className="login-field">
                 <span className="os-type-field-title">Password</span>
                 <input
@@ -193,7 +285,7 @@ export default function LoginPage() {
                   autoComplete={isLogin ? 'current-password' : 'new-password'}
                   minLength={8}
                   required
-                  autoFocus
+                  autoFocus={isLogin}
                   onChange={event => {
                     setPassword(event.target.value);
                     setStatus(null);

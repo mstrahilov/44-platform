@@ -274,6 +274,9 @@ Auth redirect target:
 - Production Site URL: `https://44os.com`.
 - Local development: `http://localhost:3000` and `http://127.0.0.1:3000`.
 - Vercel previews: controlled preview allow-list or wildcard pattern.
+- Account creation collects display name, username, email, and password. The auth-user trigger persists the submitted public identity in `profiles`.
+- New accounts with an immediate session go directly to `/profile`. When email confirmation is required, the confirmation and resend links return to `/profile`.
+- Avatar, cover image, and bio are optional profile enhancements. Community identity requires only the display name and username collected at sign-up; incomplete legacy accounts redirect directly to `/profile` without an intermediate dialog.
 - Desktop deep links: plan later with a `44os://` scheme if the Tauri shell needs native auth return.
 
 ---

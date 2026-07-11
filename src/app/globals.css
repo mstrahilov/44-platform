@@ -10232,7 +10232,9 @@ body.accent-cyan {
 }
 
 .login-shell {
+  box-sizing: border-box;
   width: min(100%, 480px);
+  min-width: 0;
   margin: 0 auto;
   padding: 40px 44px;
   display: flex;
@@ -10261,6 +10263,7 @@ body.accent-cyan {
 }
 
 .login-form {
+  min-width: 0;
   gap: 14px;
 }
 
@@ -10291,6 +10294,8 @@ body.accent-cyan {
 }
 
 .login-email-summary {
+  width: 100%;
+  min-width: 0;
   min-height: 44px;
   display: flex;
   align-items: center;
@@ -10302,6 +10307,7 @@ body.accent-cyan {
 }
 
 .login-email-summary span {
+  flex: 1 1 0;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -10309,6 +10315,7 @@ body.accent-cyan {
 }
 
 .login-email-summary button {
+  flex: 0 0 auto;
   padding: 4px 0;
   border: 0;
   background: transparent;
