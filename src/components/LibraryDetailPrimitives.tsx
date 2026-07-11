@@ -88,7 +88,7 @@ export function ProductDetailHeader({
                 {action.label}
               </Link>
             ) : (
-              <button key={action.label} className={`${action.secondary ? 'os-button os-button-secondary' : 'os-button os-button-primary'}${action.active ? ' os-button-active' : ''}`} type="button" onClick={action.onClick} aria-pressed={action.label === 'Shuffle' ? action.active : undefined}>
+              <button key={action.label} className={`${action.secondary ? 'os-button os-button-secondary' : 'os-button os-button-primary'}${action.active && action.label !== 'Shuffle' ? ' os-button-active' : ''}`} type="button" onClick={action.onClick} aria-pressed={action.label === 'Shuffle' ? action.active : undefined}>
                 {action.label}
               </button>
             ),

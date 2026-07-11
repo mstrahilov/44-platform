@@ -143,7 +143,7 @@ export default function RadioPage() {
                     onClick={handleRadioAction}
                     disabled={!queue.length || playback.index < 0}
                   >
-                    {isSyncedTrackLive ? 'Pause Radio' : 'Play Radio'}
+                    {isSyncedTrackLive ? 'Stop Radio' : 'Play Radio'}
                   </button>
                 </div>
               </div>

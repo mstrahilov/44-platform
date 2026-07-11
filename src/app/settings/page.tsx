@@ -8,11 +8,12 @@ import { useAuth } from '@/lib/useAuth';
 import { PageShell, HubHero, EmptyMessage, SectionHeader } from '@/components/Ui';
 import {
   ACCENTS,
+  applyTheme,
+  DEFAULT_THEME_ACCENT,
+  DEFAULT_THEME_MODE,
   MODES,
-  getStoredAccent,
-  getStoredMode,
-  setAccent,
-  setMode,
+  isThemeAccent,
+  isThemeMode,
   type ThemeAccent,
   type ThemeMode,
 } from '@/lib/theme';
@@ -24,12 +25,9 @@ import {
   getStoredViewerCurrency,
   setStoredViewerPreferences,
 } from '@/lib/marketPreferences';
-import { getLandingPageId, setLandingPageId, type LandingPageId } from '@/lib/landingPage';
+import { getLandingPageId, LANDING_PAGES, setLandingPageId, type LandingPageId } from '@/lib/landingPage';
 import { isMissingColumnError } from '@/lib/schemaCompat';
 import { getSitePathUrl } from '@/lib/siteUrl';
-import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
-import { getAvailableDockApps } from '@/lib/osApps';
-import { setDockMode, useDockPreferences, type DockMode } from '@/lib/dockPreferences';
 import { getNotificationPreference, setNotificationPreference, type NotificationPreferenceKind } from '@/lib/notificationPreferences';
 
 type SettingsAnchorId = 'account' | 'notifications' | 'appearance' | 'dock';
@@ -157,29 +155,51 @@ function AppearanceSettings() {
   return (
     <div className="settings-section settings-section-wide settings-two-column" id="dock">
       <ThemeSettings />
-      <DockSettings />
+      <LandingAppSettings />
     </div>
   );
 }
 
 function ThemeSettings() {
-  const [mode, setModeState] = useState<ThemeMode>('light');
-  const [accent, setAccentState] = useState<ThemeAccent>('amber');
+  const { user } = useAuth();
+  const [mode, setModeState] = useState<ThemeMode>(DEFAULT_THEME_MODE);
+  const [accent, setAccentState] = useState<ThemeAccent>(DEFAULT_THEME_ACCENT);
 
   useEffect(() => {
-    Promise.resolve().then(() => {
-      setModeState(getStoredMode());
-      setAccentState(getStoredAccent());
+    if (!user) return;
+    let alive = true;
+    supabase
+      .from('user_theme_preferences')
+      .select('theme_mode, theme_accent')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!alive) return;
+        setModeState(isThemeMode(data?.theme_mode) ? data.theme_mode : DEFAULT_THEME_MODE);
+        setAccentState(isThemeAccent(data?.theme_accent) ? data.theme_accent : DEFAULT_THEME_ACCENT);
+      });
+    return () => { alive = false; };
+  }, [user]);
+
+  async function saveTheme(nextMode: ThemeMode, nextAccent: ThemeAccent) {
+    if (!user) return;
+    const { error } = await supabase.from('user_theme_preferences').upsert({
+      user_id: user.id,
+      theme_mode: nextMode,
+      theme_accent: nextAccent,
+      updated_at: new Date().toISOString(),
     });
-  }, []);
+    if (error) return;
+    setModeState(nextMode);
+    setAccentState(nextAccent);
+    applyTheme(nextMode, nextAccent);
+  }
 
   function chooseMode(m: ThemeMode) {
-    setModeState(m);
-    setMode(m);
+    void saveTheme(m, accent);
   }
   function chooseAccent(a: ThemeAccent) {
-    setAccentState(a);
-    setAccent(a);
+    void saveTheme(mode, a);
   }
 
   return (
@@ -187,7 +207,6 @@ function ThemeSettings() {
       <div className="settings-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Theme</div>
-          <p className="os-type-body-small">Choose the system color mode.</p>
         </div>
         <div className="settings-segment" role="group" aria-label="Theme mode">
           {MODES.map(m => (
@@ -206,7 +225,6 @@ function ThemeSettings() {
       <div className="settings-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Accent</div>
-          <p className="os-type-body-small">Set the active system accent color.</p>
         </div>
         <div className="settings-swatches" role="group" aria-label="Accent color">
           {ACCENTS.map(a => (
@@ -294,7 +312,6 @@ function RegionSettingsFields({ onStatus }: { onStatus: (status: string) => void
       <div className="settings-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Region</div>
-          <p className="os-type-body-small">Set your local market.</p>
         </div>
         <select
           className="os-input-field"
@@ -313,7 +330,6 @@ function RegionSettingsFields({ onStatus }: { onStatus: (status: string) => void
       <div className="settings-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Display Currency</div>
-          <p className="os-type-body-small">Choose prices shown across Store.</p>
         </div>
         <select
           className="os-input-field"
@@ -331,33 +347,12 @@ function RegionSettingsFields({ onStatus }: { onStatus: (status: string) => void
   );
 }
 
-const DOCK_MODES: Array<{ id: DockMode; label: string }> = [
-  { id: 'full', label: 'Full' },
-  { id: 'compact', label: 'Compact' },
-];
-
-function DockSettings() {
-  const { user } = useAuth();
-  const [profile, setProfile] = useState<StudioProfile | null>(null);
+function LandingAppSettings() {
   const [landingPage, setLandingPage] = useState<LandingPageId>('store');
-  const { mode } = useDockPreferences();
-
-  useEffect(() => {
-    if (!user) { Promise.resolve().then(() => setProfile(null)); return; }
-    loadStudioProfile(user.id).then(r => setProfile(r.profile));
-  }, [user]);
 
   useEffect(() => {
     Promise.resolve().then(() => setLandingPage(getLandingPageId()));
   }, []);
-
-  const availableApps = getAvailableDockApps({
-    signedIn: Boolean(user),
-    isCreator: isCreatorProfile(profile),
-  });
-  const landingApps = ['library', 'store', 'radio', 'community']
-    .map(id => availableApps.find(app => app.id === id))
-    .filter((app): app is NonNullable<typeof app> => Boolean(app));
 
   function chooseLandingPage(id: LandingPageId) {
     setLandingPage(id);
@@ -365,14 +360,12 @@ function DockSettings() {
   }
 
   return (
-    <>
-      <div className="settings-field">
+      <div className="settings-field settings-field-full">
         <div className="settings-field-head">
           <div className="os-type-field-title">Landing App</div>
-          <p className="os-type-body-small">Choose where 44OS opens.</p>
         </div>
         <div className="settings-segment" role="group" aria-label="Landing app">
-          {landingApps.map(app => (
+          {LANDING_PAGES.map(app => (
             <button
               key={app.id}
               type="button"
@@ -384,34 +377,15 @@ function DockSettings() {
           ))}
         </div>
       </div>
-
-      <div className="settings-field">
-        <div className="settings-field-head">
-          <div className="os-type-field-title">Dock</div>
-          <p className="os-type-body-small">Set the Dock display density.</p>
-        </div>
-        <div className="settings-segment" role="group" aria-label="Dock mode">
-          {DOCK_MODES.map(m => (
-            <button
-              key={m.id}
-              type="button"
-              className={m.id === mode ? 'settings-segment-item settings-segment-item-active' : 'settings-segment-item'}
-              onClick={() => setDockMode(m.id)}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
-      </div>
-    </>
   );
 }
 
 function AccountSettings() {
   const { user } = useAuth();
-  const [sendingReset, setSendingReset] = useState(false);
   const [savingEmail, setSavingEmail] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
   const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [status, setStatus] = useState('');
 
   useEffect(() => {
@@ -435,15 +409,15 @@ function AccountSettings() {
     setStatus(error ? error.message : 'Check your new email to confirm the change.');
   }
 
-  async function sendPasswordReset() {
-    if (!user?.email || sendingReset) return;
-    setSendingReset(true);
+  async function changePassword(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!user || !newPassword || savingPassword) return;
+    setSavingPassword(true);
     setStatus('');
-    const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-      redirectTo: getSitePathUrl('/settings'),
-    });
-    setSendingReset(false);
-    setStatus(error ? error.message : 'Password reset email sent.');
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setSavingPassword(false);
+    if (!error) setNewPassword('');
+    setStatus(error ? error.message : 'Password saved.');
   }
 
   return (
@@ -451,7 +425,6 @@ function AccountSettings() {
       <div className="settings-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Email</div>
-          <p className="os-type-body-small">Your login and recovery email.</p>
         </div>
         <form className="settings-inline-form" onSubmit={changeEmail}>
           <input
@@ -463,7 +436,7 @@ function AccountSettings() {
             autoComplete="email"
           />
           <button className="os-button os-button-secondary" type="submit" disabled={!user?.email || savingEmail}>
-            {savingEmail ? 'Saving...' : 'Change Email'}
+            {savingEmail ? 'Saving...' : 'Save'}
           </button>
         </form>
       </div>
@@ -471,13 +444,21 @@ function AccountSettings() {
       <div className="settings-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Password</div>
-          <p className="os-type-body-small">Send a secure reset link to your email.</p>
         </div>
-        <div className="settings-inline-form">
-          <button className="os-button os-button-secondary" type="button" onClick={sendPasswordReset} disabled={!user?.email || sendingReset}>
-            {sendingReset ? 'Sending...' : 'Send Reset Link'}
+        <form className="settings-inline-form" onSubmit={changePassword}>
+          <input
+            className="os-input-field"
+            type="password"
+            value={newPassword}
+            onChange={event => setNewPassword(event.target.value)}
+            placeholder="New password"
+            autoComplete="new-password"
+            minLength={6}
+          />
+          <button className="os-button os-button-secondary" type="submit" disabled={!newPassword || savingPassword}>
+            {savingPassword ? 'Saving...' : 'Save'}
           </button>
-        </div>
+        </form>
       </div>
 
       <RegionSettingsFields onStatus={setStatus} />

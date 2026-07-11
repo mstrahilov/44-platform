@@ -22,21 +22,15 @@ export const MODES: { id: ThemeMode; label: string }[] = [
   { id: 'dark', label: 'Dark' },
 ];
 
-const MODE_KEY = '44-theme-mode';
-const ACCENT_KEY = '44-theme-accent';
-const DEFAULT_MODE: ThemeMode = 'light';
-const DEFAULT_ACCENT: ThemeAccent = 'amber';
+export const DEFAULT_THEME_MODE: ThemeMode = 'dark';
+export const DEFAULT_THEME_ACCENT: ThemeAccent = 'ocean';
 
-export function getStoredMode(): ThemeMode {
-  if (typeof window === 'undefined') return DEFAULT_MODE;
-  const v = window.localStorage.getItem(MODE_KEY);
-  return v === 'system' || v === 'light' || v === 'dark' ? v : DEFAULT_MODE;
+export function isThemeMode(value: unknown): value is ThemeMode {
+  return value === 'system' || value === 'light' || value === 'dark';
 }
 
-export function getStoredAccent(): ThemeAccent {
-  if (typeof window === 'undefined') return DEFAULT_ACCENT;
-  const v = window.localStorage.getItem(ACCENT_KEY);
-  return ACCENTS.some(accent => accent.id === v) ? v as ThemeAccent : DEFAULT_ACCENT;
+export function isThemeAccent(value: unknown): value is ThemeAccent {
+  return ACCENTS.some(accent => accent.id === value);
 }
 
 export function resolveMode(mode: ThemeMode): 'light' | 'dark' {
@@ -58,14 +52,4 @@ export function applyTheme(mode: ThemeMode, accent: ThemeAccent) {
 
   for (const a of ACCENTS) body.classList.remove(`accent-${a.id}`);
   body.classList.add(`accent-${accent}`);
-}
-
-export function setMode(mode: ThemeMode) {
-  if (typeof window !== 'undefined') window.localStorage.setItem(MODE_KEY, mode);
-  applyTheme(mode, getStoredAccent());
-}
-
-export function setAccent(accent: ThemeAccent) {
-  if (typeof window !== 'undefined') window.localStorage.setItem(ACCENT_KEY, accent);
-  applyTheme(getStoredMode(), accent);
 }

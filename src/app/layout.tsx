@@ -14,11 +14,9 @@ import { absoluteMetadataUrl, getMetadataBaseUrl } from '@/lib/metadata';
 
 // Applies the saved theme before first paint to avoid a flash of the wrong theme.
 const THEME_BOOTSTRAP = `(function(){try{
-  var signedIn = localStorage.getItem('44-auth-session-present') === 'true';
-  var m = signedIn ? (localStorage.getItem('44-theme-mode') || 'light') : 'light';
-  var a = signedIn ? (localStorage.getItem('44-theme-accent') || 'amber') : 'amber';
-  var resolved = m === 'system' ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : m;
-  document.body.className = 'theme-' + resolved + ' accent-' + a;
+  localStorage.removeItem('44-theme-mode');
+  localStorage.removeItem('44-theme-accent');
+  document.body.className = 'theme-dark accent-ocean';
 }catch(e){}})();`;
 
 export const metadata: Metadata = {
@@ -84,7 +82,7 @@ export const viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="theme-light accent-amber" suppressHydrationWarning>
+      <body className="theme-dark accent-ocean" suppressHydrationWarning>
         <Script id="theme-bootstrap" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
         <ThemeSync />
 

@@ -314,8 +314,9 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
-    document.body.classList.toggle('music-player-active', Boolean(currentTrack));
-    document.body.classList.toggle('music-player-expanded', Boolean(currentTrack && expanded));
+    const hasVisiblePlayer = Boolean(currentTrack && currentTrack.playbackMode !== 'radio');
+    document.body.classList.toggle('music-player-active', hasVisiblePlayer);
+    document.body.classList.toggle('music-player-expanded', Boolean(hasVisiblePlayer && expanded));
     return () => {
       document.body.classList.remove('music-player-active', 'music-player-expanded');
     };
@@ -718,14 +719,17 @@ export function MusicPlayerBar() {
     seek,
     setVolume,
     toggleMute,
+    clear,
   } = useMusicPlayer();
   const [queueOpen, setQueueOpen] = useState(false);
+  const [shuffleEnabled, setShuffleEnabled] = useState(false);
   const dragStartYRef = useRef<number | null>(null);
 
   if (!currentTrack) return null;
 
   const effectiveDuration = duration || currentTrack.durationSeconds || 0;
   const isRadioPlayback = currentTrack.playbackMode === 'radio';
+  if (isRadioPlayback) return null;
   const canPlayPrevious = currentIndex > 0;
   const canPlayNext = currentIndex < queue.length - 1;
   const percent = progressPercent(currentTime, effectiveDuration);
@@ -745,6 +749,12 @@ export function MusicPlayerBar() {
   function minimizeExpanded() {
     setExpanded(false);
     setQueueOpen(false);
+  }
+
+  function toggleShuffle() {
+    const nextEnabled = !shuffleEnabled;
+    if (nextEnabled) shuffleQueue();
+    setShuffleEnabled(nextEnabled);
   }
 
   function onSheetPointerDown(event: React.PointerEvent<HTMLElement>) {
@@ -795,6 +805,9 @@ export function MusicPlayerBar() {
             </button>
             <button type="button" className="music-player-button music-player-button-primary music-player-button-icon" onClick={togglePlayback} aria-label={isPlaying ? 'Pause' : 'Play'}>
               <PlayerIcon name={isPlaying ? 'pause' : 'play'} />
+            </button>
+            <button type="button" className="music-player-button music-player-button-icon music-player-close" onClick={clear} aria-label="Close player">
+              <PlayerIcon name="remove" />
             </button>
             <button type="button" className="music-player-button music-player-button-icon" onClick={playNext} aria-label="Next track" disabled={!canPlayNext}>
               <PlayerIcon name="next" />
@@ -901,7 +914,14 @@ export function MusicPlayerBar() {
                   </button>
                 ) : (
                   <>
-                  <button type="button" className="music-player-sheet-button music-player-sheet-button-utility" onClick={shuffleQueue} aria-label="Shuffle queue" disabled={queue.length < 3}>
+                  <button
+                    type="button"
+                    className={shuffleEnabled ? 'music-player-sheet-button music-player-sheet-button-utility music-player-sheet-shuffle music-player-sheet-button-active' : 'music-player-sheet-button music-player-sheet-button-utility music-player-sheet-shuffle'}
+                    onClick={toggleShuffle}
+                    aria-label={shuffleEnabled ? 'Turn shuffle off' : 'Turn shuffle on'}
+                    aria-pressed={shuffleEnabled}
+                    disabled={queue.length < 3}
+                  >
                     <PlayerIcon name="shuffle" />
                   </button>
                   <button type="button" className="music-player-sheet-button" onClick={playPrevious} aria-label="Previous track" disabled={!canPlayPrevious}>

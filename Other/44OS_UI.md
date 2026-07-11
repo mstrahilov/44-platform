@@ -10,7 +10,7 @@ Current implementation snapshot, July 10, 2026:
 
 - Store, Community, Library, Radio, Search, Notifications, Settings, and Inbox have been through the mobile polish pass.
 - Verified in the app after the pass: `npm run lint`, `npx tsc --noEmit`, and route smoke checks for `/store`, `/community`, `/library`, `/radio`, `/search`, and `/notifications`.
-- Mobile rendered checks confirmed Store title/filter row, hidden local mobile search, visible Search page title with no placeholder, and the mobile Dock order Store, Community, Radio, Library, Search.
+- Mobile rendered checks confirmed the Store title/filter row, hidden local mobile search, visible Search page title with no placeholder, and the former mobile Dock order; the current mobile Dock order is Discover (`/store`), Library, Radio, Community, Search.
 - Radio and Notifications also have source-level implementation aligned with this document; their live visual state may depend on signed-in/session data or Radio playlist setup.
 
 ---
@@ -144,9 +144,9 @@ The Dock is the OS taskbar and app launcher. It renders from `src/lib/osApps.ts`
 
 Current Dock order:
 
-- Signed in desktop: Library, divider, Store, Radio, Community, spacer, Support, divider, Settings.
-- Signed out desktop: Store, Radio, Community, spacer, Support, Log In.
-- Mobile fixed Dock: Store, Community, Radio, Library, Search.
+- Signed in desktop: Library, divider, Discover (`/store`), Radio, Community, spacer, Support, divider, Settings.
+- Signed out desktop: Discover (`/store`), Radio, Community, spacer, Support, Log In.
+- Mobile fixed Dock: Discover (`/store`), Library, Radio, Community, Search.
 
 Rules:
 
@@ -168,6 +168,11 @@ The Topbar owns:
 - Cart when it has items.
 - Notifications.
 - Avatar/account menu.
+
+Theme rules:
+
+- Signed-out visitors always see dark mode with the Ocean accent on desktop and mobile.
+- Signed-in theme mode and accent are account preferences loaded from Supabase; they are never persisted in browser local storage.
 
 Topbar rules:
 

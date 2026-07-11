@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 
 type CropTarget = 'avatar' | 'hero';
 
@@ -17,14 +17,20 @@ export function ProfileImageCropDialog({
   onCancel: () => void;
   onConfirm: (file: File) => Promise<void>;
 }) {
-  const sourceUrl = useMemo(() => URL.createObjectURL(file), [file]);
+  const [sourceUrl, setSourceUrl] = useState('');
   const [zoom, setZoom] = useState(1);
   const [offsetX, setOffsetX] = useState(0);
   const [offsetY, setOffsetY] = useState(0);
+  const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
 
   useEffect(() => {
-    return () => URL.revokeObjectURL(sourceUrl);
-  }, [sourceUrl]);
+    const reader = new FileReader();
+    reader.onload = () => setSourceUrl(typeof reader.result === 'string' ? reader.result : '');
+    reader.readAsDataURL(file);
+    return () => {
+      if (reader.readyState === FileReader.LOADING) reader.abort();
+    };
+  }, [file]);
 
   async function confirm() {
     if (!sourceUrl || busy) return;
@@ -67,6 +73,29 @@ export function ProfileImageCropDialog({
     transform: `translate(${offsetX * -0.35}%, ${offsetY * -0.35}%) scale(${zoom})`,
   };
 
+  function beginDrag(event: ReactPointerEvent<HTMLDivElement>) {
+    if (busy) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+  }
+
+  function dragImage(event: ReactPointerEvent<HTMLDivElement>) {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const deltaX = event.clientX - drag.x;
+    const deltaY = event.clientY - drag.y;
+    dragRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+    setOffsetX(value => clamp(value - (deltaX * 100) / Math.max(1, bounds.width * 0.35), -100, 100));
+    setOffsetY(value => clamp(value - (deltaY * 100) / Math.max(1, bounds.height * 0.35), -100, 100));
+  }
+
+  function endDrag(event: ReactPointerEvent<HTMLDivElement>) {
+    if (dragRef.current?.pointerId !== event.pointerId) return;
+    dragRef.current = null;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  }
+
   return (
     <div className="profile-crop-overlay" role="presentation">
       <button type="button" className="profile-crop-scrim" aria-label="Cancel image editing" onClick={onCancel} />
@@ -79,28 +108,31 @@ export function ProfileImageCropDialog({
           </button>
         </div>
 
-        <div className={target === 'avatar' ? 'profile-crop-preview profile-crop-preview-avatar' : 'profile-crop-preview profile-crop-preview-cover'}>
+        <div
+          className={target === 'avatar' ? 'profile-crop-preview profile-crop-preview-avatar' : 'profile-crop-preview profile-crop-preview-cover'}
+          onPointerDown={beginDrag}
+          onPointerMove={dragImage}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={sourceUrl} alt="Crop preview" style={previewStyle} />
+          {sourceUrl ? <img src={sourceUrl} alt="Crop preview" style={previewStyle} draggable={false} /> : null}
         </div>
 
         <div className="profile-crop-controls">
+          <p className="profile-crop-instruction">Drag the photo to reposition it.</p>
           <label>
             <span>Zoom</span>
             <input type="range" min="1" max="3" step="0.01" value={zoom} onChange={event => setZoom(Number(event.target.value))} />
-          </label>
-          <label>
-            <span>Horizontal position</span>
-            <input type="range" min="-100" max="100" step="1" value={offsetX} onChange={event => setOffsetX(Number(event.target.value))} />
-          </label>
-          <label>
-            <span>Vertical position</span>
-            <input type="range" min="-100" max="100" step="1" value={offsetY} onChange={event => setOffsetY(Number(event.target.value))} />
           </label>
         </div>
       </section>
     </div>
   );
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
 }
 
 function loadImage(source: string) {

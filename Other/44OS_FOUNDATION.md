@@ -163,9 +163,9 @@ Navigation rules:
 
 Current Dock order:
 
-- Signed in desktop: Library, divider, Store, Radio, Community, spacer, Support, divider, Settings.
-- Signed out desktop: Store, Radio, Community, spacer, Support, Log In.
-- Mobile: Store, Community, Radio, Library, Search.
+- Signed in desktop: Library, divider, Discover (`/store`), Radio, Community, spacer, Support, divider, Settings.
+- Signed out desktop: Discover (`/store`), Radio, Community, spacer, Support, Log In.
+- Mobile: Discover (`/store`), Library, Radio, Community, Search.
 
 Library and Settings are signed-in desktop Dock destinations. Library sits alone at the top of the signed-in desktop Dock. Studio does not appear in the Dock; creators enter through `Open Studio` on their own profile or the account menu. Inbox and Profile remain account-level surfaces. Support sits directly above the Settings divider on desktop. On mobile, Search replaces Settings in the Dock, and Settings is available from the avatar/account menu.
 
@@ -251,7 +251,7 @@ Current concept-to-table map:
 - Future services placeholder: `services` and `service_categories` are private and dormant. When services return, migrate them into canonical `products` rows with service fulfillment instead of restoring a parallel commerce system.
 - Resources were replaced by Community Questions. The old resource tables and app routes are removed.
 - Radio queue: `radio_playlist_entries` references canonical product `tracks` directly.
-- Local UI preferences remain in localStorage until cross-device persistence is intentionally built.
+- Theme mode and accent are stored only in the narrowly scoped `user_theme_preferences` table. Signed-out visitors always use dark mode with the Ocean accent; signed-in accounts load and save their theme through Supabase for cross-device consistency.
 - Removed speculative systems: generic categories, post categories, item/product components, product relations, generic unlockables, Library activity, unused Radio scheduling tables, and empty preference/icon registries.
 
 Known Supabase state from the launch cleanup:

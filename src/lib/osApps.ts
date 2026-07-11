@@ -62,7 +62,7 @@ export type OSApp = {
 export const OS_APPS: OSApp[] = [
   {
     id: 'home',
-    label: 'Home',
+    label: 'Discover',
     description: 'Your 44OS home. Pick up where you left off.',
     href: '/home',
     iconClass: 'os-icon-home',
@@ -90,7 +90,7 @@ export const OS_APPS: OSApp[] = [
   },
   {
     id: 'store',
-    label: 'Store',
+    label: 'Home',
     description: 'Find releases, books, assets, and merch from independent creators.',
     href: '/store',
     iconClass: 'os-icon-store',

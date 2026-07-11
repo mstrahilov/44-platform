@@ -383,7 +383,7 @@ function OwnedMusicRelease({
                   }
                 }}
               >
-                <div className="view-track-leading">
+                <div className={currentTrack?.id === track.id ? 'view-track-leading view-track-leading-current' : 'view-track-leading'}>
                   <span className="view-track-number">{index + 1}</span>
                   <button
                     type="button"
@@ -395,7 +395,7 @@ function OwnedMusicRelease({
                     }}
                     disabled={!track.audio_url}
                   >
-                    <span className={currentTrack?.id === track.id && isPlaying ? 'view-track-icon view-track-icon-pause' : 'view-track-icon view-track-icon-play'} aria-hidden="true" />
+                    <span className={currentTrack?.id === track.id ? `view-track-icon view-track-icon-equalizer${isPlaying ? ' view-track-icon-equalizer-playing' : ''}` : 'view-track-icon view-track-icon-play'} aria-hidden="true" />
                   </button>
                 </div>
                 <span className={currentTrack?.id === track.id && isPlaying ? 'view-track-title view-track-title-active' : 'view-track-title'}>{track.title}</span>

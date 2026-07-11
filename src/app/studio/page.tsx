@@ -125,13 +125,10 @@ export default function StudioPage() {
         if (section.id === 'assets') return experience === 'asset';
         return experience === 'physical';
       });
-      const published = items.filter(item => item.status === 'published').length;
       return {
         id: section.id,
         title: section.label,
         total: items.length,
-        published,
-        drafts: items.length - published,
         href: section.href,
       };
     }),
@@ -170,14 +167,12 @@ export default function StudioPage() {
               key={card.id}
               title={card.title}
               total={card.total}
-              published={card.published}
-              drafts={card.drafts}
             />
           ))}
-          <OverviewStatCard label="Library Saves" value={librarySaves} note="Saved by fans" />
-          <OverviewStatCard label="Total Plays" value={totalPlays} note="Music plays" />
-          <OverviewStatCard label="Products Sold" value={soldItems} note="Paid items" />
-          <OverviewStatCard label="Revenue Earned" value={formatCurrency(revenueCents)} note="Gross revenue" />
+          <OverviewStatCard label="Library Saves" value={librarySaves} />
+          <OverviewStatCard label="Total Plays" value={totalPlays} />
+          <OverviewStatCard label="Products Sold" value={soldItems} />
+          <OverviewStatCard label="Revenue Earned" value={formatCurrency(revenueCents)} />
         </div>
 
         {overview.metricsError && (
@@ -224,13 +219,12 @@ export default function StudioPage() {
   );
 }
 
-function OverviewStatCard({ label, value, note }: { label: string; value: string | number; note: string }) {
+function OverviewStatCard({ label, value }: { label: string; value: string | number }) {
   return (
     <GlassPanel className="dashboard-metric-card">
       <div className="dashboard-overview-card-inner">
         <div className="os-type-meta">{label}</div>
         <div className="os-type-page-title">{value}</div>
-        <p className="os-type-body-small">{note}</p>
       </div>
     </GlassPanel>
   );
@@ -239,22 +233,15 @@ function OverviewStatCard({ label, value, note }: { label: string; value: string
 function OverviewCard({
   title,
   total,
-  published,
-  drafts,
 }: {
   title: string;
   total: number;
-  published: number;
-  drafts: number;
 }) {
   return (
     <GlassPanel className="dashboard-overview-card">
       <div className="dashboard-overview-card-inner">
         <div className="os-type-meta">{title}</div>
         <div className="os-type-page-title">{total}</div>
-        <div className="os-type-body-small">
-          {published} published, {drafts} draft
-        </div>
       </div>
     </GlassPanel>
   );

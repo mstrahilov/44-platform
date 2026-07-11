@@ -51,18 +51,10 @@ function DockItem({
   app,
   active,
   compact,
-  expanded,
-  onOpen,
-  pathname,
-  searchParams,
 }: {
   app: OSApp;
   active: boolean;
   compact: boolean;
-  expanded: boolean;
-  onOpen: (app: OSApp) => void;
-  pathname: string;
-  searchParams: URLSearchParams;
 }) {
   const { openContextMenu } = useContextMenu();
 
@@ -78,27 +70,11 @@ function DockItem({
         className={active ? 'sidebar-item sidebar-item-active' : 'sidebar-item'}
         title={compact ? app.label : undefined}
         aria-label={app.label}
-        aria-expanded={app.children ? expanded : undefined}
-        onClick={() => onOpen(app)}
         onContextMenu={event => openContextMenu(event, entries)}
       >
         <span className={`os-icon ${app.iconClass}`} aria-hidden="true" />
         <span className="sidebar-item-label">{app.label}</span>
       </Link>
-      {!compact && expanded && app.children && (
-        <div className="sidebar-children">
-          {app.children.map(child => (
-            <Link
-              key={child.id}
-              href={child.href}
-              className={isChildActive(child, pathname, searchParams) ? 'sidebar-child sidebar-child-active' : 'sidebar-child'}
-            >
-              <span className="sidebar-child-icon sidebar-child-icon-empty" aria-hidden="true" />
-              <span className="sidebar-child-label">{child.label}</span>
-            </Link>
-          ))}
-        </div>
-      )}
     </div>;
 }
 
@@ -134,19 +110,11 @@ function DockSection({
   apps,
   activeAppId,
   compact,
-  expandedAppId,
-  onOpen,
-  pathname,
-  searchParams,
 }: {
   label?: string;
   apps: OSApp[];
   activeAppId: string;
   compact: boolean;
-  expandedAppId: string | null;
-  onOpen: (app: OSApp) => void;
-  pathname: string;
-  searchParams: URLSearchParams;
 }) {
   if (apps.length === 0) return null;
 
@@ -154,8 +122,7 @@ function DockSection({
     <div className="sidebar-section" aria-label={label}>
       {label && <div className="sidebar-section-label">{label}</div>}
       {apps.map(app => (
-        <DockItem key={app.id} app={app} active={activeAppId === app.id} compact={compact}
-          expanded={expandedAppId === app.id} onOpen={onOpen} pathname={pathname} searchParams={searchParams} />
+        <DockItem key={app.id} app={app} active={activeAppId === app.id} compact={compact} />
       ))}
     </div>
   );
@@ -249,7 +216,7 @@ export default function Sidebar() {
   const menuApps = [menuLibraryApp, getOSApp('store'), getOSApp('radio'), getOSApp('community'), studioApp, supportApp, settingsApp]
     .filter((app): app is OSApp => Boolean(app))
     .filter((app, index, apps) => apps.findIndex(candidate => candidate.id === app.id) === index);
-  const mobileDockApps = ['store', 'community', 'radio', 'library', 'search']
+  const mobileDockApps = ['store', 'library', 'radio', 'community', 'search']
     .map(id => getOSApp(id as OSApp['id']))
     .filter((app): app is OSApp => Boolean(app));
 
@@ -286,14 +253,12 @@ export default function Sidebar() {
       <nav className="sidebar-nav sidebar-nav-desktop" aria-label="Dock">
         {libraryApp && (
           <>
-            <DockItem app={libraryApp} active={mainActiveAppId === libraryApp.id} compact={compact}
-              expanded={expandedAppId === libraryApp.id} onOpen={openApp} pathname={pathname} searchParams={searchParams} />
+            <DockItem app={libraryApp} active={mainActiveAppId === libraryApp.id} compact={compact} />
             <div className="sidebar-divider" />
           </>
         )}
 
-        <DockSection apps={primaryApps} activeAppId={mainActiveAppId} compact={compact} expandedAppId={expandedAppId}
-          onOpen={openApp} pathname={pathname} searchParams={searchParams} />
+        <DockSection apps={primaryApps} activeAppId={mainActiveAppId} compact={compact} />
 
         {pinnedItems.length > 0 && (
           <>
@@ -307,15 +272,13 @@ export default function Sidebar() {
         <div className="sidebar-spacer" />
 
         {supportApp && (
-          <DockItem app={supportApp} active={mainActiveAppId === supportApp.id} compact={compact}
-            expanded={false} onOpen={openApp} pathname={pathname} searchParams={searchParams} />
+          <DockItem app={supportApp} active={mainActiveAppId === supportApp.id} compact={compact} />
         )}
 
         {user && settingsApp && (
           <>
             <div className="sidebar-divider" />
-            <DockItem app={settingsApp} active={mainActiveAppId === settingsApp.id} compact={compact}
-              expanded={false} onOpen={openApp} pathname={pathname} searchParams={searchParams} />
+            <DockItem app={settingsApp} active={mainActiveAppId === settingsApp.id} compact={compact} />
           </>
         )}
 

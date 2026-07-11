@@ -366,7 +366,7 @@ export function ProductStoreDetail({
                       }
                     }}
                   >
-                    <div className="view-track-leading">
+                    <div className={active ? 'view-track-leading view-track-leading-current' : 'view-track-leading'}>
                       <span className="view-track-number">{trackNumbers.get(track.id) ?? index + 1}</span>
                       <button
                         className="view-track-play"
@@ -378,7 +378,7 @@ export function ProductStoreDetail({
                           toggleReleaseTrack(track);
                         }}
                       >
-                        <span className={active && isPlaying ? 'view-track-icon view-track-icon-pause' : 'view-track-icon view-track-icon-play'} aria-hidden="true" />
+                        <span className={active ? `view-track-icon view-track-icon-equalizer${isPlaying ? ' view-track-icon-equalizer-playing' : ''}` : 'view-track-icon view-track-icon-play'} aria-hidden="true" />
                       </button>
                     </div>
                     <div className={active && isPlaying ? 'view-track-title view-track-title-active' : 'view-track-title'}>{track.title}</div>
