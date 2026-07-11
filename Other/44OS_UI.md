@@ -6,6 +6,13 @@ This is one of the three active handoff documents for 44OS. Read it before chang
 
 The local screenshot reference folder is `UI Elements/`. Treat those images as reference material, not production assets.
 
+Current implementation snapshot, July 10, 2026:
+
+- Store, Community, Library, Radio, Search, Notifications, Settings, and Inbox have been through the mobile polish pass.
+- Verified in the app after the pass: `npm run lint`, `npx tsc --noEmit`, and route smoke checks for `/store`, `/community`, `/library`, `/radio`, `/search`, and `/notifications`.
+- Mobile rendered checks confirmed Store title/filter row, hidden local mobile search, visible Search page title with no placeholder, and the mobile Dock order Store, Community, Radio, Library, Search.
+- Radio and Notifications also have source-level implementation aligned with this document; their live visual state may depend on signed-in/session data or Radio playlist setup.
+
 ---
 
 ## 1. Quality Bar
@@ -139,20 +146,20 @@ Current Dock order:
 
 - Signed in desktop: Library, divider, Store, Radio, Community, spacer, Support, divider, Settings.
 - Signed out desktop: Store, Radio, Community, spacer, Support, Log In.
-- Mobile fixed Dock: Store, Library, Search, Radio, Community.
+- Mobile fixed Dock: Store, Community, Radio, Library, Search.
 
 Rules:
 
 - Store is the visible catalog app.
-- Library and Settings are signed-in Dock destinations. Studio opens from the creator's own profile and is not a Dock app.
+- Library and Settings are signed-in desktop Dock destinations. Studio opens from the creator's own profile/account menu and is not a Dock app.
 - Search is immediately left of Notifications on desktop and remains a page destination in the mobile Dock.
 - Notifications stay in the Topbar.
-- Messages and Profile are hidden from the v1 Dock.
+- Inbox and Profile are hidden from the v1 Dock.
 - Resources and the old Services/Projects flows are removed from the v1 app.
 - Full Dock rows keep a 56px rhythm; child routes use substantial 40px rows.
 - Expanded Dock child routes are text-only and align child labels under the parent row label axis.
 - Compact Dock targets are slightly landscape-shaped at 56 by 52px.
-- The mobile full menu is a compact inset drawer, not a full-width navigation panel.
+- There is currently no mobile Dock menu button. Mobile global destinations are the five fixed Dock items; account-only destinations live in the avatar menu.
 - Pinned items should use artwork/profile imagery when available.
 
 The Topbar owns:
@@ -167,6 +174,9 @@ Topbar rules:
 - Do not use Topbar tabs for primary app sections. Prefer in-page sections and filters.
 - Do not show tab-like local filters and back label in the same slot.
 - Desktop Search expands in place without a halo or rectangular highlight and must remain left of Notifications.
+- Mobile top-left shows the 44 logo linking to `/store`; contextual detail pages show a circular back button immediately to the right of the logo.
+- Signed-out mobile shows a default profile icon linking to `/login`.
+- Account menu labels are Profile, Inbox, Studio; mobile also exposes Settings and hides Log Out.
 - Any local filters must be visually discoverable with clear contrast and active state.
 - The Dock answers "Where am I going?" In-page sections answer "What part of this app am I viewing?"
 
@@ -184,6 +194,8 @@ Page hero rules:
 
 - Titles are nouns or clear destinations: Store, Library, Questions, Collaboration, Studio, Settings.
 - Primary title descriptions are archived below for possible future reuse and are not rendered in the current UI.
+- On mobile hub pages with a local filter, the header collapses to title plus the circular filter button on one row. Do not show Store/Community/Library local search inputs on mobile; use the fixed mobile Search Dock item for global search.
+- Mobile primary page titles use a smaller iOS-like large-title scale, currently 42px, so controls can sit beside them without overlap.
 
 Archived primary-page descriptions (saved July 10, 2026):
 
@@ -225,6 +237,23 @@ Community state rules:
 - Posts, Questions, and Collaboration show loading states until their first Supabase request completes.
 - Never render an empty-state message while the initial request is still pending.
 - Read failures surface as errors; they must not silently look like an empty community.
+- Regular Community feed posts are links to `/community/thread/[id-or-slug]`; do not reintroduce inline reply drawers on the feed.
+- Inline reply forms live on the thread page only.
+- The feed composer placeholder is `Start a new post...` for the general feed.
+
+Search rules:
+
+- Desktop Search is a topbar control.
+- Mobile Search is the fixed Dock item and opens `/search`.
+- `/search` uses the same `.page-search-control` visual as Store/Community/Library search.
+- On mobile `/search`, show the compact page title, hide placeholder text, and keep the empty guidance to one quiet line: `Enter any term to start a search.`
+
+Notifications rules:
+
+- Notification rows show icon/image, title, description, and a one-off dismiss `x`.
+- Do not show the uppercase kind label such as Achievement Unlocked, Reply, Mention, or Like above the title on the notification center.
+- Do not show full timestamp/date columns in notification rows; they caused mobile overlap and are not needed for the current notification center.
+- The topbar notification popover may keep compact local dismissal behavior, but the full `/notifications` page should stay visually simple.
 
 ---
 
@@ -236,16 +265,27 @@ Use existing/shared containers:
 - `.dashboard-page` for Studio and Settings.
 - `.social-shell` for Community, profiles, and inbox.
 - Detail layout classes for Store and Library item detail pages.
+- `.radio-page` plus `.radio-hero` for the Radio Now Playing surface.
 
 Rules:
 
 - Primary app front screens open with `HubHero`.
+- Radio is the exception: its live state uses a full-bleed item-detail-style hero rather than a standard HubHero.
 - Settings is a single sectioned page ordered Appearance, Account, then Notifications. Appearance and Account use two-column field grids; Region and Display Currency live under Account. Dock controls live inside Appearance.
 - Sections use `HubSection` or `SectionHeader`.
 - Empty states use shared message primitives.
 - Forms use shared field, label, helper, and action-row classes.
 - Lists should prefer row surfaces with clear dividers over decorative cards.
 - Repeated cards must have consistent image ratio, title line behavior, metadata rhythm, and action placement.
+- Track titles do not marquee. They stay single-line with truncation before the duration column.
+
+Radio rules:
+
+- `/radio` uses the same blurred artwork language as Store/Library item detail pages.
+- On mobile, Radio is full-bleed between topbar and Dock: no page side margins, no standard app header, and the main live state should fit without meaningful scrolling.
+- Radio content is centered: artwork, Now Playing, title, artist, then Play Radio/Stop Radio.
+- Keep the radio title smaller than item-detail hero titles so long track names do not wrap awkwardly.
+- Use symmetrical vertical spacing around Now Playing, artist, and Play Radio; avoid a top-heavy card.
 
 Studio publishing rules:
 

@@ -23,12 +23,13 @@ The launch mental model is:
 - **Store**: the user-facing discovery and acquisition app.
 - **Library**: the signed-in user's owned, saved, purchased, or added items.
 - **Community**: public posts, questions, collaboration, follows, and creator/fan connection.
-- **Radio**: public listening surface.
+- **Radio**: public listening surface with a live Now Playing hero.
 - **Studio**: signed-in creator workspace for publishing and catalog health; canonical routes live under `/studio`.
-- **Settings**: signed-in system, Dock, region, and account controls.
+- **Settings**: signed-in system, Dock, region, and account controls. On mobile, Settings is reached from the avatar/account menu rather than the Dock.
 - **Support**: public help surface.
+- **Search**: desktop topbar control and mobile Dock destination for global search.
 
-Resources and the old Services/Projects workflow are removed. Messages and standalone Profile remain account-level surfaces rather than v1 Dock destinations.
+Resources and the old Services/Projects workflow are removed. Inbox and standalone Profile remain account-level surfaces rather than v1 Dock destinations.
 
 Language rules:
 
@@ -156,7 +157,7 @@ Navigation rules:
 - The Dock, Dock settings, route ownership, app labels, archived app descriptions, and app visibility derive from the registry.
 - Dock child routes may define `iconClass`, but desktop and mobile dropdowns render text-only child rows aligned under the parent label axis.
 - `getActiveOSAppId(pathname)` must map every route to exactly one owning app.
-- Desktop Search is a topbar control immediately left of Notifications. Mobile Search is a fixed bottom-Dock destination.
+- Desktop Search is a topbar control immediately left of Notifications. Mobile Search is a fixed bottom-Dock destination and is the preferred mobile search entry point.
 - Notifications are a topbar control, not a Dock app.
 - Signed-out users see public destinations only.
 
@@ -164,9 +165,16 @@ Current Dock order:
 
 - Signed in desktop: Library, divider, Store, Radio, Community, spacer, Support, divider, Settings.
 - Signed out desktop: Store, Radio, Community, spacer, Support, Log In.
-- Mobile: Store, Library, Search, Radio, Community. The full menu opens from the left.
+- Mobile: Store, Community, Radio, Library, Search.
 
-Library and Settings are signed-in Dock destinations. Library sits alone at the top of the signed-in Dock. Studio does not appear in the Dock; creators enter through `Open Studio` on their own profile. Messages and Profile remain account-level surfaces. Support sits directly above the Settings divider.
+Library and Settings are signed-in desktop Dock destinations. Library sits alone at the top of the signed-in desktop Dock. Studio does not appear in the Dock; creators enter through `Open Studio` on their own profile or the account menu. Inbox and Profile remain account-level surfaces. Support sits directly above the Settings divider on desktop. On mobile, Search replaces Settings in the Dock, and Settings is available from the avatar/account menu.
+
+Current topbar/account behavior:
+
+- Mobile top-left shows the 44 logo linking to `/store`; contextual detail pages show a circular back button immediately beside it.
+- Signed-out mobile top-right shows a default profile icon linking to `/login`.
+- Signed-in account menu order is Profile, Inbox, Studio; mobile additionally shows Settings and hides Log Out.
+- The user-facing account label is Inbox, not Messages.
 
 ---
 
@@ -185,6 +193,7 @@ Canonical public routes:
 - `/support` - Support.
 - `/search` - Search.
 - `/login` - authentication.
+- `/notifications` - signed-in notification center launched from the topbar.
 
 Canonical signed-in routes:
 
@@ -192,6 +201,7 @@ Canonical signed-in routes:
 - `/library/[category]` - Library category.
 - `/library/item/[id]` - owned Library item detail using `library_items.id`.
 - `/profile` and `/profile/[username]` - profile surfaces.
+- `/inbox` - signed-in direct-message inbox, surfaced through the account menu.
 - `/studio` and Studio subroutes - creator workspace.
 - `/settings` - Settings entry. The page is sectioned into Account, Notifications, Region, and Appearance; legacy `?tab=` links are compatibility anchors only.
 
@@ -205,6 +215,7 @@ Compatibility and legacy policy:
 - `/library/item/[kind]/[id]` remains as a legacy compatibility route and redirects to `/library/item/[id]`.
 - `/dashboard` and dashboard subroutes redirect to Studio equivalents.
 - `/community/following` redirects to `/community?filter=following`.
+- `/community/thread/[id-or-slug]` is the canonical regular post detail page. Community feed rows and reply-count affordances should navigate there instead of expanding inline reply drawers on `/community`.
 - Removed Resources and Services/Projects URLs intentionally return not found; they are not compatibility surfaces.
 - Do not add vanity redirects unless there is a real public link to preserve.
 

@@ -10,6 +10,7 @@ import SystemShell from '@/components/SystemShell';
 import { ContextMenuProvider } from '@/components/ContextMenu';
 import { MobileMenuProvider } from '@/components/MobileMenuContext';
 import { Suspense } from 'react';
+import { absoluteMetadataUrl, getMetadataBaseUrl } from '@/lib/metadata';
 
 // Applies the saved theme before first paint to avoid a flash of the wrong theme.
 const THEME_BOOTSTRAP = `(function(){try{
@@ -21,22 +22,63 @@ const THEME_BOOTSTRAP = `(function(){try{
 }catch(e){}})();`;
 
 export const metadata: Metadata = {
-  title: '44',
-  description: 'A platform for independent creative work.',
+  metadataBase: new URL(getMetadataBaseUrl()),
+  title: {
+    default: '44OS',
+    template: '%s · 44OS',
+  },
+  description: 'A creative operating system for independent releases, libraries, community, and radio.',
+  alternates: {
+    canonical: absoluteMetadataUrl('/store'),
+  },
   manifest: '/manifest.webmanifest',
-  applicationName: '44',
+  applicationName: '44OS',
   appleWebApp: {
     capable: true,
-    title: '44',
-    statusBarStyle: 'default',
+    title: '44OS',
+    statusBarStyle: 'black-translucent',
   },
   formatDetection: {
     telephone: false,
   },
   icons: {
-    icon: process.env.VERCEL ? '/favicon-live.svg' : '/favicon-local.svg',
-    apple: '/favicon.png',
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icon-192.png', type: 'image/png', sizes: '192x192' },
+      { url: '/icon-512.png', type: 'image/png', sizes: '512x512' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
   },
+  openGraph: {
+    title: '44OS',
+    description: 'A creative operating system for independent releases, libraries, community, and radio.',
+    url: absoluteMetadataUrl('/store'),
+    siteName: '44OS',
+    type: 'website',
+    images: [
+      {
+        url: absoluteMetadataUrl('/og.png'),
+        width: 1200,
+        height: 630,
+        alt: '44OS',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: '44OS',
+    description: 'A creative operating system for independent releases, libraries, community, and radio.',
+    images: [absoluteMetadataUrl('/og.png')],
+  },
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#f6f0e7',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
