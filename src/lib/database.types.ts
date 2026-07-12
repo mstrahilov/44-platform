@@ -306,6 +306,255 @@ export type Database = {
           },
         ]
       }
+      catalog_offers: {
+        Row: {
+          code: string
+          created_at: string
+          currency: string
+          description: string | null
+          ends_at: string | null
+          fulfillment_type: string
+          id: string
+          item_id: string
+          offer_type: string
+          price_cents: number
+          quantity_limit: number | null
+          starts_at: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          ends_at?: string | null
+          fulfillment_type: string
+          id?: string
+          item_id: string
+          offer_type: string
+          price_cents?: number
+          quantity_limit?: number | null
+          starts_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          ends_at?: string | null
+          fulfillment_type?: string
+          id?: string
+          item_id?: string
+          offer_type?: string
+          price_cents?: number
+          quantity_limit?: number | null
+          starts_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_offers_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_order_addresses: {
+        Row: {
+          address_line_1: string
+          address_line_2: string | null
+          city: string
+          country_code: string
+          created_at: string
+          delivery_notes: string | null
+          order_id: string
+          postal_code: string
+          recipient_name: string
+          region: string
+        }
+        Insert: {
+          address_line_1: string
+          address_line_2?: string | null
+          city: string
+          country_code: string
+          created_at?: string
+          delivery_notes?: string | null
+          order_id: string
+          postal_code: string
+          recipient_name: string
+          region: string
+        }
+        Update: {
+          address_line_1?: string
+          address_line_2?: string | null
+          city?: string
+          country_code?: string
+          created_at?: string
+          delivery_notes?: string | null
+          order_id?: string
+          postal_code?: string
+          recipient_name?: string
+          region?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_order_addresses_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "commerce_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_order_items: {
+        Row: {
+          created_at: string
+          currency: string
+          fulfillment_status: string
+          id: string
+          item_id: string
+          item_title: string
+          line_total_cents: number
+          offer_id: string
+          offer_title: string
+          offer_type: string
+          order_id: string
+          quantity: number
+          seller_id: string | null
+          unit_price_cents: number
+        }
+        Insert: {
+          created_at?: string
+          currency: string
+          fulfillment_status?: string
+          id?: string
+          item_id: string
+          item_title: string
+          line_total_cents: number
+          offer_id: string
+          offer_title: string
+          offer_type: string
+          order_id: string
+          quantity?: number
+          seller_id?: string | null
+          unit_price_cents: number
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          fulfillment_status?: string
+          id?: string
+          item_id?: string
+          item_title?: string
+          line_total_cents?: number
+          offer_id?: string
+          offer_title?: string
+          offer_type?: string
+          order_id?: string
+          quantity?: number
+          seller_id?: string | null
+          unit_price_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_order_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_order_items_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commerce_order_items_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commerce_orders: {
+        Row: {
+          buyer_id: string
+          canceled_at: string | null
+          created_at: string
+          currency: string
+          discount_cents: number
+          id: string
+          idempotency_key: string
+          paid_at: string | null
+          placed_at: string | null
+          provider: string | null
+          provider_order_id: string | null
+          shipping_cents: number
+          status: string
+          subtotal_cents: number
+          tax_cents: number
+          total_cents: number
+          updated_at: string
+        }
+        Insert: {
+          buyer_id: string
+          canceled_at?: string | null
+          created_at?: string
+          currency?: string
+          discount_cents?: number
+          id?: string
+          idempotency_key?: string
+          paid_at?: string | null
+          placed_at?: string | null
+          provider?: string | null
+          provider_order_id?: string | null
+          shipping_cents?: number
+          status?: string
+          subtotal_cents?: number
+          tax_cents?: number
+          total_cents?: number
+          updated_at?: string
+        }
+        Update: {
+          buyer_id?: string
+          canceled_at?: string | null
+          created_at?: string
+          currency?: string
+          discount_cents?: number
+          id?: string
+          idempotency_key?: string
+          paid_at?: string | null
+          placed_at?: string | null
+          provider?: string | null
+          provider_order_id?: string | null
+          shipping_cents?: number
+          status?: string
+          subtotal_cents?: number
+          tax_cents?: number
+          total_cents?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       community_collaboration_responses: {
         Row: {
           author_id: string
@@ -1230,6 +1479,126 @@ export type Database = {
           },
         ]
       }
+      entitlement_events: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          entitlement_id: string
+          entitlement_type: string
+          id: string
+          item_id: string
+          metadata: Json
+          operation: string
+          reason: string | null
+          source_id: string | null
+          source_type: string
+          user_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          entitlement_id: string
+          entitlement_type: string
+          id?: string
+          item_id: string
+          metadata?: Json
+          operation: string
+          reason?: string | null
+          source_id?: string | null
+          source_type: string
+          user_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          entitlement_id?: string
+          entitlement_type?: string
+          id?: string
+          item_id?: string
+          metadata?: Json
+          operation?: string
+          reason?: string | null
+          source_id?: string | null
+          source_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entitlement_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entitlement_events_entitlement_id_fkey"
+            columns: ["entitlement_id"]
+            isOneToOne: false
+            referencedRelation: "entitlements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entitlement_events_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entitlements: {
+        Row: {
+          created_at: string
+          entitlement_type: string
+          expires_at: string | null
+          granted_at: string
+          id: string
+          item_id: string
+          revoked_at: string | null
+          source_id: string | null
+          source_type: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entitlement_type: string
+          expires_at?: string | null
+          granted_at?: string
+          id?: string
+          item_id: string
+          revoked_at?: string | null
+          source_id?: string | null
+          source_type: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entitlement_type?: string
+          expires_at?: string | null
+          granted_at?: string
+          id?: string
+          item_id?: string
+          revoked_at?: string | null
+          source_id?: string | null
+          source_type?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entitlements_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exchange_rates: {
         Row: {
           currency: string
@@ -1758,6 +2127,145 @@ export type Database = {
             columns: ["sender_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offer_entitlements: {
+        Row: {
+          created_at: string
+          entitlement_type: string
+          offer_id: string
+        }
+        Insert: {
+          created_at?: string
+          entitlement_type: string
+          offer_id: string
+        }
+        Update: {
+          created_at?: string
+          entitlement_type?: string
+          offer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_entitlements_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_attempts: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          currency: string
+          failure_code: string | null
+          failure_message: string | null
+          id: string
+          idempotency_key: string
+          order_id: string
+          provider: string
+          provider_payment_id: string | null
+          status: string
+          succeeded_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          currency: string
+          failure_code?: string | null
+          failure_message?: string | null
+          id?: string
+          idempotency_key: string
+          order_id: string
+          provider: string
+          provider_payment_id?: string | null
+          status?: string
+          succeeded_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          currency?: string
+          failure_code?: string | null
+          failure_message?: string | null
+          id?: string
+          idempotency_key?: string
+          order_id?: string
+          provider?: string
+          provider_payment_id?: string | null
+          status?: string
+          succeeded_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_attempts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_events: {
+        Row: {
+          error_message: string | null
+          event_type: string
+          id: string
+          order_id: string | null
+          payload: Json
+          payment_attempt_id: string | null
+          processed_at: string | null
+          processing_status: string
+          provider: string
+          provider_event_id: string
+          received_at: string
+        }
+        Insert: {
+          error_message?: string | null
+          event_type: string
+          id?: string
+          order_id?: string | null
+          payload: Json
+          payment_attempt_id?: string | null
+          processed_at?: string | null
+          processing_status?: string
+          provider: string
+          provider_event_id: string
+          received_at?: string
+        }
+        Update: {
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          order_id?: string | null
+          payload?: Json
+          payment_attempt_id?: string | null
+          processed_at?: string | null
+          processing_status?: string
+          provider?: string
+          provider_event_id?: string
+          received_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_events_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_events_payment_attempt_id_fkey"
+            columns: ["payment_attempt_id"]
+            isOneToOne: false
+            referencedRelation: "payment_attempts"
             referencedColumns: ["id"]
           },
         ]
@@ -3140,14 +3648,34 @@ export type Database = {
         Args: { other_profile_id: string }
         Returns: string
       }
+      grant_item_entitlement: {
+        Args: {
+          grant_reason?: string
+          grant_source_id?: string
+          grant_source_type?: string
+          target_entitlement_type: string
+          target_item_id: string
+          target_user_id: string
+        }
+        Returns: string
+      }
       is_conversation_member: {
         Args: { p_conversation_id: string; p_profile_id: string }
         Returns: boolean
       }
+      is_platform_admin: { Args: never; Returns: boolean }
       notification_actor_name: { Args: { actor: string }; Returns: string }
       refresh_content_question_stats: {
         Args: { target_entry_id: string }
         Returns: undefined
+      }
+      revoke_item_entitlement: {
+        Args: { revoke_reason: string; target_entitlement_id: string }
+        Returns: undefined
+      }
+      save_item_to_library: {
+        Args: { target_item_id: string }
+        Returns: string
       }
       send_direct_message: {
         Args: { message_body: string; target_conversation_id: string }

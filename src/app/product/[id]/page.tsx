@@ -176,7 +176,7 @@ export function ProductStoreDetail({
     if (!product) return;
     if (!user) { alert('Sign in first, then add this to your library.'); return; }
     if (!canSaveProductToLibrary(product)) return;
-    const { error } = await supabase.from('library_entries').upsert({ user_id: user.id, item_id: product.id, acquisition_type: 'free', status: 'visible' }, { onConflict: 'user_id,item_id' });
+    const { error } = await supabase.rpc('save_item_to_library', { target_item_id: product.id });
     if (error) { alert(error.message); return; }
     setOwned(true);
     setOwnedAcquisitionType('free');

@@ -124,7 +124,7 @@ Completion evidence (July 11, 2026): migration `20260712020000_typed_community_c
 
 ### M5 — Entitlements And Provider-neutral Commerce Core
 
-**Status: Not started**
+**Status: In progress**
 
 Separate catalog offers, money movement, access rights, and Library presentation before choosing a payment provider.
 
@@ -139,6 +139,8 @@ Completion criteria:
 
 - A client-authored row cannot forge a purchase, entitlement, achievement, or protected-asset unlock.
 - The commerce domain can accept a later processor adapter without changing Item or Library identity.
+
+Current evidence (July 11, 2026): `20260712030000_m5_provider_neutral_commerce.sql` establishes `catalog_offers`, typed offer grants, provider-neutral commerce orders and line snapshots, addresses, payment attempts/events, entitlements, and an immutable entitlement event ledger. Existing Library relationships are preserved as `legacy_library` entitlements without claiming processor verification. Active zero-cost Library offers preserve the tester experience; downloadable and physical offers are draft-only. `save_item_to_library` is server-authoritative, direct Library insertion is revoked, paid placeholder checkout is disabled, and repeated free saves are idempotent. The full linked-data rehearsal preserved all 32 Library entries with 32 matching Library entitlements. Remaining before M5 is Complete: route achievement rewards and protected asset/download authorization through trusted entitlement operations, then verify those denial paths end to end.
 
 ### M6 — Application And Route Consolidation
 
