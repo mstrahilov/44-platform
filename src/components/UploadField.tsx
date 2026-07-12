@@ -13,6 +13,8 @@ type UploadFieldProps = {
   previewKind?: 'image' | 'file' | 'none';
   onChange: (nextValue: string) => void;
   onAudioMetadata?: (durationSeconds: number) => void;
+  hideLabel?: boolean;
+  hideSuccessMessage?: boolean;
 };
 
 export function UploadField({
@@ -25,6 +27,8 @@ export function UploadField({
   previewKind,
   onChange,
   onAudioMetadata,
+  hideLabel = false,
+  hideSuccessMessage = false,
 }: UploadFieldProps) {
   const inputId = useId();
   const [uploading, setUploading] = useState(false);
@@ -54,7 +58,7 @@ export function UploadField({
 
   return (
     <div className="dashboard-field">
-      <div className="dashboard-field-label">{label}</div>
+      {!hideLabel && <div className="dashboard-field-label">{label}</div>}
       {value && previewKind !== 'none' && (previewKind === 'image' || accept?.includes('image')) ? (
         <div className="upload-preview upload-preview-image">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -87,7 +91,7 @@ export function UploadField({
           {value ? 'Uploaded' : 'No file selected yet'}
         </span>
       </div>
-      {message ? (
+      {message && !(hideSuccessMessage && message === 'Upload complete.') ? (
         <div className={message === 'Upload complete.' ? 'dashboard-status dashboard-status-success' : 'dashboard-status dashboard-status-error'}>
           {message}
         </div>

@@ -15,6 +15,7 @@ type LibraryMetricRow = StudioLibraryMetric;
 type OverviewState = {
   products: Product[];
   libraryItems: LibraryMetricRow[];
+  totalPlays: number;
   metricsError: string;
 };
 
@@ -24,6 +25,7 @@ export default function StudioPage() {
   const [overview, setOverview] = useState<OverviewState>({
     products: [],
     libraryItems: [],
+    totalPlays: 0,
     metricsError: '',
   });
 
@@ -37,11 +39,13 @@ export default function StudioPage() {
 
       let productRows: Product[] = [];
       let libraryItems: LibraryMetricRow[] = [];
+      let totalPlays = 0;
       let metricsError = '';
       try {
         const result = await getCreatorCatalogOverview(profileId);
         productRows = result.items;
         libraryItems = result.libraryItems;
+        totalPlays = result.totalPlays;
       } catch (overviewError) {
         metricsError = overviewError instanceof Error ? overviewError.message : 'Could not load Studio metrics.';
       }
@@ -49,6 +53,7 @@ export default function StudioPage() {
       setOverview({
         products: productRows,
         libraryItems,
+        totalPlays,
         metricsError,
       });
     }
@@ -88,7 +93,7 @@ export default function StudioPage() {
             </p>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <Link href="/profile" className="os-button os-button-primary">Open Public Profile</Link>
-              <Link href="/store" className="os-button os-button-ghost">Back to Browse</Link>
+              <Link href="/store" className="os-button os-button-ghost">Back to Store</Link>
             </div>
           </GlassPanel>
         </div>
@@ -98,24 +103,6 @@ export default function StudioPage() {
 
   const productById = new Map(overview.products.map(product => [product.id, product]));
 
-  const catalogCards = [
-    ...STUDIO_CATALOG_SECTIONS.map(section => {
-      const items = overview.products.filter(item => {
-        const experience = getProductExperience(item);
-        if (section.id === 'music') return experience === 'music';
-        if (section.id === 'books') return experience === 'book';
-        if (section.id === 'assets') return experience === 'asset';
-        return experience === 'physical';
-      });
-      return {
-        id: section.id,
-        title: section.label,
-        total: items.length,
-        href: section.href,
-      };
-    }),
-  ];
-
   const librarySaves = overview.libraryItems.length;
   const purchasedItems = overview.libraryItems.filter(item => item.acquisition_type === 'purchase');
   const soldItems = purchasedItems.length;
@@ -123,7 +110,7 @@ export default function StudioPage() {
     const product = item.item_id ? productById.get(item.item_id) : null;
     return total + (product?.price_cents ?? 0);
   }, 0);
-  const totalPlays = 0;
+  const totalPlays = overview.totalPlays;
   const productSections = STUDIO_CATALOG_SECTIONS.map(section => ({
     ...section,
     items: overview.products.filter(item => {
@@ -144,17 +131,10 @@ export default function StudioPage() {
         />
 
         <div className="dashboard-overview-grid">
-          {catalogCards.map(card => (
-            <OverviewCard
-              key={card.id}
-              title={card.title}
-              total={card.total}
-            />
-          ))}
-          <OverviewStatCard label="Library Saves" value={librarySaves} />
-          <OverviewStatCard label="Total Plays" value={totalPlays} />
-          <OverviewStatCard label="Products Sold" value={soldItems} />
-          <OverviewStatCard label="Revenue Earned" value={formatCurrency(revenueCents)} />
+          <OverviewStatCard label="Saves" value={librarySaves} />
+          <OverviewStatCard label="Plays" value={totalPlays} />
+          <OverviewStatCard label="Sold" value={soldItems} />
+          <OverviewStatCard label="Earned" value={formatCurrency(revenueCents)} />
         </div>
 
         {overview.metricsError && (
@@ -212,23 +192,6 @@ function OverviewStatCard({ label, value }: { label: string; value: string | num
   );
 }
 
-function OverviewCard({
-  title,
-  total,
-}: {
-  title: string;
-  total: number;
-}) {
-  return (
-    <GlassPanel className="dashboard-overview-card">
-      <div className="dashboard-overview-card-inner">
-        <div className="os-type-meta">{title}</div>
-        <div className="os-type-page-title">{total}</div>
-      </div>
-    </GlassPanel>
-  );
-}
-
 function StudioProductSection({
   title,
   itemLabel,
@@ -250,19 +213,20 @@ function StudioProductSection({
         {items.length === 0 ? (
           <div className="dashboard-empty">No {itemLabel}s yet.</div>
         ) : (
-          items.map((product, index) => (
-            <div key={product.id} className="dashboard-list-row" style={{ gridTemplateColumns: 'minmax(0, 1fr) auto', borderTop: index === 0 ? 'none' : undefined }}>
+          items.map(product => (
+            <Link key={product.id} href={`/studio/products/${product.id}`} className="dashboard-list-row studio-item-row">
               <div className="dashboard-row-copy">
-                <div className="dashboard-row-title-wrap">
-                  <span className={product.status === 'published' ? 'dashboard-status-dot dashboard-status-dot-published' : 'dashboard-status-dot dashboard-status-dot-draft'} aria-hidden="true" />
-                  <div className="dashboard-row-title">{product.title}</div>
+                <div className="dashboard-row-title">{product.title}</div>
+                <div className="dashboard-row-subtitle">
+                  {product.browse_type?.label || product.item_type || itemLabel}
                 </div>
-                <div className="dashboard-row-subtitle">{product.item_type || itemLabel}</div>
               </div>
               <div className="dashboard-row-actions">
-                <Link href={`/studio/products/${product.id}`} className="os-button os-button-ghost os-button-compact">Edit</Link>
+                <span aria-label={product.status === 'published' ? 'Published' : 'Draft'} className={product.status === 'published' ? 'dashboard-status-pill dashboard-status-pill-success studio-publication-status' : 'dashboard-status-pill studio-status-pill-draft studio-publication-status'}>
+                  {product.status === 'published' ? 'Published' : 'Draft'}
+                </span>
               </div>
-            </div>
+            </Link>
           ))
         )}
       </div>

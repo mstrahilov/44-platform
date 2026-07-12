@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { recordItemPlay } from '@/lib/domain/playAnalytics';
 
 export type MusicQueueTrack = {
   id: string;
@@ -283,6 +284,18 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
           pendingEvent.index,
           pendingEvent.reason,
         );
+        if (pendingEvent.productId) {
+          void recordItemPlay({
+            itemId: pendingEvent.productId,
+            trackId: pendingEvent.trackId,
+            sessionId: crypto.randomUUID(),
+            playbackMode: pendingEvent.track.playbackMode === 'radio' ? 'radio' : 'standard',
+            reason: pendingEvent.reason,
+          }).catch(() => {
+            // Analytics must never interrupt playback; pre-migration clients also
+            // remain functional while the database rollout is pending.
+          });
+        }
       }
     };
     const handlePause = () => setIsPlaying(false);
@@ -486,21 +499,31 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      const isRadio = currentTrack.playbackMode === 'radio';
+      const stopPlayback = () => {
+        audioRef.current?.pause();
+        setIsPlaying(false);
+        if (isRadio) navigator.mediaSession.playbackState = 'none';
+      };
       navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
       navigator.mediaSession.setActionHandler('play', () => {
+        if (isRadio) {
+          toggleRadioPlayback();
+          return;
+        }
         const audio = audioRef.current;
         if (!audio || !currentTrack) return;
         void requestPlayback(audio, currentTrack.audioUrl);
       });
-      navigator.mediaSession.setActionHandler('pause', () => {
-        audioRef.current?.pause();
-        setIsPlaying(false);
-      });
-      navigator.mediaSession.setActionHandler('previoustrack', playPrevious);
-      navigator.mediaSession.setActionHandler('nexttrack', playNext);
-      navigator.mediaSession.setActionHandler('seekto', details => {
+      navigator.mediaSession.setActionHandler('pause', stopPlayback);
+      navigator.mediaSession.setActionHandler('stop', isRadio ? stopPlayback : null);
+      navigator.mediaSession.setActionHandler('previoustrack', isRadio ? null : playPrevious);
+      navigator.mediaSession.setActionHandler('nexttrack', isRadio ? null : playNext);
+      navigator.mediaSession.setActionHandler('seekto', isRadio ? null : details => {
         if (typeof details.seekTime === 'number') seek(details.seekTime);
       });
+      navigator.mediaSession.setActionHandler('seekbackward', null);
+      navigator.mediaSession.setActionHandler('seekforward', null);
     } catch {
       // Some browsers expose Media Session metadata without every action.
     }

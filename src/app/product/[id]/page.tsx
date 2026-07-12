@@ -72,8 +72,11 @@ export function ProductStoreDetail({
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(() => searchParams.get('track'));
   const [inferredTrackDurations, setInferredTrackDurations] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const cameFromRadio = searchParams.get('source') === 'radio';
 
-  useTopbarBack({ href: backHref ?? '/store', label: backLabel ?? 'Browse' });
+  useTopbarBack(cameFromRadio
+    ? { href: '/radio', label: 'Radio' }
+    : { href: backHref ?? '/store', label: backLabel ?? 'Store' });
 
   useEffect(() => {
     async function fetchProduct() {
@@ -370,10 +373,10 @@ export function ProductStoreDetail({
             </div>
           ))}
         </div>
-        {(product.tags ?? []).length > 0 && (
+        {(product.browse_tags ?? []).length > 0 && (
           <div className="app-tag-row" style={{ marginTop: 24 }}>
-            {(product.tags ?? []).map(tag => (
-              <Link key={tag} href={browseHref({ q: tag })} className="os-pill os-type-pill">{tag}</Link>
+            {(product.browse_tags ?? []).map(tag => (
+              <Link key={tag.id} href={browseHref({ q: tag.label })} className="os-pill os-type-pill">{tag.label}</Link>
             ))}
           </div>
         )}
@@ -391,7 +394,7 @@ export function ProductStoreDetail({
       {related.length > 0 && (
         <div className="view-section">
           <div className="item-community-header" style={{ marginBottom: 28 }}>
-            <h2 className="view-section-title" style={{ margin: 0 }}>More from {creatorDisplayName}</h2>
+            <h2 className="view-section-title" style={{ margin: 0 }}>Similar Items</h2>
             <Link className="os-button os-button-secondary os-button-compact" href={creatorMoreLink}>
               View More
             </Link>
@@ -505,11 +508,16 @@ function buildProductDetails(product: Product, tracks: ProductTrack[], inferredD
   const experience = getProductExperience(product);
   const creator = product.creators?.display_name || product.creator || '44 Creator';
   const uploadDate = new Date(product.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const taxonomy = [
+    { label: 'Category', value: product.browse_category?.label || 'Unassigned' },
+    { label: 'Type', value: product.browse_type?.label || 'Unassigned' },
+    { label: 'Tags', value: product.browse_tags?.map(tag => tag.label).join(', ') || 'None' },
+  ];
   if (experience === 'music') {
     const totalLengthSeconds = tracks.reduce((sum, track) => sum + (getTrackDurationSeconds(track, inferredDurations) ?? 0), 0);
     return [
       { label: 'Creator', value: creator },
-      { label: 'Item Type', value: product.item_type || 'Release' },
+      ...taxonomy,
       { label: 'Release Year', value: String(product.year ?? 'N/A') },
       { label: 'Total Tracks', value: String(tracks.length) },
       { label: 'Total Length', value: formatTrackDuration(totalLengthSeconds) },
@@ -519,7 +527,7 @@ function buildProductDetails(product: Product, tracks: ProductTrack[], inferredD
   if (experience === 'book') {
     return [
       { label: 'Creator', value: creator },
-      { label: 'Book Type', value: product.item_type || 'Book' },
+      ...taxonomy,
       { label: 'Publication Year', value: String(product.year ?? 'N/A') },
       { label: 'Total Pages', value: 'Coming soon' },
       { label: 'Language', value: 'Coming soon' },
@@ -529,7 +537,7 @@ function buildProductDetails(product: Product, tracks: ProductTrack[], inferredD
   if (experience === 'asset') {
     return [
       { label: 'Creator', value: creator },
-      { label: 'Asset Type', value: product.item_type || 'Asset' },
+      ...taxonomy,
       { label: 'Year', value: String(product.year ?? 'N/A') },
       { label: 'Total Samples', value: 'Coming soon' },
       { label: 'Sample Format', value: 'Coming soon' },
@@ -538,7 +546,7 @@ function buildProductDetails(product: Product, tracks: ProductTrack[], inferredD
   }
   return [
     { label: 'Creator', value: creator },
-    { label: 'Item Type', value: product.item_type || 'Item' },
+    ...taxonomy,
     { label: 'Release Year', value: String(product.year ?? 'N/A') },
     { label: 'Color', value: 'Coming soon' },
     { label: 'Available Sizes', value: 'Coming soon' },

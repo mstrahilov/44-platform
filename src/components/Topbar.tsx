@@ -185,6 +185,7 @@ export function Topbar() {
       setUserMenuOpen(false);
       setNotifMenuOpen(false);
       setSearchOpen(false);
+      document.querySelector<HTMLElement>('.app-main-content')?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     });
   }, [pathname]);
 
@@ -367,8 +368,9 @@ export function Topbar() {
           <div ref={notifWrapRef} style={{ position: 'relative' }}>
             <button
               type="button"
-              className="os-topbar-icon-button"
+              className={notifMenuOpen ? 'os-topbar-icon-button os-topbar-icon-button-active' : 'os-topbar-icon-button'}
               aria-label="Notifications"
+              aria-expanded={notifMenuOpen}
               onClick={openNotifMenu}
             >
               <span className="os-topbar-icon-wrapper">

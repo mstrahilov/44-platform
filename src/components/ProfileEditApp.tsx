@@ -13,7 +13,7 @@ import { ProfileImageCropDialog } from '@/components/ProfileImageCropDialog';
 import type { Database } from '@/lib/database.types';
 import { getOwnProfile, updateOwnProfile } from '@/lib/domain/profiles';
 
-type PendingImage = { file: File; target: 'avatar' | 'hero' };
+type PendingImage = { file: File };
 
 export default function EditProfilePage() {
   const router = useRouter();
@@ -24,7 +24,6 @@ export default function EditProfilePage() {
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
-  const [heroUrl, setHeroUrl] = useState('');
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -32,7 +31,6 @@ export default function EditProfilePage() {
   const [pendingImage, setPendingImage] = useState<PendingImage | null>(null);
   const [error, setError] = useState('');
   const avatarInputId = useId();
-  const heroInputId = useId();
 
   useEffect(() => {
     if (authLoading) return;
@@ -45,7 +43,6 @@ export default function EditProfilePage() {
         setUsername(p.username ?? '');
         setBio(p.bio ?? '');
         setAvatarUrl(p.avatar_url ?? '');
-        setHeroUrl(p.hero_url ?? '');
       }
       setLoading(false);
     }
@@ -61,7 +58,6 @@ export default function EditProfilePage() {
       username: username.trim() || null,
       bio: bio.trim() || null,
       avatar_url: avatarUrl.trim() || null,
-      hero_url: heroUrl.trim() || null,
     };
     try {
       await updateOwnProfile(user.id, payload);
@@ -75,25 +71,24 @@ export default function EditProfilePage() {
     router.push(targetHandle ? `/profile/${targetHandle}` : '/profile');
   }
 
-  function selectImage(event: ChangeEvent<HTMLInputElement>, target: 'avatar' | 'hero') {
+  function selectImage(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
-    setPendingImage({ file, target });
+    setPendingImage({ file });
     event.target.value = '';
   }
 
-  async function uploadCroppedImage(file: File, target: 'avatar' | 'hero') {
+  async function uploadCroppedImage(file: File) {
     if (!user) return;
-    setUploading(target);
+    setUploading('avatar');
     setError('');
     try {
       const result = await uploadPublicFile({
         file,
-        folder: target === 'avatar' ? 'profiles/avatars' : 'profiles/covers',
+        folder: 'profiles/avatars',
         userId: user.id,
       });
-      if (target === 'avatar') setAvatarUrl(result.publicUrl);
-      else setHeroUrl(result.publicUrl);
+      setAvatarUrl(result.publicUrl);
       setPendingImage(null);
     } catch (uploadError) {
       setError(getUploadErrorMessage(uploadError));
@@ -133,24 +128,6 @@ export default function EditProfilePage() {
   return (
     <PageShell>
       <main className="social-shell social-shell-wide">
-        <label
-          htmlFor={heroInputId}
-          className="social-profile-cover profile-cover-edit-control"
-          style={{ backgroundImage: heroUrl ? `url(${heroUrl})` : undefined }}
-          aria-label="Cover preview"
-        >
-          <span className="profile-image-edit-icon" aria-hidden="true" />
-          <span className="profile-edit-visually-hidden">Choose a new cover image</span>
-        </label>
-        <input
-          id={heroInputId}
-          type="file"
-          accept="image/*"
-          onChange={event => selectImage(event, 'hero')}
-          disabled={Boolean(uploading)}
-          className="profile-image-input"
-        />
-
         <section className="social-profile-head">
           <div className="social-profile-main">
             <div className="social-profile-identity">
@@ -163,7 +140,7 @@ export default function EditProfilePage() {
                 id={avatarInputId}
                 type="file"
                 accept="image/*"
-                onChange={event => selectImage(event, 'avatar')}
+                onChange={selectImage}
                 disabled={Boolean(uploading)}
                 className="profile-image-input"
               />
@@ -233,12 +210,11 @@ export default function EditProfilePage() {
       {pendingImage && (
         <ProfileImageCropDialog
           file={pendingImage.file}
-          target={pendingImage.target}
           busy={Boolean(uploading)}
           onCancel={() => {
             if (!uploading) setPendingImage(null);
           }}
-          onConfirm={file => uploadCroppedImage(file, pendingImage.target)}
+          onConfirm={uploadCroppedImage}
         />
       )}
     </PageShell>

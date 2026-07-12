@@ -10,7 +10,6 @@ import {
   SocialAuthorLine,
   SocialAvatar,
   SocialChatBubbleIcon,
-  SocialEngagementRow,
   SocialHeartIcon,
   SocialPostRow,
   SocialRichText,
@@ -22,7 +21,6 @@ import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import {
   authorDisplayName,
   authorHref,
-  compactDate,
   likersByPost,
   type LikeRow,
   type SocialLiker,
@@ -116,16 +114,6 @@ export default function CommunityThreadPage() {
 
   const likersMap = useMemo(() => likersByPost(likes), [likes]);
   const threadLikers = thread ? (likersMap[thread.id] ?? []) : [];
-
-  const replyLikersMap = useMemo(() => {
-    const map: Record<string, SocialLiker[]> = {};
-    replyLikes.forEach(row => {
-      if (!row.profiles) return;
-      if (!map[row.reply_id]) map[row.reply_id] = [];
-      map[row.reply_id].push(row.profiles);
-    });
-    return map;
-  }, [replyLikes]);
 
   const replyLikeCounts = useMemo(() => {
     const map: Record<string, number> = {};
@@ -361,6 +349,7 @@ export default function CommunityThreadPage() {
               repliers={repliers}
               onLike={toggleLike}
               onReplyClick={() => requireCommunityInteraction(() => setReplyComposerOpen(open => !open))}
+              replyActionLabel="Reply"
               canDelete={isThreadAuthor}
               onDelete={deleteThread}
               disabled={liking}
@@ -424,7 +413,6 @@ export default function CommunityThreadPage() {
                   onInlineChange={setInlineBody}
                   onSubmitInline={submitInlineReply}
                   submitting={submitting}
-                  replyLikersMap={replyLikersMap}
                   replyLikeCounts={replyLikeCounts}
                   replyLikedByUser={replyLikedByUser}
                   onLikeReply={toggleReplyLike}
@@ -456,7 +444,6 @@ function ReplyBranch({
   onInlineChange,
   onSubmitInline,
   submitting,
-  replyLikersMap,
   replyLikeCounts,
   replyLikedByUser,
   onLikeReply,
@@ -475,7 +462,6 @@ function ReplyBranch({
   onInlineChange: (value: string) => void;
   onSubmitInline: (event: React.FormEvent<HTMLFormElement>, parentReplyId: string) => void;
   submitting: boolean;
-  replyLikersMap: Record<string, SocialLiker[]>;
   replyLikeCounts: Record<string, number>;
   replyLikedByUser: Set<string>;
   onLikeReply: (reply: SocialReply) => void;
@@ -488,7 +474,6 @@ function ReplyBranch({
       <ReplyRow
         reply={top}
         onReplyClick={() => (currentUserId && canInteract ? onOpenReply(top.id) : onBlockedInteraction())}
-        likers={replyLikersMap[top.id] ?? []}
         likeCount={replyLikeCounts[top.id] ?? 0}
         liked={replyLikedByUser.has(top.id)}
         onLike={() => onLikeReply(top)}
@@ -511,7 +496,6 @@ function ReplyBranch({
           <ReplyRow
             reply={child}
             onReplyClick={() => (currentUserId && canInteract ? onOpenReply(child.id) : onBlockedInteraction())}
-            likers={replyLikersMap[child.id] ?? []}
             likeCount={replyLikeCounts[child.id] ?? 0}
             liked={replyLikedByUser.has(child.id)}
             onLike={() => onLikeReply(child)}
@@ -537,7 +521,6 @@ function ReplyBranch({
 function ReplyRow({
   reply,
   onReplyClick,
-  likers,
   likeCount,
   liked,
   onLike,
@@ -547,7 +530,6 @@ function ReplyRow({
 }: {
   reply: SocialReply;
   onReplyClick: () => void;
-  likers: SocialLiker[];
   likeCount: number;
   liked: boolean;
   onLike: () => void;
@@ -566,14 +548,6 @@ function ReplyRow({
         <div className="social-actions">
           <button
             type="button"
-            className="social-action"
-            onClick={onReplyClick}
-            aria-label="Reply"
-          >
-            <SocialChatBubbleIcon />
-          </button>
-          <button
-            type="button"
             className="social-action social-action-like"
             data-liked={liked ? 'true' : 'false'}
             onClick={onLike}
@@ -581,9 +555,17 @@ function ReplyRow({
             aria-label={liked ? 'Unlike' : 'Like'}
           >
             <SocialHeartIcon filled={liked} />
+            {likeCount > 0 && <span className="social-action-count">{likeCount}</span>}
           </button>
-          <SocialEngagementRow likers={likers} likeCount={likeCount} />
-          <span className="social-time" style={{ marginLeft: 'auto' }}>{compactDate(reply.created_at)}</span>
+          <button
+            type="button"
+            className="social-action"
+            onClick={onReplyClick}
+            aria-label="Reply"
+          >
+            <SocialChatBubbleIcon />
+            <span className="social-action-label">Reply</span>
+          </button>
           {canDelete && (
             <button
               type="button"

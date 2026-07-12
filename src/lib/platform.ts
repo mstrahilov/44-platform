@@ -18,7 +18,6 @@ export interface Profile {
   username: string | null;
   display_name: string | null;
   avatar_url: string | null;
-  hero_url?: string | null;
   bio?: string | null;
   role?: string | null;
   creator_type?: string | null;
@@ -39,7 +38,6 @@ export interface Creator {
   name: string;
   bio: string | null;
   creator_type?: string | null;
-  hero_url: string | null;
   avatar_url: string | null;
   is_published: boolean;
   country_code?: string | null;

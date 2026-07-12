@@ -129,62 +129,11 @@ function TrashIcon() {
   );
 }
 
-function LikerAvatar({ liker }: { liker: SocialLiker }) {
-  const name = liker.display_name || liker.username || 'M';
-  return (
-    <span className="social-liker-avatar" aria-hidden="true">
-      {liker.avatar_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={liker.avatar_url} alt="" />
-      ) : (
-        initials(name)
-      )}
-    </span>
-  );
-}
-
-export function SocialEngagementRow({
-  likers,
-  likeCount,
-  repliers = [],
-  replyCount = 0,
-}: {
-  likers: SocialLiker[];
-  likeCount: number;
-  repliers?: SocialLiker[];
-  replyCount?: number;
-}) {
-  const useLikers = likeCount > 0 && likers.length > 0;
-  const source = useLikers ? likers : repliers;
-  const total = useLikers ? likeCount : replyCount;
-  if (source.length === 0 || total === 0) return null;
-
-  const first = source[0];
-  const firstName = first.display_name || first.username || 'Someone';
-  const shown = source.slice(0, Math.min(2, total));
-  const showOthers = total > 1;
-
-  return (
-    <span className="social-engagement">
-      <span className="social-engagement-stack">
-        {shown.map(liker => (
-          <LikerAvatar key={liker.id} liker={liker} />
-        ))}
-      </span>
-      <span className="social-engagement-text">
-        <strong>{firstName}</strong>{showOthers && <> and others</>}
-      </span>
-    </span>
-  );
-}
-
 export function SocialPostRow({
   post,
   replyCount = 0,
   likeCount = 0,
   liked = false,
-  likers = [],
-  repliers = [],
   onLike,
   onDelete,
   canDelete = false,
@@ -195,6 +144,7 @@ export function SocialPostRow({
   meta,
   onOpenClick,
   onReplyClick,
+  replyActionLabel,
   repliesOpen = false,
   rowClickable = true,
 }: {
@@ -214,6 +164,7 @@ export function SocialPostRow({
   meta?: ReactNode;
   onOpenClick?: () => void;
   onReplyClick?: () => void;
+  replyActionLabel?: string;
   repliesOpen?: boolean;
   rowClickable?: boolean;
 }) {
@@ -305,23 +256,6 @@ export function SocialPostRow({
           {body && <p className="social-row-body"><SocialRichText text={body} /></p>}
         </div>
         <div className="social-actions" onClick={stopRowNavigation}>
-          {onReplyClick ? (
-            <button
-              type="button"
-              className="social-action"
-              onClick={onReplyClick}
-              aria-label={`${replyCount} replies`}
-              aria-expanded={repliesOpen}
-            >
-              <ChatBubbleIcon />
-              {replyCount > 0 && <span className="social-action-count">{replyCount}</span>}
-            </button>
-          ) : (
-            <Link href={href} className="social-action" aria-label={`${replyCount} replies`} onClick={stopRowNavigation}>
-              <ChatBubbleIcon />
-              {replyCount > 0 && <span className="social-action-count">{replyCount}</span>}
-            </Link>
-          )}
           {onLike ? (
             <button
               type="button"
@@ -332,13 +266,33 @@ export function SocialPostRow({
               aria-label={liked ? 'Unlike' : 'Like'}
             >
               <HeartIcon filled={liked} />
+              {likeCount > 0 && <span className="social-action-count">{likeCount}</span>}
             </button>
           ) : (
-            <span className="social-action social-action-like" data-liked={liked ? 'true' : 'false'} aria-hidden="true">
+            <span className="social-action social-action-like" data-liked={liked ? 'true' : 'false'} aria-label={`${likeCount} likes`}>
               <HeartIcon filled={liked} />
+              {likeCount > 0 && <span className="social-action-count">{likeCount}</span>}
             </span>
           )}
-          <SocialEngagementRow likers={likers} likeCount={likeCount} repliers={repliers} replyCount={replyCount} />
+          {onReplyClick ? (
+            <button
+              type="button"
+              className="social-action"
+              onClick={onReplyClick}
+              aria-label={`${replyCount} replies`}
+              aria-expanded={repliesOpen}
+            >
+              <ChatBubbleIcon />
+              {replyActionLabel
+                ? <span className="social-action-label">{replyActionLabel}</span>
+                : replyCount > 0 && <span className="social-action-count">{replyCount}</span>}
+            </button>
+          ) : (
+            <Link href={href} className="social-action" aria-label={`${replyCount} replies`} onClick={stopRowNavigation}>
+              <ChatBubbleIcon />
+              {replyCount > 0 && <span className="social-action-count">{replyCount}</span>}
+            </Link>
+          )}
           {canDelete && onDelete && (
             <button
               type="button"

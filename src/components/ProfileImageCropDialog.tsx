@@ -2,17 +2,13 @@
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 
-type CropTarget = 'avatar' | 'hero';
-
 export function ProfileImageCropDialog({
   file,
-  target,
   busy,
   onCancel,
   onConfirm,
 }: {
   file: File;
-  target: CropTarget;
   busy: boolean;
   onCancel: () => void;
   onConfirm: (file: File) => Promise<void>;
@@ -35,8 +31,8 @@ export function ProfileImageCropDialog({
   async function confirm() {
     if (!sourceUrl || busy) return;
     const image = await loadImage(sourceUrl);
-    const outputWidth = target === 'avatar' ? 1024 : 1800;
-    const outputHeight = target === 'avatar' ? 1024 : 600;
+    const outputWidth = 1024;
+    const outputHeight = 1024;
     const canvas = document.createElement('canvas');
     canvas.width = outputWidth;
     canvas.height = outputHeight;
@@ -66,7 +62,7 @@ export function ProfileImageCropDialog({
 
     const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
     if (!blob) return;
-    await onConfirm(new File([blob], `${target}-${Date.now()}.jpg`, { type: 'image/jpeg' }));
+    await onConfirm(new File([blob], `avatar-${Date.now()}.jpg`, { type: 'image/jpeg' }));
   }
 
   const previewStyle = {
@@ -102,14 +98,14 @@ export function ProfileImageCropDialog({
       <section className="profile-crop-dialog" role="dialog" aria-modal="true" aria-labelledby="profile-crop-title">
         <div className="profile-crop-header">
           <button type="button" className="profile-crop-text-button" onClick={onCancel} disabled={busy}>Cancel</button>
-          <h2 id="profile-crop-title">Adjust {target === 'avatar' ? 'profile photo' : 'cover'}</h2>
+          <h2 id="profile-crop-title">Adjust profile photo</h2>
           <button type="button" className="profile-crop-text-button profile-crop-confirm" onClick={() => void confirm()} disabled={busy}>
             {busy ? 'Uploading…' : 'Use photo'}
           </button>
         </div>
 
         <div
-          className={target === 'avatar' ? 'profile-crop-preview profile-crop-preview-avatar' : 'profile-crop-preview profile-crop-preview-cover'}
+          className="profile-crop-preview profile-crop-preview-avatar"
           onPointerDown={beginDrag}
           onPointerMove={dragImage}
           onPointerUp={endDrag}

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useContextMenu, type ContextMenuEntry } from '@/components/ContextMenu';
-import { PageShell, HubHero, HubSection, CenteredMessage, EmptyMessage } from '@/components/Ui';
+import { PageShell, HubHero, CenteredMessage, EmptyMessage } from '@/components/Ui';
 import { getProductExperience, productLibraryHref, type ProductExperience } from '@/lib/experience';
 import { pinDockItem } from '@/lib/dockPreferences';
 import type { LibraryCategory } from '@/lib/libraryRoutes';
@@ -11,6 +11,7 @@ import type { Product } from '@/lib/products';
 import { creatorHref } from '@/lib/platform';
 import { useAuth } from '@/lib/useAuth';
 import { hideLibraryItem, listVisibleLibraryItems } from '@/lib/domain/library';
+import { FilterPopover } from '@/components/FilterPopover';
 
 const CATEGORY_EXPERIENCE: Partial<Record<LibraryCategory, ProductExperience>> = {
   music: 'music',
@@ -102,15 +103,6 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
     });
   }, [activeFilter, query, rows]);
 
-  const groupedRows = useMemo(() => {
-    if (activeFilter !== 'all') return [];
-    return [
-      { id: 'music', title: 'Music', rows: visibleRows.filter(row => getProductExperience(row.products!) === 'music') },
-      { id: 'books', title: 'Books', rows: visibleRows.filter(row => getProductExperience(row.products!) === 'book') },
-      { id: 'assets', title: 'Assets', rows: visibleRows.filter(row => getProductExperience(row.products!) === 'asset') },
-    ].filter(group => group.rows.length > 0);
-  }, [activeFilter, visibleRows]);
-
   if (authLoading) {
     return <PageShell><CenteredMessage>Loading...</CenteredMessage></PageShell>;
   }
@@ -156,21 +148,19 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
                 <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
                 <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Filter Library" aria-label="Filter Library" />
               </label>
-              <details className="page-filter-menu">
-                <summary className="page-filter-button" aria-label="Filter Library" title="Filter Library">
-                  <span className="page-filter-icon" aria-hidden="true"><i /><i /><i /></span>
-                </summary>
-                <div className="page-filter-popover">
+              <FilterPopover label="Filter Library">
+                {({ close }) => <>
                   {(['all', ...availableFilters] as LibraryFilter[]).map(filter => (
                     <button key={filter} type="button" className={activeFilter === filter ? 'page-filter-option page-filter-option-active' : 'page-filter-option'} onClick={event => {
                       setActiveFilter(filter);
-                      event.currentTarget.closest('details')?.removeAttribute('open');
+                      event.currentTarget.blur();
+                      close();
                     }}>
                       {FILTER_LABELS[filter]}
                     </button>
                   ))}
-                </div>
-              </details>
+                </>}
+              </FilterPopover>
             </div>
           )}
         />
@@ -178,18 +168,6 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
           <EmptyMessage>{error}</EmptyMessage>
         ) : visibleRows.length === 0 ? (
           <EmptyMessage>{query ? 'No Library items match your search.' : activeFilter === 'all' ? 'Your library is empty.' : `No ${FILTER_LABELS[activeFilter].toLowerCase()} in your Library.`}</EmptyMessage>
-        ) : activeFilter === 'all' ? (
-          <>
-            {groupedRows.map(group => (
-              <HubSection key={group.id} title={group.title}>
-                <div className="app-grid">
-                  {group.rows.map(row => (
-                    <LibraryCard key={row.id} row={row} onRemove={removeLibraryRow} />
-                  ))}
-                </div>
-              </HubSection>
-            ))}
-          </>
         ) : (
           <div className="app-grid">
             {visibleRows.map(row => (
@@ -206,7 +184,6 @@ function LibraryCard({ row, onRemove }: { row: LibraryRow; onRemove: (row: Libra
   const { openContextMenu } = useContextMenu();
   const product = row.products!;
   const image = product.cover_url || product.hero_url;
-  const shape = getLibraryTileShape(product);
   const creatorName = product.creators?.display_name || product.creator || '44 Creator';
   const href = productLibraryHref(product, row.id);
   const experience = getProductExperience(product);
@@ -238,7 +215,7 @@ function LibraryCard({ row, onRemove }: { row: LibraryRow; onRemove: (row: Libra
 
   return (
     <Link className="product-tile" href={href} onContextMenu={event => openContextMenu(event, entries)}>
-      <span className={`product-tile-art product-tile-art-${shape}`}>
+      <span className="product-tile-art product-tile-art-square">
         {image && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={image} alt="" loading="lazy" decoding="async" />
@@ -266,11 +243,4 @@ function getDockIconForProduct(product: Product) {
   if (experience === 'book') return 'os-icon-books';
   if (experience === 'asset') return 'os-icon-assets';
   return 'os-icon-home';
-}
-
-function getLibraryTileShape(product: Product): 'square' | 'book' | 'landscape' {
-  const experience = getProductExperience(product);
-  if (experience === 'book') return 'book';
-  if (experience === 'asset') return 'landscape';
-  return 'square';
 }

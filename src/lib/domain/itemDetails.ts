@@ -74,7 +74,27 @@ export async function getCatalogItem(identifier: string) {
   ).maybeSingle();
 
   if (result.error) throw result.error;
-  return result.data as Product | null;
+  const item = result.data as Product | null;
+  if (!item) return null;
+  const [categoryResult, typeAssignmentResult, tagAssignmentResult] = await Promise.all([
+    item.item_category_id
+      ? supabase.from('item_categories').select('id,name,slug').eq('id', item.item_category_id).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    supabase.from('item_type_assignments').select('item_types(*)').eq('item_id', item.id).maybeSingle(),
+    supabase.from('item_tag_assignments').select('item_tags(*)').eq('item_id', item.id),
+  ]);
+  const taxonomyError = categoryResult.error || typeAssignmentResult.error || tagAssignmentResult.error;
+  if (taxonomyError) throw taxonomyError;
+  const typeRow = typeAssignmentResult.data?.item_types;
+  return {
+    ...item,
+    browse_category: categoryResult.data ? { id: categoryResult.data.id, label: categoryResult.data.name, slug: categoryResult.data.slug } : null,
+    browse_type: Array.isArray(typeRow) ? typeRow[0] ?? null : typeRow ?? null,
+    browse_tags: (tagAssignmentResult.data ?? []).flatMap(row => {
+      const tag = row.item_tags;
+      return Array.isArray(tag) ? tag : tag ? [tag] : [];
+    }),
+  } as Product;
 }
 
 export async function listRelatedCatalogItems(item: Product, limit = 4) {

@@ -196,7 +196,7 @@ function ThemeSettings() {
 
   return (
     <>
-      <div className="settings-field">
+      <div className="settings-field settings-theme-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Theme</div>
         </div>
@@ -214,7 +214,7 @@ function ThemeSettings() {
         </div>
       </div>
 
-      <div className="settings-field">
+      <div className="settings-field settings-accent-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Accent</div>
         </div>
@@ -294,7 +294,7 @@ function RegionSettingsFields({ onStatus }: { onStatus: (status: string) => void
 
   return (
     <>
-      <div className="settings-field">
+      <div className="settings-field settings-market-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Region</div>
         </div>
@@ -312,7 +312,7 @@ function RegionSettingsFields({ onStatus }: { onStatus: (status: string) => void
         </select>
       </div>
 
-      <div className="settings-field">
+      <div className="settings-field settings-market-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Display Currency</div>
         </div>
@@ -345,7 +345,7 @@ function LandingAppSettings() {
   }
 
   return (
-      <div className="settings-field settings-field-full">
+      <div className="settings-field settings-landing-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Landing App</div>
         </div>

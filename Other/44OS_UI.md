@@ -6,13 +6,14 @@ This is one of the three active handoff documents for 44OS. Read it before chang
 
 The local screenshot reference folder is `UI Elements/`. Treat those images as reference material, not production assets.
 
-Current implementation snapshot, July 11, 2026:
+Current implementation snapshot, July 12, 2026:
 
-- Store, Community, Library, Radio, Search, Notifications, Settings, and Inbox have been through the mobile polish pass.
-- Verified in the app after the pass: `npm run lint`, `npx tsc --noEmit`, and route smoke checks for `/store`, `/community`, `/library`, `/radio`, `/search`, and `/notifications`.
+- Store, Community, Library, Radio, Search, Profiles, Studio, Notifications, Settings, and Inbox have been through the desktop and mobile system-UI consolidation pass.
+- Verified after the pass: `npm run lint`, `npx tsc --noEmit`, `npm run build`, migration dry-run, and route smoke checks for `/store`, `/community`, `/library`, `/radio`, `/search`, `/profile/[username]`, `/studio`, and `/notifications`.
 - Mobile rendered checks confirmed the root and Store title/filter rows, hidden local mobile search, visible Search page title with no placeholder, and the current mobile Dock order: Home (`/`), Library, Radio, Community, Search.
 - Radio and Notifications also have source-level implementation aligned with this document; their live visual state may depend on signed-in/session data or Radio playlist setup.
 - The root URL is the branded 44OS discovery front door. It may reuse Store catalog sections, but the page title, metadata, search label, and shared-link identity say 44OS rather than Store.
+- Desktop content now follows one shared material, radius, border, spacing, elevation, input-focus, button, tab-navigation, and post-row authority. Page-specific visual overrides are not a supported extension point.
 
 ---
 
@@ -80,11 +81,12 @@ Fan-facing rules:
 
 ## 4. Materials And Surface Families
 
-Use three material roles:
+Use four material roles:
 
 - **Environment**: the fixed background behind the OS window.
 - **Shell glass**: the single unified `.app-shell` surface behind Dock, Topbar, and workspace.
-- **Content surface**: readable pages, lists, forms, cards, detail bodies, and dense work areas.
+- **Theme-through control/content material**: the shared translucent tint used by controls, inputs, overview cards, achievements, Community surfaces, reviews, creator forms, and comparable workspace panels.
+- **Opaque paper**: dropdowns, filters, account/notification menus, modal sheets, and the music player.
 
 Use three content surface families:
 
@@ -94,7 +96,9 @@ Use three content surface families:
 
 Rules:
 
-- Glass belongs only to the unified app shell. Menus, popovers, filters, modals, and true cards use solid semantic paper surfaces.
+- The app environment and shell glass are not changed when tuning content components.
+- Menus, popovers, filters, modal sheets, and the music player use the same opaque semantic paper family.
+- Panels and controls use the shared theme-through material; do not introduce page-specific gray fills or legacy glass overrides.
 - On desktop, content-first list surfaces may be transparent so the shell theme reads through them. This applies to Library tracklists/achievements, Community feed rows/composer, related detail lists, and similar repeated content; it does not turn controls or modal surfaces into glass.
 - Mobile keeps its established surface treatment outside the Studio editor. Do not apply desktop transparency sweeps to mobile pages.
 - Dense content should use readable paper/material surfaces.
@@ -147,6 +151,8 @@ Mobile geometry contract:
 - Full-width mobile lists place dividers on the list/row boundary, spanning the available workspace width. Text and controls remain inset inside the row; do not shorten the divider to the text column.
 - Reply indentation is applied once. A nested reply may indent its row content, but its composer must use the full remaining row width and must never combine parent padding with an additional inline margin.
 - Textareas, composers, segmented controls, search fields, and action rows use `width: 100%` with `min-width: 0`; controls may not force horizontal scrolling.
+- Mobile hub titles flex while their action group remains auto-width and right-aligned inside the same content inset and divider boundary. Never give the header action group `width: 100%`; doing so pushes filters beyond the viewport or behind long titles.
+- Active Store filter pills live below the header divider, wrap onto additional rows, and constrain long labels with ellipsis rather than expanding the page width.
 - Mobile page content clears the fixed Dock, the optional music player, and `env(safe-area-inset-bottom)` through shared shell spacing.
 
 ---
@@ -157,7 +163,7 @@ The Dock is the OS taskbar and app launcher. It renders from `src/lib/osApps.ts`
 
 Current Dock order:
 
-- Signed in desktop: Library, divider, Home (`/`), Radio, Community, spacer, Support, divider, Settings.
+- Signed in desktop: Home (`/`), Radio, Library, Community, optional pinned-item divider and pinned items, spacer, Support, divider, Settings.
 - Signed out desktop: Home (`/`), Radio, Community, spacer, Support, Log In.
 - Mobile fixed Dock: Home (`/`), Library, Radio, Community, Search.
 
@@ -205,7 +211,7 @@ Topbar rules:
 
 Every primary page uses concise orientation:
 
-- **Dock/app label**: Store, Library, Radio, Community.
+- **Dock/app label**: Home, Radio, Library, Community.
 - **Page hero**: title only. Do not render descriptive copy beneath primary page titles.
 - **Section context**: title and optional description only when the section itself needs guidance.
 - **Root identity**: `/` uses `44OS` as its hero/document identity while retaining discovery sections. `/store` uses `Store`.
@@ -215,7 +221,14 @@ Page hero rules:
 - Titles are nouns or clear destinations: Store, Library, Questions, Collaboration, Studio, Settings.
 - Primary title descriptions are archived below for possible future reuse and are not rendered in the current UI.
 - On mobile hub pages with a local filter, the header collapses to title plus the circular filter button on one row. Do not show Store/Community/Library local search inputs on mobile; use the fixed mobile Search Dock item for global search.
+- Store, Library, and Community use the same filter-popover containment: the circular trigger stays inside the header safe margin, the popover stays inside both viewport insets, and outside interaction closes it.
 - Mobile primary page titles use a smaller iOS-like large-title scale, currently 42px, so controls can sit beside them without overlap.
+- Radio is the intentional exception: the fixed Now Playing panel is the entire page and does not repeat a Radio page title or permit workspace scrolling.
+
+Catalog and Library presentation rules:
+
+- Browse shelves use square artwork across every Category. Mobile shelf actions collapse from the desktop `View All` pill to a compact trailing arrow without changing their behavior or accessible label.
+- Library is one mixed square Item grid. Category headings are not repeated in the content; the shared Library filter provides Category selection.
 
 Archived primary-page descriptions (saved July 10, 2026):
 
@@ -309,8 +322,8 @@ Rules:
 Radio rules:
 
 - `/radio` uses the same blurred artwork language as Store/Library item detail pages.
-- On mobile, Radio is full-bleed between topbar and Dock: no page side margins, no standard app header, and the main live state should fit without meaningful scrolling.
-- Radio content is centered: artwork, Now Playing, title, artist, then Play Radio/Stop Radio.
+- On mobile, Radio is full-bleed between topbar and Dock: no standard app header, and the main live state should fit without meaningful scrolling.
+- Radio content is centered: artwork, Now Playing, title, text-only artist, then Stream/Stop.
 - Keep the radio title smaller than item-detail hero titles so long track names do not wrap awkwardly.
 - Use symmetrical vertical spacing around Now Playing, artist, and Play Radio; avoid a top-heavy card.
 - Desktop Radio uses the same centered composition inside the workspace: app-shell background, centered bounded artwork, then track, artist, and action. Do not add a separate opaque hero panel or blurred artwork backdrop.
@@ -327,7 +340,8 @@ Studio publishing rules:
 - Achievements use a single master switch in the section header. Off hides the picker; on reveals flat rows with white editor icons and right-aligned checkboxes. There is no minimum selection count.
 - Checked achievement controls must keep a black checkmark on the light checked fill. Overachiever Bonus Content is its own card below the flat achievement list.
 - Destructive buttons should align with system action rows and use confirmation copy.
-- Studio overview is a consolidated landing page: flat metric cards first, catalog sections for Music, Books, Assets, and Merch next, and Earnings at the bottom. Catalog metric cards are informational, not navigation.
+- Studio overview is a consolidated landing page: four operational metric cards—Saves, Plays, Sold, and Earned—followed by clickable Item-management rows grouped by Category. Desktop uses four metric cards per row and mobile uses two. Mobile Item rows show title and Type only; publication status remains a desktop information pill.
+- Studio Plays is sourced from the append-only `item_play_events` ledger. A validated playback start counts regardless of whether it came from Store, Library, Radio, the creator, or another user; playback analytics must never interrupt audio.
 
 ---
 

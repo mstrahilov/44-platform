@@ -80,9 +80,9 @@ export default function RadioPage() {
     <PageShell>
       <main className="radio-page">
         {loading ? (
-          <HubSection title="Now Playing">
+          <div className="radio-loading-state" aria-live="polite">
             <EmptyMessage>Loading Radio…</EmptyMessage>
-          </HubSection>
+          </div>
         ) : bundle?.requiresSetup ? (
           <HubSection title="Radio Setup">
             <GlassPanel className="radio-setup-card">
@@ -113,7 +113,7 @@ export default function RadioPage() {
             >
               <div className="view-album-eyebrow radio-hero-kicker">Now Playing</div>
               {syncedTrack ? (
-                <Link href={syncedTrack.releaseHref} className="view-album-cover radio-hero-cover" aria-label={`Open ${syncedTrack.releaseTitle}`}>
+                <Link href={withRadioSource(syncedTrack.releaseHref)} className="view-album-cover radio-hero-cover" aria-label={`Open ${syncedTrack.releaseTitle}`}>
                   {syncedTrack.coverUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={syncedTrack.coverUrl} alt="" />
@@ -126,7 +126,7 @@ export default function RadioPage() {
               <div className="view-album-copy radio-hero-copy">
                 <div className="view-album-eyebrow radio-hero-eyebrow">Now Playing</div>
                 {syncedTrack ? (
-                  <Link href={syncedTrack.trackHref} className="radio-now-title-link">
+                  <Link href={withRadioSource(syncedTrack.trackHref)} className="radio-now-title-link">
                     <h1 className="view-album-title radio-hero-title">{syncedTrack.title}</h1>
                   </Link>
                 ) : (
@@ -134,13 +134,7 @@ export default function RadioPage() {
                 )}
 
                 {syncedTrack ? (
-                  <Link href={radioArtistHref(syncedTrack)} className="library-creator-chip radio-hero-artist">
-                    <span className="library-creator-avatar">
-                      {syncedTrack.artistAvatarUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={syncedTrack.artistAvatarUrl} alt="" />
-                      ) : null}
-                    </span>
+                  <Link href={withRadioSource(radioArtistHref(syncedTrack))} className="library-creator-chip radio-hero-artist">
                     {syncedTrack.artistName}
                   </Link>
                 ) : null}
@@ -152,7 +146,7 @@ export default function RadioPage() {
                     onClick={handleRadioAction}
                     disabled={!queue.length || playback.index < 0}
                   >
-                    {isSyncedTrackLive ? 'Stop Radio' : 'Play Radio'}
+                    {isSyncedTrackLive ? 'Stop' : 'Stream'}
                   </button>
                 </div>
               </div>
@@ -162,6 +156,10 @@ export default function RadioPage() {
       </main>
     </PageShell>
   );
+}
+
+function withRadioSource(href: string) {
+  return `${href}${href.includes('?') ? '&' : '?'}source=radio`;
 }
 
 function toQueueTrack(track: RadioPlayableTrack): MusicQueueTrack {

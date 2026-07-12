@@ -74,7 +74,7 @@ export default function CheckoutPage() {
             <div className="dashboard-empty">
               Add an Item from Store when you are ready.
               <div style={{ marginTop: 'var(--os-space-4)' }}>
-                <Link className="os-button os-button-primary os-button-compact" href="/store">Go to Browse</Link>
+                <Link className="os-button os-button-primary os-button-compact" href="/store">Go to Store</Link>
               </div>
             </div>
           </div>

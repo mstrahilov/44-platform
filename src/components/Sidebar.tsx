@@ -206,9 +206,10 @@ export default function Sidebar() {
   const activePinnedItem = pinnedItems.find(item => isPinnedDockItemActive(pathname, item.href));
   const mainActiveAppId = activePinnedItem ? '' : activeAppId;
   const libraryApp = dockApps.find(app => app.id === 'library') ?? null;
-  const primaryApps = ['store', 'radio', 'community']
+  const primaryApps = ['store', 'radio', 'library', 'community']
     .map(id => dockApps.find(app => app.id === id))
-    .filter((app): app is OSApp => Boolean(app));
+    .filter((app): app is OSApp => Boolean(app))
+    .map(app => app.id === 'store' ? { ...app, label: 'Home' } : app);
   const supportApp = dockApps.find(app => app.id === 'support') ?? null;
   const settingsApp = dockApps.find(app => app.id === 'settings') ?? null;
   const studioApp = dockApps.find(app => app.id === 'studio') ?? getOSApp('studio') ?? null;
@@ -251,13 +252,6 @@ export default function Sidebar() {
       </div>
 
       <nav className="sidebar-nav sidebar-nav-desktop" aria-label="Dock">
-        {libraryApp && (
-          <>
-            <DockItem app={libraryApp} active={mainActiveAppId === libraryApp.id} compact={compact} />
-            <div className="sidebar-divider" />
-          </>
-        )}
-
         <DockSection apps={primaryApps} activeAppId={mainActiveAppId} compact={compact} />
 
         {pinnedItems.length > 0 && (

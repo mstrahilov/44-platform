@@ -48,6 +48,7 @@ import {
   setDiscussionLike,
   type CommunityMentionProfile,
 } from '@/lib/domain/community';
+import { FilterPopover } from '@/components/FilterPopover';
 
 type PostLike = LikeRow;
 type MentionProfile = CommunityMentionProfile;
@@ -314,12 +315,20 @@ function CommunityPageContent() {
 
   const communityTools = (
     <div className="page-header-tools">
+      {!postComposerOpen && (
+        <button
+          type="button"
+          className="page-compose-button"
+          aria-label="Create a new post"
+          aria-expanded={false}
+          onClick={() => requireCommunityAction(() => setPostComposerOpen(true))}
+        >
+          <span aria-hidden="true">+</span>
+        </button>
+      )}
       {activeCommunityTab === 'feed' && !requestedTopic ? (
-        <details className="page-filter-menu">
-          <summary className="page-filter-button" aria-label="Filter Community" title="Filter Community">
-            <span className="page-filter-icon" aria-hidden="true"><i /><i /><i /></span>
-          </summary>
-          <div className="page-filter-popover">
+        <FilterPopover label="Filter Community">
+          {({ close }) => <>
             {[
               { id: 'all', label: 'All Posts', href: '/community' },
               { id: 'following', label: 'Following', href: '/community?filter=following' },
@@ -328,16 +337,16 @@ function CommunityPageContent() {
                 key={option.id}
                 type="button"
                 className={postFilter === option.id ? 'page-filter-option page-filter-option-active' : 'page-filter-option'}
-                onClick={event => {
-                  event.currentTarget.closest('details')?.removeAttribute('open');
+                onClick={() => {
+                  close();
                   router.push(option.href);
                 }}
               >
                 {option.label}
               </button>
             ))}
-          </div>
-        </details>
+          </>}
+        </FilterPopover>
       ) : null}
     </div>
   );

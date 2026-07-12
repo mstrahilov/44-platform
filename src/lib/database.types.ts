@@ -1919,6 +1919,57 @@ export type Database = {
           },
         ]
       }
+      item_play_events: {
+        Row: {
+          id: string
+          item_id: string
+          metadata: Json
+          occurred_at: string
+          play_reason: string
+          playback_mode: string
+          session_id: string
+          track_id: string
+          user_id: string | null
+        }
+        Insert: {
+          id?: string
+          item_id: string
+          metadata?: Json
+          occurred_at?: string
+          play_reason?: string
+          playback_mode?: string
+          session_id: string
+          track_id: string
+          user_id?: string | null
+        }
+        Update: {
+          id?: string
+          item_id?: string
+          metadata?: Json
+          occurred_at?: string
+          play_reason?: string
+          playback_mode?: string
+          session_id?: string
+          track_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_play_events_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_play_events_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       item_share_visits: {
         Row: {
           created_at: string
@@ -2788,7 +2839,6 @@ export type Database = {
           creator_type: string | null
           display_currency: string | null
           display_name: string | null
-          hero_url: string | null
           home_country_code: string | null
           home_currency: string | null
           id: string
@@ -2809,7 +2859,6 @@ export type Database = {
           creator_type?: string | null
           display_currency?: string | null
           display_name?: string | null
-          hero_url?: string | null
           home_country_code?: string | null
           home_currency?: string | null
           id: string
@@ -2830,7 +2879,6 @@ export type Database = {
           creator_type?: string | null
           display_currency?: string | null
           display_name?: string | null
-          hero_url?: string | null
           home_country_code?: string | null
           home_currency?: string | null
           id?: string
@@ -3884,6 +3932,17 @@ export type Database = {
           target_user_id: string
         }
         Returns: string
+      }
+      get_creator_total_plays: { Args: never; Returns: number }
+      record_item_play: {
+        Args: {
+          target_item_id: string
+          target_play_reason?: string
+          target_playback_mode?: string
+          target_session_id: string
+          target_track_id: string
+        }
+        Returns: boolean
       }
       has_item_entitlement: {
         Args: {

@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: { params: Promise<{ username:
     title: displayName,
     description: conciseDescription(profile.bio, `${displayName} on 44OS.`),
     path: `/profile/${profile.username || profile.slug || username}`,
-    image: profile.hero_url || profile.avatar_url || null,
+    image: profile.avatar_url || null,
     type: 'profile',
   });
 }

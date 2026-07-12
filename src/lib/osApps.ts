@@ -90,7 +90,7 @@ export const OS_APPS: OSApp[] = [
   },
   {
     id: 'store',
-    label: 'Browse',
+    label: 'Store',
     description: 'Find releases, books, assets, and merch from independent creators.',
     href: '/',
     iconClass: 'os-icon-store',

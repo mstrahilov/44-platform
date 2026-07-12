@@ -2,7 +2,6 @@
 
 import { AchievementIconGlyph } from '@/components/AchievementIconGlyph';
 import { SectionHeader } from '@/components/Ui';
-import { UploadField } from '@/components/UploadField';
 import type { StudioCatalogSectionId } from '@/lib/studioCatalog';
 import { getAchievementIconPath } from '@/lib/achievementIcons';
 import { replaceStudioReleaseFeatures } from '@/lib/domain/studioPublishing';
@@ -77,7 +76,7 @@ export function achievementTemplates(sectionId: StudioCatalogSectionId): DraftAc
       { code: 'joined_the_orbit', title: 'Joined the Orbit', description: 'Follow the creator from this release.', triggerType: 'creator_followed_from_product', enabled: true, iconUrl: getAchievementIconPath('joined_the_orbit') },
       { code: 'left_your_mark', title: 'Left Your Mark', description: 'Write a review for this release.', triggerType: 'review_created', enabled: true, iconUrl: getAchievementIconPath('left_your_mark') },
       { code: 'signal_boost', title: 'Signal Boost', description: 'Get someone to open this release from your shared link.', triggerType: 'shared_link_opened', enabled: true, iconUrl: getAchievementIconPath('signal_boost') },
-      { code: 'overachiever', title: 'Overachiever', description: 'Unlock every other achievement to claim the creator\'s final reward.', triggerType: 'all_achievements_unlocked', enabled: true, iconUrl: getAchievementIconPath('overachiever') },
+      { code: 'overachiever', title: 'Overachiever', description: 'Unlock every other achievement.', triggerType: 'all_achievements_unlocked', enabled: true, iconUrl: getAchievementIconPath('overachiever') },
     ];
   }
 
@@ -262,7 +261,7 @@ export function StudioReleaseFeatures({
 }) {
   const supportsAchievements = supportsAchievementsForSection(sectionId);
   const achievementsOn = supportsAchievements && state.achievementsEnabled;
-  const bonusItem = normalizeBonusItems(state.bonusItems)[0];
+  void userId;
 
   function patch(patchState: Partial<ReleaseFeatureState>) {
     onChange({ ...state, ...patchState });
@@ -295,17 +294,6 @@ export function StudioReleaseFeatures({
     });
   }
 
-  function updateBonusItem(patchState: Partial<DraftBonusContent>) {
-    patch({
-      bonusItems: [{
-        ...bonusItem,
-        ...patchState,
-        visibility: 'achievement',
-        achievementCode: OVERACHIEVER_CODE,
-      }],
-    });
-  }
-
   return (
     <section className="dashboard-form-section studio-achievements-section">
       <SectionHeader
@@ -326,9 +314,9 @@ export function StudioReleaseFeatures({
         <p className="library-empty-text">Achievements are limited to music releases in v1.0.</p>
       ) : achievementsOn ? (
         <div className="studio-achievements-content">
-          <div className="dashboard-achievement-picker">
+          <div className="dashboard-achievement-picker dashboard-list-surface library-achievement-list">
             {state.achievements.map(achievement => (
-              <label key={achievement.code} className="dashboard-achievement-choice-row">
+              <label key={achievement.code} className="dashboard-achievement-choice-row dashboard-list-row library-achievement-row">
                 <span className="library-achievement-icon studio-achievement-icon" aria-hidden="true">
                   <AchievementIconGlyph code={achievement.code} label={achievement.title} />
                 </span>
@@ -346,31 +334,6 @@ export function StudioReleaseFeatures({
                 </span>
               </label>
             ))}
-          </div>
-          <div className="studio-bonus-content-card">
-            <span className="dashboard-row-copy">
-              <span className="dashboard-row-title">Overachiever Bonus Content</span>
-              <span className="dashboard-row-subtitle">Optional content unlocked after every selected achievement is complete.</span>
-            </span>
-            <div className="dashboard-form-grid dashboard-form-grid-2">
-              <label className="dashboard-field">
-                <span className="dashboard-field-label">Bonus Title</span>
-                <input
-                  value={bonusItem.title}
-                  onChange={event => updateBonusItem({ title: event.target.value })}
-                  placeholder="Bonus Content"
-                />
-              </label>
-              <UploadField
-                label="Bonus File"
-                folder="products/bonus-content"
-                userId={userId}
-                value={bonusItem.fileUrl}
-                buttonLabel="Upload bonus"
-                previewKind="file"
-                onChange={nextValue => updateBonusItem({ fileUrl: nextValue })}
-              />
-            </div>
           </div>
         </div>
       ) : null}

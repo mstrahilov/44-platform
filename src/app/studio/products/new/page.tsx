@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { PageShell, HubHero, CenteredMessage, SectionHeader } from '@/components/Ui';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { UploadField } from '@/components/UploadField';
+import { TagMultiSelect } from '@/components/TagMultiSelect';
 import {
   StudioReleaseFeatures,
   createReleaseFeatureState,
@@ -382,25 +383,23 @@ function NewProductContent() {
                     </span>
                   </label>
                 ) : null}
+                <label className="dashboard-field">
+                  <div className="dashboard-field-label">Item Type</div>
+                  <select className="os-input-field" value={storeTypeId} onChange={event => {
+                    setStoreTypeId(event.target.value);
+                    setProductType(taxonomyTypes.find(type => type.id === event.target.value)?.label ?? '');
+                    setSelectedTagIds([]);
+                  }}>
+                    {taxonomyTypes.filter(type => type.category_id === categoryId).map(type => <option key={type.id} value={type.id}>{type.label}</option>)}
+                  </select>
+                </label>
               </div>
 
-              <label className="dashboard-field">
-                <div className="dashboard-field-label">Item Type</div>
-                <select className="os-input-field" value={storeTypeId} onChange={event => {
-                  setStoreTypeId(event.target.value);
-                  setProductType(taxonomyTypes.find(type => type.id === event.target.value)?.label ?? '');
-                  setSelectedTagIds([]);
-                }}>
-                  {taxonomyTypes.filter(type => type.category_id === categoryId).map(type => <option key={type.id} value={type.id}>{type.label}</option>)}
-                </select>
-              </label>
-              <label className="dashboard-field">
+              <div className="dashboard-field">
                 <div className="dashboard-field-label">Item Tags</div>
-                <select className="os-input-field" multiple value={selectedTagIds} onChange={event => setSelectedTagIds(Array.from(event.currentTarget.selectedOptions, option => option.value))}>
-                  {taxonomyTags.filter(tag => tag.category_id === categoryId && (!tag.item_type_id || tag.item_type_id === storeTypeId)).map(tag => <option key={tag.id} value={tag.id}>{tag.label}</option>)}
-                </select>
+                <TagMultiSelect options={taxonomyTags.filter(tag => tag.category_id === categoryId && (!tag.item_type_id || tag.item_type_id === storeTypeId))} value={selectedTagIds} onChange={setSelectedTagIds} />
                 <span className="dashboard-form-note">Optional. Select any approved genre, style, or format tags that apply.</span>
-              </label>
+              </div>
 
               {isMerchProduct ? (
                 <div className="settings-field">
@@ -600,6 +599,8 @@ function NewProductContent() {
                             accept="audio/*"
                             buttonLabel="Upload audio"
                             previewKind="none"
+                            hideLabel
+                            hideSuccessMessage
                             onChange={nextValue => updateTrack(index, { audioUrl: nextValue })}
                             onAudioMetadata={durationSeconds => updateTrack(index, { durationSeconds: String(durationSeconds) })}
                           />

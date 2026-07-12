@@ -35,6 +35,7 @@ export interface Item {
     sort_order: number;
     category_id: string;
   } | null;
+  browse_category?: { id: string; label: string; slug: string } | null;
   browse_tags?: Array<{
     id: string;
     label: string;

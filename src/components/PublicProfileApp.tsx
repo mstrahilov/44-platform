@@ -13,7 +13,7 @@ import { CommunitySetupGate } from '@/components/CommunitySetupGate';
 import { SocialArtifactCard, SocialAvatar, SocialPostRow } from '@/components/Social';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { useTopbarBack } from '@/components/TopbarContext';
-import { authorHandle, countById, likersByPost, repliersByPost, type CountMap, type LikersMap, type SocialPost } from '@/lib/social';
+import { authorHandle, countById, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type SocialPost } from '@/lib/social';
 import { useContextMenu } from '@/components/ContextMenu';
 import { pinDockItem } from '@/lib/dockPreferences';
 import { hasCommunityIdentity } from '@/lib/communityProfile';
@@ -28,6 +28,7 @@ import {
   isFollowingProfile,
   unfollowProfile,
 } from '@/lib/domain/profiles';
+import { setDiscussionLike } from '@/lib/domain/community';
 
 type ProfileTab = 'posts' | 'music' | 'books' | 'assets';
 type CurrentProfileState = {
@@ -58,8 +59,8 @@ export default function PublicProfilePage() {
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [replyCounts, setReplyCounts] = useState<CountMap>({});
   const [repliersMap, setRepliersMap] = useState<LikersMap>({});
-  const [likeCounts, setLikeCounts] = useState<CountMap>({});
-  const [likersMap, setLikersMap] = useState<LikersMap>({});
+  const [likes, setLikes] = useState<LikeRow[]>([]);
+  const [likingId, setLikingId] = useState('');
   const [isFollowing, setIsFollowing] = useState(false);
   const [currentProfileState, setCurrentProfileState] = useState<CurrentProfileState | null>(null);
   const [tab, setTab] = useState<ProfileTab>('posts');
@@ -95,8 +96,7 @@ export default function PublicProfilePage() {
       setReplyCounts(countById(replyRowsData, 'post_id'));
       setRepliersMap(repliersByPost(replyRowsData));
       const likeRows = content.likes;
-      setLikeCounts(countById(likeRows, 'post_id'));
-      setLikersMap(likersByPost(likeRows));
+      setLikes(likeRows);
       setLoading(false);
     }
 
@@ -125,7 +125,10 @@ export default function PublicProfilePage() {
 
   const isOwn = user?.id === profile?.id;
   const sourceProductId = searchParams.get('fromProduct');
-  useTopbarBack(isOwn ? undefined : { href: '/community', label: 'Community' });
+  const cameFromRadio = searchParams.get('source') === 'radio';
+  useTopbarBack(cameFromRadio
+    ? { href: '/radio', label: 'Radio' }
+    : isOwn ? undefined : { href: '/community', label: 'Community' });
 
   async function handleFollowAction() {
     if (!profile || isOwn || busy) return;
@@ -191,6 +194,35 @@ export default function PublicProfilePage() {
     setBusy('');
   }
 
+  async function toggleLike(post: SocialPost) {
+    if (likingId) return;
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    if (!hasCommunityIdentity(currentProfile)) {
+      setSetupGateOpen(true);
+      return;
+    }
+    const liked = likes.some(like => like.post_id === post.id && like.profile_id === user.id);
+    setLikingId(post.id);
+    setError('');
+    try {
+      await setDiscussionLike(post.id, user.id, !liked);
+      setLikes(current => liked
+        ? current.filter(like => !(like.post_id === post.id && like.profile_id === user.id))
+        : [...current, { post_id: post.id, profile_id: user.id, profiles: currentProfile ? {
+            id: currentProfile.id,
+            display_name: currentProfile.display_name,
+            username: currentProfile.username,
+            avatar_url: currentProfile.avatar_url,
+          } : null }]);
+    } catch (likeError) {
+      setError(likeError instanceof Error ? likeError.message : 'Could not update this like.');
+    }
+    setLikingId('');
+  }
+
   const profileForRoleCheck = profile ? {
     id: profile.id,
     display_name: profile.display_name ?? null,
@@ -230,6 +262,11 @@ export default function PublicProfilePage() {
     [publishedProducts],
   );
   const generalPosts = posts;
+  const likeCounts = useMemo(() => countById(likes, 'post_id'), [likes]);
+  const likersMap = useMemo(() => likersByPost(likes), [likes]);
+  const likedIds = useMemo(() => new Set(
+    user ? likes.filter(like => like.profile_id === user.id).map(like => like.post_id) : [],
+  ), [likes, user]);
   const tabs = useMemo(
     () => {
       if (isCreator) {
@@ -272,12 +309,6 @@ export default function PublicProfilePage() {
   return (
     <PageShell>
       <main className="social-shell social-shell-wide">
-        <section
-          className="social-profile-cover"
-          style={{ backgroundImage: profile.hero_url ? `url(${profile.hero_url})` : undefined }}
-          aria-label={`${displayName} cover`}
-        />
-
         <section className="social-profile-head">
           <div className="social-profile-main">
             <div className="social-profile-identity">
@@ -317,6 +348,26 @@ export default function PublicProfilePage() {
               </div>
             </div>
 
+          </div>
+
+          {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
+
+          <div className="social-profile-toolbar">
+            {tabs.length > 0 ? (
+              <nav className="social-profile-tabs" aria-label="Profile sections" role="tablist">
+                {tabs.map(item => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={tab === item.id}
+                    onClick={() => setTab(item.id)}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </nav>
+            ) : <span />}
             <div className="social-profile-actions">
               {isOwn ? (
                 <>
@@ -336,24 +387,6 @@ export default function PublicProfilePage() {
             </div>
           </div>
 
-          {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
-
-          {tabs.length > 0 && (
-            <nav className="social-profile-tabs" aria-label="Profile sections" role="tablist">
-              {tabs.map(item => (
-                <button
-                  key={item.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={tab === item.id}
-                  onClick={() => setTab(item.id)}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </nav>
-          )}
-
         </section>
 
         {tabs.length === 0 && (
@@ -371,6 +404,9 @@ export default function PublicProfilePage() {
                   likeCount={likeCounts[post.id] ?? 0}
                   likers={likersMap[post.id] ?? []}
                   repliers={repliersMap[post.id] ?? []}
+                  liked={likedIds.has(post.id)}
+                  onLike={() => { void toggleLike(post); }}
+                  disabled={likingId === post.id}
                   onDelete={async () => {
                     if (!user || post.author_id !== user.id) return;
                     if (!window.confirm('Delete this post? This cannot be undone.')) return;

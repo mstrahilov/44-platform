@@ -5584,6 +5584,10 @@ body.theme-dark .os-home-panel {
   position: relative;
 }
 
+.page-compose-button {
+  display: none;
+}
+
 .page-filter-menu > summary,
 .library-filter-menu > summary {
   list-style: none;
@@ -8431,65 +8435,6 @@ body.theme-light .studio-achievement-icon {
   font-variant-numeric: tabular-nums;
 }
 
-.social-engagement {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--os-color-ink-muted);
-  font-size: 13px;
-  margin-left: 0;
-  min-width: 0;
-}
-
-.social-engagement-stack {
-  display: inline-flex;
-  align-items: center;
-}
-
-.social-engagement-stack .social-liker-avatar {
-  margin-left: -8px;
-  border: 2px solid var(--os-color-surface);
-  border-radius: 50%;
-  overflow: hidden;
-  width: 22px;
-  height: 22px;
-  background: color-mix(in srgb, var(--os-color-ink) 8%, transparent);
-  display: inline-grid;
-  place-items: center;
-  font-size: 9px;
-  font-weight: 720;
-  color: var(--os-color-ink);
-  position: relative;
-}
-
-.social-engagement-stack .social-liker-avatar:first-child {
-  margin-left: 0;
-  z-index: 2;
-}
-
-.social-engagement-stack .social-liker-avatar:nth-child(2) {
-  z-index: 1;
-}
-
-.social-engagement-stack .social-liker-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.social-engagement-text {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.social-engagement-text strong {
-  color: var(--os-color-ink);
-  font-weight: 620;
-}
-
 .social-action-danger {
   color: var(--os-color-ink-muted);
   margin-left: auto;
@@ -9067,17 +9012,6 @@ body.theme-dark .dashboard-status-dot {
   color: var(--os-color-ink-secondary);
 }
 
-.social-profile-cover {
-  position: relative;
-  min-height: clamp(140px, 18vw, 220px);
-  border-radius: 14px;
-  background:
-    radial-gradient(circle at 28% 30%, color-mix(in srgb, var(--os-color-accent) 22%, transparent), transparent 45%),
-    linear-gradient(135deg, color-mix(in srgb, var(--os-color-ink) 6%, transparent), transparent);
-  background-size: cover;
-  background-position: center;
-}
-
 .profile-image-input {
   position: absolute;
   width: 1px;
@@ -9089,35 +9023,6 @@ body.theme-dark .dashboard-status-dot {
 .profile-avatar-edit-wrap {
   position: relative;
   display: inline-flex;
-}
-
-.profile-image-edit-button {
-  cursor: pointer;
-  border: 1px solid var(--os-glass-control-border);
-  border-radius: var(--os-radius-pill);
-  background: color-mix(in srgb, var(--os-color-bg) 84%, transparent);
-  color: var(--os-color-ink);
-  box-shadow: var(--os-shadow-card);
-  font-size: 12px;
-  font-weight: 720;
-  line-height: 1;
-  text-decoration: none;
-  backdrop-filter: blur(18px) saturate(1.25);
-  -webkit-backdrop-filter: blur(18px) saturate(1.25);
-}
-
-.profile-image-edit-button-cover {
-  position: absolute;
-  right: 18px;
-  bottom: 18px;
-  padding: 10px 14px;
-}
-
-.profile-image-edit-button-avatar {
-  position: absolute;
-  right: -2px;
-  bottom: 8px;
-  padding: 8px 10px;
 }
 
 .social-profile-head {
@@ -11058,7 +10963,7 @@ body.accent-cyan {
   }
 
   html,
-  body {
+  body:is(.theme-dark, .theme-light) {
     min-height: 100dvh;
   }
 
@@ -11652,11 +11557,6 @@ body.accent-cyan {
   .social-reply-drawer-form,
   .social-reply-drawer-form-nested {
     margin-left: 0;
-    border-radius: 18px;
-  }
-
-  .social-profile-cover {
-    min-height: 128px;
     border-radius: 18px;
   }
 
@@ -12917,11 +12817,6 @@ body.theme-dark :is(
     gap: 12px;
   }
 
-  .social-thread-page .social-actions .social-engagement {
-    flex: 1 1 auto;
-    overflow: hidden;
-  }
-
   .social-thread-page .social-action-danger {
     flex: 0 0 auto;
   }
@@ -13136,13 +13031,8 @@ body.theme-dark :is(
   border: 0;
 }
 
-.profile-cover-edit-control,
 .profile-avatar-edit-control {
   cursor: pointer;
-}
-
-.profile-cover-edit-control {
-  display: block;
 }
 
 .profile-image-edit-icon {
@@ -13174,19 +13064,6 @@ body.theme-dark :is(
   height: 4px;
   border: 2px solid currentColor;
   border-radius: 50%;
-}
-
-.profile-cover-edit-control > .profile-image-edit-icon {
-  position: absolute;
-  right: 16px;
-  bottom: 16px;
-  opacity: 0;
-  transition: opacity 140ms ease;
-}
-
-.profile-cover-edit-control:hover > .profile-image-edit-icon,
-.profile-cover-edit-control:focus-within > .profile-image-edit-icon {
-  opacity: 1;
 }
 
 .profile-avatar-edit-control > .profile-image-edit-icon {
@@ -13284,11 +13161,6 @@ body.theme-dark :is(
   border-radius: 50%;
 }
 
-.profile-crop-preview-cover {
-  aspect-ratio: 3 / 1;
-  border-radius: 14px;
-}
-
 .profile-crop-preview img {
   width: 100%;
   height: 100%;
@@ -13371,17 +13243,6 @@ body:is(.theme-light, .theme-dark) .view-album-actions .os-button.os-button-acti
     align-content: center;
   }
 
-  .social-shell-wide > .social-profile-cover {
-    width: calc(100% + (2 * var(--os-content-inset)));
-    min-height: 150px;
-    margin-left: calc(-1 * var(--os-content-inset));
-    margin-right: calc(-1 * var(--os-content-inset));
-    margin-bottom: -18px;
-    border-radius: 0;
-    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 76%, transparent 100%);
-    mask-image: linear-gradient(to bottom, #000 0%, #000 76%, transparent 100%);
-  }
-
   .social-profile-main {
     gap: 22px;
     padding: 28px 0 0;
@@ -13423,10 +13284,6 @@ body:is(.theme-light, .theme-dark) .view-album-actions .os-button.os-button-acti
 
   .social-artifact-cover {
     border-radius: 14px;
-  }
-
-  .profile-cover-edit-control > .profile-image-edit-icon {
-    opacity: 1;
   }
 
   .profile-crop-overlay {
@@ -13660,5 +13517,1249 @@ body:is(.theme-light, .theme-dark) .view-album-actions .os-button.os-button-acti
 
   .studio-bonus-content-card {
     padding: 18px;
+  }
+}
+
+/* =========================================================
+   44OS DESKTOP MATERIAL AUTHORITY
+   Permanent content uses Control Surface. Floating menus and music-player
+   surfaces use Opaque Paper. Structural shell/sidebar materials are untouched.
+   ========================================================= */
+@media (min-width: 769px) {
+  body:is(.theme-dark, .theme-light) {
+    --os-control-surface-bg: color-mix(in srgb, var(--os-color-ink) 8%, transparent);
+    --os-control-surface-bg-hover: color-mix(in srgb, var(--os-color-ink) 10%, transparent);
+    --os-control-surface-bg-active: color-mix(in srgb, var(--os-color-ink) 14%, transparent);
+    --os-control-surface-border: color-mix(in srgb, var(--os-color-ink) 12%, transparent);
+    --os-control-surface-focus: 0 0 0 3px color-mix(in srgb, var(--os-color-ink) 10%, transparent);
+    --os-opaque-paper-bg: var(--os-paper-bg);
+    --os-opaque-paper-border: var(--os-paper-border);
+    --os-opaque-paper-shadow: var(--os-shadow-4);
+    --os-radius-panel: 28px;
+    --os-radius-menu: 18px;
+    --os-radius-control: 18px;
+    --os-radius-compact: 14px;
+    --os-radius-media: 16px;
+    --os-radius-pill-system: 999px;
+    --os-panel-inset: 24px;
+    --os-row-inset-y: 20px;
+    --os-row-inset-x: 24px;
+    --os-panel-content-gap: 20px;
+    --os-menu-inset: 10px;
+    --os-menu-item-y: 12px;
+    --os-menu-item-x: 14px;
+    --os-border-surface: var(--os-control-surface-border);
+    --os-border-divider: color-mix(in srgb, var(--os-color-ink) 9%, transparent);
+    --os-border-control: var(--os-control-surface-border);
+    --os-border-focus: color-mix(in srgb, var(--os-color-ink) 28%, transparent);
+    --os-elevation-input: inset 0 1px 2px rgba(0, 0, 0, 0.10);
+    --os-elevation-focus: 0 0 0 3px color-mix(in srgb, var(--os-color-ink) 10%, transparent);
+
+    /* Retired desktop material families resolve to one canonical surface. */
+    --os-glass-panel-bg: var(--os-control-surface-bg);
+    --os-glass-panel-border: var(--os-control-surface-border);
+    --os-glass-control-bg: var(--os-control-surface-bg);
+    --os-glass-control-border: var(--os-control-surface-border);
+    --os-glass-chrome-bg: var(--os-control-surface-bg);
+    --os-glass-chrome-border: var(--os-control-surface-border);
+    --os-chrome-bg: var(--os-control-surface-bg);
+    --os-chrome-bg-soft: var(--os-control-surface-bg);
+    --os-chrome-border: var(--os-control-surface-border);
+    --os-input-bg: var(--os-control-surface-bg);
+    --os-input-border: var(--os-control-surface-border);
+    --os-input-radius: var(--os-radius-control);
+    --os-input-shadow: var(--os-elevation-input);
+    --os-panel-bg: var(--os-control-surface-bg);
+    --os-panel-border: var(--os-control-surface-border);
+    --os-card-bg: var(--os-control-surface-bg);
+    --os-card-border: var(--os-control-surface-border);
+    --os-product-card-bg: var(--os-control-surface-bg);
+    --os-product-card-border: var(--os-control-surface-border);
+    --os-category-card-bg: var(--os-control-surface-bg);
+    --os-category-card-border: var(--os-control-surface-border);
+  }
+
+  body.theme-light {
+    --os-elevation-panel: 0 14px 36px rgba(0, 0, 0, 0.10);
+    --os-elevation-floating: 0 24px 58px rgba(0, 0, 0, 0.18);
+  }
+
+  body.theme-dark {
+    --os-elevation-panel: 0 14px 38px rgba(0, 0, 0, 0.24);
+    --os-elevation-floating: 0 24px 62px rgba(0, 0, 0, 0.48);
+  }
+
+  body:is(.theme-dark, .theme-light) :is(
+    .glass-panel, .os-glass-panel, .os-glass-control, .os-glass-chrome,
+    .dashboard-overview-card.glass-panel, .dashboard-metric-card.glass-panel,
+    .os-paper-card, .os-panel-surface, .app-panel, .app-card, .app-empty,
+    .dashboard-form-step, .dashboard-track-editor-list, .dashboard-list-surface,
+    .dashboard-overview-card, .dashboard-metric-card, .dashboard-feature-card,
+    .dashboard-feature-row, .library-achievement-list, .item-community-surface,
+    .item-domain-surface, .product-review-list-surface, .social-feed-panel,
+    .social-feed-composer, .social-reply-drawer-form, .social-compose-panel,
+    .social-inbox-list, .social-message-list, .social-structured-list,
+    .social-structured-metrics, .search-profile-list,
+    .search-profile-row, .thread-row, .cart-summary, .os-home-app-tile,
+    .settings-list, .os-home-panel, .project-thread-surface, .project-composer,
+    .project-sidebar-card, .support-sidebar, .support-reader, .radio-setup-card,
+    .rich-editor-surface, .docked-panel
+  ) {
+    background: var(--os-control-surface-bg);
+    border-color: var(--os-control-surface-border);
+    box-shadow: var(--os-elevation-panel);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  body:is(.theme-dark, .theme-light) :is(.os-glass-control, .os-glass-chrome) {
+    box-shadow: none;
+  }
+
+  body:is(.theme-dark, .theme-light) :is(
+    .glass-panel, .os-glass-panel, .os-paper-card, .os-panel-surface, .app-panel,
+    .dashboard-form-step, .dashboard-track-editor-list, .dashboard-list-surface,
+    .library-achievement-list, .item-community-surface, .item-domain-surface,
+    .product-review-list-surface, .social-feed-panel, .social-feed-composer,
+    .social-compose-panel, .social-inbox-list, .social-message-list,
+    .social-structured-list, .search-profile-list, .search-profile-row, .settings-list,
+    .project-thread-surface, .project-composer, .project-sidebar-card,
+    .support-sidebar, .support-reader, .radio-setup-card, .rich-editor-surface
+  ) {
+    border-radius: var(--os-radius-panel);
+    overflow: hidden;
+  }
+
+  body:is(.theme-dark, .theme-light) :is(.os-popover, .page-filter-popover, .library-filter-popover, .tag-select-menu, .rich-editor-toolbar-popover, .social-mention-list, .music-player-bar, .music-player-sheet, .os-modal, .os-paper-panel, .profile-crop-dialog) {
+    background: var(--os-opaque-paper-bg);
+    border-color: var(--os-opaque-paper-border);
+    box-shadow: var(--os-elevation-floating);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-radius: var(--os-radius-menu);
+  }
+
+  body:is(.theme-dark, .theme-light) :is(.os-input-field, .os-input-textarea, .tag-select-control) {
+    border-radius: var(--os-radius-control);
+    border-color: var(--os-border-control);
+    box-shadow: var(--os-elevation-input);
+  }
+
+  body:is(.theme-dark, .theme-light) :is(.os-input-field, .os-input-textarea, .tag-select-control):focus-within,
+  body:is(.theme-dark, .theme-light) :is(input.os-input-field, textarea.os-input-textarea):focus-visible {
+    border-color: var(--os-border-focus);
+    box-shadow: var(--os-elevation-input), var(--os-elevation-focus);
+  }
+
+  body:is(.theme-dark, .theme-light) :is(.glass-panel, .dashboard-form-step, .social-feed-composer, .project-composer, .support-sidebar, .support-reader, .radio-setup-card, .rich-editor-surface) {
+    padding: var(--os-panel-inset);
+  }
+
+  body:is(.theme-dark, .theme-light) :is(.dashboard-form-step, .studio-achievements-content) {
+    gap: var(--os-panel-content-gap);
+  }
+
+  body:is(.theme-dark, .theme-light) :is(.dashboard-list-row, .dashboard-track-editor-row, .dashboard-achievement-choice-row, .library-achievement-row) {
+    padding: var(--os-row-inset-y) var(--os-row-inset-x);
+  }
+
+  body:is(.theme-dark, .theme-light) :is(.dashboard-list-row, .dashboard-track-editor-row, .dashboard-achievement-choice-row, .library-achievement-row) + :is(.dashboard-list-row, .dashboard-track-editor-row, .dashboard-achievement-choice-row, .library-achievement-row) {
+    border-top: 1px solid var(--os-border-divider);
+  }
+
+  body:is(.theme-dark, .theme-light) :is(.os-popover, .page-filter-popover, .library-filter-popover, .tag-select-menu, .rich-editor-toolbar-popover, .social-mention-list) {
+    padding: var(--os-menu-inset);
+  }
+
+  body:is(.theme-dark, .theme-light) :is(.os-popover-item, .page-filter-option, .library-filter-option, .tag-select-menu button, .social-mention-option) {
+    min-height: 44px;
+    padding: var(--os-menu-item-y) var(--os-menu-item-x);
+    border-radius: var(--os-radius-compact);
+  }
+
+  body:is(.theme-dark, .theme-light) :is(.product-tile-art, .app-card, .os-product-card, .os-category-card, .os-category-icon-card, .social-artifact-cover) {
+    border-radius: var(--os-radius-media);
+  }
+
+  body:is(.theme-dark, .theme-light) :is(.product-tile-art, .app-card, .os-product-card, .os-category-card, .os-category-icon-card, .social-artifact-cover) {
+    transition: transform 180ms cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 180ms ease, filter 180ms ease;
+    transform-origin: center;
+  }
+
+  body:is(.theme-dark, .theme-light) :is(.product-tile:hover .product-tile-art, .app-card:hover, .os-product-card:hover, .os-category-card:hover, .os-category-icon-card:hover, .social-artifact-card:hover .social-artifact-cover) {
+    transform: scale(1.018);
+    box-shadow: var(--os-elevation-floating);
+    filter: saturate(1.035) contrast(1.01);
+  }
+
+  .music-player-controls .music-player-close-mobile { display: none !important; }
+  body.theme-dark .os-popover { color: #f4f3ee; }
+  body.theme-dark .os-popover :is(.os-popover-item, .os-popover-heading, .os-popover-footer-link, .os-popover-text-button) { color: #f4f3ee; }
+  body.theme-dark .os-button:not(.os-button-danger), body.theme-dark .os-button:not(.os-button-danger):is(:link, :visited, :hover) { background: #fff; color: #111; border-color: transparent; box-shadow: var(--os-shadow-2); }
+  body.theme-light .os-button:not(.os-button-danger), body.theme-light .os-button:not(.os-button-danger):is(:link, :visited, :hover) { background: #111; color: #fff; border-color: transparent; box-shadow: var(--os-shadow-2); }
+}
+
+/* =========================================================
+   44OS DESKTOP INTERACTION AUTHORITY
+   Neutral focus, pill tabs, full-width list dividers, and one action geometry.
+   Shell, sidebar, environment, theme artwork, and mobile remain untouched.
+   ========================================================= */
+@media (min-width: 769px) {
+  body:is(.theme-dark, .theme-light) {
+    --os-button-height: 40px;
+    --os-button-compact-height: 40px;
+    --os-input-bg-focus-neutral: color-mix(in srgb, var(--os-color-ink) 12%, transparent);
+    --os-input-border-focus: color-mix(in srgb, var(--os-color-ink) 22%, transparent);
+    --os-input-focus-shadow: var(--os-elevation-input);
+    --os-elevation-focus: 0 0 0 1px color-mix(in srgb, var(--os-color-ink) 14%, transparent);
+  }
+
+  /* A regular and compact action share one desktop height. Large actions stay large. */
+  body:is(.theme-dark, .theme-light) .os-button,
+  body:is(.theme-dark, .theme-light) .os-button.os-button-compact {
+    height: var(--os-button-height);
+    min-height: var(--os-button-height);
+    padding-inline: 20px;
+  }
+
+  body:is(.theme-dark, .theme-light) .os-button.os-button-large {
+    height: var(--os-button-large-height);
+    min-height: var(--os-button-large-height);
+  }
+
+  body:is(.theme-dark, .theme-light) :is(.os-icon-button, .os-icon-button-compact) {
+    width: var(--os-button-height);
+    height: var(--os-button-height);
+    min-height: var(--os-button-height);
+    padding: 0;
+  }
+
+  /* Section actions use the same trailing safe inset as actions inside list rows. */
+  body:is(.theme-dark, .theme-light) .hub-section-head {
+    align-items: center;
+    padding-right: 0;
+  }
+
+  body:is(.theme-dark, .theme-light) .hub-section-head-described {
+    align-items: flex-start;
+  }
+
+  /* Profile content tabs are one neutral segmented pill, never square tabs. */
+  body:is(.theme-dark, .theme-light) .social-profile-tabs {
+    display: inline-flex;
+    width: fit-content;
+    max-width: 100%;
+    gap: 8px;
+    margin: 8px auto 0;
+    padding: 0;
+    overflow-x: auto;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-profile-tabs button {
+    min-height: 40px;
+    margin: 0;
+    padding: 0 18px;
+    border: 1px solid var(--os-border-control);
+    border-radius: var(--os-radius-pill-system);
+    background: var(--os-control-surface-bg);
+    box-shadow: none;
+    color: var(--os-color-ink-muted);
+    transition: background 140ms ease, color 140ms ease;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-profile-tabs button:hover {
+    background: var(--os-control-surface-bg-active);
+    color: var(--os-color-ink);
+  }
+
+  body:is(.theme-dark, .theme-light) .social-profile-tabs button[aria-selected="true"],
+  body.theme-dark .social-profile-tabs button[aria-selected="true"] {
+    border-color: transparent;
+    background: var(--os-color-ink);
+    box-shadow: none;
+    color: var(--os-color-canvas);
+  }
+
+  /* Artwork-first profile cards are not panels. Only their media carries depth. */
+  body:is(.theme-dark, .theme-light) .social-artifact-card,
+  body:is(.theme-dark, .theme-light) .social-artifact-card:hover {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    filter: none;
+    transform: none;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-artifact-cover {
+    box-shadow: var(--os-elevation-panel);
+    transition: transform 180ms cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow 180ms ease, filter 180ms ease;
+    transform-origin: center;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-artifact-card:hover .social-artifact-cover {
+    transform: scale(1.018);
+    box-shadow: var(--os-elevation-floating);
+    filter: saturate(1.035) contrast(1.01);
+  }
+
+  /* Feed panels own their complete outline; rows own edge-to-edge dividers. */
+  body:is(.theme-dark, .theme-light) .social-feed-panel {
+    padding: 0;
+    border: 1px solid var(--os-border-surface);
+    border-radius: var(--os-radius-panel);
+    overflow: hidden;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-feed-panel .social-feed-post {
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-feed-panel .social-feed-post + .social-feed-post {
+    border-top: 1px solid var(--os-border-divider);
+  }
+
+  body:is(.theme-dark, .theme-light) .social-feed-panel .social-feed-post > .social-row {
+    padding: var(--os-row-inset-y) var(--os-row-inset-x);
+    border-bottom: 0;
+  }
+
+  /* Profile and Search reuse the exact same post surface and hover language. */
+  body:is(.theme-dark, .theme-light) .social-feed:not(.social-feed-list) {
+    border: 1px solid var(--os-border-surface);
+    border-radius: var(--os-radius-panel);
+    background: var(--os-control-surface-bg);
+    box-shadow: var(--os-elevation-panel);
+    overflow: hidden;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-feed:not(.social-feed-list) > .social-row {
+    padding: var(--os-row-inset-y) var(--os-row-inset-x);
+    border-bottom: 0;
+    transition: background 140ms ease;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-feed:not(.social-feed-list) > .social-row + .social-row {
+    border-top: 1px solid var(--os-border-divider);
+  }
+
+  body:is(.theme-dark, .theme-light) :is(
+    .social-feed-panel .social-feed-post:hover,
+    .social-feed:not(.social-feed-list) > .social-row-interactive:hover
+  ) {
+    background: var(--os-control-surface-bg-hover);
+  }
+
+  /* Filter, notification, and composer controls acknowledge their open state. */
+  body:is(.theme-dark, .theme-light) :is(
+    .page-filter-menu[open] > .page-filter-button,
+    .page-filter-menu-open > .page-filter-button,
+    .library-filter-menu[open] > .library-filter-button,
+    .page-compose-button-active,
+    .os-topbar-icon-button-active
+  ) {
+    background: var(--os-control-surface-bg-active);
+    border-color: var(--os-input-border-focus);
+    box-shadow: var(--os-elevation-input), var(--os-elevation-focus);
+  }
+
+  body:is(.theme-dark, .theme-light) .page-compose-button {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid var(--os-border-control);
+    border-radius: 50%;
+    background: var(--os-control-surface-bg);
+    color: var(--os-color-ink);
+    box-shadow: none;
+    cursor: pointer;
+    transition: background 140ms ease, border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+  }
+
+  body:is(.theme-dark, .theme-light) .page-compose-button:hover {
+    background: var(--os-control-surface-bg-hover);
+  }
+
+  body:is(.theme-dark, .theme-light) .page-compose-button-active,
+  body:is(.theme-dark, .theme-light) .page-compose-button-active:hover {
+    background: var(--os-control-surface-bg-active);
+    border-color: var(--os-input-border-focus);
+    box-shadow: var(--os-elevation-input), var(--os-elevation-focus);
+  }
+
+  body:is(.theme-dark, .theme-light) .page-compose-button > span {
+    display: block;
+    font-size: 27px;
+    font-weight: 360;
+    line-height: 1;
+    transform: translateY(-1px);
+  }
+
+  body:is(.theme-dark, .theme-light) .page-compose-button-active > span {
+    transform: rotate(45deg);
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page > .social-feed-composer-compact {
+    display: none;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-thread-page > section > .social-feed-list {
+    padding: 0;
+    border: 1px solid var(--os-border-surface);
+    border-radius: var(--os-radius-panel);
+    overflow: hidden;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-thread-page > section > .social-feed-list > .social-row,
+  body:is(.theme-dark, .theme-light) .social-thread-page > section > .social-feed-list > .social-feed-post > .social-row {
+    padding: var(--os-row-inset-y) var(--os-row-inset-x);
+  }
+
+  /* A top-level reply composer starts on the post's content column. */
+  body:is(.theme-dark, .theme-light) .social-thread-page > section > .social-feed-list > .social-composer-inline-surface {
+    margin: 0;
+    padding: var(--os-row-inset-y) var(--os-row-inset-x) var(--os-row-inset-y) calc(var(--os-row-inset-x) + 62px);
+    border-top: 1px solid var(--os-border-divider);
+    border-bottom: 0;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-thread-page .social-reply-branch > .social-inline-composer {
+    margin-left: 62px;
+    margin-right: var(--os-row-inset-x);
+    padding-block: 14px 20px;
+  }
+
+  /* Every text entry surface uses the same quiet neutral active state. */
+  body:is(.theme-dark, .theme-light) :is(
+    .os-input-field,
+    .os-input-search,
+    .os-input-textarea,
+    .profile-edit-input,
+    .tag-select-control
+  ) {
+    outline: 0;
+    transition: background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  }
+
+  body:is(.theme-dark, .theme-light) :is(
+    .os-input-field,
+    .os-input-search,
+    .os-input-textarea,
+    .profile-edit-input
+  ):is(:focus, :focus-visible),
+  body:is(.theme-dark, .theme-light) .tag-select-control:focus-within {
+    outline: 0;
+    background: var(--os-input-bg-focus-neutral);
+    border-color: var(--os-input-border-focus);
+    box-shadow: var(--os-elevation-input), var(--os-elevation-focus);
+  }
+
+  body:is(.theme-dark, .theme-light) :is(
+    .social-feed-composer,
+    .social-reply-drawer-form,
+    .social-inline-composer-box,
+    .social-composer-box,
+    .rich-editor-surface
+  ):focus-within {
+    background: var(--os-input-bg-focus-neutral);
+    border-color: var(--os-input-border-focus);
+    box-shadow: var(--os-elevation-input), var(--os-elevation-focus);
+  }
+
+  body:is(.theme-dark, .theme-light) :is(
+    .social-feed-composer,
+    .social-reply-drawer-form,
+    .social-inline-composer-box,
+    .social-composer-box
+  ) textarea:focus,
+  body:is(.theme-dark, .theme-light) :is(
+    .social-feed-composer,
+    .social-reply-drawer-form,
+    .social-inline-composer-box,
+    .social-composer-box
+  ) textarea:focus-visible {
+    outline: 0;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  body:is(.theme-dark, .theme-light) :is(.social-inline-composer-box, .social-composer-box) {
+    padding: 14px 16px;
+    border: 1px solid var(--os-border-control);
+    border-radius: var(--os-radius-control);
+    background: var(--os-control-surface-bg);
+    box-shadow: var(--os-elevation-input);
+  }
+
+  body:is(.theme-dark, .theme-light) :is(.social-inline-composer-box, .social-composer-box) > .os-input-textarea {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  body:is(.theme-dark, .theme-light) .os-topbar-search-form {
+    border-color: var(--os-border-control);
+    background: var(--os-control-surface-bg);
+    box-shadow: var(--os-elevation-input);
+    transition: background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  }
+
+  body:is(.theme-dark, .theme-light) .os-topbar-search-form:focus-within {
+    background: var(--os-input-bg-focus-neutral);
+    border-color: var(--os-input-border-focus);
+    box-shadow: var(--os-elevation-input), var(--os-elevation-focus);
+  }
+
+  body:is(.theme-dark, .theme-light) .os-topbar-search-input:is(:focus, :focus-visible) {
+    outline: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  body:is(.theme-dark, .theme-light) :is(.page-search-control, .library-search-control, .social-compose-to-row) {
+    border-color: var(--os-border-control);
+    background: var(--os-control-surface-bg);
+    box-shadow: var(--os-elevation-input);
+    transition: background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  }
+
+  body:is(.theme-dark, .theme-light) :is(.page-search-control, .library-search-control, .social-compose-to-row):focus-within {
+    background: var(--os-input-bg-focus-neutral);
+    border-color: var(--os-input-border-focus);
+    box-shadow: var(--os-elevation-input), var(--os-elevation-focus);
+  }
+
+  body:is(.theme-dark, .theme-light) :is(.page-search-control, .library-search-control, .social-compose-to-row) input:is(:focus, :focus-visible) {
+    outline: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  body:is(.theme-dark, .theme-light) .item-community-composer-surface {
+    border: 1px solid transparent;
+    border-radius: var(--os-radius-control);
+    transition: background 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+  }
+
+  body:is(.theme-dark, .theme-light) .item-community-composer-surface:focus-within {
+    background: var(--os-input-bg-focus-neutral);
+    border-color: var(--os-input-border-focus);
+    box-shadow: var(--os-elevation-input), var(--os-elevation-focus);
+  }
+
+  body:is(.theme-dark, .theme-light) .item-community-composer-surface :is(textarea, input):is(:focus, :focus-visible) {
+    outline: 0;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  body:is(.theme-dark, .theme-light) .login-field .os-input-field:focus {
+    border-color: var(--os-input-border-focus);
+    background: var(--os-input-bg-focus-neutral);
+    box-shadow: var(--os-elevation-input), var(--os-elevation-focus);
+  }
+
+  /* Keyboard focus remains visible without borrowing the theme accent. */
+  body:is(.theme-dark, .theme-light) :is(.dashboard-card-link, .social-row-main-clickable):focus-visible {
+    outline: 1px solid var(--os-border-focus);
+    outline-offset: 3px;
+  }
+
+  body:is(.theme-dark, .theme-light) .dashboard-card-link:focus-visible .glass-panel {
+    border-color: var(--os-border-focus);
+    box-shadow: var(--os-elevation-panel);
+  }
+
+  /* Profile identity uses the full measure; navigation and actions share one row. */
+  body:is(.theme-dark, .theme-light) .social-profile-main {
+    display: block;
+    width: 100%;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-profile-identity,
+  body:is(.theme-dark, .theme-light) .social-profile-text {
+    width: 100%;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-profile-text {
+    flex: 1 1 auto;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-profile-bio {
+    width: 100%;
+    max-width: none;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-profile-toolbar {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding-inline: 4px;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-profile-toolbar .social-profile-tabs {
+    margin: 0;
+    flex: 0 1 auto;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-profile-toolbar .social-profile-actions {
+    margin-left: auto;
+    padding-top: 0;
+    flex: 0 0 auto;
+  }
+
+  /* Notification categories navigate content, so they use the tab navigator. */
+  body:is(.theme-dark, .theme-light) .notification-navigation {
+    margin: 0;
+  }
+
+  body:is(.theme-dark, .theme-light) .store-active-filters {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  body:is(.theme-dark, .theme-light) .store-active-filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  body:is(.theme-dark, .theme-light) .store-active-filters .tag-select-pill {
+    flex: 0 0 auto;
+  }
+
+  /* Studio rows are the edit affordance; status remains informational. */
+  body:is(.theme-dark, .theme-light) .studio-item-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 140ms ease;
+  }
+
+  body:is(.theme-dark, .theme-light) .studio-item-row:hover {
+    background: var(--os-control-surface-bg-hover);
+  }
+
+  body:is(.theme-dark, .theme-light) .studio-status-pill-draft {
+    background: var(--os-control-surface-bg-active);
+    color: var(--os-color-ink-secondary);
+    border-color: var(--os-border-control);
+  }
+
+  /* Buttons visibly answer hover without introducing a new accent color. */
+  body.theme-dark .os-button:not(.os-button-danger):not(:disabled):hover {
+    background: #111;
+    color: #fff;
+    border-color: color-mix(in srgb, white 18%, transparent);
+    box-shadow: var(--os-button-shadow-hover);
+  }
+
+  body.theme-light .os-button:not(.os-button-danger):not(:disabled):hover {
+    background: #fff;
+    color: #111;
+    border-color: color-mix(in srgb, black 14%, transparent);
+    box-shadow: var(--os-button-shadow-hover);
+  }
+
+  /* Settings use a predictable two-column desktop grid. */
+  body:is(.theme-dark, .theme-light) .settings-page-stack {
+    width: 100%;
+  }
+
+  body:is(.theme-dark, .theme-light) .settings-theme-field {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  body:is(.theme-dark, .theme-light) .settings-landing-field {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  body:is(.theme-dark, .theme-light) .settings-accent-field {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  body:is(.theme-dark, .theme-light) .settings-accent-field .settings-swatches {
+    flex-wrap: nowrap;
+    width: 100%;
+  }
+
+  body:is(.theme-dark, .theme-light) .settings-inline-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 88px;
+    gap: var(--os-space-3);
+  }
+
+  body:is(.theme-dark, .theme-light) .settings-inline-form .os-button {
+    width: 88px;
+    padding-inline: 12px;
+  }
+
+  body:is(.theme-dark, .theme-light) .settings-market-field {
+    padding-right: calc(88px + var(--os-space-3));
+  }
+
+  body:is(.theme-dark, .theme-light) .settings-list {
+    gap: 0;
+    padding: 0;
+  }
+
+  body:is(.theme-dark, .theme-light) .settings-list > .settings-row {
+    min-height: 72px;
+    padding: 18px var(--os-panel-inset);
+  }
+
+  body:is(.theme-dark, .theme-light) .settings-list > .settings-row + .settings-row {
+    border-top: 1px solid var(--os-border-divider);
+  }
+}
+
+.tag-select { position: relative; }
+.tag-select-control { min-height: 48px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 7px 12px; border: 1px solid var(--os-input-border); border-radius: var(--os-radius-4); background: var(--os-input-bg); box-shadow: var(--os-input-shadow); cursor: text; }
+.tag-select-control:focus-within { border-color: var(--os-input-border-focus); box-shadow: var(--os-input-focus-shadow); }
+.tag-select-control input { flex: 1 1 150px; min-width: 120px; border: 0; outline: 0; background: transparent; color: var(--os-input-text); font: inherit; }
+.tag-select-control input::placeholder { color: var(--os-input-placeholder); }
+.tag-select-pill { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 8px 0 11px; border-radius: var(--os-radius-pill); background: var(--os-pill-bg); border: 1px solid var(--os-pill-border); color: var(--os-pill-text); font-size: 13px; font-weight: 680; }
+.tag-select-pill button { width: 20px; height: 20px; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; font-size: 17px; line-height: 1; }
+.tag-select-pill button:hover { background: color-mix(in srgb, var(--os-color-ink) 12%, transparent); }
+.tag-select-menu { position: absolute; z-index: 30; top: calc(100% + 8px); left: 0; right: 0; max-height: 260px; overflow-y: auto; display: grid; padding: 8px; border: 1px solid var(--os-paper-border); border-radius: 16px; background: var(--os-paper-bg); box-shadow: var(--os-shadow-4); }
+.tag-select-menu button { min-height: 40px; padding: 0 12px; border: 0; border-radius: 10px; background: transparent; color: var(--os-color-ink); text-align: left; cursor: pointer; font: inherit; }
+.tag-select-menu button:hover { background: color-mix(in srgb, var(--os-color-ink) 10%, transparent); }
+.tag-select-empty { padding: 10px 12px; color: var(--os-color-ink-muted); font-size: 13px; }
+.store-active-filters-mobile { display: none; }
+
+@media (min-width: 769px) {
+  /* Store filter state grows leftward while the filter button stays anchored. */
+  body:is(.theme-dark, .theme-light) .store-clear-filters {
+    display: block;
+    width: 100%;
+    text-align: center;
+  }
+
+  /* The mini player joins the shell at its lower-left seam. */
+  body:is(.theme-dark, .theme-light) .music-player-bar {
+    border-bottom-left-radius: 0;
+  }
+
+  /* Mini and expanded transport controls share one circular material system. */
+  body:is(.theme-dark, .theme-light) :is(
+    .music-player-button.music-player-button-icon,
+    .music-player-sheet-button:not(.music-player-sheet-button-utility)
+  ) {
+    width: 48px;
+    min-width: 48px;
+    height: 48px;
+    padding: 0;
+    border: 1px solid var(--os-border-control);
+    border-radius: 50%;
+    background: var(--os-control-surface-bg);
+    color: var(--os-color-ink-secondary);
+    box-shadow: none;
+  }
+
+  body:is(.theme-dark, .theme-light) :is(
+    .music-player-button.music-player-button-primary,
+    .music-player-sheet-button.music-player-sheet-button-primary
+  ) {
+    width: 48px;
+    min-width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--os-control-surface-bg-active);
+    color: var(--os-color-ink);
+  }
+
+  body:is(.theme-dark, .theme-light) :is(
+    .music-player-button.music-player-button-icon,
+    .music-player-sheet-button:not(.music-player-sheet-button-utility)
+  ):hover:not(:disabled) {
+    background: var(--os-control-surface-bg-active);
+    color: var(--os-color-ink);
+    border-color: var(--os-border-focus);
+  }
+
+  /* Expanded-player close is a nested corner control with system spacing. */
+  body:is(.theme-dark, .theme-light) .music-player-sheet-minimize {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 3;
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--os-border-control);
+    border-radius: 50%;
+    background: var(--os-control-surface-bg);
+    color: var(--os-color-ink);
+    box-shadow: var(--os-elevation-input);
+  }
+
+  body:is(.theme-dark, .theme-light) .music-player-sheet-minimize:hover {
+    background: var(--os-control-surface-bg-active);
+    border-color: var(--os-border-focus);
+  }
+
+  /* Light mode keeps the same material hierarchy with quieter tonal movement. */
+  body.theme-light {
+    --os-control-surface-bg: color-mix(in srgb, var(--os-color-ink) 4%, transparent);
+    --os-control-surface-bg-hover: color-mix(in srgb, var(--os-color-ink) 5.5%, transparent);
+    --os-control-surface-bg-active: color-mix(in srgb, var(--os-color-ink) 7.5%, transparent);
+    --os-control-surface-border: color-mix(in srgb, var(--os-color-ink) 8%, transparent);
+    --os-border-surface: var(--os-control-surface-border);
+    --os-border-control: var(--os-control-surface-border);
+    --os-border-focus: color-mix(in srgb, var(--os-color-ink) 14%, transparent);
+    --os-input-bg: var(--os-control-surface-bg);
+    --os-input-bg-hover: var(--os-control-surface-bg-hover);
+    --os-input-bg-focus: var(--os-control-surface-bg-active);
+    --os-input-bg-focus-neutral: var(--os-control-surface-bg-active);
+    --os-input-border: var(--os-control-surface-border);
+    --os-input-border-hover: color-mix(in srgb, var(--os-color-ink) 10%, transparent);
+    --os-input-border-focus: var(--os-border-focus);
+    --os-elevation-input: inset 0 1px 1px rgba(0, 0, 0, 0.05);
+    --os-elevation-focus: 0 0 0 1px color-mix(in srgb, var(--os-color-ink) 8%, transparent);
+    --os-elevation-panel: 0 12px 30px rgba(0, 0, 0, 0.07);
+  }
+
+  body.theme-light :is(.page-filter-option:hover, .page-filter-option-active, .library-filter-option:hover, .library-filter-option-active) {
+    background: var(--os-control-surface-bg-active);
+  }
+}
+
+/* Radio is a fixed listening panel inside the existing 44OS environment.
+   Its title and player share the available viewport instead of creating a
+   second scroll surface when the persistent music player is present. */
+.app-main-content:has(.radio-page),
+.view-hub:has(.radio-page),
+.radio-page {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.view-hub:has(.radio-page) {
+  height: 100%;
+  padding-bottom: var(--os-content-inset);
+}
+
+.radio-page {
+  height: 100%;
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.radio-page > .radio-hero {
+  height: 100%;
+  min-height: 0;
+}
+
+@media (min-width: 769px) {
+  .radio-page > .radio-hero {
+    padding-block: 14px;
+    gap: 12px;
+  }
+
+  .radio-page .radio-hero .radio-hero-cover,
+  .radio-page .radio-hero .view-album-cover {
+    width: min(30vw, 310px, 35dvh);
+    height: min(30vw, 310px, 35dvh);
+  }
+
+  .radio-page .radio-hero-title {
+    max-width: 720px;
+    font-size: clamp(22px, 1.75vw, 26px);
+  }
+
+  .radio-page .radio-hero-actions {
+    margin-top: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .store-active-filters-header {
+    display: none !important;
+  }
+
+  .store-browse-header {
+    display: grid;
+  }
+
+  .store-active-filters-mobile {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+    padding: var(--os-space-4) 0 0;
+  }
+
+  .store-active-filters-mobile .tag-select-pill {
+    flex: 0 0 auto;
+    max-width: 100%;
+  }
+
+  .view-hub:has(.radio-page) {
+    height: calc(100dvh - var(--os-topbar-height) - var(--os-mobile-dock-height) - env(safe-area-inset-bottom));
+    padding-inline: var(--os-content-inset);
+    padding-bottom: 0;
+    gap: var(--os-space-3);
+  }
+
+  .radio-page {
+    height: 100%;
+  }
+
+  .radio-page > .radio-hero {
+    padding-block: 10px;
+    gap: 10px;
+  }
+
+  .radio-page .radio-hero .radio-hero-cover,
+  .radio-page .radio-hero .view-album-cover {
+    width: min(58vw, 250px, 32dvh);
+    height: min(58vw, 250px, 32dvh);
+  }
+
+  .radio-page .radio-hero-title {
+    font-size: clamp(22px, 6vw, 28px);
+  }
+
+  .store-shelf-action.os-button {
+    width: 34px;
+    min-width: 34px;
+    height: 40px;
+    min-height: 40px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: var(--os-color-ink);
+    font-size: 0;
+  }
+
+  .store-shelf-action.os-button::before {
+    content: "";
+    width: 13px;
+    height: 13px;
+    border-top: 3px solid currentColor;
+    border-right: 3px solid currentColor;
+    transform: rotate(45deg);
+  }
+
+  .store-shelf-action.os-button:hover,
+  .store-shelf-action.os-button:active {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    transform: translateX(2px);
+  }
+
+  /* Mobile Community uses the same responsive input material as desktop. */
+  body.theme-light .community-app-page .social-feed-composer {
+    background: color-mix(in srgb, var(--os-color-ink) 4%, transparent);
+    border-color: color-mix(in srgb, var(--os-color-ink) 9%, transparent);
+    box-shadow: var(--os-elevation-input);
+  }
+
+  body.theme-dark .community-app-page .social-feed-composer {
+    background: color-mix(in srgb, var(--os-color-ink) 8%, transparent);
+    border-color: color-mix(in srgb, var(--os-color-ink) 12%, transparent);
+    box-shadow: var(--os-elevation-input);
+  }
+
+  .social-thread-page > section > .social-feed-list > .social-composer-inline-surface {
+    width: 100%;
+    margin: 0;
+    padding: 16px var(--os-content-inset) 20px;
+    border-top: 1px solid var(--os-color-hairline);
+    border-bottom: 0;
+  }
+
+  .social-thread-page > section > .social-feed-list > .social-composer-inline-surface .social-composer-box {
+    width: 100%;
+    min-width: 0;
+    padding: 14px 16px;
+  }
+
+  .social-thread-page > section > .social-feed-list > .social-composer-inline-surface textarea {
+    width: 100%;
+    min-width: 0;
+    min-height: 132px;
+    resize: vertical;
+  }
+
+  .social-thread-page > section > .social-feed-list > .social-composer-inline-surface .social-composer-actions {
+    width: 100%;
+    align-items: flex-end;
+  }
+
+  /* Studio overview keeps only its four operational signals. */
+  .dashboard-page .dashboard-overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--os-space-3);
+  }
+
+  .dashboard-page .dashboard-overview-card,
+  .dashboard-page .dashboard-metric-card {
+    min-height: 88px;
+    padding: 8px 5px;
+    border-radius: 16px;
+  }
+
+  .dashboard-page :is(.dashboard-overview-card, .dashboard-metric-card) .os-type-meta {
+    font-size: 9px;
+    line-height: 1.1;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  .dashboard-page :is(.dashboard-overview-card, .dashboard-metric-card) .os-type-page-title {
+    font-size: clamp(24px, 8vw, 32px);
+  }
+
+  .studio-item-row .studio-publication-status {
+    width: 11px;
+    min-width: 11px;
+    height: 11px;
+    min-height: 11px;
+    padding: 0;
+    border-radius: 50%;
+    border: 0;
+    font-size: 0;
+    box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 12%, transparent);
+    align-self: start;
+    margin-top: 5px;
+  }
+
+  .studio-item-row .dashboard-status-pill-success.studio-publication-status {
+    background: #20b486;
+    color: #20b486;
+  }
+
+  .studio-item-row .studio-status-pill-draft.studio-publication-status {
+    background: var(--os-color-ink-muted);
+    color: var(--os-color-ink-muted);
+  }
+
+  .studio-achievements-section .dashboard-achievement-choice-row {
+    grid-template-columns: 48px minmax(0, 1fr) 24px;
+    gap: 12px;
+    min-height: 100px;
+    padding: 16px 14px;
+  }
+
+  .studio-achievements-section .dashboard-achievement-toggle {
+    padding-left: 0;
+  }
+}
+
+/* Final mobile containment and hierarchy rules. These intentionally live after
+   the legacy responsive layers so every app shares one predictable viewport. */
+@media (max-width: 768px) {
+  .social-profile-identity {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    align-items: start;
+    column-gap: 14px;
+    row-gap: 2px;
+  }
+
+  .social-profile-avatar-button {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    align-self: flex-start;
+  }
+
+  .social-profile-identity .social-avatar-large {
+    width: 64px;
+    height: 64px;
+  }
+
+  .social-profile-text {
+    display: contents;
+  }
+
+  .social-profile-name {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: end;
+  }
+
+  .social-profile-text > .social-handle {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: start;
+  }
+
+  .social-profile-bio {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    width: 100%;
+    margin-top: var(--os-space-4);
+  }
+
+  .social-profile-external-links {
+    grid-column: 1 / -1;
+  }
+
+  body:is(.theme-light, .theme-dark) .social-profile-toolbar {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--os-space-4);
+    padding-inline: 0;
+  }
+
+  body:is(.theme-light, .theme-dark) .social-profile-toolbar .social-profile-actions {
+    order: 1;
+    width: 100%;
+    margin: 0;
+  }
+
+  body:is(.theme-light, .theme-dark) .social-profile-toolbar .social-profile-tabs {
+    order: 2;
+    align-self: center;
+    margin: 0;
+  }
+
+  .settings-landing-field {
+    display: none !important;
+  }
+
+  .settings-two-column {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .store-browse-header,
+  .store-active-filters-mobile,
+  .app-header:has(.page-filter-menu),
+  .app-header:has(.page-filter-menu) .app-header-copy {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .app-header:has(.page-filter-menu) {
+    display: flex;
+    align-items: center;
+  }
+
+  .app-header:has(.page-filter-menu) .app-header-copy {
+    width: auto;
+    flex: 1 1 auto;
+  }
+
+  .app-header:has(.page-filter-menu) .page-header-tools,
+  .community-app-page .page-header-tools {
+    width: auto;
+    min-width: max-content;
+    max-width: none;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    margin-left: auto;
+  }
+
+  .store-active-filters-mobile {
+    overflow: hidden;
+  }
+
+  .store-active-filters-mobile .tag-select-pill {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .store-active-filters-mobile .tag-select-pill-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .store-active-filters-mobile .tag-select-pill button {
+    flex: 0 0 20px;
+  }
+
+  .page-filter-menu,
+  .library-filter-menu {
+    margin-right: 0;
+  }
+
+  .page-filter-popover,
+  .library-filter-popover,
+  .page-filter-popover:has(.store-filter-group) {
+    position: fixed;
+    top: calc(var(--os-topbar-height) + var(--os-space-3));
+    right: var(--os-content-inset);
+    left: auto;
+    width: min(280px, calc(100vw - (var(--os-content-inset) * 2)));
+    max-width: calc(100vw - (var(--os-content-inset) * 2));
+  }
+
+  body:is(.theme-light, .theme-dark) .store-shelf-action.os-button,
+  body:is(.theme-light, .theme-dark) .store-shelf-action.os-button:hover,
+  body:is(.theme-light, .theme-dark) .store-shelf-action.os-button:active,
+  body:is(.theme-light, .theme-dark) .store-shelf-action.os-button:focus-visible {
+    appearance: none;
+    width: 34px;
+    min-width: 34px;
+    height: 40px;
+    min-height: 40px;
+    padding: 0;
+    border: 0 !important;
+    border-radius: 0;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--os-color-ink) !important;
+  }
+
+  .store-shelf-action-label {
+    display: none;
+  }
+
+  .store-shelf-action-chevron {
+    width: 13px;
+    height: 13px;
+    display: block;
+    border-top: 3px solid currentColor;
+    border-right: 3px solid currentColor;
+    transform: rotate(45deg);
+  }
+
+  .store-shelf-action.os-button::before {
+    content: none;
+  }
+
+  .studio-item-row .studio-publication-status {
+    display: none;
+  }
+
+  .radio-page .radio-hero-actions .os-button {
+    width: auto;
+    min-width: 132px;
+    min-height: 44px;
+    padding-inline: 28px;
   }
 }

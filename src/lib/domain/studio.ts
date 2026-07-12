@@ -1,4 +1,5 @@
 import type { Product } from '@/lib/products';
+import { isMissingFunctionError } from '@/lib/schemaCompat';
 import { supabase } from '@/lib/supabase';
 
 export type StudioLibraryMetric = {
@@ -21,14 +22,22 @@ export async function listCreatorItems(profileId: string) {
 export async function getCreatorCatalogOverview(profileId: string) {
   const items = await listCreatorItems(profileId);
   const itemIds = items.map(item => item.id);
-  if (itemIds.length === 0) return { items, libraryItems: [] as StudioLibraryMetric[] };
+  if (itemIds.length === 0) return { items, libraryItems: [] as StudioLibraryMetric[], totalPlays: 0 };
 
-  const result = await supabase
-    .from('library_entries')
-    .select('id,item_id,acquisition_type,acquired_at')
-    .in('item_id', itemIds);
-  if (result.error) throw result.error;
-  return { items, libraryItems: (result.data as StudioLibraryMetric[] | null) ?? [] };
+  const [libraryResult, playsResult] = await Promise.all([
+    supabase
+      .from('library_entries')
+      .select('id,item_id,acquisition_type,acquired_at')
+      .in('item_id', itemIds),
+    supabase.rpc('get_creator_total_plays'),
+  ]);
+  if (libraryResult.error) throw libraryResult.error;
+  if (playsResult.error && !isMissingFunctionError(playsResult.error)) throw playsResult.error;
+  return {
+    items,
+    libraryItems: (libraryResult.data as StudioLibraryMetric[] | null) ?? [],
+    totalPlays: Number(playsResult.data ?? 0),
+  };
 }
 
 export async function setItemPublicationStatus(itemId: string, status: 'published' | 'draft') {

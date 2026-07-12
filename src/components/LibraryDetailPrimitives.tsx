@@ -270,12 +270,17 @@ function buildLibraryProductDetails(product: Product, tracks: ProductDetailTrack
     : 'N/A';
   const type = product.experience_type || product.item_type || '';
   const normalizedType = type.toLowerCase();
+  const taxonomy = [
+    { label: 'Category', value: product.browse_category?.label || 'Unassigned' },
+    { label: 'Type', value: product.browse_type?.label || product.item_type || 'Unassigned' },
+    { label: 'Tags', value: product.browse_tags?.map(tag => tag.label).join(', ') || 'None' },
+  ];
 
   if (normalizedType.includes('music') || ['album', 'ep', 'single'].some(value => product.item_type?.toLowerCase().includes(value))) {
     const totalLength = tracks.reduce((sum, track) => sum + getTrackDurationSeconds(track, inferredTrackDurations), 0);
     return [
       { label: 'Creator', value: creator },
-      { label: 'Item Type', value: product.item_type || 'Release' },
+      ...taxonomy,
       { label: 'Release Year', value: String(product.year ?? 'N/A') },
       { label: 'Total Tracks', value: String(tracks.length) },
       { label: 'Total Length', value: formatDuration(totalLength) },
@@ -286,7 +291,7 @@ function buildLibraryProductDetails(product: Product, tracks: ProductDetailTrack
   if (normalizedType.includes('book') || product.item_type?.toLowerCase().includes('book')) {
     return [
       { label: 'Creator', value: creator },
-      { label: 'Book Type', value: product.item_type || 'Book' },
+      ...taxonomy,
       { label: 'Publication Year', value: String(product.year ?? 'N/A') },
       { label: 'Upload Date', value: uploadDate },
     ];
@@ -294,7 +299,7 @@ function buildLibraryProductDetails(product: Product, tracks: ProductDetailTrack
 
   return [
     { label: 'Creator', value: creator },
-    { label: 'Item Type', value: product.item_type || 'Item' },
+    ...taxonomy,
     { label: 'Year', value: String(product.year ?? 'N/A') },
     { label: 'Upload Date', value: uploadDate },
   ];

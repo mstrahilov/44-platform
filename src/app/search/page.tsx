@@ -8,13 +8,17 @@ import { SocialAvatar, SocialPostRow } from '@/components/Social';
 import type { Product } from '@/lib/products';
 import { creatorHref } from '@/lib/platform';
 import { matchesQuery } from '@/lib/taxonomy';
-import type { SocialPost } from '@/lib/social';
+import { countById, type LikeRow, type ReplyEngagerRow, type SocialPost } from '@/lib/social';
 import { loadPlatformSearchIndex, type SearchProfile } from '@/lib/domain/search';
+import { setDiscussionLike } from '@/lib/domain/community';
+import { useAuth } from '@/lib/useAuth';
 
 type SearchIndex = {
   products: Product[];
   posts: SocialPost[];
   profiles: SearchProfile[];
+  replies: ReplyEngagerRow[];
+  likes: LikeRow[];
 };
 
 let searchIndexCache: SearchIndex | null = null;
@@ -45,11 +49,15 @@ export default function SearchPage() {
 function SearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { user } = useAuth();
   const query = searchParams.get('q')?.trim() ?? '';
   const [draft, setDraft] = useState(query);
   const [products, setProducts] = useState<Product[]>([]);
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [profiles, setProfiles] = useState<SearchProfile[]>([]);
+  const [replies, setReplies] = useState<ReplyEngagerRow[]>([]);
+  const [likes, setLikes] = useState<LikeRow[]>([]);
+  const [likingId, setLikingId] = useState('');
   const [loading, setLoading] = useState(Boolean(query));
 
   useEffect(() => {
@@ -69,6 +77,8 @@ function SearchContent() {
       setProducts(index.products);
       setPosts(index.posts);
       setProfiles(index.profiles);
+      setReplies(index.replies);
+      setLikes(index.likes);
       setLoading(false);
     });
     return () => { alive = false; };
@@ -97,6 +107,29 @@ function SearchContent() {
     [profiles, query],
   );
   const hasResults = productMatches.length + postMatches.length + profileMatches.length > 0;
+  const replyCounts = useMemo(() => countById(replies, 'post_id'), [replies]);
+  const likeCounts = useMemo(() => countById(likes, 'post_id'), [likes]);
+  const likedIds = useMemo(() => new Set(
+    user ? likes.filter(like => like.profile_id === user.id).map(like => like.post_id) : [],
+  ), [likes, user]);
+
+  async function toggleLike(post: SocialPost) {
+    if (likingId) return;
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    const liked = likedIds.has(post.id);
+    setLikingId(post.id);
+    try {
+      await setDiscussionLike(post.id, user.id, !liked);
+      setLikes(current => liked
+        ? current.filter(like => !(like.post_id === post.id && like.profile_id === user.id))
+        : [...current, { post_id: post.id, profile_id: user.id, profiles: null }]);
+    } finally {
+      setLikingId('');
+    }
+  }
 
   return (
     <PageShell>
@@ -158,7 +191,17 @@ function SearchContent() {
               <HubSection title="Posts">
                 <div className="social-feed">
                   {postMatches.map(post => (
-                    <SocialPostRow key={post.id} post={post} showTitle handleOnly={false} />
+                    <SocialPostRow
+                      key={post.id}
+                      post={post}
+                      showTitle
+                      handleOnly={false}
+                      replyCount={replyCounts[post.id] ?? 0}
+                      likeCount={likeCounts[post.id] ?? 0}
+                      liked={likedIds.has(post.id)}
+                      onLike={() => { void toggleLike(post); }}
+                      disabled={likingId === post.id}
+                    />
                   ))}
                 </div>
               </HubSection>

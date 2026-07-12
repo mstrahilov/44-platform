@@ -123,13 +123,13 @@ export default function NotificationsPage() {
     <PageShell>
       <main className="dashboard-page">
         <HubHero title="Notifications" copy="Mentions, replies, achievements, and other account activity." />
-        <div className="settings-segment" role="tablist" aria-label="Notification sections">
+        <div className="social-profile-tabs notification-navigation" role="tablist" aria-label="Notification sections">
           {TABS.map(tab => (
             <button
               key={tab.id}
               type="button"
               role="tab"
-              className={`settings-segment-item${tab.id === activeTab ? ' settings-segment-item-active' : ''}`}
+              aria-selected={tab.id === activeTab}
               onClick={() => setActiveTab(tab.id)}
             >
               {tab.label}

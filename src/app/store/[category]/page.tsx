@@ -28,7 +28,7 @@ const CATEGORY_METADATA: Record<Exclude<StoreCategory, 'all'>, { title: string; 
 
 export async function generateMetadata({ params }: { params: Promise<{ category: string }> }) {
   const { category } = await params;
-  if (!isStoreCategory(category) || category === 'all') return buildPageMetadata({ title: 'Browse', path: '/store' });
+  if (!isStoreCategory(category) || category === 'all') return buildPageMetadata({ title: 'Store', path: '/store' });
   return buildPageMetadata({
     ...CATEGORY_METADATA[category],
     path: `/store/${category}`,

@@ -17,7 +17,7 @@ export default function CartPage() {
   const { items, count, subtotalCents } = useCart();
   const currency = items[0]?.currency ?? 'USD';
 
-  useTopbarBack({ href: '/store', label: 'Browse' });
+  useTopbarBack({ href: '/store', label: 'Store' });
 
   if (items.length === 0) {
     return (
@@ -28,7 +28,7 @@ export default function CartPage() {
             <div className="dashboard-empty">
               Your cart is empty. Browse merch or creator items to add something.
               <div style={{ marginTop: 'var(--os-space-4)' }}>
-                <Link className="os-button os-button-primary os-button-compact" href="/store">Open Browse</Link>
+                <Link className="os-button os-button-primary os-button-compact" href="/store">Open Store</Link>
               </div>
             </div>
           </div>

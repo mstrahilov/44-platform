@@ -18,7 +18,7 @@ export const LANDING_PAGE_STORAGE_KEY = '44-setting-landing-page';
 export const DEFAULT_LANDING_PAGE: LandingPageId = 'store';
 
 export const LANDING_PAGES: Array<{ id: LandingPageId; label: string; href: string }> = [
-  { id: 'store', label: 'Discover', href: '/store' },
+  { id: 'store', label: 'Store', href: '/store' },
   { id: 'library', label: 'Library', href: '/library' },
   { id: 'radio', label: 'Radio', href: '/radio' },
   { id: 'community', label: 'Community', href: '/community' },
