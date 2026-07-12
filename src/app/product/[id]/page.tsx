@@ -377,6 +377,15 @@ export function ProductStoreDetail({
             ))}
           </div>
         )}
+        {(product.external_links ?? []).length > 0 && (
+          <div className="app-tag-row" style={{ marginTop: 16 }} aria-label="Available on other platforms">
+            {(product.external_links ?? []).map(link => (
+              <a key={link.id} href={link.url} target="_blank" rel="noreferrer" className="os-pill os-type-pill">
+                {link.label || link.platform}
+              </a>
+            ))}
+          </div>
+        )}
       </div>
 
       {related.length > 0 && (

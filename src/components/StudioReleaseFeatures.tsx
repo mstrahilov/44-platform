@@ -132,15 +132,8 @@ function enabledBonusItems(state: ReleaseFeatureState) {
 }
 
 export function validateReleaseFeatureState(state: ReleaseFeatureState, sectionId: StudioCatalogSectionId) {
-  const supportsAchievements = supportsAchievementsForSection(sectionId);
-  const hasIncompleteBonusContent = supportsAchievements
-    && state.achievementsEnabled
-    && normalizeBonusItems(state.bonusItems).some(item => Boolean(item.title.trim()) !== Boolean(item.fileUrl.trim()));
-
-  if (hasIncompleteBonusContent) {
-    return 'Bonus Content needs both a title and an uploaded file.';
-  }
-
+  void state;
+  void sectionId;
   return '';
 }
 
@@ -161,7 +154,7 @@ export function buildAchievementRows(productId: string, state: ReleaseFeatureSta
         reward_item_id: null,
         reward_config: {
           commentary_enabled: state.commentaryEnabled,
-          final_reward_required: achievement.code === 'overachiever',
+          final_reward_required: achievement.code === OVERACHIEVER_CODE && bonusItems.length > 0,
           bonus_items: achievement.code === OVERACHIEVER_CODE ? bonusItems : [],
         },
         points: 0,

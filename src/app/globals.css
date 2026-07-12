@@ -5646,6 +5646,30 @@ body.theme-dark .os-home-panel {
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.14);
 }
 
+.page-filter-popover:has(.store-filter-group) {
+  width: min(260px, calc(100vw - 32px));
+  padding: 10px;
+  gap: 10px;
+}
+
+.store-filter-group {
+  display: grid;
+  gap: 5px;
+}
+
+.store-filter-label {
+  color: var(--os-color-ink-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.store-filter-group .os-input-field {
+  width: 100%;
+  min-height: 36px;
+}
+
 
 .page-filter-option,
 .library-filter-option {

@@ -67,7 +67,7 @@ export async function getLibraryItemBundle(userId: string, libraryEntryId: strin
 }
 
 export async function getCatalogItem(identifier: string) {
-  const query = supabase.from('catalog_items').select('*, creators:profiles!author_id(*)');
+  const query = supabase.from('catalog_items').select('*, creators:profiles!author_id(*), external_links:item_external_links(id,label,platform,url,sort_order)');
   const result = await (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier)
     ? query.eq('id', identifier)
     : query.eq('slug', identifier)

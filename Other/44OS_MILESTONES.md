@@ -160,7 +160,7 @@ Completion evidence (July 12, 2026): Studio is the single creator-management imp
 
 ### M7 — Store And Discovery Launch Loop
 
-**Status: Not started**
+**Status: Complete**
 
 Ship one transparent catalog engine behind `/store` and `/store/[category]`, with curated editorial shelves and explicit category, price, tag, and capability filters. `/browse` remains compatibility-only.
 
@@ -168,6 +168,8 @@ Completion criteria:
 
 - The full catalog is discoverable without bespoke category implementations or opaque popularity ranking.
 - Profiles and Items expose structured external-platform links.
+
+Completion evidence (July 12, 2026): `/store` and every category route use one `loadStoreDiscoveryCatalog` contract over all 49 published Items and their capability registrations. Discovery exposes explicit category, free/paid, tag, capability, and text filters; text search includes title, creator, and tags. The full filtered catalog remains visible in `All Items`/`Results` rather than being truncated to shelves. Editorial surfaces are deterministic and explainable: `Featured by 44` uses the explicit `featured` flag, `Free to Listen` requires music plus the streaming capability, and `Recently Released` uses the documented public catalog order—no engagement/popularity score is used. `20260712050000_m7_catalog_discovery_truth.sql` removed inherited false capability claims: streaming now covers only 28 music Items, and downloads cover 28 music plus 2 books rather than 19 physical merch Items with no downloadable asset/offer. Item and profile pages render ordered `item_external_links` and `profile_external_links` when populated; both live tables are currently empty, so no fake outbound links were invented. `/browse` remains permanent compatibility-only. Typecheck, lint, production build, local Store/filter markup, clean schema replay, linked migration alignment, and public capability probes passed.
 
 ### M8 — Library, Achievements, And Item Memory
 

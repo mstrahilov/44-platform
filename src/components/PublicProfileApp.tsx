@@ -54,6 +54,7 @@ export default function PublicProfilePage() {
   const userId = user?.id ?? null;
   const [profile, setProfile] = useState<Profile | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
+  const [externalLinks, setExternalLinks] = useState<Array<{ id: string; label: string; platform: string; url: string }>>([]);
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [replyCounts, setReplyCounts] = useState<CountMap>({});
   const [repliersMap, setRepliersMap] = useState<LikersMap>({});
@@ -78,6 +79,7 @@ export default function PublicProfilePage() {
 
       if (!resolvedProfile) {
         setProducts([]);
+        setExternalLinks([]);
         setPosts([]);
         setIsFollowing(false);
         setLoading(false);
@@ -86,6 +88,7 @@ export default function PublicProfilePage() {
 
       const content = await getPublicProfileContent(resolvedProfile);
       setProducts(content.items.filter(Boolean));
+      setExternalLinks(content.links);
       const nextPosts = content.posts;
       setPosts(nextPosts);
       const replyRowsData = content.replies;
@@ -302,6 +305,15 @@ export default function PublicProfilePage() {
                 <p className="social-profile-bio">
                   {profile.bio || 'This member has not added a bio yet.'}
                 </p>
+                {externalLinks.length > 0 && (
+                  <div className="app-tag-row social-profile-external-links" aria-label="External profiles">
+                    {externalLinks.map(link => (
+                      <a key={link.id} href={link.url} target="_blank" rel="noreferrer" className="os-pill os-type-pill">
+                        {link.label || link.platform}
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 

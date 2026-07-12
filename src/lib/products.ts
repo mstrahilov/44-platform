@@ -20,6 +20,14 @@ export interface Item {
   is_free: boolean;
   featured: boolean;
   tags: string[] | null;
+  capability_keys?: string[];
+  external_links?: Array<{
+    id: string;
+    label: string;
+    platform: string;
+    url: string;
+    sort_order: number;
+  }>;
   cover_url: string | null;
   hero_url?: string | null;
   feature_description?: string | null;

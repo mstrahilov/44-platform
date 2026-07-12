@@ -50,7 +50,7 @@ export async function getPublicProfileContent(profile: Profile) {
     creator_type: profile.creator_type ?? null,
   }, profile.id);
 
-  const [itemResult, postResult] = await Promise.all([
+  const [itemResult, postResult, linkResult] = await Promise.all([
     supabase
       .from('catalog_items')
       .select('*, creators:profiles!author_id(*)')
@@ -62,14 +62,20 @@ export async function getPublicProfileContent(profile: Profile) {
       .in('author_id', ids)
       .eq('status', 'published')
       .order('created_at', { ascending: false }),
+    supabase
+      .from('profile_external_links')
+      .select('id,label,platform,url,sort_order')
+      .eq('profile_id', profile.id)
+      .order('sort_order'),
   ]);
   if (itemResult.error) throw itemResult.error;
   if (postResult.error) throw postResult.error;
+  if (linkResult.error) throw linkResult.error;
 
   const posts = ((postResult.data as SocialPost[] | null) ?? []).filter(Boolean);
   const postIds = posts.map(post => post.id);
   if (postIds.length === 0) {
-    return { items: (itemResult.data as Product[] | null) ?? [], posts, replies: [], likes: [] };
+    return { items: (itemResult.data as Product[] | null) ?? [], posts, replies: [], likes: [], links: linkResult.data ?? [] };
   }
 
   const [replyResult, likeResult] = await Promise.all([
@@ -93,6 +99,7 @@ export async function getPublicProfileContent(profile: Profile) {
     posts,
     replies: (replyResult.data as ReplyEngagerRow[] | null) ?? [],
     likes: (likeResult.data as LikeRow[] | null) ?? [],
+    links: linkResult.data ?? [],
   };
 }
 

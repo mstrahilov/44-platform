@@ -111,6 +111,7 @@ Current code state:
 
 - `src/lib/achievementCatalog.ts` filters Library display/tracking to the eight v1 music codes.
 - `src/components/StudioReleaseFeatures.tsx` exposes a music-only Achievements section: one master switch, independently selectable v1 templates with no minimum count, plus optional Overachiever Bonus Content. `DashboardReleaseFeatures.tsx` remains only as a compatibility export.
+- Bonus Content is optional during testing and launch preparation. Achievements save without a bonus upload; Overachiever records a final reward only when both a bonus title and file are present.
 - Studio create/edit pages show release achievements only for music.
 - Studio create/edit pages no longer collect release descriptions. New Items save an empty legacy description under the canonical baseline schema; edits preserve any existing legacy copy without exposing the field.
 - The reviewed achievement and launch-foundation schema is captured in the canonical `supabase/migrations/20260712010000_44os_item_baseline.sql`.
@@ -301,11 +302,12 @@ Current concept-to-table map:
 
 Known Supabase state from the launch cleanup:
 
-- Migration history is aligned locally and remotely through `20260712040000`.
+- Migration history is aligned locally and remotely through `20260712050000`.
 - The typed Community spine is applied in `20260712020000_typed_community_content_spine.sql`; application queries no longer target the legacy Community content tables.
 - `20260712025000_add_missing_tracks_to_radio.sql` brings Radio to one active entry for every existing track: 248 tracks, 248 entries, zero missing, zero duplicates.
 - `20260712030000_m5_provider_neutral_commerce.sql` separates public access, offers, orders, payment processing, entitlements, and Library presentation. Current free Library behavior is active; download and physical offers remain drafts until the operating model and verified provider are approved.
 - `20260712040000_m5_trusted_achievements_and_assets.sql` makes achievement evaluation and reward grants server-authoritative, protects asset locations behind entitlement-aware manifests, prohibits public download URLs, and disables legacy client-authored merchandise orders. M5 is complete; paid checkout remains deliberately disabled until M11.
+- `20260712050000_m7_catalog_discovery_truth.sql` removes false inherited streaming capabilities from non-music Items and false download capabilities from physical merch without a downloadable asset or digital offer.
 - The prior incremental migration chain was consolidated into `20260712010000_44os_item_baseline.sql`. Its historical files remain available in Git history, but they are no longer active replay inputs.
 - The baseline includes the complete public schema, RLS, functions, triggers, auth profile hook, public storage buckets and policies, Item vocabulary, capabilities, membership, external links, and curated role mapping.
 - A clean local Supabase reset replays the baseline without a live snapshot, and a public-schema comparison against linked staging is empty.
@@ -313,6 +315,7 @@ Known Supabase state from the launch cleanup:
 - The July 11 post-cutover probes verified 49 Items, 248 tracks, 32 Library entries, 14 profiles, 49 Item owners, 213 capability registrations, 5 Item categories, 24 posts, 248 Radio playlist entries, and 8 achievement templates.
 - The canonical track ordering column is `tracks.number`; `tracks.track_number` is absent in the live schema and should not be selected by app code.
 - Public Store discovery and creator-profile Music/Books tabs sort by release year descending, then creator profile name ascending. Studio release management is intentionally independent and sorts by `created_at` descending (order added).
+- Store discovery uses explicit category, price, tag, capability, and text filters over the complete published catalog. Its only launch shelves are rule-based: the curated `featured` flag, streaming-capable music for `Free to Listen`, and the documented public release order for `Recently Released`; engagement is never an undisclosed ranking input.
 - Anonymous access to the dormant `services` table returns zero rows; its data remains available only through admin/service-role access.
 - `supabase db push --linked --dry-run` reports the remote database is up to date.
 
