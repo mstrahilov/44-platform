@@ -71,6 +71,16 @@ function creatorFilterKey(product: Product) {
   return product.author_id || product.creators?.id || product.creator;
 }
 
+function compareMerchShelfProducts(left: Product, right: Product) {
+  const priority = (product: Product) => {
+    const type = (product.browse_type?.label || product.item_type || '').trim().toLowerCase();
+    if (type === 'apparel') return 0;
+    if (type === 'accessories') return 1;
+    return 2;
+  };
+  return priority(left) - priority(right) || comparePublicCatalogProducts(left, right);
+}
+
 export default function StoreApp({ category, frontDoor = false }: { category: StoreCategory; frontDoor?: boolean }) {
   const { user, loading: authLoading } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
@@ -344,7 +354,10 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
       .map(filter => ({
         filter,
         title: `New in ${STORE_FILTER_LABELS[filter]}`,
-        products: products.filter(product => getProductExperience(product) === filter).sort(comparePublicCatalogProducts).slice(0, 8),
+        products: products
+          .filter(product => getProductExperience(product) === filter)
+          .sort(filter === 'physical' ? compareMerchShelfProducts : comparePublicCatalogProducts)
+          .slice(0, 8),
       }))
       .filter(shelf => shelf.products.length > 0);
 

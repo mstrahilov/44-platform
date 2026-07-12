@@ -116,7 +116,7 @@ Current code state:
 - Studio create/edit pages no longer collect release descriptions. New Items save an empty legacy description under the canonical baseline schema; edits preserve any existing legacy copy without exposing the field.
 - The reviewed achievement and launch-foundation schema is captured in the canonical `supabase/migrations/20260712010000_44os_item_baseline.sql`.
 
-Supabase is still staging-only before public launch. Back up first, run dry runs, then apply reviewed repo migrations directly through the Supabase CLI.
+The linked Supabase project backing the live tester deployment is aligned with the repository through migration `20260712052600_creator_studio_play_metrics.sql`. Profile headers are retired, existing music achievements are enabled without requiring Bonus Content, and `item_play_events` is the append-only creator analytics source for validated playback starts across Store, Library, and Radio. Back up first, run dry runs, and apply reviewed repository migrations through the Supabase CLI; never make untracked dashboard-only schema changes.
 
 ---
 

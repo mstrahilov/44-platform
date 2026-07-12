@@ -227,8 +227,9 @@ Page hero rules:
 
 Catalog and Library presentation rules:
 
-- Browse shelves use square artwork across every Category. Mobile shelf actions collapse from the desktop `View All` pill to a compact trailing arrow without changing their behavior or accessible label.
-- Library is one mixed square Item grid. Category headings are not repeated in the content; the shared Library filter provides Category selection.
+- Browse artwork follows Item presentation: Music and Assets are square, Books use their 2:3 portrait cover ratio, and physical Merch uses a 3:4 portrait product ratio. Store detail artwork uses the same Category-specific ratio. Mobile shelf actions collapse from the desktop `View All` pill to a compact trailing arrow without changing their behavior or accessible label.
+- Library remains one filterable destination but renders separate grid bands in the stable order Music, Books, Assets. Existing catalog order remains intact within each band, and Books always begin on a fresh row so 2:3 covers never mix into a square Music row.
+- The `New in Merch` editorial shelf temporarily prioritizes Apparel, then Accessories, then all remaining Merch Types; products retain the normal public catalog order inside each priority group. This is editorial presentation, not a new global ranking rule.
 
 Archived primary-page descriptions (saved July 10, 2026):
 
