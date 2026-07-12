@@ -253,9 +253,11 @@ The approved destination treats `catalog_items.id` as the permanent Item identit
 Current access and commerce stance:
 
 - Public listening is a catalog capability, not a subscription entitlement. Music may remain fully streamable without being saved or purchased.
-- Add to Library is currently a free save/organization action backed by a zero-cost `library_access` offer and server-issued entitlement.
+- `Listen` is free and requires neither a purchase nor a Library relationship.
+- `Add to Library` is a free save for returning, organization, progress, achievements, and creator updates, backed by a zero-cost `library_access` offer and server-issued entitlement.
 - A downloadable copy is a separate `digital_download` offer; physical editions use `physical_purchase`. Their prices and activation do not change whether an Item can be streamed or saved.
-- The user-facing model, when activated, should use distinct actions such as `Listen`, `Add to Library`, `Buy Download`, and `Buy Physical` instead of asking one Store price to explain multiple rights.
+- `Buy Download` is an optional creator-supporting downloadable copy. `Buy Physical` covers vinyl, cassette, apparel, books, and other physical editions.
+- Music discovery pages are price-neutral. Price belongs to the optional purchase step, where the user can understand exactly what they are buying; it never implies that listening or saving requires payment.
 - Download and physical offers remain draft-only until M11 approves the seller, fee, tax, payout, refund, fulfillment, currency, and provider model. No placeholder card form may create a paid order or entitlement.
 
 Rules:
@@ -281,7 +283,7 @@ Current concept-to-table map:
 - Commerce ledger: `commerce_orders`, `commerce_order_items`, `commerce_order_addresses`, `payment_attempts`, and `payment_events`. Provider IDs are adapters around this ledger rather than platform identity. Pre-M5 client-authored merch history is explicitly `legacy_unverified`, never silently treated as verified payment.
 - Reviews: canonical `content_entries` rows of type `review`, attached by `item_id`, with constrained payloads in `content_review_details`.
 - Creator updates: canonical `content_entries` rows of type `creator_update`, attached by `item_id`, with constrained payloads in `content_update_details`.
-- Achievements: `achievement_templates` 44-defined catalog plus `item_achievements`, `user_achievements`, `achievement_events`, `achievement_progress`.
+- Achievements: `achievement_templates` 44-defined catalog plus `item_achievements`, `user_achievements`, `achievement_events`, `achievement_progress`, and validated `achievement_playback_signals`. Unlock evaluation and reward grants are server-authoritative; clients submit bounded evidence rather than writing achievement state.
 - Item capabilities and collaborators: `item_capabilities` and `item_members`; structured outbound links use `item_external_links` and `profile_external_links`.
 - Release features: achievements first, with optional `item_assets` unlocks such as `bonus_content`; future features include `commentary_audio` and `behind_the_scenes`.
 - Points foundation: `user_points_ledger`.
@@ -297,10 +299,11 @@ Current concept-to-table map:
 
 Known Supabase state from the launch cleanup:
 
-- Migration history is aligned locally and remotely through `20260712030000`.
+- Migration history is aligned locally and remotely through `20260712040000`.
 - The typed Community spine is applied in `20260712020000_typed_community_content_spine.sql`; application queries no longer target the legacy Community content tables.
 - `20260712025000_add_missing_tracks_to_radio.sql` brings Radio to one active entry for every existing track: 248 tracks, 248 entries, zero missing, zero duplicates.
 - `20260712030000_m5_provider_neutral_commerce.sql` separates public access, offers, orders, payment processing, entitlements, and Library presentation. Current free Library behavior is active; download and physical offers remain drafts until the operating model and verified provider are approved.
+- `20260712040000_m5_trusted_achievements_and_assets.sql` makes achievement evaluation and reward grants server-authoritative, protects asset locations behind entitlement-aware manifests, prohibits public download URLs, and disables legacy client-authored merchandise orders. M5 is complete; paid checkout remains deliberately disabled until M11.
 - The prior incremental migration chain was consolidated into `20260712010000_44os_item_baseline.sql`. Its historical files remain available in Git history, but they are no longer active replay inputs.
 - The baseline includes the complete public schema, RLS, functions, triggers, auth profile hook, public storage buckets and policies, Item vocabulary, capabilities, membership, external links, and curated role mapping.
 - A clean local Supabase reset replays the baseline without a live snapshot, and a public-schema comparison against linked staging is empty.

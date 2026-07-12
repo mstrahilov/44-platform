@@ -1,11 +1,10 @@
 'use client';
 
-import { unlockAchievementForUser } from '@/lib/achievementNotifications';
+import { requestAchievementEvaluation } from '@/lib/achievementNotifications';
 import type { AchievementNotification } from '@/lib/achievementNotifications';
 import { isV1AchievementCode } from '@/lib/achievementCatalog';
 import type { ProductAchievement } from '@/lib/platform';
 import { supabase } from '@/lib/supabase';
-import type { Json } from '@/lib/database.types';
 
 type TrackTriggerOptions = {
   userId: string;
@@ -29,32 +28,11 @@ export async function trackProductAchievementTrigger({
   unlockedAchievementIds,
   metadata,
 }: TrackTriggerOptions): Promise<AchievementTrackResult> {
-  const achievementRows = (achievements ?? await loadProductAchievements(productId)).filter(achievement => isV1AchievementCode(achievement.code));
+  void achievements;
   const unlockedIds = unlockedAchievementIds ?? await loadUnlockedAchievementIds(userId, productId);
-  const candidates = achievementRows.filter(achievement => achievement.trigger_type === triggerType);
-  const unlockedAchievements: AchievementNotification[] = [];
+  const unlockedAchievements = await requestAchievementEvaluation(productId, triggerType, metadata);
   const nextUnlockedIds = new Set(unlockedIds);
-
-  for (const achievement of candidates) {
-    if (nextUnlockedIds.has(achievement.id)) continue;
-    const unlocked = await unlockAchievementForUser(userId, productId, achievement, metadata);
-    if (!unlocked) continue;
-    unlockedAchievements.push(unlocked);
-    nextUnlockedIds.add(achievement.id);
-  }
-
-  const overachiever = await maybeUnlockOverachiever({
-    userId,
-    productId,
-    achievements: achievementRows,
-    unlockedAchievementIds: nextUnlockedIds,
-    metadata: { source: 'overachiever_check', completed_trigger: triggerType },
-  });
-
-  if (overachiever) {
-    unlockedAchievements.push(overachiever);
-    nextUnlockedIds.add(overachiever.id);
-  }
+  unlockedAchievements.forEach(achievement => nextUnlockedIds.add(achievement.id));
 
   return {
     unlockedAchievements,
@@ -75,18 +53,11 @@ export async function maybeUnlockOverachiever({
   unlockedAchievementIds?: Set<string>;
   metadata?: Record<string, unknown>;
 }) {
-  const achievementRows = (achievements ?? await loadProductAchievements(productId)).filter(achievement => isV1AchievementCode(achievement.code));
-  const overachiever = achievementRows.find(achievement => achievement.code === 'overachiever');
-  if (!overachiever) return null;
-
-  const unlockedIds = unlockedAchievementIds ?? await loadUnlockedAchievementIds(userId, productId);
-  if (unlockedIds.has(overachiever.id)) return null;
-
-  const requiredAchievements = achievementRows.filter(achievement => achievement.code !== 'overachiever');
-  if (requiredAchievements.length === 0) return null;
-  if (!requiredAchievements.every(achievement => unlockedIds.has(achievement.id))) return null;
-
-  return unlockAchievementForUser(userId, productId, overachiever, metadata);
+  void achievements;
+  void unlockedAchievementIds;
+  void userId;
+  const unlocked = await requestAchievementEvaluation(productId, 'all_achievements_unlocked', metadata);
+  return unlocked.find(achievement => achievement.achievementCode === 'overachiever') ?? null;
 }
 
 export async function loadProductAchievements(productId: string) {
@@ -123,70 +94,22 @@ export async function loadUnlockedAchievementIds(userId: string, productId: stri
   return new Set(((data as Array<{ achievement_id: string }> | null) ?? []).map(item => item.achievement_id));
 }
 
-export async function incrementAchievementProgress({
-  userId,
+export async function recordAchievementPlaybackSignal({
   productId,
-  metric,
-  metadata,
+  trackId,
+  sessionId,
+  signalType,
 }: {
-  userId: string;
   productId: string;
-  metric: string;
-  metadata?: Record<string, unknown>;
+  trackId: string;
+  sessionId: string;
+  signalType: 'track_completed' | 'track_skipped';
 }) {
-  const { data: existing } = await supabase
-    .from('achievement_progress')
-    .select('value,metadata')
-    .eq('user_id', userId)
-    .eq('item_id', productId)
-    .eq('metric', metric)
-    .maybeSingle();
-
-  const currentValue = typeof existing?.value === 'number' ? existing.value : 0;
-  const nextValue = currentValue + 1;
-
-  await supabase
-    .from('achievement_progress')
-    .upsert({
-      user_id: userId,
-      item_id: productId,
-      metric,
-      value: nextValue,
-      metadata: {
-        ...(isRecord(existing?.metadata) ? existing.metadata : {}),
-        ...(metadata ?? {}),
-      } as Json,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id,item_id,metric' });
-
-  return nextValue;
-}
-
-export async function rememberAchievementProgress({
-  userId,
-  productId,
-  metric,
-  value,
-  metadata,
-}: {
-  userId: string;
-  productId: string;
-  metric: string;
-  value?: number;
-  metadata?: Record<string, unknown>;
-}) {
-  await supabase
-    .from('achievement_progress')
-    .upsert({
-      user_id: userId,
-      item_id: productId,
-      metric,
-      value: value ?? 1,
-      metadata: (metadata ?? {}) as Json,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id,item_id,metric' });
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+  return supabase.rpc('record_achievement_playback_signal', {
+    target_item_id: productId,
+    target_track_id: trackId,
+    target_session_id: sessionId,
+    target_signal_type: signalType,
+    signal_metadata: {},
+  });
 }

@@ -124,7 +124,7 @@ Completion evidence (July 11, 2026): migration `20260712020000_typed_community_c
 
 ### M5 — Entitlements And Provider-neutral Commerce Core
 
-**Status: In progress**
+**Status: Complete**
 
 Separate catalog offers, money movement, access rights, and Library presentation before choosing a payment provider.
 
@@ -140,7 +140,9 @@ Completion criteria:
 - A client-authored row cannot forge a purchase, entitlement, achievement, or protected-asset unlock.
 - The commerce domain can accept a later processor adapter without changing Item or Library identity.
 
-Current evidence (July 11, 2026): `20260712030000_m5_provider_neutral_commerce.sql` establishes `catalog_offers`, typed offer grants, provider-neutral commerce orders and line snapshots, addresses, payment attempts/events, entitlements, and an immutable entitlement event ledger. Existing Library relationships are preserved as `legacy_library` entitlements without claiming processor verification. Active zero-cost Library offers preserve the tester experience; downloadable and physical offers are draft-only. `save_item_to_library` is server-authoritative, direct Library insertion is revoked, paid placeholder checkout is disabled, and repeated free saves are idempotent. The full linked-data rehearsal preserved all 32 Library entries with 32 matching Library entitlements. Remaining before M5 is Complete: route achievement rewards and protected asset/download authorization through trusted entitlement operations, then verify those denial paths end to end.
+Completion evidence (July 12, 2026): `20260712030000_m5_provider_neutral_commerce.sql` establishes `catalog_offers`, typed offer grants, provider-neutral commerce orders and line snapshots, addresses, payment attempts/events, entitlements, and an immutable entitlement event ledger. Existing Library relationships are preserved as `legacy_library` entitlements without claiming processor verification. Active zero-cost Library offers preserve the tester experience; downloadable and physical offers are draft-only. `save_item_to_library` is server-authoritative, direct Library insertion is revoked, paid placeholder checkout is disabled, and repeated free saves are idempotent. The linked-data rehearsal preserved all 32 Library entries with 32 matching Library entitlements.
+
+`20260712040000_m5_trusted_achievements_and_assets.sql` completes the trust boundary. Playback evidence is recorded through validated server operations; achievement evaluation and reward entitlements are server-authoritative; clients cannot directly write unlock, event, or progress records. Protected asset manifests reveal file locations only to an entitled user or Item manager, public track/Item download URLs are prohibited, and legacy client-authored merchandise orders are disabled. Rehearsals preserved all 12 existing achievement unlocks. Denial-path tests confirmed that direct unlock writes fail and locked assets withhold their URLs, while a valid download entitlement reveals the protected asset. The approved music contract is free listening, free Library saves, optional `Buy Download`, and separate `Buy Physical` actions.
 
 ### M6 — Application And Route Consolidation
 

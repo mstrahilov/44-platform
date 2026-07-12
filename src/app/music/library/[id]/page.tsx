@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
 import { useContextMenu } from '@/components/ContextMenu';
@@ -17,7 +17,7 @@ import {
 import { ProductUpdatesSection } from '@/components/ProductUpdatesSection';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { isV1AchievementCode } from '@/lib/achievementCatalog';
-import { incrementAchievementProgress, trackProductAchievementTrigger } from '@/lib/achievementTracking';
+import { recordAchievementPlaybackSignal, trackProductAchievementTrigger } from '@/lib/achievementTracking';
 import { getProductLibraryPrimaryAction, getProductRuntimeKind } from '@/lib/libraryContent';
 import type { Product } from '@/lib/products';
 import { productLibraryHref } from '@/lib/experience';
@@ -89,17 +89,13 @@ export default function MusicLibraryItemPage() {
           .select('id,user_id,achievement_id,item_id,unlocked_at')
           .eq('user_id', userId)
           .eq('item_id', libraryRow.item_id),
-        supabase
-          .from('item_assets')
-          .select('asset_type,title,file_url')
-          .eq('item_id', libraryRow.item_id)
-          .in('asset_type', ['bonus_content', 'bonus_achievement']),
+        supabase.rpc('list_item_asset_manifest', { target_item_id: libraryRow.item_id }),
       ]);
 
       const orderedTracks = ((trackRows as Track[] | null) ?? []).sort((a, b) => trackOrder(a) - trackOrder(b));
       setTracks(orderedTracks);
       setAchievements(((achievementRows as ProductAchievement[] | null) ?? []).filter(achievement => isV1AchievementCode(achievement.code)));
-      setBonusAssets((assetRows as LibraryBonusAsset[] | null) ?? []);
+      setBonusAssets(((assetRows as LibraryBonusAsset[] | null) ?? []).filter(asset => ['bonus_content', 'bonus_achievement'].includes(asset.asset_type ?? '')));
       setUnlockedAchievementIds(new Set(((unlockedRows as UserAchievement[] | null) ?? []).map(item => item.achievement_id)));
       setLoading(false);
     }
@@ -153,6 +149,17 @@ function OwnedMusicRelease({
   const [toast, setToast] = useState<AchievementToastData | null>(null);
   const [inferredTrackDurations, setInferredTrackDurations] = useState<Record<string, number>>({});
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
+  const playbackSessionIdRef = useRef('');
+
+  function currentPlaybackSessionId() {
+    if (!playbackSessionIdRef.current) playbackSessionIdRef.current = crypto.randomUUID();
+    return playbackSessionIdRef.current;
+  }
+
+  function beginPlaybackSession() {
+    playbackSessionIdRef.current = crypto.randomUUID();
+    return playbackSessionIdRef.current;
+  }
 
   const musicQueue = useMemo<MusicQueueTrack[]>(() => (
     tracks
@@ -182,6 +189,7 @@ function OwnedMusicRelease({
       setNoSkipsEligible(false);
     }
     if (trackIndex === 0 && currentTrack?.productId !== product.id) {
+      beginPlaybackSession();
       setCompletedTrackIds(new Set());
       setNoSkipsEligible(true);
       setFullReleaseHandled(false);
@@ -203,6 +211,7 @@ function OwnedMusicRelease({
       return;
     }
 
+    beginPlaybackSession();
     playQueue(musicQueue, 0);
     setSelectedTrackId(musicQueue[0]?.id ?? null);
     setCompletedTrackIds(new Set());
@@ -217,6 +226,7 @@ function OwnedMusicRelease({
       playRelease();
       return;
     }
+    beginPlaybackSession();
     const shuffled = shuffleMusicQueue(musicQueue);
     playQueue(shuffled, 0);
     setSelectedTrackId(shuffled[0]?.id ?? null);
@@ -230,6 +240,12 @@ function OwnedMusicRelease({
     function handleTrackCompleted(event: Event) {
       const detail = (event as CustomEvent<MusicTrackPlaybackEventDetail>).detail;
       if (detail.productId !== product.id) return;
+      void recordAchievementPlaybackSignal({
+        productId: product.id,
+        trackId: detail.trackId,
+        sessionId: currentPlaybackSessionId(),
+        signalType: 'track_completed',
+      });
       setCompletedTrackIds(current => {
         const next = new Set(current);
         next.add(detail.trackId);
@@ -241,6 +257,12 @@ function OwnedMusicRelease({
       const detail = (event as CustomEvent<MusicTrackPlaybackEventDetail>).detail;
       if (detail.productId !== product.id) return;
       if (detail.reason === 'manual' || detail.reason === 'next' || detail.reason === 'previous') {
+        void recordAchievementPlaybackSignal({
+          productId: product.id,
+          trackId: detail.trackId,
+          sessionId: currentPlaybackSessionId(),
+          signalType: 'track_skipped',
+        });
         setNoSkipsEligible(false);
       }
     }
@@ -290,7 +312,7 @@ function OwnedMusicRelease({
       triggerType,
       achievements,
       unlockedAchievementIds: localUnlockedAchievementIds,
-      metadata,
+      metadata: { ...metadata, playback_session_id: currentPlaybackSessionId() },
     });
     if (result.unlockedIds.length === 0) return;
     setLocalUnlockedAchievementIds(current => {
@@ -322,15 +344,7 @@ function OwnedMusicRelease({
         await unlockTrigger('release_completed_launch_window', { source: 'music_library_playback' });
       }
 
-      const listenCount = await incrementAchievementProgress({
-        userId,
-        productId: product.id,
-        metric: 'full_release_listens',
-        metadata: { last_listened_at: new Date().toISOString() },
-      });
-      if (listenCount >= 3) {
-        await unlockTrigger('release_completed_three_sessions', { source: 'music_library_playback', full_listens: listenCount });
-      }
+      await unlockTrigger('release_completed_three_sessions', { source: 'music_library_playback' });
     }
 
     handleFullReleaseListened();

@@ -215,9 +215,8 @@ function resolveProductActionEntries({
   onToggleCart: () => void;
 }) {
   if (experience === 'music') {
-    if (owned) return [];
     return [
-      {
+      ...(!owned ? [{
         id: 'library',
         label: 'Add to Library',
         onSelect: () => {
@@ -225,7 +224,12 @@ function resolveProductActionEntries({
           void onAddToLibrary();
         },
         disabled: !userId,
-      },
+      }] : []),
+      ...(product.download_purchase_enabled && product.price_cents > 0 ? [{
+        id: 'download',
+        label: inCart ? 'View Download Cart' : 'Buy Download',
+        onSelect: onToggleCart,
+      }] : []),
     ];
   }
 
@@ -233,7 +237,7 @@ function resolveProductActionEntries({
     return [
       {
         id: 'cart',
-        label: inCart ? 'Remove from Cart' : 'Add to Cart',
+        label: inCart ? 'Remove from Purchase Cart' : experience === 'physical' ? 'Buy Physical' : 'Buy Download',
         onSelect: onToggleCart,
       },
     ];

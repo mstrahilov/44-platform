@@ -84,6 +84,54 @@ export type Database = {
           },
         ]
       }
+      achievement_playback_signals: {
+        Row: {
+          id: string
+          item_id: string
+          metadata: Json
+          occurred_at: string
+          session_id: string
+          signal_type: string
+          track_id: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          item_id: string
+          metadata?: Json
+          occurred_at?: string
+          session_id: string
+          signal_type: string
+          track_id?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          item_id?: string
+          metadata?: Json
+          occurred_at?: string
+          session_id?: string
+          signal_type?: string
+          track_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "achievement_playback_signals_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "achievement_playback_signals_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       achievement_progress: {
         Row: {
           id: string
@@ -3648,6 +3696,31 @@ export type Database = {
         Args: { other_profile_id: string }
         Returns: string
       }
+      evaluate_item_achievements: {
+        Args: {
+          client_context?: Json
+          requested_trigger_type: string
+          target_item_id: string
+          target_session_id?: string
+        }
+        Returns: {
+          code: string
+          description: string
+          icon: string
+          id: string
+          title: string
+          trigger_type: string
+        }[]
+      }
+      grant_achievement_entitlement: {
+        Args: {
+          target_achievement_id: string
+          target_entitlement_type: string
+          target_item_id: string
+          target_user_id: string
+        }
+        Returns: string
+      }
       grant_item_entitlement: {
         Args: {
           grant_reason?: string
@@ -3659,12 +3732,54 @@ export type Database = {
         }
         Returns: string
       }
+      has_item_entitlement: {
+        Args: {
+          target_entitlement_type: string
+          target_item_id: string
+          target_user_id: string
+        }
+        Returns: boolean
+      }
       is_conversation_member: {
         Args: { p_conversation_id: string; p_profile_id: string }
         Returns: boolean
       }
       is_platform_admin: { Args: never; Returns: boolean }
+      issue_item_achievement: {
+        Args: {
+          event_metadata?: Json
+          target_achievement_id: string
+          target_item_id: string
+          target_user_id: string
+        }
+        Returns: boolean
+      }
+      list_item_asset_manifest: {
+        Args: { target_item_id: string }
+        Returns: {
+          asset_type: string
+          created_at: string
+          file_url: string
+          id: string
+          is_downloadable: boolean
+          is_unlocked: boolean
+          item_id: string
+          sort_order: number
+          storage_path: string
+          title: string
+        }[]
+      }
       notification_actor_name: { Args: { actor: string }; Returns: string }
+      record_achievement_playback_signal: {
+        Args: {
+          signal_metadata?: Json
+          target_item_id: string
+          target_session_id: string
+          target_signal_type: string
+          target_track_id: string
+        }
+        Returns: undefined
+      }
       refresh_content_question_stats: {
         Args: { target_entry_id: string }
         Returns: undefined

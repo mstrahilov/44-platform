@@ -493,15 +493,16 @@ function resolveStoreActions({
   if (experience === 'music') {
     return [
       { label: 'Play', onClick: onPlay },
-      free
-        ? owned || hasDownloadUnlock
-          ? { label: 'View in Library', href: libraryHref, secondary: true }
-          : userSignedIn
-            ? { label: 'Add to Library', onClick: onAddToLibrary, secondary: true }
-            : { label: 'Sign In to Save', href: '/login', secondary: true }
-        : cartHasItem
-          ? { label: 'View Cart', href: '/cart', secondary: true }
-          : { label: 'Add to Cart', onClick: onAddToCart, secondary: true },
+      owned
+        ? { label: 'View in Library', href: libraryHref, secondary: true }
+        : userSignedIn
+          ? { label: 'Add to Library', onClick: onAddToLibrary, secondary: true }
+          : { label: 'Sign In to Save', href: '/login', secondary: true },
+      ...(product.download_purchase_enabled && product.price_cents > 0 && !hasDownloadUnlock
+        ? [cartHasItem
+          ? { label: 'View Download Cart', href: '/cart', secondary: true }
+          : { label: 'Buy Download', onClick: onAddToCart, secondary: true }]
+        : []),
     ];
   }
 
@@ -515,15 +516,15 @@ function resolveStoreActions({
             ? { label: 'Add to Library', onClick: onAddToLibrary, secondary: true }
             : { label: 'Sign In to Save', href: '/login', secondary: true }
         : cartHasItem
-          ? { label: 'View Cart', href: '/cart', secondary: true }
-          : { label: 'Add to Cart', onClick: onAddToCart, secondary: true },
+          ? { label: 'View Purchase Cart', href: '/cart', secondary: true }
+          : { label: 'Buy Book', onClick: onAddToCart, secondary: true },
     ];
   }
 
   return [
     cartHasItem
-      ? { label: 'View Cart', href: '/cart' }
-      : { label: 'Add to Cart', onClick: onAddToCart },
+      ? { label: 'View Purchase Cart', href: '/cart' }
+      : { label: experience === 'physical' ? 'Buy Physical' : 'Buy Download', onClick: onAddToCart },
   ];
 }
 

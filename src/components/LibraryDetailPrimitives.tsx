@@ -27,6 +27,7 @@ export type LibraryBonusAsset = {
   title: string | null;
   file_url: string | null;
   asset_type: string | null;
+  is_unlocked?: boolean | null;
 };
 
 export function ProductDetailHeader({
@@ -211,15 +212,16 @@ export function LibraryBonusContentSection({
       <div className="dashboard-list-surface">
         {bonusAssets.map((asset, index) => {
           const title = asset.title || `Bonus Content ${index + 1}`;
+          const assetUnlocked = asset.is_unlocked ?? unlocked;
           return (
             <div className="dashboard-list-row" key={`${title}-${index}`}>
               <span className="dashboard-row-copy">
                 <span className="dashboard-row-title">{title}</span>
                 <span className="dashboard-row-subtitle">
-                  {unlocked ? 'Unlocked and ready to download.' : 'Locked until Overachiever is unlocked.'}
+                  {assetUnlocked ? 'Unlocked and ready to download.' : 'Locked until Overachiever is unlocked.'}
                 </span>
               </span>
-              {unlocked && asset.file_url ? (
+              {assetUnlocked && asset.file_url ? (
                 <Link className="os-button os-button-secondary os-button-compact" href={asset.file_url} target="_blank" rel="noreferrer">
                   Download
                 </Link>

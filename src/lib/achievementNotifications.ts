@@ -31,45 +31,39 @@ export async function unlockAchievementForUser(
   achievement: Pick<ProductAchievement, 'id' | 'code' | 'title' | 'description' | 'trigger_type'>,
   metadata?: Record<string, unknown>,
 ) {
-  const { data: existingUnlock } = await supabase
-    .from('user_achievements')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('achievement_id', achievement.id)
-    .maybeSingle();
+  void userId;
+  const notifications = await requestAchievementEvaluation(productId, achievement.trigger_type, metadata);
+  return notifications.find(notification => notification.id === achievement.id) ?? null;
+}
 
-  if (existingUnlock) return null;
-
-  const { error } = await supabase.from('user_achievements').insert({
-    user_id: userId,
-    item_id: productId,
-    achievement_id: achievement.id,
-  });
-
-  if (error) return null;
-
-  await supabase.from('achievement_events').insert({
-    user_id: userId,
-    item_id: productId,
-    achievement_id: achievement.id,
-    event_type: 'achievement_unlocked',
-    metadata: {
-      trigger_type: achievement.trigger_type,
-      achievement_code: achievement.code,
+export async function requestAchievementEvaluation(
+  productId: string,
+  triggerType: string,
+  metadata?: Record<string, unknown>,
+) {
+  const sessionId = typeof metadata?.playback_session_id === 'string' ? metadata.playback_session_id : undefined;
+  const { data, error } = await supabase.rpc('evaluate_item_achievements', {
+    target_item_id: productId,
+    requested_trigger_type: triggerType,
+    target_session_id: sessionId,
+    client_context: {
       ...(metadata ?? {}),
+      timezone_offset_minutes: new Date().getTimezoneOffset(),
     },
   });
+  if (error || !data) return [];
 
-  const notification = {
-    id: achievement.id,
-    title: achievement.title,
-    description: achievement.description,
-    achievementCode: achievement.code,
-  } satisfies AchievementNotification;
-
-  broadcastAchievementNotification(notification);
-
-  return notification;
+  return data.map(row => {
+    const notification = {
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      achievementCode: row.code,
+      achievementIcon: row.icon,
+    } satisfies AchievementNotification;
+    broadcastAchievementNotification(notification);
+    return notification;
+  });
 }
 
 // Reply, mention, like, and message events are created by the reviewed live
