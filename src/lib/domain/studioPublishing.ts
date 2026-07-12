@@ -25,6 +25,20 @@ export async function listItemCategories() {
   return (result.data as ProductCategory[] | null) ?? [];
 }
 
+export async function listCatalogTaxonomyTerms() {
+  const result = await supabase.from('catalog_taxonomy_terms').select('*').eq('is_active', true).order('sort_order');
+  if (result.error) throw result.error;
+  return result.data ?? [];
+}
+
+export async function replaceStudioItemTaxonomy(itemId: string, termIds: string[]) {
+  const deleted = await supabase.from('item_taxonomy_terms').delete().eq('item_id', itemId);
+  if (deleted.error) throw deleted.error;
+  if (termIds.length === 0) return;
+  const inserted = await supabase.from('item_taxonomy_terms').insert(termIds.map(termId => ({ item_id: itemId, term_id: termId })));
+  if (inserted.error) throw inserted.error;
+}
+
 export async function createStudioItem(payload: ItemInsert) {
   const result = await supabase.from('catalog_items').insert(payload).select('id').single();
   if (result.error) throw result.error;
@@ -53,7 +67,7 @@ export async function loadStudioItemEditor(itemId: string, ownerId: string) {
   if (itemResult.error) throw itemResult.error;
   if (!itemResult.data) return null;
 
-  const [trackResult, assetResult, achievementResult] = await Promise.all([
+  const [trackResult, assetResult, achievementResult, taxonomyResult] = await Promise.all([
     supabase.from('tracks').select('*').eq('item_id', itemId).order('number'),
     supabase.from('item_assets').select('asset_type,title,file_url').eq('item_id', itemId).order('sort_order'),
     supabase
@@ -61,8 +75,9 @@ export async function loadStudioItemEditor(itemId: string, ownerId: string) {
       .select('code,title,description,trigger_type,reward_config,is_secret,icon')
       .eq('item_id', itemId)
       .order('sort_order'),
+    supabase.from('item_taxonomy_terms').select('term_id').eq('item_id', itemId),
   ]);
-  const error = trackResult.error || assetResult.error || achievementResult.error;
+  const error = trackResult.error || assetResult.error || achievementResult.error || taxonomyResult.error;
   if (error) throw error;
 
   return {
@@ -70,6 +85,7 @@ export async function loadStudioItemEditor(itemId: string, ownerId: string) {
     tracks: (trackResult.data as Track[] | null) ?? [],
     assets: (assetResult.data as StudioAssetSummary[] | null) ?? [],
     achievements: (achievementResult.data as StudioAchievementSummary[] | null) ?? [],
+    taxonomyTermIds: (taxonomyResult.data ?? []).map(row => row.term_id),
   };
 }
 

@@ -8,7 +8,7 @@ import type { StoreCategory } from '@/lib/storeRoutes';
 import { useAuth } from '@/lib/useAuth';
 import { loadStoreDiscoveryCatalog } from '@/lib/domain/catalog';
 import { listVisibleLibraryItemIds } from '@/lib/domain/library';
-import { storeTagsForExperience } from '@/lib/storeTaxonomy';
+import { itemMatchesStoreType } from '@/lib/storeTaxonomy';
 
 const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
   music: 'music',
@@ -39,7 +39,7 @@ const CATEGORY_COPY: Record<StoreCategory, { title: string; copy: string; empty:
     empty: 'No assets are published yet.',
   },
   merch: {
-    title: 'Apparel',
+    title: 'Merch',
     copy: 'Explore apparel, accessories, and physical goods from creators.',
     empty: 'No merch is published yet.',
   },
@@ -53,7 +53,7 @@ const STORE_FILTER_LABELS: Record<StoreFilter, string> = {
   music: 'Music',
   book: 'Books',
   asset: 'Assets',
-  physical: 'Apparel',
+  physical: 'Merch',
 };
 
 const STORE_FILTER_ORDER: StoreFilter[] = ['all', 'music', 'book', 'physical', 'asset'];
@@ -67,6 +67,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<StoreFilter>('all');
   const [priceFilter, setPriceFilter] = useState<PriceFilter>('all');
+  const [typeFilter, setTypeFilter] = useState('all');
   const [tagFilter, setTagFilter] = useState('all');
   const [capabilityFilter, setCapabilityFilter] = useState<'all' | 'achievements'>('all');
 
@@ -118,13 +119,26 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   }, [category]);
   const effectiveFilter = CATEGORY_EXPERIENCE[category] as StoreFilter | undefined
     ?? (availableStoreFilters.includes(activeFilter) ? activeFilter : 'all');
-  const selectedTagExperience = CATEGORY_EXPERIENCE[category] ?? (effectiveFilter === 'all' ? null : effectiveFilter);
-  const availableTags = useMemo(
-    () => storeTagsForExperience(selectedTagExperience),
-    [selectedTagExperience],
+  const selectedExperience = CATEGORY_EXPERIENCE[category] ?? (effectiveFilter === 'all' ? null : effectiveFilter);
+  const availableTypes = useMemo(
+    () => Array.from(new Set(products
+      .filter(product => getProductExperience(product) === selectedExperience)
+      .flatMap(product => (product.taxonomy_terms ?? []).filter(term => term.level === 'type').map(term => term.label)),
+    )).sort((a, b) => a.localeCompare(b)),
+    [products, selectedExperience],
   );
-
-  const effectiveTagFilter = selectedTagExperience
+  const effectiveTypeFilter = selectedExperience
+    && availableTypes.some(type => type.toLowerCase() === typeFilter.toLowerCase())
+    ? typeFilter
+    : 'all';
+  const availableTags = useMemo(() => {
+    if (!selectedExperience || effectiveTypeFilter === 'all') return [];
+    return Array.from(new Set(products
+      .filter(product => getProductExperience(product) === selectedExperience && itemMatchesStoreType(product, effectiveTypeFilter))
+      .flatMap(product => (product.taxonomy_terms ?? []).filter(term => term.level === 'tag').map(term => term.label))
+    )).sort((a, b) => a.localeCompare(b));
+  }, [effectiveTypeFilter, products, selectedExperience]);
+  const effectiveTagFilter = effectiveTypeFilter !== 'all'
     && availableTags.some(tag => tag.toLowerCase() === tagFilter.toLowerCase())
     ? tagFilter
     : 'all';
@@ -137,17 +151,19 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
       if (!['music', 'book', 'asset', 'physical'].includes(experience)) return false;
       if (expected && experience !== expected) return false;
       if (effectiveFilter !== 'all' && experience !== effectiveFilter) return false;
+      if (effectiveTypeFilter !== 'all' && !itemMatchesStoreType(product, effectiveTypeFilter)) return false;
       if (priceFilter === 'free' && !(product.is_free || product.price_cents === 0)) return false;
       if (priceFilter === 'paid' && (product.is_free || product.price_cents === 0)) return false;
-      if (effectiveTagFilter !== 'all' && !(product.tags ?? []).some(tag => tag.toLowerCase() === effectiveTagFilter.toLowerCase())) return false;
+      if (effectiveTagFilter !== 'all' && !(product.taxonomy_terms ?? []).some(term => term.level === 'tag' && term.label.toLowerCase() === effectiveTagFilter.toLowerCase())) return false;
       if (capabilityFilter !== 'all' && !(product.capability_keys ?? []).includes(capabilityFilter)) return false;
       if (!normalizedQuery) return true;
       const creator = product.creators?.display_name || product.creator || '';
       return `${product.title} ${creator} ${(product.tags ?? []).join(' ')}`.toLowerCase().includes(normalizedQuery);
     }).sort(comparePublicCatalogProducts);
-  }, [capabilityFilter, category, effectiveFilter, effectiveTagFilter, priceFilter, products, query]);
+  }, [capabilityFilter, category, effectiveFilter, effectiveTagFilter, effectiveTypeFilter, priceFilter, products, query]);
   const hasActiveFilters = (category === 'all' && effectiveFilter !== 'all')
     || priceFilter !== 'all'
+    || effectiveTypeFilter !== 'all'
     || effectiveTagFilter !== 'all'
     || capabilityFilter !== 'all'
     || Boolean(query.trim());
@@ -169,6 +185,8 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
           {availableStoreFilters.map(filter => (
             <button key={filter} type="button" className={effectiveFilter === filter ? 'page-filter-option page-filter-option-active' : 'page-filter-option'} onClick={event => {
               setActiveFilter(filter);
+              setTypeFilter('all');
+              setTagFilter('all');
               event.currentTarget.closest('details')?.removeAttribute('open');
             }}>
               {STORE_FILTER_LABELS[filter]}
@@ -183,7 +201,17 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
               <option value="paid">Paid</option>
             </select>
           </label>
-          {selectedTagExperience && <label className="store-filter-group">
+          {selectedExperience && <label className="store-filter-group">
+            <span className="store-filter-label">Type</span>
+            <select className="os-input-field" value={effectiveTypeFilter} onChange={event => {
+              setTypeFilter(event.target.value);
+              setTagFilter('all');
+            }}>
+              <option value="all">Any type</option>
+              {availableTypes.map(type => <option key={type} value={type}>{type}</option>)}
+            </select>
+          </label>}
+          {effectiveTypeFilter !== 'all' && availableTags.length > 0 && <label className="store-filter-group">
             <span className="store-filter-label">Tag</span>
             <select className="os-input-field" value={effectiveTagFilter} onChange={event => setTagFilter(event.target.value)}>
               <option value="all">Any tag</option>
@@ -201,6 +229,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
             <button type="button" className="page-filter-option" onClick={() => {
               setActiveFilter('all');
               setPriceFilter('all');
+              setTypeFilter('all');
               setTagFilter('all');
               setCapabilityFilter('all');
               setQuery('');

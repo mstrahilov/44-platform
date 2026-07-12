@@ -18,8 +18,9 @@ import { currencyForCountry, type MarketMode } from '@/lib/marketPreferences';
 import { getStudioDisplayName, isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { normalizeTaxonomyValue } from '@/lib/taxonomy';
 import { getStudioCatalogSection, type StudioCatalogSectionId } from '@/lib/studioCatalog';
-import { addStudioAssets, addStudioTracks, createStudioItem, listItemCategories } from '@/lib/domain/studioPublishing';
-import { storeTagsForStudioSection } from '@/lib/storeTaxonomy';
+import { addStudioAssets, addStudioTracks, createStudioItem, listCatalogTaxonomyTerms, listItemCategories, replaceStudioItemTaxonomy } from '@/lib/domain/studioPublishing';
+import { parseStoreTags, storeTypesForStudioSection } from '@/lib/storeTaxonomy';
+import type { Database } from '@/lib/database.types';
 
 function buildSlug(title: string) {
   const base = normalizeTaxonomyValue(title) || 'item';
@@ -106,7 +107,9 @@ function NewProductContent() {
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [productType, setProductType] = useState(section.typeOptions[0]);
-  const [storeTag, setStoreTag] = useState(() => storeTagsForStudioSection(section.id)[0] ?? '');
+  const [storeType, setStoreType] = useState(() => storeTypesForStudioSection(section.id)[0] ?? '');
+  const [storeTags, setStoreTags] = useState('');
+  const [taxonomyTerms, setTaxonomyTerms] = useState<Database['public']['Tables']['catalog_taxonomy_terms']['Row'][]>([]);
   const [price, setPrice] = useState('');
   const [marketMode, setMarketMode] = useState<MarketMode>('global');
   const [localPrice, setLocalPrice] = useState('');
@@ -134,9 +137,10 @@ function NewProductContent() {
     async function loadFormData() {
       if (!user) return;
 
-      const [categoryRows, profileResult] = await Promise.all([
+      const [categoryRows, profileResult, taxonomyRows] = await Promise.all([
         listItemCategories(),
         loadStudioProfile(user.id),
+        listCatalogTaxonomyTerms(),
       ]);
 
       const resolvedCategories = categoryRows;
@@ -151,6 +155,9 @@ function NewProductContent() {
         currencyForCountry(profileResult.profile?.home_country_code);
       setLocalCurrency(nextCurrency);
       setProductType(section.typeOptions[0]);
+      setTaxonomyTerms(taxonomyRows);
+      const configuredTypes = taxonomyRows.filter(term => term.level === 'type' && term.experience_type === (section.id === 'merch' ? 'physical' : section.id === 'books' ? 'book' : section.id === 'assets' ? 'asset' : 'music'));
+      setStoreType(configuredTypes[0]?.label ?? storeTypesForStudioSection(section.id)[0] ?? '');
     }
 
     loadFormData();
@@ -224,7 +231,7 @@ function NewProductContent() {
       title: cleanTitle,
       creator: creatorName,
       item_type: cleanType,
-      tags: [storeTag].filter(Boolean),
+      tags: [storeType, ...parseStoreTags(storeTags)].filter(Boolean),
       short_description: null,
       long_description: '',
       price_cents: merchUsesLocalOnlyPricing ? 0 : priceCents,
@@ -253,6 +260,15 @@ function NewProductContent() {
     } catch (insertError) {
       setSaving(false);
       setError(insertError instanceof Error ? insertError.message : 'Could not create this Item.');
+      return;
+    }
+
+    const selectedLabels = new Set([storeType, ...parseStoreTags(storeTags)].map(label => label.toLowerCase()));
+    try {
+      await replaceStudioItemTaxonomy(insertedProductId, taxonomyTerms.filter(term => selectedLabels.has(term.label.toLowerCase())).map(term => term.id));
+    } catch (taxonomyError) {
+      setSaving(false);
+      setError(taxonomyError instanceof Error ? taxonomyError.message : 'Could not save Browse taxonomy.');
       return;
     }
 
@@ -378,10 +394,16 @@ function NewProductContent() {
               </div>
 
               <label className="dashboard-field">
-                <div className="dashboard-field-label">Browse Tag</div>
-                <select className="os-input-field" value={storeTag} onChange={event => setStoreTag(event.target.value)}>
-                  {storeTagsForStudioSection(section.id).map(tag => <option key={tag} value={tag}>{tag}</option>)}
+                <div className="dashboard-field-label">Browse Type</div>
+                <select className="os-input-field" value={storeType} onChange={event => setStoreType(event.target.value)}>
+                  {taxonomyTerms.filter(term => term.level === 'type' && term.experience_type === (section.id === 'merch' ? 'physical' : section.id === 'books' ? 'book' : section.id === 'assets' ? 'asset' : 'music')).map(term => <option key={term.id} value={term.label}>{term.label}</option>)}
                 </select>
+              </label>
+              <label className="dashboard-field">
+                <div className="dashboard-field-label">Browse Tags</div>
+                <input className="os-input-field" value={storeTags} onChange={event => setStoreTags(event.target.value)} placeholder="Electronic, Ambient" />
+                <span className="dashboard-form-note">Optional. Separate genre, style, or format tags with commas.</span>
+                <span className="dashboard-form-note">Configured tags: {taxonomyTerms.filter(term => term.level === 'tag' && term.experience_type === (section.id === 'merch' ? 'physical' : section.id === 'books' ? 'book' : section.id === 'assets' ? 'asset' : 'music')).map(term => term.label).join(', ') || 'none yet'}</span>
               </label>
 
               {isMerchProduct ? (

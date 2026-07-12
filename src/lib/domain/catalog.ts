@@ -20,7 +20,7 @@ export async function listPublishedCatalogItems(limit = 120) {
 }
 
 export async function loadStoreDiscoveryCatalog(limit = 200) {
-  const [itemResult, capabilityResult] = await Promise.all([
+  const [itemResult, capabilityResult, taxonomyResult, assignmentResult] = await Promise.all([
     supabase
       .from('catalog_items')
       .select('*, creators:profiles!author_id(*)')
@@ -28,16 +28,25 @@ export async function loadStoreDiscoveryCatalog(limit = 200) {
       .order('created_at', { ascending: false })
       .limit(limit),
     supabase.from('item_capabilities').select('item_id,capability_key'),
+    supabase.from('catalog_taxonomy_terms').select('*').eq('is_active', true).order('sort_order'),
+    supabase.from('item_taxonomy_terms').select('item_id,term_id'),
   ]);
-  const error = itemResult.error || capabilityResult.error;
+  const error = itemResult.error || capabilityResult.error || taxonomyResult.error || assignmentResult.error;
   if (error) throw error;
   const capabilitiesByItem = new Map<string, string[]>();
   (capabilityResult.data ?? []).forEach(row => {
     capabilitiesByItem.set(row.item_id, [...(capabilitiesByItem.get(row.item_id) ?? []), row.capability_key]);
   });
+  const termsById = new Map((taxonomyResult.data ?? []).map(term => [term.id, term]));
+  const termsByItem = new Map<string, Product['taxonomy_terms']>();
+  (assignmentResult.data ?? []).forEach(row => {
+    const term = termsById.get(row.term_id);
+    if (term) termsByItem.set(row.item_id, [...(termsByItem.get(row.item_id) ?? []), term]);
+  });
   return ((itemResult.data ?? []) as Product[]).map(item => ({
     ...item,
     capability_keys: capabilitiesByItem.get(item.id) ?? [],
+    taxonomy_terms: termsByItem.get(item.id) ?? [],
   }));
 }
 

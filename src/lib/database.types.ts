@@ -416,6 +416,53 @@ export type Database = {
           },
         ]
       }
+      catalog_taxonomy_terms: {
+        Row: {
+          created_at: string
+          experience_type: string
+          id: string
+          is_active: boolean
+          label: string
+          level: string
+          parent_id: string | null
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          experience_type: string
+          id?: string
+          is_active?: boolean
+          label: string
+          level: string
+          parent_id?: string | null
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          experience_type?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          level?: string
+          parent_id?: string | null
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_taxonomy_terms_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_taxonomy_terms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commerce_order_addresses: {
         Row: {
           address_line_1: string
@@ -1966,6 +2013,39 @@ export type Database = {
             columns: ["visitor_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_taxonomy_terms: {
+        Row: {
+          created_at: string
+          item_id: string
+          term_id: string
+        }
+        Insert: {
+          created_at?: string
+          item_id: string
+          term_id: string
+        }
+        Update: {
+          created_at?: string
+          item_id?: string
+          term_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_taxonomy_terms_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_taxonomy_terms_term_id_fkey"
+            columns: ["term_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_taxonomy_terms"
             referencedColumns: ["id"]
           },
         ]

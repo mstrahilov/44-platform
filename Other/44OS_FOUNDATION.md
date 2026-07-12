@@ -302,12 +302,13 @@ Current concept-to-table map:
 
 Known Supabase state from the launch cleanup:
 
-- Migration history is aligned locally and remotely through `20260712050000`.
+- Migration history is aligned locally and remotely through `20260712051000`.
 - The typed Community spine is applied in `20260712020000_typed_community_content_spine.sql`; application queries no longer target the legacy Community content tables.
 - `20260712025000_add_missing_tracks_to_radio.sql` brings Radio to one active entry for every existing track: 248 tracks, 248 entries, zero missing, zero duplicates.
 - `20260712030000_m5_provider_neutral_commerce.sql` separates public access, offers, orders, payment processing, entitlements, and Library presentation. Current free Library behavior is active; download and physical offers remain drafts until the operating model and verified provider are approved.
 - `20260712040000_m5_trusted_achievements_and_assets.sql` makes achievement evaluation and reward grants server-authoritative, protects asset locations behind entitlement-aware manifests, prohibits public download URLs, and disables legacy client-authored merchandise orders. M5 is complete; paid checkout remains deliberately disabled until M11.
 - `20260712050000_m7_catalog_discovery_truth.sql` removes false inherited streaming capabilities from non-music Items and false download capabilities from physical merch without a downloadable asset or digital offer.
+- `20260712051000_m7_normalized_browse_taxonomy.sql` makes Browse Types/Tags Supabase-managed, adds normalized Item assignments, seeds launch Types, and preserves existing Item relationships through backfill.
 - The prior incremental migration chain was consolidated into `20260712010000_44os_item_baseline.sql`. Its historical files remain available in Git history, but they are no longer active replay inputs.
 - The baseline includes the complete public schema, RLS, functions, triggers, auth profile hook, public storage buckets and policies, Item vocabulary, capabilities, membership, external links, and curated role mapping.
 - A clean local Supabase reset replays the baseline without a live snapshot, and a public-schema comparison against linked staging is empty.
@@ -316,7 +317,8 @@ Known Supabase state from the launch cleanup:
 - The canonical track ordering column is `tracks.number`; `tracks.track_number` is absent in the live schema and should not be selected by app code.
 - Public Store discovery and creator-profile Music/Books tabs sort by release year descending, then creator profile name ascending. Studio release management is intentionally independent and sorts by `created_at` descending (order added).
 - Browse discovery uses explicit category, price, category-relevant tag, achievement-feature, and text filters over the complete published catalog. Its only launch shelves are rule-based: the curated `featured` flag, streaming-capable music for `Free to Listen`, and the documented public release order for `Recently Released`; engagement is never an undisclosed ranking input.
-- Browse launch tags are shared with Studio publishing: Music uses Album, EP, Single, Mixtape, and Live Set; Books uses Novel, Artbook, and Zine; Apparel uses Apparel, Accessories, Physical Music, and Goods & Collectibles; Assets uses Sample Packs, Remix Packs, and Game Assets. The tag control appears only after its category is active.
+- Browse taxonomy is normalized in Supabase: `catalog_taxonomy_terms` defines active Type/Tag options and their hierarchy, while `item_taxonomy_terms` assigns them to Items. Studio shows configured active options; Browse shows only Types/Tags used by a visible Item, so future empty terms remain hidden. Launch Types are Music—Album, EP, Single, Mixtape, Live Set; Books—Novel, Artbook, Zine; Merch—Apparel, Accessories, Physical Music, Goods & Collectibles; Assets—Sample Packs, Remix Packs, Game Assets. Tags are the third level for genre/style/use, such as Electronic or Hoodies.
+- All Item cards use one square artwork frame with cover cropping across Music, Books, Merch, and Assets so mixed-category grids remain aligned.
 - Anonymous access to the dormant `services` table returns zero rows; its data remains available only through admin/service-role access.
 - `supabase db push --linked --dry-run` reports the remote database is up to date.
 

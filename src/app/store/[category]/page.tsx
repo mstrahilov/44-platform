@@ -17,7 +17,7 @@ const CATEGORY_METADATA: Record<Exclude<StoreCategory, 'all'>, { title: string; 
     description: 'Explore assets, remix stems, presets, and creative tools from independent creators on 44OS.',
   },
   merch: {
-    title: 'Apparel',
+    title: 'Merch',
     description: 'Explore apparel, accessories, and physical goods from independent creators on 44OS.',
   },
 };
