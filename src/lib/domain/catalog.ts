@@ -20,7 +20,7 @@ export async function listPublishedCatalogItems(limit = 120) {
 }
 
 export async function loadStoreDiscoveryCatalog(limit = 200) {
-  const [itemResult, capabilityResult, taxonomyResult, assignmentResult] = await Promise.all([
+  const [itemResult, capabilityResult, typeResult, tagResult, typeAssignmentResult, tagAssignmentResult] = await Promise.all([
     supabase
       .from('catalog_items')
       .select('*, creators:profiles!author_id(*)')
@@ -28,25 +28,31 @@ export async function loadStoreDiscoveryCatalog(limit = 200) {
       .order('created_at', { ascending: false })
       .limit(limit),
     supabase.from('item_capabilities').select('item_id,capability_key'),
-    supabase.from('catalog_taxonomy_terms').select('*').eq('is_active', true).order('sort_order'),
-    supabase.from('item_taxonomy_terms').select('item_id,term_id'),
+    supabase.from('item_types').select('*').eq('is_active', true).order('sort_order'),
+    supabase.from('item_tags').select('*').eq('is_active', true).order('sort_order'),
+    supabase.from('item_type_assignments').select('item_id,item_type_id'),
+    supabase.from('item_tag_assignments').select('item_id,item_tag_id'),
   ]);
-  const error = itemResult.error || capabilityResult.error || taxonomyResult.error || assignmentResult.error;
+  const error = itemResult.error || capabilityResult.error || typeResult.error || tagResult.error || typeAssignmentResult.error || tagAssignmentResult.error;
   if (error) throw error;
   const capabilitiesByItem = new Map<string, string[]>();
   (capabilityResult.data ?? []).forEach(row => {
     capabilitiesByItem.set(row.item_id, [...(capabilitiesByItem.get(row.item_id) ?? []), row.capability_key]);
   });
-  const termsById = new Map((taxonomyResult.data ?? []).map(term => [term.id, term]));
-  const termsByItem = new Map<string, Product['taxonomy_terms']>();
-  (assignmentResult.data ?? []).forEach(row => {
-    const term = termsById.get(row.term_id);
-    if (term) termsByItem.set(row.item_id, [...(termsByItem.get(row.item_id) ?? []), term]);
+  const typesById = new Map((typeResult.data ?? []).map(type => [type.id, type]));
+  const tagsById = new Map((tagResult.data ?? []).map(tag => [tag.id, tag]));
+  const typeByItem = new Map<string, Product['browse_type']>();
+  const tagsByItem = new Map<string, Product['browse_tags']>();
+  (typeAssignmentResult.data ?? []).forEach(row => typeByItem.set(row.item_id, typesById.get(row.item_type_id) ?? null));
+  (tagAssignmentResult.data ?? []).forEach(row => {
+    const tag = tagsById.get(row.item_tag_id);
+    if (tag) tagsByItem.set(row.item_id, [...(tagsByItem.get(row.item_id) ?? []), tag]);
   });
   return ((itemResult.data ?? []) as Product[]).map(item => ({
     ...item,
     capability_keys: capabilitiesByItem.get(item.id) ?? [],
-    taxonomy_terms: termsByItem.get(item.id) ?? [],
+    browse_type: typeByItem.get(item.id) ?? null,
+    browse_tags: tagsByItem.get(item.id) ?? [],
   }));
 }
 

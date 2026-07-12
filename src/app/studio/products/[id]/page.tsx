@@ -25,7 +25,7 @@ import { getStudioDisplayName, loadStudioProfile } from '@/lib/studioProfiles';
 import { getStudioCatalogSectionForProduct, type StudioCatalogSectionId } from '@/lib/studioCatalog';
 import {
   deleteStudioItem,
-  listCatalogTaxonomyTerms,
+  listCatalogTaxonomy,
   listItemCategories,
   loadStudioItemEditor,
   replaceStudioAsset,
@@ -33,7 +33,6 @@ import {
   syncStudioTracks,
   updateStudioItem,
 } from '@/lib/domain/studioPublishing';
-import { parseStoreTags } from '@/lib/storeTaxonomy';
 import type { Database } from '@/lib/database.types';
 
 function formatPriceInput(value: string) {
@@ -99,9 +98,10 @@ export default function EditProductPage() {
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [productType, setProductType] = useState('');
-  const [storeType, setStoreType] = useState('');
-  const [storeTags, setStoreTags] = useState('');
-  const [taxonomyTerms, setTaxonomyTerms] = useState<Database['public']['Tables']['catalog_taxonomy_terms']['Row'][]>([]);
+  const [storeTypeId, setStoreTypeId] = useState('');
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [taxonomyTypes, setTaxonomyTypes] = useState<Database['public']['Tables']['item_types']['Row'][]>([]);
+  const [taxonomyTags, setTaxonomyTags] = useState<Database['public']['Tables']['item_tags']['Row'][]>([]);
   const [price, setPrice] = useState('');
   const [marketMode, setMarketMode] = useState<MarketMode>('global');
   const [localPrice, setLocalPrice] = useState('');
@@ -132,14 +132,15 @@ export default function EditProductPage() {
     async function loadData() {
       if (!user) return;
 
-      const [categoryRows, profileResult, taxonomyRows] = await Promise.all([
+      const [categoryRows, profileResult, taxonomy] = await Promise.all([
         listItemCategories(),
         loadStudioProfile(user.id),
-        listCatalogTaxonomyTerms(),
+        listCatalogTaxonomy(),
       ]);
 
       setCategories(categoryRows);
-      setTaxonomyTerms(taxonomyRows);
+      setTaxonomyTypes(taxonomy.types);
+      setTaxonomyTags(taxonomy.tags);
       setCreatorName(getStudioDisplayName(profileResult.profile, user.email));
       const profileId = profileResult.profile?.id ?? user.id;
       const fallbackLocalCurrency =
@@ -165,18 +166,13 @@ export default function EditProductPage() {
       const { item: product, tracks: trackRows, assets: assetRows, achievements: achievementRows } = editor;
 
       const productSection = getStudioCatalogSectionForProduct(product);
-      const allowedStoreTypes = taxonomyRows.filter(term => term.level === 'type' && term.experience_type === (productSection.id === 'merch' ? 'physical' : productSection.id === 'books' ? 'book' : productSection.id === 'assets' ? 'asset' : 'music')).map(term => term.label);
       const featureAssets = assetRows.filter(asset => featureAssetTypes().includes(asset.asset_type ?? ''));
 
       setTitle(product.title ?? '');
       setCategoryId(product.item_category_id ?? '');
       setProductType(product.item_type ?? '');
-      setStoreType(product.tags?.find(tag => allowedStoreTypes.some(option => option.toLowerCase() === tag.toLowerCase())) ?? allowedStoreTypes.find(option => option.replace(/\s/g, '').toLowerCase() === product.item_type.replace(/\s/g, '').toLowerCase()) ?? allowedStoreTypes[0] ?? '');
-      setStoreTags((product.tags ?? []).filter(tag => (
-        !allowedStoreTypes.some(option => option.toLowerCase() === tag.toLowerCase())
-        && tag.toLowerCase() !== 'merch'
-        && !/^\d{4}$/.test(tag)
-      )).join(', '));
+      setStoreTypeId(editor.taxonomyTypeId ?? taxonomy.types.find(type => type.category_id === product.item_category_id)?.id ?? '');
+      setSelectedTagIds(editor.taxonomyTagIds);
       setPrice(product.price_cents ? (product.price_cents / 100).toFixed(2) : '');
       setMarketMode(normalizeMarketMode(product.market_mode));
       setLocalPrice(product.local_price_cents ? (product.local_price_cents / 100).toFixed(2) : '');
@@ -243,9 +239,6 @@ export default function EditProductPage() {
   const isMerchProduct = section.id === 'merch';
   const needsDigitalFile = section.id === 'books' || section.id === 'assets';
   const merchUsesLocalOnlyPricing = isMerchProduct && (merchFulfillmentMode === 'deliver' || merchShippingScope === 'local');
-  const typeOptions = section.typeOptions.includes(productType) || !productType
-    ? section.typeOptions
-    : [productType, ...section.typeOptions];
 
   useTopbarBack({ href: section.href, label: section.label });
 
@@ -273,6 +266,10 @@ export default function EditProductPage() {
     const profileId = ownerId || profileResult?.profile?.id || user.id;
 
     const cleanTitle = title.trim();
+    if (!cleanTitle || !categoryId || !storeTypeId) {
+      setError('Please fill out the title and choose an Item Type.');
+      return;
+    }
     const visibleTracks = tracks.slice(0, Number(trackCount || '0')).map((track, index, list) => ({
       ...track,
       title: track.title.trim() || (list.length === 1 ? cleanTitle : ''),
@@ -312,7 +309,6 @@ export default function EditProductPage() {
       title: title.trim(),
       item_category_id: categoryId,
       item_type: productType.trim(),
-      tags: [storeType, ...parseStoreTags(storeTags)].filter(Boolean),
       price_cents: merchUsesLocalOnlyPricing ? 0 : priceCents,
       market_mode: isMerchProduct ? (merchUsesLocalOnlyPricing ? 'global_plus_local' : marketMode) : marketMode,
       local_price_cents: isMerchProduct ? (localPriceCents ?? priceCents) : (marketMode === 'global' ? null : localPriceCents),
@@ -339,9 +335,8 @@ export default function EditProductPage() {
       return;
     }
 
-    const selectedLabels = new Set([storeType, ...parseStoreTags(storeTags)].map(label => label.toLowerCase()));
     try {
-      await replaceStudioItemTaxonomy(id, taxonomyTerms.filter(term => selectedLabels.has(term.label.toLowerCase())).map(term => term.id));
+      await replaceStudioItemTaxonomy(id, storeTypeId, selectedTagIds);
     } catch (taxonomyError) {
       setSaving(false);
       setError(taxonomyError instanceof Error ? taxonomyError.message : 'Could not save Browse taxonomy.');
@@ -447,14 +442,6 @@ export default function EditProductPage() {
             <label className="dashboard-field"><div className="dashboard-field-label">{isMerchProduct ? 'Product Name' : 'Title'}</div><input className="os-input-field" value={title} onChange={e => setTitle(e.target.value)} /></label>
 
             <div className="dashboard-form-grid dashboard-form-grid-3">
-              <label className="dashboard-field">
-                <div className="dashboard-field-label">{section.typeLabel}</div>
-                <select className="os-input-field" value={productType} onChange={event => setProductType(event.target.value)}>
-                  {typeOptions.map(option => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
-                </select>
-              </label>
               <label className="dashboard-field"><div className="dashboard-field-label">{isMerchProduct ? 'Drop Year' : 'Release Year'}</div><input className="os-input-field" value={year} onChange={e => setYear(e.target.value.replace(/\D/g, '').slice(0, 4))} /></label>
               {!merchUsesLocalOnlyPricing ? (
                 <label className="dashboard-field">
@@ -468,16 +455,21 @@ export default function EditProductPage() {
             </div>
 
             <label className="dashboard-field">
-              <div className="dashboard-field-label">Browse Type</div>
-              <select className="os-input-field" value={storeType} onChange={event => setStoreType(event.target.value)}>
-                {taxonomyTerms.filter(term => term.level === 'type' && term.experience_type === (section.id === 'merch' ? 'physical' : section.id === 'books' ? 'book' : section.id === 'assets' ? 'asset' : 'music')).map(term => <option key={term.id} value={term.label}>{term.label}</option>)}
+              <div className="dashboard-field-label">Item Type</div>
+              <select className="os-input-field" value={storeTypeId} onChange={event => {
+                setStoreTypeId(event.target.value);
+                setProductType(taxonomyTypes.find(type => type.id === event.target.value)?.label ?? '');
+                setSelectedTagIds([]);
+              }}>
+                {taxonomyTypes.filter(type => type.category_id === categoryId).map(type => <option key={type.id} value={type.id}>{type.label}</option>)}
               </select>
             </label>
             <label className="dashboard-field">
-              <div className="dashboard-field-label">Browse Tags</div>
-              <input className="os-input-field" value={storeTags} onChange={event => setStoreTags(event.target.value)} placeholder="Electronic, Ambient" />
-              <span className="dashboard-form-note">Optional. Separate genre, style, or format tags with commas.</span>
-              <span className="dashboard-form-note">Configured tags: {taxonomyTerms.filter(term => term.level === 'tag' && term.experience_type === (section.id === 'merch' ? 'physical' : section.id === 'books' ? 'book' : section.id === 'assets' ? 'asset' : 'music')).map(term => term.label).join(', ') || 'none yet'}</span>
+              <div className="dashboard-field-label">Item Tags</div>
+              <select className="os-input-field" multiple value={selectedTagIds} onChange={event => setSelectedTagIds(Array.from(event.currentTarget.selectedOptions, option => option.value))}>
+                {taxonomyTags.filter(tag => tag.category_id === categoryId && (!tag.item_type_id || tag.item_type_id === storeTypeId)).map(tag => <option key={tag.id} value={tag.id}>{tag.label}</option>)}
+              </select>
+              <span className="dashboard-form-note">Optional. Select any approved genre, style, or format tags that apply.</span>
             </label>
 
             {isMerchProduct ? (

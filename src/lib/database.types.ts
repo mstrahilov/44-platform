@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -412,53 +407,6 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "catalog_items"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      catalog_taxonomy_terms: {
-        Row: {
-          created_at: string
-          experience_type: string
-          id: string
-          is_active: boolean
-          label: string
-          level: string
-          parent_id: string | null
-          slug: string
-          sort_order: number
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          experience_type: string
-          id?: string
-          is_active?: boolean
-          label: string
-          level: string
-          parent_id?: string | null
-          slug: string
-          sort_order?: number
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          experience_type?: string
-          id?: string
-          is_active?: boolean
-          label?: string
-          level?: string
-          parent_id?: string | null
-          slug?: string
-          sort_order?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "catalog_taxonomy_terms_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "catalog_taxonomy_terms"
             referencedColumns: ["id"]
           },
         ]
@@ -2017,35 +1965,160 @@ export type Database = {
           },
         ]
       }
-      item_taxonomy_terms: {
+      item_tag_assignments: {
         Row: {
           created_at: string
           item_id: string
-          term_id: string
+          item_tag_id: string
         }
         Insert: {
           created_at?: string
           item_id: string
-          term_id: string
+          item_tag_id: string
         }
         Update: {
           created_at?: string
           item_id?: string
-          term_id?: string
+          item_tag_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "item_taxonomy_terms_item_id_fkey"
+            foreignKeyName: "item_tag_assignments_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "catalog_items"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "item_taxonomy_terms_term_id_fkey"
-            columns: ["term_id"]
+            foreignKeyName: "item_tag_assignments_item_tag_id_fkey"
+            columns: ["item_tag_id"]
             isOneToOne: false
-            referencedRelation: "catalog_taxonomy_terms"
+            referencedRelation: "item_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_tags: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          item_type_id: string | null
+          label: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          item_type_id?: string | null
+          label: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          item_type_id?: string | null
+          label?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_tags_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "item_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_tags_item_type_id_fkey"
+            columns: ["item_type_id"]
+            isOneToOne: false
+            referencedRelation: "item_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_type_assignments: {
+        Row: {
+          created_at: string
+          item_id: string
+          item_type_id: string
+        }
+        Insert: {
+          created_at?: string
+          item_id: string
+          item_type_id: string
+        }
+        Update: {
+          created_at?: string
+          item_id?: string
+          item_type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_type_assignments_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: true
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_type_assignments_item_type_id_fkey"
+            columns: ["item_type_id"]
+            isOneToOne: false
+            referencedRelation: "item_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_types: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_types_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "item_categories"
             referencedColumns: ["id"]
           },
         ]

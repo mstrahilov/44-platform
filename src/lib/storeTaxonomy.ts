@@ -24,13 +24,11 @@ function normalizedTaxonomyLabel(value: string) {
 }
 
 export function itemMatchesStoreType(
-  item: { item_type?: string | null; tags?: string[] | null; taxonomy_terms?: Array<{ level: string; label: string }> },
+  item: { browse_type?: { label: string } | null },
   type: string,
 ) {
   const target = normalizedTaxonomyLabel(type);
-  return normalizedTaxonomyLabel(item.item_type ?? '') === target
-    || (item.taxonomy_terms ?? []).some(term => term.level === 'type' && normalizedTaxonomyLabel(term.label) === target)
-    || (item.tags ?? []).some(tag => normalizedTaxonomyLabel(tag) === target);
+  return normalizedTaxonomyLabel(item.browse_type?.label ?? '') === target;
 }
 
 export function parseStoreTags(value: string) {

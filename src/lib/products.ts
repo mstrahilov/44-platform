@@ -28,14 +28,20 @@ export interface Item {
     url: string;
     sort_order: number;
   }>;
-  taxonomy_terms?: Array<{
+  browse_type?: {
     id: string;
-    experience_type: string;
-    level: string;
-    parent_id: string | null;
     label: string;
     slug: string;
     sort_order: number;
+    category_id: string;
+  } | null;
+  browse_tags?: Array<{
+    id: string;
+    label: string;
+    slug: string;
+    sort_order: number;
+    category_id: string;
+    item_type_id: string | null;
   }>;
   cover_url: string | null;
   hero_url?: string | null;

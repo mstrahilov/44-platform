@@ -9,12 +9,14 @@ import { useAuth } from '@/lib/useAuth';
 import { loadStoreDiscoveryCatalog } from '@/lib/domain/catalog';
 import { listVisibleLibraryItemIds } from '@/lib/domain/library';
 import { itemMatchesStoreType } from '@/lib/storeTaxonomy';
+import { listFollowedProfileIds } from '@/lib/domain/community';
 
 const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
   music: 'music',
   books: 'book',
   assets: 'asset',
   merch: 'physical',
+  games: 'interactive',
 };
 
 const CATEGORY_COPY: Record<StoreCategory, { title: string; copy: string; empty: string }> = {
@@ -38,6 +40,11 @@ const CATEGORY_COPY: Record<StoreCategory, { title: string; copy: string; empty:
     copy: 'Explore assets, remix stems, and creative tools for your work.',
     empty: 'No assets are published yet.',
   },
+  games: {
+    title: 'Games',
+    copy: 'Explore games and interactive releases from independent creators.',
+    empty: 'No games are published yet.',
+  },
   merch: {
     title: 'Merch',
     copy: 'Explore apparel, accessories, and physical goods from creators.',
@@ -45,7 +52,7 @@ const CATEGORY_COPY: Record<StoreCategory, { title: string; copy: string; empty:
   },
 };
 
-type StoreFilter = 'all' | 'music' | 'book' | 'asset' | 'physical';
+type StoreFilter = 'all' | 'music' | 'book' | 'interactive' | 'asset' | 'physical';
 type PriceFilter = 'all' | 'free' | 'paid';
 
 const STORE_FILTER_LABELS: Record<StoreFilter, string> = {
@@ -54,14 +61,16 @@ const STORE_FILTER_LABELS: Record<StoreFilter, string> = {
   book: 'Books',
   asset: 'Assets',
   physical: 'Merch',
+  interactive: 'Games',
 };
 
-const STORE_FILTER_ORDER: StoreFilter[] = ['all', 'music', 'book', 'physical', 'asset'];
+const STORE_FILTER_ORDER: StoreFilter[] = ['all', 'music', 'book', 'interactive', 'physical', 'asset'];
 
 export default function StoreApp({ category, frontDoor = false }: { category: StoreCategory; frontDoor?: boolean }) {
   const { user, loading: authLoading } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [ownedProductIds, setOwnedProductIds] = useState<Set<string>>(new Set());
+  const [followedProfileIds, setFollowedProfileIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
@@ -100,14 +109,16 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     if (!user) {
       Promise.resolve().then(() => {
         if (alive) setOwnedProductIds(new Set());
+        if (alive) setFollowedProfileIds(new Set());
       });
       return () => { alive = false; };
     }
 
-    void listVisibleLibraryItemIds(user.id)
-      .then(itemIds => {
+    void Promise.all([listVisibleLibraryItemIds(user.id), listFollowedProfileIds(user.id)])
+      .then(([itemIds, followedIds]) => {
         if (!alive) return;
         setOwnedProductIds(new Set(itemIds));
+        setFollowedProfileIds(new Set(followedIds));
       });
 
     return () => { alive = false; };
@@ -115,15 +126,17 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
 
   const availableStoreFilters = useMemo(() => {
     const expected = CATEGORY_EXPERIENCE[category] as StoreFilter | undefined;
-    return expected ? [expected] : STORE_FILTER_ORDER;
-  }, [category]);
+    return expected ? [expected] : STORE_FILTER_ORDER.filter(filter => (
+      filter === 'all' || products.some(product => getProductExperience(product) === filter)
+    ));
+  }, [category, products]);
   const effectiveFilter = CATEGORY_EXPERIENCE[category] as StoreFilter | undefined
     ?? (availableStoreFilters.includes(activeFilter) ? activeFilter : 'all');
   const selectedExperience = CATEGORY_EXPERIENCE[category] ?? (effectiveFilter === 'all' ? null : effectiveFilter);
   const availableTypes = useMemo(
     () => Array.from(new Set(products
       .filter(product => getProductExperience(product) === selectedExperience)
-      .flatMap(product => (product.taxonomy_terms ?? []).filter(term => term.level === 'type').map(term => term.label)),
+      .flatMap(product => product.browse_type?.label ? [product.browse_type.label] : []),
     )).sort((a, b) => a.localeCompare(b)),
     [products, selectedExperience],
   );
@@ -132,13 +145,13 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     ? typeFilter
     : 'all';
   const availableTags = useMemo(() => {
-    if (!selectedExperience || effectiveTypeFilter === 'all') return [];
+    if (!selectedExperience) return [];
     return Array.from(new Set(products
-      .filter(product => getProductExperience(product) === selectedExperience && itemMatchesStoreType(product, effectiveTypeFilter))
-      .flatMap(product => (product.taxonomy_terms ?? []).filter(term => term.level === 'tag').map(term => term.label))
+      .filter(product => getProductExperience(product) === selectedExperience && (effectiveTypeFilter === 'all' || itemMatchesStoreType(product, effectiveTypeFilter)))
+      .flatMap(product => (product.browse_tags ?? []).map(tag => tag.label))
     )).sort((a, b) => a.localeCompare(b));
   }, [effectiveTypeFilter, products, selectedExperience]);
-  const effectiveTagFilter = effectiveTypeFilter !== 'all'
+  const effectiveTagFilter = selectedExperience
     && availableTags.some(tag => tag.toLowerCase() === tagFilter.toLowerCase())
     ? tagFilter
     : 'all';
@@ -148,17 +161,18 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     const normalizedQuery = query.trim().toLowerCase();
     return products.filter(product => {
       const experience = getProductExperience(product);
-      if (!['music', 'book', 'asset', 'physical'].includes(experience)) return false;
+      if (!['music', 'book', 'interactive', 'asset', 'physical'].includes(experience)) return false;
       if (expected && experience !== expected) return false;
       if (effectiveFilter !== 'all' && experience !== effectiveFilter) return false;
       if (effectiveTypeFilter !== 'all' && !itemMatchesStoreType(product, effectiveTypeFilter)) return false;
       if (priceFilter === 'free' && !(product.is_free || product.price_cents === 0)) return false;
       if (priceFilter === 'paid' && (product.is_free || product.price_cents === 0)) return false;
-      if (effectiveTagFilter !== 'all' && !(product.taxonomy_terms ?? []).some(term => term.level === 'tag' && term.label.toLowerCase() === effectiveTagFilter.toLowerCase())) return false;
+      if (effectiveTagFilter !== 'all' && !(product.browse_tags ?? []).some(tag => tag.label.toLowerCase() === effectiveTagFilter.toLowerCase())) return false;
       if (capabilityFilter !== 'all' && !(product.capability_keys ?? []).includes(capabilityFilter)) return false;
       if (!normalizedQuery) return true;
       const creator = product.creators?.display_name || product.creator || '';
-      return `${product.title} ${creator} ${(product.tags ?? []).join(' ')}`.toLowerCase().includes(normalizedQuery);
+      const taxonomy = [product.browse_type?.label, ...(product.browse_tags ?? []).map(tag => tag.label)].filter(Boolean).join(' ');
+      return `${product.title} ${creator} ${taxonomy}`.toLowerCase().includes(normalizedQuery);
     }).sort(comparePublicCatalogProducts);
   }, [capabilityFilter, category, effectiveFilter, effectiveTagFilter, effectiveTypeFilter, priceFilter, products, query]);
   const hasActiveFilters = (category === 'all' && effectiveFilter !== 'all')
@@ -193,14 +207,6 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
             </button>
           ))}
           </div>
-          <label className="store-filter-group">
-            <span className="store-filter-label">Price</span>
-            <select className="os-input-field" value={priceFilter} onChange={event => setPriceFilter(event.target.value as PriceFilter)}>
-              <option value="all">Any price</option>
-              <option value="free">Free</option>
-              <option value="paid">Paid</option>
-            </select>
-          </label>
           {selectedExperience && <label className="store-filter-group">
             <span className="store-filter-label">Type</span>
             <select className="os-input-field" value={effectiveTypeFilter} onChange={event => {
@@ -211,8 +217,8 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
               {availableTypes.map(type => <option key={type} value={type}>{type}</option>)}
             </select>
           </label>}
-          {effectiveTypeFilter !== 'all' && availableTags.length > 0 && <label className="store-filter-group">
-            <span className="store-filter-label">Tag</span>
+          {availableTags.length > 0 && <label className="store-filter-group">
+            <span className="store-filter-label">Tags</span>
             <select className="os-input-field" value={effectiveTagFilter} onChange={event => setTagFilter(event.target.value)}>
               <option value="all">Any tag</option>
               {availableTags.map(tag => <option key={tag} value={tag}>{tag}</option>)}
@@ -223,6 +229,14 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
             <select className="os-input-field" value={capabilityFilter} onChange={event => setCapabilityFilter(event.target.value as 'all' | 'achievements')}>
               <option value="all">Any feature</option>
               <option value="achievements">Achievements</option>
+            </select>
+          </label>
+          <label className="store-filter-group">
+            <span className="store-filter-label">Price</span>
+            <select className="os-input-field" value={priceFilter} onChange={event => setPriceFilter(event.target.value as PriceFilter)}>
+              <option value="all">Any price</option>
+              <option value="free">Free</option>
+              <option value="paid">Paid</option>
             </select>
           </label>
           {hasActiveFilters && (
@@ -243,12 +257,27 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   const copy = CATEGORY_COPY[category];
   const pageTitle = copy.title;
 
+  function browseCategory(filter: StoreFilter) {
+    setActiveFilter(filter);
+    setTypeFilter('all');
+    setTagFilter('all');
+    setCapabilityFilter('all');
+    setPriceFilter('all');
+    setQuery('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   if (category === 'all') {
-    const featuredProducts = visibleProducts.filter(product => product.featured).slice(0, 8);
-    const freeListeningProducts = visibleProducts.filter(product => (
-      getProductExperience(product) === 'music' && (product.capability_keys ?? []).includes('streaming')
-    )).slice(0, 8);
-    const recentProducts = visibleProducts.slice(0, 8);
+    const featuredProducts = products.filter(product => product.featured).sort(comparePublicCatalogProducts).slice(0, 4);
+    const followingProducts = products.filter(product => product.author_id && followedProfileIds.has(product.author_id)).sort(comparePublicCatalogProducts).slice(0, 8);
+    const categoryShelves = STORE_FILTER_ORDER
+      .filter((filter): filter is Exclude<StoreFilter, 'all'> => filter !== 'all')
+      .map(filter => ({
+        filter,
+        title: `New Releases in ${STORE_FILTER_LABELS[filter]}`,
+        products: products.filter(product => getProductExperience(product) === filter).sort(comparePublicCatalogProducts).slice(0, 8),
+      }))
+      .filter(shelf => shelf.products.length > 0);
 
     return (
       <PageShell>
@@ -262,40 +291,47 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
             <EmptyMessage>{query ? 'No items match your search.' : 'No items match this filter.'}</EmptyMessage>
           ) : (
             <>
-              {featuredProducts.length > 0 && (
-                <HubSection title="Featured by 44">
+              {hasActiveFilters ? (
+                <HubSection title="Browse">
+                  <ProductGrid>
+                    {visibleProducts.map(product => (
+                      <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />
+                    ))}
+                  </ProductGrid>
+                </HubSection>
+              ) : <>
+                {featuredProducts.length > 0 && (
+                <HubSection title="Featured">
                   <ProductGrid>
                     {featuredProducts.map(product => (
                       <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />
                     ))}
                   </ProductGrid>
                 </HubSection>
-              )}
-              {!hasActiveFilters && freeListeningProducts.length > 0 && (
-                <HubSection title="Free to Listen">
+                )}
+                {followingProducts.length > 0 && (
+                <HubSection title="Creators You Follow">
                   <ProductGrid>
-                    {freeListeningProducts.map(product => (
+                    {followingProducts.map(product => (
                       <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />
                     ))}
                   </ProductGrid>
                 </HubSection>
-              )}
-              {!hasActiveFilters && recentProducts.length > 0 && (
-                <HubSection title="Recently Released">
+                )}
+                {categoryShelves.map(shelf => (
+              <HubSection
+                key={shelf.filter}
+                title={shelf.title}
+                action={<button type="button" className="os-button os-button-primary" onClick={() => browseCategory(shelf.filter)}>View All</button>}
+              >
                   <ProductGrid>
-                    {recentProducts.map(product => (
-                      <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />
-                    ))}
-                  </ProductGrid>
-                </HubSection>
-              )}
-              <HubSection title={hasActiveFilters ? 'Browse' : 'All Items'}>
-                  <ProductGrid>
-                    {visibleProducts.map(product => (
+                    {shelf.products.map(product => (
                       <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />
                     ))}
                   </ProductGrid>
               </HubSection>
+                ))}
+              </>}
             </>
           )}
         </main>
