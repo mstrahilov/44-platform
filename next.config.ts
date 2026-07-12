@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
       {
         source: "/dashboard/:path*",
         destination: "/studio/:path*",
-        permanent: false,
+        permanent: true,
       },
     ];
   },

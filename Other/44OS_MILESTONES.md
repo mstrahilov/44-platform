@@ -146,7 +146,7 @@ Completion evidence (July 12, 2026): `20260712030000_m5_provider_neutral_commerc
 
 ### M6 — Application And Route Consolidation
 
-**Status: Not started**
+**Status: In progress**
 
 Move catalog, Library, Community, Studio, profile, and acquisition queries behind typed domain services. Remove duplicate Dashboard implementations while preserving intentional redirects.
 
@@ -155,6 +155,8 @@ Completion criteria:
 - Each canonical route has one implementation.
 - Compatibility routes contain redirects only.
 - Repeated cards and pages do not produce session or row-by-row request fan-out.
+
+Current evidence (July 12, 2026): Studio is now the single creator-management implementation. The former 13-page `/dashboard` copy is replaced by one permanent compatibility redirect that preserves nested paths and query parameters, reducing the production route set from 75 to 63 without changing the destination UI. The shared Store/Library experience shell now uses typed catalog and Library domain operations for published Items, visible Library state, ownership checks, track queues, removal, and hiding instead of embedding those Supabase queries in the component. Specialized music and book Library implementations remain temporarily canonical for their distinct playback, achievement, and reader behavior; they must be merged behind shared detail services before M6 is Complete.
 
 ### M7 — Store And Discovery Launch Loop
 

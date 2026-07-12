@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
 import { browseIndexHref, getProductExperience, productLibraryHref, type ProductExperience } from '@/lib/experience';
@@ -12,6 +11,14 @@ import { creatorHref } from '@/lib/platform';
 import { PageShell, HubHero, ProductCard, ProductGrid, CenteredMessage, EmptyMessage } from '@/components/Ui';
 import { useContextMenu, type ContextMenuEntry } from '@/components/ContextMenu';
 import { useMusicPlayer, type MusicQueueTrack } from '@/components/MusicPlayer';
+import { listPlayableItemTracks, listPublishedCatalogItems } from '@/lib/domain/catalog';
+import {
+  hideLibraryItem,
+  listVisibleLibraryItemIds,
+  listVisibleLibraryItems,
+  removeLibraryItem,
+  type LibraryItemRow,
+} from '@/lib/domain/library';
 
 type ExperienceRoute = 'library' | 'store';
 
@@ -68,14 +75,6 @@ const EXPERIENCE_CONFIG: Record<ExperienceConfig['id'], ExperienceConfig> = {
   },
 };
 
-type LibraryItemRow = {
-  id: string;
-  item_id: string | null;
-  acquired_at: string | null;
-  acquisition_type: string | null;
-  products: Product | null;
-};
-
 export function ExperienceApp({ app, route }: { app: ExperienceConfig['id']; route: ExperienceRoute }) {
   const config = EXPERIENCE_CONFIG[app];
   const router = useRouter();
@@ -92,14 +91,8 @@ export function ExperienceApp({ app, route }: { app: ExperienceConfig['id']; rou
 
     async function loadStore() {
       setLoading(true);
-      const { data } = await supabase
-        .from('catalog_items')
-        .select('*, creators:profiles!author_id(*)')
-        .eq('status', 'published')
-        .order('created_at', { ascending: false })
-        .limit(120);
-
-      setProducts(((data ?? []) as Product[]).filter(product => getProductExperience(product) === config.experience));
+      const data = await listPublishedCatalogItems();
+      setProducts(data.filter(product => getProductExperience(product) === config.experience));
       setLoading(false);
     }
 
@@ -118,15 +111,7 @@ export function ExperienceApp({ app, route }: { app: ExperienceConfig['id']; rou
 
     async function loadLibrary(userId: string) {
       setLoading(true);
-      const { data } = await supabase
-        .from('library_entries')
-        .select('id,item_id,acquired_at,acquisition_type,products:catalog_items(*)')
-        .eq('user_id', userId)
-        .neq('status', 'archived')
-        .neq('status', 'hidden')
-        .order('acquired_at', { ascending: false });
-
-      const rows = ((data ?? []) as unknown as LibraryItemRow[])
+      const rows = (await listVisibleLibraryItems(userId))
         .filter(row => row.products && getProductExperience(row.products) === config.experience);
       setLibraryItems(rows);
       setLoading(false);
@@ -142,17 +127,7 @@ export function ExperienceApp({ app, route }: { app: ExperienceConfig['id']; rou
     }
 
     async function loadOwned(userId: string) {
-      const { data } = await supabase
-        .from('library_entries')
-        .select('item_id,status')
-        .eq('user_id', userId);
-
-      setOwnedProductIds(
-        (data ?? [])
-          .filter(item => item.item_id && item.status !== 'hidden')
-          .map(item => item.item_id)
-          .filter(Boolean),
-      );
+      setOwnedProductIds(await listVisibleLibraryItemIds(userId));
     }
 
     loadOwned(user.id);
@@ -166,12 +141,8 @@ export function ExperienceApp({ app, route }: { app: ExperienceConfig['id']; rou
   ), [libraryItems]);
 
   async function playProduct(product: Product, fallbackHref: string) {
-    const { data } = await supabase
-      .from('tracks')
-      .select('id,title,number,duration_seconds,audio_url')
-      .eq('item_id', product.id)
-      .order('number');
-    const queue: MusicQueueTrack[] = (data ?? [])
+    const tracks = await listPlayableItemTracks(product.id);
+    const queue: MusicQueueTrack[] = tracks
       .filter(track => track.audio_url)
       .map(track => ({
         id: track.id,
@@ -191,10 +162,13 @@ export function ExperienceApp({ app, route }: { app: ExperienceConfig['id']; rou
 
   async function removeLibraryRow(row: LibraryItemRow, free: boolean) {
     if (!user) return;
-    const result = free
-      ? await supabase.from('library_entries').delete().eq('id', row.id).eq('user_id', user.id)
-      : await supabase.from('library_entries').update({ status: 'hidden' }).eq('id', row.id).eq('user_id', user.id);
-    if (result.error) { alert(result.error.message); return; }
+    try {
+      if (free) await removeLibraryItem(user.id, row.id);
+      else await hideLibraryItem(user.id, row.id);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Could not update your Library.');
+      return;
+    }
     setLibraryItems(current => current.filter(entry => entry.id !== row.id));
   }
 

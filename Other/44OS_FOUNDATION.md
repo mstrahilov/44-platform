@@ -235,6 +235,7 @@ Compatibility and legacy policy:
 - `/product/[id]` resolves as a compatibility hop to `/store/item/[identifier]`.
 - `/collection` redirects to `/library`; `/collection/item/[kind]/[id]` redirects to `/library/item/[id]`.
 - `/music`, `/books`, `/assets`, `/merch`, `/shop`, and old typed `/discover` paths redirect to Store categories.
+- `/studio` is the canonical creator-management route tree. `/dashboard` and every nested Dashboard URL are permanent compatibility redirects to the corresponding Studio path; no Dashboard page implementation may be reintroduced.
 - `/library/item/[kind]/[id]` remains as a legacy compatibility route and redirects to `/library/item/[id]`.
 - `/dashboard` and dashboard subroutes redirect to Studio equivalents.
 - `/community/following` redirects to `/community?filter=following`.
