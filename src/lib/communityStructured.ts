@@ -86,7 +86,7 @@ export type CommunityCollaborationResponse = {
 
 export async function loadCommunityQuestions(sort: 'recent' | 'unanswered' | 'votes' = 'recent') {
   let query = supabase
-    .from('community_questions')
+    .from('community_question_content')
     .select('*, authors:profiles!author_id(id, username, slug, display_name, avatar_url)')
     .neq('status', 'archived');
 
@@ -116,7 +116,7 @@ export async function loadCommunityQuestions(sort: 'recent' | 'unanswered' | 'vo
 
 export async function loadCommunityCollaborations() {
   const result = await supabase
-    .from('community_collaborations')
+    .from('community_collaboration_content')
     .select('*, authors:profiles!author_id(id, username, slug, display_name, avatar_url)')
     .neq('status', 'archived')
     .order('created_at', { ascending: false })
@@ -143,15 +143,17 @@ export async function createCommunityQuestion(input: {
   body: string;
   tags: string[];
 }) {
+  const created = await supabase.rpc('create_content_question', {
+    question_title: input.title,
+    question_body: input.body,
+    question_tags: input.tags,
+    target_item_id: undefined,
+  });
+  if (created.error) return { data: null, error: created.error };
   return supabase
-    .from('community_questions')
-    .insert({
-      author_id: input.authorId,
-      title: input.title,
-      body: input.body,
-      tags: input.tags,
-    })
+    .from('community_question_content')
     .select('*, authors:profiles!author_id(id, username, slug, display_name, avatar_url)')
+    .eq('id', created.data)
     .single();
 }
 
@@ -162,22 +164,24 @@ export async function createCommunityCollaboration(input: {
   roleNeeded: string;
   projectType: string;
 }) {
+  const created = await supabase.rpc('create_content_collaboration', {
+    collaboration_title: input.title,
+    collaboration_body: input.body,
+    needed_role: input.roleNeeded || undefined,
+    collaboration_project_type: input.projectType || undefined,
+    target_item_id: undefined,
+  });
+  if (created.error) return { data: null, error: created.error };
   return supabase
-    .from('community_collaborations')
-    .insert({
-      author_id: input.authorId,
-      title: input.title,
-      body: input.body,
-      role_needed: input.roleNeeded || null,
-      project_type: input.projectType || null,
-    })
+    .from('community_collaboration_content')
     .select('*, authors:profiles!author_id(id, username, slug, display_name, avatar_url)')
+    .eq('id', created.data)
     .single();
 }
 
 export async function deleteCommunityQuestion(input: { questionId: string; ownerId: string }) {
   return supabase
-    .from('community_questions')
+    .from('content_entries')
     .delete()
     .eq('id', input.questionId)
     .eq('author_id', input.ownerId);
@@ -185,7 +189,7 @@ export async function deleteCommunityQuestion(input: { questionId: string; owner
 
 export async function deleteQuestionAnswer(input: { answerId: string; ownerId: string }) {
   return supabase
-    .from('community_question_answers')
+    .from('content_replies')
     .delete()
     .eq('id', input.answerId)
     .eq('author_id', input.ownerId);
@@ -193,7 +197,7 @@ export async function deleteQuestionAnswer(input: { answerId: string; ownerId: s
 
 export async function loadQuestionAnswers(questionId: string) {
   const answersResult = await supabase
-    .from('community_question_answers')
+    .from('community_question_answer_content')
     .select('*, authors:profiles!author_id(id, username, slug, display_name, avatar_url)')
     .eq('question_id', questionId)
     .order('is_accepted', { ascending: false })
@@ -219,21 +223,30 @@ export async function createQuestionAnswer(input: {
   body: string;
 }) {
   return supabase
-    .from('community_question_answers')
+    .from('content_replies')
     .insert({
-      question_id: input.questionId,
+      entry_id: input.questionId,
       author_id: input.authorId,
+      reply_type: 'answer',
       body: input.body,
     })
-    .select('*, authors:profiles!author_id(id, username, slug, display_name, avatar_url)')
-    .single();
+    .select('id')
+    .single()
+    .then(async created => {
+      if (created.error) return { data: null, error: created.error };
+      return supabase
+        .from('community_question_answer_content')
+        .select('*, authors:profiles!author_id(id, username, slug, display_name, avatar_url)')
+        .eq('id', created.data.id)
+        .single();
+    });
 }
 
 export async function loadQuestionVotes(questionId: string, answerIds: string[]) {
   const orParts = [`question_id.eq.${questionId}`];
   answerIds.forEach(answerId => orParts.push(`answer_id.eq.${answerId}`));
   const result = await supabase
-    .from('community_question_votes')
+    .from('community_question_vote_content')
     .select('id, question_id, answer_id, profile_id, value')
     .or(orParts.join(','));
 
@@ -251,11 +264,17 @@ export async function loadQuestionVotes(questionId: string, answerIds: string[])
 }
 
 export async function addQuestionVote(input: { profileId: string; questionId?: string; answerId?: string }) {
-  return supabase.from('community_question_votes').insert({
+  if (input.questionId) {
+    return supabase.from('content_entry_reactions').insert({
+      entry_id: input.questionId,
+      profile_id: input.profileId,
+      reaction_type: 'upvote',
+    });
+  }
+  return supabase.from('content_reply_reactions').insert({
+    reply_id: input.answerId as string,
     profile_id: input.profileId,
-    question_id: input.questionId ?? null,
-    answer_id: input.answerId ?? null,
-    value: 1,
+    reaction_type: 'upvote',
   });
 }
 
@@ -264,34 +283,15 @@ export async function acceptQuestionAnswer(input: {
   answerId: string;
   ownerId: string;
 }) {
-  const resetResult = await supabase
-    .from('community_question_answers')
-    .update({ is_accepted: false })
-    .eq('question_id', input.questionId);
-
-  if (resetResult.error) return resetResult;
-
-  const answerResult = await supabase
-    .from('community_question_answers')
-    .update({ is_accepted: true })
-    .eq('id', input.answerId)
-    .eq('question_id', input.questionId);
-
-  if (answerResult.error) return answerResult;
-
-  return supabase
-    .from('community_questions')
-    .update({
-      accepted_answer_id: input.answerId,
-      has_accepted_answer: true,
-    })
-    .eq('id', input.questionId)
-    .eq('author_id', input.ownerId);
+  return supabase.rpc('accept_content_answer', {
+    target_question_id: input.questionId,
+    target_reply_id: input.answerId,
+  });
 }
 
 export async function loadCollaborationResponses(collaborationId: string) {
   const result = await supabase
-    .from('community_collaboration_responses')
+    .from('community_collaboration_response_content')
     .select('*, authors:profiles!author_id(id, username, slug, display_name, avatar_url)')
     .eq('collaboration_id', collaborationId)
     .order('created_at', { ascending: false });
@@ -315,14 +315,23 @@ export async function createCollaborationResponse(input: {
   body: string;
 }) {
   return supabase
-    .from('community_collaboration_responses')
+    .from('content_replies')
     .insert({
-      collaboration_id: input.collaborationId,
+      entry_id: input.collaborationId,
       author_id: input.authorId,
+      reply_type: 'collaboration_response',
       body: input.body,
     })
-    .select('*, authors:profiles!author_id(id, username, slug, display_name, avatar_url)')
-    .single();
+    .select('id')
+    .single()
+    .then(async created => {
+      if (created.error) return { data: null, error: created.error };
+      return supabase
+        .from('community_collaboration_response_content')
+        .select('*, authors:profiles!author_id(id, username, slug, display_name, avatar_url)')
+        .eq('id', created.data.id)
+        .single();
+    });
 }
 
 export async function updateCommunityCollaborationStatus(input: {
@@ -331,15 +340,14 @@ export async function updateCommunityCollaborationStatus(input: {
   status: CommunityCollaboration['status'];
 }) {
   return supabase
-    .from('community_collaborations')
-    .update({ status: input.status })
-    .eq('id', input.collaborationId)
-    .eq('author_id', input.ownerId);
+    .from('content_collaboration_details')
+    .update({ collaboration_status: input.status })
+    .eq('entry_id', input.collaborationId);
 }
 
 export async function deleteCommunityCollaboration(input: { collaborationId: string; ownerId: string }) {
   return supabase
-    .from('community_collaborations')
+    .from('content_entries')
     .delete()
     .eq('id', input.collaborationId)
     .eq('author_id', input.ownerId);
@@ -347,7 +355,7 @@ export async function deleteCommunityCollaboration(input: { collaborationId: str
 
 export async function deleteCollaborationResponse(input: { responseId: string; ownerId: string }) {
   return supabase
-    .from('community_collaboration_responses')
+    .from('content_replies')
     .delete()
     .eq('id', input.responseId)
     .eq('author_id', input.ownerId);

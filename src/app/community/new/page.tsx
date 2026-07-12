@@ -67,17 +67,13 @@ function NewCommunityThreadContent() {
     setSaving(true);
     setError('');
 
-    const { data, error: insertError } = await supabase
-      .from('posts')
-      .insert({
-        author_id: user.id,
-        slug: buildSlug(body),
-        title: buildPostTitle(body),
-        body: body.trim(),
-        status: 'published',
-      })
-      .select('id, slug')
-      .single();
+    const slug = buildSlug(body);
+    const { data, error: insertError } = await supabase.rpc('create_content_discussion', {
+      discussion_title: buildPostTitle(body),
+      discussion_body: body.trim(),
+      discussion_slug: slug,
+      target_item_id: undefined,
+    });
 
     if (insertError) {
       setSaving(false);
@@ -86,8 +82,7 @@ function NewCommunityThreadContent() {
     }
 
     setSaving(false);
-    const created = data as { id: string; slug: string | null } | null;
-    router.push(`/community/thread/${created?.slug ?? created?.id}`);
+    router.push(`/community/thread/${slug || data}`);
   }
 
   if (loading || !user) {

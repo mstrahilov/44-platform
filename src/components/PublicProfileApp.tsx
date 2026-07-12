@@ -103,7 +103,7 @@ export default function PublicProfilePage() {
           .eq('author_id', profileId)
           .order('created_at', { ascending: false }),
         supabase
-          .from('posts')
+          .from('community_discussions')
           .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type)')
           .in('author_id', ids)
           .eq('status', 'published')
@@ -116,13 +116,13 @@ export default function PublicProfilePage() {
       const postIds = nextPosts.map(post => post.id);
       const [replyCountResult, likeResult] = postIds.length > 0 ? await Promise.all([
         supabase
-          .from('post_replies')
+          .from('community_discussion_replies')
           .select('post_id, author_id, authors:profiles!author_id(id, display_name, username, avatar_url)')
           .in('post_id', postIds)
           .eq('status', 'published')
           .order('created_at', { ascending: false }),
         supabase
-          .from('post_likes')
+          .from('community_discussion_likes')
           .select('post_id, profile_id, profiles:profiles!profile_id(id, display_name, username, avatar_url)')
           .in('post_id', postIds)
           .order('created_at', { ascending: false }),
@@ -411,7 +411,7 @@ export default function PublicProfilePage() {
                   onDelete={async () => {
                     if (!user || post.author_id !== user.id) return;
                     if (!window.confirm('Delete this post? This cannot be undone.')) return;
-                    const { error: deleteError } = await supabase.from('posts').delete().eq('id', post.id);
+                    const { error: deleteError } = await supabase.from('content_entries').delete().eq('id', post.id);
                     if (deleteError) { setError(deleteError.message); return; }
                     setPosts(current => current.filter(p => p.id !== post.id));
                   }}

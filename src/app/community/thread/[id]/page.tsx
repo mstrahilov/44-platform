@@ -72,7 +72,7 @@ export default function CommunityThreadPage() {
       let post: SocialPost | null = null;
 
       const { data: slugMatch } = await supabase
-        .from('posts')
+        .from('community_discussions')
         .select(selectClause)
         .eq('slug', id)
         .eq('status', 'published')
@@ -82,7 +82,7 @@ export default function CommunityThreadPage() {
 
       if (!post) {
         const { data: idMatch } = await supabase
-          .from('posts')
+          .from('community_discussions')
           .select(selectClause)
           .eq('id', id)
           .eq('status', 'published')
@@ -102,13 +102,13 @@ export default function CommunityThreadPage() {
 
       const [{ data: replyRows }, { data: likeRows }] = await Promise.all([
         supabase
-          .from('post_replies')
+          .from('community_discussion_replies')
           .select('*, authors:profiles!author_id(id, slug, display_name, username, avatar_url)')
           .eq('post_id', post.id)
           .eq('status', 'published')
           .order('created_at', { ascending: false }),
         supabase
-          .from('post_likes')
+          .from('community_discussion_likes')
           .select('post_id, profile_id, profiles:profiles!profile_id(id, display_name, username, avatar_url)')
           .eq('post_id', post.id)
           .order('created_at', { ascending: false }),
@@ -119,7 +119,7 @@ export default function CommunityThreadPage() {
       let replyLikeRows: ReplyLikeRow[] = [];
       if (replyIds.length > 0) {
         const { data: rlRows } = await supabase
-          .from('reply_likes')
+          .from('community_reply_likes')
           .select('reply_id, profile_id, profiles:profiles!profile_id(id, display_name, username, avatar_url)')
           .in('reply_id', replyIds)
           .order('created_at', { ascending: false });
@@ -244,7 +244,7 @@ export default function CommunityThreadPage() {
 
     if (likedByUser) {
       const { error: deleteError } = await supabase
-        .from('post_likes')
+        .from('community_discussion_likes')
         .delete()
         .eq('post_id', thread.id)
         .eq('profile_id', user.id);
@@ -255,7 +255,7 @@ export default function CommunityThreadPage() {
         setLikes(current => current.filter(entry => !(entry.post_id === thread.id && entry.profile_id === user.id)));
       }
     } else {
-      const { error: insertError } = await supabase.from('post_likes').insert({ post_id: thread.id, profile_id: user.id });
+      const { error: insertError } = await supabase.from('community_discussion_likes').insert({ post_id: thread.id, profile_id: user.id });
       if (insertError) {
         setError(insertError.message);
       } else {
@@ -287,14 +287,14 @@ export default function CommunityThreadPage() {
     const alreadyLiked = replyLikedByUser.has(reply.id);
     if (alreadyLiked) {
       const { error: deleteError } = await supabase
-        .from('reply_likes')
+        .from('community_reply_likes')
         .delete()
         .eq('reply_id', reply.id)
         .eq('profile_id', user.id);
       if (deleteError) setError(deleteError.message);
       else setReplyLikes(current => current.filter(entry => !(entry.reply_id === reply.id && entry.profile_id === user.id)));
     } else {
-      const { error: insertError } = await supabase.from('reply_likes').insert({ reply_id: reply.id, profile_id: user.id });
+      const { error: insertError } = await supabase.from('community_reply_likes').insert({ reply_id: reply.id, profile_id: user.id });
       if (insertError) {
         setError(insertError.message);
       } else {
@@ -318,10 +318,9 @@ export default function CommunityThreadPage() {
       author_id: user.id,
       parent_reply_id: parentReplyId,
       body: trimmedBody,
-      status: 'published',
     };
     const { data, error: insertError } = await supabase
-      .from('post_replies')
+      .from('community_discussion_replies')
       .insert(payload)
       .select('*, authors:profiles!author_id(id, slug, display_name, username, avatar_url)')
       .single();
@@ -373,7 +372,7 @@ export default function CommunityThreadPage() {
   async function deleteThread() {
     if (!thread || !user || !isThreadAuthor) return;
     if (!window.confirm('Delete this post? This cannot be undone.')) return;
-    const { error: deleteError } = await supabase.from('posts').delete().eq('id', thread.id);
+    const { error: deleteError } = await supabase.from('content_entries').delete().eq('id', thread.id);
     if (deleteError) {
       setError(deleteError.message);
       return;
@@ -384,7 +383,7 @@ export default function CommunityThreadPage() {
   async function deleteReply(reply: SocialReply) {
     if (!user || reply.author_id !== user.id) return;
     if (!window.confirm('Delete this reply? This cannot be undone.')) return;
-    const { error: deleteError } = await supabase.from('post_replies').delete().eq('id', reply.id);
+    const { error: deleteError } = await supabase.from('content_replies').delete().eq('id', reply.id);
     if (deleteError) {
       setError(deleteError.message);
       return;

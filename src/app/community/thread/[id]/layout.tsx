@@ -9,7 +9,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   let post: SocialPost | null = null;
 
   const { data: slugMatch } = await supabase
-    .from('posts')
+    .from('community_discussions')
     .select(select)
     .eq('slug', id)
     .eq('status', 'published')
@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
   if (!post) {
     const { data: idMatch } = await supabase
-      .from('posts')
+      .from('community_discussions')
       .select(select)
       .eq('id', id)
       .eq('status', 'published')

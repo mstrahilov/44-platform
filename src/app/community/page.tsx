@@ -206,7 +206,7 @@ function CommunityPageContent() {
   useEffect(() => {
     async function fetchCommunity() {
       const postResult = await supabase
-        .from('posts')
+        .from('community_discussions')
         .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type, country_code, home_country_code)')
         .eq('status', 'published')
         .order('created_at', { ascending: false })
@@ -217,13 +217,13 @@ function CommunityPageContent() {
       const postIds = nextPosts.map(post => post.id);
       const [replyResult, likeResult] = postIds.length > 0 ? await Promise.all([
         supabase
-          .from('post_replies')
+          .from('community_discussion_replies')
           .select('post_id, author_id, authors:profiles!author_id(id, display_name, username, avatar_url)')
           .in('post_id', postIds)
           .eq('status', 'published')
           .order('created_at', { ascending: false }),
         supabase
-          .from('post_likes')
+          .from('community_discussion_likes')
           .select('post_id, profile_id, profiles:profiles!profile_id(id, display_name, username, avatar_url)')
           .in('post_id', postIds)
           .order('created_at', { ascending: false }),
@@ -486,17 +486,13 @@ function CommunityPageContent() {
     }
 
     const finalBody = forcedTopic ? composeLockedBody(body, forcedTopic).trim() : body;
-    const { data, error: insertError } = await supabase
-      .from('posts')
-      .insert({
-        author_id: user.id,
-        slug: buildSlug(finalBody),
-        title: buildPostTitle(finalBody),
-        body: finalBody,
-        status: 'published',
-      })
-      .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type, country_code, home_country_code)')
-      .single();
+    const slug = buildSlug(finalBody);
+    const { data: createdId, error: insertError } = await supabase.rpc('create_content_discussion', {
+      discussion_title: buildPostTitle(finalBody),
+      discussion_body: finalBody,
+      discussion_slug: slug,
+      target_item_id: undefined,
+    });
 
     if (insertError) {
       setError(insertError.message);
@@ -504,7 +500,12 @@ function CommunityPageContent() {
       return;
     }
 
-    setPosts(current => [data as SocialPost, ...current]);
+    const { data } = await supabase
+      .from('community_discussions')
+      .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type, country_code, home_country_code)')
+      .eq('id', createdId)
+      .single();
+    if (data) setPosts(current => [data as SocialPost, ...current]);
     setPostBody('');
     setPostComposerOpen(false);
     setPosting(false);
@@ -717,7 +718,7 @@ function CommunityPageContent() {
     const liked = likedIds.has(post.id);
     if (liked) {
       const { error: deleteError } = await supabase
-        .from('post_likes')
+        .from('community_discussion_likes')
         .delete()
         .eq('post_id', post.id)
         .eq('profile_id', user.id);
@@ -729,7 +730,7 @@ function CommunityPageContent() {
         profile_id: user.id,
         profiles: profile ? { id: profile.id, display_name: profile.display_name, username: profile.username, avatar_url: profile.avatar_url } : null,
       };
-      const { error: insertError } = await supabase.from('post_likes').insert({ post_id: post.id, profile_id: user.id });
+      const { error: insertError } = await supabase.from('community_discussion_likes').insert({ post_id: post.id, profile_id: user.id });
       if (insertError) setError(insertError.message);
       else setLikes(current => [...current, nextLike]);
     }
@@ -739,7 +740,7 @@ function CommunityPageContent() {
   async function deletePost(post: SocialPost) {
     if (!user || post.author_id !== user.id) return;
     if (!window.confirm('Delete this post? This cannot be undone.')) return;
-    const { error: deleteError } = await supabase.from('posts').delete().eq('id', post.id);
+    const { error: deleteError } = await supabase.from('content_entries').delete().eq('id', post.id);
     if (deleteError) {
       setError(deleteError.message);
       return;

@@ -44,7 +44,7 @@ export function ProductReviewsSection({
 
   async function loadReviews() {
     const { data, error: loadError } = await supabase
-      .from('product_reviews')
+      .from('community_review_content')
       .select('id,user_id,item_id,title,body,sentiment,status,created_at,reviewers:profiles!user_id(id,slug,username,display_name,avatar_url)')
       .eq('item_id', productId)
       .eq('status', 'published')
@@ -84,16 +84,13 @@ export function ProductReviewsSection({
     setSaving(true);
     setError('');
 
-    const { error: reviewError } = await supabase
-      .from('product_reviews')
-      .upsert({
-        user_id: user.id,
-        item_id: productId,
-        title: null,
-        body: body.trim(),
-        sentiment: 'recommended',
-        status: 'published',
-      }, { onConflict: 'user_id,item_id' });
+    const { error: reviewError } = await supabase.rpc('upsert_content_review', {
+      target_item_id: productId,
+      review_body: body.trim(),
+      review_title: undefined,
+      review_sentiment: 'recommended',
+      review_rating: undefined,
+    });
 
     if (reviewError) {
       setSaving(false);

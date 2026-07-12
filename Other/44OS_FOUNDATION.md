@@ -269,13 +269,13 @@ Current concept-to-table map:
 - Music tracks: `tracks`, attached by `item_id`.
 - Files, galleries, and release feature unlocks: `item_assets`.
 - User Library relationship: `library_entries` with `item_id`. Future entitlements become the authority for access/acquisition; the Library entry owns display state.
-- Reviews: legacy `product_reviews` with `item_id`, scheduled to move onto the typed content spine in M4.
-- Creator updates: legacy `product_updates` with `item_id`, scheduled to move onto the typed content spine in M4.
+- Reviews: canonical `content_entries` rows of type `review`, attached by `item_id`, with constrained payloads in `content_review_details`.
+- Creator updates: canonical `content_entries` rows of type `creator_update`, attached by `item_id`, with constrained payloads in `content_update_details`.
 - Achievements: `achievement_templates` 44-defined catalog plus `item_achievements`, `user_achievements`, `achievement_events`, `achievement_progress`.
 - Item capabilities and collaborators: `item_capabilities` and `item_members`; structured outbound links use `item_external_links` and `profile_external_links`.
 - Release features: achievements first, with optional `item_assets` unlocks such as `bonus_content`; future features include `commentary_audio` and `behind_the_scenes`.
 - Points foundation: `user_points_ledger`.
-- Community: `posts`, `post_replies`, `post_likes`, `reply_likes`, `profile_follows`, `community_questions`, `community_question_answers`, `community_question_votes`, `community_collaborations`, `community_collaboration_responses`.
+- Community identity and lifecycle: `content_entries`, with shared `content_replies`, `content_entry_reactions`, and `content_reply_reactions`. Typed payloads use `content_question_details`, `content_collaboration_details`, `content_review_details`, and `content_update_details`. A nullable `content_entries.item_id` distinguishes platform-wide content from content attached to a canonical Item. UI-specific `community_*_content` views are stable read contracts over this spine. The former posts/questions/collaborations/reviews/updates tables are temporary compatibility sources during the post-cutover verification period, not foundations for new work.
 - Messaging: `conversations`, `conversation_members`, `messages`.
 - Direct conversation creation and message sending use authenticated security-definer RPCs so conversation rows, both memberships, the message, and thread timestamp are written atomically without an RLS ordering gap.
 - Future services placeholder: `services` and `service_categories` are private and dormant. When services return, migrate them into canonical Item rows with service fulfillment instead of restoring a parallel commerce system.
@@ -287,7 +287,8 @@ Current concept-to-table map:
 
 Known Supabase state from the launch cleanup:
 
-- Migration history is aligned locally and remotely through `20260712010000`.
+- Migration history is aligned locally and remotely through `20260712020000`.
+- The typed Community spine is applied in `20260712020000_typed_community_content_spine.sql`; application queries no longer target the legacy Community content tables.
 - The prior incremental migration chain was consolidated into `20260712010000_44os_item_baseline.sql`. Its historical files remain available in Git history, but they are no longer active replay inputs.
 - The baseline includes the complete public schema, RLS, functions, triggers, auth profile hook, public storage buckets and policies, Item vocabulary, capabilities, membership, external links, and curated role mapping.
 - A clean local Supabase reset replays the baseline without a live snapshot, and a public-schema comparison against linked staging is empty.

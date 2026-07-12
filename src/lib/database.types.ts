@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       achievement_events: {
@@ -520,6 +545,616 @@ export type Database = {
             columns: ["author_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_collaboration_details: {
+        Row: {
+          collaboration_status: string
+          created_at: string
+          entry_id: string
+          project_type: string | null
+          role_needed: string | null
+          updated_at: string
+        }
+        Insert: {
+          collaboration_status?: string
+          created_at?: string
+          entry_id: string
+          project_type?: string | null
+          role_needed?: string | null
+          updated_at?: string
+        }
+        Update: {
+          collaboration_status?: string
+          created_at?: string
+          entry_id?: string
+          project_type?: string | null
+          role_needed?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_collaboration_details_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "community_collaboration_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_collaboration_details_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "community_discussions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_collaboration_details_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "community_question_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_collaboration_details_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "community_review_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_collaboration_details_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "community_update_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_collaboration_details_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "content_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_entries: {
+        Row: {
+          author_id: string | null
+          body: string | null
+          content_type: string
+          created_at: string
+          id: string
+          item_id: string | null
+          moderation_status: string
+          publication_status: string
+          slug: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          author_id?: string | null
+          body?: string | null
+          content_type: string
+          created_at?: string
+          id?: string
+          item_id?: string | null
+          moderation_status?: string
+          publication_status?: string
+          slug?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string | null
+          content_type?: string
+          created_at?: string
+          id?: string
+          item_id?: string | null
+          moderation_status?: string
+          publication_status?: string
+          slug?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_entries_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_entries_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_entry_reactions: {
+        Row: {
+          created_at: string
+          entry_id: string
+          profile_id: string
+          reaction_type: string
+        }
+        Insert: {
+          created_at?: string
+          entry_id: string
+          profile_id: string
+          reaction_type?: string
+        }
+        Update: {
+          created_at?: string
+          entry_id?: string
+          profile_id?: string
+          reaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_entry_reactions_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "community_collaboration_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_entry_reactions_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "community_discussions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_entry_reactions_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "community_question_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_entry_reactions_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "community_review_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_entry_reactions_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "community_update_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_entry_reactions_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "content_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_entry_reactions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_question_details: {
+        Row: {
+          accepted_reply_id: string | null
+          answer_count: number
+          created_at: string
+          entry_id: string
+          question_status: string
+          tags: string[]
+          updated_at: string
+          vote_count: number
+        }
+        Insert: {
+          accepted_reply_id?: string | null
+          answer_count?: number
+          created_at?: string
+          entry_id: string
+          question_status?: string
+          tags?: string[]
+          updated_at?: string
+          vote_count?: number
+        }
+        Update: {
+          accepted_reply_id?: string | null
+          answer_count?: number
+          created_at?: string
+          entry_id?: string
+          question_status?: string
+          tags?: string[]
+          updated_at?: string
+          vote_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_question_details_accepted_reply_id_fkey"
+            columns: ["accepted_reply_id"]
+            isOneToOne: false
+            referencedRelation: "community_collaboration_response_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_question_details_accepted_reply_id_fkey"
+            columns: ["accepted_reply_id"]
+            isOneToOne: false
+            referencedRelation: "community_discussion_replies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_question_details_accepted_reply_id_fkey"
+            columns: ["accepted_reply_id"]
+            isOneToOne: false
+            referencedRelation: "community_question_answer_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_question_details_accepted_reply_id_fkey"
+            columns: ["accepted_reply_id"]
+            isOneToOne: false
+            referencedRelation: "content_replies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_question_details_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "community_collaboration_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_question_details_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "community_discussions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_question_details_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "community_question_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_question_details_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "community_review_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_question_details_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "community_update_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_question_details_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "content_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_replies: {
+        Row: {
+          author_id: string | null
+          body: string
+          created_at: string
+          entry_id: string
+          id: string
+          is_accepted: boolean
+          moderation_status: string
+          parent_reply_id: string | null
+          publication_status: string
+          reply_type: string
+          updated_at: string
+        }
+        Insert: {
+          author_id?: string | null
+          body: string
+          created_at?: string
+          entry_id: string
+          id?: string
+          is_accepted?: boolean
+          moderation_status?: string
+          parent_reply_id?: string | null
+          publication_status?: string
+          reply_type?: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          created_at?: string
+          entry_id?: string
+          id?: string
+          is_accepted?: boolean
+          moderation_status?: string
+          parent_reply_id?: string | null
+          publication_status?: string
+          reply_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_replies_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "community_collaboration_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "community_discussions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "community_question_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "community_review_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "community_update_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "content_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_parent_reply_id_fkey"
+            columns: ["parent_reply_id"]
+            isOneToOne: false
+            referencedRelation: "community_collaboration_response_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_parent_reply_id_fkey"
+            columns: ["parent_reply_id"]
+            isOneToOne: false
+            referencedRelation: "community_discussion_replies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_parent_reply_id_fkey"
+            columns: ["parent_reply_id"]
+            isOneToOne: false
+            referencedRelation: "community_question_answer_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_parent_reply_id_fkey"
+            columns: ["parent_reply_id"]
+            isOneToOne: false
+            referencedRelation: "content_replies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_reply_reactions: {
+        Row: {
+          created_at: string
+          profile_id: string
+          reaction_type: string
+          reply_id: string
+        }
+        Insert: {
+          created_at?: string
+          profile_id: string
+          reaction_type?: string
+          reply_id: string
+        }
+        Update: {
+          created_at?: string
+          profile_id?: string
+          reaction_type?: string
+          reply_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_reply_reactions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_reply_reactions_reply_id_fkey"
+            columns: ["reply_id"]
+            isOneToOne: false
+            referencedRelation: "community_collaboration_response_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_reply_reactions_reply_id_fkey"
+            columns: ["reply_id"]
+            isOneToOne: false
+            referencedRelation: "community_discussion_replies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_reply_reactions_reply_id_fkey"
+            columns: ["reply_id"]
+            isOneToOne: false
+            referencedRelation: "community_question_answer_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_reply_reactions_reply_id_fkey"
+            columns: ["reply_id"]
+            isOneToOne: false
+            referencedRelation: "content_replies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_review_details: {
+        Row: {
+          created_at: string
+          entry_id: string
+          rating: number | null
+          sentiment: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          entry_id: string
+          rating?: number | null
+          sentiment?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          entry_id?: string
+          rating?: number | null
+          sentiment?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_review_details_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "community_collaboration_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_review_details_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "community_discussions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_review_details_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "community_question_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_review_details_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "community_review_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_review_details_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "community_update_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_review_details_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "content_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_update_details: {
+        Row: {
+          created_at: string
+          entry_id: string
+          updated_at: string
+          version_label: string | null
+        }
+        Insert: {
+          created_at?: string
+          entry_id: string
+          updated_at?: string
+          version_label?: string | null
+        }
+        Update: {
+          created_at?: string
+          entry_id?: string
+          updated_at?: string
+          version_label?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_update_details_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "community_collaboration_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_update_details_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "community_discussions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_update_details_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "community_question_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_update_details_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "community_review_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_update_details_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "community_update_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_update_details_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: true
+            referencedRelation: "content_entries"
             referencedColumns: ["id"]
           },
         ]
@@ -1863,14 +2498,644 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      community_collaboration_content: {
+        Row: {
+          author_id: string | null
+          body: string | null
+          created_at: string | null
+          id: string | null
+          item_id: string | null
+          project_type: string | null
+          role_needed: string | null
+          status: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_entries_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_entries_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_collaboration_response_content: {
+        Row: {
+          author_id: string | null
+          body: string | null
+          collaboration_id: string | null
+          created_at: string | null
+          id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          author_id?: string | null
+          body?: string | null
+          collaboration_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          author_id?: string | null
+          body?: string | null
+          collaboration_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_replies_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_entry_id_fkey"
+            columns: ["collaboration_id"]
+            isOneToOne: false
+            referencedRelation: "community_collaboration_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_entry_id_fkey"
+            columns: ["collaboration_id"]
+            isOneToOne: false
+            referencedRelation: "community_discussions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_entry_id_fkey"
+            columns: ["collaboration_id"]
+            isOneToOne: false
+            referencedRelation: "community_question_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_entry_id_fkey"
+            columns: ["collaboration_id"]
+            isOneToOne: false
+            referencedRelation: "community_review_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_entry_id_fkey"
+            columns: ["collaboration_id"]
+            isOneToOne: false
+            referencedRelation: "community_update_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_entry_id_fkey"
+            columns: ["collaboration_id"]
+            isOneToOne: false
+            referencedRelation: "content_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_discussion_likes: {
+        Row: {
+          created_at: string | null
+          post_id: string | null
+          profile_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          post_id?: string | null
+          profile_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          post_id?: string | null
+          profile_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_entry_reactions_entry_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_collaboration_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_entry_reactions_entry_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_discussions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_entry_reactions_entry_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_question_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_entry_reactions_entry_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_review_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_entry_reactions_entry_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_update_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_entry_reactions_entry_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "content_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_entry_reactions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_discussion_replies: {
+        Row: {
+          author_id: string | null
+          body: string | null
+          created_at: string | null
+          id: string | null
+          parent_reply_id: string | null
+          post_id: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          author_id?: string | null
+          body?: string | null
+          created_at?: string | null
+          id?: string | null
+          parent_reply_id?: string | null
+          post_id?: string | null
+          status?: never
+          updated_at?: string | null
+        }
+        Update: {
+          author_id?: string | null
+          body?: string | null
+          created_at?: string | null
+          id?: string | null
+          parent_reply_id?: string | null
+          post_id?: string | null
+          status?: never
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_replies_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_entry_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_collaboration_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_entry_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_discussions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_entry_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_question_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_entry_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_review_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_entry_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_update_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_entry_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "content_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_parent_reply_id_fkey"
+            columns: ["parent_reply_id"]
+            isOneToOne: false
+            referencedRelation: "community_collaboration_response_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_parent_reply_id_fkey"
+            columns: ["parent_reply_id"]
+            isOneToOne: false
+            referencedRelation: "community_discussion_replies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_parent_reply_id_fkey"
+            columns: ["parent_reply_id"]
+            isOneToOne: false
+            referencedRelation: "community_question_answer_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_parent_reply_id_fkey"
+            columns: ["parent_reply_id"]
+            isOneToOne: false
+            referencedRelation: "content_replies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_discussions: {
+        Row: {
+          author_id: string | null
+          body: string | null
+          created_at: string | null
+          id: string | null
+          slug: string | null
+          status: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          author_id?: string | null
+          body?: string | null
+          created_at?: string | null
+          id?: string | null
+          slug?: string | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          author_id?: string | null
+          body?: string | null
+          created_at?: string | null
+          id?: string | null
+          slug?: string | null
+          status?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_entries_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_question_answer_content: {
+        Row: {
+          author_id: string | null
+          body: string | null
+          created_at: string | null
+          id: string | null
+          is_accepted: boolean | null
+          question_id: string | null
+          updated_at: string | null
+          vote_count: number | null
+        }
+        Insert: {
+          author_id?: string | null
+          body?: string | null
+          created_at?: string | null
+          id?: string | null
+          is_accepted?: boolean | null
+          question_id?: string | null
+          updated_at?: string | null
+          vote_count?: never
+        }
+        Update: {
+          author_id?: string | null
+          body?: string | null
+          created_at?: string | null
+          id?: string | null
+          is_accepted?: boolean | null
+          question_id?: string | null
+          updated_at?: string | null
+          vote_count?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_replies_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_entry_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "community_collaboration_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_entry_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "community_discussions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_entry_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "community_question_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_entry_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "community_review_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_entry_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "community_update_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_replies_entry_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "content_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_question_content: {
+        Row: {
+          accepted_answer_id: string | null
+          answer_count: number | null
+          author_id: string | null
+          body: string | null
+          created_at: string | null
+          has_accepted_answer: boolean | null
+          id: string | null
+          item_id: string | null
+          status: string | null
+          tags: string[] | null
+          title: string | null
+          updated_at: string | null
+          vote_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_entries_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_entries_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_question_details_accepted_reply_id_fkey"
+            columns: ["accepted_answer_id"]
+            isOneToOne: false
+            referencedRelation: "community_collaboration_response_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_question_details_accepted_reply_id_fkey"
+            columns: ["accepted_answer_id"]
+            isOneToOne: false
+            referencedRelation: "community_discussion_replies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_question_details_accepted_reply_id_fkey"
+            columns: ["accepted_answer_id"]
+            isOneToOne: false
+            referencedRelation: "community_question_answer_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_question_details_accepted_reply_id_fkey"
+            columns: ["accepted_answer_id"]
+            isOneToOne: false
+            referencedRelation: "content_replies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_question_vote_content: {
+        Row: {
+          answer_id: string | null
+          id: string | null
+          profile_id: string | null
+          question_id: string | null
+          value: number | null
+        }
+        Relationships: []
+      }
+      community_reply_likes: {
+        Row: {
+          created_at: string | null
+          profile_id: string | null
+          reply_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          profile_id?: string | null
+          reply_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          profile_id?: string | null
+          reply_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_reply_reactions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_reply_reactions_reply_id_fkey"
+            columns: ["reply_id"]
+            isOneToOne: false
+            referencedRelation: "community_collaboration_response_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_reply_reactions_reply_id_fkey"
+            columns: ["reply_id"]
+            isOneToOne: false
+            referencedRelation: "community_discussion_replies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_reply_reactions_reply_id_fkey"
+            columns: ["reply_id"]
+            isOneToOne: false
+            referencedRelation: "community_question_answer_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_reply_reactions_reply_id_fkey"
+            columns: ["reply_id"]
+            isOneToOne: false
+            referencedRelation: "content_replies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_review_content: {
+        Row: {
+          body: string | null
+          created_at: string | null
+          id: string | null
+          item_id: string | null
+          rating: number | null
+          sentiment: string | null
+          status: string | null
+          title: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_entries_author_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_entries_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_update_content: {
+        Row: {
+          author_id: string | null
+          body: string | null
+          created_at: string | null
+          id: string | null
+          item_id: string | null
+          status: string | null
+          title: string | null
+          updated_at: string | null
+          version_label: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_entries_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_entries_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      accept_content_answer: {
+        Args: { target_question_id: string; target_reply_id: string }
+        Returns: undefined
+      }
       account_exists_for_email: {
         Args: { lookup_email: string }
         Returns: boolean
       }
+      can_manage_content: {
+        Args: { target_entry_id: string }
+        Returns: boolean
+      }
       can_manage_item: { Args: { target_item_id: string }; Returns: boolean }
+      can_read_content: { Args: { target_entry_id: string }; Returns: boolean }
+      create_content_collaboration: {
+        Args: {
+          collaboration_body: string
+          collaboration_project_type?: string
+          collaboration_title: string
+          needed_role?: string
+          target_item_id?: string
+        }
+        Returns: string
+      }
+      create_content_discussion: {
+        Args: {
+          discussion_body: string
+          discussion_slug: string
+          discussion_title: string
+          target_item_id?: string
+        }
+        Returns: string
+      }
+      create_content_question: {
+        Args: {
+          question_body: string
+          question_tags?: string[]
+          question_title: string
+          target_item_id?: string
+        }
+        Returns: string
+      }
       create_or_open_direct_conversation: {
         Args: { other_profile_id: string }
         Returns: string
@@ -1880,6 +3145,10 @@ export type Database = {
         Returns: boolean
       }
       notification_actor_name: { Args: { actor: string }; Returns: string }
+      refresh_content_question_stats: {
+        Args: { target_entry_id: string }
+        Returns: undefined
+      }
       send_direct_message: {
         Args: { message_body: string; target_conversation_id: string }
         Returns: {
@@ -1896,6 +3165,16 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      upsert_content_review: {
+        Args: {
+          review_body: string
+          review_rating?: number
+          review_sentiment?: string
+          review_title?: string
+          target_item_id: string
+        }
+        Returns: string
       }
     }
     Enums: {
@@ -2025,6 +3304,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

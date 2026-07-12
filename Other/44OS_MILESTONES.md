@@ -102,7 +102,7 @@ Completion evidence (July 11, 2026): the canonical Item foundation is applied to
 
 ### M4 — Typed Community Content Spine
 
-**Status: Not started**
+**Status: Complete**
 
 Unify shared identity, Item anchoring, replies, and reactions while retaining purpose-built data constraints.
 
@@ -119,6 +119,8 @@ Completion criteria:
 - General discussions/questions/collaborations render in Community.
 - Reviews, updates, and future scoped questions attach to the correct Store/Library Item.
 - No user-visible behavior or current staging content is lost.
+
+Completion evidence (July 11, 2026): migration `20260712020000_typed_community_content_spine.sql` established canonical `content_entries`, shared replies/reactions, and constrained question, collaboration, review, and creator-update detail tables. The app now reads and writes through canonical Community contracts rather than the legacy table families. A full linked-data rehearsal preserved every existing content and reply UUID with zero missing IDs, including 24 discussions, 2 questions, 2 collaborations, 2 reviews, 63 discussion replies, 3 answers, 1 collaboration response, and their reactions. Anonymous writes and forged creator updates were denied; authenticated discussion, reply, question, vote, and review creation passed. Feed, Questions, Collaboration, thread, and Item-review UI checks passed locally against the cloned data with no application or console errors. The linked migration history is aligned through `20260712020000`; legacy tables remain only as temporary verification-period compatibility sources before retirement.
 
 ### M5 — Entitlements And Provider-neutral Commerce Core
 

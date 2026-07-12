@@ -37,7 +37,7 @@ export function ProductUpdatesSection({
     async function loadUpdates() {
       setError('');
       const { data, error: loadError } = await supabase
-        .from('product_updates')
+        .from('community_update_content')
         .select('id,item_id,author_id,title,body,version_label,status,created_at,authors:profiles!author_id(id,slug,username,display_name,avatar_url)')
         .eq('item_id', productId)
         .eq('status', 'published')
