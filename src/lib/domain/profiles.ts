@@ -4,6 +4,7 @@ import type { LikeRow, ReplyEngagerRow, SocialPost } from '@/lib/social';
 import { isMissingRelationError } from '@/lib/schemaCompat';
 import { getOwnershipKeys } from '@/lib/studioProfiles';
 import { supabase } from '@/lib/supabase';
+import type { Database } from '@/lib/database.types';
 
 export async function getPublicProfile(identifier: string) {
   const result = await supabase
@@ -13,6 +14,28 @@ export async function getPublicProfile(identifier: string) {
     .maybeSingle();
   if (result.error) throw result.error;
   return result.data as Profile | null;
+}
+
+export async function getOwnProfile(userId: string) {
+  const result = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+  if (result.error) throw result.error;
+  return result.data as Profile | null;
+}
+
+export async function updateOwnProfile(userId: string, payload: Database['public']['Tables']['profiles']['Update']) {
+  const result = await supabase.from('profiles').update(payload).eq('id', userId);
+  if (result.error) throw result.error;
+}
+
+export async function getProfileMarketPreferences(userId: string) {
+  const result = await supabase.from('profiles').select('country_code,display_currency').eq('id', userId).maybeSingle();
+  if (result.error) throw result.error;
+  return result.data;
+}
+
+export async function saveProfileMarketPreferences(userId: string, countryCode: string, displayCurrency: string) {
+  const result = await supabase.from('profiles').update({ country_code: countryCode, display_currency: displayCurrency }).eq('id', userId);
+  if (result.error) throw result.error;
 }
 
 export async function getPublicProfileContent(profile: Profile) {

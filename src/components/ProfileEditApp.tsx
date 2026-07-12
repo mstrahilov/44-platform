@@ -3,7 +3,6 @@
 import { useEffect, useId, useState, type ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { PageShell, CenteredMessage } from '@/components/Ui';
 import { SocialAvatar } from '@/components/Social';
@@ -12,6 +11,7 @@ import { authorHandle } from '@/lib/social';
 import { getUploadErrorMessage, uploadPublicFile } from '@/lib/uploads';
 import { ProfileImageCropDialog } from '@/components/ProfileImageCropDialog';
 import type { Database } from '@/lib/database.types';
+import { getOwnProfile, updateOwnProfile } from '@/lib/domain/profiles';
 
 type PendingImage = { file: File; target: 'avatar' | 'hero' };
 
@@ -38,12 +38,7 @@ export default function EditProfilePage() {
     if (authLoading) return;
     if (!user) return;
     async function load() {
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user!.id)
-        .maybeSingle();
-      const p = (data as Profile | null) ?? null;
+      const p = await getOwnProfile(user!.id);
       setProfile(p);
       if (p) {
         setDisplayName(p.display_name ?? '');
@@ -68,15 +63,14 @@ export default function EditProfilePage() {
       avatar_url: avatarUrl.trim() || null,
       hero_url: heroUrl.trim() || null,
     };
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update(payload)
-      .eq('id', user.id);
-    setSaving(false);
-    if (updateError) {
-      setError(updateError.message);
+    try {
+      await updateOwnProfile(user.id, payload);
+    } catch (updateError) {
+      setSaving(false);
+      setError(updateError instanceof Error ? updateError.message : 'Could not update your profile.');
       return;
     }
+    setSaving(false);
     const targetHandle = username.trim() || authorHandle(profile) || '';
     router.push(targetHandle ? `/profile/${targetHandle}` : '/profile');
   }

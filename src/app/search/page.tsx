@@ -6,13 +6,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { PageShell, ProductCard, ProductGrid, EmptyMessage, HubSection, HubHero } from '@/components/Ui';
 import { SocialAvatar, SocialPostRow } from '@/components/Social';
 import type { Product } from '@/lib/products';
-import type { Profile } from '@/lib/platform';
 import { creatorHref } from '@/lib/platform';
-import { supabase } from '@/lib/supabase';
 import { matchesQuery } from '@/lib/taxonomy';
 import type { SocialPost } from '@/lib/social';
-
-type SearchProfile = Pick<Profile, 'id' | 'slug' | 'username' | 'display_name' | 'avatar_url' | 'bio' | 'role' | 'creator_type'>;
+import { loadPlatformSearchIndex, type SearchProfile } from '@/lib/domain/search';
 
 type SearchIndex = {
   products: Product[];
@@ -27,30 +24,7 @@ function loadSearchIndex() {
   if (searchIndexCache) return Promise.resolve(searchIndexCache);
   if (searchIndexRequest) return searchIndexRequest;
 
-  searchIndexRequest = Promise.all([
-    supabase
-      .from('catalog_items')
-      .select('*, creators:profiles!author_id(*)')
-      .eq('status', 'published')
-      .order('created_at', { ascending: false })
-      .limit(120),
-    supabase
-      .from('community_discussions')
-      .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type)')
-      .eq('status', 'published')
-      .order('created_at', { ascending: false })
-      .limit(120),
-    supabase
-      .from('profiles')
-      .select('id, slug, username, display_name, avatar_url, bio, role, creator_type')
-      .order('display_name', { ascending: true })
-      .limit(120),
-  ]).then(([productResult, postResult, profileResult]) => {
-    const index = {
-      products: (productResult.data as Product[] | null) ?? [],
-      posts: (postResult.data as SocialPost[] | null) ?? [],
-      profiles: (profileResult.data as SearchProfile[] | null) ?? [],
-    };
+  searchIndexRequest = loadPlatformSearchIndex().then(index => {
     searchIndexCache = index;
     return index;
   }).finally(() => {

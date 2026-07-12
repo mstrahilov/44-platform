@@ -1,15 +1,10 @@
 import { buildPageMetadata, conciseDescription } from '@/lib/metadata';
-import { supabase } from '@/lib/supabase';
 import type { Profile } from '@/lib/platform';
+import { getPublicProfile } from '@/lib/domain/profiles';
 
 export async function generateMetadata({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params;
-  const { data } = await supabase
-    .from('profiles')
-    .select('*')
-    .or(`username.eq.${username},slug.eq.${username}`)
-    .maybeSingle();
-  const profile = data as Profile | null;
+  const profile = await getPublicProfile(username) as Profile | null;
   if (!profile) {
     return buildPageMetadata({
       title: 'Profile',

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { accountExistsForEmail, usernameIsTaken } from '@/lib/domain/accounts';
 import { useAuth } from '@/lib/useAuth';
 import { getSitePathUrl } from '@/lib/siteUrl';
 
@@ -45,11 +46,7 @@ export default function LoginPage() {
   }, [loading, router, user]);
 
   async function findAccount(cleanEmail: string) {
-    const { data, error } = await supabase.rpc('account_exists_for_email', {
-      lookup_email: cleanEmail,
-    });
-    if (error) throw error;
-    return Boolean(data);
+    return accountExistsForEmail(cleanEmail);
   }
 
   async function continueWithEmail() {
@@ -113,13 +110,10 @@ export default function LoginPage() {
       return;
     }
 
-    const { data: existingUsername, error: usernameError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('username', cleanUsername)
-      .maybeSingle();
-
-    if (usernameError) {
+    let existingUsername = false;
+    try {
+      existingUsername = await usernameIsTaken(cleanUsername);
+    } catch {
       setSubmitting(false);
       setStatus('We could not check that username right now. Please try again.');
       return;

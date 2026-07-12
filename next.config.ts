@@ -7,6 +7,13 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      { source: "/product/:id", destination: "/store/item/:id", permanent: true },
+      { source: "/music/library", destination: "/library/music", permanent: true },
+      { source: "/music/library/:id", destination: "/library/music/:id", permanent: true },
+      { source: "/books/library", destination: "/library/books", permanent: true },
+      { source: "/books/library/:id", destination: "/library/books/:id", permanent: true },
+      { source: "/assets/library", destination: "/library/assets", permanent: true },
+      { source: "/assets/library/:id", destination: "/library/assets/:id", permanent: true },
       {
         source: "/dashboard/:path*",
         destination: "/studio/:path*",

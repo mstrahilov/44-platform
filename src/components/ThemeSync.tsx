@@ -10,8 +10,8 @@ import {
   type ThemeAccent,
   type ThemeMode,
 } from '@/lib/theme';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
+import { getThemePreference, saveThemePreference } from '@/lib/domain/preferences';
 
 // Signed-out chrome is always dark/ocean. Signed-in preferences come only from
 // Supabase so the same account has the same theme on every device.
@@ -42,19 +42,11 @@ export default function ThemeSync() {
 
       signedInRef.current = true;
       userIdRef.current = userId;
-      const { data } = await supabase
-        .from('user_theme_preferences')
-        .select('theme_mode, theme_accent')
-        .eq('user_id', userId)
-        .maybeSingle();
+      const data = await getThemePreference(userId);
       if (!alive || !signedInRef.current || userIdRef.current !== userId) return;
 
       if (!data) {
-        await supabase.from('user_theme_preferences').upsert({
-          user_id: userId,
-          theme_mode: DEFAULT_THEME_MODE,
-          theme_accent: DEFAULT_THEME_ACCENT,
-        });
+        await saveThemePreference(userId, DEFAULT_THEME_MODE, DEFAULT_THEME_ACCENT);
         if (!alive || !signedInRef.current || userIdRef.current !== userId) return;
       }
 

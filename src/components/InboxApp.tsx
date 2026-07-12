@@ -10,35 +10,26 @@ import { OnboardingTip } from '@/components/OnboardingTip';
 import { SocialAvatar, SocialProfileRow } from '@/components/Social';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { useAuth } from '@/lib/useAuth';
-import { createOrOpenConversation, directMessageError, sendDirectMessage } from '@/lib/messages';
+import {
+  createOrOpenConversation,
+  directMessageError,
+  loadInboxData,
+  searchMessageRecipients,
+  sendDirectMessage,
+  type InboxConversation,
+  type InboxConversationMember,
+  type InboxMessage,
+  type MessageRecipient,
+} from '@/lib/messages';
 import { hasCommunityIdentity, communityIdentityMessage } from '@/lib/communityProfile';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { isMissingRelationError } from '@/lib/schemaCompat';
-import { authorDisplayName, compactDate, type SocialAuthor } from '@/lib/social';
-import { supabase } from '@/lib/supabase';
+import { authorDisplayName, compactDate } from '@/lib/social';
 
-type Conversation = {
-  id: string;
-  conversation_key: string;
-  updated_at: string;
-};
-
-type ConversationMember = {
-  conversation_id: string;
-  profile_id: string;
-  profiles?: SocialAuthor | null;
-};
-
-type Message = {
-  id: string;
-  conversation_id: string;
-  sender_id: string | null;
-  body: string;
-  status: string;
-  created_at: string;
-};
-
-type MessageProfile = Pick<SocialAuthor, 'id' | 'slug' | 'username' | 'display_name' | 'avatar_url' | 'role' | 'creator_type'>;
+type Conversation = InboxConversation;
+type ConversationMember = InboxConversationMember;
+type Message = InboxMessage;
+type MessageProfile = MessageRecipient;
 type InboxProfileState = {
   userId: string;
   profile: StudioProfile | null;
@@ -131,60 +122,18 @@ function MessagesContent() {
     if (!user) return;
     const userId = user.id;
 
-    const { data: ownMemberships, error: membershipError } = await supabase
-      .from('conversation_members')
-      .select('conversation_id')
-      .eq('profile_id', userId);
-
-    if (isMissingRelationError(membershipError)) {
-      setSchemaReady(false);
-      setConversations([]);
-      setMembers([]);
-      setMessages([]);
+    let result;
+    try {
+      result = await loadInboxData(userId);
+    } catch (loadError) {
+      if (isMissingRelationError(loadError as { message?: string | null; code?: string | null })) setSchemaReady(false);
+      setInboxError(directMessageError(loadError as { message?: string }));
       return;
     }
-    if (membershipError) {
-      setInboxError(directMessageError(membershipError));
-      return;
-    }
-
-    const ids = Array.from(new Set(((ownMemberships as Array<{ conversation_id: string }> | null) ?? []).map(row => row.conversation_id)));
-    if (ids.length === 0) {
-      setConversations([]);
-      setMembers([]);
-      setMessages([]);
-      setSchemaReady(true);
-      return;
-    }
-
-    const [conversationResult, memberResult, messageResult] = await Promise.all([
-      supabase.from('conversations').select('*').in('id', ids).order('updated_at', { ascending: false }),
-      supabase
-        .from('conversation_members')
-        .select('conversation_id, profile_id, profiles:profiles!conversation_members_profile_id_fkey(id, slug, username, display_name, avatar_url, role, creator_type)')
-        .in('conversation_id', ids),
-      supabase.from('messages').select('*').in('conversation_id', ids).order('created_at', { ascending: true }),
-    ]);
-
-    if (
-      isMissingRelationError(conversationResult.error) ||
-      isMissingRelationError(memberResult.error) ||
-      isMissingRelationError(messageResult.error)
-    ) {
-      setSchemaReady(false);
-      return;
-    }
-
-    const loadError = conversationResult.error || memberResult.error || messageResult.error;
-    if (loadError) {
-      setInboxError(directMessageError(loadError));
-      return;
-    }
-
-    const rows = (conversationResult.data as Conversation[] | null) ?? [];
+    const rows = result.conversations;
     setConversations(rows);
-    setMembers((memberResult.data as unknown as ConversationMember[] | null) ?? []);
-    setMessages((messageResult.data as Message[] | null) ?? []);
+    setMembers(result.members);
+    setMessages(result.messages);
     setSchemaReady(true);
     setInboxError('');
 
@@ -243,21 +192,11 @@ function MessagesContent() {
     let alive = true;
     async function loadRecipients() {
       const query = recipientQuery.trim();
-      let request = supabase
-        .from('profiles')
-        .select('id, slug, username, display_name, avatar_url, role, creator_type')
-        .neq('id', user!.id)
-        .order('display_name', { ascending: true })
-        .limit(12);
-
-      if (query) {
-        request = request.or(`display_name.ilike.%${query}%,username.ilike.%${query}%,slug.ilike.%${query}%`);
-      }
-
-      const { data, error } = await request;
-      if (alive) {
-        setRecipientProfiles((data as MessageProfile[] | null) ?? []);
-        if (error) setInboxError(directMessageError(error));
+      try {
+        const rows = await searchMessageRecipients(user!.id, query);
+        if (alive) setRecipientProfiles(rows);
+      } catch (recipientError) {
+        if (alive) setInboxError(directMessageError(recipientError as { message?: string }));
       }
     }
 

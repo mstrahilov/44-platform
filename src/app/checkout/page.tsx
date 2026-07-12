@@ -5,10 +5,10 @@ import { useEffect, useState } from 'react';
 import { PageShell, HubHero, CenteredMessage } from '@/components/Ui';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { useAuth } from '@/lib/useAuth';
-import { supabase } from '@/lib/supabase';
 import { clearCart, useCart } from '@/lib/cart';
 import { getProductExperience } from '@/lib/experience';
 import type { Product } from '@/lib/products';
+import { getCartCatalogItems, saveFreeCartToLibrary } from '@/lib/domain/acquisition';
 
 type PlaceState = 'idle' | 'placing' | 'placed' | 'error';
 
@@ -29,8 +29,7 @@ export default function CheckoutPage() {
   useEffect(() => {
     async function loadItems() {
       if (!items.length) return;
-      const { data } = await supabase.from('catalog_items').select('*').in('id', items.map(item => item.item_id));
-      const rows = (data as Product[] | null) ?? [];
+      const rows = await getCartCatalogItems(items.map(item => item.item_id));
       setCatalogItems(rows.reduce<Record<string, Product>>((result, item) => {
         result[item.id] = item;
         return result;
@@ -95,13 +94,12 @@ export default function CheckoutPage() {
 
     setState('placing');
     setErrorMessage('');
-    for (const item of items) {
-      const { error } = await supabase.rpc('save_item_to_library', { target_item_id: item.item_id });
-      if (error) {
-        setErrorMessage(error.message);
-        setState('error');
-        return;
-      }
+    try {
+      await saveFreeCartToLibrary(user.id, items.map(item => item.item_id));
+    } catch (saveError) {
+      setErrorMessage(saveError instanceof Error ? saveError.message : 'Could not save these Items to your Library.');
+      setState('error');
+      return;
     }
     clearCart();
     setState('placed');

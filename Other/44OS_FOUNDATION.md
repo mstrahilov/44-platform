@@ -236,6 +236,7 @@ Compatibility and legacy policy:
 - `/collection` redirects to `/library`; `/collection/item/[kind]/[id]` redirects to `/library/item/[id]`.
 - `/music`, `/books`, `/assets`, `/merch`, `/shop`, and old typed `/discover` paths redirect to Store categories.
 - `/studio` is the canonical creator-management route tree. `/dashboard` and every nested Dashboard URL are permanent compatibility redirects to the corresponding Studio path; no Dashboard page implementation may be reintroduced.
+- Application pages and UI components consume typed domain services for platform data. Direct Supabase table/RPC calls belong in `src/lib/domain` or a narrowly scoped infrastructure module, not in routes, cards, or forms.
 - `/library/item/[kind]/[id]` remains as a legacy compatibility route and redirects to `/library/item/[id]`.
 - `/dashboard` and dashboard subroutes redirect to Studio equivalents.
 - `/community/following` redirects to `/community?filter=following`.

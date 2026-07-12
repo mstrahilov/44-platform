@@ -2,13 +2,13 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { getAvailableDockApps } from '@/lib/osApps';
 import { loadAchievementNotifications, type AchievementNotification } from '@/lib/achievementNotifications';
 import type { Product } from '@/lib/products';
 import { PageShell, HubHero, HubSection, Shelf, ProductCard, CenteredMessage, EmptyMessage } from '@/components/Ui';
+import { listVisibleLibraryItems } from '@/lib/domain/library';
 
 type LibraryRow = {
   id: string;
@@ -55,21 +55,14 @@ export default function HomePage() {
     let alive = true;
 
     async function loadActivity() {
-      const [{ data }, rows] = await Promise.all([
-        supabase
-          .from('library_entries')
-          .select('id,item_id,acquired_at,products:catalog_items(*)')
-          .eq('user_id', activeUserId)
-          .neq('status', 'archived')
-          .neq('status', 'hidden')
-          .order('acquired_at', { ascending: false })
-          .limit(4),
+      const [libraryRows, rows] = await Promise.all([
+        listVisibleLibraryItems(activeUserId),
         loadAchievementNotifications(activeUserId),
       ]);
       if (!alive) return;
       setActivityState({
         userId: activeUserId,
-        recentItems: ((data ?? []) as unknown as LibraryRow[]).filter(row => row.products),
+        recentItems: (libraryRows as LibraryRow[]).filter(row => row.products).slice(0, 4),
         notifications: rows.slice(0, 5),
       });
     }

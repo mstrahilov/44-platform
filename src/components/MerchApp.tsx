@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { listPublishedCatalogItems } from '@/lib/domain/catalog';
 import type { Product } from '@/lib/products';
 import { getProductExperience } from '@/lib/experience';
 import { PageShell, HubHero, ProductGrid, ProductCard, EmptyMessage } from '@/components/Ui';
@@ -17,14 +17,8 @@ export function MerchApp({ route }: { route: MerchRoute }) {
 
     async function load() {
       setLoading(true);
-      const { data } = await supabase
-        .from('catalog_items')
-        .select('*, creators:profiles!author_id(*)')
-        .eq('status', 'published')
-        .order('created_at', { ascending: false })
-        .limit(120);
-
-      setProducts(((data ?? []) as Product[]).filter(product => getProductExperience(product) === 'physical'));
+      const data = await listPublishedCatalogItems();
+      setProducts(data.filter(product => getProductExperience(product) === 'physical'));
       setLoading(false);
     }
 

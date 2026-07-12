@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
+import { getThemePreference, saveThemePreference } from '@/lib/domain/preferences';
+import { getProfileMarketPreferences, saveProfileMarketPreferences } from '@/lib/domain/profiles';
 import { PageShell, HubHero, EmptyMessage, SectionHeader } from '@/components/Ui';
 import {
   ACCENTS,
@@ -168,28 +170,18 @@ function ThemeSettings() {
   useEffect(() => {
     if (!user) return;
     let alive = true;
-    supabase
-      .from('user_theme_preferences')
-      .select('theme_mode, theme_accent')
-      .eq('user_id', user.id)
-      .maybeSingle()
-      .then(({ data }) => {
+    getThemePreference(user.id)
+      .then(data => {
         if (!alive) return;
         setModeState(isThemeMode(data?.theme_mode) ? data.theme_mode : DEFAULT_THEME_MODE);
         setAccentState(isThemeAccent(data?.theme_accent) ? data.theme_accent : DEFAULT_THEME_ACCENT);
-      });
+      }).catch(() => {});
     return () => { alive = false; };
   }, [user]);
 
   async function saveTheme(nextMode: ThemeMode, nextAccent: ThemeAccent) {
     if (!user) return;
-    const { error } = await supabase.from('user_theme_preferences').upsert({
-      user_id: user.id,
-      theme_mode: nextMode,
-      theme_accent: nextAccent,
-      updated_at: new Date().toISOString(),
-    });
-    if (error) return;
+    try { await saveThemePreference(user.id, nextMode, nextAccent); } catch { return; }
     setModeState(nextMode);
     setAccentState(nextAccent);
     applyTheme(nextMode, nextAccent);
@@ -260,16 +252,14 @@ function RegionSettingsFields({ onStatus }: { onStatus: (status: string) => void
   useEffect(() => {
     async function loadSystemPreferences() {
       if (!user) return;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('country_code, display_currency')
-        .eq('id', user.id)
-        .maybeSingle();
+      let data = null;
+      let error: unknown = null;
+      try { data = await getProfileMarketPreferences(user.id); } catch (loadError) { error = loadError; }
 
-      const nextCountry = !isMissingColumnError(error) && data?.country_code
+      const nextCountry = !isMissingColumnError(error as { message?: string | null; code?: string | null }) && data?.country_code
         ? data.country_code
         : getStoredViewerCountry();
-      const nextCurrency = !isMissingColumnError(error) && data?.display_currency
+      const nextCurrency = !isMissingColumnError(error as { message?: string | null; code?: string | null }) && data?.display_currency
         ? data.display_currency
         : getStoredViewerCurrency();
       setCountryCode(nextCountry);
@@ -291,20 +281,15 @@ function RegionSettingsFields({ onStatus }: { onStatus: (status: string) => void
       return;
     }
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        country_code: nextCountry,
-        display_currency: nextCurrency,
-      })
-      .eq('id', user.id);
+    let error: unknown = null;
+    try { await saveProfileMarketPreferences(user.id, nextCountry, nextCurrency); } catch (saveError) { error = saveError; }
 
-    if (isMissingColumnError(error)) {
+    if (isMissingColumnError(error as { message?: string | null; code?: string | null })) {
       onStatus('Saved on this device.');
       return;
     }
 
-    onStatus(error ? error.message : 'System preferences saved.');
+    onStatus(error instanceof Error ? error.message : 'System preferences saved.');
   }
 
   return (

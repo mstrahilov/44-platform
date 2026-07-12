@@ -146,7 +146,7 @@ Completion evidence (July 12, 2026): `20260712030000_m5_provider_neutral_commerc
 
 ### M6 — Application And Route Consolidation
 
-**Status: In progress**
+**Status: Complete**
 
 Move catalog, Library, Community, Studio, profile, and acquisition queries behind typed domain services. Remove duplicate Dashboard implementations while preserving intentional redirects.
 
@@ -156,7 +156,7 @@ Completion criteria:
 - Compatibility routes contain redirects only.
 - Repeated cards and pages do not produce session or row-by-row request fan-out.
 
-Current evidence (July 12, 2026): Studio is now the single creator-management implementation. The former 13-page `/dashboard` copy is replaced by one permanent compatibility redirect that preserves nested paths and query parameters, reducing the production route set from 75 to 63 without changing the destination UI. Typed domain services now own published catalog loading, visible Library state, ownership and free-save operations, track queues, complete Item-detail bundles, related Items, protected asset manifests, Item reviews and creator updates, public profile content/follows, all Studio catalog operations, and all Community discussion operations. Studio create/edit, tracks, protected files, gallery assets, release features, publication state, deletion, legacy order handling, and earnings history no longer embed Supabase queries in page components. Community feed/thread loading, metadata, mentions, following filters, post/reply creation, likes, and owner deletion now use one typed discussion service; Questions and Collaboration retain their typed structured-content service. The canonical Store page, shared Store/Library shells, generic Item detail, specialized music and book experiences, public profiles, Item Community sections, Studio, and Community screens consume those contracts. Specialized music and book UI remains intentionally distinct for playback/achievement and reader behavior, while its data orchestration is shared. Remaining before M6 is Complete: move messaging and acquisition/commerce screens behind domain services; collapse legacy detail routes once their behavior is fully represented; verify request fan-out and redirects end to end.
+Completion evidence (July 12, 2026): Studio is the single creator-management implementation; the former 13-page `/dashboard` copy is one permanent redirect preserving paths and query parameters. Typed domain services own catalog, Library, Item details, entitlements/acquisition, profiles, search, preferences, Community, messaging, Studio publishing, protected assets, and current commerce-history access. There are zero direct database table or RPC calls in application pages or UI components; authentication SDK calls remain intentionally at the login/settings boundary. Store/Library detail bundles and Community/profile engagement data load through bounded parallel service queries rather than card-level or row-level request loops. Specialized music and book UI remains distinct for playback/achievement and reader behavior while sharing its data orchestration. `/product`, typed legacy Library paths, and Dashboard paths are permanent compatibility redirects to canonical Store, Library, and Studio routes. Typecheck, lint, production build, redirect probes, and signed-out production smoke tests passed.
 
 ### M7 — Store And Discovery Launch Loop
 
