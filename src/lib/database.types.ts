@@ -3934,6 +3934,10 @@ export type Database = {
         Returns: string
       }
       get_creator_total_plays: { Args: never; Returns: number }
+      archive_owned_item: {
+        Args: { target_item_id: string }
+        Returns: string
+      }
       record_item_play: {
         Args: {
           target_item_id: string

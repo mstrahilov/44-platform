@@ -14,6 +14,7 @@ export async function listCreatorItems(profileId: string) {
     .from('catalog_items')
     .select('*')
     .eq('author_id', profileId)
+    .neq('status', 'archived')
     .order('created_at', { ascending: false });
   if (result.error) throw result.error;
   return (result.data as Product[] | null) ?? [];
@@ -41,6 +42,6 @@ export async function getCreatorCatalogOverview(profileId: string) {
 }
 
 export async function setItemPublicationStatus(itemId: string, status: 'published' | 'draft') {
-  const result = await supabase.from('catalog_items').update({ status }).eq('id', itemId);
+  const result = await supabase.from('catalog_items').update({ status }).eq('id', itemId).neq('status', 'archived');
   if (result.error) throw result.error;
 }

@@ -76,6 +76,7 @@ export async function loadStudioItemEditor(itemId: string, ownerId: string) {
     .select('*')
     .eq('id', itemId)
     .eq('author_id', ownerId)
+    .neq('status', 'archived')
     .maybeSingle();
   if (itemResult.error) throw itemResult.error;
   if (!itemResult.data) return null;
@@ -105,7 +106,7 @@ export async function loadStudioItemEditor(itemId: string, ownerId: string) {
 }
 
 export async function updateStudioItem(itemId: string, ownerId: string, payload: ItemUpdate) {
-  const result = await supabase.from('catalog_items').update(payload).eq('id', itemId).eq('author_id', ownerId);
+  const result = await supabase.from('catalog_items').update(payload).eq('id', itemId).eq('author_id', ownerId).neq('status', 'archived');
   if (result.error) throw result.error;
 }
 
@@ -146,7 +147,7 @@ export async function replaceStudioReleaseFeatures(
   await addStudioAssets(assets);
 }
 
-export async function deleteStudioItem(itemId: string, ownerId: string) {
+export async function archiveStudioItem(itemId: string, ownerId: string) {
   const ownershipResult = await supabase
     .from('catalog_items')
     .select('id')
@@ -156,8 +157,6 @@ export async function deleteStudioItem(itemId: string, ownerId: string) {
   if (ownershipResult.error) throw ownershipResult.error;
   if (!ownershipResult.data) throw new Error('Item not found.');
 
-  const tracksResult = await supabase.from('tracks').delete().eq('item_id', itemId);
-  if (tracksResult.error) throw tracksResult.error;
-  const itemResult = await supabase.from('catalog_items').delete().eq('id', itemId).eq('author_id', ownerId);
-  if (itemResult.error) throw itemResult.error;
+  const archiveResult = await supabase.rpc('archive_owned_item', { target_item_id: itemId });
+  if (archiveResult.error) throw archiveResult.error;
 }

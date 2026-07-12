@@ -340,7 +340,7 @@ Studio publishing rules:
 - Music Tracks are a flat section rather than a nested paper card. Desktop track rows use a wide title column and a narrower Audio File/upload column; mobile stacks those fields. Keep generous section spacing between Details, Tracks, and Achievements.
 - Achievements use a single master switch in the section header. Off hides the picker; on reveals flat rows with white editor icons and right-aligned checkboxes. There is no minimum selection count.
 - Checked achievement controls must keep a black checkmark on the light checked fill. Overachiever Bonus Content is its own card below the flat achievement list.
-- Destructive buttons should align with system action rows and use confirmation copy.
+- Creator Item removal uses the destructive action treatment and confirmation copy, but the operation is archival: it says `Remove`, explains that Store/active Studio visibility ends while Library history remains, and never promises permanent deletion.
 - Studio overview is a consolidated landing page: four operational metric cards—Saves, Plays, Sold, and Earned—followed by clickable Item-management rows grouped by Category. Desktop uses four metric cards per row and mobile uses two. Mobile Item rows show title and Type only; publication status remains a desktop information pill.
 - Studio Plays is sourced from the append-only `item_play_events` ledger. A validated playback start counts regardless of whether it came from Store, Library, Radio, the creator, or another user; playback analytics must never interrupt audio.
 

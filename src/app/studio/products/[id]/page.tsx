@@ -25,7 +25,7 @@ import { currencyForCountry, normalizeMarketMode, type MarketMode } from '@/lib/
 import { getStudioDisplayName, loadStudioProfile } from '@/lib/studioProfiles';
 import { getStudioCatalogSectionForProduct, type StudioCatalogSectionId } from '@/lib/studioCatalog';
 import {
-  deleteStudioItem,
+  archiveStudioItem,
   listCatalogTaxonomy,
   listItemCategories,
   loadStudioItemEditor,
@@ -235,7 +235,7 @@ export default function EditProductPage() {
     if (slug === 'merch') return getStudioCatalogSectionForProduct({ item_type: productType, experience_type: 'merch', fulfillment_type: 'physical' });
     return getStudioCatalogSectionForProduct({ item_type: productType, experience_type: 'music', fulfillment_type: 'digital' });
   }, [productType, selectedCategory]);
-  const deleteLabel = `Delete ${section.itemLabel.replace(/\b\w/g, char => char.toUpperCase())}`;
+  const deleteLabel = `Remove ${section.itemLabel.replace(/\b\w/g, char => char.toUpperCase())}`;
   const isMusicProduct = section.id === 'music';
   const isMerchProduct = section.id === 'merch';
   const needsDigitalFile = section.id === 'books' || section.id === 'assets';
@@ -415,10 +415,10 @@ export default function EditProductPage() {
     const profileId = ownerId || profileResult?.profile?.id || user.id;
 
     try {
-      await deleteStudioItem(id, profileId);
+      await archiveStudioItem(id, profileId);
     } catch (deleteError) {
       setDeleting(false);
-      setError(deleteError instanceof Error ? deleteError.message : 'Could not delete this Item.');
+      setError(deleteError instanceof Error ? deleteError.message : 'Could not remove this Item.');
       return;
     }
 
@@ -428,8 +428,8 @@ export default function EditProductPage() {
 
   const hasTracks = tracks.some(track => track.title.trim() || track.audioUrl.trim());
   const deleteDescription = hasTracks || isMusicProduct
-    ? 'Delete this release? This will permanently remove the release and its tracklist.'
-    : `Delete this ${section.itemLabel}? This will permanently remove it.`;
+    ? 'Remove this release? It will leave Store and active Studio views while existing Library access and activity history stay intact.'
+    : `Remove this ${section.itemLabel}? It will leave Store and active Studio views while existing Library access and activity history stay intact.`;
 
   return (
     <PageShell>

@@ -116,7 +116,7 @@ Current code state:
 - Studio create/edit pages no longer collect release descriptions. New Items save an empty legacy description under the canonical baseline schema; edits preserve any existing legacy copy without exposing the field.
 - The reviewed achievement and launch-foundation schema is captured in the canonical `supabase/migrations/20260712010000_44os_item_baseline.sql`.
 
-The linked Supabase project backing the live tester deployment is aligned with the repository through migration `20260712052600_creator_studio_play_metrics.sql`. Profile headers are retired, existing music achievements are enabled without requiring Bonus Content, and `item_play_events` is the append-only creator analytics source for validated playback starts across Store, Library, and Radio. Back up first, run dry runs, and apply reviewed repository migrations through the Supabase CLI; never make untracked dashboard-only schema changes.
+The linked Supabase project backing the live tester deployment is aligned with the repository through migration `20260712052700_m10_permanent_item_lifecycle.sql`. Profile headers are retired, existing music achievements are enabled without requiring Bonus Content, `item_play_events` is the append-only creator analytics source for validated playback starts across Store, Library, and Radio, and creator Item removal is server-authoritative archival rather than hard deletion. Back up first, run dry runs, and apply reviewed repository migrations through the Supabase CLI; never make untracked dashboard-only schema changes.
 
 ---
 
@@ -253,6 +253,8 @@ Supabase is the staging source of auth, user, catalog, community, messaging, and
 
 The approved destination treats `catalog_items.id` as the permanent Item identity shared by Store, Library, and Community. Existing `products.id` values are preserved during the migration. The additive migration path, typed content spine, capability registry, entitlement separation, and retirement sequence are owned by `44OS_MILESTONES.md`. Current tables remain valid until their milestone cutover is verified; documentation of the destination does not authorize skipping preservation or rollback steps.
 
+Item lifecycle is `draft` → `published` → `archived`. A creator may move an active Item between draft and published, but removal calls the authenticated `archive_owned_item` operation. Archival hides the Item and all offers from Store and active Studio views while retaining its permanent ID, Library relationships, entitlements, `entitlement_events`, tracks, achievements, protected assets, and creator updates for authorized Library users. Direct anonymous/authenticated deletion is revoked, and archived Items cannot be republished through normal creator updates. Service-role hard deletion is emergency maintenance only and must never be used as a creator workflow.
+
 Current access and commerce stance:
 
 - Public listening is a catalog capability, not a subscription entitlement. Music may remain fully streamable without being saved or purchased.
@@ -302,7 +304,7 @@ Current concept-to-table map:
 
 Known Supabase state from the launch cleanup:
 
-- Migration history is aligned locally and remotely through `20260712052300`.
+- Migration history is aligned locally and remotely through `20260712052700`.
 - The typed Community spine is applied in `20260712020000_typed_community_content_spine.sql`; application queries no longer target the legacy Community content tables.
 - `20260712025000_add_missing_tracks_to_radio.sql` brings Radio to one active entry for every existing track: 248 tracks, 248 entries, zero missing, zero duplicates.
 - `20260712030000_m5_provider_neutral_commerce.sql` separates public access, offers, orders, payment processing, entitlements, and Library presentation. Current free Library behavior is active; download and physical offers remain drafts until the operating model and verified provider are approved.
@@ -312,6 +314,7 @@ Known Supabase state from the launch cleanup:
 - `20260712052000_m7_category_type_tag_foundation.sql` establishes the permanent Category → Type → Tags model: immutable system Categories, admin-managed `item_types` and approved `item_tags`, one Type assignment per Item, and any number of approved Tag assignments. `20260712052100_m7_seed_asset_item_types.sql` completes the initial Assets Type seed after the legacy singular/plural vocabulary conversion.
 - `20260712052200_m7_retire_legacy_taxonomy.sql` corrects two ambiguous Single backfills and deletes the superseded combined taxonomy tables. Browse and Studio no longer read or write the deprecated free-form Item `tags` metadata.
 - `20260712052300_m7_seed_music_genre_tags.sql` seeds the controlled Music Tag vocabulary with 32 current Apple Music-aligned genre choices. These Tags apply across every Music Type and remain admin-editable.
+- `20260712052700_m10_permanent_item_lifecycle.sql` revokes creator hard deletion, adds the ownership-checked archival operation, archives Item offers atomically, blocks stale republishing, and preserves entitlement-aware read access to archived Library Items and their content.
 - The prior incremental migration chain was consolidated into `20260712010000_44os_item_baseline.sql`. Its historical files remain available in Git history, but they are no longer active replay inputs.
 - The baseline includes the complete public schema, RLS, functions, triggers, auth profile hook, public storage buckets and policies, Item vocabulary, capabilities, membership, external links, and curated role mapping.
 - A clean local Supabase reset replays the baseline without a live snapshot, and a public-schema comparison against linked staging is empty.
@@ -323,7 +326,7 @@ Known Supabase state from the launch cleanup:
 - The system-owned Category rows in `item_categories` are Music, Books, Games, Merch, and Assets; application migrations own them and administrators must not edit them. `item_types` is the admin-managed list of Types scoped to a Category. `item_tags` is the admin-managed allow-list of Tags scoped to a Category and optionally a Type. `item_type_assignments` gives each Item one Type; `item_tag_assignments` gives it zero or more approved Tags. Studio and Browse both read this same model. The superseded `catalog_taxonomy_terms` and `item_taxonomy_terms` tables have been deleted.
 - Browse shelves are transparent and rule-based: `Featured` contains at most four explicitly featured Items; `Creators You Follow` appears only when it has results; each nonempty Category receives a `New Releases in …` shelf of at most eight Items ordered by the documented public catalog order. `View All` applies that Category in the existing Browse filter instead of creating another page. Engagement is never an undisclosed ranking input.
 - Initial Types are Music—Album, EP, Single, Mixtape, Live Set; Books—Novel, Artbook, Zine; Merch—Apparel, Accessories, Physical Music, Goods & Collectibles; Assets—Sample Packs, Remix Packs, Game Assets. Administrators can refine these in Supabase. Tags are the guarded third level for genre/style/use, such as Electronic or Hoodies, and creators cannot enter arbitrary public Tags.
-- All Item cards use one square artwork frame with cover cropping across Music, Books, Merch, and Assets so mixed-category grids remain aligned.
+- Music and Assets use square catalog artwork, Books use 2:3 covers, and physical Merch uses 3:4 product artwork. Library keeps separate Music, Books, and Assets grid bands so portrait Books begin below square Music.
 - Anonymous access to the dormant `services` table returns zero rows; its data remains available only through admin/service-role access.
 - `supabase db push --linked --dry-run` reports the remote database is up to date.
 
@@ -334,7 +337,7 @@ Auth redirect target:
 - Vercel previews: controlled preview allow-list or wildcard pattern.
 - Account creation collects display name, username, email, and password. The auth-user trigger persists the submitted public identity in `profiles`.
 - New accounts with an immediate session go directly to `/profile`. When email confirmation is required, the confirmation and resend links return to `/profile`.
-- Avatar, cover image, and bio are optional profile enhancements. Community identity requires only the display name and username collected at sign-up; incomplete legacy accounts redirect directly to `/profile` without an intermediate dialog.
+- Avatar and bio are optional profile enhancements; the retired profile-cover/header field is not part of the identity contract. Community identity requires only the display name and username collected at sign-up; incomplete legacy accounts redirect directly to `/profile` without an intermediate dialog.
 - Desktop deep links: plan later with a `44os://` scheme if the Tauri shell needs native auth return.
 
 ---

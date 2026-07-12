@@ -199,11 +199,11 @@ Completion criteria:
 
 ### M10 — Studio And Curated Creator Launch
 
-**Status: Not started**
+**Status: In progress**
 
 Keep fan registration public while publishing remains invite/approval based. Move Studio publishing onto the Item/capability services with validation, previews, upload policies, and catalog-health checks.
 
-First lifecycle task: replace creator hard deletion with server-authoritative Item archival. `catalog_items.id` remains permanent; removing an Item must hide it from Store and active Studio views while preserving existing Library access, entitlements, and immutable `entitlement_events`. Revoke direct authenticated hard deletion after the archival operation and its ownership/security tests are in place. The current foreign-key denial is intentional protection until this cutover is implemented.
+Lifecycle slice complete (July 12, 2026): `20260712052700_m10_permanent_item_lifecycle.sql` replaces creator hard deletion with the ownership-checked `archive_owned_item` operation. `catalog_items.id` remains permanent; removal archives every offer and hides the Item from Store and active Studio views while preserving existing Library access, entitlements, immutable `entitlement_events`, tracks, achievements, assets, and creator updates for authorized users. Direct anonymous/authenticated deletion is revoked, archived Items cannot be republished through normal creator updates, migration history is aligned, linked schema lint completes with only the pre-existing `evaluate_item_achievements` cast warning, and the anonymous RPC denial path returns HTTP 401. The owner acceptance path is ready to retry in signed-in Studio.
 
 Approved staging role mapping:
 
