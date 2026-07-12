@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageShell, GlassPanel, HubHero, CenteredMessage } from '@/components/Ui';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
@@ -12,6 +11,7 @@ import {
   getStudioCatalogSection,
   productBelongsToStudioSection,
 } from '@/lib/studioCatalog';
+import { listCreatorItems, setItemPublicationStatus } from '@/lib/domain/studio';
 
 export default function StudioProductsPage() {
   return (
@@ -46,13 +46,7 @@ function StudioProductsContent() {
       setProfile(profileResult.profile);
       const profileId = profileResult.profile?.id ?? user.id;
 
-      const { data: productRows } = await supabase
-        .from('catalog_items')
-        .select('*')
-        .eq('author_id', profileId)
-        .order('created_at', { ascending: false });
-      const nextProducts = (productRows as Product[] | null) ?? [];
-      setProducts(nextProducts);
+      setProducts(await listCreatorItems(profileId));
       setFetching(false);
     }
 
@@ -69,13 +63,10 @@ function StudioProductsContent() {
     const nextPublished = !published;
     const nextStatus = nextPublished ? 'published' : 'draft';
 
-    const { error } = await supabase
-      .from('catalog_items')
-      .update({ status: nextStatus })
-      .eq('id', product.id);
-
-    if (error) {
-      setStatus(error.message);
+    try {
+      await setItemPublicationStatus(product.id, nextStatus);
+    } catch (publishError) {
+      setStatus(publishError instanceof Error ? publishError.message : 'Could not update publication status.');
       setStatusKind('error');
       return;
     }

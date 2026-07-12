@@ -12,8 +12,8 @@ import { getPostMetaLabel } from '@/lib/social';
 import { useAuth } from '@/lib/useAuth';
 import { COPY_TO_CLIPBOARD_TOAST_EVENT } from '@/components/ContextMenu';
 import { addToCart, removeFromCart, useCart } from '@/lib/cart';
-import { supabase } from '@/lib/supabase';
 import { isFreeLibraryClaim } from '@/lib/libraryContent';
+import { getItemLibraryOwnership, saveItemToLibrary } from '@/lib/domain/itemDetails';
 
 export function PageShell({ children }: { children: ReactNode }) {
   return <div className="view-hub">{children}</div>;
@@ -121,13 +121,7 @@ export function ProductCard({ product, owned: ownedProp }: { product: Product; o
         setOwned(false);
         return;
       }
-      const { data } = await supabase
-        .from('library_entries')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('item_id', product.id)
-        .neq('status', 'hidden')
-        .maybeSingle();
+      const data = await getItemLibraryOwnership(user.id, product.id);
       if (alive) setOwned(Boolean(data));
     }
     loadOwned();
@@ -136,9 +130,12 @@ export function ProductCard({ product, owned: ownedProp }: { product: Product; o
 
   async function addProductToLibrary() {
     if (!user) return;
-    const { error } = await supabase.rpc('save_item_to_library', { target_item_id: product.id });
-    if (error) return;
-    setOwned(true);
+    try {
+      await saveItemToLibrary(user.id, product.id);
+      setOwned(true);
+    } catch {
+      // The detail page presents actionable acquisition errors; cards stay non-disruptive.
+    }
   }
 
   function copyShareLink() {

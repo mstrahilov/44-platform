@@ -3,19 +3,14 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { PageShell, GlassPanel, HubHero, HubSection, EmptyMessage, SectionHeader } from '@/components/Ui';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
 import { getProductExperience } from '@/lib/experience';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { STUDIO_CATALOG_SECTIONS } from '@/lib/studioCatalog';
+import { getCreatorCatalogOverview, type StudioLibraryMetric } from '@/lib/domain/studio';
 
-type LibraryMetricRow = {
-  id: string;
-  item_id: string | null;
-  acquisition_type: string | null;
-  acquired_at: string | null;
-};
+type LibraryMetricRow = StudioLibraryMetric;
 
 type OverviewState = {
   products: Product[];
@@ -40,28 +35,15 @@ export default function StudioPage() {
       setProfile(profileResult.profile);
       const profileId = profileResult.profile?.id ?? user.id;
 
-      const productsResult = await supabase
-        .from('catalog_items')
-        .select('*')
-        .eq('author_id', profileId)
-        .order('created_at', { ascending: false });
-
-      const productRows = (productsResult.data as Product[] | null) ?? [];
-      const productIds = productRows.map(product => product.id);
+      let productRows: Product[] = [];
       let libraryItems: LibraryMetricRow[] = [];
       let metricsError = '';
-
-      if (productIds.length > 0) {
-        const libraryResult = await supabase
-          .from('library_entries')
-          .select('id,item_id,acquisition_type,acquired_at')
-          .in('item_id', productIds);
-
-        if (libraryResult.error) {
-          metricsError = libraryResult.error.message;
-        } else {
-          libraryItems = (libraryResult.data as LibraryMetricRow[] | null) ?? [];
-        }
+      try {
+        const result = await getCreatorCatalogOverview(profileId);
+        productRows = result.items;
+        libraryItems = result.libraryItems;
+      } catch (overviewError) {
+        metricsError = overviewError instanceof Error ? overviewError.message : 'Could not load Studio metrics.';
       }
 
       setOverview({

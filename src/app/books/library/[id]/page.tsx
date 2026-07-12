@@ -9,18 +9,10 @@ import { LibraryCreatorChip, LibraryProductDetailsSection } from '@/components/L
 import { ProductUpdatesSection } from '@/components/ProductUpdatesSection';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { getProductLibraryPrimaryAction, getProductRuntimeKind } from '@/lib/libraryContent';
-import type { Product } from '@/lib/products';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
+import { getDetailedLibraryItem, type DetailedLibraryItemRow } from '@/lib/domain/itemDetails';
 
-interface BookLibraryRow {
-  id: string;
-  item_id: string;
-  acquisition_type: string;
-  acquired_at: string;
-  status: string;
-  products: Product | null;
-}
+type BookLibraryRow = DetailedLibraryItemRow;
 
 export default function BooksLibraryItemPage() {
   const { id } = useParams<{ id: string }>();
@@ -38,21 +30,15 @@ export default function BooksLibraryItemPage() {
       setLoading(true);
       setError(null);
 
-      const { data, error: itemError } = await supabase
-        .from('library_entries')
-        .select('id,item_id,acquisition_type,acquired_at,status,products:catalog_items(*, creators:profiles!author_id(*))')
-        .eq('id', id)
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (itemError || !data) {
-        setError(itemError?.message ?? 'Book not found.');
+      let libraryRow;
+      try {
+        libraryRow = await getDetailedLibraryItem(userId, id);
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : 'Book not found.');
         setLoading(false);
         return;
       }
-
-      const libraryRow = data as unknown as BookLibraryRow;
-      if (!libraryRow.products || getProductRuntimeKind(libraryRow.products) !== 'book') {
+      if (!libraryRow?.products || getProductRuntimeKind(libraryRow.products) !== 'book') {
         setError('Book not found.');
         setLoading(false);
         return;

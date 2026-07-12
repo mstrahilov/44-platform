@@ -187,6 +187,14 @@ export async function deleteCommunityQuestion(input: { questionId: string; owner
     .eq('author_id', input.ownerId);
 }
 
+export async function deleteCommunityDiscussion(input: { discussionId: string; ownerId: string }) {
+  return supabase
+    .from('content_entries')
+    .delete()
+    .eq('id', input.discussionId)
+    .eq('author_id', input.ownerId);
+}
+
 export async function deleteQuestionAnswer(input: { answerId: string; ownerId: string }) {
   return supabase
     .from('content_replies')

@@ -3,30 +3,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useContextMenu } from '@/components/ContextMenu';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
-import { isV1AchievementCode } from '@/lib/achievementCatalog';
-import type { Product } from '@/lib/products';
 import { productLibraryHref } from '@/lib/experience';
 import { getProductLibraryContent, getProductLibraryPrimaryAction, getProductRuntimeKind } from '@/lib/libraryContent';
-import { creatorHref, type ProductAchievement, type Track, type UserAchievement } from '@/lib/platform';
+import { creatorHref, type ProductAchievement, type Track } from '@/lib/platform';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
 import { LibraryAchievementsSection, LibraryBonusContentSection, LibraryProductDetailsSection, ProductDetailHeader, type LibraryBonusAsset, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
 import { ProductUpdatesSection } from '@/components/ProductUpdatesSection';
 import { recordAchievementPlaybackSignal, trackProductAchievementTrigger } from '@/lib/achievementTracking';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { MUSIC_TRACK_COMPLETED_EVENT, useMusicPlayer, type MusicQueueTrack, type MusicTrackPlaybackEventDetail } from '@/components/MusicPlayer';
+import { getLibraryItemBundle, type DetailedLibraryItemRow } from '@/lib/domain/itemDetails';
 
 type LibraryKind = 'product';
 
-interface LibraryItemRow {
-  id: string;
-  item_id: string;
-  acquisition_type: string;
-  acquired_at: string;
-  status: string;
-  products: Product | null;
-}
+type LibraryItemRow = DetailedLibraryItemRow;
 
 export function LibraryItemDetail({
   kind,
@@ -69,20 +60,21 @@ export function LibraryItemDetail({
       setError(null);
 
       if (kind === 'product') {
-        const { data, error: itemError } = await supabase
-          .from('library_entries')
-          .select('id,item_id,acquisition_type,acquired_at,status,products:catalog_items(*, creators:profiles!author_id(*))')
-          .eq('id', id)
-          .eq('user_id', userId)
-          .maybeSingle();
-
-        if (itemError || !data) {
-          setError(itemError?.message ?? 'Library item not found.');
+        let bundle;
+        try {
+          bundle = await getLibraryItemBundle(userId, id);
+        } catch (loadError) {
+          setError(loadError instanceof Error ? loadError.message : 'Library item not found.');
+          setLoading(false);
+          return;
+        }
+        if (!bundle) {
+          setError('Library item not found.');
           setLoading(false);
           return;
         }
 
-        const row = data as unknown as LibraryItemRow;
+        const { row } = bundle;
         setProductRow(row);
 
         if (legacyRedirect && row.products) {
@@ -90,33 +82,10 @@ export function LibraryItemDetail({
           return;
         }
 
-        if (row.item_id) {
-          const [{ data: trackRows }, { data: achievementRows }, { data: unlockedRows }, { data: assetRows }] = await Promise.all([
-            supabase
-              .from('tracks')
-              .select('id,item_id,number,title,duration_seconds,audio_url,download_url')
-              .eq('item_id', row.item_id)
-              .order('number'),
-            supabase
-              .from('item_achievements')
-              .select('id,item_id,code,title,description,trigger_type,trigger_config,reward_item_id,reward_config,points,icon,sort_order,is_secret')
-              .eq('item_id', row.item_id)
-              .order('sort_order'),
-            supabase
-              .from('user_achievements')
-              .select('id,user_id,achievement_id,item_id,unlocked_at')
-              .eq('user_id', userId)
-              .eq('item_id', row.item_id),
-            supabase.rpc('list_item_asset_manifest', { target_item_id: row.item_id }),
-          ]);
-
-          setTracks((trackRows as Track[] | null) ?? []);
-          setAchievements(row.products && getProductRuntimeKind(row.products) === 'music'
-            ? ((achievementRows as ProductAchievement[] | null) ?? []).filter(achievement => isV1AchievementCode(achievement.code))
-            : []);
-          setBonusAssets(((assetRows as LibraryBonusAsset[] | null) ?? []).filter(asset => ['bonus_content', 'bonus_achievement'].includes(asset.asset_type ?? '')));
-          setUnlockedAchievementIds(new Set(((unlockedRows as UserAchievement[] | null) ?? []).map(item => item.achievement_id)));
-        }
+        setTracks(bundle.tracks);
+        setAchievements(bundle.achievements);
+        setBonusAssets(bundle.assets.filter(asset => ['bonus_content', 'bonus_achievement'].includes(asset.asset_type ?? '')));
+        setUnlockedAchievementIds(new Set(bundle.unlockedAchievements.map(item => item.achievement_id)));
       }
 
       setLoading(false);

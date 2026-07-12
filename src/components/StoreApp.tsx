@@ -5,8 +5,9 @@ import { PageShell, ProductCard, ProductGrid, HubHero, HubSection, EmptyMessage 
 import { browseIndexHref, getProductExperience, type ProductExperience } from '@/lib/experience';
 import { comparePublicCatalogProducts, type Product } from '@/lib/products';
 import type { StoreCategory } from '@/lib/storeRoutes';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
+import { listPublishedCatalogItems } from '@/lib/domain/catalog';
+import { listVisibleLibraryItemIds } from '@/lib/domain/library';
 
 const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
   music: 'music',
@@ -69,22 +70,14 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
       setLoading(true);
       setError('');
 
-      const productResult = await supabase
-        .from('catalog_items')
-        .select('*, creators:profiles!author_id(*)')
-        .eq('status', 'published')
-        .order('year', { ascending: false, nullsFirst: false })
-        .order('creator', { ascending: true, nullsFirst: false })
-        .order('sort_order', { ascending: false, nullsFirst: false })
-        .order('created_at', { ascending: false })
-        .limit(160);
-
-      if (!alive) return;
-      if (productResult.error) {
-        setError(productResult.error.message);
+      try {
+        const items = await listPublishedCatalogItems(160);
+        if (!alive) return;
+        setProducts(items);
+      } catch (loadError) {
+        if (!alive) return;
+        setError(loadError instanceof Error ? loadError.message : 'Could not load the Store.');
         setProducts([]);
-      } else {
-        setProducts((productResult.data ?? []) as Product[]);
       }
       setLoading(false);
     }
@@ -103,14 +96,10 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
       return () => { alive = false; };
     }
 
-    void supabase
-      .from('library_entries')
-      .select('item_id')
-      .eq('user_id', user.id)
-      .neq('status', 'hidden')
-      .then(({ data }) => {
+    void listVisibleLibraryItemIds(user.id)
+      .then(itemIds => {
         if (!alive) return;
-        setOwnedProductIds(new Set((data ?? []).map(row => row.item_id).filter(Boolean)));
+        setOwnedProductIds(new Set(itemIds));
       });
 
     return () => { alive = false; };

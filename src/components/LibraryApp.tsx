@@ -9,8 +9,8 @@ import { pinDockItem } from '@/lib/dockPreferences';
 import type { LibraryCategory } from '@/lib/libraryRoutes';
 import type { Product } from '@/lib/products';
 import { creatorHref } from '@/lib/platform';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
+import { hideLibraryItem, listVisibleLibraryItems } from '@/lib/domain/library';
 
 const CATEGORY_EXPERIENCE: Partial<Record<LibraryCategory, ProductExperience>> = {
   music: 'music',
@@ -72,20 +72,14 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
       setLoading(true);
       setError('');
 
-      const { data, error: fetchError } = await supabase
-        .from('library_entries')
-        .select('id,item_id,acquisition_type,acquired_at,status,products:catalog_items(*, creators:profiles!author_id(*))')
-        .eq('user_id', userId)
-        .neq('status', 'archived')
-        .neq('status', 'hidden')
-        .order('acquired_at', { ascending: false });
-
-      if (!alive) return;
-      if (fetchError) {
-        setError(fetchError.message);
+      try {
+        const data = await listVisibleLibraryItems(userId);
+        if (!alive) return;
+        setRows(data as LibraryRow[]);
+      } catch (fetchError) {
+        if (!alive) return;
+        setError(fetchError instanceof Error ? fetchError.message : 'Could not load your Library.');
         setRows([]);
-      } else {
-        setRows((data ?? []) as unknown as LibraryRow[]);
       }
       setLoading(false);
     }
@@ -141,13 +135,10 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
 
   async function removeLibraryRow(row: LibraryRow) {
     if (!user) return;
-    const result = await supabase
-      .from('library_entries')
-      .update({ status: 'hidden' })
-      .eq('id', row.id)
-      .eq('user_id', user.id);
-    if (result.error) {
-      setError(result.error.message);
+    try {
+      await hideLibraryItem(user.id, row.id);
+    } catch (removeError) {
+      setError(removeError instanceof Error ? removeError.message : 'Could not update your Library.');
       return;
     }
     setRows(current => current.filter(item => item.id !== row.id));

@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useContextMenu, COPY_TO_CLIPBOARD_TOAST_EVENT } from '@/components/ContextMenu';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
 import { browseHref, productMeta } from '@/lib/products';
@@ -19,6 +18,14 @@ import { useTopbarBack } from '@/components/TopbarContext';
 import { addToCart, useCart } from '@/lib/cart';
 import { resolvePrice } from '@/lib/pricing';
 import { useMusicPlayer, type MusicQueueTrack } from '@/components/MusicPlayer';
+import { listPlayableItemTracks } from '@/lib/domain/catalog';
+import {
+  getCatalogItem,
+  getItemLibraryOwnership,
+  listRelatedCatalogItems,
+  recordItemShareVisit,
+  saveItemToLibrary,
+} from '@/lib/domain/itemDetails';
 
 type ProductTrack = {
   id: string;
@@ -72,13 +79,7 @@ export function ProductStoreDetail({
     async function fetchProduct() {
       setLoading(true);
       setTracks([]);
-      const productQuery = supabase
-        .from('catalog_items')
-        .select('*, creators:profiles!author_id(*)');
-      const { data } = await (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier)
-        ? productQuery.eq('id', identifier)
-        : productQuery.eq('slug', identifier)
-      ).maybeSingle();
+      const data = await getCatalogItem(identifier);
 
       setProduct(data);
       setLoading(false);
@@ -96,33 +97,11 @@ export function ProductStoreDetail({
 
       if (data) {
         if (releasePage || getProductExperience(data) === 'music') {
-          const { data: trackRows } = await supabase
-            .from('tracks')
-            .select('id,item_id,number,title,duration_seconds,audio_url,download_url')
-            .eq('item_id', data.id)
-            .order('number');
-          setTracks(((trackRows as ProductTrack[] | null) ?? []).sort((a, b) => trackOrder(a) - trackOrder(b)));
+          const trackRows = await listPlayableItemTracks(data.id);
+          setTracks(trackRows.sort((a, b) => trackOrder(a) - trackOrder(b)));
         }
 
-        const relatedLimit = getProductExperience(data) === 'physical' ? 12 : 4;
-        const relatedQuery = supabase
-          .from('catalog_items')
-          .select('*, creators:profiles!author_id(*)')
-          .eq('status', 'published')
-          .neq('id', data.id)
-          .limit(relatedLimit);
-
-        const relatedScope = data.author_id
-          ? relatedQuery.eq('author_id', data.author_id)
-          : relatedQuery.eq('creator', data.creator);
-
-        const { data: relatedProducts } = await relatedScope;
-        const relatedRows = (relatedProducts ?? []) as Product[];
-        setRelated(
-          getProductExperience(data) === 'physical'
-            ? relatedRows.filter(item => getProductExperience(item) === 'physical').slice(0, 4)
-            : relatedRows.slice(0, 4),
-        );
+        setRelated(await listRelatedCatalogItems(data));
       }
     }
     fetchProduct();
@@ -131,13 +110,7 @@ export function ProductStoreDetail({
   useEffect(() => {
     async function fetchOwnership(userId: string) {
       if (!product) return;
-      const { data } = await supabase
-        .from('library_entries')
-        .select('id, item_id, acquisition_type')
-        .eq('user_id', userId)
-        .eq('item_id', product.id)
-        .neq('status', 'hidden')
-        .maybeSingle();
+      const data = await getItemLibraryOwnership(userId, product.id);
       setOwned(Boolean(data));
       setOwnedLibraryItemId(data?.id ?? null);
       setOwnedAcquisitionType(data?.acquisition_type ?? null);
@@ -161,11 +134,7 @@ export function ProductStoreDetail({
       const referrerId = searchParams.get('ref');
       if (!referrerId || referrerId === user?.id) return;
 
-      await supabase.from('item_share_visits').insert({
-        item_id: product.id,
-        referrer_id: referrerId,
-        visitor_id: user?.id ?? null,
-      });
+      await recordItemShareVisit(product.id, referrerId, user?.id ?? null);
 
     }
 
@@ -176,19 +145,14 @@ export function ProductStoreDetail({
     if (!product) return;
     if (!user) { alert('Sign in first, then add this to your library.'); return; }
     if (!canSaveProductToLibrary(product)) return;
-    const { error } = await supabase.rpc('save_item_to_library', { target_item_id: product.id });
-    if (error) { alert(error.message); return; }
-    setOwned(true);
-    setOwnedAcquisitionType('free');
-    const { data } = await supabase
-      .from('library_entries')
-      .select('id, acquisition_type')
-      .eq('user_id', user.id)
-      .eq('item_id', product.id)
-      .neq('status', 'hidden')
-      .maybeSingle();
-    setOwnedLibraryItemId(data?.id ?? null);
-    setOwnedAcquisitionType(data?.acquisition_type ?? 'free');
+    try {
+      const data = await saveItemToLibrary(user.id, product.id);
+      setOwned(true);
+      setOwnedAcquisitionType(data?.acquisition_type ?? 'free');
+      setOwnedLibraryItemId(data?.id ?? null);
+    } catch (saveError) {
+      alert(saveError instanceof Error ? saveError.message : 'Could not add this Item to your Library.');
+    }
   }
 
   function addProductToCart() {

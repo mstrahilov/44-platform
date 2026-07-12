@@ -1,24 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { creatorHref, type Profile } from '@/lib/platform';
+import { creatorHref } from '@/lib/platform';
 import Link from 'next/link';
 import { SectionHeader } from '@/components/Ui';
+import { listItemUpdates, type ItemUpdate } from '@/lib/domain/itemCommunity';
 
-type UpdateProfile = Pick<Profile, 'id' | 'slug' | 'username' | 'display_name' | 'avatar_url'>;
-
-type ProductUpdate = {
-  id: string;
-  item_id: string;
-  author_id: string;
-  title: string;
-  body: string;
-  version_label: string | null;
-  status: string;
-  created_at: string;
-  authors?: UpdateProfile | UpdateProfile[] | null;
-};
+type ProductUpdate = ItemUpdate;
 
 function resolveAuthor(update: ProductUpdate) {
   return Array.isArray(update.authors) ? update.authors[0] : update.authors;
@@ -36,19 +24,12 @@ export function ProductUpdatesSection({
   useEffect(() => {
     async function loadUpdates() {
       setError('');
-      const { data, error: loadError } = await supabase
-        .from('community_update_content')
-        .select('id,item_id,author_id,title,body,version_label,status,created_at,authors:profiles!author_id(id,slug,username,display_name,avatar_url)')
-        .eq('item_id', productId)
-        .eq('status', 'published')
-        .order('created_at', { ascending: false });
-
-      if (loadError) {
-        setError(loadError.message);
+      try {
+        setUpdates(await listItemUpdates(productId));
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : 'Could not load creator updates.');
         return;
       }
-
-      setUpdates((data as ProductUpdate[] | null) ?? []);
     }
 
     loadUpdates();

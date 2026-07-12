@@ -16,23 +16,14 @@ import {
 } from '@/components/MusicPlayer';
 import { ProductUpdatesSection } from '@/components/ProductUpdatesSection';
 import { useTopbarBack } from '@/components/TopbarContext';
-import { isV1AchievementCode } from '@/lib/achievementCatalog';
 import { recordAchievementPlaybackSignal, trackProductAchievementTrigger } from '@/lib/achievementTracking';
 import { getProductLibraryPrimaryAction, getProductRuntimeKind } from '@/lib/libraryContent';
-import type { Product } from '@/lib/products';
 import { productLibraryHref } from '@/lib/experience';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
-import { creatorHref, type ProductAchievement, type Track, type UserAchievement } from '@/lib/platform';
+import { creatorHref, type ProductAchievement, type Track } from '@/lib/platform';
+import { getLibraryItemBundle, type DetailedLibraryItemRow } from '@/lib/domain/itemDetails';
 
-interface MusicLibraryRow {
-  id: string;
-  item_id: string;
-  acquisition_type: string;
-  acquired_at: string;
-  status: string;
-  products: Product | null;
-}
+type MusicLibraryRow = DetailedLibraryItemRow;
 
 export default function MusicLibraryItemPage() {
   const { id } = useParams<{ id: string }>();
@@ -55,20 +46,21 @@ export default function MusicLibraryItemPage() {
       setLoading(true);
       setError(null);
 
-      const { data, error: itemError } = await supabase
-        .from('library_entries')
-        .select('id,item_id,acquisition_type,acquired_at,status,products:catalog_items(*, creators:profiles!author_id(*))')
-        .eq('id', id)
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (itemError || !data) {
-        setError(itemError?.message ?? 'Release not found.');
+      let bundle;
+      try {
+        bundle = await getLibraryItemBundle(userId, id);
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : 'Release not found.');
+        setLoading(false);
+        return;
+      }
+      if (!bundle) {
+        setError('Release not found.');
         setLoading(false);
         return;
       }
 
-      const libraryRow = data as unknown as MusicLibraryRow;
+      const libraryRow = bundle.row;
       if (!libraryRow.products || getProductRuntimeKind(libraryRow.products) !== 'music') {
         setError('Release not found.');
         setLoading(false);
@@ -77,26 +69,11 @@ export default function MusicLibraryItemPage() {
 
       setRow(libraryRow);
 
-      const [{ data: trackRows }, { data: achievementRows }, { data: unlockedRows }, { data: assetRows }] = await Promise.all([
-        supabase.from('tracks').select('*').eq('item_id', libraryRow.item_id),
-        supabase
-          .from('item_achievements')
-          .select('id,item_id,code,title,description,trigger_type,trigger_config,reward_item_id,reward_config,points,icon,sort_order,is_secret')
-          .eq('item_id', libraryRow.item_id)
-          .order('sort_order'),
-        supabase
-          .from('user_achievements')
-          .select('id,user_id,achievement_id,item_id,unlocked_at')
-          .eq('user_id', userId)
-          .eq('item_id', libraryRow.item_id),
-        supabase.rpc('list_item_asset_manifest', { target_item_id: libraryRow.item_id }),
-      ]);
-
-      const orderedTracks = ((trackRows as Track[] | null) ?? []).sort((a, b) => trackOrder(a) - trackOrder(b));
+      const orderedTracks = [...bundle.tracks].sort((a, b) => trackOrder(a) - trackOrder(b));
       setTracks(orderedTracks);
-      setAchievements(((achievementRows as ProductAchievement[] | null) ?? []).filter(achievement => isV1AchievementCode(achievement.code)));
-      setBonusAssets(((assetRows as LibraryBonusAsset[] | null) ?? []).filter(asset => ['bonus_content', 'bonus_achievement'].includes(asset.asset_type ?? '')));
-      setUnlockedAchievementIds(new Set(((unlockedRows as UserAchievement[] | null) ?? []).map(item => item.achievement_id)));
+      setAchievements(bundle.achievements);
+      setBonusAssets(bundle.assets.filter(asset => ['bonus_content', 'bonus_achievement'].includes(asset.asset_type ?? '')));
+      setUnlockedAchievementIds(new Set(bundle.unlockedAchievements.map(item => item.achievement_id)));
       setLoading(false);
     }
 

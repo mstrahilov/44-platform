@@ -6,13 +6,14 @@ export type LibraryItemRow = {
   item_id: string | null;
   acquired_at: string | null;
   acquisition_type: string | null;
+  status: string;
   products: Product | null;
 };
 
 export async function listVisibleLibraryItems(userId: string) {
   const result = await supabase
     .from('library_entries')
-    .select('id,item_id,acquired_at,acquisition_type,products:catalog_items(*)')
+    .select('id,item_id,acquired_at,acquisition_type,status,products:catalog_items(*, creators:profiles!author_id(*))')
     .eq('user_id', userId)
     .neq('status', 'archived')
     .neq('status', 'hidden')

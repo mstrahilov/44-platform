@@ -1,16 +1,11 @@
 import { ProductStoreDetail } from '@/app/product/[id]/page';
 import { buildPageMetadata, conciseDescription } from '@/lib/metadata';
-import { supabase } from '@/lib/supabase';
 import type { Product } from '@/lib/products';
+import { getCatalogItem } from '@/lib/domain/itemDetails';
 
 export async function generateMetadata({ params }: { params: Promise<{ identifier: string }> }) {
   const { identifier } = await params;
-  const query = supabase.from('catalog_items').select('*, creators:profiles!author_id(*)');
-  const { data } = await (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier)
-    ? query.eq('id', identifier)
-    : query.eq('slug', identifier)
-  ).maybeSingle();
-  const product = data as Product | null;
+  const product = await getCatalogItem(identifier) as Product | null;
   if (!product) {
     return buildPageMetadata({
       title: 'Store Item',

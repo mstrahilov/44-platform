@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { Profile } from '@/lib/platform';
 import { comparePublicCatalogProducts, type Product } from '@/lib/products';
@@ -12,15 +11,23 @@ import { getProductExperience, productBrowseHref } from '@/lib/experience';
 import { PageShell, CenteredMessage } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
 import { SocialArtifactCard, SocialAvatar, SocialPostRow } from '@/components/Social';
-import { getOwnershipKeys, isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
+import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { useTopbarBack } from '@/components/TopbarContext';
-import { authorHandle, countById, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type ReplyEngagerRow, type SocialPost } from '@/lib/social';
+import { authorHandle, countById, likersByPost, repliersByPost, type CountMap, type LikersMap, type SocialPost } from '@/lib/social';
 import { useContextMenu } from '@/components/ContextMenu';
 import { pinDockItem } from '@/lib/dockPreferences';
 import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { isMissingRelationError } from '@/lib/schemaCompat';
 import { createOrOpenConversation } from '@/lib/messages';
 import { trackProductAchievementTrigger } from '@/lib/achievementTracking';
+import { deleteCommunityDiscussion } from '@/lib/communityStructured';
+import {
+  followProfile,
+  getPublicProfile,
+  getPublicProfileContent,
+  isFollowingProfile,
+  unfollowProfile,
+} from '@/lib/domain/profiles';
 
 type ProfileTab = 'posts' | 'music' | 'books' | 'assets';
 type CurrentProfileState = {
@@ -66,13 +73,7 @@ export default function PublicProfilePage() {
       setLoading(true);
       setError('');
 
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .or(`username.eq.${username},slug.eq.${username}`)
-        .maybeSingle();
-
-      const resolvedProfile = (profileData as Profile | null) ?? null;
+      const resolvedProfile = await getPublicProfile(username);
       setProfile(resolvedProfile);
 
       if (!resolvedProfile) {
@@ -83,54 +84,14 @@ export default function PublicProfilePage() {
         return;
       }
 
-      const profileId = resolvedProfile.id;
-      const ownershipProfile = {
-        id: resolvedProfile.id,
-        display_name: resolvedProfile.display_name ?? null,
-        username: resolvedProfile.username ?? null,
-        role: resolvedProfile.role ?? null,
-        slug: resolvedProfile.slug ?? null,
-        avatar_url: resolvedProfile.avatar_url ?? null,
-        bio: resolvedProfile.bio ?? null,
-        creator_type: resolvedProfile.creator_type ?? null,
-      };
-      const { ids } = getOwnershipKeys(ownershipProfile, profileId);
-
-      const [productResult, postResult] = await Promise.all([
-        supabase
-          .from('catalog_items')
-          .select('*, creators:profiles!author_id(*)')
-          .eq('author_id', profileId)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('community_discussions')
-          .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type)')
-          .in('author_id', ids)
-          .eq('status', 'published')
-          .order('created_at', { ascending: false }),
-      ]);
-
-      setProducts(((productResult.data as Product[] | null) ?? []).filter(Boolean));
-      const nextPosts = ((postResult.data as SocialPost[] | null) ?? []).filter(Boolean);
+      const content = await getPublicProfileContent(resolvedProfile);
+      setProducts(content.items.filter(Boolean));
+      const nextPosts = content.posts;
       setPosts(nextPosts);
-      const postIds = nextPosts.map(post => post.id);
-      const [replyCountResult, likeResult] = postIds.length > 0 ? await Promise.all([
-        supabase
-          .from('community_discussion_replies')
-          .select('post_id, author_id, authors:profiles!author_id(id, display_name, username, avatar_url)')
-          .in('post_id', postIds)
-          .eq('status', 'published')
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('community_discussion_likes')
-          .select('post_id, profile_id, profiles:profiles!profile_id(id, display_name, username, avatar_url)')
-          .in('post_id', postIds)
-          .order('created_at', { ascending: false }),
-      ]) : [{ data: [], error: null }, { data: [], error: null }];
-      const replyRowsData = (replyCountResult.data as ReplyEngagerRow[] | null) ?? [];
+      const replyRowsData = content.replies;
       setReplyCounts(countById(replyRowsData, 'post_id'));
       setRepliersMap(repliersByPost(replyRowsData));
-      const likeRows = (likeResult.data as LikeRow[] | null) ?? [];
+      const likeRows = content.likes;
       setLikeCounts(countById(likeRows, 'post_id'));
       setLikersMap(likersByPost(likeRows));
       setLoading(false);
@@ -154,17 +115,9 @@ export default function PublicProfilePage() {
       return;
     }
 
-    supabase
-      .from('profile_follows')
-      .select('follower_id')
-      .eq('follower_id', user.id)
-      .eq('following_id', profile.id)
-      .maybeSingle()
-      .then(result => {
-        if (isMissingRelationError(result.error)) return;
-        if (result.error) setError(result.error.message ?? 'Could not load follow state.');
-        else setIsFollowing(Boolean(result.data));
-      });
+    isFollowingProfile(user.id, profile.id)
+      .then(setIsFollowing)
+      .catch(followError => setError(followError instanceof Error ? followError.message : 'Could not load follow state.'));
   }, [profile, user]);
 
   const isOwn = user?.id === profile?.id;
@@ -186,19 +139,15 @@ export default function PublicProfilePage() {
     setError('');
 
     if (isFollowing) {
-      const { error: unfollowError } = await supabase
-        .from('profile_follows')
-        .delete()
-        .eq('follower_id', user.id)
-        .eq('following_id', profile.id);
-      if (unfollowError) setError(unfollowError.message);
-      else setIsFollowing(false);
+      try {
+        await unfollowProfile(user.id, profile.id);
+        setIsFollowing(false);
+      } catch (unfollowError) {
+        setError(unfollowError instanceof Error ? unfollowError.message : 'Could not unfollow this profile.');
+      }
     } else {
-      const { error: followError } = await supabase
-        .from('profile_follows')
-        .upsert({ follower_id: user.id, following_id: profile.id }, { onConflict: 'follower_id,following_id' });
-      if (followError) setError(followError.message);
-      else {
+      try {
+        await followProfile(user.id, profile.id);
         setIsFollowing(true);
         if (sourceProductId) {
           await trackProductAchievementTrigger({
@@ -208,6 +157,8 @@ export default function PublicProfilePage() {
             metadata: { source: 'profile_follow', creator_profile_id: profile.id },
           });
         }
+      } catch (followError) {
+        setError(followError instanceof Error ? followError.message : 'Could not follow this profile.');
       }
     }
     setBusy('');
@@ -411,7 +362,7 @@ export default function PublicProfilePage() {
                   onDelete={async () => {
                     if (!user || post.author_id !== user.id) return;
                     if (!window.confirm('Delete this post? This cannot be undone.')) return;
-                    const { error: deleteError } = await supabase.from('content_entries').delete().eq('id', post.id);
+                    const { error: deleteError } = await deleteCommunityDiscussion({ discussionId: post.id, ownerId: user.id });
                     if (deleteError) { setError(deleteError.message); return; }
                     setPosts(current => current.filter(p => p.id !== post.id));
                   }}

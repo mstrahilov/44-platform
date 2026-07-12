@@ -2,26 +2,14 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
-import { creatorHref, type Profile } from '@/lib/platform';
+import { creatorHref } from '@/lib/platform';
 import { trackProductAchievementTrigger } from '@/lib/achievementTracking';
 import Link from 'next/link';
 import { SectionHeader } from '@/components/Ui';
+import { listItemReviews, saveItemReview, type ItemReview } from '@/lib/domain/itemCommunity';
 
-type ReviewProfile = Pick<Profile, 'id' | 'slug' | 'username' | 'display_name' | 'avatar_url'>;
-
-type ProductReview = {
-  id: string;
-  user_id: string;
-  item_id: string;
-  title: string | null;
-  body: string;
-  sentiment: string;
-  status: string;
-  created_at: string;
-  reviewers?: ReviewProfile | ReviewProfile[] | null;
-};
+type ProductReview = ItemReview;
 
 function resolveReviewer(review: ProductReview) {
   return Array.isArray(review.reviewers) ? review.reviewers[0] : review.reviewers;
@@ -43,19 +31,12 @@ export function ProductReviewsSection({
   const [error, setError] = useState('');
 
   async function loadReviews() {
-    const { data, error: loadError } = await supabase
-      .from('community_review_content')
-      .select('id,user_id,item_id,title,body,sentiment,status,created_at,reviewers:profiles!user_id(id,slug,username,display_name,avatar_url)')
-      .eq('item_id', productId)
-      .eq('status', 'published')
-      .order('created_at', { ascending: false });
-
-    if (loadError) {
-      setError(loadError.message);
+    try {
+      setReviews(await listItemReviews(productId));
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Could not load reviews.');
       return;
     }
-
-    setReviews((data as ProductReview[] | null) ?? []);
   }
 
   useEffect(() => {
@@ -84,17 +65,11 @@ export function ProductReviewsSection({
     setSaving(true);
     setError('');
 
-    const { error: reviewError } = await supabase.rpc('upsert_content_review', {
-      target_item_id: productId,
-      review_body: body.trim(),
-      review_title: undefined,
-      review_sentiment: 'recommended',
-      review_rating: undefined,
-    });
-
-    if (reviewError) {
+    try {
+      await saveItemReview(productId, body.trim());
+    } catch (reviewError) {
       setSaving(false);
-      setError(reviewError.message);
+      setError(reviewError instanceof Error ? reviewError.message : 'Could not save your review.');
       return;
     }
 
