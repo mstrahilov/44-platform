@@ -3,17 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageShell, HubHero, HubSection } from '@/components/Ui';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
-import type { Product } from '@/lib/products';
 import { loadStudioProfile } from '@/lib/studioProfiles';
+import { listLegacyCreatorPurchases, type StudioPurchaseRow } from '@/lib/domain/studioCommerce';
 
-type LibraryPurchaseRow = {
-  id: string;
-  item_id: string | null;
-  acquired_at: string | null;
-  products?: Pick<Product, 'title' | 'price_cents'> | Pick<Product, 'title' | 'price_cents'>[] | null;
-};
+type LibraryPurchaseRow = StudioPurchaseRow;
 
 export default function StudioEarningsPage() {
   const router = useRouter();
@@ -32,30 +26,11 @@ export default function StudioEarningsPage() {
       const profileResult = await loadStudioProfile(user.id);
       const profileId = profileResult.profile?.id ?? user.id;
 
-      const productResult = await supabase
-        .from('catalog_items')
-        .select('id')
-        .eq('author_id', profileId);
-
-      const productIds = ((productResult.data as Array<{ id: string }> | null) ?? []).map(product => product.id);
-      if (productIds.length === 0) {
+      try {
+        setRows(await listLegacyCreatorPurchases(profileId));
+      } catch (purchaseError) {
+        setError(purchaseError instanceof Error ? purchaseError.message : 'Could not load earnings history.');
         setRows([]);
-        setFetching(false);
-        return;
-      }
-
-      const purchaseResult = await supabase
-        .from('library_entries')
-        .select('id,item_id,acquired_at,products:catalog_items(title,price_cents)')
-        .eq('acquisition_type', 'purchase')
-        .in('item_id', productIds)
-        .order('acquired_at', { ascending: false });
-
-      if (purchaseResult.error) {
-        setError(purchaseResult.error.message);
-        setRows([]);
-      } else {
-        setRows((purchaseResult.data as unknown as LibraryPurchaseRow[] | null) ?? []);
       }
       setFetching(false);
     }

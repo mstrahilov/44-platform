@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageShell, GlassPanel, HubHero } from '@/components/Ui';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 
@@ -23,9 +22,6 @@ export default function StudioPayoutsPage() {
       if (!user) return;
       const profileResult = await loadStudioProfile(user.id);
       setProfile(profileResult.profile);
-      const profileId = profileResult.profile?.id ?? user.id;
-
-      await supabase.from('catalog_items').select('id').eq('author_id', profileId).limit(1);
       setFetching(false);
     }
 

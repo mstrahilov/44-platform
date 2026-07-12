@@ -17,13 +17,20 @@ import {
   validateReleaseFeatureState,
   type SavedProductAchievement,
 } from '@/components/StudioReleaseFeatures';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
-import type { ProductCategory, Track } from '@/lib/platform';
+import type { ProductCategory } from '@/lib/platform';
 import type { Product } from '@/lib/products';
 import { currencyForCountry, normalizeMarketMode, type MarketMode } from '@/lib/marketPreferences';
 import { getStudioDisplayName, loadStudioProfile } from '@/lib/studioProfiles';
 import { getStudioCatalogSectionForProduct, type StudioCatalogSectionId } from '@/lib/studioCatalog';
+import {
+  deleteStudioItem,
+  listItemCategories,
+  loadStudioItemEditor,
+  replaceStudioAsset,
+  syncStudioTracks,
+  updateStudioItem,
+} from '@/lib/domain/studioPublishing';
 
 function formatPriceInput(value: string) {
   const digits = value.replace(/\D/g, '').slice(0, 9);
@@ -79,12 +86,6 @@ function productAssetTypeForSection(sectionId: StudioCatalogSectionId) {
   return 'music';
 }
 
-type ProductAssetRow = {
-  title: string | null;
-  file_url: string | null;
-  asset_type: string | null;
-};
-
 export default function EditProductPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -124,12 +125,12 @@ export default function EditProductPage() {
     async function loadData() {
       if (!user) return;
 
-      const [{ data: categoryRows }, profileResult] = await Promise.all([
-        supabase.from('item_categories').select('*').order('sort_order'),
+      const [categoryRows, profileResult] = await Promise.all([
+        listItemCategories(),
         loadStudioProfile(user.id),
       ]);
 
-      setCategories((categoryRows as ProductCategory[] | null) ?? []);
+      setCategories(categoryRows);
       setCreatorName(getStudioDisplayName(profileResult.profile, user.email));
       const profileId = profileResult.profile?.id ?? user.id;
       const fallbackLocalCurrency =
@@ -139,32 +140,23 @@ export default function EditProductPage() {
         currencyForCountry(profileResult.profile?.home_country_code);
       setOwnerId(profileId);
 
-      const { data: productRow } = await supabase
-        .from('catalog_items')
-        .select('*')
-        .eq('id', id)
-        .eq('author_id', profileId)
-        .maybeSingle();
-
-      const product = (productRow as Product | null) ?? null;
-      if (!product) {
+      let editor;
+      try {
+        editor = await loadStudioItemEditor(id, profileId);
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : 'Could not load this Item.');
+        setFetching(false);
+        return;
+      }
+      if (!editor) {
         setError('Item not found.');
         setFetching(false);
         return;
       }
-
-      const [{ data: trackRows }, { data: assetRows }, { data: achievementRows }] = await Promise.all([
-        supabase.from('tracks').select('*').eq('item_id', id).order('number'),
-        supabase.from('item_assets').select('asset_type,title,file_url').eq('item_id', id).order('sort_order'),
-        supabase
-          .from('item_achievements')
-          .select('code,title,description,trigger_type,reward_config,is_secret,icon')
-          .eq('item_id', id)
-          .order('sort_order'),
-      ]);
+      const { item: product, tracks: trackRows, assets: assetRows, achievements: achievementRows } = editor;
 
       const productSection = getStudioCatalogSectionForProduct(product);
-      const featureAssets = ((assetRows as ProductAssetRow[] | null) ?? []).filter(asset => featureAssetTypes().includes(asset.asset_type ?? ''));
+      const featureAssets = assetRows.filter(asset => featureAssetTypes().includes(asset.asset_type ?? ''));
 
       setTitle(product.title ?? '');
       setCategoryId(product.item_category_id ?? '');
@@ -176,12 +168,12 @@ export default function EditProductPage() {
       setMerchFulfillmentMode((product as Product & { merch_fulfillment_mode?: 'ship' | 'deliver' | null }).merch_fulfillment_mode || (product.available_locally_only ? 'deliver' : 'ship'));
       setMerchShippingScope((product as Product & { merch_shipping_scope?: 'local' | 'global' | null }).merch_shipping_scope || (product.available_locally_only ? 'local' : 'global'));
       setCoverUrl(product.cover_url ?? '');
-      setItemFileUrl(product.read_url || product.download_url || ((assetRows as ProductAssetRow[] | null) ?? []).find(asset => !featureAssetTypes().includes(asset.asset_type ?? ''))?.file_url || '');
+      setItemFileUrl(product.read_url || product.download_url || assetRows.find(asset => !featureAssetTypes().includes(asset.asset_type ?? ''))?.file_url || '');
       setYear(product.year ? String(product.year) : '');
       setPublishStatus(product.status === 'published' ? 'published' : 'draft');
       setFeatureState(hydrateReleaseFeatureState(
         productSection.id,
-        ((achievementRows as Array<{
+        (achievementRows as Array<{
           code: string;
           title: string;
           description: string | null;
@@ -189,7 +181,7 @@ export default function EditProductPage() {
           reward_config: Record<string, unknown> | null;
           is_secret: boolean | null;
           icon: string | null;
-        }> | null) ?? []).map(achievement => ({
+        }>).map(achievement => ({
           code: achievement.code,
           title: achievement.title,
           description: achievement.description ?? '',
@@ -201,9 +193,9 @@ export default function EditProductPage() {
         })) satisfies SavedProductAchievement[],
         featureAssets,
       ));
-      setHasSavedFeatures(Boolean(((achievementRows as unknown[] | null) ?? []).length || featureAssets.length));
+      setHasSavedFeatures(Boolean(achievementRows.length || featureAssets.length));
 
-      const resolvedTracks = ((trackRows as Track[] | null) ?? []).map(track => ({
+      const resolvedTracks = trackRows.map(track => ({
         id: track.id,
         title: track.title ?? '',
         durationSeconds: track.duration_seconds ? String(track.duration_seconds) : '',
@@ -322,15 +314,11 @@ export default function EditProductPage() {
       creator: creatorName,
     };
 
-    const { error: updateError } = await supabase
-      .from('catalog_items')
-      .update(updatePayload)
-      .eq('id', id)
-      .eq('author_id', profileId);
-
-    if (updateError) {
+    try {
+      await updateStudioItem(id, profileId, updatePayload);
+    } catch (updateError) {
       setSaving(false);
-      setError(updateError.message);
+      setError(updateError instanceof Error ? updateError.message : 'Could not update this Item.');
       return;
     }
 
@@ -339,76 +327,44 @@ export default function EditProductPage() {
       const keptIds = visibleTracks.map(track => track.id).filter(Boolean) as string[];
       const idsToDelete = existingIds.filter(existingId => !keptIds.includes(existingId));
 
-      for (const [index, track] of visibleTracks.entries()) {
-        const payload = {
+      const trackRows = visibleTracks.map((track, index) => ({
+          id: track.id,
           item_id: id,
           number: index + 1,
           title: track.title.trim(),
           duration_seconds: track.durationSeconds ? Number(track.durationSeconds) : null,
           audio_url: track.audioUrl.trim(),
           download_url: null,
-        };
-
-        if (track.id) {
-          const { error: trackUpdateError } = await supabase.from('tracks').update(payload).eq('id', track.id).eq('item_id', id);
-          if (trackUpdateError) {
-            setSaving(false);
-            setError(trackUpdateError.message);
-            return;
-          }
-        } else {
-          const { error: trackInsertError } = await supabase.from('tracks').insert(payload);
-          if (trackInsertError) {
-            setSaving(false);
-            setError(trackInsertError.message);
-            return;
-          }
-        }
-      }
-
-      if (idsToDelete.length) {
-        const { error: deleteError } = await supabase.from('tracks').delete().in('id', idsToDelete).eq('item_id', id);
-        if (deleteError) {
-          setSaving(false);
-          setError(deleteError.message);
-          return;
-        }
+        }));
+      try {
+        await syncStudioTracks(id, trackRows, idsToDelete);
+      } catch (trackError) {
+        setSaving(false);
+        setError(trackError instanceof Error ? trackError.message : 'Could not save tracks.');
+        return;
       }
     }
 
     if (needsDigitalFile) {
       const assetType = productAssetTypeForSection(section.id);
-      const { error: deleteAssetError } = await supabase
-        .from('item_assets')
-        .delete()
-        .eq('item_id', id)
-        .eq('asset_type', assetType);
-
-      if (deleteAssetError) {
+      try {
+        await replaceStudioAsset(id, assetType, {
+          item_id: id,
+          asset_type: assetType,
+          title: productType.trim() || title.trim(),
+          file_url: itemFileUrl.trim(),
+          storage_path: null,
+          is_downloadable: true,
+          sort_order: 0,
+        });
+      } catch (assetError) {
         setSaving(false);
-        setError(deleteAssetError.message);
-        return;
-      }
-
-      const { error: insertAssetError } = await supabase.from('item_assets').insert({
-        item_id: id,
-        asset_type: assetType,
-        title: productType.trim() || title.trim(),
-        file_url: itemFileUrl.trim(),
-        storage_path: null,
-        is_downloadable: true,
-        sort_order: 0,
-      });
-
-      if (insertAssetError) {
-        setSaving(false);
-        setError(insertAssetError.message);
+        setError(assetError instanceof Error ? assetError.message : 'Could not save the digital file.');
         return;
       }
     }
 
       const featureError = section.id === 'music' ? await saveReleaseFeatures({
-        supabaseClient: supabase,
         productId: id,
         sectionId: section.id,
         state: featureState,
@@ -436,35 +392,11 @@ export default function EditProductPage() {
     const profileResult = ownerId ? null : await loadStudioProfile(user.id);
     const profileId = ownerId || profileResult?.profile?.id || user.id;
 
-    const { data: ownedProduct, error: ownershipError } = await supabase
-      .from('catalog_items')
-      .select('id')
-      .eq('id', id)
-      .eq('author_id', profileId)
-      .maybeSingle();
-
-    if (ownershipError || !ownedProduct) {
+    try {
+      await deleteStudioItem(id, profileId);
+    } catch (deleteError) {
       setDeleting(false);
-      setError(ownershipError?.message || 'Item not found.');
-      return;
-    }
-
-    const { error: tracksError } = await supabase.from('tracks').delete().eq('item_id', id);
-    if (tracksError) {
-      setDeleting(false);
-      setError(tracksError.message);
-      return;
-    }
-
-    const { error: deleteError } = await supabase
-      .from('catalog_items')
-      .delete()
-      .eq('id', id)
-      .eq('author_id', profileId);
-
-    if (deleteError) {
-      setDeleting(false);
-      setError(deleteError.message);
+      setError(deleteError instanceof Error ? deleteError.message : 'Could not delete this Item.');
       return;
     }
 

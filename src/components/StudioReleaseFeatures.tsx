@@ -5,7 +5,7 @@ import { SectionHeader } from '@/components/Ui';
 import { UploadField } from '@/components/UploadField';
 import type { StudioCatalogSectionId } from '@/lib/studioCatalog';
 import { getAchievementIconPath } from '@/lib/achievementIcons';
-import { supabase } from '@/lib/supabase';
+import { replaceStudioReleaseFeatures } from '@/lib/domain/studioPublishing';
 
 export type DraftAchievement = {
   code: string;
@@ -234,12 +234,10 @@ export function hydrateReleaseFeatureState(
 }
 
 export async function saveReleaseFeatures({
-  supabaseClient,
   productId,
   sectionId,
   state,
 }: {
-  supabaseClient: typeof supabase;
   productId: string;
   sectionId: StudioCatalogSectionId;
   state: ReleaseFeatureState;
@@ -247,29 +245,12 @@ export async function saveReleaseFeatures({
   const validationError = validateReleaseFeatureState(state, sectionId);
   if (validationError) return validationError;
 
-  const { error: deleteAchievementsError } = await supabaseClient
-    .from('item_achievements')
-    .delete()
-    .eq('item_id', productId);
-  if (deleteAchievementsError) return deleteAchievementsError.message;
-
-  const { error: deleteAssetsError } = await supabaseClient
-    .from('item_assets')
-    .delete()
-    .eq('item_id', productId)
-    .in('asset_type', featureAssetTypes());
-  if (deleteAssetsError) return deleteAssetsError.message;
-
   const achievementRows = buildAchievementRows(productId, state, sectionId);
-  if (achievementRows.length) {
-    const { error } = await supabaseClient.from('item_achievements').insert(achievementRows);
-    if (error) return error.message;
-  }
-
   const assetRows = buildFeatureAssetRows(productId, state);
-  if (assetRows.length) {
-    const { error } = await supabaseClient.from('item_assets').insert(assetRows);
-    if (error) return error.message;
+  try {
+    await replaceStudioReleaseFeatures(productId, featureAssetTypes(), achievementRows, assetRows);
+  } catch (saveError) {
+    return saveError instanceof Error ? saveError.message : 'Could not save release features.';
   }
 
   return '';

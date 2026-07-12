@@ -3,29 +3,13 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { PageShell, HubHero, EmptyMessage } from '@/components/Ui';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { isMissingRelationError } from '@/lib/schemaCompat';
+import { listLegacyCreatorOrders, updateLegacyCreatorOrderStatus, type LegacyMerchOrder } from '@/lib/domain/studioCommerce';
 
-type MerchOrder = {
-  id: string;
-  buyer_id: string;
-  creator_id: string;
-  buyer_name: string;
-  buyer_email: string;
-  delivery_name: string;
-  delivery_address_1: string;
-  delivery_address_2: string | null;
-  delivery_city: string;
-  delivery_region: string;
-  delivery_postal_code: string;
-  delivery_country: string;
-  delivery_notes: string | null;
-  subtotal_cents: number;
-  currency: string;
+type MerchOrder = Omit<LegacyMerchOrder, 'status'> & {
   status: 'paid' | 'in_progress' | 'completed' | 'received';
-  created_at: string;
 };
 
 function formatMoney(cents: number, currency: string) {
@@ -47,24 +31,19 @@ export default function StudioOrdersPage() {
       setProfile(profileResult.profile);
       const profileId = profileResult.profile?.id ?? user.id;
 
-      const result = await supabase
-        .from('merch_orders')
-        .select('*')
-        .eq('creator_id', profileId)
-        .order('created_at', { ascending: false });
-
-      if (result.error) {
+      try {
+        setOrders(await listLegacyCreatorOrders(profileId) as MerchOrder[]);
+      } catch (loadError) {
         setStatusKind('error');
         setStatus(
-          isMissingRelationError(result.error)
+          isMissingRelationError(loadError as { message?: string | null; code?: string | null })
             ? 'Merch orders need the reviewed merch SQL applied in Supabase first.'
-            : result.error.message,
+            : loadError instanceof Error ? loadError.message : 'Could not load orders.',
         );
         setFetching(false);
         return;
       }
 
-      setOrders((result.data as MerchOrder[] | null) ?? []);
       setFetching(false);
     }
 
@@ -72,14 +51,11 @@ export default function StudioOrdersPage() {
   }, [user]);
 
   async function updateOrderStatus(order: MerchOrder, nextStatus: MerchOrder['status']) {
-    const patch: Partial<MerchOrder> & { completed_at?: string; received_at?: string } = { status: nextStatus };
-    if (nextStatus === 'completed') patch.completed_at = new Date().toISOString();
-    if (nextStatus === 'received') patch.received_at = new Date().toISOString();
-
-    const { error } = await supabase.from('merch_orders').update(patch).eq('id', order.id);
-    if (error) {
+    try {
+      await updateLegacyCreatorOrderStatus(order.id, nextStatus);
+    } catch (updateError) {
       setStatusKind('error');
-      setStatus(error.message);
+      setStatus(updateError instanceof Error ? updateError.message : 'Could not update this order.');
       return;
     }
 

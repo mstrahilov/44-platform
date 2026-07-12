@@ -12,13 +12,13 @@ import {
   normalizeFeatureStateForSection,
   saveReleaseFeatures,
 } from '@/components/StudioReleaseFeatures';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import type { ProductCategory } from '@/lib/platform';
 import { currencyForCountry, type MarketMode } from '@/lib/marketPreferences';
 import { getStudioDisplayName, isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { normalizeTaxonomyValue } from '@/lib/taxonomy';
 import { getStudioCatalogSection, type StudioCatalogSectionId } from '@/lib/studioCatalog';
+import { addStudioAssets, addStudioTracks, createStudioItem, listItemCategories } from '@/lib/domain/studioPublishing';
 
 function buildSlug(title: string) {
   const base = normalizeTaxonomyValue(title) || 'item';
@@ -132,12 +132,12 @@ function NewProductContent() {
     async function loadFormData() {
       if (!user) return;
 
-      const [{ data: categoryRows }, profileResult] = await Promise.all([
-        supabase.from('item_categories').select('*').order('sort_order'),
+      const [categoryRows, profileResult] = await Promise.all([
+        listItemCategories(),
         loadStudioProfile(user.id),
       ]);
 
-      const resolvedCategories = (categoryRows as ProductCategory[] | null) ?? [];
+      const resolvedCategories = categoryRows;
       setCategoryId(resolvedCategories.find(category => categoryMatchesSection(category, section.id))?.id ?? resolvedCategories[0]?.id ?? '');
 
       setProfile(profileResult.profile);
@@ -244,21 +244,18 @@ function NewProductContent() {
       sort_order: sortOrder,
     };
 
-    const { data: insertedProduct, error: insertError } = await supabase
-      .from('catalog_items')
-      .insert(insertPayload)
-      .select('id')
-      .single();
-
-    if (insertError) {
+    let insertedProductId: string;
+    try {
+      insertedProductId = await createStudioItem(insertPayload);
+    } catch (insertError) {
       setSaving(false);
-      setError(insertError.message);
+      setError(insertError instanceof Error ? insertError.message : 'Could not create this Item.');
       return;
     }
 
-    if (isMusicProduct && insertedProduct?.id) {
+    if (isMusicProduct) {
       const trackRows = visibleTracks.map((track, index) => ({
-        item_id: insertedProduct.id,
+        item_id: insertedProductId,
         number: index + 1,
         title: track.title.trim(),
         duration_seconds: track.durationSeconds ? Number(track.durationSeconds) : null,
@@ -266,56 +263,54 @@ function NewProductContent() {
         download_url: null,
       }));
 
-      const { error: trackInsertError } = await supabase.from('tracks').insert(trackRows);
-      if (trackInsertError) {
+      try {
+        await addStudioTracks(trackRows);
+      } catch (trackInsertError) {
         setSaving(false);
-        setError(trackInsertError.message);
+        setError(trackInsertError instanceof Error ? trackInsertError.message : 'Could not save tracks.');
         return;
       }
     }
 
-    if (needsDigitalFile && insertedProduct?.id) {
-      const { error: assetInsertError } = await supabase.from('item_assets').insert({
-        item_id: insertedProduct.id,
+    if (needsDigitalFile) {
+      try {
+        await addStudioAssets([{
+        item_id: insertedProductId,
         asset_type: productAssetTypeForSection(section.id),
         title: cleanType || cleanTitle,
         file_url: itemFileUrl.trim(),
         storage_path: null,
         is_downloadable: true,
         sort_order: 0,
-      });
-
-      if (assetInsertError) {
+        }]);
+      } catch (assetInsertError) {
         setSaving(false);
-        setError(assetInsertError.message);
+        setError(assetInsertError instanceof Error ? assetInsertError.message : 'Could not save the digital file.');
         return;
       }
     }
 
-    if (isMerchProduct && insertedProduct?.id && galleryUrls.length > 0) {
-      const { error: galleryInsertError } = await supabase.from('item_assets').insert(
-        galleryUrls.map((url, index) => ({
-          item_id: insertedProduct.id,
+    if (isMerchProduct && galleryUrls.length > 0) {
+      try {
+        await addStudioAssets(galleryUrls.map((url, index) => ({
+          item_id: insertedProductId,
           asset_type: 'gallery_image',
           title: `Gallery Image ${index + 1}`,
           file_url: url,
           storage_path: null,
           is_downloadable: false,
           sort_order: index,
-        })),
-      );
-
-      if (galleryInsertError) {
+        })));
+      } catch (galleryInsertError) {
         setSaving(false);
-        setError(galleryInsertError.message);
+        setError(galleryInsertError instanceof Error ? galleryInsertError.message : 'Could not save gallery images.');
         return;
       }
     }
 
-    if (insertedProduct?.id && section.id === 'music') {
+    if (section.id === 'music') {
       const featureError = await saveReleaseFeatures({
-        supabaseClient: supabase,
-        productId: insertedProduct.id,
+        productId: insertedProductId,
         sectionId: section.id,
         state: featureState,
       });
