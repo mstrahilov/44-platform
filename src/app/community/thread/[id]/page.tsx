@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { PageShell, CenteredMessage } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
@@ -30,12 +29,16 @@ import {
   type SocialPost,
   type SocialReply,
 } from '@/lib/social';
+import {
+  createDiscussionReply,
+  deleteDiscussion,
+  deleteDiscussionReply,
+  loadDiscussionThread,
+  setDiscussionLike,
+  setReplyLike,
+  type ReplyLikeRow,
+} from '@/lib/domain/community';
 
-type ReplyLikeRow = {
-  reply_id: string;
-  profile_id: string;
-  profiles?: SocialLiker | null;
-};
 type ThreadProfileState = {
   userId: string;
   profile: StudioProfile | null;
@@ -67,31 +70,15 @@ export default function CommunityThreadPage() {
     async function loadThread() {
       setLoading(true);
 
-      const selectClause =
-        '*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type)';
-      let post: SocialPost | null = null;
-
-      const { data: slugMatch } = await supabase
-        .from('community_discussions')
-        .select(selectClause)
-        .eq('slug', id)
-        .eq('status', 'published')
-        .maybeSingle();
-
-      post = (slugMatch as SocialPost | null) ?? null;
-
-      if (!post) {
-        const { data: idMatch } = await supabase
-          .from('community_discussions')
-          .select(selectClause)
-          .eq('id', id)
-          .eq('status', 'published')
-          .maybeSingle();
-
-        post = (idMatch as SocialPost | null) ?? null;
+      let result;
+      try {
+        result = await loadDiscussionThread(id);
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : 'Could not load this thread.');
+        setLoading(false);
+        return;
       }
-
-      if (!post) {
+      if (!result) {
         setThread(null);
         setReplies([]);
         setLikes([]);
@@ -100,36 +87,10 @@ export default function CommunityThreadPage() {
         return;
       }
 
-      const [{ data: replyRows }, { data: likeRows }] = await Promise.all([
-        supabase
-          .from('community_discussion_replies')
-          .select('*, authors:profiles!author_id(id, slug, display_name, username, avatar_url)')
-          .eq('post_id', post.id)
-          .eq('status', 'published')
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('community_discussion_likes')
-          .select('post_id, profile_id, profiles:profiles!profile_id(id, display_name, username, avatar_url)')
-          .eq('post_id', post.id)
-          .order('created_at', { ascending: false }),
-      ]);
-
-      const replyList = (replyRows as SocialReply[] | null) ?? [];
-      const replyIds = replyList.map(r => r.id);
-      let replyLikeRows: ReplyLikeRow[] = [];
-      if (replyIds.length > 0) {
-        const { data: rlRows } = await supabase
-          .from('community_reply_likes')
-          .select('reply_id, profile_id, profiles:profiles!profile_id(id, display_name, username, avatar_url)')
-          .in('reply_id', replyIds)
-          .order('created_at', { ascending: false });
-        replyLikeRows = (rlRows as ReplyLikeRow[] | null) ?? [];
-      }
-
-      setThread(post);
-      setReplies(replyList);
-      setLikes((likeRows as LikeRow[] | null) ?? []);
-      setReplyLikes(replyLikeRows);
+      setThread(result.post);
+      setReplies(result.replies);
+      setLikes(result.likes);
+      setReplyLikes(result.replyLikes);
       setLoading(false);
     }
 
@@ -243,29 +204,20 @@ export default function CommunityThreadPage() {
     setError('');
 
     if (likedByUser) {
-      const { error: deleteError } = await supabase
-        .from('community_discussion_likes')
-        .delete()
-        .eq('post_id', thread.id)
-        .eq('profile_id', user.id);
-
-      if (deleteError) {
-        setError(deleteError.message);
-      } else {
+      try {
+        await setDiscussionLike(thread.id, user.id, false);
         setLikes(current => current.filter(entry => !(entry.post_id === thread.id && entry.profile_id === user.id)));
-      }
+      } catch (likeError) { setError(likeError instanceof Error ? likeError.message : 'Could not update this like.'); }
     } else {
-      const { error: insertError } = await supabase.from('community_discussion_likes').insert({ post_id: thread.id, profile_id: user.id });
-      if (insertError) {
-        setError(insertError.message);
-      } else {
+      try {
+        await setDiscussionLike(thread.id, user.id, true);
         const nextLike: LikeRow = {
           post_id: thread.id,
           profile_id: user.id,
           profiles: profile ? { id: profile.id, display_name: profile.display_name, username: profile.username, avatar_url: profile.avatar_url } : null,
         };
         setLikes(current => [nextLike, ...current]);
-      }
+      } catch (likeError) { setError(likeError instanceof Error ? likeError.message : 'Could not update this like.'); }
     }
 
     setLiking(false);
@@ -286,25 +238,20 @@ export default function CommunityThreadPage() {
 
     const alreadyLiked = replyLikedByUser.has(reply.id);
     if (alreadyLiked) {
-      const { error: deleteError } = await supabase
-        .from('community_reply_likes')
-        .delete()
-        .eq('reply_id', reply.id)
-        .eq('profile_id', user.id);
-      if (deleteError) setError(deleteError.message);
-      else setReplyLikes(current => current.filter(entry => !(entry.reply_id === reply.id && entry.profile_id === user.id)));
+      try {
+        await setReplyLike(reply.id, user.id, false);
+        setReplyLikes(current => current.filter(entry => !(entry.reply_id === reply.id && entry.profile_id === user.id)));
+      } catch (likeError) { setError(likeError instanceof Error ? likeError.message : 'Could not update this reply like.'); }
     } else {
-      const { error: insertError } = await supabase.from('community_reply_likes').insert({ reply_id: reply.id, profile_id: user.id });
-      if (insertError) {
-        setError(insertError.message);
-      } else {
+      try {
+        await setReplyLike(reply.id, user.id, true);
         const nextLike: ReplyLikeRow = {
           reply_id: reply.id,
           profile_id: user.id,
           profiles: profile ? { id: profile.id, display_name: profile.display_name, username: profile.username, avatar_url: profile.avatar_url } : null,
         };
         setReplyLikes(current => [nextLike, ...current]);
-      }
+      } catch (likeError) { setError(likeError instanceof Error ? likeError.message : 'Could not update this reply like.'); }
     }
 
     setReplyLiking('');
@@ -313,24 +260,12 @@ export default function CommunityThreadPage() {
   async function insertReply(body: string, parentReplyId: string | null) {
     if (!thread || !user) return null;
     const trimmedBody = body.trim();
-    const payload = {
-      post_id: thread.id,
-      author_id: user.id,
-      parent_reply_id: parentReplyId,
-      body: trimmedBody,
-    };
-    const { data, error: insertError } = await supabase
-      .from('community_discussion_replies')
-      .insert(payload)
-      .select('*, authors:profiles!author_id(id, slug, display_name, username, avatar_url)')
-      .single();
-    if (insertError) {
-      setError(insertError.message);
+    try {
+      return await createDiscussionReply({ postId: thread.id, authorId: user.id, parentReplyId, body: trimmedBody });
+    } catch (insertError) {
+      setError(insertError instanceof Error ? insertError.message : 'Could not create this reply.');
       return null;
     }
-    const createdReply = data as SocialReply;
-
-    return createdReply;
   }
 
   async function submitReply(event: React.FormEvent<HTMLFormElement>) {
@@ -372,9 +307,10 @@ export default function CommunityThreadPage() {
   async function deleteThread() {
     if (!thread || !user || !isThreadAuthor) return;
     if (!window.confirm('Delete this post? This cannot be undone.')) return;
-    const { error: deleteError } = await supabase.from('content_entries').delete().eq('id', thread.id);
-    if (deleteError) {
-      setError(deleteError.message);
+    try {
+      await deleteDiscussion(thread.id, user.id);
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Could not delete this thread.');
       return;
     }
     router.push('/community');
@@ -383,9 +319,10 @@ export default function CommunityThreadPage() {
   async function deleteReply(reply: SocialReply) {
     if (!user || reply.author_id !== user.id) return;
     if (!window.confirm('Delete this reply? This cannot be undone.')) return;
-    const { error: deleteError } = await supabase.from('content_replies').delete().eq('id', reply.id);
-    if (deleteError) {
-      setError(deleteError.message);
+    try {
+      await deleteDiscussionReply(reply.id, user.id);
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Could not delete this reply.');
       return;
     }
     setReplies(current => current.filter(r => r.id !== reply.id));

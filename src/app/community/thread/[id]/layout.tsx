@@ -1,30 +1,11 @@
 import type { ReactNode } from 'react';
 import { buildPageMetadata, conciseDescription } from '@/lib/metadata';
-import { supabase } from '@/lib/supabase';
 import { authorDisplayName, type SocialPost } from '@/lib/social';
+import { getDiscussion } from '@/lib/domain/community';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const select = 'id, slug, title, body, creators:profiles!author_id(display_name, username, slug)';
-  let post: SocialPost | null = null;
-
-  const { data: slugMatch } = await supabase
-    .from('community_discussions')
-    .select(select)
-    .eq('slug', id)
-    .eq('status', 'published')
-    .maybeSingle();
-  post = (slugMatch as SocialPost | null) ?? null;
-
-  if (!post) {
-    const { data: idMatch } = await supabase
-      .from('community_discussions')
-      .select(select)
-      .eq('id', id)
-      .eq('status', 'published')
-      .maybeSingle();
-    post = (idMatch as SocialPost | null) ?? null;
-  }
+  const post = await getDiscussion(id) as SocialPost | null;
 
   if (!post) {
     return buildPageMetadata({

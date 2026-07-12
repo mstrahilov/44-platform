@@ -5,11 +5,11 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageShell } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { normalizeTaxonomyValue } from '@/lib/taxonomy';
 import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
+import { createDiscussion } from '@/lib/domain/community';
 
 function buildPostTitle(body: string) {
   const cleanBody = body.trim().replace(/\s+/g, ' ');
@@ -68,21 +68,15 @@ function NewCommunityThreadContent() {
     setError('');
 
     const slug = buildSlug(body);
-    const { data, error: insertError } = await supabase.rpc('create_content_discussion', {
-      discussion_title: buildPostTitle(body),
-      discussion_body: body.trim(),
-      discussion_slug: slug,
-      target_item_id: undefined,
-    });
-
-    if (insertError) {
+    try {
+      const created = await createDiscussion({ title: buildPostTitle(body), body: body.trim(), slug });
       setSaving(false);
-      setError(insertError.message);
+      router.push(`/community/thread/${created.slug || created.id}`);
+    } catch (insertError) {
+      setSaving(false);
+      setError(insertError instanceof Error ? insertError.message : 'Could not create this post.');
       return;
     }
-
-    setSaving(false);
-    router.push(`/community/thread/${slug || data}`);
   }
 
   if (loading || !user) {

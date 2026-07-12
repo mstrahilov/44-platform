@@ -2,7 +2,6 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 import { HubHero, PageShell } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
 import {
@@ -38,16 +37,20 @@ import {
 import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { useAuth } from '@/lib/useAuth';
-import { countById, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type ReplyEngagerRow, type SocialPost } from '@/lib/social';
+import { countById, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type SocialPost } from '@/lib/social';
 import { normalizeTaxonomyValue } from '@/lib/taxonomy';
+import {
+  createDiscussion,
+  deleteDiscussion,
+  listFollowedProfileIds,
+  loadCommunityFeed,
+  searchCommunityMentions,
+  setDiscussionLike,
+  type CommunityMentionProfile,
+} from '@/lib/domain/community';
 
 type PostLike = LikeRow;
-type MentionProfile = {
-  id: string;
-  username: string | null;
-  display_name: string | null;
-  avatar_url: string | null;
-};
+type MentionProfile = CommunityMentionProfile;
 type CommunityProfileState = {
   userId: string;
   profile: StudioProfile | null;
@@ -205,33 +208,15 @@ function CommunityPageContent() {
 
   useEffect(() => {
     async function fetchCommunity() {
-      const postResult = await supabase
-        .from('community_discussions')
-        .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type, country_code, home_country_code)')
-        .eq('status', 'published')
-        .order('created_at', { ascending: false })
-        .limit(80);
-      if (postResult.error) setError(postResult.error.message);
-      const nextPosts = (postResult.data as SocialPost[] | null) ?? [];
-      setPosts(nextPosts);
-      const postIds = nextPosts.map(post => post.id);
-      const [replyResult, likeResult] = postIds.length > 0 ? await Promise.all([
-        supabase
-          .from('community_discussion_replies')
-          .select('post_id, author_id, authors:profiles!author_id(id, display_name, username, avatar_url)')
-          .in('post_id', postIds)
-          .eq('status', 'published')
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('community_discussion_likes')
-          .select('post_id, profile_id, profiles:profiles!profile_id(id, display_name, username, avatar_url)')
-          .in('post_id', postIds)
-          .order('created_at', { ascending: false }),
-      ]) : [{ data: [], error: null }, { data: [], error: null }];
-      const replies = (replyResult.data as ReplyEngagerRow[] | null) ?? [];
-      setReplyCounts(countById(replies, 'post_id'));
-      setRepliersMap(repliersByPost(replies));
-      setLikes((likeResult.data as PostLike[] | null) ?? []);
+      try {
+        const result = await loadCommunityFeed();
+        setPosts(result.posts);
+        setReplyCounts(countById(result.replies, 'post_id'));
+        setRepliersMap(repliersByPost(result.replies));
+        setLikes(result.likes);
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : 'Could not load Community posts.');
+      }
       setPostsLoading(false);
     }
     fetchCommunity();
@@ -266,21 +251,15 @@ function CommunityPageContent() {
     loadStudioProfile(activeUserId).then(result => {
       if (alive) setProfileState({ userId: activeUserId, profile: result.profile });
     });
-    supabase
-      .from('profile_follows')
-      .select('following_id')
-      .eq('follower_id', activeUserId)
-      .then(result => {
+    listFollowedProfileIds(activeUserId)
+      .then(ids => {
         if (!alive) return;
-        if (result.error) {
-          setError(result.error.message);
-          setFollowingState({ userId: activeUserId, ids: new Set() });
-          return;
-        }
-        setFollowingState({
-          userId: activeUserId,
-          ids: new Set(((result.data ?? []) as Array<{ following_id: string }>).map(row => row.following_id)),
-        });
+        setFollowingState({ userId: activeUserId, ids: new Set(ids) });
+      })
+      .catch(followError => {
+        if (!alive) return;
+        setError(followError instanceof Error ? followError.message : 'Could not load followed profiles.');
+        setFollowingState({ userId: activeUserId, ids: new Set() });
       });
     return () => { alive = false; };
   }, [userId]);
@@ -288,19 +267,12 @@ function CommunityPageContent() {
   useEffect(() => {
     if (!activeMentionQuery) return;
     let alive = true;
-    supabase
-      .from('profiles')
-      .select('id, username, display_name, avatar_url')
-      .ilike('username', `${activeMentionQuery}%`)
-      .limit(6)
-      .then(result => {
+    searchCommunityMentions(activeMentionQuery)
+      .then(rows => {
         if (!alive) return;
-        if (result.error) {
-          setMentionOptions([]);
-          return;
-        }
-        setMentionOptions((result.data as MentionProfile[] | null) ?? []);
-      });
+        setMentionOptions(rows);
+      })
+      .catch(() => { if (alive) setMentionOptions([]); });
     return () => { alive = false; };
   }, [activeMentionQuery]);
 
@@ -487,25 +459,14 @@ function CommunityPageContent() {
 
     const finalBody = forcedTopic ? composeLockedBody(body, forcedTopic).trim() : body;
     const slug = buildSlug(finalBody);
-    const { data: createdId, error: insertError } = await supabase.rpc('create_content_discussion', {
-      discussion_title: buildPostTitle(finalBody),
-      discussion_body: finalBody,
-      discussion_slug: slug,
-      target_item_id: undefined,
-    });
-
-    if (insertError) {
-      setError(insertError.message);
+    try {
+      const created = await createDiscussion({ title: buildPostTitle(finalBody), body: finalBody, slug });
+      setPosts(current => [created, ...current]);
+    } catch (insertError) {
+      setError(insertError instanceof Error ? insertError.message : 'Could not create this post.');
       setPosting(false);
       return;
     }
-
-    const { data } = await supabase
-      .from('community_discussions')
-      .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type, country_code, home_country_code)')
-      .eq('id', createdId)
-      .single();
-    if (data) setPosts(current => [data as SocialPost, ...current]);
     setPostBody('');
     setPostComposerOpen(false);
     setPosting(false);
@@ -717,22 +678,20 @@ function CommunityPageContent() {
     setError('');
     const liked = likedIds.has(post.id);
     if (liked) {
-      const { error: deleteError } = await supabase
-        .from('community_discussion_likes')
-        .delete()
-        .eq('post_id', post.id)
-        .eq('profile_id', user.id);
-      if (deleteError) setError(deleteError.message);
-      else setLikes(current => current.filter(like => !(like.post_id === post.id && like.profile_id === user.id)));
+      try {
+        await setDiscussionLike(post.id, user.id, false);
+        setLikes(current => current.filter(like => !(like.post_id === post.id && like.profile_id === user.id)));
+      } catch (likeError) { setError(likeError instanceof Error ? likeError.message : 'Could not update this like.'); }
     } else {
       const nextLike: PostLike = {
         post_id: post.id,
         profile_id: user.id,
         profiles: profile ? { id: profile.id, display_name: profile.display_name, username: profile.username, avatar_url: profile.avatar_url } : null,
       };
-      const { error: insertError } = await supabase.from('community_discussion_likes').insert({ post_id: post.id, profile_id: user.id });
-      if (insertError) setError(insertError.message);
-      else setLikes(current => [...current, nextLike]);
+      try {
+        await setDiscussionLike(post.id, user.id, true);
+        setLikes(current => [...current, nextLike]);
+      } catch (likeError) { setError(likeError instanceof Error ? likeError.message : 'Could not update this like.'); }
     }
     setLikingId('');
   }
@@ -740,9 +699,10 @@ function CommunityPageContent() {
   async function deletePost(post: SocialPost) {
     if (!user || post.author_id !== user.id) return;
     if (!window.confirm('Delete this post? This cannot be undone.')) return;
-    const { error: deleteError } = await supabase.from('content_entries').delete().eq('id', post.id);
-    if (deleteError) {
-      setError(deleteError.message);
+    try {
+      await deleteDiscussion(post.id, user.id);
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Could not delete this post.');
       return;
     }
     setPosts(current => current.filter(p => p.id !== post.id));
