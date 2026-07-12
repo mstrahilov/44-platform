@@ -35,10 +35,10 @@ Resources and the old Services/Projects workflow are removed. Inbox and standalo
 
 Language rules:
 
-- User-facing copy says Store, Library, Community, release, item, music, book, sample pack, merch, review, creator update, bonus content, earnings, and orders.
-- UI copy should not use "Browse" or "Collection" as the visible product model.
+- User-facing copy says Browse, Library, Community, release, item, music, book, sample pack, apparel, merch, review, creator update, bonus content, earnings, and orders. Browse is the public discovery label; `/store` and the Store domain remain the internal route and architecture names.
+- UI copy should not use "Collection" as the visible Library model.
 - **Item** is the permanent domain noun. The canonical destination table is `catalog_items`, its application type is `Item`, and its universal foreign key is `item_id`. The current `products` name is migrated without changing UUIDs. User-facing copy should use "items" or format-specific nouns.
-- Services are excluded from the v1 polished Store surface.
+- Services are excluded from the v1 polished Browse surface.
 
 ---
 
@@ -315,7 +315,8 @@ Known Supabase state from the launch cleanup:
 - The July 11 post-cutover probes verified 49 Items, 248 tracks, 32 Library entries, 14 profiles, 49 Item owners, 213 capability registrations, 5 Item categories, 24 posts, 248 Radio playlist entries, and 8 achievement templates.
 - The canonical track ordering column is `tracks.number`; `tracks.track_number` is absent in the live schema and should not be selected by app code.
 - Public Store discovery and creator-profile Music/Books tabs sort by release year descending, then creator profile name ascending. Studio release management is intentionally independent and sorts by `created_at` descending (order added).
-- Store discovery uses explicit category, price, tag, capability, and text filters over the complete published catalog. Its only launch shelves are rule-based: the curated `featured` flag, streaming-capable music for `Free to Listen`, and the documented public release order for `Recently Released`; engagement is never an undisclosed ranking input.
+- Browse discovery uses explicit category, price, category-relevant tag, achievement-feature, and text filters over the complete published catalog. Its only launch shelves are rule-based: the curated `featured` flag, streaming-capable music for `Free to Listen`, and the documented public release order for `Recently Released`; engagement is never an undisclosed ranking input.
+- Browse launch tags are shared with Studio publishing: Music uses Album, EP, Single, Mixtape, and Live Set; Books uses Novel, Artbook, and Zine; Apparel uses Apparel, Accessories, Physical Music, and Goods & Collectibles; Assets uses Sample Packs, Remix Packs, and Game Assets. The tag control appears only after its category is active.
 - Anonymous access to the dormant `services` table returns zero rows; its data remains available only through admin/service-role access.
 - `supabase db push --linked --dry-run` reports the remote database is up to date.
 

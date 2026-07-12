@@ -4,7 +4,7 @@ import { PageShell } from '@/components/Ui';
 const quickApps = [
   { label: 'Music', meta: 'Library and store', href: '/music' },
   { label: 'Community', meta: 'Posts, friends, replies', href: '/community' },
-  { label: 'Store', meta: 'Releases and creator items', href: '/store' },
+  { label: 'Browse', meta: 'Releases and creator items', href: '/store' },
   { label: 'Library', meta: 'Saved and owned items', href: '/library' },
 ];
 

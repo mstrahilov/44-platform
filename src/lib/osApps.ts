@@ -90,7 +90,7 @@ export const OS_APPS: OSApp[] = [
   },
   {
     id: 'store',
-    label: 'Home',
+    label: 'Browse',
     description: 'Find releases, books, assets, and merch from independent creators.',
     href: '/',
     iconClass: 'os-icon-store',
@@ -98,7 +98,7 @@ export const OS_APPS: OSApp[] = [
     children: [
       { id: 'music', label: 'Music', href: '/store/music', iconClass: 'os-icon-music' },
       { id: 'books', label: 'Books', href: '/store/books', iconClass: 'os-icon-books' },
-      { id: 'merch', label: 'Merch', href: '/store/merch', iconClass: 'os-icon-merch' },
+      { id: 'merch', label: 'Apparel', href: '/store/merch', iconClass: 'os-icon-merch' },
       { id: 'assets', label: 'Assets', href: '/store/assets', iconClass: 'os-icon-assets' },
     ],
   },

@@ -19,6 +19,7 @@ import { getStudioDisplayName, isCreatorProfile, loadStudioProfile, type StudioP
 import { normalizeTaxonomyValue } from '@/lib/taxonomy';
 import { getStudioCatalogSection, type StudioCatalogSectionId } from '@/lib/studioCatalog';
 import { addStudioAssets, addStudioTracks, createStudioItem, listItemCategories } from '@/lib/domain/studioPublishing';
+import { storeTagsForStudioSection } from '@/lib/storeTaxonomy';
 
 function buildSlug(title: string) {
   const base = normalizeTaxonomyValue(title) || 'item';
@@ -105,6 +106,7 @@ function NewProductContent() {
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [productType, setProductType] = useState(section.typeOptions[0]);
+  const [storeTag, setStoreTag] = useState(() => storeTagsForStudioSection(section.id)[0] ?? '');
   const [price, setPrice] = useState('');
   const [marketMode, setMarketMode] = useState<MarketMode>('global');
   const [localPrice, setLocalPrice] = useState('');
@@ -222,6 +224,7 @@ function NewProductContent() {
       title: cleanTitle,
       creator: creatorName,
       item_type: cleanType,
+      tags: [storeTag].filter(Boolean),
       short_description: null,
       long_description: '',
       price_cents: merchUsesLocalOnlyPricing ? 0 : priceCents,
@@ -373,6 +376,13 @@ function NewProductContent() {
                   </label>
                 ) : null}
               </div>
+
+              <label className="dashboard-field">
+                <div className="dashboard-field-label">Browse Tag</div>
+                <select className="os-input-field" value={storeTag} onChange={event => setStoreTag(event.target.value)}>
+                  {storeTagsForStudioSection(section.id).map(tag => <option key={tag} value={tag}>{tag}</option>)}
+                </select>
+              </label>
 
               {isMerchProduct ? (
                 <div className="settings-field">

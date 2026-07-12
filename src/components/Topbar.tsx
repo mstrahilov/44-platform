@@ -73,7 +73,7 @@ type NotificationState = {
 function labelForPath(path: string | null | undefined) {
   if (!path) return null;
   if (path.startsWith('/library')) return 'Library';
-  if (path.startsWith('/browse') || path.startsWith('/store') || path.startsWith('/product') || path.startsWith('/cart')) return 'Store';
+  if (path.startsWith('/browse') || path.startsWith('/store') || path.startsWith('/product') || path.startsWith('/cart')) return 'Browse';
   if (path.startsWith('/community')) return 'Community';
   if (path.startsWith('/studio') || path.startsWith('/dashboard')) return 'Studio';
   if (path.startsWith('/profile')) return 'Profile';
@@ -81,7 +81,7 @@ function labelForPath(path: string | null | undefined) {
   if (path.startsWith('/books')) return 'Books';
   if (path.startsWith('/assets')) return 'Assets';
   if (path.startsWith('/merch') || path.startsWith('/shop')) return 'Merch';
-  if (path === '/' || path.startsWith('/home')) return 'Store';
+  if (path === '/' || path.startsWith('/home')) return 'Browse';
   return null;
 }
 

@@ -55,8 +55,8 @@ const ARTICLES: SupportArticle[] = [
     question: 'Customize the Dock',
     answer: [
       'Open the Appearance section in Settings to switch between Full and Compact Dock mode and select your landing app.',
-      'Library, Store, Community, Radio, Support, and Settings are the signed-in Dock surfaces.',
-      'Signed-out visitors see Store, Community, Radio, Support, and Log In. Search lives in the desktop topbar and mobile Dock.',
+      'Library, Browse, Community, Radio, Support, and Settings are the signed-in Dock surfaces.',
+      'Signed-out visitors see Browse, Community, Radio, Support, and Log In. Search lives in the desktop topbar and mobile Dock.',
     ],
     actions: [{ label: 'Open Dock Settings', href: '/settings#dock' }],
   },

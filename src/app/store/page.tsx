@@ -2,7 +2,7 @@ import StoreApp from '@/components/StoreApp';
 import { buildPageMetadata } from '@/lib/metadata';
 
 export const metadata = buildPageMetadata({
-  title: 'Store',
+  title: 'Browse',
   description: 'Find releases, books, assets, and merch from independent creators on 44OS.',
   path: '/store',
 });

@@ -31,6 +31,7 @@ import {
   syncStudioTracks,
   updateStudioItem,
 } from '@/lib/domain/studioPublishing';
+import { storeTagsForStudioSection } from '@/lib/storeTaxonomy';
 
 function formatPriceInput(value: string) {
   const digits = value.replace(/\D/g, '').slice(0, 9);
@@ -95,6 +96,7 @@ export default function EditProductPage() {
   const [title, setTitle] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [productType, setProductType] = useState('');
+  const [storeTag, setStoreTag] = useState('');
   const [price, setPrice] = useState('');
   const [marketMode, setMarketMode] = useState<MarketMode>('global');
   const [localPrice, setLocalPrice] = useState('');
@@ -156,11 +158,13 @@ export default function EditProductPage() {
       const { item: product, tracks: trackRows, assets: assetRows, achievements: achievementRows } = editor;
 
       const productSection = getStudioCatalogSectionForProduct(product);
+      const allowedStoreTags = storeTagsForStudioSection(productSection.id);
       const featureAssets = assetRows.filter(asset => featureAssetTypes().includes(asset.asset_type ?? ''));
 
       setTitle(product.title ?? '');
       setCategoryId(product.item_category_id ?? '');
       setProductType(product.item_type ?? '');
+      setStoreTag(product.tags?.find(tag => allowedStoreTags.some(option => option.toLowerCase() === tag.toLowerCase())) ?? allowedStoreTags[0] ?? '');
       setPrice(product.price_cents ? (product.price_cents / 100).toFixed(2) : '');
       setMarketMode(normalizeMarketMode(product.market_mode));
       setLocalPrice(product.local_price_cents ? (product.local_price_cents / 100).toFixed(2) : '');
@@ -296,6 +300,7 @@ export default function EditProductPage() {
       title: title.trim(),
       item_category_id: categoryId,
       item_type: productType.trim(),
+      tags: [storeTag].filter(Boolean),
       price_cents: merchUsesLocalOnlyPricing ? 0 : priceCents,
       market_mode: isMerchProduct ? (merchUsesLocalOnlyPricing ? 'global_plus_local' : marketMode) : marketMode,
       local_price_cents: isMerchProduct ? (localPriceCents ?? priceCents) : (marketMode === 'global' ? null : localPriceCents),
@@ -412,7 +417,7 @@ export default function EditProductPage() {
   return (
     <PageShell>
       <div className="dashboard-editor">
-        <HubHero title={section.editTitle} copy={`Update this ${section.itemLabel} for Store and Library.`} />
+        <HubHero title={section.editTitle} copy={`Update this ${section.itemLabel} for Browse and Library.`} />
         <div className="dashboard-section">
           <form onSubmit={handleSubmit} className="dashboard-form">
             <section className="dashboard-form-section">
@@ -440,6 +445,13 @@ export default function EditProductPage() {
                 </label>
               ) : null}
             </div>
+
+            <label className="dashboard-field">
+              <div className="dashboard-field-label">Browse Tag</div>
+              <select className="os-input-field" value={storeTag} onChange={event => setStoreTag(event.target.value)}>
+                {storeTagsForStudioSection(section.id).map(tag => <option key={tag} value={tag}>{tag}</option>)}
+              </select>
+            </label>
 
             {isMerchProduct ? (
               <div className="settings-field">

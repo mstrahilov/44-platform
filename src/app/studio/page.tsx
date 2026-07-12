@@ -88,7 +88,7 @@ export default function StudioPage() {
             </p>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <Link href="/profile" className="os-button os-button-primary">Open Public Profile</Link>
-              <Link href="/store" className="os-button os-button-ghost">Back to Store</Link>
+              <Link href="/store" className="os-button os-button-ghost">Back to Browse</Link>
             </div>
           </GlassPanel>
         </div>

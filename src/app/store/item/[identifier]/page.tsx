@@ -8,7 +8,7 @@ export async function generateMetadata({ params }: { params: Promise<{ identifie
   const product = await getCatalogItem(identifier) as Product | null;
   if (!product) {
     return buildPageMetadata({
-      title: 'Store Item',
+      title: 'Browse Item',
       description: 'View independent creative work on 44OS.',
       path: `/store/item/${identifier}`,
     });
@@ -25,5 +25,5 @@ export async function generateMetadata({ params }: { params: Promise<{ identifie
 
 export default async function StoreItemPage({ params }: { params: Promise<{ identifier: string }> }) {
   const { identifier } = await params;
-  return <ProductStoreDetail identifier={identifier} backHref="/store" backLabel="Store" />;
+  return <ProductStoreDetail identifier={identifier} backHref="/store" backLabel="Browse" />;
 }

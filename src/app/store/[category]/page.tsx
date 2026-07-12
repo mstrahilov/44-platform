@@ -17,14 +17,14 @@ const CATEGORY_METADATA: Record<Exclude<StoreCategory, 'all'>, { title: string; 
     description: 'Explore assets, remix stems, presets, and creative tools from independent creators on 44OS.',
   },
   merch: {
-    title: 'Merch',
+    title: 'Apparel',
     description: 'Explore apparel, accessories, and physical goods from independent creators on 44OS.',
   },
 };
 
 export async function generateMetadata({ params }: { params: Promise<{ category: string }> }) {
   const { category } = await params;
-  if (!isStoreCategory(category) || category === 'all') return buildPageMetadata({ title: 'Store', path: '/store' });
+  if (!isStoreCategory(category) || category === 'all') return buildPageMetadata({ title: 'Browse', path: '/store' });
   return buildPageMetadata({
     ...CATEGORY_METADATA[category],
     path: `/store/${category}`,
