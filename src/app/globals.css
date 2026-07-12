@@ -4356,6 +4356,12 @@ body.theme-dark .os-category-icon img {
   grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
 }
 
+.library-item-groups {
+  display: grid;
+  gap: var(--os-space-5);
+  min-width: 0;
+}
+
 .app-shelf {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -7474,7 +7480,7 @@ body.theme-light .studio-achievement-icon {
 }
 
 .view-album-cover-physical {
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 3 / 4;
   height: auto;
 }
 
@@ -14575,6 +14581,18 @@ body:is(.theme-light, .theme-dark) .view-album-actions .os-button.os-button-acti
 /* Final mobile containment and hierarchy rules. These intentionally live after
    the legacy responsive layers so every app shares one predictable viewport. */
 @media (max-width: 768px) {
+  .store-app-page .hub-section-title {
+    font-size: 21px;
+    line-height: 1.12;
+  }
+
+  .view-album-cover-physical,
+  .library-detail-header .view-album-cover-physical {
+    width: min(60vw, 240px);
+    height: auto;
+    aspect-ratio: 3 / 4;
+  }
+
   .social-profile-identity {
     width: 100%;
     display: grid;

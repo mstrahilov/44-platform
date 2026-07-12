@@ -350,7 +350,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
 
     return (
       <PageShell>
-        <main className="app-page">
+        <main className="app-page store-app-page">
           {storeHeader}
           {loading ? (
             <EmptyMessage>Loading...</EmptyMessage>
@@ -408,7 +408,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
 
   return (
     <PageShell>
-      <main className="app-page">
+      <main className="app-page store-app-page">
         {storeHeader}
         {loading ? (
           <EmptyMessage>Loading...</EmptyMessage>

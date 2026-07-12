@@ -105,9 +105,9 @@ export function ProductCard({ product, owned: ownedProp }: { product: Product; o
   const cart = useCart();
   const href = productBrowseHref(product);
   const image = product.cover_url || product.hero_url;
-  const shape = 'square';
   const subtitle = getProductTileSubtitle(product);
   const experience = getProductExperience(product);
+  const shape = experience === 'physical' ? 'portrait' : experience === 'book' ? 'book' : 'square';
   const [owned, setOwned] = useState(Boolean(ownedProp));
 
   useEffect(() => {

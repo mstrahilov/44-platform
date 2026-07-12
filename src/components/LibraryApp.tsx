@@ -103,6 +103,13 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
     });
   }, [activeFilter, query, rows]);
 
+  const visibleRowGroups = useMemo(() => {
+    if (activeFilter !== 'all') return [visibleRows];
+    return (['music', 'book', 'asset'] as ProductExperience[])
+      .map(experience => visibleRows.filter(row => getProductExperience(row.products!) === experience))
+      .filter(group => group.length > 0);
+  }, [activeFilter, visibleRows]);
+
   if (authLoading) {
     return <PageShell><CenteredMessage>Loading...</CenteredMessage></PageShell>;
   }
@@ -169,9 +176,13 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
         ) : visibleRows.length === 0 ? (
           <EmptyMessage>{query ? 'No Library items match your search.' : activeFilter === 'all' ? 'Your library is empty.' : `No ${FILTER_LABELS[activeFilter].toLowerCase()} in your Library.`}</EmptyMessage>
         ) : (
-          <div className="app-grid">
-            {visibleRows.map(row => (
-              <LibraryCard key={row.id} row={row} onRemove={removeLibraryRow} />
+          <div className="library-item-groups">
+            {visibleRowGroups.map((group, index) => (
+              <div className="app-grid" key={`${getProductExperience(group[0].products!)}-${index}`}>
+                {group.map(row => (
+                  <LibraryCard key={row.id} row={row} onRemove={removeLibraryRow} />
+                ))}
+              </div>
             ))}
           </div>
         )}
@@ -215,7 +226,7 @@ function LibraryCard({ row, onRemove }: { row: LibraryRow; onRemove: (row: Libra
 
   return (
     <Link className="product-tile" href={href} onContextMenu={event => openContextMenu(event, entries)}>
-      <span className="product-tile-art product-tile-art-square">
+      <span className={`product-tile-art product-tile-art-${experience === 'book' ? 'book' : 'square'}`}>
         {image && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={image} alt="" loading="lazy" decoding="async" />
