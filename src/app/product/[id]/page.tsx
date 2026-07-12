@@ -259,10 +259,6 @@ export function ProductStoreDetail({
     }));
   }
 
-  function playReleasePreview() {
-    if (playableTracks.length > 0) toggleTrack(playableTracks, 0);
-  }
-
   const primaryActions: ProductDetailAction[] = resolveStoreActions({
     product,
     userSignedIn: Boolean(user),
@@ -271,7 +267,6 @@ export function ProductStoreDetail({
     hasDownloadUnlock,
     libraryHref,
     cartHasItem: cart.has(product.id),
-    onPlay: playReleasePreview,
     onAddToLibrary: addToLibrary,
     onAddToCart: addProductToCart,
   });
@@ -437,7 +432,6 @@ function resolveStoreActions({
   hasDownloadUnlock,
   libraryHref,
   cartHasItem,
-  onPlay,
   onAddToLibrary,
   onAddToCart,
 }: {
@@ -448,7 +442,6 @@ function resolveStoreActions({
   hasDownloadUnlock: boolean;
   libraryHref: string;
   cartHasItem: boolean;
-  onPlay: () => void;
   onAddToLibrary: () => void;
   onAddToCart: () => void;
 }) {
@@ -456,7 +449,6 @@ function resolveStoreActions({
   const free = isFreeLibraryClaim(product);
   if (experience === 'music') {
     return [
-      { label: 'Play', onClick: onPlay },
       owned
         ? { label: 'View in Library', href: libraryHref, secondary: true }
         : userSignedIn
