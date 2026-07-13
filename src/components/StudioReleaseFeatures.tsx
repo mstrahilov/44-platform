@@ -1,7 +1,6 @@
 'use client';
 
 import { AchievementIconGlyph } from '@/components/AchievementIconGlyph';
-import { UploadField } from '@/components/UploadField';
 import { SectionHeader } from '@/components/Ui';
 import type { StudioCatalogSectionId } from '@/lib/studioCatalog';
 import { getAchievementIconPath } from '@/lib/achievementIcons';
@@ -240,9 +239,10 @@ export async function saveReleaseFeatures({
   if (validationError) return validationError;
 
   const achievementRows = buildAchievementRows(productId, state, sectionId);
-  const assetRows = buildFeatureAssetRows(productId, state);
   try {
-    await replaceStudioReleaseFeatures(productId, featureAssetTypes(), achievementRows, assetRows);
+    // Bonus Content editing is hidden during trusted testing. Preserve any
+    // existing protected bonus assets while saving achievement selections.
+    await replaceStudioReleaseFeatures(productId, [], achievementRows, []);
   } catch (saveError) {
     return saveError instanceof Error ? saveError.message : 'Could not save release features.';
   }
@@ -252,12 +252,10 @@ export async function saveReleaseFeatures({
 
 export function StudioReleaseFeatures({
   sectionId,
-  userId,
   state,
   onChange,
 }: {
   sectionId: StudioCatalogSectionId;
-  userId: string;
   state: ReleaseFeatureState;
   onChange: (next: ReleaseFeatureState) => void;
 }) {
@@ -293,11 +291,6 @@ export function StudioReleaseFeatures({
         item.code === code ? { ...item, enabled: !item.enabled } : item.code === OVERACHIEVER_CODE ? { ...item, enabled: true } : item
       )),
     });
-  }
-
-  function patchBonus(patchState: Partial<DraftBonusContent>) {
-    const current = normalizeBonusItems(state.bonusItems)[0] ?? EMPTY_BONUS_ITEM;
-    patch({ bonusItems: [{ ...current, ...patchState }] });
   }
 
   return (
@@ -340,33 +333,6 @@ export function StudioReleaseFeatures({
                 </span>
               </label>
             ))}
-          </div>
-          <div className="dashboard-form-card">
-            <SectionHeader
-              title="Overachiever Bonus Content"
-              description="Optionally attach one private file that unlocks only after every other enabled achievement."
-            />
-            <div className="dashboard-form-grid">
-              <label className="dashboard-field">
-                <div className="dashboard-field-label">Bonus Title</div>
-                <input
-                  className="os-input-field"
-                  value={state.bonusItems[0]?.title ?? ''}
-                  onChange={event => patchBonus({ title: event.target.value })}
-                  placeholder="Bonus Content"
-                />
-              </label>
-              <UploadField
-                label="Bonus File"
-                folder="products/bonus"
-                storage="private-item"
-                userId={userId}
-                value={state.bonusItems[0]?.fileUrl ?? ''}
-                onChange={fileUrl => patchBonus({ fileUrl })}
-                previewKind="file"
-                buttonLabel="Upload bonus file"
-              />
-            </div>
           </div>
         </div>
       ) : null}

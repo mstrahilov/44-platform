@@ -36,7 +36,6 @@ import {
   setReplyLike,
   type ReplyLikeRow,
 } from '@/lib/domain/community';
-import { reportContent } from '@/lib/domain/moderation';
 
 type ThreadProfileState = {
   userId: string;
@@ -64,16 +63,6 @@ export default function CommunityThreadPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  async function reportTarget(input: { entryId?: string; replyId?: string }) {
-    if (!user) return;
-    const details = window.prompt('Briefly describe why you are reporting this content. You can leave this blank.') ?? '';
-    try {
-      await reportContent({ ...input, reason: 'other', details });
-      setError('Report submitted for review.');
-    } catch (reportError) {
-      setError(reportError instanceof Error ? reportError.message : 'Could not submit this report.');
-    }
-  }
   const [setupGateOpen, setSetupGateOpen] = useState(false);
 
   useEffect(() => {
@@ -368,7 +357,6 @@ export default function CommunityThreadPage() {
               titleSize="lg"
               handleOnly={false}
               rowClickable={false}
-              onReport={user && thread.author_id !== user.id ? () => { void reportTarget({ entryId: thread.id }); } : undefined}
             />
             {replyComposerOpen && (
               user && canInteract ? (
@@ -431,7 +419,6 @@ export default function CommunityThreadPage() {
                   onLikeReply={toggleReplyLike}
                   replyLiking={replyLiking}
                   onDeleteReply={deleteReply}
-                  onReportReply={reply => { void reportTarget({ replyId: reply.id }); }}
                   onBlockedInteraction={() => requireCommunityInteraction(() => {})}
                 >
                   {children}
@@ -463,7 +450,6 @@ function ReplyBranch({
   onLikeReply,
   replyLiking,
   onDeleteReply,
-  onReportReply,
   onBlockedInteraction,
 }: {
   top: SocialReply;
@@ -483,7 +469,6 @@ function ReplyBranch({
   replyLiking: string;
   onDeleteReply: (reply: SocialReply) => void;
   onBlockedInteraction: () => void;
-  onReportReply: (reply: SocialReply) => void;
 }) {
   return (
     <div className="social-reply-branch">
@@ -496,7 +481,6 @@ function ReplyBranch({
         likeDisabled={replyLiking === top.id}
         canDelete={Boolean(currentUserId && top.author_id === currentUserId)}
         onDelete={() => onDeleteReply(top)}
-        onReport={currentUserId && top.author_id !== currentUserId ? () => onReportReply(top) : undefined}
       />
       {replyingTo === top.id && (
         <InlineReplyForm
@@ -519,7 +503,6 @@ function ReplyBranch({
             likeDisabled={replyLiking === child.id}
             canDelete={Boolean(currentUserId && child.author_id === currentUserId)}
             onDelete={() => onDeleteReply(child)}
-            onReport={currentUserId && child.author_id !== currentUserId ? () => onReportReply(child) : undefined}
           />
           {replyingTo === child.id && (
             <InlineReplyForm
@@ -545,7 +528,6 @@ function ReplyRow({
   likeDisabled,
   canDelete,
   onDelete,
-  onReport,
 }: {
   reply: SocialReply;
   onReplyClick: () => void;
@@ -555,7 +537,6 @@ function ReplyRow({
   likeDisabled: boolean;
   canDelete: boolean;
   onDelete: () => void;
-  onReport?: () => void;
 }) {
   return (
     <article className="social-row">
@@ -595,11 +576,6 @@ function ReplyRow({
               style={{ marginLeft: 0 }}
             >
               <SocialTrashIcon />
-            </button>
-          )}
-          {onReport && (
-            <button type="button" className="social-action" onClick={onReport} aria-label="Report reply">
-              <span className="social-action-label">Report</span>
             </button>
           )}
         </div>

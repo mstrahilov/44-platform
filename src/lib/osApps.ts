@@ -61,17 +61,6 @@ export type OSApp = {
 
 export const OS_APPS: OSApp[] = [
   {
-    id: 'home',
-    label: 'Discover',
-    description: 'Your 44OS home. Pick up where you left off.',
-    href: '/home',
-    iconClass: 'os-icon-home',
-    group: 'legacy',
-    requiresAuth: true,
-    locked: true,
-    hidden: true,
-  },
-  {
     id: 'library',
     label: 'Library',
     description: 'Everything you have saved, added, or purchased.',
@@ -227,10 +216,10 @@ export const OS_APPS: OSApp[] = [
     requiresCreator: true,
     children: [
       { id: 'overview', label: 'Overview', href: '/studio', iconClass: 'os-icon-dashboard' },
-      { id: 'music', label: 'Music', href: '/studio/products', iconClass: 'os-icon-music' },
-      { id: 'books', label: 'Books', href: '/studio/products?section=books', iconClass: 'os-icon-books' },
-      { id: 'assets', label: 'Assets', href: '/studio/products?section=assets', iconClass: 'os-icon-assets' },
-      { id: 'merch', label: 'Merch', href: '/studio/products?section=merch', iconClass: 'os-icon-merch' },
+      { id: 'music', label: 'Music', href: '/studio#music', iconClass: 'os-icon-music' },
+      { id: 'books', label: 'Books', href: '/studio#books', iconClass: 'os-icon-books' },
+      { id: 'assets', label: 'Assets', href: '/studio#assets', iconClass: 'os-icon-assets' },
+      { id: 'merch', label: 'Merch', href: '/studio#merch', iconClass: 'os-icon-merch' },
     ],
   },
   {
@@ -266,7 +255,6 @@ export function getOSApp(id: OSAppId): OSApp | undefined {
  * exactly one Dock app so the active state is always coherent.
  */
 export function getActiveOSAppId(pathname: string): OSAppId | '' {
-  if (pathname === '/home' || pathname.startsWith('/home/')) return 'home';
   if (pathname.startsWith('/search')) return 'search';
   if (
     pathname.startsWith('/library') ||

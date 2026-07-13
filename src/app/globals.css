@@ -37,6 +37,12 @@
 }
 
 .os-icon-sm { width: 18px; height: 18px; }
+.legal-page { max-width: 980px; margin-inline: auto; }
+.legal-document { display: grid; gap: 28px; padding: clamp(24px, 5vw, 52px); }
+.legal-document section { display: grid; gap: 10px; }
+.legal-document p { line-height: 1.75; color: var(--os-color-ink-secondary); }
+.legal-links { display: flex; flex-wrap: wrap; gap: 16px; padding-top: 20px; border-top: 1px solid var(--os-border-divider); }
+.legal-links a, .login-status a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 .os-icon-md { width: 22px; height: 22px; }
 .os-icon-lg { width: 28px; height: 28px; }
 

@@ -5,10 +5,12 @@ import { PageShell, HubHero, EmptyMessage } from '@/components/Ui';
 import { useAuth } from '@/lib/useAuth';
 import { loadStudioProfile } from '@/lib/studioProfiles';
 import { listModerationReports, resolveContentReport } from '@/lib/domain/moderation';
+import { notFound } from 'next/navigation';
 
 type ModerationReport = Awaited<ReturnType<typeof listModerationReports>>[number];
 
 export default function CommunityModerationPage() {
+  if (process.env.NEXT_PUBLIC_ENABLE_M13_REVIEWED_SURFACES !== 'true') notFound();
   const { user, loading: authLoading } = useAuth();
   const [reports, setReports] = useState<ModerationReport[]>([]);
   const [loading, setLoading] = useState(true);

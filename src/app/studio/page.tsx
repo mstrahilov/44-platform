@@ -153,6 +153,7 @@ export default function StudioPage() {
           {productSections.map(section => (
             <StudioProductSection
               key={section.id}
+              id={section.id}
               title={section.label}
               itemLabel={section.itemLabel}
               items={section.items}
@@ -200,12 +201,14 @@ function OverviewStatCard({ label, value }: { label: string; value: string | num
 }
 
 function StudioProductSection({
+  id,
   title,
   itemLabel,
   items,
   newHref,
   healthByItemId,
 }: {
+  id: string;
   title: string;
   itemLabel: string;
   items: Product[];
@@ -213,7 +216,7 @@ function StudioProductSection({
   healthByItemId: Map<string, StudioCatalogHealth>;
 }) {
   return (
-    <section className="dashboard-section">
+    <section className="dashboard-section" id={id}>
       <SectionHeader
         title={title}
         action={<Link href={newHref} className="os-button os-button-secondary os-button-compact">New</Link>}

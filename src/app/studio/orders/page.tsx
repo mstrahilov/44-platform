@@ -108,7 +108,7 @@ export default function StudioOrdersPage() {
             <div className="dashboard-empty">
               No merch orders yet.
               <div style={{ marginTop: 'var(--os-space-4)' }}>
-                <Link className="os-button os-button-primary os-button-compact" href="/studio/products?section=merch">Open Merch</Link>
+                <Link className="os-button os-button-primary os-button-compact" href="/studio#merch">Open Merch</Link>
               </div>
             </div>
           ) : (

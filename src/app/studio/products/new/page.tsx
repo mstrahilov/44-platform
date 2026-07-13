@@ -626,7 +626,6 @@ function NewProductContent() {
             {section.id === 'music' ? (
               <StudioReleaseFeatures
                 sectionId={section.id}
-                userId={user.id}
                 state={featureState}
                 onChange={setFeatureState}
               />

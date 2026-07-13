@@ -141,6 +141,7 @@ Quality gates for production-facing work:
 - Route and auth changes require manual browser QA at desktop and mobile widths.
 - Mobile launch QA targets 390px and 430px widths and must include normal Safari plus an iOS home-screen installation.
 - Performance work must remove request fan-out before adding caches. Shared session state is subscribed once per app runtime; repeated cards must not independently call `getSession()` or query ownership one row at a time.
+- `Other/44OS_OPERATIONS.md` owns deployment, health, incident, restoration, and secret-rotation runbooks. `npm run test:smoke` is the executable anonymous launch check and `/api/health` is the bounded application/Supabase readiness endpoint.
 
 ---
 
@@ -244,6 +245,7 @@ Compatibility and legacy policy:
 - `/community/following` redirects to `/community?filter=following`.
 - `/community/thread/[id-or-slug]` is the canonical regular post detail page. Community feed rows and reply-count affordances should navigate there instead of expanding inline reply drawers on `/community`.
 - Removed Resources and Services/Projects URLs intentionally return not found; they are not compatibility surfaces.
+- Compatibility redirects are centralized in `next.config.ts` and resolve directly to one canonical destination. Obsolete React implementations under legacy Music, Books, Assets, Merch, Browse, Collection, Product, Community-profile, Home, and Studio-prototype trees were removed in M13. `/studio` is the only catalog list and post-save return surface; the two `/studio/products` editor routes remain canonical.
 - Do not add vanity redirects unless there is a real public link to preserve.
 
 ---

@@ -48,7 +48,6 @@ import {
   setDiscussionLike,
   type CommunityMentionProfile,
 } from '@/lib/domain/community';
-import { reportContent } from '@/lib/domain/moderation';
 import { FilterPopover } from '@/components/FilterPopover';
 
 type PostLike = LikeRow;
@@ -718,31 +717,6 @@ function CommunityPageContent() {
     setPosts(current => current.filter(p => p.id !== post.id));
   }
 
-  async function reportPost(post: SocialPost) {
-    await reportEntry(post.id, post.author_id);
-  }
-
-  async function reportEntry(entryId: string, authorId: string | null | undefined) {
-    if (!user || authorId === user.id) return;
-    const details = window.prompt('Briefly describe why you are reporting this post. You can leave this blank.') ?? '';
-    try {
-      await reportContent({ entryId, reason: 'other', details });
-      window.alert('Report submitted for review.');
-    } catch (reportError) {
-      setError(reportError instanceof Error ? reportError.message : 'Could not submit this report.');
-    }
-  }
-
-  async function reportReply(replyId: string, authorId: string | null | undefined) {
-    if (!user || authorId === user.id) return;
-    const details = window.prompt('Briefly describe why you are reporting this reply. You can leave this blank.') ?? '';
-    try {
-      await reportContent({ replyId, reason: 'other', details });
-      window.alert('Report submitted for review.');
-    } catch (reportError) {
-      setError(reportError instanceof Error ? reportError.message : 'Could not submit this report.');
-    }
-  }
 
   function applyMention(username: string) {
     setPostBody(current => parseLockedBody(replaceTrailingMention(composeLockedBody(current, forcedTopic), username, forcedTopic), forcedTopic));
@@ -862,8 +836,6 @@ function CommunityPageContent() {
                           <button type="button" className="os-button os-button-ghost os-button-compact" onClick={event => { event.stopPropagation(); void deleteQuestion(question); }}>
                             Delete
                           </button>
-                        ) : user ? (
-                          <button type="button" className="os-button os-button-ghost os-button-compact" onClick={event => { event.stopPropagation(); void reportEntry(question.id, question.author_id); }}>Report</button>
                         ) : null}
                       </div>
                       {openStructuredId === question.id && (
@@ -912,8 +884,6 @@ function CommunityPageContent() {
                                       <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => { void deleteAnswer(question.id, answer); }}>
                                         Delete
                                       </button>
-                                    ) : user ? (
-                                      <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => { void reportReply(answer.id, answer.author_id); }}>Report</button>
                                     ) : null}
                                   </div>
                                 </div>
@@ -965,8 +935,6 @@ function CommunityPageContent() {
                               Delete
                             </button>
                           </>
-                        ) : user ? (
-                          <button type="button" className="os-button os-button-ghost os-button-compact" onClick={event => { event.stopPropagation(); void reportEntry(collaboration.id, collaboration.author_id); }}>Report</button>
                         ) : null}
                       </div>
                       {openStructuredId === collaboration.id && (
@@ -1000,8 +968,6 @@ function CommunityPageContent() {
                                       <button type="button" className="os-icon-button" aria-label="Delete response" onClick={() => { void deleteCollaborationReply(collaboration.id, response); }}>
                                         <SocialTrashIcon />
                                       </button>
-                                    ) : user ? (
-                                      <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => { void reportReply(response.id, response.author_id); }}>Report</button>
                                     ) : null}
                                   </div>
                                   <p className="social-row-body"><SocialRichText text={response.body} /></p>
@@ -1038,7 +1004,6 @@ function CommunityPageContent() {
                   onLike={() => toggleLike(post)}
                   onDelete={() => deletePost(post)}
                   canDelete={Boolean(user && post.author_id === user.id)}
-                  onReport={user && post.author_id !== user.id ? () => { void reportPost(post); } : undefined}
                   disabled={likingId === post.id}
                 />
               </div>

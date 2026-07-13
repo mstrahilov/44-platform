@@ -5,8 +5,6 @@ import { creatorHref } from '@/lib/platform';
 import Link from 'next/link';
 import { SectionHeader } from '@/components/Ui';
 import { listItemUpdates, type ItemUpdate } from '@/lib/domain/itemCommunity';
-import { reportContent } from '@/lib/domain/moderation';
-import { useAuth } from '@/lib/useAuth';
 
 type ProductUpdate = ItemUpdate;
 
@@ -20,7 +18,6 @@ export function ProductUpdatesSection({
   productId: string;
   emptyMessage?: string;
 }) {
-  const { user } = useAuth();
   const [updates, setUpdates] = useState<ProductUpdate[]>([]);
   const [error, setError] = useState('');
 
@@ -39,17 +36,6 @@ export function ProductUpdatesSection({
   }, [productId]);
 
   if (updates.length === 0 && !error) return null;
-
-  async function reportUpdate(update: ProductUpdate) {
-    if (!user || update.author_id === user.id) return;
-    const details = window.prompt('Briefly describe why you are reporting this update. You can leave this blank.') ?? '';
-    try {
-      await reportContent({ entryId: update.id, reason: 'other', details });
-      window.alert('Report submitted for review.');
-    } catch (reportError) {
-      setError(reportError instanceof Error ? reportError.message : 'Could not submit this report.');
-    }
-  }
 
   return (
     <div className="view-section">
@@ -77,7 +63,6 @@ export function ProductUpdatesSection({
                 {update.version_label && <span className="os-pill os-status-owned">{update.version_label}</span>}
               </div>
               <p className="os-type-body product-domain-body">{update.body}</p>
-              {user && update.author_id !== user.id ? <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => { void reportUpdate(update); }}>Report</button> : null}
             </article>
           );
         })}

@@ -21,7 +21,7 @@ export const STUDIO_CATALOG_SECTIONS: StudioCatalogSection[] = [
   {
     id: 'music',
     label: 'Music',
-    href: '/studio/products',
+    href: '/studio#music',
     itemLabel: 'release',
     itemLabelPlural: 'releases',
     newLabel: 'New Release',
@@ -34,7 +34,7 @@ export const STUDIO_CATALOG_SECTIONS: StudioCatalogSection[] = [
   {
     id: 'books',
     label: 'Books',
-    href: '/studio/products?section=books',
+    href: '/studio#books',
     itemLabel: 'book',
     itemLabelPlural: 'books',
     newLabel: 'New Book',
@@ -47,7 +47,7 @@ export const STUDIO_CATALOG_SECTIONS: StudioCatalogSection[] = [
   {
     id: 'assets',
     label: 'Assets',
-    href: '/studio/products?section=assets',
+    href: '/studio#assets',
     itemLabel: 'asset',
     itemLabelPlural: 'assets',
     newLabel: 'New Asset',
@@ -60,7 +60,7 @@ export const STUDIO_CATALOG_SECTIONS: StudioCatalogSection[] = [
   {
     id: 'merch',
     label: 'Merch',
-    href: '/studio/products?section=merch',
+    href: '/studio#merch',
     itemLabel: 'merch item',
     itemLabelPlural: 'merch',
     newLabel: 'New Merch Item',

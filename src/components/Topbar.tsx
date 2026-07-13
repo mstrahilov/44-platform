@@ -81,7 +81,7 @@ function labelForPath(path: string | null | undefined) {
   if (path.startsWith('/books')) return 'Books';
   if (path.startsWith('/assets')) return 'Assets';
   if (path.startsWith('/merch') || path.startsWith('/shop')) return 'Merch';
-  if (path === '/' || path.startsWith('/home')) return 'Browse';
+  if (path === '/') return 'Browse';
   return null;
 }
 

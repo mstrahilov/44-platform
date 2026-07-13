@@ -10,7 +10,6 @@ import { creatorHref, type ProductAchievement, type Track } from '@/lib/platform
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
 import { LibraryAchievementsSection, LibraryBonusContentSection, LibraryFilesSection, LibraryProductDetailsSection, ProductDetailHeader, withSourceProduct, type LibraryBonusAsset, type LibraryFileAsset, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
 import { ProductUpdatesSection } from '@/components/ProductUpdatesSection';
-import { ItemQuestionsSection } from '@/components/ItemQuestionsSection';
 import { recordAchievementPlaybackSignal, trackProductAchievementTrigger } from '@/lib/achievementTracking';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { MUSIC_TRACK_COMPLETED_EVENT, MUSIC_TRACK_STARTED_EVENT, useMusicPlayer, type MusicQueueTrack, type MusicTrackPlaybackEventDetail } from '@/components/MusicPlayer';
@@ -23,7 +22,7 @@ type LibraryItemRow = DetailedLibraryItemRow;
 export function LibraryItemDetail({
   kind,
   id,
-  backHref = '/music/library',
+  backHref = '/library',
   backLabel = 'Library',
   legacyRedirect = false,
 }: {
@@ -432,7 +431,6 @@ function ProductLibraryDetail({
       <LibraryProductDetailsSection product={product} tracks={tracks} inferredTrackDurations={inferredTrackDurations} />
 
       <ProductUpdatesSection productId={product.id} emptyMessage="No updates from this creator yet." />
-      <ItemQuestionsSection itemId={product.id} />
 
       <AchievementToast toast={toast} onDone={() => setToast(null)} />
     </div>
