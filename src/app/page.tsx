@@ -2,7 +2,7 @@ import StoreApp from '@/components/StoreApp';
 import { buildPageMetadata } from '@/lib/metadata';
 
 export const metadata = buildPageMetadata({
-  title: 'Store',
+  title: '44OS',
   description: 'Discover, collect, create, and connect through independent music, books, art, community, and radio.',
   path: '/',
 });

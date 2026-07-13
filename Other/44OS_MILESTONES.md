@@ -283,6 +283,8 @@ Executable launch-gate expansion (July 12, 2026): `test:smoke` now proves the bo
 
 Role-security and observability foundation (July 12, 2026): a rollback-only pgTAP suite now exercises the database as anonymous, member, creator, and admin. Twelve assertions prove anonymous RPC denial, public fan registration without publishing authority, member Item-creation/foreign-edit/self-promotion denial, approved creator editing with price and publication-state preservation, lifecycle-field rejection, and admin-only role approval. Provider-neutral request-error instrumentation emits sanitized structured events with release/runtime/route context but no headers, query values, user content, or tokens; health output now identifies deployment release and region. The production-data restoration rehearsal is deliberately deferred alongside the final payment-era operational gates; external alert routing still requires provider/on-call selection.
 
+Public responsive acceptance (July 12, 2026): Home, Karen Item detail, Community, Support, Login, and Radio were exercised in production at 390px, 430px, 1280px, and 1440px. All 24 combinations retained the English document contract, main landmark, exact viewport width, and zero horizontal overflow; every visible mobile input remained at least 16px. The audit caught and corrected the root metadata regression so `/` identifies itself as 44OS while `/store` remains Store. This closes the automated/public responsive subset, not signed-in screen-reader/keyboard or installed-iOS acceptance.
+
 Completion criteria:
 
 - Anonymous, fan, creator, and admin journeys pass at 1440px, 1280px, 430px, 390px, and installed iOS PWA.

@@ -424,3 +424,4 @@ Acceptance:
 - Achievement icons render correctly from Supabase Storage.
 - Automated launch smoke verifies an English document language, a page title, a main landmark, and viewport metadata that does not disable user zoom. These are regression guards, not a substitute for the required keyboard, screen-reader, contrast, responsive, and installed-iOS review matrix.
 - M13 role/security automation and provider-neutral server telemetry are behind-the-scenes foundations only. They do not authorize new navigation, status labels, report controls, recovery/legal links, or other visible surfaces before UI Activation Review.
+- The public M13 responsive matrix covers Home, Item detail, Community, Support, Login, and Radio at 390px, 430px, 1280px, and 1440px. Root metadata must say 44OS; only the explicit `/store` surface may use Store as its page identity.
