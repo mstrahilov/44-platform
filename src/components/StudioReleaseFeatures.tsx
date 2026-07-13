@@ -1,6 +1,7 @@
 'use client';
 
 import { AchievementIconGlyph } from '@/components/AchievementIconGlyph';
+import { UploadField } from '@/components/UploadField';
 import { SectionHeader } from '@/components/Ui';
 import type { StudioCatalogSectionId } from '@/lib/studioCatalog';
 import { getAchievementIconPath } from '@/lib/achievementIcons';
@@ -40,6 +41,7 @@ export type SavedProductAsset = {
   asset_type: string | null;
   title: string | null;
   file_url: string | null;
+  storage_path?: string | null;
 };
 
 function supportsAchievementsForSection(sectionId: StudioCatalogSectionId) {
@@ -169,8 +171,8 @@ export function buildFeatureAssetRows(productId: string, state: ReleaseFeatureSt
     item_id: productId,
     asset_type: 'bonus_content',
     title: item.title,
-    file_url: item.fileUrl,
-    storage_path: null,
+    file_url: null,
+    storage_path: item.fileUrl,
     is_downloadable: true,
     sort_order: index,
   }));
@@ -191,7 +193,7 @@ export function hydrateReleaseFeatureState(
     .filter(asset => ['bonus_content', 'bonus_achievement', 'bonus_free'].includes(asset.asset_type ?? ''))
     .map(asset => ({
       title: asset.title ?? 'Bonus Content',
-      fileUrl: asset.file_url ?? '',
+      fileUrl: asset.storage_path ?? asset.file_url ?? '',
       visibility: 'achievement' as const,
       achievementCode: OVERACHIEVER_CODE,
     }));
@@ -261,7 +263,6 @@ export function StudioReleaseFeatures({
 }) {
   const supportsAchievements = supportsAchievementsForSection(sectionId);
   const achievementsOn = supportsAchievements && state.achievementsEnabled;
-  void userId;
 
   function patch(patchState: Partial<ReleaseFeatureState>) {
     onChange({ ...state, ...patchState });
@@ -292,6 +293,11 @@ export function StudioReleaseFeatures({
         item.code === code ? { ...item, enabled: !item.enabled } : item.code === OVERACHIEVER_CODE ? { ...item, enabled: true } : item
       )),
     });
+  }
+
+  function patchBonus(patchState: Partial<DraftBonusContent>) {
+    const current = normalizeBonusItems(state.bonusItems)[0] ?? EMPTY_BONUS_ITEM;
+    patch({ bonusItems: [{ ...current, ...patchState }] });
   }
 
   return (
@@ -334,6 +340,33 @@ export function StudioReleaseFeatures({
                 </span>
               </label>
             ))}
+          </div>
+          <div className="dashboard-form-card">
+            <SectionHeader
+              title="Overachiever Bonus Content"
+              description="Optionally attach one private file that unlocks only after every other enabled achievement."
+            />
+            <div className="dashboard-form-grid">
+              <label className="dashboard-field">
+                <div className="dashboard-field-label">Bonus Title</div>
+                <input
+                  className="os-input-field"
+                  value={state.bonusItems[0]?.title ?? ''}
+                  onChange={event => patchBonus({ title: event.target.value })}
+                  placeholder="Bonus Content"
+                />
+              </label>
+              <UploadField
+                label="Bonus File"
+                folder="products/bonus"
+                storage="private-item"
+                userId={userId}
+                value={state.bonusItems[0]?.fileUrl ?? ''}
+                onChange={fileUrl => patchBonus({ fileUrl })}
+                previewKind="file"
+                buttonLabel="Upload bonus file"
+              />
+            </div>
           </div>
         </div>
       ) : null}

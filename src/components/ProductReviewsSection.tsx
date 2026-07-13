@@ -8,6 +8,7 @@ import { trackProductAchievementTrigger } from '@/lib/achievementTracking';
 import Link from 'next/link';
 import { SectionHeader } from '@/components/Ui';
 import { listItemReviews, saveItemReview, type ItemReview } from '@/lib/domain/itemCommunity';
+import { reportContent } from '@/lib/domain/moderation';
 
 type ProductReview = ItemReview;
 
@@ -84,6 +85,17 @@ export function ProductReviewsSection({
     await loadReviews();
   }
 
+  async function reportReview(review: ProductReview) {
+    if (!user || review.user_id === user.id) return;
+    const details = window.prompt('Briefly describe why you are reporting this review. You can leave this blank.') ?? '';
+    try {
+      await reportContent({ entryId: review.id, reason: 'other', details });
+      window.alert('Report submitted for review.');
+    } catch (reportError) {
+      setError(reportError instanceof Error ? reportError.message : 'Could not submit this report.');
+    }
+  }
+
   return (
     <div className="view-section">
       <SectionHeader
@@ -155,6 +167,7 @@ export function ProductReviewsSection({
                 </div>
               </div>
               <p className="os-type-body product-domain-body">{review.body}</p>
+              {user && review.user_id !== user.id ? <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => { void reportReview(review); }}>Report</button> : null}
             </article>
             );
           })}

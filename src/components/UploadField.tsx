@@ -1,7 +1,7 @@
 'use client';
 
 import { useId, useState, type ChangeEvent } from 'react';
-import { getUploadErrorMessage, uploadPublicFile } from '@/lib/uploads';
+import { getUploadErrorMessage, uploadPrivateItemFile, uploadPublicFile } from '@/lib/uploads';
 
 type UploadFieldProps = {
   label: string;
@@ -15,6 +15,7 @@ type UploadFieldProps = {
   onAudioMetadata?: (durationSeconds: number) => void;
   hideLabel?: boolean;
   hideSuccessMessage?: boolean;
+  storage?: 'public' | 'private-item';
 };
 
 export function UploadField({
@@ -29,6 +30,7 @@ export function UploadField({
   onAudioMetadata,
   hideLabel = false,
   hideSuccessMessage = false,
+  storage = 'public',
 }: UploadFieldProps) {
   const inputId = useId();
   const [uploading, setUploading] = useState(false);
@@ -43,9 +45,11 @@ export function UploadField({
 
     try {
       const durationPromise = accept?.includes('audio') ? readAudioDuration(file) : Promise.resolve(null);
-      const result = await uploadPublicFile({ file, folder, userId });
+      const uploadedValue = storage === 'private-item'
+        ? (await uploadPrivateItemFile({ file, folder, userId })).path
+        : (await uploadPublicFile({ file, folder, userId })).publicUrl;
       const durationSeconds = await durationPromise;
-      onChange(result.publicUrl);
+      onChange(uploadedValue);
       if (durationSeconds && onAudioMetadata) onAudioMetadata(durationSeconds);
       setMessage('Upload complete.');
     } catch (error) {

@@ -32,6 +32,18 @@ export async function uploadPublicFile(params: {
   return { path, publicUrl: data.publicUrl, bucket };
 }
 
+export async function uploadPrivateItemFile(params: { file: File; folder: string; userId: string }) {
+  const { file, folder, userId } = params;
+  const safeName = sanitizeFileName(file.name || 'file');
+  const path = `${folder}/${userId}/${crypto.randomUUID()}-${safeName}`;
+  const { error } = await supabase.storage.from('item-files').upload(path, file, {
+    cacheControl: '3600',
+    upsert: false,
+  });
+  if (error) throw error;
+  return { path, bucket: 'item-files' };
+}
+
 export function getUploadErrorMessage(error: unknown) {
   if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
     return error.message;

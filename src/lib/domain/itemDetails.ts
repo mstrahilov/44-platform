@@ -54,6 +54,13 @@ export async function getLibraryItemBundle(userId: string, libraryEntryId: strin
   const error = trackResult.error || achievementResult.error || unlockedResult.error || assetResult.error;
   if (error) throw error;
 
+  const authorizedAssets = await Promise.all(((assetResult.data ?? []) as ItemAssetManifestRow[]).map(async asset => {
+    if (!asset.is_unlocked || !asset.storage_path) return asset;
+    const signed = await supabase.storage.from('item-files').createSignedUrl(asset.storage_path, 300);
+    if (signed.error) throw signed.error;
+    return { ...asset, file_url: signed.data.signedUrl };
+  }));
+
   const isMusic = getProductExperience(row.products) === 'music';
   return {
     row,
@@ -62,7 +69,7 @@ export async function getLibraryItemBundle(userId: string, libraryEntryId: strin
       ? ((achievementResult.data ?? []) as ProductAchievement[]).filter(item => isV1AchievementCode(item.code))
       : [],
     unlockedAchievements: (unlockedResult.data ?? []) as UserAchievement[],
-    assets: (assetResult.data ?? []) as ItemAssetManifestRow[],
+    assets: authorizedAssets,
   };
 }
 
@@ -134,11 +141,10 @@ export async function saveItemToLibrary(userId: string, itemId: string) {
   return getItemLibraryOwnership(userId, itemId);
 }
 
-export async function recordItemShareVisit(itemId: string, referrerId: string, visitorId: string | null) {
-  const result = await supabase.from('item_share_visits').insert({
-    item_id: itemId,
-    referrer_id: referrerId,
-    visitor_id: visitorId,
+export async function recordItemShareVisit(itemId: string, referrerId: string) {
+  const result = await supabase.rpc('record_item_share_visit', {
+    target_item_id: itemId,
+    target_referrer_id: referrerId,
   });
   if (result.error) throw result.error;
 }

@@ -11,7 +11,7 @@ import {
   getStudioCatalogSection,
   productBelongsToStudioSection,
 } from '@/lib/studioCatalog';
-import { listCreatorItems, setItemPublicationStatus } from '@/lib/domain/studio';
+import { listCreatorItems } from '@/lib/domain/studio';
 
 export default function StudioProductsPage() {
   return (
@@ -29,8 +29,6 @@ function StudioProductsContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [fetching, setFetching] = useState(true);
-  const [status, setStatus] = useState('');
-  const [statusKind, setStatusKind] = useState<'success' | 'error'>('success');
 
   useEffect(() => {
     if (!loading && !user) {
@@ -58,26 +56,6 @@ function StudioProductsContent() {
     [products, section.id],
   );
 
-  async function togglePublish(product: Product) {
-    const published = product.status === 'published';
-    const nextPublished = !published;
-    const nextStatus = nextPublished ? 'published' : 'draft';
-
-    try {
-      await setItemPublicationStatus(product.id, nextStatus);
-    } catch (publishError) {
-      setStatus(publishError instanceof Error ? publishError.message : 'Could not update publication status.');
-      setStatusKind('error');
-      return;
-    }
-
-    setProducts(current => current.map(item => (
-      item.id === product.id ? { ...item, status: nextStatus } : item
-    )));
-    setStatus(nextPublished ? `${product.title} is published.` : `${product.title} is unpublished.`);
-    setStatusKind('success');
-  }
-
   if (loading || !user) {
     return <PageShell><div style={{ minHeight: '40vh' }} /></PageShell>;
   }
@@ -98,16 +76,10 @@ function StudioProductsContent() {
         {!isCreatorProfile(profile) && (
           <GlassPanel style={{ padding: 24, marginBottom: 18 }}>
             <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)' }}>
-              This account is not marked as a creator yet. You can still save drafts, but switch your profile role to creator before publishing publicly.
+              Studio publishing is available to approved creator accounts. Your fan account remains active while approval is pending.
             </p>
           </GlassPanel>
         )}
-
-        {status ? (
-          <div className={statusKind === 'success' ? 'dashboard-status dashboard-status-success' : 'dashboard-status dashboard-status-error'}>
-            {status}
-          </div>
-        ) : null}
 
         <div className="dashboard-list-surface">
           {fetching ? (
@@ -130,7 +102,6 @@ function StudioProductsContent() {
               >
                 <div className="dashboard-row-copy">
                   <div className="dashboard-row-title-wrap">
-                    <span className={product.status === 'published' ? 'dashboard-status-dot dashboard-status-dot-published' : 'dashboard-status-dot dashboard-status-dot-draft'} aria-hidden="true" />
                     <div className="dashboard-row-title">{product.title}</div>
                   </div>
                   <div className="dashboard-row-subtitle">{product.item_type || section.itemLabel}</div>
@@ -140,9 +111,6 @@ function StudioProductsContent() {
                   <Link href={`/studio/products/${product.id}`} className="os-button os-button-ghost os-button-compact">
                     Edit
                   </Link>
-                  <button type="button" className="os-button os-button-secondary os-button-compact" onClick={() => togglePublish(product)}>
-                    {product.status === 'published' ? 'Unpublish' : 'Publish'}
-                  </button>
                 </div>
               </div>
             ))

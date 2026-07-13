@@ -1,5 +1,7 @@
 # 44OS UI Principles
 
+Payment infrastructure must not change the established Store or Studio UI while checkout is disabled. Prices may be retained as offer configuration, but no enabled-looking purchase, available-earnings, or completed-payout state may render until its server-authoritative runtime control and reconciled provider state are true. Missing provider configuration fails closed with the existing unavailable state.
+
 This is one of the three active handoff documents for 44OS. Read it before changing layout, styling, app chrome, component primitives, or visual behavior. Architecture and sequencing live in `44OS_FOUNDATION.md` and `44OS_MILESTONES.md`; this document remains the visual and interaction contract.
 
 44OS should feel like a premium operating system: calm, spatially consistent, tactile, legible, and fast. It is not a marketing site and should not look like a stack of unrelated pages.
@@ -275,6 +277,8 @@ Community state rules:
 - Inline reply forms live on the thread page only.
 - On mobile, thread posts, replies, and their dividers use the full thread width. Nested replies indent content once; all reply composers expand to the full remaining width.
 - The feed composer placeholder is `Start a new post...` for the general feed.
+- Signed-in users can report posts, replies, questions, answers, collaborations, responses, reviews, and Creator Updates they do not own. Reports enter an administrator-only moderation queue; hidden or removed content disappears from public views without deleting its audit record.
+- Store and Library Item hubs include Item-scoped Questions with explicit loading, empty, error, and signed-in Ask states. Studio Item editors include Creator Update publishing beneath the release editor.
 
 Search rules:
 
@@ -333,14 +337,20 @@ Studio publishing rules:
 
 - Studio release lists are creator-management views, not public discovery grids, and remain ordered by when the release was added (`created_at` newest-first).
 - Release Type, Release Year, and Price belong in the same 3-column field group.
+- Price inputs accept normal decimal entry such as `5.99`; editing an existing music release preserves achievement row IDs and earned Library history.
 - Track editors use the recessed editable list primitive, not nested glass cards.
 - Book achievements are hidden for v1.
 - Music release features start with the eight v1 achievement templates and optional Overachiever Bonus Content.
+- Overachiever Bonus Content uses a private Studio upload. Library renders it as locked until the trusted Overachiever grant exists, then opens it through a short-lived signed URL. Books and other included private files use the same Library file treatment.
 - New and edit release forms do not collect a description. Existing legacy descriptions may remain readable, but Studio does not display or overwrite them during edits.
 - Music Tracks are a flat section rather than a nested paper card. Desktop track rows use a wide title column and a narrower Audio File/upload column; mobile stacks those fields. Keep generous section spacing between Details, Tracks, and Achievements.
 - Achievements use a single master switch in the section header. Off hides the picker; on reveals flat rows with white editor icons and right-aligned checkboxes. There is no minimum selection count.
 - Checked achievement controls must keep a black checkmark on the light checked fill. Overachiever Bonus Content is its own card below the flat achievement list.
 - Creator Item removal uses the destructive action treatment and confirmation copy, but the operation is archival: it says `Remove`, explains that Store/active Studio visibility ends while Library history remains, and never promises permanent deletion.
+- Publication state is server-authoritative. Studio saves related Item data as a draft before requesting publication; validation failures remain in the editor as backend-truth error states and must never imply that an incomplete Item is live.
+- New releases require a plain-language publishing-rights checkbox. The UI says this records the creator's confirmation and does not imply independent verification by 44; the backend stores the policy version and blocks publication without a current attestation.
+- Creators never see or control Draft/Published lifecycle toggles. The review workflow shows `Pending Review` after submission; only 44 admins see approval controls. When an existing live Item has proposed changes, its last approved public version remains visible until review succeeds.
+- Studio catalog rows show a compact issue count when server catalog-health checks find incomplete taxonomy, artwork, year, tracks, books, or downloadable assets. Published/draft state remains separate from health state.
 - Studio overview is a consolidated landing page: four operational metric cards—Saves, Plays, Sold, and Earned—followed by clickable Item-management rows grouped by Category. Desktop uses four metric cards per row and mobile uses two. Mobile Item rows show title and Type only; publication status remains a desktop information pill.
 - Studio Plays is sourced from the append-only `item_play_events` ledger. A validated playback start counts regardless of whether it came from Store, Library, Radio, the creator, or another user; playback analytics must never interrupt audio.
 

@@ -24,6 +24,18 @@
           mask-size: contain;
 }
 
+/* iOS Safari zooms focused text controls rendered below 16px. Keeping mobile
+   entry surfaces at 16px prevents repeated visual-viewport zoom without
+   disabling the user's normal pinch-to-zoom accessibility. */
+@media (max-width: 768px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea,
+  [contenteditable="true"] {
+    font-size: 16px !important;
+  }
+}
+
 .os-icon-sm { width: 18px; height: 18px; }
 .os-icon-md { width: 22px; height: 22px; }
 .os-icon-lg { width: 28px; height: 28px; }

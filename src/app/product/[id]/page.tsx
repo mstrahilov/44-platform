@@ -12,6 +12,7 @@ import { browseIndexHref, getProductExperience, productBrowseHref, productLibrar
 import { creatorHref } from '@/lib/platform';
 import { ProductGrid, ProductCard } from '@/components/Ui';
 import { ProductReviewsSection } from '@/components/ProductReviewsSection';
+import { ItemQuestionsSection } from '@/components/ItemQuestionsSection';
 import { ProductDetailHeader, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
 import { useTopbarBack } from '@/components/TopbarContext';
@@ -137,12 +138,13 @@ export function ProductStoreDetail({
       const referrerId = searchParams.get('ref');
       if (!referrerId || referrerId === user?.id) return;
 
-      await recordItemShareVisit(product.id, referrerId, user?.id ?? null);
+      if (!user) return;
+      await recordItemShareVisit(product.id, referrerId);
 
     }
 
     recordSharedVisit();
-  }, [product, searchParams, user?.id]);
+  }, [product, searchParams, user]);
 
   async function addToLibrary() {
     if (!product) return;
@@ -406,6 +408,7 @@ export function ProductStoreDetail({
       )}
 
       <ProductReviewsSection productId={product.id} canPost={owned} />
+      <ItemQuestionsSection itemId={product.id} />
 
       <AchievementToast toast={toast} onDone={() => setToast(null)} />
     </div>

@@ -8,11 +8,12 @@ import { productLibraryHref } from '@/lib/experience';
 import { getProductLibraryContent, getProductLibraryPrimaryAction, getProductRuntimeKind } from '@/lib/libraryContent';
 import { creatorHref, type ProductAchievement, type Track } from '@/lib/platform';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
-import { LibraryAchievementsSection, LibraryBonusContentSection, LibraryProductDetailsSection, ProductDetailHeader, type LibraryBonusAsset, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
+import { LibraryAchievementsSection, LibraryBonusContentSection, LibraryFilesSection, LibraryProductDetailsSection, ProductDetailHeader, withSourceProduct, type LibraryBonusAsset, type LibraryFileAsset, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
 import { ProductUpdatesSection } from '@/components/ProductUpdatesSection';
+import { ItemQuestionsSection } from '@/components/ItemQuestionsSection';
 import { recordAchievementPlaybackSignal, trackProductAchievementTrigger } from '@/lib/achievementTracking';
 import { useTopbarBack } from '@/components/TopbarContext';
-import { MUSIC_TRACK_COMPLETED_EVENT, useMusicPlayer, type MusicQueueTrack, type MusicTrackPlaybackEventDetail } from '@/components/MusicPlayer';
+import { MUSIC_TRACK_COMPLETED_EVENT, MUSIC_TRACK_STARTED_EVENT, useMusicPlayer, type MusicQueueTrack, type MusicTrackPlaybackEventDetail } from '@/components/MusicPlayer';
 import { getLibraryItemBundle, type DetailedLibraryItemRow } from '@/lib/domain/itemDetails';
 
 type LibraryKind = 'product';
@@ -40,6 +41,7 @@ export function LibraryItemDetail({
   const [tracks, setTracks] = useState<Track[]>([]);
   const [achievements, setAchievements] = useState<ProductAchievement[]>([]);
   const [bonusAssets, setBonusAssets] = useState<LibraryBonusAsset[]>([]);
+  const [assets, setAssets] = useState<LibraryFileAsset[]>([]);
   const [unlockedAchievementIds, setUnlockedAchievementIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -85,6 +87,7 @@ export function LibraryItemDetail({
         setTracks(bundle.tracks);
         setAchievements(bundle.achievements);
         setBonusAssets(bundle.assets.filter(asset => ['bonus_content', 'bonus_achievement'].includes(asset.asset_type ?? '')));
+        setAssets(bundle.assets);
         setUnlockedAchievementIds(new Set(bundle.unlockedAchievements.map(item => item.achievement_id)));
       }
 
@@ -99,7 +102,7 @@ export function LibraryItemDetail({
   if (!user) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Sign in to view this library item.</div>;
 
   if (kind === 'product' && productRow?.products) {
-    return <ProductLibraryDetail userId={user.id} row={productRow} tracks={tracks} achievements={achievements} bonusAssets={bonusAssets} unlockedAchievementIds={unlockedAchievementIds} />;
+    return <ProductLibraryDetail userId={user.id} row={productRow} tracks={tracks} achievements={achievements} assets={assets} bonusAssets={bonusAssets} unlockedAchievementIds={unlockedAchievementIds} />;
   }
 
   return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Library item not found.</div>;
@@ -110,6 +113,7 @@ function ProductLibraryDetail({
   row,
   tracks,
   achievements,
+  assets,
   bonusAssets,
   unlockedAchievementIds,
 }: {
@@ -117,11 +121,18 @@ function ProductLibraryDetail({
   row: LibraryItemRow;
   tracks: Track[];
   achievements: ProductAchievement[];
+  assets: LibraryFileAsset[];
   bonusAssets: LibraryBonusAsset[];
   unlockedAchievementIds: Set<string>;
 }) {
   const product = row.products!;
-  const action = getProductLibraryPrimaryAction(product);
+  const baseAction = getProductLibraryPrimaryAction(product);
+  const includedFile = assets.find(asset => asset.file_url && !['bonus_content', 'bonus_achievement'].includes(asset.asset_type ?? ''));
+  const action = includedFile?.file_url ? {
+    ...baseAction,
+    label: includedFile.asset_type === 'book' ? 'Open' : 'Download',
+    href: includedFile.file_url,
+  } : baseAction;
   const runtimeKind = getProductRuntimeKind(product);
   const isMusic = runtimeKind === 'music';
   const isBook = runtimeKind === 'book';
@@ -133,6 +144,8 @@ function ProductLibraryDetail({
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [inferredTrackDurations, setInferredTrackDurations] = useState<Record<string, number>>({});
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
+  const [noSkipsEligible, setNoSkipsEligible] = useState(false);
+  const [fullReleaseHandled, setFullReleaseHandled] = useState(false);
   const playbackSessionIdRef = useRef('');
 
   function currentPlaybackSessionId() {
@@ -199,6 +212,13 @@ function ProductLibraryDetail({
     const trackIndex = musicQueue.findIndex(item => item.id === track.id);
     if (trackIndex < 0) return;
 
+    if (currentTrack?.productId === product.id && currentTrack.id !== track.id) setNoSkipsEligible(false);
+    if (trackIndex === 0 && currentTrack?.productId !== product.id) {
+      beginPlaybackSession();
+      setCompletedTrackIds(new Set());
+      setNoSkipsEligible(true);
+      setFullReleaseHandled(false);
+    }
     togglePlayerTrack(musicQueue, trackIndex);
   }
 
@@ -219,6 +239,8 @@ function ProductLibraryDetail({
     playQueue(musicQueue, 0);
     setSelectedTrackId(musicQueue[0]?.id ?? null);
     setCompletedTrackIds(new Set());
+    setNoSkipsEligible(true);
+    setFullReleaseHandled(false);
     setShuffleEnabled(false);
   }
 
@@ -233,6 +255,8 @@ function ProductLibraryDetail({
     playQueue(shuffled, 0);
     setSelectedTrackId(shuffled[0]?.id ?? null);
     setCompletedTrackIds(new Set());
+    setNoSkipsEligible(false);
+    setFullReleaseHandled(false);
     setShuffleEnabled(true);
   }
 
@@ -248,46 +272,67 @@ function ProductLibraryDetail({
       });
       setCompletedTrackIds(current => new Set(current).add(detail.trackId));
     }
+    function handleTrackStarted(event: Event) {
+      const detail = (event as CustomEvent<MusicTrackPlaybackEventDetail>).detail;
+      if (detail.productId !== product.id) return;
+      if (detail.reason === 'manual' || detail.reason === 'next' || detail.reason === 'previous') {
+        void recordAchievementPlaybackSignal({
+          productId: product.id,
+          trackId: detail.trackId,
+          sessionId: currentPlaybackSessionId(),
+          signalType: 'track_skipped',
+        });
+        setNoSkipsEligible(false);
+      }
+    }
     window.addEventListener(MUSIC_TRACK_COMPLETED_EVENT, handleTrackCompleted);
-    return () => window.removeEventListener(MUSIC_TRACK_COMPLETED_EVENT, handleTrackCompleted);
+    window.addEventListener(MUSIC_TRACK_STARTED_EVENT, handleTrackStarted);
+    return () => {
+      window.removeEventListener(MUSIC_TRACK_COMPLETED_EVENT, handleTrackCompleted);
+      window.removeEventListener(MUSIC_TRACK_STARTED_EVENT, handleTrackStarted);
+    };
   }, [product.id]);
 
   useEffect(() => {
-    async function maybeUnlockCasualListener() {
+    async function evaluateCompletedRelease() {
       if (!isMusic) return;
-      if (tracks.length === 0) return;
-      const requiredTrackCount = tracks.filter(track => track.title?.trim()).length || tracks.length;
-      if (completedTrackIds.size < requiredTrackCount) return;
+      if (fullReleaseHandled) return;
+      const playableTrackIds = tracks.filter(track => Boolean(track.audio_url)).map(track => track.id);
+      if (playableTrackIds.length === 0 || !playableTrackIds.every(trackId => completedTrackIds.has(trackId))) return;
       if (!row.item_id) return;
-      const achievement = achievements.find(
-        item =>
-          item.trigger_type === 'all_tracks_listened'
-          || item.trigger_type === 'played_all_tracks'
-          || item.trigger_type === 'tracks_completed'
-          || item.trigger_type === 'listen_all_tracks'
-          || item.code?.toLowerCase() === 'casual_listener',
-      );
-      if (!achievement) return;
-      if (localUnlockedAchievementIds.has(achievement.id)) return;
-      const result = await trackProductAchievementTrigger({
-        userId,
-        productId: row.item_id,
-        triggerType: achievement.trigger_type,
-        achievements,
-        unlockedAchievementIds: localUnlockedAchievementIds,
-        metadata: { source: 'library_playback', playback_session_id: currentPlaybackSessionId() },
-      });
-      const unlockedAchievement = result.unlockedAchievements[result.unlockedAchievements.length - 1];
+      setFullReleaseHandled(true);
+      const triggerTypes = ['all_tracks_listened'];
+      if (noSkipsEligible) triggerTypes.push('album_no_skips');
+      const now = new Date();
+      if (now.getHours() >= 22 || now.getHours() < 4) triggerTypes.push('release_completed_at_night');
+      triggerTypes.push('release_completed_three_sessions');
+      const unlocked: AchievementToastData[] = [];
+      for (const triggerType of triggerTypes) {
+        const result = await trackProductAchievementTrigger({
+          userId,
+          productId: row.item_id,
+          triggerType,
+          achievements,
+          unlockedAchievementIds: localUnlockedAchievementIds,
+          metadata: {
+            source: 'library_playback',
+            playback_session_id: currentPlaybackSessionId(),
+            timezone_offset_minutes: now.getTimezoneOffset(),
+          },
+        });
+        unlocked.push(...result.unlockedAchievements);
+      }
+      const unlockedAchievement = unlocked[unlocked.length - 1];
       if (!unlockedAchievement) return;
       setLocalUnlockedAchievementIds(current => {
         const next = new Set(current);
-        next.add(achievement.id);
+        unlocked.forEach(achievement => next.add(achievement.id));
         return next;
       });
       setToast(unlockedAchievement);
     }
-    maybeUnlockCasualListener();
-  }, [achievements, completedTrackIds, isMusic, localUnlockedAchievementIds, row.item_id, tracks, userId]);
+    evaluateCompletedRelease();
+  }, [achievements, completedTrackIds, fullReleaseHandled, isMusic, localUnlockedAchievementIds, noSkipsEligible, row.item_id, tracks, userId]);
 
   const content = getProductLibraryContent(product);
   const creatorDisplayName = product.creators?.display_name || product.creator || '44 Creator';
@@ -295,7 +340,7 @@ function ProductLibraryDetail({
     () => new Map(tracks.map((track, index) => [track.id, track.number ?? index + 1])),
     [tracks],
   );
-  const creatorLink = creatorHref(product.creators ?? creatorDisplayName);
+  const creatorLink = withSourceProduct(creatorHref(product.creators ?? creatorDisplayName), product.id);
   const releaseMeta = [
     (product.item_type || content.detailsTitle).toUpperCase(),
     ...(product.year ? [String(product.year)] : []),
@@ -383,9 +428,11 @@ function ProductLibraryDetail({
 
       {isMusic && <LibraryAchievementsSection achievements={achievements} unlockedAchievementIds={localUnlockedAchievementIds} />}
       {isMusic && <LibraryBonusContentSection bonusAssets={bonusAssets} unlocked={hasOverachieverUnlocked} />}
+      {!isMusic && <LibraryFilesSection assets={assets} />}
       <LibraryProductDetailsSection product={product} tracks={tracks} inferredTrackDurations={inferredTrackDurations} />
 
       <ProductUpdatesSection productId={product.id} emptyMessage="No updates from this creator yet." />
+      <ItemQuestionsSection itemId={product.id} />
 
       <AchievementToast toast={toast} onDone={() => setToast(null)} />
     </div>

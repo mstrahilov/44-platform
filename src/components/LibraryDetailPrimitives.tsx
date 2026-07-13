@@ -30,6 +30,10 @@ export type LibraryBonusAsset = {
   is_unlocked?: boolean | null;
 };
 
+export type LibraryFileAsset = LibraryBonusAsset & {
+  is_downloadable?: boolean | null;
+};
+
 export function ProductDetailHeader({
   product,
   creatorName,
@@ -144,7 +148,7 @@ export function LibraryCreatorChip({
   );
 }
 
-function withSourceProduct(href: string, productId?: string | null) {
+export function withSourceProduct(href: string, productId?: string | null) {
   if (!productId) return href;
   const separator = href.includes('?') ? '&' : '?';
   return `${href}${separator}fromProduct=${encodeURIComponent(productId)}`;
@@ -231,6 +235,36 @@ export function LibraryBonusContentSection({
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+export function LibraryFilesSection({ assets }: { assets: LibraryFileAsset[] }) {
+  const files = assets.filter(asset => !['bonus_content', 'bonus_achievement'].includes(asset.asset_type ?? ''));
+  if (files.length === 0) return null;
+
+  return (
+    <div className="view-section">
+      <SectionHeader title="Files" description="Files included with this Library item." />
+      <div className="dashboard-list-surface">
+        {files.map((asset, index) => (
+          <div className="dashboard-list-row" key={`${asset.asset_type ?? 'file'}-${asset.title ?? index}`}>
+            <span className="dashboard-row-copy">
+              <span className="dashboard-row-title">{asset.title || `File ${index + 1}`}</span>
+              <span className="dashboard-row-subtitle">
+                {asset.file_url ? 'Ready to open from your Library.' : 'This file is not included with your current access.'}
+              </span>
+            </span>
+            {asset.file_url ? (
+              <Link className="os-button os-button-secondary os-button-compact" href={asset.file_url} target="_blank" rel="noreferrer">
+                {asset.asset_type === 'book' ? 'Open' : 'Download'}
+              </Link>
+            ) : (
+              <span className="project-status-pill library-achievement-status-locked">Unavailable</span>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

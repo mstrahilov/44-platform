@@ -77,6 +77,7 @@ Important launch journeys:
 Creator-fan distance should be low:
 
 - Creator profiles connect posts, releases, Library items, updates, and future services.
+- Creator profiles and Item pages should act as cross-platform hubs. Creators may link their Spotify, Apple Music, Bandcamp, YouTube, Instagram, X, website, and other approved destinations; releases may link directly to their corresponding listening pages. These links extend creator reach and must use the existing structured external-link tables.
 - Store item pages explain the release and acquisition.
 - Library item pages show the deeper relationship: owned status, play/read/download, achievements, updates, bonus content, and future Launch actions.
 - Creator Updates are the 44OS version of patch notes, release notes, dev logs, and album/project updates.
@@ -116,7 +117,7 @@ Current code state:
 - Studio create/edit pages no longer collect release descriptions. New Items save an empty legacy description under the canonical baseline schema; edits preserve any existing legacy copy without exposing the field.
 - The reviewed achievement and launch-foundation schema is captured in the canonical `supabase/migrations/20260712010000_44os_item_baseline.sql`.
 
-The linked Supabase project backing the live tester deployment is aligned with the repository through migration `20260712052700_m10_permanent_item_lifecycle.sql`. Profile headers are retired, existing music achievements are enabled without requiring Bonus Content, `item_play_events` is the append-only creator analytics source for validated playback starts across Store, Library, and Radio, and creator Item removal is server-authoritative archival rather than hard deletion. Back up first, run dry runs, and apply reviewed repository migrations through the Supabase CLI; never make untracked dashboard-only schema changes.
+The linked Supabase project backing the live tester deployment is aligned with the repository through migration `20260712057100_m13_reliable_studio_item_edits.sql`. Profile headers are retired, existing music achievements are enabled without requiring Bonus Content, `item_play_events` is the append-only creator analytics source for validated playback starts across Store, Library, and Radio, creator Item removal is server-authoritative archival rather than hard deletion, and protected downloads use entitlement-authorized private storage with short-lived signed URLs. Back up first, run dry runs, and apply reviewed repository migrations through the Supabase CLI; never make untracked dashboard-only schema changes.
 
 ---
 
@@ -264,6 +265,11 @@ Current access and commerce stance:
 - `Buy Download` is an optional creator-supporting downloadable copy. `Buy Physical` covers vinyl, cassette, apparel, books, and other physical editions.
 - Music discovery pages are price-neutral. Price belongs to the optional purchase step, where the user can understand exactly what they are buying; it never implies that listening or saving requires payment.
 - Download and physical offers remain draft-only until M11 approves the seller, fee, tax, payout, refund, fulfillment, currency, and provider model. No placeholder card form may create a paid order or entitlement.
+- The provisional M11 direction is Stripe for customer payment collection and PayPal for creator payouts, with 44 provisionally acting as seller. This is infrastructure guidance, not final legal/accounting approval; unresolved decisions are recorded in `Other/M11_PROVISIONAL_PAYMENT_MODEL.md`.
+- Checkout and payouts remain disabled. Provider credentials alone must never activate commerce: `commerce_runtime_controls` requires explicit operating-model approval and keeps every switch false by default.
+- Creator earnings, payout batches/items, signed provider events, and reconciliation runs use private server-authoritative ledgers. PayPal eligibility is verified per creator rather than inferred from a country list.
+
+Current publishing phase is `trusted_testing`: only the approved creator/admin role list may create or mutate Items, but those trusted testers publish and edit their own releases directly so testing can cover pricing, tracks, achievements, artwork, files, and removal without an unattended approval queue. Studio does not expose Draft/Published toggles. The later submission-review launch gate must use pending revisions, preserve the last approved public version, notify 44 admins, and be explicitly enabled through reviewed runtime controls only after that workflow is complete.
 
 Rules:
 
@@ -315,6 +321,18 @@ Known Supabase state from the launch cleanup:
 - `20260712052200_m7_retire_legacy_taxonomy.sql` corrects two ambiguous Single backfills and deletes the superseded combined taxonomy tables. Browse and Studio no longer read or write the deprecated free-form Item `tags` metadata.
 - `20260712052300_m7_seed_music_genre_tags.sql` seeds the controlled Music Tag vocabulary with 32 current Apple Music-aligned genre choices. These Tags apply across every Music Type and remain admin-editable.
 - `20260712052700_m10_permanent_item_lifecycle.sql` revokes creator hard deletion, adds the ownership-checked archival operation, archives Item offers atomically, blocks stale republishing, and preserves entitlement-aware read access to archived Library Items and their content.
+- `20260712053000_m10_curated_publishing_boundary.sql` makes profile roles approval-managed, limits Item creation and mutation to creator/admin accounts, moves publication to an ownership-checked validation RPC, exposes read-only catalog-health findings, and scopes upload mutation to the owning account. Fan registration, profile editing, and Community participation remain available as before.
+- `20260712053100_m10_catalog_health_reporting.sql` provides one bounded authenticated Studio health result set across the caller's active Items; Studio shows issue counts without row-by-row request fan-out.
+- `20260712053200_m10_studio_child_write_boundary.sql` makes approval revocation apply consistently to tracks, assets, taxonomy, capabilities, collaborators, offers, links, and achievement configuration. Achievement unlocks and entitlements remain server-issued.
+- `20260712053300_m10_rpc_execute_boundary.sql` removes Supabase's direct default anonymous execute grants from M10 health, publication, role, and approval functions.
+- `20260712054000_m8_private_item_files_foundation.sql` creates the private `item-files` bucket and binds object reads to the matching `item_assets` row plus server-issued download, bonus, Library, or manager authority.
+- `20260712054100_m8_private_book_asset_cutover.sql` moves the two existing book assets to verified private paths and preserves their existing Library access as explicit audited download entitlements.
+- `20260712054200_m8_trusted_achievement_edges.sql` removes direct execution of internal achievement grant helpers, makes Signal Boost require a distinct authenticated visitor, and rejects public locations for all future downloadable or bonus assets.
+- `20260712054300_m8_achievement_evaluator_cast.sql` removes the evaluator's unsafe implicit UUID-array cast; linked schema lint is clean.
+- `20260712054400_safe_studio_release_edits.sql` makes music feature edits preserve permanent achievement row IDs and every earned unlock; normal decimal price entry and existing-release price persistence are verified.
+- `20260712055000_m9_moderation_reporting_rate_limits.sql` adds report/audit records, administrator moderation resolution, author-immutable moderation state, and database-triggered entry/reply/reaction rate limits.
+- `20260712055100_m9_creator_updates.sql` adds atomic ownership-checked Creator Update publishing for active Items.
+- `20260712055200_m9_typed_content_integrity.sql` enforces typed detail rows, reply-type/parent integrity, bounded content lengths, and published-Item scope at transaction commit.
 - The prior incremental migration chain was consolidated into `20260712010000_44os_item_baseline.sql`. Its historical files remain available in Git history, but they are no longer active replay inputs.
 - The baseline includes the complete public schema, RLS, functions, triggers, auth profile hook, public storage buckets and policies, Item vocabulary, capabilities, membership, external links, and curated role mapping.
 - A clean local Supabase reset replays the baseline without a live snapshot, and a public-schema comparison against linked staging is empty.

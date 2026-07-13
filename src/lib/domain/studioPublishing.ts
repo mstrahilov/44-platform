@@ -11,7 +11,7 @@ type AchievementInsert = Database['public']['Tables']['item_achievements']['Inse
 
 export type StudioAssetSummary = Pick<
   Database['public']['Tables']['item_assets']['Row'],
-  'asset_type' | 'title' | 'file_url'
+  'asset_type' | 'title' | 'file_url' | 'storage_path'
 >;
 
 export type StudioAchievementSummary = Pick<
@@ -83,7 +83,7 @@ export async function loadStudioItemEditor(itemId: string, ownerId: string) {
 
   const [trackResult, assetResult, achievementResult, typeResult, tagResult] = await Promise.all([
     supabase.from('tracks').select('*').eq('item_id', itemId).order('number'),
-    supabase.from('item_assets').select('asset_type,title,file_url').eq('item_id', itemId).order('sort_order'),
+    supabase.from('item_assets').select('asset_type,title,file_url,storage_path').eq('item_id', itemId).order('sort_order'),
     supabase
       .from('item_achievements')
       .select('code,title,description,trigger_type,reward_config,is_secret,icon')
@@ -106,8 +106,29 @@ export async function loadStudioItemEditor(itemId: string, ownerId: string) {
 }
 
 export async function updateStudioItem(itemId: string, ownerId: string, payload: ItemUpdate) {
-  const result = await supabase.from('catalog_items').update(payload).eq('id', itemId).eq('author_id', ownerId).neq('status', 'archived');
+  if (!ownerId) throw new Error('Could not verify the Item owner.');
+  const itemPatch = { ...payload };
+  delete itemPatch.status;
+  const result = await supabase.rpc('update_owned_item', { target_item_id: itemId, patch: itemPatch });
+  if (result.error) throw new Error(result.error.message);
+}
+
+export async function setStudioPublicationStatus(itemId: string, status: 'draft' | 'published') {
+  const result = await supabase.rpc('set_owned_item_publication_status', {
+    target_item_id: itemId,
+    target_status: status,
+  });
   if (result.error) throw result.error;
+}
+
+export async function attestStudioItemRights(itemId: string) {
+  const result = await supabase.rpc('attest_owned_item_rights', {
+    target_item_id: itemId,
+    accepted: true,
+    target_policy_version: '2026-07-12-v1',
+  });
+  if (result.error) throw result.error;
+  return result.data;
 }
 
 export async function syncStudioTracks(itemId: string, rows: Array<TrackInsert & { id?: string }>, deletedIds: string[]) {
@@ -136,14 +157,13 @@ export async function replaceStudioReleaseFeatures(
   achievements: AchievementInsert[],
   assets: AssetInsert[],
 ) {
-  const achievementDelete = await supabase.from('item_achievements').delete().eq('item_id', itemId);
-  if (achievementDelete.error) throw achievementDelete.error;
+  const achievementSync = await supabase.rpc('sync_managed_item_achievements', {
+    target_item_id: itemId,
+    achievement_rows: achievements,
+  });
+  if (achievementSync.error) throw achievementSync.error;
   const assetDelete = await supabase.from('item_assets').delete().eq('item_id', itemId).in('asset_type', featureAssetTypes);
   if (assetDelete.error) throw assetDelete.error;
-  if (achievements.length > 0) {
-    const result = await supabase.from('item_achievements').insert(achievements);
-    if (result.error) throw result.error;
-  }
   await addStudioAssets(assets);
 }
 

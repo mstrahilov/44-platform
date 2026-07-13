@@ -136,6 +136,7 @@ export function SocialPostRow({
   liked = false,
   onLike,
   onDelete,
+  onReport,
   canDelete = false,
   disabled,
   showTitle = false,
@@ -156,6 +157,7 @@ export function SocialPostRow({
   repliers?: SocialLiker[];
   onLike?: () => void;
   onDelete?: () => void;
+  onReport?: () => void;
   canDelete?: boolean;
   disabled?: boolean;
   showTitle?: boolean;
@@ -202,6 +204,7 @@ export function SocialPostRow({
       { id: 'author', label: 'View Author', href: authorLink },
       { id: 'reply', label: 'Reply', href },
       ...(onLike ? [{ id: 'like', label: liked ? 'Unlike' : 'Like', onSelect: onLike, disabled }] as ContextMenuEntry[] : []),
+      ...(onReport ? [{ id: 'report', label: 'Report Post', onSelect: onReport }] as ContextMenuEntry[] : []),
       ...(canDelete && onDelete
         ? [
             { kind: 'divider', id: 'post-actions' },
@@ -301,6 +304,11 @@ export function SocialPostRow({
               aria-label="Delete post"
             >
               <TrashIcon />
+            </button>
+          )}
+          {onReport && (
+            <button type="button" className="social-action" onClick={onReport} aria-label="Report post">
+              <span className="social-action-label">Report</span>
             </button>
           )}
         </div>

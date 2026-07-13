@@ -1,4 +1,5 @@
 import type { Profile } from '@/lib/platform';
+import type { Database } from '@/lib/database.types';
 import { supabase } from '@/lib/supabase';
 
 type ContentProfile = Pick<Profile, 'id' | 'slug' | 'username' | 'display_name' | 'avatar_url'>;
@@ -26,6 +27,8 @@ export type ItemUpdate = {
   created_at: string;
   authors?: ContentProfile | ContentProfile[] | null;
 };
+
+export type ItemQuestion = Database['public']['Views']['community_question_content']['Row'];
 
 export async function listItemReviews(itemId: string) {
   const result = await supabase
@@ -58,4 +61,37 @@ export async function listItemUpdates(itemId: string) {
     .order('created_at', { ascending: false });
   if (result.error) throw result.error;
   return (result.data as ItemUpdate[] | null) ?? [];
+}
+
+export async function createItemUpdate(itemId: string, title: string, body: string, versionLabel?: string) {
+  const result = await supabase.rpc('create_content_update', {
+    target_item_id: itemId,
+    update_title: title.trim(),
+    update_body: body.trim(),
+    update_version_label: versionLabel?.trim() || undefined,
+  });
+  if (result.error) throw result.error;
+  return result.data;
+}
+
+export async function listItemQuestions(itemId: string) {
+  const result = await supabase
+    .from('community_question_content')
+    .select('*')
+    .eq('item_id', itemId)
+    .eq('status', 'published')
+    .order('created_at', { ascending: false });
+  if (result.error) throw result.error;
+  return (result.data as ItemQuestion[] | null) ?? [];
+}
+
+export async function createItemQuestion(itemId: string, title: string, body: string) {
+  const result = await supabase.rpc('create_content_question', {
+    target_item_id: itemId,
+    question_title: title.trim(),
+    question_body: body.trim(),
+    question_tags: [],
+  });
+  if (result.error) throw result.error;
+  return result.data;
 }

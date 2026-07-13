@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -598,6 +603,86 @@ export type Database = {
         }
         Relationships: []
       }
+      commerce_reconciliation_runs: {
+        Row: {
+          checked_count: number
+          completed_at: string | null
+          id: string
+          mismatch_count: number
+          provider: string
+          scope: string
+          started_at: string
+          status: string
+          summary: Json
+          window_end: string
+          window_start: string
+        }
+        Insert: {
+          checked_count?: number
+          completed_at?: string | null
+          id?: string
+          mismatch_count?: number
+          provider: string
+          scope: string
+          started_at?: string
+          status?: string
+          summary?: Json
+          window_end: string
+          window_start: string
+        }
+        Update: {
+          checked_count?: number
+          completed_at?: string | null
+          id?: string
+          mismatch_count?: number
+          provider?: string
+          scope?: string
+          started_at?: string
+          status?: string
+          summary?: Json
+          window_end?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
+      commerce_runtime_controls: {
+        Row: {
+          approved_by: string | null
+          checkout_enabled: boolean
+          operating_model_approved_at: string | null
+          paypal_payouts_enabled: boolean
+          singleton: boolean
+          stripe_payments_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          approved_by?: string | null
+          checkout_enabled?: boolean
+          operating_model_approved_at?: string | null
+          paypal_payouts_enabled?: boolean
+          singleton?: boolean
+          stripe_payments_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          approved_by?: string | null
+          checkout_enabled?: boolean
+          operating_model_approved_at?: string | null
+          paypal_payouts_enabled?: boolean
+          singleton?: boolean
+          stripe_payments_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commerce_runtime_controls_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       community_collaboration_responses: {
         Row: {
           author_id: string
@@ -835,6 +920,35 @@ export type Database = {
           {
             foreignKeyName: "community_questions_author_id_fkey"
             columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_rate_events: {
+        Row: {
+          action_key: string
+          actor_id: string
+          created_at: string
+          id: number
+        }
+        Insert: {
+          action_key: string
+          actor_id: string
+          created_at?: string
+          id?: number
+        }
+        Update: {
+          action_key?: string
+          actor_id?: string
+          created_at?: string
+          id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_rate_events_actor_id_fkey"
+            columns: ["actor_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1320,6 +1434,133 @@ export type Database = {
           },
         ]
       }
+      content_reports: {
+        Row: {
+          created_at: string
+          details: string | null
+          entry_id: string | null
+          id: string
+          reason: string
+          reply_id: string | null
+          reporter_id: string
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          details?: string | null
+          entry_id?: string | null
+          id?: string
+          reason: string
+          reply_id?: string | null
+          reporter_id: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          details?: string | null
+          entry_id?: string | null
+          id?: string
+          reason?: string
+          reply_id?: string | null
+          reporter_id?: string
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_reports_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "community_collaboration_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_reports_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "community_discussions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_reports_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "community_question_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_reports_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "community_review_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_reports_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "community_update_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_reports_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "content_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_reports_reply_id_fkey"
+            columns: ["reply_id"]
+            isOneToOne: false
+            referencedRelation: "community_collaboration_response_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_reports_reply_id_fkey"
+            columns: ["reply_id"]
+            isOneToOne: false
+            referencedRelation: "community_discussion_replies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_reports_reply_id_fkey"
+            columns: ["reply_id"]
+            isOneToOne: false
+            referencedRelation: "community_question_answer_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_reports_reply_id_fkey"
+            columns: ["reply_id"]
+            isOneToOne: false
+            referencedRelation: "content_replies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_reports_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_review_details: {
         Row: {
           created_at: string
@@ -1518,6 +1759,231 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creator_earnings_entries: {
+        Row: {
+          amount_cents: number
+          available_at: string | null
+          created_at: string
+          creator_id: string
+          currency: string
+          entry_type: string
+          id: string
+          metadata: Json
+          order_item_id: string | null
+          source_provider: string | null
+          source_reference: string | null
+        }
+        Insert: {
+          amount_cents: number
+          available_at?: string | null
+          created_at?: string
+          creator_id: string
+          currency: string
+          entry_type: string
+          id?: string
+          metadata?: Json
+          order_item_id?: string | null
+          source_provider?: string | null
+          source_reference?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          available_at?: string | null
+          created_at?: string
+          creator_id?: string
+          currency?: string
+          entry_type?: string
+          id?: string
+          metadata?: Json
+          order_item_id?: string | null
+          source_provider?: string | null
+          source_reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creator_earnings_entries_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creator_earnings_entries_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_order_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creator_payout_accounts: {
+        Row: {
+          created_at: string
+          creator_id: string
+          disabled_at: string | null
+          id: string
+          preferred_currency: string | null
+          provider: string
+          provider_recipient_ref: string | null
+          recipient_country_code: string | null
+          status: string
+          updated_at: string
+          verified_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          creator_id: string
+          disabled_at?: string | null
+          id?: string
+          preferred_currency?: string | null
+          provider: string
+          provider_recipient_ref?: string | null
+          recipient_country_code?: string | null
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          creator_id?: string
+          disabled_at?: string | null
+          id?: string
+          preferred_currency?: string | null
+          provider?: string
+          provider_recipient_ref?: string | null
+          recipient_country_code?: string | null
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creator_payout_accounts_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creator_payout_batches: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          currency: string
+          id: string
+          idempotency_key: string
+          item_count: number
+          provider: string
+          provider_batch_id: string | null
+          status: string
+          submitted_at: string | null
+          total_cents: number
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          currency: string
+          id?: string
+          idempotency_key: string
+          item_count?: number
+          provider: string
+          provider_batch_id?: string | null
+          status?: string
+          submitted_at?: string | null
+          total_cents?: number
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          idempotency_key?: string
+          item_count?: number
+          provider?: string
+          provider_batch_id?: string | null
+          status?: string
+          submitted_at?: string | null
+          total_cents?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      creator_payout_items: {
+        Row: {
+          amount_cents: number
+          batch_id: string
+          completed_at: string | null
+          created_at: string
+          creator_id: string
+          currency: string
+          failure_code: string | null
+          failure_message: string | null
+          id: string
+          payout_account_id: string
+          provider_item_id: string | null
+          sender_item_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_cents: number
+          batch_id: string
+          completed_at?: string | null
+          created_at?: string
+          creator_id: string
+          currency: string
+          failure_code?: string | null
+          failure_message?: string | null
+          id?: string
+          payout_account_id: string
+          provider_item_id?: string | null
+          sender_item_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_cents?: number
+          batch_id?: string
+          completed_at?: string | null
+          created_at?: string
+          creator_id?: string
+          currency?: string
+          failure_code?: string | null
+          failure_message?: string | null
+          id?: string
+          payout_account_id?: string
+          provider_item_id?: string | null
+          sender_item_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creator_payout_items_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "creator_payout_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creator_payout_items_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creator_payout_items_payout_account_id_fkey"
+            columns: ["payout_account_id"]
+            isOneToOne: false
+            referencedRelation: "creator_payout_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -1966,6 +2432,54 @@ export type Database = {
             columns: ["track_id"]
             isOneToOne: false
             referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_rights_attestations: {
+        Row: {
+          attested_at: string
+          attested_by: string
+          id: string
+          item_id: string
+          metadata: Json
+          policy_version: string
+          revoked_at: string | null
+          statement: string
+        }
+        Insert: {
+          attested_at?: string
+          attested_by: string
+          id?: string
+          item_id: string
+          metadata?: Json
+          policy_version: string
+          revoked_at?: string | null
+          statement: string
+        }
+        Update: {
+          attested_at?: string
+          attested_by?: string
+          id?: string
+          item_id?: string
+          metadata?: Json
+          policy_version?: string
+          revoked_at?: string | null
+          statement?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_rights_attestations_attested_by_fkey"
+            columns: ["attested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_rights_attestations_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
             referencedColumns: ["id"]
           },
         ]
@@ -2890,6 +3404,66 @@ export type Database = {
           slug?: string | null
           updated_at?: string
           username?: string | null
+        }
+        Relationships: []
+      }
+      provider_webhook_events: {
+        Row: {
+          error_message: string | null
+          event_type: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          processing_status: string
+          provider: string
+          provider_event_id: string
+          received_at: string
+          signature_verified: boolean
+        }
+        Insert: {
+          error_message?: string | null
+          event_type: string
+          id?: string
+          payload: Json
+          processed_at?: string | null
+          processing_status?: string
+          provider: string
+          provider_event_id: string
+          received_at?: string
+          signature_verified?: boolean
+        }
+        Update: {
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          processing_status?: string
+          provider?: string
+          provider_event_id?: string
+          received_at?: string
+          signature_verified?: boolean
+        }
+        Relationships: []
+      }
+      publishing_runtime_controls: {
+        Row: {
+          phase: string
+          review_required: boolean
+          singleton: boolean
+          updated_at: string
+        }
+        Insert: {
+          phase?: string
+          review_required?: boolean
+          singleton?: boolean
+          updated_at?: string
+        }
+        Update: {
+          phase?: string
+          review_required?: boolean
+          singleton?: boolean
+          updated_at?: string
         }
         Relationships: []
       }
@@ -3859,12 +4433,29 @@ export type Database = {
         Args: { lookup_email: string }
         Returns: boolean
       }
+      archive_owned_item: { Args: { target_item_id: string }; Returns: string }
+      attest_owned_item_rights: {
+        Args: {
+          accepted: boolean
+          target_item_id: string
+          target_policy_version?: string
+        }
+        Returns: string
+      }
+      can_access_item_file: { Args: { object_name: string }; Returns: boolean }
       can_manage_content: {
         Args: { target_entry_id: string }
         Returns: boolean
       }
       can_manage_item: { Args: { target_item_id: string }; Returns: boolean }
       can_read_content: { Args: { target_entry_id: string }; Returns: boolean }
+      catalog_item_health: {
+        Args: { target_item_id: string }
+        Returns: {
+          code: string
+          message: string
+        }[]
+      }
       create_content_collaboration: {
         Args: {
           collaboration_body: string
@@ -3893,6 +4484,15 @@ export type Database = {
         }
         Returns: string
       }
+      create_content_update: {
+        Args: {
+          target_item_id: string
+          update_body: string
+          update_title: string
+          update_version_label?: string
+        }
+        Returns: string
+      }
       create_or_open_direct_conversation: {
         Args: { other_profile_id: string }
         Returns: string
@@ -3913,6 +4513,7 @@ export type Database = {
           trigger_type: string
         }[]
       }
+      get_creator_total_plays: { Args: never; Returns: number }
       grant_achievement_entitlement: {
         Args: {
           target_achievement_id: string
@@ -3933,27 +4534,16 @@ export type Database = {
         }
         Returns: string
       }
-      get_creator_total_plays: { Args: never; Returns: number }
-      archive_owned_item: {
-        Args: { target_item_id: string }
-        Returns: string
-      }
-      record_item_play: {
-        Args: {
-          target_item_id: string
-          target_play_reason?: string
-          target_playback_mode?: string
-          target_session_id: string
-          target_track_id: string
-        }
-        Returns: boolean
-      }
       has_item_entitlement: {
         Args: {
           target_entitlement_type: string
           target_item_id: string
           target_user_id: string
         }
+        Returns: boolean
+      }
+      is_approved_publisher: {
+        Args: { target_profile_id?: string }
         Returns: boolean
       }
       is_conversation_member: {
@@ -3985,6 +4575,15 @@ export type Database = {
           title: string
         }[]
       }
+      list_managed_catalog_health: {
+        Args: never
+        Returns: {
+          issue_codes: string[]
+          issue_count: number
+          issue_messages: string[]
+          item_id: string
+        }[]
+      }
       notification_actor_name: { Args: { actor: string }; Returns: string }
       record_achievement_playback_signal: {
         Args: {
@@ -3996,8 +4595,40 @@ export type Database = {
         }
         Returns: undefined
       }
+      record_item_play: {
+        Args: {
+          target_item_id: string
+          target_play_reason?: string
+          target_playback_mode?: string
+          target_session_id: string
+          target_track_id: string
+        }
+        Returns: boolean
+      }
+      record_item_share_visit: {
+        Args: { target_item_id: string; target_referrer_id: string }
+        Returns: boolean
+      }
       refresh_content_question_stats: {
         Args: { target_entry_id: string }
+        Returns: undefined
+      }
+      report_content: {
+        Args: {
+          report_details?: string
+          report_reason?: string
+          target_entry_id?: string
+          target_reply_id?: string
+        }
+        Returns: string
+      }
+      resolve_content_report: {
+        Args: {
+          target_moderation_status?: string
+          target_report_id: string
+          target_resolution_note?: string
+          target_status: string
+        }
         Returns: undefined
       }
       revoke_item_entitlement: {
@@ -4024,6 +4655,22 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      set_owned_item_publication_status: {
+        Args: { target_item_id: string; target_status: string }
+        Returns: undefined
+      }
+      set_profile_role: {
+        Args: { target_profile_id: string; target_role: string }
+        Returns: undefined
+      }
+      sync_managed_item_achievements: {
+        Args: { achievement_rows: Json; target_item_id: string }
+        Returns: undefined
+      }
+      update_owned_item: {
+        Args: { patch: Json; target_item_id: string }
+        Returns: undefined
       }
       upsert_content_review: {
         Args: {

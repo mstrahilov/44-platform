@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
 import { useContextMenu } from '@/components/ContextMenu';
-import { LibraryAchievementsSection, LibraryBonusContentSection, LibraryProductDetailsSection, ProductDetailHeader, type LibraryBonusAsset, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
+import { LibraryAchievementsSection, LibraryBonusContentSection, LibraryProductDetailsSection, ProductDetailHeader, withSourceProduct, type LibraryBonusAsset, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
 import {
   MUSIC_TRACK_COMPLETED_EVENT,
   MUSIC_TRACK_STARTED_EVENT,
@@ -15,6 +15,7 @@ import {
   type MusicTrackPlaybackEventDetail,
 } from '@/components/MusicPlayer';
 import { ProductUpdatesSection } from '@/components/ProductUpdatesSection';
+import { ItemQuestionsSection } from '@/components/ItemQuestionsSection';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { recordAchievementPlaybackSignal, trackProductAchievementTrigger } from '@/lib/achievementTracking';
 import { getProductLibraryPrimaryAction, getProductRuntimeKind } from '@/lib/libraryContent';
@@ -312,9 +313,13 @@ function OwnedMusicRelease({
         await unlockTrigger('album_no_skips', { source: 'music_library_playback' });
       }
 
-      const hour = new Date().getHours();
+      const now = new Date();
+      const hour = now.getHours();
       if (hour >= 22 || hour < 4) {
-        await unlockTrigger('release_completed_at_night', { source: 'music_library_playback', local_hour: hour });
+        await unlockTrigger('release_completed_at_night', {
+          source: 'music_library_playback',
+          timezone_offset_minutes: now.getTimezoneOffset(),
+        });
       }
 
       if (isWithinLaunchWindow(product.created_at)) {
@@ -330,7 +335,7 @@ function OwnedMusicRelease({
 
   const releaseType = product.item_type || 'Release';
   const creatorDisplayName = product.creators?.display_name || product.creator || '44 Creator';
-  const creatorLink = creatorHref(product.creators ?? creatorDisplayName);
+  const creatorLink = withSourceProduct(creatorHref(product.creators ?? creatorDisplayName), product.id);
   const releaseMeta = [
     releaseType.toUpperCase(),
     ...(product.year ? [String(product.year)] : []),
@@ -407,6 +412,7 @@ function OwnedMusicRelease({
       <LibraryProductDetailsSection product={product} tracks={tracks} inferredTrackDurations={inferredTrackDurations} />
 
       <ProductUpdatesSection productId={product.id} emptyMessage="No updates from this creator yet." />
+      <ItemQuestionsSection itemId={product.id} />
 
       <AchievementToast toast={toast} onDone={() => setToast(null)} />
     </div>

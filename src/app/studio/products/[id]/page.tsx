@@ -7,6 +7,7 @@ import { PageShell, HubHero, SectionHeader } from '@/components/Ui';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { UploadField } from '@/components/UploadField';
+import { StudioCreatorUpdates } from '@/components/StudioCreatorUpdates';
 import { TagMultiSelect } from '@/components/TagMultiSelect';
 import {
   StudioReleaseFeatures,
@@ -37,13 +38,11 @@ import {
 import type { Database } from '@/lib/database.types';
 
 function formatPriceInput(value: string) {
-  const digits = value.replace(/\D/g, '').slice(0, 9);
-  if (!digits) return '';
-
-  const cents = digits.padStart(3, '0');
-  const whole = cents.slice(0, -2).replace(/^0+(?=\d)/, '') || '0';
-  const decimals = cents.slice(-2);
-  return `${whole}.${decimals}`;
+  const normalized = value.replace(/[^\d.]/g, '');
+  const [whole = '', ...decimalParts] = normalized.split('.');
+  const decimals = decimalParts.join('').slice(0, 2);
+  const safeWhole = whole.replace(/^0+(?=\d)/, '').slice(0, 7);
+  return decimalParts.length > 0 ? `${safeWhole || '0'}.${decimals}` : safeWhole;
 }
 
 function currencySymbol(currency: string) {
@@ -115,7 +114,6 @@ export default function EditProductPage() {
   const [trackCount, setTrackCount] = useState('1');
   const [tracks, setTracks] = useState<DraftTrack[]>([createDraftTrack()]);
   const [featureState, setFeatureState] = useState(() => createReleaseFeatureState('music'));
-  const [publishStatus, setPublishStatus] = useState<'draft' | 'published' | 'scheduled'>('draft');
   const [hasSavedFeatures, setHasSavedFeatures] = useState(false);
   const [ownerId, setOwnerId] = useState('');
   const [saving, setSaving] = useState(false);
@@ -181,9 +179,9 @@ export default function EditProductPage() {
       setMerchFulfillmentMode((product as Product & { merch_fulfillment_mode?: 'ship' | 'deliver' | null }).merch_fulfillment_mode || (product.available_locally_only ? 'deliver' : 'ship'));
       setMerchShippingScope((product as Product & { merch_shipping_scope?: 'local' | 'global' | null }).merch_shipping_scope || (product.available_locally_only ? 'local' : 'global'));
       setCoverUrl(product.cover_url ?? '');
-      setItemFileUrl(product.read_url || product.download_url || assetRows.find(asset => !featureAssetTypes().includes(asset.asset_type ?? ''))?.file_url || '');
+      const primaryAsset = assetRows.find(asset => !featureAssetTypes().includes(asset.asset_type ?? ''));
+      setItemFileUrl(product.read_url || product.download_url || primaryAsset?.storage_path || primaryAsset?.file_url || '');
       setYear(product.year ? String(product.year) : '');
-      setPublishStatus(product.status === 'published' ? 'published' : 'draft');
       setFeatureState(hydrateReleaseFeatureState(
         productSection.id,
         (achievementRows as Array<{
@@ -324,7 +322,6 @@ export default function EditProductPage() {
       read_url: null,
       download_url: null,
       year: year ? Number(year) : null,
-      status: publishStatus,
       creator: creatorName,
     };
 
@@ -374,8 +371,8 @@ export default function EditProductPage() {
           item_id: id,
           asset_type: assetType,
           title: productType.trim() || title.trim(),
-          file_url: itemFileUrl.trim(),
-          storage_path: null,
+          file_url: null,
+          storage_path: itemFileUrl.trim(),
           is_downloadable: true,
           sort_order: 0,
         });
@@ -578,6 +575,7 @@ export default function EditProductPage() {
               <UploadField
                 label={section.id === 'books' ? 'Book File' : 'Asset File'}
                 folder={section.id === 'books' ? 'products/books' : 'products/assets'}
+                storage="private-item"
                 userId={user.id}
                 value={itemFileUrl}
                 accept={section.id === 'books' ? 'application/pdf,.pdf,.epub' : 'application/zip,.zip,audio/*'}
@@ -661,6 +659,7 @@ export default function EditProductPage() {
               </div>
             </div>
           </form>
+          <StudioCreatorUpdates itemId={id} />
         </div>
         <ConfirmDialog
           open={showDeleteConfirm}

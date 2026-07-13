@@ -8,7 +8,7 @@ import type { Product } from '@/lib/products';
 import { getProductExperience } from '@/lib/experience';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { STUDIO_CATALOG_SECTIONS } from '@/lib/studioCatalog';
-import { getCreatorCatalogOverview, type StudioLibraryMetric } from '@/lib/domain/studio';
+import { getCreatorCatalogOverview, type StudioCatalogHealth, type StudioLibraryMetric } from '@/lib/domain/studio';
 
 type LibraryMetricRow = StudioLibraryMetric;
 
@@ -16,6 +16,7 @@ type OverviewState = {
   products: Product[];
   libraryItems: LibraryMetricRow[];
   totalPlays: number;
+  catalogHealth: StudioCatalogHealth[];
   metricsError: string;
 };
 
@@ -26,6 +27,7 @@ export default function StudioPage() {
     products: [],
     libraryItems: [],
     totalPlays: 0,
+    catalogHealth: [],
     metricsError: '',
   });
 
@@ -40,12 +42,14 @@ export default function StudioPage() {
       let productRows: Product[] = [];
       let libraryItems: LibraryMetricRow[] = [];
       let totalPlays = 0;
+      let catalogHealth: StudioCatalogHealth[] = [];
       let metricsError = '';
       try {
         const result = await getCreatorCatalogOverview(profileId);
         productRows = result.items;
         libraryItems = result.libraryItems;
         totalPlays = result.totalPlays;
+        catalogHealth = result.catalogHealth;
       } catch (overviewError) {
         metricsError = overviewError instanceof Error ? overviewError.message : 'Could not load Studio metrics.';
       }
@@ -54,6 +58,7 @@ export default function StudioPage() {
         products: productRows,
         libraryItems,
         totalPlays,
+        catalogHealth,
         metricsError,
       });
     }
@@ -89,7 +94,7 @@ export default function StudioPage() {
           <GlassPanel style={{ padding: 40 }}>
             <h1 className="os-type-panel-title" style={{ marginBottom: 8 }}>Creator Access Required</h1>
             <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', marginBottom: 18 }}>
-              Studio is for creator accounts. You can update your public profile first, then switch your role in Supabase when you are ready to publish.
+              Studio publishing is available to approved creator accounts. Your fan account, Library, and Community access remain available while approval is pending.
             </p>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <Link href="/profile" className="os-button os-button-primary">Open Public Profile</Link>
@@ -111,6 +116,7 @@ export default function StudioPage() {
     return total + (product?.price_cents ?? 0);
   }, 0);
   const totalPlays = overview.totalPlays;
+  const healthByItemId = new Map(overview.catalogHealth.map(health => [health.item_id, health]));
   const productSections = STUDIO_CATALOG_SECTIONS.map(section => ({
     ...section,
     items: overview.products.filter(item => {
@@ -150,6 +156,7 @@ export default function StudioPage() {
               title={section.label}
               itemLabel={section.itemLabel}
               items={section.items}
+              healthByItemId={healthByItemId}
               newHref={`/studio/products/new?section=${section.id}`}
             />
           ))}
@@ -197,11 +204,13 @@ function StudioProductSection({
   itemLabel,
   items,
   newHref,
+  healthByItemId,
 }: {
   title: string;
   itemLabel: string;
   items: Product[];
   newHref: string;
+  healthByItemId: Map<string, StudioCatalogHealth>;
 }) {
   return (
     <section className="dashboard-section">
@@ -213,7 +222,10 @@ function StudioProductSection({
         {items.length === 0 ? (
           <div className="dashboard-empty">No {itemLabel}s yet.</div>
         ) : (
-          items.map(product => (
+          items.map(product => {
+            const health = healthByItemId.get(product.id);
+            const issueCount = health?.issue_count ?? 0;
+            return (
             <Link key={product.id} href={`/studio/products/${product.id}`} className="dashboard-list-row studio-item-row">
               <div className="dashboard-row-copy">
                 <div className="dashboard-row-title">{product.title}</div>
@@ -222,12 +234,15 @@ function StudioProductSection({
                 </div>
               </div>
               <div className="dashboard-row-actions">
-                <span aria-label={product.status === 'published' ? 'Published' : 'Draft'} className={product.status === 'published' ? 'dashboard-status-pill dashboard-status-pill-success studio-publication-status' : 'dashboard-status-pill studio-status-pill-draft studio-publication-status'}>
-                  {product.status === 'published' ? 'Published' : 'Draft'}
-                </span>
+                {issueCount > 0 ? (
+                  <span title={health?.issue_messages.join(' ')} className="dashboard-status-pill studio-status-pill-draft">
+                    {issueCount} {issueCount === 1 ? 'issue' : 'issues'}
+                  </span>
+                ) : null}
               </div>
             </Link>
-          ))
+            );
+          })
         )}
       </div>
     </section>

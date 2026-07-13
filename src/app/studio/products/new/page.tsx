@@ -19,7 +19,7 @@ import { currencyForCountry, type MarketMode } from '@/lib/marketPreferences';
 import { getStudioDisplayName, isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { normalizeTaxonomyValue } from '@/lib/taxonomy';
 import { getStudioCatalogSection, type StudioCatalogSectionId } from '@/lib/studioCatalog';
-import { addStudioAssets, addStudioTracks, createStudioItem, listCatalogTaxonomy, listItemCategories, replaceStudioItemTaxonomy } from '@/lib/domain/studioPublishing';
+import { addStudioAssets, addStudioTracks, attestStudioItemRights, createStudioItem, listCatalogTaxonomy, listItemCategories, replaceStudioItemTaxonomy, setStudioPublicationStatus } from '@/lib/domain/studioPublishing';
 import type { Database } from '@/lib/database.types';
 
 function buildSlug(title: string) {
@@ -28,13 +28,11 @@ function buildSlug(title: string) {
 }
 
 function formatPriceInput(value: string) {
-  const digits = value.replace(/\D/g, '').slice(0, 9);
-  if (!digits) return '';
-
-  const cents = digits.padStart(3, '0');
-  const whole = cents.slice(0, -2).replace(/^0+(?=\d)/, '') || '0';
-  const decimals = cents.slice(-2);
-  return `${whole}.${decimals}`;
+  const normalized = value.replace(/[^\d.]/g, '');
+  const [whole = '', ...decimalParts] = normalized.split('.');
+  const decimals = decimalParts.join('').slice(0, 2);
+  const safeWhole = whole.replace(/^0+(?=\d)/, '').slice(0, 7);
+  return decimalParts.length > 0 ? `${safeWhole || '0'}.${decimals}` : safeWhole;
 }
 
 function currencySymbol(currency: string) {
@@ -124,8 +122,8 @@ function NewProductContent() {
   const [trackCount, setTrackCount] = useState('1');
   const [tracks, setTracks] = useState<DraftTrack[]>([createDraftTrack()]);
   const [featureState, setFeatureState] = useState(() => createReleaseFeatureState(section.id));
-  const [publishStatus] = useState<'draft' | 'published' | 'scheduled'>('draft');
   const [saving, setSaving] = useState(false);
+  const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -198,6 +196,10 @@ function NewProductContent() {
       setError('Please fill out the title and choose an Item Type.');
       return;
     }
+    if (!rightsConfirmed) {
+      setError('Confirm that you own this work or have permission to publish it.');
+      return;
+    }
 
     const visibleTracks = tracks.slice(0, Number(trackCount || '0')).map((track, index, list) => ({
       ...track,
@@ -250,7 +252,7 @@ function NewProductContent() {
       read_url: null,
       download_url: null,
       featured: false,
-      status: publishStatus,
+      status: 'draft' as const,
       year: year ? Number(year) : null,
       sort_order: sortOrder,
     };
@@ -258,6 +260,7 @@ function NewProductContent() {
     let insertedProductId: string;
     try {
       insertedProductId = await createStudioItem(insertPayload);
+      await attestStudioItemRights(insertedProductId);
     } catch (insertError) {
       setSaving(false);
       setError(insertError instanceof Error ? insertError.message : 'Could not create this Item.');
@@ -297,8 +300,8 @@ function NewProductContent() {
         item_id: insertedProductId,
         asset_type: productAssetTypeForSection(section.id),
         title: cleanType || cleanTitle,
-        file_url: itemFileUrl.trim(),
-        storage_path: null,
+        file_url: null,
+        storage_path: itemFileUrl.trim(),
         is_downloadable: true,
         sort_order: 0,
         }]);
@@ -339,6 +342,14 @@ function NewProductContent() {
         setError(featureError);
         return;
       }
+    }
+
+    try {
+      await setStudioPublicationStatus(insertedProductId, 'published');
+    } catch (publicationError) {
+      setSaving(false);
+      setError(publicationError instanceof Error ? publicationError.message : 'This Item is not ready to publish.');
+      return;
     }
 
     setSaving(false);
@@ -550,6 +561,7 @@ function NewProductContent() {
                 <UploadField
                 label={section.id === 'books' ? 'Book File' : 'Asset File'}
                 folder={section.id === 'books' ? 'products/books' : 'products/assets'}
+                storage="private-item"
                 userId={user.id}
                 value={itemFileUrl}
                 accept={section.id === 'books' ? 'application/pdf,.pdf,.epub' : 'application/zip,.zip,audio/*'}
@@ -622,9 +634,17 @@ function NewProductContent() {
 
             {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
 
+            <label className="dashboard-field">
+              <span className="settings-checkbox-row">
+                <input type="checkbox" checked={rightsConfirmed} onChange={event => setRightsConfirmed(event.target.checked)} />
+                <span>I confirm that I own this work or have the necessary rights and permission to publish and distribute it through 44OS.</span>
+              </span>
+              <span className="dashboard-form-note">This records your confirmation; it does not mean 44 has independently verified ownership.</span>
+            </label>
+
             {!isCreatorProfile(profile) && (
               <p className="dashboard-form-note">
-                This account is not marked as a creator yet. You can still save drafts, but switch your profile role to creator before publishing publicly.
+                Studio publishing is available to approved creator accounts. Your fan account remains active while approval is pending.
               </p>
             )}
 
@@ -634,7 +654,7 @@ function NewProductContent() {
                   Cancel
                 </Link>
                 <button className="os-button os-button-primary" type="submit" disabled={saving}>
-                  {saving ? 'Saving…' : 'Save Draft'}
+                  {saving ? 'Publishing…' : 'Publish Release'}
                 </button>
               </div>
             </div>
