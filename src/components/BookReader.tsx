@@ -10,38 +10,6 @@ import { useAuth } from '@/lib/useAuth';
 type ReaderAppearance = { theme: 'system' | 'light' | 'dark' | 'sepia'; fit: 'width' | 'page'; zoom: number };
 const DEFAULT_APPEARANCE: ReaderAppearance = { theme: 'system', fit: 'width', zoom: 1 };
 
-type MapWithUpsert<K, V> = Map<K, V> & {
-  getOrInsert?: (key: K, value: V) => V;
-  getOrInsertComputed?: (key: K, callback: (key: K) => V) => V;
-};
-
-function ensureMapUpsertSupport() {
-  const prototype = Map.prototype as MapWithUpsert<unknown, unknown>;
-  if (!prototype.getOrInsert) {
-    Object.defineProperty(prototype, 'getOrInsert', {
-      configurable: true,
-      writable: true,
-      value(this: Map<unknown, unknown>, key: unknown, value: unknown) {
-        if (this.has(key)) return this.get(key);
-        this.set(key, value);
-        return value;
-      },
-    });
-  }
-  if (!prototype.getOrInsertComputed) {
-    Object.defineProperty(prototype, 'getOrInsertComputed', {
-      configurable: true,
-      writable: true,
-      value(this: Map<unknown, unknown>, key: unknown, callback: (key: unknown) => unknown) {
-        if (this.has(key)) return this.get(key);
-        const value = callback(key);
-        this.set(key, value);
-        return value;
-      },
-    });
-  }
-}
-
 export function BookReader({ itemId, mode }: { itemId: string; mode: 'sample' | 'full' }) {
   const { user, loading: authLoading } = useAuth();
   const userId = user?.id ?? '';
@@ -81,9 +49,6 @@ export function BookReader({ itemId, mode }: { itemId: string; mode: 'sample' | 
           zoom: typeof savedAppearance.zoom === 'number' ? Math.min(2, Math.max(.7, savedAppearance.zoom)) : 1,
         });
       }
-      // PDF.js 6 uses the Map upsert proposal. Older Safari/iOS releases do not
-      // expose it yet, so install the small standards-compatible methods first.
-      ensureMapUpsertSupport();
       const { GlobalWorkerOptions, getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
       GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/legacy/build/pdf.worker.min.mjs', import.meta.url).toString();
       const pdf = await getDocument({ url: session.url, withCredentials: false }).promise;
@@ -140,7 +105,7 @@ export function BookReader({ itemId, mode }: { itemId: string; mode: 'sample' | 
       const context = canvas.getContext('2d');
       if (!context) return;
       await renderTaskRef.current?.cancel();
-      const task = pdfPage.render({ canvasContext: context, canvas, viewport, transform: outputScale === 1 ? undefined : [outputScale, 0, 0, outputScale, 0, 0] });
+      const task = pdfPage.render({ canvasContext: context, viewport, transform: outputScale === 1 ? undefined : [outputScale, 0, 0, outputScale, 0, 0] });
       renderTaskRef.current = task;
       try { await task.promise; } catch (renderError) { if ((renderError as Error).name !== 'RenderingCancelledException') throw renderError; }
       const text = await pdfPage.getTextContent();
