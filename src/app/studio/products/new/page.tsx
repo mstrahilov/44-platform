@@ -21,6 +21,8 @@ import { normalizeTaxonomyValue } from '@/lib/taxonomy';
 import { getStudioCatalogSection, type StudioCatalogSectionId } from '@/lib/studioCatalog';
 import { addStudioAssets, addStudioTracks, attestStudioItemRights, createStudioItem, listCatalogTaxonomy, listItemCategories, replaceStudioItemTaxonomy, setStudioPublicationStatus } from '@/lib/domain/studioPublishing';
 import type { Database } from '@/lib/database.types';
+import { ExternalLinksEditor } from '@/components/ExternalLinksEditor';
+import { activeExternalLinkDrafts, listExternalLinkPlatforms, materializeExternalLinkDrafts, replaceOwnedItemExternalLinks, validateExternalLinkDrafts, type ExternalLinkDraft, type ExternalLinkPlatform } from '@/lib/domain/externalLinks';
 
 function buildSlug(title: string) {
   const base = normalizeTaxonomyValue(title) || 'item';
@@ -122,6 +124,8 @@ function NewProductContent() {
   const [trackCount, setTrackCount] = useState('1');
   const [tracks, setTracks] = useState<DraftTrack[]>([createDraftTrack()]);
   const [featureState, setFeatureState] = useState(() => createReleaseFeatureState(section.id));
+  const [externalLinks, setExternalLinks] = useState<ExternalLinkDraft[]>([]);
+  const [externalLinkPlatforms, setExternalLinkPlatforms] = useState<ExternalLinkPlatform[]>([]);
   const [saving, setSaving] = useState(false);
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const [error, setError] = useState('');
@@ -136,10 +140,11 @@ function NewProductContent() {
     async function loadFormData() {
       if (!user) return;
 
-      const [categoryRows, profileResult, taxonomy] = await Promise.all([
+      const [categoryRows, profileResult, taxonomy, linkPlatforms] = await Promise.all([
         listItemCategories(),
         loadStudioProfile(user.id),
         listCatalogTaxonomy(),
+        listExternalLinkPlatforms('item'),
       ]);
 
       const resolvedCategories = categoryRows;
@@ -155,6 +160,8 @@ function NewProductContent() {
       setLocalCurrency(nextCurrency);
       setTaxonomyTypes(taxonomy.types);
       setTaxonomyTags(taxonomy.tags);
+      setExternalLinkPlatforms(linkPlatforms);
+      setExternalLinks(materializeExternalLinkDrafts(linkPlatforms, []));
       const firstType = taxonomy.types.find(type => type.category_id === (resolvedCategories.find(category => categoryMatchesSection(category, section.id))?.id ?? resolvedCategories[0]?.id));
       setStoreTypeId(firstType?.id ?? '');
       setProductType(firstType?.label ?? section.typeOptions[0]);
@@ -215,6 +222,13 @@ function NewProductContent() {
     if (needsDigitalFile && !itemFileUrl.trim()) {
       setError(section.id === 'books' ? 'Books need an uploaded file before saving.' : 'Sample packs need an uploaded file before saving.');
       return;
+    }
+    if (isMusicProduct) {
+      const linkError = validateExternalLinkDrafts(externalLinks, externalLinkPlatforms);
+      if (linkError) {
+        setError(linkError);
+        return;
+      }
     }
 
     setSaving(true);
@@ -340,6 +354,13 @@ function NewProductContent() {
       if (featureError) {
         setSaving(false);
         setError(featureError);
+        return;
+      }
+      try {
+        await replaceOwnedItemExternalLinks(insertedProductId, activeExternalLinkDrafts(externalLinks));
+      } catch (linkSaveError) {
+        setSaving(false);
+        setError(linkSaveError instanceof Error ? linkSaveError.message : 'Could not save release links.');
         return;
       }
     }
@@ -620,6 +641,18 @@ function NewProductContent() {
                       </div>
                     ))}
                 </div>
+              </section>
+            ) : null}
+
+            {isMusicProduct ? (
+              <section className="dashboard-form-section">
+                <SectionHeader title="Listen Elsewhere" description="Link this release to its official pages on other listening platforms." />
+                <ExternalLinksEditor
+                  links={externalLinks}
+                  platforms={externalLinkPlatforms}
+                  onChange={setExternalLinks}
+                  description="Paste the matching release link for each service you use. Leave a field blank when this release is not available there."
+                />
               </section>
             ) : null}
 

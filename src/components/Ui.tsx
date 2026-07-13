@@ -163,6 +163,7 @@ export function ProductCard({ product, owned: ownedProp }: { product: Product; o
           item_id: product.id,
           title: product.title,
           creator: product.creators?.display_name || product.creator || '44 Creator',
+          item_type: product.item_type ?? null,
           cover_url: product.cover_url,
           price_cents: product.price_cents,
           currency: 'USD',

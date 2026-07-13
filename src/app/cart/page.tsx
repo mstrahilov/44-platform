@@ -1,11 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { PageShell, HubHero } from '@/components/Ui';
 import { useTopbarBack } from '@/components/TopbarContext';
+import { supabase } from '@/lib/supabase';
 import {
   removeFromCart,
-  updateCartQuantity,
   useCart,
 } from '@/lib/cart';
 
@@ -16,8 +17,24 @@ function formatMoney(cents: number, currency: string) {
 export default function CartPage() {
   const { items, count, subtotalCents } = useCart();
   const currency = items[0]?.currency ?? 'USD';
+  const [legacyItemTypes, setLegacyItemTypes] = useState<Record<string, string>>({});
 
   useTopbarBack({ href: '/store', label: 'Store' });
+
+  useEffect(() => {
+    const missingIds = items.filter(item => !item.item_type).map(item => item.item_id);
+    if (missingIds.length === 0) return;
+    let active = true;
+    supabase
+      .from('catalog_items')
+      .select('id,item_type')
+      .in('id', missingIds)
+      .then(({ data }) => {
+        if (!active) return;
+        setLegacyItemTypes(Object.fromEntries((data ?? []).map(item => [item.id, item.item_type || 'Item'])));
+      });
+    return () => { active = false; };
+  }, [items]);
 
   if (items.length === 0) {
     return (
@@ -43,11 +60,6 @@ export default function CartPage() {
         <HubHero
           title="Cart"
           copy={`${count} item${count === 1 ? '' : 's'} ready to check out.`}
-          actions={
-            <Link className="os-button os-button-primary" href="/checkout">
-              Continue to Checkout
-            </Link>
-          }
         />
 
         <div className="dashboard-list-surface">
@@ -69,43 +81,23 @@ export default function CartPage() {
                       {item.title}
                     </Link>
                   </div>
-                  <div className="dashboard-row-subtitle">{item.creator}</div>
+                  <div className="dashboard-row-subtitle">{item.item_type || legacyItemTypes[item.item_id] || 'Item'}</div>
                 </div>
               </div>
 
-              <div className="cart-row-qty" role="group" aria-label="Quantity">
-                <button
-                  type="button"
-                  className="os-button os-button-secondary os-button-compact"
-                  onClick={() => updateCartQuantity(item.item_id, item.quantity - 1)}
-                  aria-label="Decrease quantity"
-                >
-                  −
-                </button>
-                <span className="cart-row-qty-value">{item.quantity}</span>
-                <button
-                  type="button"
-                  className="os-button os-button-secondary os-button-compact"
-                  onClick={() => updateCartQuantity(item.item_id, item.quantity + 1)}
-                  aria-label="Increase quantity"
-                >
-                  +
-                </button>
-              </div>
-
               <div className="cart-row-price">
-                {formatMoney(item.price_cents * item.quantity, item.currency)}
+                {formatMoney(item.price_cents, item.currency)}
               </div>
 
-              <div className="dashboard-row-actions">
-                <button
-                  type="button"
-                  className="os-button os-button-ghost os-button-compact"
-                  onClick={() => removeFromCart(item.item_id)}
-                >
-                  Remove
-                </button>
-              </div>
+              <button
+                type="button"
+                className="cart-row-remove-button"
+                onClick={() => removeFromCart(item.item_id)}
+                aria-label={`Remove ${item.title} from cart`}
+                title="Remove from cart"
+              >
+                <span aria-hidden="true">×</span>
+              </button>
             </div>
           ))}
         </div>
@@ -125,7 +117,7 @@ export default function CartPage() {
               Keep Shopping
             </Link>
             <Link className="os-button os-button-primary" href="/checkout">
-              Continue to Checkout
+              Checkout
             </Link>
           </div>
         </div>

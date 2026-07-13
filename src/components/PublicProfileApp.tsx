@@ -29,6 +29,7 @@ import {
   unfollowProfile,
 } from '@/lib/domain/profiles';
 import { setDiscussionLike } from '@/lib/domain/community';
+import { ExternalLinkActions } from '@/components/ExternalLinkActions';
 
 type ProfileTab = 'posts' | 'music' | 'books' | 'assets';
 type CurrentProfileState = {
@@ -336,15 +337,7 @@ export default function PublicProfilePage() {
                 <p className="social-profile-bio">
                   {profile.bio || 'This member has not added a bio yet.'}
                 </p>
-                {externalLinks.length > 0 && (
-                  <div className="app-tag-row social-profile-external-links" aria-label="External profiles">
-                    {externalLinks.map(link => (
-                      <a key={link.id} href={link.url} target="_blank" rel="noreferrer" className="os-pill os-type-pill">
-                        {link.label || link.platform}
-                      </a>
-                    ))}
-                  </div>
-                )}
+                <ExternalLinkActions links={externalLinks} context="profile" label={`${displayName} around the web`} />
               </div>
             </div>
 

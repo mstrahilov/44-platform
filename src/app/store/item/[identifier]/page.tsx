@@ -26,6 +26,7 @@ import {
   recordItemShareVisit,
   saveItemToLibrary,
 } from '@/lib/domain/itemDetails';
+import { ExternalLinkActions } from '@/components/ExternalLinkActions';
 
 type ProductTrack = {
   id: string;
@@ -166,6 +167,7 @@ export function ProductStoreDetail({
       item_id: product.id,
       title: product.title,
       creator: product.creators?.display_name || product.creator || '44 Creator',
+      item_type: product.item_type ?? null,
       cover_url: product.cover_url,
       price_cents: price.cents,
       currency: price.currency,
@@ -381,15 +383,7 @@ export function ProductStoreDetail({
             ))}
           </div>
         )}
-        {(product.external_links ?? []).length > 0 && (
-          <div className="app-tag-row" style={{ marginTop: 16 }} aria-label="Available on other platforms">
-            {(product.external_links ?? []).map(link => (
-              <a key={link.id} href={link.url} target="_blank" rel="noreferrer" className="os-pill os-type-pill">
-                {link.label || link.platform}
-              </a>
-            ))}
-          </div>
-        )}
+        <ExternalLinkActions links={product.external_links ?? []} context="item" label="Listen on other platforms" />
       </div>
 
       {related.length > 0 && (

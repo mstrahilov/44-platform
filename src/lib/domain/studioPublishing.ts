@@ -81,7 +81,7 @@ export async function loadStudioItemEditor(itemId: string, ownerId: string) {
   if (itemResult.error) throw itemResult.error;
   if (!itemResult.data) return null;
 
-  const [trackResult, assetResult, achievementResult, typeResult, tagResult] = await Promise.all([
+  const [trackResult, assetResult, achievementResult, typeResult, tagResult, linkResult] = await Promise.all([
     supabase.from('tracks').select('*').eq('item_id', itemId).order('number'),
     supabase.from('item_assets').select('asset_type,title,file_url,storage_path').eq('item_id', itemId).order('sort_order'),
     supabase
@@ -91,8 +91,9 @@ export async function loadStudioItemEditor(itemId: string, ownerId: string) {
       .order('sort_order'),
     supabase.from('item_type_assignments').select('item_type_id').eq('item_id', itemId).maybeSingle(),
     supabase.from('item_tag_assignments').select('item_tag_id').eq('item_id', itemId),
+    supabase.from('item_external_links').select('platform,url,sort_order').eq('item_id', itemId).order('sort_order'),
   ]);
-  const error = trackResult.error || assetResult.error || achievementResult.error || typeResult.error || tagResult.error;
+  const error = trackResult.error || assetResult.error || achievementResult.error || typeResult.error || tagResult.error || linkResult.error;
   if (error) throw error;
 
   return {
@@ -102,6 +103,7 @@ export async function loadStudioItemEditor(itemId: string, ownerId: string) {
     achievements: (achievementResult.data as StudioAchievementSummary[] | null) ?? [],
     taxonomyTypeId: typeResult.data?.item_type_id ?? null,
     taxonomyTagIds: (tagResult.data ?? []).map(row => row.item_tag_id),
+    externalLinks: (linkResult.data ?? []).map(row => ({ platform: row.platform, url: row.url })),
   };
 }
 

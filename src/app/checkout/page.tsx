@@ -166,9 +166,9 @@ export default function CheckoutPage() {
                   </div>
                   <div style={{ minWidth: 0 }}>
                     <div className="checkout-summary-title">{item.title}</div>
-                    <div className="dashboard-row-subtitle">{item.creator} · Qty {item.quantity}</div>
+                    <div className="dashboard-row-subtitle">{item.creator}</div>
                   </div>
-                  <div className="cart-row-price">{formatMoney(item.price_cents * item.quantity, item.currency)}</div>
+                  <div className="cart-row-price">{formatMoney(item.price_cents, item.currency)}</div>
                 </div>
               ))}
             </div>

@@ -9,10 +9,10 @@ export type CartItem = {
   item_id: string;
   title: string;
   creator: string;
+  item_type?: string | null;
   cover_url: string | null;
   price_cents: number;
   currency: string;
-  quantity: number;
   slug?: string | null;
   href?: string | null;
 };
@@ -33,11 +33,12 @@ function readCart(): CartItem[] {
   try {
     const parsed = JSON.parse(raw);
     cachedItems = Array.isArray(parsed)
-      ? parsed.flatMap((entry: CartItem & { product_id?: string }) => {
+      ? parsed.flatMap((entry: CartItem & { product_id?: string; quantity?: number }) => {
           const itemId = entry.item_id || entry.product_id;
           if (!itemId) return [];
           const current = { ...entry };
           delete current.product_id;
+          delete current.quantity;
           return [{ ...current, item_id: itemId }];
         })
       : [];
@@ -57,23 +58,11 @@ export function getCart(): CartItem[] {
   return readCart();
 }
 
-export function addToCart(item: Omit<CartItem, 'quantity'>, quantity = 1) {
+export function addToCart(item: CartItem) {
   const items = readCart();
   const existing = items.find(entry => entry.item_id === item.item_id);
-  if (existing) {
-    existing.quantity += quantity;
-  } else {
-    items.push({ ...item, quantity });
-  }
+  if (!existing) items.push(item);
   writeCart(items);
-}
-
-export function updateCartQuantity(itemId: string, quantity: number) {
-  const items = readCart();
-  const next = items
-    .map(entry => (entry.item_id === itemId ? { ...entry, quantity } : entry))
-    .filter(entry => entry.quantity > 0);
-  writeCart(next);
 }
 
 export function removeFromCart(itemId: string) {
@@ -85,11 +74,11 @@ export function clearCart() {
 }
 
 export function cartSubtotalCents(items: CartItem[]) {
-  return items.reduce((sum, entry) => sum + entry.price_cents * entry.quantity, 0);
+  return items.reduce((sum, entry) => sum + entry.price_cents, 0);
 }
 
 export function cartCount(items: CartItem[]) {
-  return items.reduce((sum, entry) => sum + entry.quantity, 0);
+  return items.length;
 }
 
 function subscribe(callback: () => void) {

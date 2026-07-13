@@ -2305,6 +2305,42 @@ export type Database = {
         }
         Relationships: []
       }
+      external_link_platforms: {
+        Row: {
+          created_at: string
+          host_patterns: string[]
+          is_active: boolean
+          key: string
+          label: string
+          sort_order: number
+          supports_items: boolean
+          supports_profiles: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          host_patterns: string[]
+          is_active?: boolean
+          key: string
+          label: string
+          sort_order?: number
+          supports_items?: boolean
+          supports_profiles?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          host_patterns?: string[]
+          is_active?: boolean
+          key?: string
+          label?: string
+          sort_order?: number
+          supports_items?: boolean
+          supports_profiles?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       item_external_links: {
         Row: {
           created_at: string
@@ -4583,6 +4619,14 @@ export type Database = {
           issue_messages: string[]
           item_id: string
         }[]
+      }
+      replace_own_profile_external_links: {
+        Args: { link_rows: Json }
+        Returns: undefined
+      }
+      replace_owned_item_external_links: {
+        Args: { link_rows: Json; target_item_id: string }
+        Returns: undefined
       }
       notification_actor_name: { Args: { actor: string }; Returns: string }
       record_achievement_playback_signal: {

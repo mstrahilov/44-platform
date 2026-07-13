@@ -12,6 +12,17 @@ import { getUploadErrorMessage, uploadPublicFile } from '@/lib/uploads';
 import { ProfileImageCropDialog } from '@/components/ProfileImageCropDialog';
 import type { Database } from '@/lib/database.types';
 import { getOwnProfile, updateOwnProfile } from '@/lib/domain/profiles';
+import { ExternalLinksEditor } from '@/components/ExternalLinksEditor';
+import {
+  listExternalLinkPlatforms,
+  listOwnProfileExternalLinks,
+  materializeExternalLinkDrafts,
+  activeExternalLinkDrafts,
+  replaceOwnProfileExternalLinks,
+  validateExternalLinkDrafts,
+  type ExternalLinkDraft,
+  type ExternalLinkPlatform,
+} from '@/lib/domain/externalLinks';
 
 type PendingImage = { file: File };
 
@@ -24,6 +35,9 @@ export default function EditProfilePage() {
   const [username, setUsername] = useState('');
   const [bio, setBio] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [externalLinks, setExternalLinks] = useState<ExternalLinkDraft[]>([]);
+  const [externalLinkPlatforms, setExternalLinkPlatforms] = useState<ExternalLinkPlatform[]>([]);
+  const [initialExternalLinks, setInitialExternalLinks] = useState<ExternalLinkDraft[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -36,8 +50,15 @@ export default function EditProfilePage() {
     if (authLoading) return;
     if (!user) return;
     async function load() {
-      const p = await getOwnProfile(user!.id);
+      const [p, links, platforms] = await Promise.all([
+        getOwnProfile(user!.id),
+        listOwnProfileExternalLinks(user!.id),
+        listExternalLinkPlatforms('profile'),
+      ]);
       setProfile(p);
+      setExternalLinks(materializeExternalLinkDrafts(platforms, links));
+      setInitialExternalLinks(activeExternalLinkDrafts(links));
+      setExternalLinkPlatforms(platforms);
       if (p) {
         setDisplayName(p.display_name ?? '');
         setUsername(p.username ?? '');
@@ -51,8 +72,17 @@ export default function EditProfilePage() {
 
   async function save() {
     if (!user || saving) return;
+    const canManageExternalLinks = profile?.role === 'creator' || profile?.role === 'admin';
     setSaving(true);
     setError('');
+    const linkError = canManageExternalLinks ? validateExternalLinkDrafts(externalLinks, externalLinkPlatforms) : null;
+    if (linkError) {
+      setSaving(false);
+      setError(linkError);
+      return;
+    }
+    const activeLinks = activeExternalLinkDrafts(externalLinks);
+    const linksChanged = JSON.stringify(activeLinks) !== JSON.stringify(initialExternalLinks);
     const payload: Database['public']['Tables']['profiles']['Update'] = {
       display_name: displayName.trim() || null,
       username: username.trim() || null,
@@ -61,6 +91,7 @@ export default function EditProfilePage() {
     };
     try {
       await updateOwnProfile(user.id, payload);
+      if (canManageExternalLinks && linksChanged) await replaceOwnProfileExternalLinks(activeLinks);
     } catch (updateError) {
       setSaving(false);
       setError(updateError instanceof Error ? updateError.message : 'Could not update your profile.');
@@ -171,40 +202,56 @@ export default function EditProfilePage() {
           {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
 
           <div className="profile-edit-fields">
-            <label className="profile-edit-field">
+            <label className="profile-edit-field dashboard-field">
               <span className="profile-edit-label">Display name</span>
               <input
                 type="text"
                 value={displayName}
                 onChange={event => setDisplayName(event.target.value)}
-                className="profile-edit-input"
+                className="profile-edit-input os-input-field"
                 placeholder="Your public name"
               />
             </label>
 
-            <label className="profile-edit-field">
+            <label className="profile-edit-field dashboard-field">
               <span className="profile-edit-label">Username</span>
-              <input
-                type="text"
-                value={username}
-                onChange={event => setUsername(event.target.value.replace(/\s+/g, '').toLowerCase())}
-                className="profile-edit-input"
-                placeholder="username"
-              />
+              <span className="profile-edit-username-control">
+                <span className="profile-edit-username-prefix" aria-hidden="true">@</span>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={event => setUsername(event.target.value.replace(/\s+/g, '').toLowerCase())}
+                  className="profile-edit-username-input"
+                  aria-label="Username"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+              </span>
             </label>
 
-            <label className="profile-edit-field profile-edit-field-full">
+            <label className="profile-edit-field profile-edit-field-full dashboard-field">
               <span className="profile-edit-label">Bio</span>
               <textarea
                 value={bio}
                 onChange={event => setBio(event.target.value)}
-                className="profile-edit-input profile-edit-textarea"
-                placeholder="Tell people what you make."
+                className="profile-edit-input profile-edit-textarea os-input-field"
                 rows={4}
               />
             </label>
 
           </div>
+
+          {(profile?.role === 'creator' || profile?.role === 'admin') && <div className="profile-edit-links-section">
+            <div className="settings-field-head">
+              <div className="os-type-card-title">Around the Web</div>
+            </div>
+            <ExternalLinksEditor
+              links={externalLinks}
+              platforms={externalLinkPlatforms}
+              onChange={setExternalLinks}
+            />
+          </div>}
         </section>
       </main>
       {pendingImage && (

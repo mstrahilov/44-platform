@@ -296,7 +296,11 @@ Completion criteria:
 
 ### M14 — Creator Media
 
+**Status: In progress (Cross-Platform Reach deployed; remaining Creator Media slices pending)**
+
 Cross-Platform Reach is the first M14 slice: add creator-facing editors for structured profile links (Spotify, Apple Music, Bandcamp, YouTube, Instagram, X, creator website, and extensible approved platforms) and release-level Spotify/Apple Music/Bandcamp/YouTube links. Validate canonical HTTPS hosts, allow ordering/removal, render accessible outbound actions on profiles and Item pages, and preserve 44OS as a creator-owned hub rather than treating external platforms as competitors. The schema and public rendering foundations already exist in `profile_external_links` and `item_external_links`; do not create parallel URL columns.
+
+Cross-Platform Reach completed (July 12, 2026): migration `20260712057200_m14_cross_platform_reach.sql` is applied to the linked project and adds the extensible approved-platform registry and atomic owner-managed profile/Item sync operations without parallel URL columns. It enforces creator approval, Item ownership, HTTPS, canonical Spotify/Apple Music/Bandcamp/YouTube/Instagram/X hosts, secure general websites, scope eligibility, one link per platform, maximum counts, fixed approved ordering, removal, and direct-write revocation. Profile and Studio editors show every approved destination as a labeled empty field; public profiles render left-aligned monochrome icons beneath Bio and Item pages render descriptive listening-platform actions. The real `olsten44` profile editor and KΛREN release editor passed linked-schema review at 1280px/362px with no horizontal overflow, matching field styles, 16px fields, and no URL placeholder. Clean replay, 17 M14 pgTAP assertions covering all seven profile and all four Item platforms (29 total suite assertions), zero-error local schema lint, linked dry-run/migration-history verification, anonymous live-RPC denial, lint, strict TypeScript, and production build pass. The Cross-Platform Reach slice is complete; commentary audio/text, behind-the-scenes video, and richer creator updates remain later M14 work.
 
 Then add commentary audio/text, behind-the-scenes YouTube video, general creator video, and richer creator updates.
 
