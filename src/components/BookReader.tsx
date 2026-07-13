@@ -148,7 +148,7 @@ export function BookReader({ itemId, mode, returnTo }: { itemId: string; mode: '
   if (error) return <div className="native-reader-state"><p>{error}</p><button className="os-button os-button-primary" type="button" onClick={() => void loadBook()} disabled={!online}>{online ? 'Refresh Access' : 'Offline'}</button></div>;
 
   return (
-    <main className="native-reader" onKeyDown={handleKeyDown} tabIndex={-1}>
+    <section className="native-reader" aria-label={`${title} reader`} onKeyDown={handleKeyDown} tabIndex={-1}>
       <header className="native-reader-toolbar">
         <Link className="native-reader-close" href={returnTo || (mode === 'sample' ? `/store/item/${itemId}` : '/library')} aria-label="Close reader">×</Link>
         <div className="native-reader-title"><strong>{title}</strong></div>
@@ -185,7 +185,7 @@ export function BookReader({ itemId, mode, returnTo }: { itemId: string; mode: '
         <canvas ref={canvasRef} aria-hidden="true" />
         <p className="sr-only" aria-live="polite">{pageText}</p>
       </div>
-    </main>
+    </section>
   );
 }
 

@@ -359,15 +359,17 @@ export function SocialArtifactCard({
   title,
   meta,
   image,
+  shape = 'square',
 }: {
   href: string;
   title: string;
   meta: string;
   image?: string | null;
+  shape?: 'square' | 'portrait';
 }) {
   return (
     <Link href={href} className="social-artifact-card">
-      <div className="social-artifact-cover">
+      <div className={shape === 'portrait' ? 'social-artifact-cover social-artifact-cover-portrait' : 'social-artifact-cover'}>
         {image && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={image} alt="" />

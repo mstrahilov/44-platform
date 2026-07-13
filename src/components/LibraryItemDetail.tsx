@@ -357,11 +357,13 @@ function ProductLibraryDetail({
     ...(product.year ? [String(product.year)] : []),
   ];
   const readerHref = `/reader/${product.id}?returnTo=${encodeURIComponent(`/library/item/${row.id}`)}`;
+  const interactiveHref = `/launch/${product.id}?returnTo=${encodeURIComponent(`/library/item/${row.id}`)}`;
   const primaryActions: ProductDetailAction[] = [
     {
       label: isMusic ? 'Play' : isBook ? 'Read' : isAsset ? 'Download Pack' : action.label,
-      href: isBook && bookContent ? readerHref : undefined,
-      onClick: isMusic ? playRelease : isBook && bookContent ? undefined : () => runProductAction(action),
+      href: isBook && bookContent ? readerHref : runtimeKind === 'interactive' ? interactiveHref : undefined,
+      opensInNewWindow: runtimeKind === 'interactive',
+      onClick: isMusic ? playRelease : (isBook && bookContent) || runtimeKind === 'interactive' ? undefined : () => runProductAction(action),
     },
     isMusic
       ? { label: 'Shuffle', onClick: shuffleRelease, active: shuffleEnabled }

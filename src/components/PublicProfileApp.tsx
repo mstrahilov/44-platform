@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -30,8 +30,10 @@ import {
 } from '@/lib/domain/profiles';
 import { setDiscussionLike } from '@/lib/domain/community';
 import { ExternalLinkActions } from '@/components/ExternalLinkActions';
+import type { CreatorEvent } from '@/lib/domain/events';
+import { formatEventDate } from '@/lib/eventTime';
 
-type ProfileTab = 'posts' | 'music' | 'books' | 'sample-packs';
+type ProfileTab = 'posts' | 'music' | 'books' | 'sample-packs' | 'merch' | 'events';
 type CurrentProfileState = {
   userId: string;
   profile: StudioProfile | null;
@@ -45,6 +47,8 @@ function parseProfileTab(value: string | null, isCreator: boolean): ProfileTab |
   if (normalized === 'music' || normalized === 'releases' || normalized === 'products') return 'music';
   if (normalized === 'books') return 'books';
   if (normalized === 'sample-packs' || normalized === 'assets') return 'sample-packs';
+  if (normalized === 'merch') return 'merch';
+  if (normalized === 'events') return 'events';
   return null;
 }
 
@@ -58,6 +62,7 @@ export default function PublicProfilePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [externalLinks, setExternalLinks] = useState<Array<{ id: string; label: string; platform: string; url: string }>>([]);
   const [posts, setPosts] = useState<SocialPost[]>([]);
+  const [events, setEvents] = useState<CreatorEvent[]>([]);
   const [replyCounts, setReplyCounts] = useState<CountMap>({});
   const [repliersMap, setRepliersMap] = useState<LikersMap>({});
   const [likes, setLikes] = useState<LikeRow[]>([]);
@@ -69,6 +74,7 @@ export default function PublicProfilePage() {
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [setupGateOpen, setSetupGateOpen] = useState(false);
+  const profileTabsRef = useRef<HTMLElement>(null);
   const { openContextMenu } = useContextMenu();
 
   useEffect(() => {
@@ -93,6 +99,7 @@ export default function PublicProfilePage() {
       setExternalLinks(content.links);
       const nextPosts = content.posts;
       setPosts(nextPosts);
+      setEvents((content.events ?? []) as CreatorEvent[]);
       const replyRowsData = content.replies;
       setReplyCounts(countById(replyRowsData, 'post_id'));
       setRepliersMap(repliersByPost(replyRowsData));
@@ -262,6 +269,12 @@ export default function PublicProfilePage() {
     () => publishedProducts.filter(product => getProductExperience(product) === 'asset'),
     [publishedProducts],
   );
+  const merchProducts = useMemo(
+    () => publishedProducts
+      .filter(product => getProductExperience(product) === 'physical')
+      .sort(comparePublicCatalogProducts),
+    [publishedProducts],
+  );
   const generalPosts = posts;
   const likeCounts = useMemo(() => countById(likes, 'post_id'), [likes]);
   const likersMap = useMemo(() => likersByPost(likes), [likes]);
@@ -276,11 +289,13 @@ export default function PublicProfilePage() {
         if (musicProducts.length > 0) creatorTabs.push({ id: 'music', label: 'Music' });
         if (bookProducts.length > 0) creatorTabs.push({ id: 'books', label: 'Books' });
         if (assetProducts.length > 0) creatorTabs.push({ id: 'sample-packs', label: 'Sample Packs' });
+        if (merchProducts.length > 0) creatorTabs.push({ id: 'merch', label: 'Merch' });
+        if (events.length > 0) creatorTabs.push({ id: 'events', label: 'Events' });
         return creatorTabs;
       }
       return generalPosts.length > 0 ? [{ id: 'posts' as const, label: 'Posts' }] : [];
     },
-    [assetProducts.length, bookProducts.length, generalPosts.length, isCreator, musicProducts.length],
+    [assetProducts.length, bookProducts.length, events.length, generalPosts.length, isCreator, merchProducts.length, musicProducts.length],
   );
 
   useEffect(() => {
@@ -295,6 +310,10 @@ export default function PublicProfilePage() {
       Promise.resolve().then(() => setTab(tabs[0].id));
     }
   }, [isCreator, searchParams, tab, tabs]);
+
+  useEffect(() => {
+    if (tabs[0]?.id === tab && profileTabsRef.current) profileTabsRef.current.scrollLeft = 0;
+  }, [tab, tabs]);
 
   const displayName = profile?.display_name ?? profile?.username ?? 'Member';
   const handle = authorHandle(profile ?? undefined);
@@ -347,7 +366,7 @@ export default function PublicProfilePage() {
 
           <div className="social-profile-toolbar">
             {tabs.length > 0 ? (
-              <nav className="social-profile-tabs" aria-label="Profile sections" role="tablist">
+              <nav ref={profileTabsRef} className="social-profile-tabs" aria-label="Profile sections" role="tablist">
                 {tabs.map(item => (
                   <button
                     key={item.id}
@@ -458,10 +477,40 @@ export default function PublicProfilePage() {
           </ArtifactGrid>
         )}
 
+        {tab === 'merch' && (
+          <ArtifactGrid empty="No merch published yet.">
+            {merchProducts.map(product => (
+              <SocialArtifactCard
+                key={product.id}
+                href={productBrowseHref(product)}
+                title={product.title}
+                meta={profileProductMeta(product, 'Merch')}
+                image={product.cover_url}
+                shape="portrait"
+              />
+            ))}
+          </ArtifactGrid>
+        )}
+
+        {tab === 'events' && (
+          <ProfileEvents events={events} />
+        )}
+
       </main>
       <CommunitySetupGate open={setupGateOpen} onClose={() => setSetupGateOpen(false)} />
     </PageShell>
   );
+}
+
+function ProfileEvents({ events }: { events: CreatorEvent[] }) {
+  const [now] = useState(Date.now);
+  if (events.length === 0) return <div className="app-empty-text">No events scheduled yet.</div>;
+  const groups = [
+    { label: 'Upcoming', rows: events.filter(event => event.lifecycle_state === 'scheduled' && new Date(event.starts_at).getTime() >= now) },
+    { label: 'Cancelled', rows: events.filter(event => event.lifecycle_state === 'cancelled') },
+    { label: 'Past', rows: events.filter(event => event.lifecycle_state === 'scheduled' && new Date(event.starts_at).getTime() < now).reverse() },
+  ];
+  return <section className="profile-events" aria-label="Events">{groups.map(group => group.rows.length ? <section key={group.label}><h2>{group.label}</h2><div className="dashboard-list-surface">{group.rows.map(event => <article key={event.id} className={`profile-event-row ${event.lifecycle_state === 'cancelled' ? 'calendar-entry-cancelled' : ''}`}><div><strong>{event.title}</strong><time dateTime={event.starts_at}>{formatEventDate(event.starts_at,event.timezone)}</time><p>{event.short_description}</p>{event.venue_name && <span>{[event.venue_name,event.locality,event.region].filter(Boolean).join(' · ')}</span>}</div><div className="calendar-entry-actions">{event.online_url&&<a href={event.online_url} target="_blank" rel="noopener noreferrer">Online Destination</a>}{event.info_url&&<a href={event.info_url} target="_blank" rel="noopener noreferrer">Tickets / Information</a>}</div></article>)}</div></section>:null)}</section>;
 }
 
 function profileProductMeta(product: Product, fallbackType: string) {

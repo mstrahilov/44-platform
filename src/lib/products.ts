@@ -56,6 +56,8 @@ export interface Item {
   download_url?: string | null;
   status?: string | null;
   year?: number | null;
+  upcoming_release_at?: string | null;
+  upcoming_release_timezone?: string | null;
   sort_order?: number | null;
   created_at: string;
   creators?: Pick<

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageShell, HubHero, CenteredMessage } from '@/components/Ui';
 import { AchievementIconGlyph } from '@/components/AchievementIconGlyph';
@@ -34,6 +34,11 @@ export default function NotificationsPage() {
   const [activeTab, setActiveTab] = useState<TabId>('all');
   const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+  const navigationRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (activeTab === 'all' && navigationRef.current) navigationRef.current.scrollLeft = 0;
+  }, [activeTab]);
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
@@ -123,7 +128,7 @@ export default function NotificationsPage() {
     <PageShell>
       <main className="dashboard-page">
         <HubHero title="Notifications" copy="Mentions, replies, achievements, and other account activity." />
-        <div className="social-profile-tabs notification-navigation" role="tablist" aria-label="Notification sections">
+        <div ref={navigationRef} className="social-profile-tabs notification-navigation" role="tablist" aria-label="Notification sections">
           {TABS.map(tab => (
             <button
               key={tab.id}

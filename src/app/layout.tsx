@@ -100,14 +100,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <SystemShell />
             <div className="app-frame">
               <div className="app-shell">
-                <Suspense fallback={null}>
-                  <Sidebar />
-                </Suspense>
+                <Suspense fallback={null}><Sidebar /></Suspense>
                 <main className="app-main">
                   <Topbar />
-                  <div className="app-main-content">
-                    {children}
-                  </div>
+                  <div className="app-main-content">{children}</div>
                   <MusicPlayerBar />
                 </main>
               </div>

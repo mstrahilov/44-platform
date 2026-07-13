@@ -20,6 +20,7 @@ export type OSAppId =
   | 'merch'
   | 'shop'
   | 'community'
+  | 'calendar'
   | 'profile'
   | 'friends'
   | 'notifications'
@@ -60,6 +61,15 @@ export type OSApp = {
 };
 
 export const OS_APPS: OSApp[] = [
+  {
+    id: 'calendar',
+    label: 'Calendar',
+    description: 'Creator events and upcoming releases across 44OS.',
+    href: '/calendar',
+    iconClass: 'os-icon-calendar',
+    group: 'community',
+    hidden: true,
+  },
   {
     id: 'library',
     label: 'Library',
@@ -143,6 +153,7 @@ export const OS_APPS: OSApp[] = [
     iconClass: 'os-icon-community',
     group: 'community',
     children: [
+      { id: 'calendar', label: 'Calendar', href: '/calendar', iconClass: 'os-icon-calendar' },
       { id: 'questions', label: 'Questions', href: '/community/questions', iconClass: 'os-icon-questions' },
       { id: 'collaboration', label: 'Collaboration', href: '/community/collaboration', iconClass: 'os-icon-collaboration' },
     ],
@@ -279,6 +290,7 @@ export function getActiveOSAppId(pathname: string): OSAppId | '' {
   ) return 'store';
   if (pathname.startsWith('/radio')) return 'radio';
   if (pathname.startsWith('/friends')) return 'community';
+  if (pathname.startsWith('/calendar')) return 'community';
   if (pathname.startsWith('/community')) return 'community';
   if (pathname.startsWith('/profile')) return 'profile';
   if (pathname.startsWith('/inbox')) return 'inbox';

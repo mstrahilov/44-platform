@@ -19,6 +19,7 @@ type ProductDetailTrack = {
 export type ProductDetailAction = {
   label: string;
   href?: string;
+  opensInNewWindow?: boolean;
   onClick?: () => void;
   secondary?: boolean;
   active?: boolean;
@@ -94,7 +95,14 @@ export function ProductDetailHeader({
         <div className="view-album-actions">
           {actions.map(action =>
             action.href ? (
-              <Link key={action.label} className={`${action.secondary ? 'os-button os-button-secondary' : 'os-button os-button-primary'}${action.active ? ' os-button-active' : ''}`} href={action.href}>
+              <Link
+                key={action.label}
+                className={`${action.secondary ? 'os-button os-button-secondary' : 'os-button os-button-primary'}${action.active ? ' os-button-active' : ''}`}
+                href={action.href}
+                target={action.opensInNewWindow ? '_blank' : undefined}
+                rel={action.opensInNewWindow ? 'noopener noreferrer' : undefined}
+                aria-label={action.opensInNewWindow ? `${action.label} (opens in a new window)` : undefined}
+              >
                 {action.label}
               </Link>
             ) : (

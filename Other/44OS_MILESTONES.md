@@ -325,24 +325,55 @@ Reliability follow-up (July 13, 2026): Studio add/edit recovery is device-local 
 
 Final M15 interface and naming closure (July 13, 2026): desktop and mobile readers share one compact theme-aware toolbar with title-only desktop identity, read-only `current of total` progress, circular bookmark/page/zoom actions, restored last page, and exact return to the originating Library Item detail. The public Assets product category is renamed in place to Sample Packs through migration `20260712061000_m15_sample_pack_category_language.sql`; Store, Library, Studio, profiles, support copy, metadata, sitemap, filters, and canonical URLs use Sample Packs. Existing category and Item UUIDs, uploads, generic `item_assets`, internal asset experience values, Library relationships, entitlements, and audit history are preserved; former URLs redirect and former non-sample Types remain inactive rather than deleted.
 
+Desktop shell follow-up (July 13, 2026): `/reader/[itemId]` now keeps the Sidebar and rounded app window visible while replacing the full content pane, normal Topbar, and global player with the reader's aligned 60px toolbar and page stage. Mobile portrait and compact-landscape readers remain full viewport. This is a route-shell change only; reader retrieval, entitlement, progress, bookmark, asset, and publication contracts are unchanged.
+
 ### M16 — Creator Events And Community Calendar
 
-**Status: Approved — next**
+**Status: Complete (deployed July 13, 2026)**
 
 Ship creator-owned event listings and the shared 44OS Calendar without coupling either surface to the later Radio programming workflow. Calendar is an aggregate view over authoritative source records, not an independent writable data source. Existing Radio behavior remains unchanged.
 
-- [ ] Audit current profile, Studio, catalog release-date, navigation, RLS, and timezone contracts read-only before choosing the migration shape.
-- [ ] Define creator Event records with `In Person`, `Online`, and `Hybrid` formats; timezone-aware start and optional end; description; venue/address; online destination; ticket/information URL; and cancellation state.
-- [ ] Add reviewed additive migrations, server validation, creator-ownership RLS/RPCs, and 44 admin moderation while preserving every existing user and Item record.
-- [ ] Add secure Studio Event list/create/edit/cancel/remove flows with device-local unsaved-form recovery and truthful validation/failure states.
-- [ ] Add a creator-profile Events tab with clear upcoming, past, cancelled, empty, and external-destination behavior.
-- [ ] Add an optional informational upcoming release date to Items if the audit confirms no durable field exists; do not use that field to bypass publication validation or auto-publish an Item.
-- [ ] Build one server-authoritative Calendar feed contract that aggregates creator Events and eligible upcoming Item releases without copying ownership into a generic writable calendar table.
-- [ ] Build `/calendar` as a full-width titled surface with divider and rounded desktop calendar, plus an accessible responsive mobile agenda/list view.
-- [ ] Verify IANA timezone and daylight-saving behavior, URL safety, keyboard/screen-reader navigation, creator/admin boundaries, and public visibility with schema replay, security tests, lint, typecheck, build, and responsive acceptance.
-- [ ] Deploy through reviewed repository migrations and record production evidence before marking M16 complete.
+- [x] Audit current profile, Studio, catalog release-date, navigation, RLS, and timezone contracts read-only before choosing the migration shape.
+- [x] Define creator Event records with `In Person`, `Online`, and `Hybrid` formats; timezone-aware start and optional end; description; venue/address; online destination; ticket/information URL; and cancellation state.
+- [x] Add reviewed additive migrations, server validation, creator-ownership RLS/RPCs, and 44 admin moderation while preserving every existing user and Item record.
+- [x] Add secure Studio Event list/create/edit/cancel/remove flows with device-local unsaved-form recovery and truthful validation/failure states.
+- [x] Add a creator-profile Events tab with clear upcoming, past, cancelled, empty, and external-destination behavior.
+- [x] Add an optional informational upcoming release date to Items after confirming no durable field existed; it does not bypass publication validation or auto-publish an Item.
+- [x] Build one server-authoritative Calendar feed contract that aggregates creator Events and eligible upcoming Item releases without copying ownership into a generic writable calendar table.
+- [x] Build `/calendar` as a full-width titled surface with divider and rounded desktop calendar, plus an accessible responsive mobile agenda/list view.
+- [x] Verify IANA timezone and daylight-saving behavior, URL safety, keyboard/screen-reader navigation, creator/admin boundaries, and public visibility with schema replay, security tests, lint, typecheck, build, and responsive acceptance.
+- [x] Deploy through reviewed repository migrations and record production evidence before marking M16 complete.
 
-### M17 — Radio Programming And Schedule
+Completion evidence: the read-only audit found no event/calendar source and no durable Item release date beyond integer `year`. Deployed migration `20260713010000_m16_creator_events_calendar.sql` adds the authoritative `creator_events` source, optional paired Item upcoming-release instant/timezone fields, owner/admin RPCs, moderation state, RLS, URL/IANA validation, and bounded `calendar_feed`; it does not add a writable Calendar table or touch Radio. A fresh linked data dump preceded deployment, dry-run was clean, local no-seed replay passed, local/remote history is aligned, and linked lint retains only the pre-existing Sample Pack composite warning. The full pgTAP suite passes 72 assertions, including 18 M16 creator/member/admin, foreign-owner, direct-write, unsafe-URL, required-format-field, DST fallback, hidden-public, aggregate-feed, and publication-state tests. Typecheck, zero-warning lint, production build, and `git diff --check` pass. Rendered Calendar acceptance at 390px, 430px, 1280px, and 1440px confirmed exact viewport width/no overflow, mobile agenda, desktop month view, native accessible controls, and successful public feed loading. Vercel production deployment `dpl_6ydyrgLrTn5SuCUXSd4yAUZZrXqG` is Ready, `https://44os.com/calendar` returns 200 with canonical Calendar metadata, and the production launch smoke passes. Existing users, Item IDs, uploads, Library/Community/entitlement/audit records, Radio player, and `radio_playlist_entries` remain unchanged.
+
+Studio refinement (July 13, 2026): the overview header now owns one circular plus menu on desktop and mobile linking to the existing Music, Book, Event, Merch, and Sample Pack creation routes. It is the sole creation affordance; section-level New buttons are removed. Empty creator-content sections are omitted, populated sections retain their management rows, and Events render owned event records instead of the generic Manage Events link. The otherwise unreachable Events empty state uses the same rounded list-surface treatment as other Studio categories. The unfinished bottom Earnings list is hidden on desktop and mobile pending payment UI review. Mobile Notifications and profile tabs now share full-width dividers, balanced pill spacing, leading-edge scroll reset, and hidden scrollbars; profile tabs are content-conditional and ordered Posts, Music, Books, Sample Packs, Merch, Events, with empty Events omitted. Roles, RLS, RPCs, persistence, publication behavior, and source records are unchanged. Zero-warning lint, strict TypeScript, production build, and diff checks pass. Production deployment `https://44-platform-jkwcxyx5e-44os.vercel.app` is Ready and aliased to `https://44os.com`.
+
+### M17 — Interactive Platform
+
+**Status: Infrastructure complete — Unity export acceptance pending**
+
+Prepare 44OS to launch isolated Unity/WebGL Items without claiming that an untested export is production-ready. The executable manifest, session, bridge, trusted-event, compatibility, sandbox, resource, and future-wrapper contracts are now defined; resume runtime acceptance when the launch export exists.
+
+- [x] Define WebGL and Unity Item capabilities.
+- [x] Define the interactive launch contract.
+- [x] Define trusted interactive progress events.
+- [x] Define trusted interactive achievement events.
+- [x] Design signed event validation and replay protection.
+- [x] Define browser/device compatibility metadata.
+- [x] Define interactive loading, failure, and unsupported-device states.
+- [x] Research sandboxing and resource limits.
+- [x] Document future desktop-wrapper requirements.
+- [ ] Host and validate a real Unity export across the approved browser/device matrix before marking M17 complete.
+
+Infrastructure evidence: deployed additive migration `20260713020000_m17_interactive_platform_foundation.sql` defines reviewed per-Item build manifests, exact isolated origins, compatibility/resource metadata, owner/admin boundaries, expiring hashed-token launch sessions, bounded client progress, append-only trusted events, durable nonce/external-ID replay rejection, signed-progress precedence, and service-only achievement issuance. `/launch/[itemId]` supplies accessible loading/unavailable/unsupported/failure/expiry/exit states, exact-origin versioned `postMessage` handling, a sandboxed isolated iframe, and an exact Library return path. `POST /api/interactive/events` verifies a timestamped HMAC envelope in constant time and fails closed without server secrets. `Other/44OS_INTERACTIVE_CONTRACT.md` is the export and wrapper handoff. No Unity placeholder, Radio UI, Radio schema, or `radio_playlist_entries` change was introduced.
+
+Deployment evidence (July 13, 2026): a current linked data dump was captured at `supabase/backups/20260713_before_m17_interactive_foundation_data.sql`; linked dry-run and zero-error schema lint passed; local no-seed replay passed; all 97 pgTAP assertions passed, including 25 M17 ownership, admin-review, entitlement, URL-lookalike, direct-write, client/trusted, replay, and achievement tests; generated database types, strict TypeScript, zero-warning lint, and production build passed. Remote migration history is aligned through `20260713020000`. Browser acceptance at 1280px, 390px, and 430px found exact viewport width with no overflow, a 44px return target, polite status semantics, and no console errors. Production deployment `https://44-platform-1pe4z7am3-44os.vercel.app` is Ready and aliased to `https://44os.com`; `/launch/[itemId]` returns 200 with the restricted frame/CSP/permissions headers, anonymous manifest reading is bounded by RLS, anonymous session issuance returns 401, and the production launch smoke passes. Runtime acceptance is still intentionally open until the real Unity export exists.
+
+Immersive-shell follow-up (July 13, 2026): the desktop launch route now fills the entire rounded 44OS app window instead of rendering a smaller page card; Sidebar, Topbar, ordinary heading/divider, and global player are suppressed, while a 44px focused return control remains over the runtime. Mobile and narrow layouts stop before build lookup/session issuance and present a full-viewport `Desktop Required` state with keyboard/mouse guidance. Local acceptance at 1440×900 and 390×844 confirmed exact full-shell geometry, preserved desktop outer margin/radius, hidden launch chrome, zero reserved player space, accessible heading/list/return semantics, and preserved full-viewport mobile reader behavior. Zero-warning lint, strict TypeScript, production build, and diff checks passed; production deployment `https://44-platform-e9yp4065n-44os.vercel.app` is Ready and aliased to `https://44os.com`; both immersive routes return 200 and the post-deployment launch smoke passes. A real Unity export remains the only open M17 acceptance item.
+
+Installed-app safety follow-up (July 13, 2026): Safari standalone/PWA acceptance exposed a partial-shell regression after the route-aware client wrapper was deployed, although the ordinary website recovered after hydration. The wrapper was removed and the proven server-rendered root shell restored. Reader/launch presentation is now selected by route-local content markers rather than a client boundary around Sidebar, Topbar, route content, and player. Interactive Library actions explicitly open the launch route in a separate window/tab with `noopener` isolation and an accessible new-window label, keeping the main 44OS window and player intact. `/` and `/store` now share the same Store header and neither renders the redundant inline search field. Zero-warning lint, strict TypeScript, and production build passed; cold production responses for `/`, `/store`, and `/api/health` return 200, both Store responses omit `Search Store`, and the corrected deployment `https://44-platform-dozfutzzk-44os.vercel.app` is Ready and aliased to `https://44os.com`. The installed Safari app must be fully quit and reopened once to discard the already-loaded broken client shell; real Unity runtime acceptance remains open until the export exists.
+
+### M18 — Radio Programming And Schedule
 
 **Status: Not started — deliberately deferred**
 
@@ -356,10 +387,6 @@ Keep Radio v1 as-is for launch unless this milestone is separately reviewed and 
 - [ ] Add a Radio-page schedule only after its mobile/desktop UI Activation Review.
 - [ ] Feed only approved scheduled programs into the M16 Calendar read contract.
 - [ ] Preserve the existing `radio_playlist_entries` queue and current Radio player until a verified cutover exists.
-
-### M18 — Interactive Platform
-
-WebGL/Unity launches, interactive progress and achievement bridges, desktop-experience guidance, and the later Tauri wrapper.
 
 ### M19 — Ecosystem Expansion
 

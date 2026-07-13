@@ -9,6 +9,7 @@ const PUBLIC_ROUTES = [
   '/store/sample-packs',
   '/store/merch',
   '/community',
+  '/calendar',
   '/community/questions',
   '/community/collaboration',
   '/radio',

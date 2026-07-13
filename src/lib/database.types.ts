@@ -308,6 +308,8 @@ export type Database = {
           streaming_enabled: boolean
           tags: string[]
           title: string
+          upcoming_release_at: string | null
+          upcoming_release_timezone: string | null
           updated_at: string
           year: number | null
         }
@@ -344,6 +346,8 @@ export type Database = {
           streaming_enabled?: boolean
           tags?: string[]
           title: string
+          upcoming_release_at?: string | null
+          upcoming_release_timezone?: string | null
           updated_at?: string
           year?: number | null
         }
@@ -380,6 +384,8 @@ export type Database = {
           streaming_enabled?: boolean
           tags?: string[]
           title?: string
+          upcoming_release_at?: string | null
+          upcoming_release_timezone?: string | null
           updated_at?: string
           year?: number | null
         }
@@ -1866,6 +1872,102 @@ export type Database = {
           },
         ]
       }
+      creator_events: {
+        Row: {
+          address_line1: string | null
+          address_line2: string | null
+          country_code: string | null
+          created_at: string
+          creator_id: string
+          ends_at: string | null
+          format: string
+          id: string
+          info_url: string | null
+          lifecycle_state: string
+          locality: string | null
+          moderated_at: string | null
+          moderated_by: string | null
+          moderation_reason: string | null
+          moderation_state: string
+          online_url: string | null
+          postal_code: string | null
+          region: string | null
+          short_description: string
+          starts_at: string
+          timezone: string
+          title: string
+          updated_at: string
+          venue_name: string | null
+        }
+        Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          country_code?: string | null
+          created_at?: string
+          creator_id: string
+          ends_at?: string | null
+          format: string
+          id?: string
+          info_url?: string | null
+          lifecycle_state?: string
+          locality?: string | null
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_reason?: string | null
+          moderation_state?: string
+          online_url?: string | null
+          postal_code?: string | null
+          region?: string | null
+          short_description: string
+          starts_at: string
+          timezone: string
+          title: string
+          updated_at?: string
+          venue_name?: string | null
+        }
+        Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          country_code?: string | null
+          created_at?: string
+          creator_id?: string
+          ends_at?: string | null
+          format?: string
+          id?: string
+          info_url?: string | null
+          lifecycle_state?: string
+          locality?: string | null
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_reason?: string | null
+          moderation_state?: string
+          online_url?: string | null
+          postal_code?: string | null
+          region?: string | null
+          short_description?: string
+          starts_at?: string
+          timezone?: string
+          title?: string
+          updated_at?: string
+          venue_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creator_events_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creator_events_moderated_by_fkey"
+            columns: ["moderated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       creator_payout_accounts: {
         Row: {
           created_at: string
@@ -2207,6 +2309,370 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      interactive_builds: {
+        Row: {
+          build_version: string
+          compression: string
+          created_at: string
+          created_by: string
+          decompression_fallback: boolean
+          download_size_mb: number | null
+          entry_url: string | null
+          id: string
+          item_id: string
+          manifest_version: number
+          max_session_minutes: number
+          maximum_heap_memory_mb: number | null
+          minimum_device_memory_mb: number | null
+          preferred_orientation: string
+          requires_cross_origin_isolation: boolean
+          reviewed_at: string | null
+          reviewed_by: string | null
+          runtime: string
+          status: string
+          supported_browsers: string[]
+          supported_inputs: string[]
+          supports_desktop: boolean
+          supports_mobile: boolean
+          unity_version: string | null
+          updated_at: string
+          wasm_required: boolean
+          webgl_version: number
+        }
+        Insert: {
+          build_version: string
+          compression?: string
+          created_at?: string
+          created_by: string
+          decompression_fallback?: boolean
+          download_size_mb?: number | null
+          entry_url?: string | null
+          id?: string
+          item_id: string
+          manifest_version?: number
+          max_session_minutes?: number
+          maximum_heap_memory_mb?: number | null
+          minimum_device_memory_mb?: number | null
+          preferred_orientation?: string
+          requires_cross_origin_isolation?: boolean
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          runtime?: string
+          status?: string
+          supported_browsers?: string[]
+          supported_inputs?: string[]
+          supports_desktop?: boolean
+          supports_mobile?: boolean
+          unity_version?: string | null
+          updated_at?: string
+          wasm_required?: boolean
+          webgl_version?: number
+        }
+        Update: {
+          build_version?: string
+          compression?: string
+          created_at?: string
+          created_by?: string
+          decompression_fallback?: boolean
+          download_size_mb?: number | null
+          entry_url?: string | null
+          id?: string
+          item_id?: string
+          manifest_version?: number
+          max_session_minutes?: number
+          maximum_heap_memory_mb?: number | null
+          minimum_device_memory_mb?: number | null
+          preferred_orientation?: string
+          requires_cross_origin_isolation?: boolean
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          runtime?: string
+          status?: string
+          supported_browsers?: string[]
+          supported_inputs?: string[]
+          supports_desktop?: boolean
+          supports_mobile?: boolean
+          unity_version?: string | null
+          updated_at?: string
+          wasm_required?: boolean
+          webgl_version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interactive_builds_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: true
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      interactive_event_definitions: {
+        Row: {
+          achievement_id: string | null
+          created_at: string
+          event_key: string
+          event_kind: string
+          id: string
+          is_enabled: boolean
+          item_id: string
+          max_per_session: number
+          schema_version: number
+          updated_at: string
+        }
+        Insert: {
+          achievement_id?: string | null
+          created_at?: string
+          event_key: string
+          event_kind: string
+          id?: string
+          is_enabled?: boolean
+          item_id: string
+          max_per_session?: number
+          schema_version?: number
+          updated_at?: string
+        }
+        Update: {
+          achievement_id?: string | null
+          created_at?: string
+          event_key?: string
+          event_kind?: string
+          id?: string
+          is_enabled?: boolean
+          item_id?: string
+          max_per_session?: number
+          schema_version?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interactive_event_definitions_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "item_achievements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interactive_event_definitions_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      interactive_events: {
+        Row: {
+          definition_id: string
+          event_key: string
+          event_kind: string
+          external_event_id: string | null
+          id: string
+          item_id: string
+          occurred_at: string
+          payload: Json
+          received_at: string
+          replay_nonce: string | null
+          sequence_number: number | null
+          session_id: string
+          signature_sha256: string | null
+          signing_key_id: string | null
+          trust_level: string
+          user_id: string
+        }
+        Insert: {
+          definition_id: string
+          event_key: string
+          event_kind: string
+          external_event_id?: string | null
+          id?: string
+          item_id: string
+          occurred_at: string
+          payload?: Json
+          received_at?: string
+          replay_nonce?: string | null
+          sequence_number?: number | null
+          session_id: string
+          signature_sha256?: string | null
+          signing_key_id?: string | null
+          trust_level: string
+          user_id: string
+        }
+        Update: {
+          definition_id?: string
+          event_key?: string
+          event_kind?: string
+          external_event_id?: string | null
+          id?: string
+          item_id?: string
+          occurred_at?: string
+          payload?: Json
+          received_at?: string
+          replay_nonce?: string | null
+          sequence_number?: number | null
+          session_id?: string
+          signature_sha256?: string | null
+          signing_key_id?: string | null
+          trust_level?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interactive_events_definition_id_fkey"
+            columns: ["definition_id"]
+            isOneToOne: false
+            referencedRelation: "interactive_event_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interactive_events_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interactive_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "interactive_launch_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      interactive_launch_sessions: {
+        Row: {
+          build_id: string
+          client_context: Json
+          ended_at: string | null
+          expires_at: string
+          id: string
+          item_id: string
+          last_seen_at: string
+          started_at: string
+          status: string
+          token_hash: string
+          user_id: string
+        }
+        Insert: {
+          build_id: string
+          client_context?: Json
+          ended_at?: string | null
+          expires_at: string
+          id?: string
+          item_id: string
+          last_seen_at?: string
+          started_at?: string
+          status?: string
+          token_hash: string
+          user_id: string
+        }
+        Update: {
+          build_id?: string
+          client_context?: Json
+          ended_at?: string | null
+          expires_at?: string
+          id?: string
+          item_id?: string
+          last_seen_at?: string
+          started_at?: string
+          status?: string
+          token_hash?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interactive_launch_sessions_build_id_fkey"
+            columns: ["build_id"]
+            isOneToOne: false
+            referencedRelation: "interactive_builds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interactive_launch_sessions_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      interactive_origins: {
+        Row: {
+          created_at: string
+          is_active: boolean
+          label: string
+          origin: string
+        }
+        Insert: {
+          created_at?: string
+          is_active?: boolean
+          label: string
+          origin: string
+        }
+        Update: {
+          created_at?: string
+          is_active?: boolean
+          label?: string
+          origin?: string
+        }
+        Relationships: []
+      }
+      interactive_progress_state: {
+        Row: {
+          definition_id: string
+          item_id: string
+          occurred_at: string
+          payload: Json
+          source_event_id: string
+          trust_level: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          definition_id: string
+          item_id: string
+          occurred_at: string
+          payload?: Json
+          source_event_id: string
+          trust_level: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          definition_id?: string
+          item_id?: string
+          occurred_at?: string
+          payload?: Json
+          source_event_id?: string
+          trust_level?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interactive_progress_state_definition_id_fkey"
+            columns: ["definition_id"]
+            isOneToOne: false
+            referencedRelation: "interactive_event_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interactive_progress_state_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interactive_progress_state_source_event_id_fkey"
+            columns: ["source_event_id"]
+            isOneToOne: false
+            referencedRelation: "interactive_events"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       item_achievements: {
         Row: {
@@ -4696,6 +5162,41 @@ export type Database = {
         }
         Returns: string
       }
+      begin_interactive_launch: {
+        Args: { client_context?: Json; target_item_id: string }
+        Returns: {
+          entry_url: string
+          expires_at: string
+          manifest: Json
+          session_id: string
+          session_token: string
+        }[]
+      }
+      calendar_feed: {
+        Args: { range_end: string; range_start: string }
+        Returns: {
+          country_code: string
+          creator_id: string
+          description: string
+          ends_at: string
+          format: string
+          info_url: string
+          item_cover_url: string
+          item_slug: string
+          locality: string
+          online_url: string
+          profile_slug: string
+          profile_username: string
+          region: string
+          source_id: string
+          source_type: string
+          starts_at: string
+          state: string
+          timezone: string
+          title: string
+          venue_name: string
+        }[]
+      }
       can_access_item_file: { Args: { object_name: string }; Returns: boolean }
       can_manage_content: {
         Args: { target_entry_id: string }
@@ -4751,6 +5252,10 @@ export type Database = {
         Args: { other_profile_id: string }
         Returns: string
       }
+      end_interactive_launch: {
+        Args: { target_session_id: string; target_session_token: string }
+        Returns: undefined
+      }
       evaluate_item_achievements: {
         Args: {
           client_context?: Json
@@ -4805,6 +5310,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_allowed_interactive_url: {
+        Args: { target_url: string }
+        Returns: boolean
+      }
       is_approved_publisher: {
         Args: { target_profile_id?: string }
         Returns: boolean
@@ -4814,6 +5323,8 @@ export type Database = {
         Returns: boolean
       }
       is_platform_admin: { Args: never; Returns: boolean }
+      is_safe_public_https_url: { Args: { value: string }; Returns: boolean }
+      is_valid_iana_timezone: { Args: { value: string }; Returns: boolean }
       issue_item_achievement: {
         Args: {
           event_metadata?: Json
@@ -4847,6 +5358,10 @@ export type Database = {
           item_id: string
         }[]
       }
+      moderate_creator_event: {
+        Args: { reason?: string; target_event_id: string; target_state: string }
+        Returns: undefined
+      }
       notification_actor_name: { Args: { actor: string }; Returns: string }
       record_achievement_playback_signal: {
         Args: {
@@ -4857,6 +5372,17 @@ export type Database = {
           target_track_id: string
         }
         Returns: undefined
+      }
+      record_interactive_progress: {
+        Args: {
+          event_payload: Json
+          target_event_key: string
+          target_occurred_at?: string
+          target_sequence_number: number
+          target_session_id: string
+          target_session_token: string
+        }
+        Returns: string
       }
       record_item_play: {
         Args: {
@@ -4871,6 +5397,24 @@ export type Database = {
       record_item_share_visit: {
         Args: { target_item_id: string; target_referrer_id: string }
         Returns: boolean
+      }
+      record_trusted_interactive_event: {
+        Args: {
+          event_payload: Json
+          target_event_key: string
+          target_external_event_id: string
+          target_item_id: string
+          target_occurred_at: string
+          target_replay_nonce: string
+          target_session_id: string
+          target_signature_sha256: string
+          target_signing_key_id: string
+          target_user_id: string
+        }
+        Returns: {
+          achievement_issued: boolean
+          event_id: string
+        }[]
       }
       refresh_content_question_stats: {
         Args: { target_entry_id: string }
@@ -4905,6 +5449,18 @@ export type Database = {
       revoke_item_entitlement: {
         Args: { revoke_reason: string; target_entitlement_id: string }
         Returns: undefined
+      }
+      save_creator_event: {
+        Args: { payload: Json; target_event_id: string }
+        Returns: string
+      }
+      save_interactive_build: {
+        Args: { payload: Json; target_item_id: string }
+        Returns: string
+      }
+      save_interactive_event_definition: {
+        Args: { payload: Json; target_item_id: string }
+        Returns: string
       }
       save_item_to_library: {
         Args: { target_item_id: string }
@@ -4970,6 +5526,18 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      set_creator_event_state: {
+        Args: { target_event_id: string; target_state: string }
+        Returns: undefined
+      }
+      set_item_upcoming_release: {
+        Args: {
+          release_at: string
+          release_timezone: string
+          target_item_id: string
+        }
+        Returns: undefined
       }
       set_owned_item_publication_status: {
         Args: { target_item_id: string; target_status: string }

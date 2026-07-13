@@ -1,14 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { PageShell, GlassPanel, HubHero, HubSection, EmptyMessage, SectionHeader } from '@/components/Ui';
+import { useEffect, useRef, useState } from 'react';
+import { PageShell, GlassPanel, HubHero, EmptyMessage, SectionHeader } from '@/components/Ui';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
 import { getProductExperience } from '@/lib/experience';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { STUDIO_CATALOG_SECTIONS } from '@/lib/studioCatalog';
 import { getCreatorCatalogOverview, type StudioCatalogHealth, type StudioLibraryMetric } from '@/lib/domain/studio';
+import { formatEventDate } from '@/lib/eventTime';
+import { listCreatorEvents, type CreatorEvent } from '@/lib/domain/events';
 
 type LibraryMetricRow = StudioLibraryMetric;
 
@@ -17,6 +19,7 @@ type OverviewState = {
   libraryItems: LibraryMetricRow[];
   totalPlays: number;
   catalogHealth: StudioCatalogHealth[];
+  events: CreatorEvent[];
   metricsError: string;
 };
 
@@ -28,6 +31,7 @@ export default function StudioPage() {
     libraryItems: [],
     totalPlays: 0,
     catalogHealth: [],
+    events: [],
     metricsError: '',
   });
 
@@ -43,6 +47,7 @@ export default function StudioPage() {
       let libraryItems: LibraryMetricRow[] = [];
       let totalPlays = 0;
       let catalogHealth: StudioCatalogHealth[] = [];
+      let events: CreatorEvent[] = [];
       let metricsError = '';
       try {
         const result = await getCreatorCatalogOverview(profileId);
@@ -53,12 +58,19 @@ export default function StudioPage() {
       } catch (overviewError) {
         metricsError = overviewError instanceof Error ? overviewError.message : 'Could not load Studio metrics.';
       }
+      try {
+        events = (await listCreatorEvents(user.id)).filter(event => event.lifecycle_state !== 'removed');
+      } catch (eventsError) {
+        const eventMessage = eventsError instanceof Error ? eventsError.message : 'Could not load Studio events.';
+        metricsError = metricsError ? `${metricsError} ${eventMessage}` : eventMessage;
+      }
 
       setOverview({
         products: productRows,
         libraryItems,
         totalPlays,
         catalogHealth,
+        events,
         metricsError,
       });
     }
@@ -134,6 +146,7 @@ export default function StudioPage() {
         <HubHero
           title="Studio"
           copy="Your creator workspace for catalog health, sales signals, and what should go live next."
+          actions={<StudioCreateMenu />}
         />
 
         <div className="dashboard-overview-grid">
@@ -150,7 +163,23 @@ export default function StudioPage() {
         )}
 
         <div className="studio-catalog-sections">
-          {productSections.map(section => (
+          {overview.events.length > 0 && <section className="dashboard-section" id="events">
+            <SectionHeader title="Events" />
+            <div className="dashboard-list-surface">
+              {overview.events.map(event => (
+                <Link key={event.id} href={`/studio/events/${event.id}`} className="dashboard-list-row studio-item-row">
+                  <div className="dashboard-row-copy">
+                    <div className="dashboard-row-title">{event.title}</div>
+                    <div className="dashboard-row-subtitle">{formatEventDate(event.starts_at, event.timezone)} · {formatEventFormat(event.format)}</div>
+                  </div>
+                  <div className="dashboard-row-actions">
+                    {event.lifecycle_state === 'cancelled' && <span className="dashboard-status-pill studio-status-pill-draft">Cancelled</span>}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>}
+          {productSections.filter(section => section.items.length > 0).map(section => (
             <StudioProductSection
               key={section.id}
               id={section.id === 'assets' ? 'sample-packs' : section.id}
@@ -158,31 +187,9 @@ export default function StudioPage() {
               itemLabel={section.itemLabel}
               items={section.items}
               healthByItemId={healthByItemId}
-              newHref={`/studio/products/new?section=${section.id === 'assets' ? 'sample-packs' : section.id}`}
             />
           ))}
         </div>
-
-        <HubSection title="Earnings">
-          {purchasedItems.length === 0 ? (
-            <p className="library-empty-text">No items sold yet.</p>
-          ) : (
-            <div className="dashboard-list-surface">
-              {purchasedItems.map((item, index) => {
-                const product = item.item_id ? productById.get(item.item_id) : null;
-                return (
-                  <div key={item.id} className="dashboard-list-row" style={{ borderTop: index === 0 ? 'none' : undefined }}>
-                    <div className="dashboard-row-copy">
-                      <div className="dashboard-row-title">{product?.title ?? 'Item'}</div>
-                      <div className="dashboard-row-subtitle">{item.acquired_at ? formatDate(item.acquired_at) : 'Purchase date unavailable'}</div>
-                    </div>
-                    <div className="dashboard-row-meta">{formatCurrency(product?.price_cents ?? 0)}</div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </HubSection>
 
       </div>
     </PageShell>
@@ -200,27 +207,80 @@ function OverviewStatCard({ label, value }: { label: string; value: string | num
   );
 }
 
+const STUDIO_CREATE_ACTIONS = [
+  { label: 'Add Music', href: '/studio/products/new?section=music' },
+  { label: 'Add Book', href: '/studio/products/new?section=books' },
+  { label: 'Add Event', href: '/studio/events/new' },
+  { label: 'Add Merch', href: '/studio/products/new?section=merch' },
+  { label: 'Add Sample Pack', href: '/studio/products/new?section=sample-packs' },
+];
+
+function StudioCreateMenu() {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const firstAction = rootRef.current?.querySelector<HTMLElement>('[role="menuitem"]');
+    firstAction?.focus();
+    function closeMenu(event: MouseEvent) {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false);
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return;
+      setOpen(false);
+      rootRef.current?.querySelector<HTMLButtonElement>('.page-compose-button')?.focus();
+    }
+    document.addEventListener('mousedown', closeMenu);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('mousedown', closeMenu);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [open]);
+
+  return (
+    <div className="page-header-tools studio-create-tools">
+      <div ref={rootRef} className={open ? 'page-filter-menu page-filter-menu-open' : 'page-filter-menu'}>
+        <button
+          type="button"
+          className="page-filter-button studio-create-button"
+          aria-label="Add Studio content"
+          title="Add Studio content"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={() => setOpen(current => !current)}
+        >
+          <span aria-hidden="true">+</span>
+        </button>
+        {open && <div className="page-filter-popover studio-create-popover" role="menu" aria-label="Add Studio content">
+          {STUDIO_CREATE_ACTIONS.map(action => (
+            <Link key={action.href} href={action.href} className="page-filter-option" role="menuitem" onClick={() => setOpen(false)}>
+              {action.label}
+            </Link>
+          ))}
+        </div>}
+      </div>
+    </div>
+  );
+}
+
 function StudioProductSection({
   id,
   title,
   itemLabel,
   items,
-  newHref,
   healthByItemId,
 }: {
   id: string;
   title: string;
   itemLabel: string;
   items: Product[];
-  newHref: string;
   healthByItemId: Map<string, StudioCatalogHealth>;
 }) {
   return (
     <section className="dashboard-section" id={id}>
-      <SectionHeader
-        title={title}
-        action={<Link href={newHref} className="os-button os-button-secondary os-button-compact">New</Link>}
-      />
+      <SectionHeader title={title} />
       <div className="dashboard-list-surface">
         {items.length === 0 ? (
           <div className="dashboard-empty">No {itemLabel}s yet.</div>
@@ -260,6 +320,6 @@ function formatCurrency(cents: number) {
   }).format(cents / 100);
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(value));
+function formatEventFormat(value: string) {
+  return value.split('_').map(word => `${word[0].toUpperCase()}${word.slice(1)}`).join(' ');
 }
