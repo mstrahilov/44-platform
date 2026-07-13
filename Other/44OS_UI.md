@@ -363,7 +363,7 @@ Studio publishing rules:
 Native content rules:
 
 - Book Store pages order creator-written Description, reader Sample, then Product Details. A missing sample produces an intentional unavailable state; it does not expose the protected Library PDF.
-- The PDF reader takes over the full workspace and hides Dock, Topbar, and the global music player. Mobile portrait and compact landscape use a single 60px toolbar row: close and page count on the left, then bookmark, bookmark list, previous, and next circular actions on the right. Title and creator are omitted on mobile because the reading context is already established; desktop keeps them on the left and retains fit, zoom, and appearance controls.
+- The PDF reader takes over the full workspace and hides Dock, Topbar, and the global music player. Mobile portrait and compact landscape use a single 60px toolbar row: close and page count on the left, then bookmark, bookmark list, previous, and next circular actions on the right. Title and creator are omitted on mobile because the reading context is already established; desktop keeps only the title on the left. Both sizes use the same circular bookmark, page-navigation, and minus/plus zoom actions with a read-only `current of total` count; there are no fit, appearance, or editable-page controls.
 - Reader pages support native browser pinch zoom and scrolling, keyboard page navigation on desktop, visible focus, screen-reader page text, synchronized last-page restoration, synchronized appearance, and entitlement-gated synchronized bookmarks. Store samples always start at page 1 and cannot pass the creator-set sample page limit.
 - Protected PDFs are not placed in an offline cache. If signed access expires or the device is offline, the reader presents a reconnect/refresh state without implying that an unavailable file is stored locally.
 - Studio add/edit forms retain their current device-local values when the window loses focus, the browser refreshes, or a creator briefly switches mobile apps. This recovery is invisible backend truth rather than a user-selectable Draft state, and it clears after Save, Cancel, or removal. Uploaded sample-preview audio shows as uploaded immediately; waveform analysis can finish afterward without clearing that file.
@@ -371,6 +371,15 @@ Native content rules:
 - Sample Pack Store pages order creator-written Description, Sample Preview, then Product Details. Preview rows use the exact shared release track/equalizer interaction and persistent global music player; do not create a second waveform/audio player. Waveform metadata remains available for later visual refinement.
 - Sample Pack Library pages use the same preview rows and expose one full protected pack download through the primary Item action. Optional protected individual samples may render compact download actions. Do not duplicate the full-pack action inside Pack Contents.
 - Studio Books accept a protected full PDF and optional separate sample PDF, with total-page, sample-page, and language metadata. Studio Sample Packs accept a protected full ZIP plus up to 30 public audio previews. Both flows include the canonical Item Description field and keep upload status/failure truth visible.
+
+Events and Calendar rules:
+
+- Public event formats are `In Person`, `Online`, and `Hybrid`. Studio reveals only the location and destination fields relevant to the selected format while allowing a ticket/information URL for any format; 44OS does not sell or fulfill tickets.
+- Studio gains a dedicated Events management surface for creators to add, edit, cancel, and remove their own event listings. Controls must preserve timezone truth, distinguish start from optional end, validate required destinations, and retain entered work through the established device-local form recovery behavior.
+- Creator profiles expose an Events tab when that profile has event content. Upcoming events lead; past and cancelled events must be visually unambiguous without competing with the creator's Items and posts.
+- `/calendar` is a full-width community surface with the normal page title and divider followed by one rounded calendar region. Desktop provides a clear month view and mobile provides a legible responsive agenda/list representation; both expose the same event details and accessible chronological navigation.
+- Calendar entries identify their source—creator event or upcoming release—and link to the canonical profile, event destination, or Item. Calendar never presents an informational release date as proof that an Item is published or purchasable.
+- Radio programming and schedule controls remain hidden. The current Radio page and playback experience do not change during M16; a later reviewed milestone will design submission, 44 approval, programming blocks, and schedule presentation.
 
 ---
 

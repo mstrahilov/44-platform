@@ -325,15 +325,43 @@ Reliability follow-up (July 13, 2026): Studio add/edit recovery is device-local 
 
 Final M15 interface and naming closure (July 13, 2026): desktop and mobile readers share one compact theme-aware toolbar with title-only desktop identity, read-only `current of total` progress, circular bookmark/page/zoom actions, restored last page, and exact return to the originating Library Item detail. The public Assets product category is renamed in place to Sample Packs through migration `20260712061000_m15_sample_pack_category_language.sql`; Store, Library, Studio, profiles, support copy, metadata, sitemap, filters, and canonical URLs use Sample Packs. Existing category and Item UUIDs, uploads, generic `item_assets`, internal asset experience values, Library relationships, entitlements, and audit history are preserved; former URLs redirect and former non-sample Types remain inactive rather than deleted.
 
-### M16 — Events And Programming
+### M16 — Creator Events And Community Calendar
 
-Creator events, calendar aggregation, release dates, and scheduled Radio programming. Calendar remains an aggregate view, not an independent data source.
+**Status: Approved — next**
 
-### M17 — Interactive Platform
+Ship creator-owned event listings and the shared 44OS Calendar without coupling either surface to the later Radio programming workflow. Calendar is an aggregate view over authoritative source records, not an independent writable data source. Existing Radio behavior remains unchanged.
+
+- [ ] Audit current profile, Studio, catalog release-date, navigation, RLS, and timezone contracts read-only before choosing the migration shape.
+- [ ] Define creator Event records with `In Person`, `Online`, and `Hybrid` formats; timezone-aware start and optional end; description; venue/address; online destination; ticket/information URL; and cancellation state.
+- [ ] Add reviewed additive migrations, server validation, creator-ownership RLS/RPCs, and 44 admin moderation while preserving every existing user and Item record.
+- [ ] Add secure Studio Event list/create/edit/cancel/remove flows with device-local unsaved-form recovery and truthful validation/failure states.
+- [ ] Add a creator-profile Events tab with clear upcoming, past, cancelled, empty, and external-destination behavior.
+- [ ] Add an optional informational upcoming release date to Items if the audit confirms no durable field exists; do not use that field to bypass publication validation or auto-publish an Item.
+- [ ] Build one server-authoritative Calendar feed contract that aggregates creator Events and eligible upcoming Item releases without copying ownership into a generic writable calendar table.
+- [ ] Build `/calendar` as a full-width titled surface with divider and rounded desktop calendar, plus an accessible responsive mobile agenda/list view.
+- [ ] Verify IANA timezone and daylight-saving behavior, URL safety, keyboard/screen-reader navigation, creator/admin boundaries, and public visibility with schema replay, security tests, lint, typecheck, build, and responsive acceptance.
+- [ ] Deploy through reviewed repository migrations and record production evidence before marking M16 complete.
+
+### M17 — Radio Programming And Schedule
+
+**Status: Not started — deliberately deferred**
+
+Keep Radio v1 as-is for launch unless this milestone is separately reviewed and approved. Later, support pre-recorded creator sets, podcasts, talk shows, and 44-curated programming blocks through a Radio-specific submission and scheduling lifecycle.
+
+- [ ] Define the pre-recorded program/media contract independently from creator Events.
+- [ ] Define creator submission, revision, withdrawal, and 44 admin approval/rejection states.
+- [ ] Define timezone-aware programming blocks, conflict handling, repeat scheduling, and fallback music behavior.
+- [ ] Build protected program-media ingestion and server-authoritative playout eligibility.
+- [ ] Build the 44 admin review and scheduling workspace before exposing creator submission controls.
+- [ ] Add a Radio-page schedule only after its mobile/desktop UI Activation Review.
+- [ ] Feed only approved scheduled programs into the M16 Calendar read contract.
+- [ ] Preserve the existing `radio_playlist_entries` queue and current Radio player until a verified cutover exists.
+
+### M18 — Interactive Platform
 
 WebGL/Unity launches, interactive progress and achievement bridges, desktop-experience guidance, and the later Tauri wrapper.
 
-### M18 — Ecosystem Expansion
+### M19 — Ecosystem Expansion
 
 Livestream status, guides/showcases, contributor organizations, services represented through the Item spine, points/rewards, and other capabilities validated by real creator demand.
 
