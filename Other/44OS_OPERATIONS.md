@@ -5,7 +5,7 @@ This is an operational companion referenced by the three active handoff document
 ## Release gate
 
 1. Confirm `git status` is clean and the intended commit is on `main`.
-2. Run `npm run lint`, `npm run typecheck`, and `npm run build`.
+2. Run `npm run lint`, `npm run typecheck`, `npm run test:security`, and `npm run build`.
 3. Start the production build locally and run `npm run test:smoke`. The executable gate checks readiness shape, security headers, document accessibility basics, bounded response/HTML budgets, hidden-surface isolation, and one-hop canonical redirects.
 4. Run `npm run test:schema-replay` against the disposable local Supabase stack, then run `supabase db push --linked --dry-run` and `supabase db lint --linked --level error`.
 5. Back up linked data before every migration. Apply only reviewed repository migrations.
@@ -15,6 +15,7 @@ This is an operational companion referenced by the three active handoff document
 ## Health and triage
 
 - `/api/health` checks application configuration and a bounded Supabase read. HTTP 200 means ready; HTTP 503 means configuration or Supabase is unavailable.
+- Health output includes the deployment release and region so an incident can be tied to an exact build. Unhandled server request errors emit the `request_error` JSON contract with release, runtime, method, route, framework context, and sanitized error identity. It deliberately excludes request headers, query values, user content, and tokens. Vercel logs retain the baseline events until an approved external aggregation/alert destination is connected.
 - Record UTC time, user role, route, Item/account identifier, browser/device, error reference, and reproduction steps.
 - Determine whether the problem affects anonymous browsing, authentication, publishing, Library/entitlements, protected files, Community, or payment infrastructure.
 - Do not “repair” Item, entitlement, or audit data through dashboard-only SQL. Capture evidence, back up, and use a reviewed forward migration.
@@ -46,6 +47,7 @@ This is an operational companion referenced by the three active handoff document
 - Restoration rehearsals use a separate project/database. Never restore a dump over staging or production as a test.
 - Validate row counts and permanent identifiers for profiles, Items, tracks, Library entries, entitlements, entitlement events, Community content, and storage object references before accepting a restore.
 - After restoration, regenerate types, run schema lint/security checks, and exercise signed-in journeys before changing traffic.
+- Per the July 12 launch sequence decision, the production-data backup restoration rehearsal remains grouped with payment-era final operational gates. Migration-chain replay remains mandatory during current non-payment work.
 
 ## Secrets and providers
 

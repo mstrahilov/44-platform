@@ -423,3 +423,4 @@ Acceptance:
 - Loading, empty, error, signed-out, and signed-in states are intentional.
 - Achievement icons render correctly from Supabase Storage.
 - Automated launch smoke verifies an English document language, a page title, a main landmark, and viewport metadata that does not disable user zoom. These are regression guards, not a substitute for the required keyboard, screen-reader, contrast, responsive, and installed-iOS review matrix.
+- M13 role/security automation and provider-neutral server telemetry are behind-the-scenes foundations only. They do not authorize new navigation, status labels, report controls, recovery/legal links, or other visible surfaces before UI Activation Review.

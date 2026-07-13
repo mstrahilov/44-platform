@@ -44,7 +44,7 @@ for (const route of routes) {
   }
   if (route === '/api/health') {
     const health = await response.json().catch(() => null);
-    if (health?.status !== 'healthy' || !health?.checkedAt || typeof health?.dependencies?.supabase !== 'number') fail('/api/health: invalid readiness response');
+    if (health?.status !== 'healthy' || !health?.checkedAt || !health?.release || !health?.region || typeof health?.dependencies?.supabase !== 'number') fail('/api/health: invalid readiness response');
   } else {
     const body = await response.text();
     const bytes = Buffer.byteLength(body);
