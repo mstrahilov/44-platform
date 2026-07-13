@@ -32,6 +32,7 @@ import {
   loadStudioItemEditor,
   replaceStudioAsset,
   replaceStudioItemTaxonomy,
+  setStudioPublicationStatus,
   syncStudioTracks,
   updateStudioItem,
 } from '@/lib/domain/studioPublishing';
@@ -458,6 +459,14 @@ export default function EditProductPage() {
         setError(linkSaveError instanceof Error ? linkSaveError.message : 'Could not save release links.');
         return;
       }
+    }
+
+    try {
+      await setStudioPublicationStatus(id, 'published');
+    } catch (publicationError) {
+      setSaving(false);
+      setError(publicationError instanceof Error ? publicationError.message : 'This Item is not ready to publish.');
+      return;
     }
 
     setSaving(false);

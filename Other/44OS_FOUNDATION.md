@@ -123,6 +123,8 @@ M14 Cross-Platform Reach is deployed in migration `20260712057200_m14_cross_plat
 
 M15 Native Content Experiences is deployed in migrations `20260712058000_m15_native_books_and_sample_packs.sql`, `20260712059000_m15_reader_bookmarks.sql`, and `20260712060000_m15_native_description_edits.sql`. Books are PDF-only for this release: a protected full PDF asset powers the entitled Library reader and an optional separate public sample PDF powers Store preview. Reading page, progress percentage, appearance, and bookmarks synchronize server-side; read access, bookmark mutation, and protected retrieval require an active `read` entitlement or Item-management authority. Sample Packs retain a protected ZIP as the durable Library download and may expose ordered public audio previews with waveform metadata plus optional protected individual sample assets. Preview playback uses the one shared 44OS music player rather than a second audio engine. Free Library acquisition grants the required `read` or `download` entitlement while preserving existing Library rows, Item IDs, assets, and entitlement audit history. EPUB, protected offline caching, and archive extraction are not active formats.
 
+Trusted-testing Studio saves re-run the server publication validator after all Item children are synchronized. A valid Item caught in the internal creation state becomes public automatically; creators still never receive a Draft/Published control.
+
 ---
 
 ## 5. Stack And Workflow
