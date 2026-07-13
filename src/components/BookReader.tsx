@@ -10,8 +10,41 @@ import { useAuth } from '@/lib/useAuth';
 type ReaderAppearance = { theme: 'system' | 'light' | 'dark' | 'sepia'; fit: 'width' | 'page'; zoom: number };
 const DEFAULT_APPEARANCE: ReaderAppearance = { theme: 'system', fit: 'width', zoom: 1 };
 
+type MapWithUpsert<K, V> = Map<K, V> & {
+  getOrInsert?: (key: K, value: V) => V;
+  getOrInsertComputed?: (key: K, callback: (key: K) => V) => V;
+};
+
+function ensureMapUpsertSupport() {
+  const prototype = Map.prototype as MapWithUpsert<unknown, unknown>;
+  if (!prototype.getOrInsert) {
+    Object.defineProperty(prototype, 'getOrInsert', {
+      configurable: true,
+      writable: true,
+      value(this: Map<unknown, unknown>, key: unknown, value: unknown) {
+        if (this.has(key)) return this.get(key);
+        this.set(key, value);
+        return value;
+      },
+    });
+  }
+  if (!prototype.getOrInsertComputed) {
+    Object.defineProperty(prototype, 'getOrInsertComputed', {
+      configurable: true,
+      writable: true,
+      value(this: Map<unknown, unknown>, key: unknown, callback: (key: unknown) => unknown) {
+        if (this.has(key)) return this.get(key);
+        const value = callback(key);
+        this.set(key, value);
+        return value;
+      },
+    });
+  }
+}
+
 export function BookReader({ itemId, mode }: { itemId: string; mode: 'sample' | 'full' }) {
   const { user, loading: authLoading } = useAuth();
+  const userId = user?.id ?? '';
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const renderTaskRef = useRef<RenderTask | null>(null);
@@ -32,7 +65,7 @@ export function BookReader({ itemId, mode }: { itemId: string; mode: 'sample' | 
   const [error, setError] = useState('');
 
   const loadBook = useCallback(async () => {
-    if (authLoading || (mode === 'full' && !user)) return;
+    if (authLoading || (mode === 'full' && !userId)) return;
     setLoading(true);
     setError('');
     try {
@@ -48,8 +81,11 @@ export function BookReader({ itemId, mode }: { itemId: string; mode: 'sample' | 
           zoom: typeof savedAppearance.zoom === 'number' ? Math.min(2, Math.max(.7, savedAppearance.zoom)) : 1,
         });
       }
-      const { GlobalWorkerOptions, getDocument } = await import('pdfjs-dist');
-      GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+      // PDF.js 6 uses the Map upsert proposal. Older Safari/iOS releases do not
+      // expose it yet, so install the small standards-compatible methods first.
+      ensureMapUpsertSupport();
+      const { GlobalWorkerOptions, getDocument } = await import('pdfjs-dist/legacy/build/pdf.mjs');
+      GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/legacy/build/pdf.worker.min.mjs', import.meta.url).toString();
       const pdf = await getDocument({ url: session.url, withCredentials: false }).promise;
       const availablePages = mode === 'sample' && session.book.sample_page_limit
         ? Math.min(pdf.numPages, session.book.sample_page_limit)
@@ -62,13 +98,13 @@ export function BookReader({ itemId, mode }: { itemId: string; mode: 'sample' | 
     } finally {
       setLoading(false);
     }
-  }, [authLoading, itemId, mode, user]);
+  }, [authLoading, itemId, mode, userId]);
 
   useEffect(() => { Promise.resolve().then(() => void loadBook()); }, [loadBook]);
   useEffect(() => {
-    if (mode !== 'full' || !user) return;
+    if (mode !== 'full' || !userId) return;
     void listReadingBookmarks(itemId).then(setBookmarks).catch(() => setBookmarkStatus('Bookmarks could not be loaded.'));
-  }, [itemId, mode, user]);
+  }, [itemId, mode, userId]);
   useEffect(() => {
     const update = () => setOnline(navigator.onLine);
     window.addEventListener('online', update);
@@ -115,12 +151,12 @@ export function BookReader({ itemId, mode }: { itemId: string; mode: 'sample' | 
   }, [appearance.fit, appearance.zoom, documentProxy, page, stageHeight, stageWidth]);
 
   useEffect(() => {
-    if (mode !== 'full' || !documentProxy || !user) return;
+    if (mode !== 'full' || !documentProxy || !userId) return;
     const timer = window.setTimeout(() => {
       void saveReadingProgress({ itemId, page, totalPages: documentProxy.numPages, appearance }).catch(() => undefined);
     }, 500);
     return () => window.clearTimeout(timer);
-  }, [appearance, documentProxy, itemId, mode, page, user]);
+  }, [appearance, documentProxy, itemId, mode, page, userId]);
 
   function movePage(next: number) {
     if (!documentProxy || !pageCount) return;

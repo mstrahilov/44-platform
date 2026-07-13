@@ -1,5 +1,6 @@
 'use client';
 
+import type { Dispatch, SetStateAction } from 'react';
 import { UploadField } from '@/components/UploadField';
 import { SectionHeader } from '@/components/Ui';
 
@@ -57,9 +58,9 @@ export function StudioBookFields({ userId, previewUrl, onPreviewUrlChange, total
   );
 }
 
-export function StudioSamplePreviewFields({ userId, samples, onChange }: { userId: string; samples: DraftSamplePreview[]; onChange: (samples: DraftSamplePreview[]) => void }) {
+export function StudioSamplePreviewFields({ userId, samples, onChange }: { userId: string; samples: DraftSamplePreview[]; onChange: Dispatch<SetStateAction<DraftSamplePreview[]>> }) {
   function update(index: number, patch: Partial<DraftSamplePreview>) {
-    onChange(samples.map((sample, sampleIndex) => sampleIndex === index ? { ...sample, ...patch } : sample));
+    onChange(current => current.map((sample, sampleIndex) => sampleIndex === index ? { ...sample, ...patch } : sample));
   }
   return (
     <section className="dashboard-form-section studio-tracks-section">
@@ -69,7 +70,7 @@ export function StudioSamplePreviewFields({ userId, samples, onChange }: { userI
         action={(
           <label className="dashboard-field" style={{ minWidth: 140 }}>
             <span className="dashboard-field-label">Preview Count</span>
-            <select className="os-input-field" value={samples.length} onChange={event => onChange(ensureSamplePreviewCount(samples, Number(event.target.value)))}>
+            <select className="os-input-field" value={samples.length} onChange={event => onChange(current => ensureSamplePreviewCount(current, Number(event.target.value)))}>
               {Array.from({ length: 31 }, (_, index) => <option key={index} value={index}>{index}</option>)}
             </select>
           </label>

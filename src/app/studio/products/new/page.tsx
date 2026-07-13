@@ -25,6 +25,7 @@ import { ExternalLinksEditor } from '@/components/ExternalLinksEditor';
 import { activeExternalLinkDrafts, listExternalLinkPlatforms, materializeExternalLinkDrafts, replaceOwnedItemExternalLinks, validateExternalLinkDrafts, type ExternalLinkDraft, type ExternalLinkPlatform } from '@/lib/domain/externalLinks';
 import { saveStudioBookContent, replaceStudioSampleFiles } from '@/lib/domain/nativeContent';
 import { StudioBookFields, StudioSamplePreviewFields, type DraftSamplePreview } from '@/components/StudioNativeContentFields';
+import { clearStudioFormRecovery, readStudioFormRecovery, writeStudioFormRecovery } from '@/lib/studioFormRecovery';
 
 function buildSlug(title: string) {
   const base = normalizeTaxonomyValue(title) || 'item';
@@ -50,6 +51,16 @@ type DraftTrack = {
   title: string;
   durationSeconds: string;
   audioUrl: string;
+};
+
+type NewItemRecovery = {
+  title: string; description: string; categoryId: string; productType: string; storeTypeId: string;
+  selectedTagIds: string[]; price: string; marketMode: MarketMode; localPrice: string; localCurrency: string;
+  merchFulfillmentMode: 'ship' | 'deliver'; merchShippingScope: 'local' | 'global'; coverUrl: string;
+  galleryUrls: string[]; itemFileUrl: string; bookPreviewUrl: string; bookTotalPages: string;
+  bookSamplePages: string; bookLanguage: string; samplePreviews: DraftSamplePreview[]; year: string;
+  trackCount: string; tracks: DraftTrack[]; featureState: ReturnType<typeof createReleaseFeatureState>;
+  externalLinks: ExternalLinkDraft[]; rightsConfirmed: boolean;
 };
 
 function createDraftTrack(): DraftTrack {
@@ -101,15 +112,19 @@ function categoryMatchesSection(category: ProductCategory, sectionId: StudioCata
 function NewProductContent() {
   const searchParams = useSearchParams();
   const section = getStudioCatalogSection(searchParams.get('section'));
+  const defaultProductType = section.typeOptions[0];
   useTopbarBack({ href: section.href, label: section.label });
   const router = useRouter();
   const { user, loading } = useAuth();
+  const userId = user?.id ?? '';
+  const userEmail = user?.email ?? undefined;
+  const recoveryKey = userId ? `new:${userId}:${section.id}` : '';
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [creatorName, setCreatorName] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  const [productType, setProductType] = useState(section.typeOptions[0]);
+  const [productType, setProductType] = useState(defaultProductType);
   const [storeTypeId, setStoreTypeId] = useState('');
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [taxonomyTypes, setTaxonomyTypes] = useState<Database['public']['Tables']['item_types']['Row'][]>([]);
@@ -137,6 +152,7 @@ function NewProductContent() {
   const [saving, setSaving] = useState(false);
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const [error, setError] = useState('');
+  const [formRecoveryReady, setFormRecoveryReady] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -146,11 +162,11 @@ function NewProductContent() {
 
   useEffect(() => {
     async function loadFormData() {
-      if (!user) return;
+      if (!userId) return;
 
       const [categoryRows, profileResult, taxonomy, linkPlatforms] = await Promise.all([
         listItemCategories(),
-        loadStudioProfile(user.id),
+        loadStudioProfile(userId),
         listCatalogTaxonomy(),
         listExternalLinkPlatforms('item'),
       ]);
@@ -159,7 +175,7 @@ function NewProductContent() {
       setCategoryId(resolvedCategories.find(category => categoryMatchesSection(category, section.id))?.id ?? resolvedCategories[0]?.id ?? '');
 
       setProfile(profileResult.profile);
-      setCreatorName(getStudioDisplayName(profileResult.profile, user.email));
+      setCreatorName(getStudioDisplayName(profileResult.profile, userEmail));
       const nextCurrency =
         profileResult.profile?.display_currency ||
         currencyForCountry(profileResult.profile?.country_code) ||
@@ -172,11 +188,39 @@ function NewProductContent() {
       setExternalLinks(materializeExternalLinkDrafts(linkPlatforms, []));
       const firstType = taxonomy.types.find(type => type.category_id === (resolvedCategories.find(category => categoryMatchesSection(category, section.id))?.id ?? resolvedCategories[0]?.id));
       setStoreTypeId(firstType?.id ?? '');
-      setProductType(firstType?.label ?? section.typeOptions[0]);
+      setProductType(firstType?.label ?? defaultProductType);
+
+      const recovered = readStudioFormRecovery<NewItemRecovery>(recoveryKey);
+      if (recovered) {
+        setTitle(recovered.title); setDescription(recovered.description); setCategoryId(recovered.categoryId);
+        setProductType(recovered.productType); setStoreTypeId(recovered.storeTypeId); setSelectedTagIds(recovered.selectedTagIds);
+        setPrice(recovered.price); setMarketMode(recovered.marketMode); setLocalPrice(recovered.localPrice);
+        setLocalCurrency(recovered.localCurrency); setMerchFulfillmentMode(recovered.merchFulfillmentMode);
+        setMerchShippingScope(recovered.merchShippingScope); setCoverUrl(recovered.coverUrl);
+        setGalleryUrls(recovered.galleryUrls); setItemFileUrl(recovered.itemFileUrl); setBookPreviewUrl(recovered.bookPreviewUrl);
+        setBookTotalPages(recovered.bookTotalPages); setBookSamplePages(recovered.bookSamplePages);
+        setBookLanguage(recovered.bookLanguage); setSamplePreviews(recovered.samplePreviews); setYear(recovered.year);
+        setTrackCount(recovered.trackCount); setTracks(recovered.tracks); setFeatureState(recovered.featureState);
+        setExternalLinks(recovered.externalLinks); setRightsConfirmed(recovered.rightsConfirmed);
+      }
+      setFormRecoveryReady(true);
     }
 
     loadFormData();
-  }, [section.id, section.typeOptions, user]);
+  }, [defaultProductType, recoveryKey, section.id, userEmail, userId]);
+
+  useEffect(() => {
+    if (!formRecoveryReady || !recoveryKey) return;
+    writeStudioFormRecovery(recoveryKey, {
+      title, description, categoryId, productType, storeTypeId, selectedTagIds, price, marketMode,
+      localPrice, localCurrency, merchFulfillmentMode, merchShippingScope, coverUrl, galleryUrls,
+      itemFileUrl, bookPreviewUrl, bookTotalPages, bookSamplePages, bookLanguage, samplePreviews,
+      year, trackCount, tracks, featureState, externalLinks, rightsConfirmed,
+    } satisfies NewItemRecovery);
+  }, [bookLanguage, bookPreviewUrl, bookSamplePages, bookTotalPages, categoryId, coverUrl, description,
+    externalLinks, featureState, formRecoveryReady, galleryUrls, itemFileUrl, localCurrency, localPrice,
+    marketMode, merchFulfillmentMode, merchShippingScope, price, productType, recoveryKey, rightsConfirmed,
+    samplePreviews, selectedTagIds, storeTypeId, title, trackCount, tracks, year]);
 
   const isMusicProduct = section.id === 'music';
   const isMerchProduct = section.id === 'merch';
@@ -404,6 +448,7 @@ function NewProductContent() {
     }
 
     setSaving(false);
+    clearStudioFormRecovery(recoveryKey);
     router.push(section.href);
   }
 
@@ -735,7 +780,7 @@ function NewProductContent() {
 
             <div className="dashboard-form-actions">
               <div className="dashboard-form-actions-right">
-                <Link className="os-button os-button-secondary" href={section.href}>
+                <Link className="os-button os-button-secondary" href={section.href} onClick={() => clearStudioFormRecovery(recoveryKey)}>
                   Cancel
                 </Link>
                 <button className="os-button os-button-primary" type="submit" disabled={saving}>

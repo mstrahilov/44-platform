@@ -50,8 +50,10 @@ export function UploadField({
       const uploadedValue = storage === 'private-item'
         ? (await uploadPrivateItemFile({ file, folder, userId })).path
         : (await uploadPublicFile({ file, folder, userId })).publicUrl;
-      const analysis = await analysisPromise;
+      // Commit the durable upload as soon as storage accepts it. Audio analysis can
+      // take several seconds on mobile and must never leave the form looking empty.
       onChange(uploadedValue);
+      const analysis = await analysisPromise;
       if (analysis?.durationSeconds && onAudioMetadata) onAudioMetadata(Math.ceil(analysis.durationSeconds));
       if (analysis && onAudioAnalysis) onAudioAnalysis(analysis);
       setMessage('Upload complete.');

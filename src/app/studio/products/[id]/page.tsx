@@ -41,6 +41,7 @@ import { ExternalLinksEditor } from '@/components/ExternalLinksEditor';
 import { activeExternalLinkDrafts, listExternalLinkPlatforms, materializeExternalLinkDrafts, replaceOwnedItemExternalLinks, validateExternalLinkDrafts, type ExternalLinkDraft, type ExternalLinkPlatform } from '@/lib/domain/externalLinks';
 import { replaceStudioSampleFiles, saveStudioBookContent } from '@/lib/domain/nativeContent';
 import { StudioBookFields, StudioSamplePreviewFields, type DraftSamplePreview } from '@/components/StudioNativeContentFields';
+import { clearStudioFormRecovery, readStudioFormRecovery, writeStudioFormRecovery } from '@/lib/studioFormRecovery';
 
 function formatPriceInput(value: string) {
   const normalized = value.replace(/[^\d.]/g, '');
@@ -62,6 +63,15 @@ type DraftTrack = {
   title: string;
   durationSeconds: string;
   audioUrl: string;
+};
+
+type EditItemRecovery = {
+  title: string; description: string; categoryId: string; productType: string; storeTypeId: string;
+  selectedTagIds: string[]; price: string; marketMode: MarketMode; localPrice: string; localCurrency: string;
+  merchFulfillmentMode: 'ship' | 'deliver'; merchShippingScope: 'local' | 'global'; coverUrl: string;
+  itemFileUrl: string; bookPreviewUrl: string; bookTotalPages: string; bookSamplePages: string;
+  bookLanguage: string; samplePreviews: DraftSamplePreview[]; year: string; trackCount: string;
+  tracks: DraftTrack[]; featureState: ReturnType<typeof createReleaseFeatureState>; externalLinks: ExternalLinkDraft[];
 };
 
 function createDraftTrack(): DraftTrack {
@@ -98,6 +108,9 @@ export default function EditProductPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { user, loading } = useAuth();
+  const userId = user?.id ?? '';
+  const userEmail = user?.email ?? undefined;
+  const recoveryKey = userId ? `edit:${userId}:${id}` : '';
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [creatorName, setCreatorName] = useState('');
   const [title, setTitle] = useState('');
@@ -135,6 +148,7 @@ export default function EditProductPage() {
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [formRecoveryReady, setFormRecoveryReady] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
@@ -142,11 +156,11 @@ export default function EditProductPage() {
 
   useEffect(() => {
     async function loadData() {
-      if (!user) return;
+      if (!userId) return;
 
       const [categoryRows, profileResult, taxonomy, linkPlatforms] = await Promise.all([
         listItemCategories(),
-        loadStudioProfile(user.id),
+        loadStudioProfile(userId),
         listCatalogTaxonomy(),
         listExternalLinkPlatforms('item'),
       ]);
@@ -155,8 +169,8 @@ export default function EditProductPage() {
       setTaxonomyTypes(taxonomy.types);
       setTaxonomyTags(taxonomy.tags);
       setExternalLinkPlatforms(linkPlatforms);
-      setCreatorName(getStudioDisplayName(profileResult.profile, user.email));
-      const profileId = profileResult.profile?.id ?? user.id;
+      setCreatorName(getStudioDisplayName(profileResult.profile, userEmail));
+      const profileId = profileResult.profile?.id ?? userId;
       const fallbackLocalCurrency =
         profileResult.profile?.display_currency ||
         currencyForCountry(profileResult.profile?.country_code) ||
@@ -244,11 +258,38 @@ export default function EditProductPage() {
       const nextTracks = resolvedTracks.length ? resolvedTracks : [createDraftTrack()];
       setTracks(nextTracks);
       setTrackCount(String(Math.min(30, nextTracks.length)));
+      const recovered = readStudioFormRecovery<EditItemRecovery>(recoveryKey);
+      if (recovered) {
+        setTitle(recovered.title); setDescription(recovered.description); setCategoryId(recovered.categoryId);
+        setProductType(recovered.productType); setStoreTypeId(recovered.storeTypeId); setSelectedTagIds(recovered.selectedTagIds);
+        setPrice(recovered.price); setMarketMode(recovered.marketMode); setLocalPrice(recovered.localPrice);
+        setLocalCurrency(recovered.localCurrency); setMerchFulfillmentMode(recovered.merchFulfillmentMode);
+        setMerchShippingScope(recovered.merchShippingScope); setCoverUrl(recovered.coverUrl);
+        setItemFileUrl(recovered.itemFileUrl); setBookPreviewUrl(recovered.bookPreviewUrl);
+        setBookTotalPages(recovered.bookTotalPages); setBookSamplePages(recovered.bookSamplePages);
+        setBookLanguage(recovered.bookLanguage); setSamplePreviews(recovered.samplePreviews); setYear(recovered.year);
+        setTrackCount(recovered.trackCount); setTracks(recovered.tracks); setFeatureState(recovered.featureState);
+        setExternalLinks(recovered.externalLinks);
+      }
+      setFormRecoveryReady(true);
       setFetching(false);
     }
 
     loadData();
-  }, [id, user]);
+  }, [id, recoveryKey, userEmail, userId]);
+
+  useEffect(() => {
+    if (!formRecoveryReady || !recoveryKey) return;
+    writeStudioFormRecovery(recoveryKey, {
+      title, description, categoryId, productType, storeTypeId, selectedTagIds, price, marketMode,
+      localPrice, localCurrency, merchFulfillmentMode, merchShippingScope, coverUrl, itemFileUrl,
+      bookPreviewUrl, bookTotalPages, bookSamplePages, bookLanguage, samplePreviews, year,
+      trackCount, tracks, featureState, externalLinks,
+    } satisfies EditItemRecovery);
+  }, [bookLanguage, bookPreviewUrl, bookSamplePages, bookTotalPages, categoryId, coverUrl, description,
+    externalLinks, featureState, formRecoveryReady, itemFileUrl, localCurrency, localPrice, marketMode,
+    merchFulfillmentMode, merchShippingScope, price, productType, recoveryKey, samplePreviews,
+    selectedTagIds, storeTypeId, title, trackCount, tracks, year]);
 
   const selectedCategory = useMemo(
     () => categories.find(category => category.id === categoryId) ?? null,
@@ -471,6 +512,7 @@ export default function EditProductPage() {
 
     setSaving(false);
     setSuccess('Changes saved.');
+    clearStudioFormRecovery(recoveryKey);
     router.push(section.href);
   }
 
@@ -494,6 +536,7 @@ export default function EditProductPage() {
     }
 
     setDeleting(false);
+    clearStudioFormRecovery(recoveryKey);
     router.push(section.href);
   }
 
@@ -762,7 +805,7 @@ export default function EditProductPage() {
                 <button className="os-button os-button-danger" type="button" onClick={() => setShowDeleteConfirm(true)}>{deleteLabel}</button>
               </div>
               <div className="dashboard-form-actions-right">
-                <Link className="os-button os-button-secondary" href={section.href}>Cancel</Link>
+                <Link className="os-button os-button-secondary" href={section.href} onClick={() => clearStudioFormRecovery(recoveryKey)}>Cancel</Link>
                 <button className="os-button os-button-primary" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>
               </div>
             </div>
