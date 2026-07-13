@@ -8,6 +8,7 @@ import { SectionHeader } from '@/components/Ui';
 import { pinDockItem } from '@/lib/dockPreferences';
 import { creatorHref, type ProductAchievement } from '@/lib/platform';
 import type { Product } from '@/lib/products';
+import { ExternalLinkActions } from '@/components/ExternalLinkActions';
 
 type ProductCreator = Product['creators'];
 type ProductDetailTrack = {
@@ -31,6 +32,7 @@ export type LibraryBonusAsset = {
 };
 
 export type LibraryFileAsset = LibraryBonusAsset & {
+  id?: string | null;
   is_downloadable?: boolean | null;
 };
 
@@ -40,6 +42,7 @@ export function ProductDetailHeader({
   creatorHrefValue,
   meta,
   actions,
+  externalLinks = [],
   coverClassName = '',
 }: {
   product: Product;
@@ -47,6 +50,7 @@ export function ProductDetailHeader({
   creatorHrefValue: string;
   meta: string[];
   actions: ProductDetailAction[];
+  externalLinks?: Product['external_links'];
   coverClassName?: string;
 }) {
   const heroImage = product.hero_url || product.cover_url;
@@ -86,6 +90,7 @@ export function ProductDetailHeader({
             ))}
           </div>
         )}
+        <ExternalLinkActions links={externalLinks ?? []} context="item" variant="icons" label={`Open ${product.title} on other platforms`} />
         <div className="view-album-actions">
           {actions.map(action =>
             action.href ? (
@@ -307,7 +312,6 @@ function buildLibraryProductDetails(product: Product, tracks: ProductDetailTrack
   const taxonomy = [
     { label: 'Category', value: product.browse_category?.label || 'Unassigned' },
     { label: 'Type', value: product.browse_type?.label || product.item_type || 'Unassigned' },
-    { label: 'Tags', value: product.browse_tags?.map(tag => tag.label).join(', ') || 'None' },
   ];
 
   if (normalizedType.includes('music') || ['album', 'ep', 'single'].some(value => product.item_type?.toLowerCase().includes(value))) {

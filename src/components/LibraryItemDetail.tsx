@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useContextMenu } from '@/components/ContextMenu';
 import { useAuth } from '@/lib/useAuth';
 import { productLibraryHref } from '@/lib/experience';
@@ -14,6 +15,8 @@ import { recordAchievementPlaybackSignal, trackProductAchievementTrigger } from 
 import { useTopbarBack } from '@/components/TopbarContext';
 import { MUSIC_TRACK_COMPLETED_EVENT, MUSIC_TRACK_STARTED_EVENT, useMusicPlayer, type MusicQueueTrack, type MusicTrackPlaybackEventDetail } from '@/components/MusicPlayer';
 import { getLibraryItemBundle, type DetailedLibraryItemRow } from '@/lib/domain/itemDetails';
+import type { BookContent, SamplePackFile } from '@/lib/domain/nativeContent';
+import { SamplePackExperience } from '@/components/SamplePackExperience';
 
 type LibraryKind = 'product';
 
@@ -41,6 +44,8 @@ export function LibraryItemDetail({
   const [achievements, setAchievements] = useState<ProductAchievement[]>([]);
   const [bonusAssets, setBonusAssets] = useState<LibraryBonusAsset[]>([]);
   const [assets, setAssets] = useState<LibraryFileAsset[]>([]);
+  const [bookContent, setBookContent] = useState<BookContent | null>(null);
+  const [sampleFiles, setSampleFiles] = useState<SamplePackFile[]>([]);
   const [unlockedAchievementIds, setUnlockedAchievementIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -87,6 +92,8 @@ export function LibraryItemDetail({
         setAchievements(bundle.achievements);
         setBonusAssets(bundle.assets.filter(asset => ['bonus_content', 'bonus_achievement'].includes(asset.asset_type ?? '')));
         setAssets(bundle.assets);
+        setBookContent(bundle.nativeContent.book);
+        setSampleFiles(bundle.nativeContent.samples);
         setUnlockedAchievementIds(new Set(bundle.unlockedAchievements.map(item => item.achievement_id)));
       }
 
@@ -101,7 +108,7 @@ export function LibraryItemDetail({
   if (!user) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Sign in to view this library item.</div>;
 
   if (kind === 'product' && productRow?.products) {
-    return <ProductLibraryDetail userId={user.id} row={productRow} tracks={tracks} achievements={achievements} assets={assets} bonusAssets={bonusAssets} unlockedAchievementIds={unlockedAchievementIds} />;
+    return <ProductLibraryDetail userId={user.id} row={productRow} tracks={tracks} achievements={achievements} assets={assets} bonusAssets={bonusAssets} unlockedAchievementIds={unlockedAchievementIds} bookContent={bookContent} sampleFiles={sampleFiles} />;
   }
 
   return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Library item not found.</div>;
@@ -115,6 +122,8 @@ function ProductLibraryDetail({
   assets,
   bonusAssets,
   unlockedAchievementIds,
+  bookContent,
+  sampleFiles,
 }: {
   userId: string;
   row: LibraryItemRow;
@@ -123,6 +132,8 @@ function ProductLibraryDetail({
   assets: LibraryFileAsset[];
   bonusAssets: LibraryBonusAsset[];
   unlockedAchievementIds: Set<string>;
+  bookContent: BookContent | null;
+  sampleFiles: SamplePackFile[];
 }) {
   const product = row.products!;
   const baseAction = getProductLibraryPrimaryAction(product);
@@ -135,6 +146,7 @@ function ProductLibraryDetail({
   const runtimeKind = getProductRuntimeKind(product);
   const isMusic = runtimeKind === 'music';
   const isBook = runtimeKind === 'book';
+  const isAsset = runtimeKind === 'sample_pack';
   const { currentTrack, isPlaying, playQueue, toggleTrack: togglePlayerTrack, queueNext } = useMusicPlayer();
   const { openContextMenu } = useContextMenu();
   const [localUnlockedAchievementIds, setLocalUnlockedAchievementIds] = useState(unlockedAchievementIds);
@@ -346,8 +358,9 @@ function ProductLibraryDetail({
   ];
   const primaryActions: ProductDetailAction[] = [
     {
-      label: isMusic ? 'Play' : isBook ? 'Read' : action.label,
-      onClick: isMusic ? playRelease : () => runProductAction(action),
+      label: isMusic ? 'Play' : isBook ? 'Read' : isAsset ? 'Download Pack' : action.label,
+      href: isBook && bookContent ? `/reader/${product.id}` : undefined,
+      onClick: isMusic ? playRelease : isBook && bookContent ? undefined : () => runProductAction(action),
     },
     isMusic
       ? { label: 'Shuffle', onClick: shuffleRelease, active: shuffleEnabled }
@@ -363,6 +376,7 @@ function ProductLibraryDetail({
         creatorHrefValue={creatorLink}
         meta={releaseMeta}
         actions={primaryActions}
+        externalLinks={product.external_links ?? []}
       />
 
       {/* Tracklist (music) */}
@@ -416,18 +430,35 @@ function ProductLibraryDetail({
         </div>
       )}
 
-      {!isMusic && (
+      {isBook && (
         <div className="view-section">
-          <h2 className="view-section-title">{content.contentTitle}</h2>
+          <h2 className="view-section-title">Continue Reading</h2>
           <p className="os-type-body view-description">
-            {content.emptyCopy}
+            {bookContent ? 'Your page and reader appearance sync automatically across signed-in devices.' : content.emptyCopy}
           </p>
+          {bookContent ? <Link className="os-button os-button-secondary" href={`/reader/${product.id}`}>Open Reader</Link> : null}
         </div>
+      )}
+
+      {isAsset && <SamplePackExperience
+        itemId={product.id}
+        title={product.title}
+        creator={product.creators?.display_name || product.creator || '44 Creator'}
+        artworkUrl={product.cover_url || product.hero_url}
+        samples={sampleFiles}
+        library
+        signedIn
+        fullPackUrl={assets.find(asset => asset.asset_type === 'sample_pack')?.file_url ?? null}
+        signedDownloads={Object.fromEntries(assets.filter(asset => asset.asset_type === 'sample' && asset.id && asset.file_url).map(asset => [asset.id!, asset.file_url!]))}
+      />}
+
+      {!isMusic && !isBook && !isAsset && (
+        <div className="view-section"><h2 className="view-section-title">{content.contentTitle}</h2><p className="os-type-body view-description">{content.emptyCopy}</p></div>
       )}
 
       {isMusic && <LibraryAchievementsSection achievements={achievements} unlockedAchievementIds={localUnlockedAchievementIds} />}
       {isMusic && <LibraryBonusContentSection bonusAssets={bonusAssets} unlocked={hasOverachieverUnlocked} />}
-      {!isMusic && <LibraryFilesSection assets={assets} />}
+      {!isMusic && !isBook && !isAsset && <LibraryFilesSection assets={assets} />}
       <LibraryProductDetailsSection product={product} tracks={tracks} inferredTrackDurations={inferredTrackDurations} />
 
       <ProductUpdatesSection productId={product.id} emptyMessage="No updates from this creator yet." />

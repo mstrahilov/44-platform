@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useContextMenu, COPY_TO_CLIPBOARD_TOAST_EVENT } from '@/components/ContextMenu';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
-import { browseHref, productMeta } from '@/lib/products';
+import { productMeta } from '@/lib/products';
 import { isFreeLibraryClaim } from '@/lib/libraryContent';
 import { browseIndexHref, getProductExperience, productBrowseHref, productLibraryHref } from '@/lib/experience';
 import { creatorHref } from '@/lib/platform';
@@ -26,7 +26,8 @@ import {
   recordItemShareVisit,
   saveItemToLibrary,
 } from '@/lib/domain/itemDetails';
-import { ExternalLinkActions } from '@/components/ExternalLinkActions';
+import { getPublicNativeContent, type BookContent, type SamplePackFile } from '@/lib/domain/nativeContent';
+import { SamplePackExperience } from '@/components/SamplePackExperience';
 
 type ProductTrack = {
   id: string;
@@ -73,6 +74,8 @@ export function ProductStoreDetail({
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(() => searchParams.get('track'));
   const [inferredTrackDurations, setInferredTrackDurations] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [bookContent, setBookContent] = useState<BookContent | null>(null);
+  const [sampleFiles, setSampleFiles] = useState<SamplePackFile[]>([]);
   const cameFromRadio = searchParams.get('source') === 'radio';
 
   useTopbarBack(cameFromRadio
@@ -83,6 +86,8 @@ export function ProductStoreDetail({
     async function fetchProduct() {
       setLoading(true);
       setTracks([]);
+      setBookContent(null);
+      setSampleFiles([]);
       const data = await getCatalogItem(identifier);
 
       setProduct(data);
@@ -106,6 +111,11 @@ export function ProductStoreDetail({
         }
 
         setRelated(await listRelatedCatalogItems(data));
+        if (['book', 'asset'].includes(getProductExperience(data))) {
+          const nativeContent = await getPublicNativeContent(data.id);
+          setBookContent(nativeContent.book);
+          setSampleFiles(nativeContent.samples);
+        }
       }
     }
     fetchProduct();
@@ -275,9 +285,10 @@ export function ProductStoreDetail({
     cartHasItem: cart.has(product.id),
     onAddToLibrary: addToLibrary,
     onAddToCart: addProductToCart,
+    bookSampleAvailable: Boolean(bookContent?.preview_url),
   });
   const contentHeading = getContentHeading(product);
-  const productDetails = buildProductDetails(product, tracks, inferredTrackDurations);
+  const productDetails = buildProductDetails(product, tracks, inferredTrackDurations, bookContent, sampleFiles);
   const creatorDisplayName = product.creators?.display_name || product.creator || '44 Creator';
   const releaseMeta = [
     (product.item_type || productMeta(product)).toUpperCase(),
@@ -293,13 +304,20 @@ export function ProductStoreDetail({
         creatorHrefValue={creatorTabLink}
         meta={releaseMeta}
         actions={primaryActions}
+        externalLinks={product.external_links ?? []}
         coverClassName={`view-album-cover-${productExperience}`}
       />
 
-      <div className="view-section view-tracklist-section">
-        <div className="item-community-header" style={{ marginBottom: 28 }}>
-          <h2 className="view-section-title" style={{ margin: 0 }}>{contentHeading}</h2>
+      {['book', 'asset'].includes(productExperience) && product.long_description?.trim() ? (
+        <div className="view-section item-description-section">
+          <p className="os-type-body view-description">{product.long_description}</p>
         </div>
+      ) : null}
+
+      <div className="view-section view-tracklist-section">
+        {productExperience !== 'asset' ? <div className="item-community-header" style={{ marginBottom: 28 }}>
+          <h2 className="view-section-title" style={{ margin: 0 }}>{contentHeading}</h2>
+        </div> : null}
         {isReleasePage ? (
           tracks.length === 0 ? (
             <p className="os-type-body view-description view-content-empty">No tracks are published for this release yet.</p>
@@ -355,13 +373,23 @@ export function ProductStoreDetail({
               })}
             </div>
           )
+        ) : productExperience === 'asset' ? (
+          <SamplePackExperience
+            itemId={product.id}
+            title={product.title}
+            creator={creatorDisplayName}
+            artworkUrl={product.cover_url || product.hero_url}
+            samples={sampleFiles}
+            signedIn={Boolean(user)}
+          />
+        ) : productExperience === 'book' ? (
+          <div className="book-sample-callout">
+            <p className="os-type-body view-description">{bookContent?.preview_url ? 'Read the creator-selected PDF sample in the 44OS reader.' : 'This creator has not added a public sample yet.'}</p>
+            {bookContent?.preview_url ? <Link className="os-button os-button-secondary" href={`/reader/${product.id}?mode=sample`}>Read Sample</Link> : null}
+          </div>
         ) : (
           <p className="os-type-body view-description view-content-empty">
-            {productExperience === 'book'
-              ? 'Book sample support is the next product upload pass.'
-              : productExperience === 'asset'
-                ? 'Sample preview support is the next asset upload pass.'
-                : 'Product gallery support is the next merch upload pass.'}
+            Product gallery support is not available for this Item yet.
           </p>
         )}
       </div>
@@ -376,14 +404,6 @@ export function ProductStoreDetail({
             </div>
           ))}
         </div>
-        {(product.browse_tags ?? []).length > 0 && (
-          <div className="app-tag-row" style={{ marginTop: 24 }}>
-            {(product.browse_tags ?? []).map(tag => (
-              <Link key={tag.id} href={browseHref({ q: tag.label })} className="os-pill os-type-pill">{tag.label}</Link>
-            ))}
-          </div>
-        )}
-        <ExternalLinkActions links={product.external_links ?? []} context="item" label="Listen on other platforms" />
       </div>
 
       {related.length > 0 && (
@@ -441,6 +461,7 @@ function resolveStoreActions({
   cartHasItem,
   onAddToLibrary,
   onAddToCart,
+  bookSampleAvailable,
 }: {
   product: Product;
   userSignedIn: boolean;
@@ -451,6 +472,7 @@ function resolveStoreActions({
   cartHasItem: boolean;
   onAddToLibrary: () => void;
   onAddToCart: () => void;
+  bookSampleAvailable: boolean;
 }) {
   const experience = getProductExperience(product);
   const free = isFreeLibraryClaim(product);
@@ -471,7 +493,7 @@ function resolveStoreActions({
 
   if (experience === 'book') {
     return [
-      { label: 'Read Sample', href: product.read_url || productBrowseHref(product) },
+      ...(bookSampleAvailable ? [{ label: 'Read Sample', href: `/reader/${product.id}?mode=sample` }] : []),
       free && canClaimToLibrary
         ? owned
           ? { label: 'View in Library', href: libraryHref, secondary: true }
@@ -482,6 +504,14 @@ function resolveStoreActions({
           ? { label: 'View Purchase Cart', href: '/cart', secondary: true }
           : { label: 'Buy Book', onClick: onAddToCart, secondary: true },
     ];
+  }
+
+  if (experience === 'asset' && free && canClaimToLibrary) {
+    return [owned
+      ? { label: 'View in Library', href: libraryHref }
+      : userSignedIn
+        ? { label: 'Add to Library', onClick: onAddToLibrary }
+        : { label: 'Sign In to Save', href: '/login' }];
   }
 
   return [
@@ -499,14 +529,13 @@ function getContentHeading(product: Product) {
   return 'Product Gallery';
 }
 
-function buildProductDetails(product: Product, tracks: ProductTrack[], inferredDurations: Record<string, number> = {}) {
+function buildProductDetails(product: Product, tracks: ProductTrack[], inferredDurations: Record<string, number> = {}, bookContent: BookContent | null = null, sampleFiles: SamplePackFile[] = []) {
   const experience = getProductExperience(product);
   const creator = product.creators?.display_name || product.creator || '44 Creator';
   const uploadDate = new Date(product.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   const taxonomy = [
     { label: 'Category', value: product.browse_category?.label || 'Unassigned' },
     { label: 'Type', value: product.browse_type?.label || 'Unassigned' },
-    { label: 'Tags', value: product.browse_tags?.map(tag => tag.label).join(', ') || 'None' },
   ];
   if (experience === 'music') {
     const totalLengthSeconds = tracks.reduce((sum, track) => sum + (getTrackDurationSeconds(track, inferredDurations) ?? 0), 0);
@@ -524,8 +553,8 @@ function buildProductDetails(product: Product, tracks: ProductTrack[], inferredD
       { label: 'Creator', value: creator },
       ...taxonomy,
       { label: 'Publication Year', value: String(product.year ?? 'N/A') },
-      { label: 'Total Pages', value: 'Coming soon' },
-      { label: 'Language', value: 'Coming soon' },
+      { label: 'Total Pages', value: bookContent?.total_pages ? String(bookContent.total_pages) : 'Not provided' },
+      { label: 'Language', value: bookContent?.language_code || 'Not provided' },
       { label: 'Upload Date', value: uploadDate },
     ];
   }
@@ -534,8 +563,8 @@ function buildProductDetails(product: Product, tracks: ProductTrack[], inferredD
       { label: 'Creator', value: creator },
       ...taxonomy,
       { label: 'Year', value: String(product.year ?? 'N/A') },
-      { label: 'Total Samples', value: 'Coming soon' },
-      { label: 'Sample Format', value: 'Coming soon' },
+      { label: 'Previewed Samples', value: String(sampleFiles.length) },
+      { label: 'Preview Format', value: [...new Set(sampleFiles.map(sample => sample.mime_type).filter(Boolean))].join(', ') || 'Not provided' },
       { label: 'Upload Date', value: uploadDate },
     ];
   }

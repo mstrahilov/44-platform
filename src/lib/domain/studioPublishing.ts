@@ -65,9 +65,10 @@ export async function addStudioTracks(rows: TrackInsert[]) {
 }
 
 export async function addStudioAssets(rows: AssetInsert[]) {
-  if (rows.length === 0) return;
-  const result = await supabase.from('item_assets').insert(rows);
+  if (rows.length === 0) return [];
+  const result = await supabase.from('item_assets').insert(rows).select('*');
   if (result.error) throw result.error;
+  return result.data ?? [];
 }
 
 export async function loadStudioItemEditor(itemId: string, ownerId: string) {
@@ -81,7 +82,7 @@ export async function loadStudioItemEditor(itemId: string, ownerId: string) {
   if (itemResult.error) throw itemResult.error;
   if (!itemResult.data) return null;
 
-  const [trackResult, assetResult, achievementResult, typeResult, tagResult, linkResult] = await Promise.all([
+  const [trackResult, assetResult, achievementResult, typeResult, tagResult, linkResult, bookResult, samplesResult] = await Promise.all([
     supabase.from('tracks').select('*').eq('item_id', itemId).order('number'),
     supabase.from('item_assets').select('asset_type,title,file_url,storage_path').eq('item_id', itemId).order('sort_order'),
     supabase
@@ -92,8 +93,10 @@ export async function loadStudioItemEditor(itemId: string, ownerId: string) {
     supabase.from('item_type_assignments').select('item_type_id').eq('item_id', itemId).maybeSingle(),
     supabase.from('item_tag_assignments').select('item_tag_id').eq('item_id', itemId),
     supabase.from('item_external_links').select('platform,url,sort_order').eq('item_id', itemId).order('sort_order'),
+    supabase.from('book_contents').select('*').eq('item_id', itemId).maybeSingle(),
+    supabase.from('sample_pack_files').select('*').eq('item_id', itemId).order('sort_order'),
   ]);
-  const error = trackResult.error || assetResult.error || achievementResult.error || typeResult.error || tagResult.error || linkResult.error;
+  const error = trackResult.error || assetResult.error || achievementResult.error || typeResult.error || tagResult.error || linkResult.error || bookResult.error || samplesResult.error;
   if (error) throw error;
 
   return {
@@ -104,6 +107,8 @@ export async function loadStudioItemEditor(itemId: string, ownerId: string) {
     taxonomyTypeId: typeResult.data?.item_type_id ?? null,
     taxonomyTagIds: (tagResult.data ?? []).map(row => row.item_tag_id),
     externalLinks: (linkResult.data ?? []).map(row => ({ platform: row.platform, url: row.url })),
+    bookContent: bookResult.data,
+    sampleFiles: samplesResult.data ?? [],
   };
 }
 
@@ -148,9 +153,14 @@ export async function syncStudioTracks(itemId: string, rows: Array<TrackInsert &
 }
 
 export async function replaceStudioAsset(itemId: string, assetType: string, asset: AssetInsert) {
-  const deleteResult = await supabase.from('item_assets').delete().eq('item_id', itemId).eq('asset_type', assetType);
-  if (deleteResult.error) throw deleteResult.error;
-  await addStudioAssets([asset]);
+  const existing = await supabase.from('item_assets').select('id').eq('item_id', itemId).eq('asset_type', assetType).order('sort_order').limit(1).maybeSingle();
+  if (existing.error) throw existing.error;
+  if (existing.data) {
+    const updated = await supabase.from('item_assets').update(asset).eq('id', existing.data.id).select('*');
+    if (updated.error) throw updated.error;
+    return updated.data ?? [];
+  }
+  return addStudioAssets([asset]);
 }
 
 export async function replaceStudioReleaseFeatures(

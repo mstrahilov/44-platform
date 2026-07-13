@@ -38,6 +38,8 @@ import {
 import type { Database } from '@/lib/database.types';
 import { ExternalLinksEditor } from '@/components/ExternalLinksEditor';
 import { activeExternalLinkDrafts, listExternalLinkPlatforms, materializeExternalLinkDrafts, replaceOwnedItemExternalLinks, validateExternalLinkDrafts, type ExternalLinkDraft, type ExternalLinkPlatform } from '@/lib/domain/externalLinks';
+import { replaceStudioSampleFiles, saveStudioBookContent } from '@/lib/domain/nativeContent';
+import { StudioBookFields, StudioSamplePreviewFields, type DraftSamplePreview } from '@/components/StudioNativeContentFields';
 
 function formatPriceInput(value: string) {
   const normalized = value.replace(/[^\d.]/g, '');
@@ -98,6 +100,7 @@ export default function EditProductPage() {
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [creatorName, setCreatorName] = useState('');
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [productType, setProductType] = useState('');
   const [storeTypeId, setStoreTypeId] = useState('');
@@ -112,6 +115,11 @@ export default function EditProductPage() {
   const [merchShippingScope, setMerchShippingScope] = useState<'local' | 'global'>('local');
   const [coverUrl, setCoverUrl] = useState('');
   const [itemFileUrl, setItemFileUrl] = useState('');
+  const [bookPreviewUrl, setBookPreviewUrl] = useState('');
+  const [bookTotalPages, setBookTotalPages] = useState('');
+  const [bookSamplePages, setBookSamplePages] = useState('');
+  const [bookLanguage, setBookLanguage] = useState('');
+  const [samplePreviews, setSamplePreviews] = useState<DraftSamplePreview[]>([]);
   const [year, setYear] = useState('');
   const [trackCount, setTrackCount] = useState('1');
   const [tracks, setTracks] = useState<DraftTrack[]>([createDraftTrack()]);
@@ -174,6 +182,7 @@ export default function EditProductPage() {
       const featureAssets = assetRows.filter(asset => featureAssetTypes().includes(asset.asset_type ?? ''));
 
       setTitle(product.title ?? '');
+      setDescription(product.long_description ?? '');
       setCategoryId(product.item_category_id ?? '');
       setProductType(product.item_type ?? '');
       setStoreTypeId(editor.taxonomyTypeId ?? taxonomy.types.find(type => type.category_id === product.item_category_id)?.id ?? '');
@@ -188,6 +197,18 @@ export default function EditProductPage() {
       setCoverUrl(product.cover_url ?? '');
       const primaryAsset = assetRows.find(asset => !featureAssetTypes().includes(asset.asset_type ?? ''));
       setItemFileUrl(product.read_url || product.download_url || primaryAsset?.storage_path || primaryAsset?.file_url || '');
+      setBookPreviewUrl(editor.bookContent?.preview_url ?? '');
+      setBookTotalPages(editor.bookContent?.total_pages ? String(editor.bookContent.total_pages) : '');
+      setBookSamplePages(editor.bookContent?.sample_page_limit ? String(editor.bookContent.sample_page_limit) : '');
+      setBookLanguage(editor.bookContent?.language_code ?? '');
+      setSamplePreviews(editor.sampleFiles.map(sample => ({
+        title: sample.title,
+        previewUrl: sample.preview_url ?? '',
+        durationSeconds: sample.duration_seconds === null ? null : Number(sample.duration_seconds),
+        waveformPeaks: Array.isArray(sample.waveform_peaks) ? sample.waveform_peaks.map(value => Number(value)) : [],
+        mimeType: sample.mime_type,
+        fileSizeBytes: sample.file_size_bytes,
+      })));
       setYear(product.year ? String(product.year) : '');
       setFeatureState(hydrateReleaseFeatureState(
         productSection.id,
@@ -291,6 +312,10 @@ export default function EditProductPage() {
       setError(section.id === 'books' ? 'Books need an uploaded file before saving.' : 'Sample packs need an uploaded file before saving.');
       return;
     }
+    if (section.id === 'assets' && samplePreviews.some(sample => !sample.title.trim() || !sample.previewUrl.trim())) {
+      setError('Each sample preview needs a name and uploaded audio.');
+      return;
+    }
     const featureValidationError = validateReleaseFeatureState(featureState, section.id);
     if (featureValidationError) {
       setError(featureValidationError);
@@ -320,6 +345,7 @@ export default function EditProductPage() {
 
     const updatePayload = {
       title: title.trim(),
+      long_description: description.trim(),
       item_category_id: categoryId,
       item_type: productType.trim(),
       price_cents: merchUsesLocalOnlyPricing ? 0 : priceCents,
@@ -381,7 +407,7 @@ export default function EditProductPage() {
     if (needsDigitalFile) {
       const assetType = productAssetTypeForSection(section.id);
       try {
-        await replaceStudioAsset(id, assetType, {
+        const insertedAssets = await replaceStudioAsset(id, assetType, {
           item_id: id,
           asset_type: assetType,
           title: productType.trim() || title.trim(),
@@ -390,6 +416,22 @@ export default function EditProductPage() {
           is_downloadable: true,
           sort_order: 0,
         });
+        const fullAsset = insertedAssets[0];
+        if (!fullAsset) throw new Error('The protected Item file was not recorded.');
+        if (section.id === 'books') {
+          await saveStudioBookContent({
+            itemId: id, fileAssetId: fullAsset.id, previewUrl: bookPreviewUrl.trim() || null,
+            totalPages: bookTotalPages ? Number(bookTotalPages) : null,
+            samplePageLimit: bookSamplePages ? Number(bookSamplePages) : null,
+            languageCode: bookLanguage.trim() || null,
+          });
+        } else {
+          await replaceStudioSampleFiles(id, samplePreviews.map(sample => ({
+            title: sample.title.trim(), previewUrl: sample.previewUrl.trim() || null,
+            durationSeconds: sample.durationSeconds, waveformPeaks: sample.waveformPeaks,
+            mimeType: sample.mimeType, fileSizeBytes: sample.fileSizeBytes,
+          })));
+        }
       } catch (assetError) {
         setSaving(false);
         setError(assetError instanceof Error ? assetError.message : 'Could not save the digital file.');
@@ -461,6 +503,13 @@ export default function EditProductPage() {
               <SectionHeader title="Details" description="Set the core title, type, pricing, artwork, and main details for this item." />
               <div className="dashboard-form-step">
             <label className="dashboard-field"><div className="dashboard-field-label">{isMerchProduct ? 'Product Name' : 'Title'}</div><input className="os-input-field" value={title} onChange={e => setTitle(e.target.value)} /></label>
+
+            {(section.id === 'books' || section.id === 'assets') ? (
+              <label className="dashboard-field">
+                <div className="dashboard-field-label">Description</div>
+                <textarea className="os-input-field dashboard-textarea" value={description} onChange={event => setDescription(event.target.value)} />
+              </label>
+            ) : null}
 
             <div className="dashboard-form-grid dashboard-form-grid-3">
               <label className="dashboard-field"><div className="dashboard-field-label">{isMerchProduct ? 'Drop Year' : 'Release Year'}</div><input className="os-input-field" value={year} onChange={e => setYear(e.target.value.replace(/\D/g, '').slice(0, 4))} /></label>
@@ -601,13 +650,29 @@ export default function EditProductPage() {
                 storage="private-item"
                 userId={user.id}
                 value={itemFileUrl}
-                accept={section.id === 'books' ? 'application/pdf,.pdf,.epub' : 'application/zip,.zip,audio/*'}
-                buttonLabel={section.id === 'books' ? 'Upload book file' : 'Upload asset file'}
+                accept={section.id === 'books' ? 'application/pdf,.pdf' : 'application/zip,.zip'}
+                buttonLabel={section.id === 'books' ? 'Upload full PDF' : 'Upload full pack ZIP'}
                 onChange={setItemFileUrl}
               />
             ) : null}
               </div>
             </section>
+
+            {section.id === 'books' ? (
+              <StudioBookFields
+                userId={user.id}
+                previewUrl={bookPreviewUrl}
+                onPreviewUrlChange={setBookPreviewUrl}
+                totalPages={bookTotalPages}
+                onTotalPagesChange={setBookTotalPages}
+                samplePages={bookSamplePages}
+                onSamplePagesChange={setBookSamplePages}
+                languageCode={bookLanguage}
+                onLanguageCodeChange={setBookLanguage}
+              />
+            ) : null}
+
+            {section.id === 'assets' ? <StudioSamplePreviewFields userId={user.id} samples={samplePreviews} onChange={setSamplePreviews} /> : null}
 
             {isMusicProduct ? (
               <section className="dashboard-form-section studio-tracks-section">

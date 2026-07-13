@@ -1,21 +1,23 @@
 type ExternalLink = { id: string; label: string; platform: string; url: string };
 
-export function ExternalLinkActions({ links, context, label }: {
+export function ExternalLinkActions({ links, context, label, variant = context === 'profile' ? 'icons' : 'labels' }: {
   links: ExternalLink[];
   context: 'profile' | 'item';
   label: string;
+  variant?: 'icons' | 'labels';
 }) {
   if (links.length === 0) return null;
+  const iconOnly = variant === 'icons';
   return (
-    <nav className={`external-link-actions-list external-link-actions-list-${context}`} aria-label={label}>
+    <nav className={`external-link-actions-list external-link-actions-list-${context}${iconOnly ? ' external-link-actions-list-icons' : ''}${context === 'profile' ? ' social-profile-external-links' : ''}`} aria-label={label}>
       {links.map(link => {
         const platformLabel = link.label || link.platform;
         const accessibleLabel = context === 'item'
           ? `Open this release on ${platformLabel}`
           : link.platform === 'website' ? 'Visit creator website' : `Visit creator on ${platformLabel}`;
         return (
-          <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" title={platformLabel} className={`${context === 'profile' ? 'external-profile-icon-link' : 'os-pill os-type-pill'} external-link-action`} aria-label={`${accessibleLabel} (opens in a new tab)`}>
-            {context === 'profile' ? <PlatformIcon platform={link.platform} /> : <>
+          <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" title={platformLabel} className={`${iconOnly ? 'external-profile-icon-link' : 'os-pill os-type-pill'} external-link-action`} aria-label={`${accessibleLabel} (opens in a new tab)`}>
+            {iconOnly ? <PlatformIcon platform={link.platform} /> : <>
               <span>{platformLabel}</span>
               <span className="external-link-action-icon" aria-hidden="true">↗</span>
             </>}

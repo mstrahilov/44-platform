@@ -306,7 +306,20 @@ Then add commentary audio/text, behind-the-scenes YouTube video, general creator
 
 ### M15 — Native Content Experiences
 
-Typeset book reader, sample-pack waveform previews, individual/full-pack downloads, and saved progress.
+**Status: Complete (deployed July 13, 2026)**
+
+- [x] Define the native PDF reader content model and keep EPUB as a later additive format.
+- [x] Build entitlement-aware protected book retrieval and separate public sample-PDF foundations.
+- [x] Build server-derived reading progress, last-page restoration, appearance synchronization, and page bookmarks.
+- [x] Deliver full-viewport mobile portrait/landscape reading plus desktop fit, zoom, appearance, keyboard, and screen-reader behavior.
+- [x] Keep browser pinch zoom available and define explicit offline/expired-access recovery without caching protected PDFs.
+- [x] Define Sample Pack/file contracts with ordered preview metadata, waveform peaks, optional individual source assets, and protected full ZIP assets.
+- [x] Authorize individual and full-pack downloads through active download entitlements and short-lived signed URLs.
+- [x] Save clamped sample-preview playback position while routing previews through the existing global music player.
+- [x] Deliver Store and Library Book/Sample Pack experiences plus PDF/ZIP-aware Studio create/edit flows and canonical Description fields.
+- [x] Preserve existing users, Item IDs, uploads, Library relationships, Community data, entitlements, and entitlement audit history.
+
+Deployment evidence: migrations `20260712058000_m15_native_books_and_sample_packs.sql`, `20260712059000_m15_reader_bookmarks.sql`, and `20260712060000_m15_native_description_edits.sql` are aligned locally and remotely. Clean no-seed schema replay, zero-error schema lint, 25 M15 pgTAP assertions (54 across the full security suite), lint, strict TypeScript, and production build passed. Signed-in local QA covered Store, Library, Studio, sample-limit enforcement, shared-player routing, protected ZIP/PDF manifests, reading restoration, bookmarks, and 390px portrait/844×390 landscape/1280px reader geometry. The linked “Drum Loops” Item and its uploaded ZIP were preserved; its optional preview rows can now be added through Studio. Payment activation, backups/restoration rehearsal, EPUB, and protected offline storage remain separate later work.
 
 ### M16 — Events And Programming
 

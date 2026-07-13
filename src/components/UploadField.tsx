@@ -13,6 +13,7 @@ type UploadFieldProps = {
   previewKind?: 'image' | 'file' | 'none';
   onChange: (nextValue: string) => void;
   onAudioMetadata?: (durationSeconds: number) => void;
+  onAudioAnalysis?: (analysis: { durationSeconds: number | null; waveformPeaks: number[]; mimeType: string; fileSizeBytes: number }) => void;
   hideLabel?: boolean;
   hideSuccessMessage?: boolean;
   storage?: 'public' | 'private-item';
@@ -28,6 +29,7 @@ export function UploadField({
   previewKind,
   onChange,
   onAudioMetadata,
+  onAudioAnalysis,
   hideLabel = false,
   hideSuccessMessage = false,
   storage = 'public',
@@ -44,13 +46,14 @@ export function UploadField({
     setMessage('');
 
     try {
-      const durationPromise = accept?.includes('audio') ? readAudioDuration(file) : Promise.resolve(null);
+      const analysisPromise = accept?.includes('audio') ? analyzeAudioFile(file) : Promise.resolve(null);
       const uploadedValue = storage === 'private-item'
         ? (await uploadPrivateItemFile({ file, folder, userId })).path
         : (await uploadPublicFile({ file, folder, userId })).publicUrl;
-      const durationSeconds = await durationPromise;
+      const analysis = await analysisPromise;
       onChange(uploadedValue);
-      if (durationSeconds && onAudioMetadata) onAudioMetadata(durationSeconds);
+      if (analysis?.durationSeconds && onAudioMetadata) onAudioMetadata(Math.ceil(analysis.durationSeconds));
+      if (analysis && onAudioAnalysis) onAudioAnalysis(analysis);
       setMessage('Upload complete.');
     } catch (error) {
       setMessage(getUploadErrorMessage(error));
@@ -132,4 +135,26 @@ function readAudioDuration(file: File) {
     audio.src = objectUrl;
     audio.load();
   });
+}
+
+async function analyzeAudioFile(file: File) {
+  const durationFallback = readAudioDuration(file);
+  try {
+    const context = new AudioContext();
+    const buffer = await context.decodeAudioData(await file.arrayBuffer());
+    const channel = buffer.getChannelData(0);
+    const bucketCount = 72;
+    const bucketSize = Math.max(1, Math.floor(channel.length / bucketCount));
+    const waveformPeaks = Array.from({ length: bucketCount }, (_, bucketIndex) => {
+      let peak = 0;
+      const start = bucketIndex * bucketSize;
+      const end = Math.min(channel.length, start + bucketSize);
+      for (let index = start; index < end; index += 1) peak = Math.max(peak, Math.abs(channel[index] ?? 0));
+      return Number(peak.toFixed(3));
+    });
+    await context.close();
+    return { durationSeconds: buffer.duration, waveformPeaks, mimeType: file.type || 'audio/mpeg', fileSizeBytes: file.size };
+  } catch {
+    return { durationSeconds: await durationFallback, waveformPeaks: [], mimeType: file.type || 'audio/mpeg', fileSizeBytes: file.size };
+  }
 }

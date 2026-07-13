@@ -6292,6 +6292,158 @@ body.theme-dark .os-home-panel {
   }
 }
 
+/* M15 native books and sample packs */
+.book-sample-callout,
+.sample-pack-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--os-space-5);
+}
+
+.sample-pack-heading { align-items: center; }
+.sample-pack-heading .view-section-title { margin: 0; }
+.sample-preview-list { border-top: 1px solid var(--os-color-border); }
+.sample-download-action {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--os-color-border);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--os-color-ink);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.sample-track-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+.sample-download-action:focus-visible { outline: 2px solid var(--os-color-accent); outline-offset: 3px; }
+
+.app-frame:has(.native-reader) { padding: 0; }
+.app-shell:has(.native-reader) { max-width: none; min-height: 100dvh; border: 0; border-radius: 0; }
+.app-shell:has(.native-reader) .app-sidebar,
+.app-shell:has(.native-reader) .os-topbar,
+.app-shell:has(.native-reader) .music-player-bar { display: none !important; }
+.app-main-content:has(.native-reader) { padding: 0; min-height: 100dvh; }
+.native-reader {
+  --reader-bg: #17191c;
+  --reader-toolbar: #111316;
+  --reader-ink: #f4f4f2;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--reader-bg);
+  color: var(--reader-ink);
+}
+.native-reader-light { --reader-bg: #e7e7e3; --reader-toolbar: #fff; --reader-ink: #111; }
+.native-reader-dark { --reader-bg: #17191c; --reader-toolbar: #111316; --reader-ink: #f4f4f2; }
+.native-reader-sepia { --reader-bg: #d9c9aa; --reader-toolbar: #f0e3c7; --reader-ink: #352c20; }
+@media (prefers-color-scheme: light) { .native-reader-system { --reader-bg: #e7e7e3; --reader-toolbar: #fff; --reader-ink: #111; } }
+.native-reader-toolbar {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  min-height: 72px;
+  padding: 12px 20px;
+  background: var(--reader-toolbar);
+  border-bottom: 1px solid color-mix(in srgb, var(--reader-ink) 16%, transparent);
+}
+.native-reader-close { position: absolute; top: 14px; left: 16px; display: grid; place-items: center; width: 44px; height: 44px; color: inherit; font-size: 30px; text-decoration: none; }
+.native-reader-title { display: flex; flex-direction: column; min-width: 0; padding-left: 52px; }
+.native-reader-title strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.native-reader-title span { color: color-mix(in srgb, var(--reader-ink) 64%, transparent); font-size: 13px; }
+.native-reader-controls,
+.native-reader-page-actions,
+.native-reader-settings { display: flex; align-items: center; gap: 8px; }
+.native-reader-page-count { display: none; font-variant-numeric: tabular-nums; }
+.native-reader-bookmarks { position: relative; display: flex; }
+.native-reader-bookmark-active { color: var(--os-color-accent) !important; }
+.native-reader-bookmark-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 20;
+  display: grid;
+  gap: 6px;
+  width: 210px;
+  max-height: min(320px, 55dvh);
+  overflow-y: auto;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--reader-ink) 20%, transparent);
+  border-radius: 14px;
+  background: var(--reader-toolbar);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 24%);
+}
+.native-reader-bookmark-menu > strong { padding: 4px 6px 8px; }
+.native-reader-bookmark-menu > span { padding: 8px 6px; color: color-mix(in srgb, var(--reader-ink) 64%, transparent); font-size: 13px; }
+.native-reader-bookmark-row { display: grid; grid-template-columns: minmax(0, 1fr) 36px; gap: 6px; }
+.native-reader-bookmark-row button { width: auto; min-width: 36px; height: 36px; border-radius: 9px; text-align: left; padding: 0 10px; }
+.native-reader-bookmark-row button:last-child { padding: 0; text-align: center; }
+.native-reader-controls button,
+.native-reader-controls input,
+.native-reader-controls select {
+  min-width: 44px;
+  height: 44px;
+  border: 1px solid color-mix(in srgb, var(--reader-ink) 24%, transparent);
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+.native-reader-controls button { cursor: pointer; font-size: 22px; }
+.native-reader-controls input { width: 54px; padding: 0 8px; text-align: center; }
+.native-reader-controls select { padding: 0 12px; }
+.native-reader-zoom { min-width: 48px; text-align: center; font-variant-numeric: tabular-nums; }
+.native-reader-offline { padding: 8px 20px; background: #7d4b13; color: #fff; text-align: center; }
+.native-reader-stage { overflow: auto; display: grid; place-items: start center; padding: 16px; outline: none; touch-action: pan-x pan-y pinch-zoom; }
+.native-reader-stage canvas { display: block; background: #fff; box-shadow: 0 14px 42px rgb(0 0 0 / 32%); }
+.native-reader-state { display: grid; place-items: center; align-content: center; gap: 20px; min-height: 70dvh; padding: 32px; text-align: center; }
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+@media (max-width: 780px) {
+  .book-sample-callout,
+  .sample-pack-heading { flex-direction: column; }
+  .sample-pack-heading .os-button { width: 100%; }
+  .sample-download-action { width: 36px; height: 36px; }
+  .native-reader-toolbar { grid-template-columns: 1fr; min-height: 60px; gap: 0; padding: 8px 12px; }
+  .native-reader-close { top: 8px; left: 10px; }
+  .native-reader-title { display: none; }
+  .native-reader-controls { justify-content: space-between; min-height: 44px; padding-left: 54px; }
+  .native-reader-page-count { display: block; color: color-mix(in srgb, var(--reader-ink) 72%, transparent); font-size: 14px; }
+  .native-reader-page-actions button { border-radius: 50%; }
+  .native-reader-page-actions { gap: 6px; }
+  .native-reader-bookmark-menu { position: fixed; top: 66px; right: 10px; width: min(260px, calc(100vw - 20px)); }
+  .native-reader-settings { display: none; }
+  .native-reader-stage { padding: 0; }
+}
+
+@media (max-height: 520px) and (max-width: 900px) {
+  .native-reader-toolbar { grid-template-columns: 1fr; min-height: 60px; gap: 0; padding: 8px 12px; }
+  .native-reader-close { top: 8px; left: 10px; }
+  .native-reader-title { display: none; }
+  .native-reader-controls { justify-content: space-between; min-height: 44px; padding-left: 54px; }
+  .native-reader-page-count { display: block; color: color-mix(in srgb, var(--reader-ink) 72%, transparent); font-size: 14px; }
+  .native-reader-page-actions { gap: 6px; }
+  .native-reader-page-actions button { border-radius: 50%; }
+  .native-reader-settings { display: none; }
+  .native-reader-bookmark-menu { position: fixed; top: 66px; right: 10px; width: min(260px, calc(100vw - 20px)); }
+  .native-reader-stage { padding: 0; }
+}
+
 .checkout-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
@@ -14436,7 +14588,15 @@ body:is(.theme-light, .theme-dark) .view-album-actions .os-button.os-button-acti
   align-items: center;
   justify-content: flex-start;
   gap: 14px;
+  flex-wrap: nowrap;
+  width: max-content;
+  max-width: 100%;
 }
+
+.external-link-actions-list-icons { align-items: center; flex-wrap: nowrap; width: max-content; max-width: 100%; }
+.view-album-copy > .external-link-actions-list-item { margin-top: 8px; color: #fff; gap: 14px; }
+.view-album-copy > .external-link-actions-list-item .external-profile-icon-link { color: #fff; background: transparent; }
+.view-album-copy > .external-link-actions-list-item .external-profile-icon-link:hover { background: rgba(255, 255, 255, 0.12); }
 
 .external-profile-icon-link {
   display: inline-grid;

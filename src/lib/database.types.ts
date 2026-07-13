@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -227,6 +222,57 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      book_contents: {
+        Row: {
+          created_at: string
+          file_asset_id: string
+          format: string
+          item_id: string
+          language_code: string | null
+          preview_url: string | null
+          sample_page_limit: number | null
+          total_pages: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          file_asset_id: string
+          format?: string
+          item_id: string
+          language_code?: string | null
+          preview_url?: string | null
+          sample_page_limit?: number | null
+          total_pages?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          file_asset_id?: string
+          format?: string
+          item_id?: string
+          language_code?: string | null
+          preview_url?: string | null
+          sample_page_limit?: number | null
+          total_pages?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "book_contents_file_asset_id_fkey"
+            columns: ["file_asset_id"]
+            isOneToOne: true
+            referencedRelation: "item_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "book_contents_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: true
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       catalog_items: {
         Row: {
@@ -2126,6 +2172,42 @@ export type Database = {
         }
         Relationships: []
       }
+      external_link_platforms: {
+        Row: {
+          created_at: string
+          host_patterns: string[]
+          is_active: boolean
+          key: string
+          label: string
+          sort_order: number
+          supports_items: boolean
+          supports_profiles: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          host_patterns: string[]
+          is_active?: boolean
+          key: string
+          label: string
+          sort_order?: number
+          supports_items?: boolean
+          supports_profiles?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          host_patterns?: string[]
+          is_active?: boolean
+          key?: string
+          label?: string
+          sort_order?: number
+          supports_items?: boolean
+          supports_profiles?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       item_achievements: {
         Row: {
           code: string
@@ -2302,42 +2384,6 @@ export type Database = {
           name?: string
           slug?: string
           sort_order?: number
-        }
-        Relationships: []
-      }
-      external_link_platforms: {
-        Row: {
-          created_at: string
-          host_patterns: string[]
-          is_active: boolean
-          key: string
-          label: string
-          sort_order: number
-          supports_items: boolean
-          supports_profiles: boolean
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          host_patterns: string[]
-          is_active?: boolean
-          key: string
-          label: string
-          sort_order?: number
-          supports_items?: boolean
-          supports_profiles?: boolean
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          host_patterns?: string[]
-          is_active?: boolean
-          key?: string
-          label?: string
-          sort_order?: number
-          supports_items?: boolean
-          supports_profiles?: boolean
-          updated_at?: string
         }
         Relationships: []
       }
@@ -3548,6 +3594,76 @@ export type Database = {
           },
         ]
       }
+      reading_bookmarks: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          page_number: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          page_number: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          page_number?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reading_bookmarks_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reading_progress: {
+        Row: {
+          appearance: Json
+          item_id: string
+          page_number: number
+          progress_percent: number
+          total_pages: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          appearance?: Json
+          item_id: string
+          page_number?: number
+          progress_percent?: number
+          total_pages?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          appearance?: Json
+          item_id?: string
+          page_number?: number
+          progress_percent?: number
+          total_pages?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reading_progress_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reply_likes: {
         Row: {
           created_at: string
@@ -3577,6 +3693,108 @@ export type Database = {
             columns: ["reply_id"]
             isOneToOne: false
             referencedRelation: "post_replies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sample_pack_files: {
+        Row: {
+          created_at: string
+          duration_seconds: number | null
+          file_size_bytes: number | null
+          id: string
+          item_id: string
+          mime_type: string | null
+          preview_url: string | null
+          sort_order: number
+          source_asset_id: string | null
+          title: string
+          updated_at: string
+          waveform_peaks: Json
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number | null
+          file_size_bytes?: number | null
+          id?: string
+          item_id: string
+          mime_type?: string | null
+          preview_url?: string | null
+          sort_order?: number
+          source_asset_id?: string | null
+          title: string
+          updated_at?: string
+          waveform_peaks?: Json
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number | null
+          file_size_bytes?: number | null
+          id?: string
+          item_id?: string
+          mime_type?: string | null
+          preview_url?: string | null
+          sort_order?: number
+          source_asset_id?: string | null
+          title?: string
+          updated_at?: string
+          waveform_peaks?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sample_pack_files_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sample_pack_files_source_asset_id_fkey"
+            columns: ["source_asset_id"]
+            isOneToOne: true
+            referencedRelation: "item_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sample_playback_progress: {
+        Row: {
+          duration_seconds: number | null
+          item_id: string
+          position_seconds: number
+          sample_file_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          duration_seconds?: number | null
+          item_id: string
+          position_seconds?: number
+          sample_file_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          duration_seconds?: number | null
+          item_id?: string
+          position_seconds?: number
+          sample_file_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sample_playback_progress_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sample_playback_progress_sample_file_id_fkey"
+            columns: ["sample_file_id"]
+            isOneToOne: false
+            referencedRelation: "sample_pack_files"
             referencedColumns: ["id"]
           },
         ]
@@ -4549,6 +4767,15 @@ export type Database = {
           trigger_type: string
         }[]
       }
+      external_link_host: { Args: { target_url: string }; Returns: string }
+      external_link_is_valid: {
+        Args: {
+          target_platform: string
+          target_scope: string
+          target_url: string
+        }
+        Returns: boolean
+      }
       get_creator_total_plays: { Args: never; Returns: number }
       grant_achievement_entitlement: {
         Args: {
@@ -4620,14 +4847,6 @@ export type Database = {
           item_id: string
         }[]
       }
-      replace_own_profile_external_links: {
-        Args: { link_rows: Json }
-        Returns: undefined
-      }
-      replace_owned_item_external_links: {
-        Args: { link_rows: Json; target_item_id: string }
-        Returns: undefined
-      }
       notification_actor_name: { Args: { actor: string }; Returns: string }
       record_achievement_playback_signal: {
         Args: {
@@ -4657,6 +4876,14 @@ export type Database = {
         Args: { target_entry_id: string }
         Returns: undefined
       }
+      replace_own_profile_external_links: {
+        Args: { link_rows: Json }
+        Returns: undefined
+      }
+      replace_owned_item_external_links: {
+        Args: { link_rows: Json; target_item_id: string }
+        Returns: undefined
+      }
       report_content: {
         Args: {
           report_details?: string
@@ -4682,6 +4909,50 @@ export type Database = {
       save_item_to_library: {
         Args: { target_item_id: string }
         Returns: string
+      }
+      save_reading_progress: {
+        Args: {
+          target_appearance?: Json
+          target_item_id: string
+          target_page: number
+          target_total_pages: number
+        }
+        Returns: {
+          appearance: Json
+          item_id: string
+          page_number: number
+          progress_percent: number
+          total_pages: number | null
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "reading_progress"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      save_sample_playback_progress: {
+        Args: {
+          target_duration_seconds?: number
+          target_position_seconds: number
+          target_sample_file_id: string
+        }
+        Returns: {
+          duration_seconds: number | null
+          item_id: string
+          position_seconds: number
+          sample_file_id: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sample_playback_progress"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       send_direct_message: {
         Args: { message_body: string; target_conversation_id: string }
@@ -4711,6 +4982,10 @@ export type Database = {
       sync_managed_item_achievements: {
         Args: { achievement_rows: Json; target_item_id: string }
         Returns: undefined
+      }
+      toggle_reading_bookmark: {
+        Args: { target_item_id: string; target_page: number }
+        Returns: boolean
       }
       update_owned_item: {
         Args: { patch: Json; target_item_id: string }

@@ -4,6 +4,7 @@ import { getProductExperience } from '@/lib/experience';
 import type { Product } from '@/lib/products';
 import type { ProductAchievement, Track, UserAchievement } from '@/lib/platform';
 import { supabase } from '@/lib/supabase';
+import { getPublicNativeContent } from '@/lib/domain/nativeContent';
 
 export type DetailedLibraryItemRow = {
   id: string;
@@ -32,7 +33,7 @@ export async function getLibraryItemBundle(userId: string, libraryEntryId: strin
   const row = await getDetailedLibraryItem(userId, libraryEntryId);
   if (!row?.products) return null;
 
-  const [trackResult, achievementResult, unlockedResult, assetResult] = await Promise.all([
+  const [trackResult, achievementResult, unlockedResult, assetResult, nativeContent] = await Promise.all([
     supabase
       .from('tracks')
       .select('id,item_id,number,title,duration_seconds,audio_url,download_url')
@@ -49,6 +50,7 @@ export async function getLibraryItemBundle(userId: string, libraryEntryId: strin
       .eq('user_id', userId)
       .eq('item_id', row.item_id),
     supabase.rpc('list_item_asset_manifest', { target_item_id: row.item_id }),
+    getPublicNativeContent(row.item_id),
   ]);
 
   const error = trackResult.error || achievementResult.error || unlockedResult.error || assetResult.error;
@@ -70,6 +72,7 @@ export async function getLibraryItemBundle(userId: string, libraryEntryId: strin
       : [],
     unlockedAchievements: (unlockedResult.data ?? []) as UserAchievement[],
     assets: authorizedAssets,
+    nativeContent,
   };
 }
 

@@ -23,6 +23,8 @@ import { addStudioAssets, addStudioTracks, attestStudioItemRights, createStudioI
 import type { Database } from '@/lib/database.types';
 import { ExternalLinksEditor } from '@/components/ExternalLinksEditor';
 import { activeExternalLinkDrafts, listExternalLinkPlatforms, materializeExternalLinkDrafts, replaceOwnedItemExternalLinks, validateExternalLinkDrafts, type ExternalLinkDraft, type ExternalLinkPlatform } from '@/lib/domain/externalLinks';
+import { saveStudioBookContent, replaceStudioSampleFiles } from '@/lib/domain/nativeContent';
+import { StudioBookFields, StudioSamplePreviewFields, type DraftSamplePreview } from '@/components/StudioNativeContentFields';
 
 function buildSlug(title: string) {
   const base = normalizeTaxonomyValue(title) || 'item';
@@ -105,6 +107,7 @@ function NewProductContent() {
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [creatorName, setCreatorName] = useState('');
   const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [productType, setProductType] = useState(section.typeOptions[0]);
   const [storeTypeId, setStoreTypeId] = useState('');
@@ -120,6 +123,11 @@ function NewProductContent() {
   const [coverUrl, setCoverUrl] = useState('');
   const [galleryUrls, setGalleryUrls] = useState<string[]>([]);
   const [itemFileUrl, setItemFileUrl] = useState('');
+  const [bookPreviewUrl, setBookPreviewUrl] = useState('');
+  const [bookTotalPages, setBookTotalPages] = useState('');
+  const [bookSamplePages, setBookSamplePages] = useState('');
+  const [bookLanguage, setBookLanguage] = useState('');
+  const [samplePreviews, setSamplePreviews] = useState<DraftSamplePreview[]>([]);
   const [year, setYear] = useState('');
   const [trackCount, setTrackCount] = useState('1');
   const [tracks, setTracks] = useState<DraftTrack[]>([createDraftTrack()]);
@@ -223,6 +231,10 @@ function NewProductContent() {
       setError(section.id === 'books' ? 'Books need an uploaded file before saving.' : 'Sample packs need an uploaded file before saving.');
       return;
     }
+    if (section.id === 'assets' && samplePreviews.some(sample => !sample.title.trim() || !sample.previewUrl.trim())) {
+      setError('Each sample preview needs a name and uploaded audio.');
+      return;
+    }
     if (isMusicProduct) {
       const linkError = validateExternalLinkDrafts(externalLinks, externalLinkPlatforms);
       if (linkError) {
@@ -250,7 +262,7 @@ function NewProductContent() {
       creator: creatorName,
       item_type: cleanType,
       short_description: null,
-      long_description: '',
+      long_description: description.trim(),
       price_cents: merchUsesLocalOnlyPricing ? 0 : priceCents,
       market_mode: isMerchProduct ? (merchUsesLocalOnlyPricing ? 'global_plus_local' : marketMode) : marketMode,
       local_price_cents: isMerchProduct ? (localPriceCents ?? priceCents) : (marketMode === 'global' ? null : localPriceCents),
@@ -310,7 +322,7 @@ function NewProductContent() {
 
     if (needsDigitalFile) {
       try {
-        await addStudioAssets([{
+        const insertedAssets = await addStudioAssets([{
         item_id: insertedProductId,
         asset_type: productAssetTypeForSection(section.id),
         title: cleanType || cleanTitle,
@@ -319,6 +331,24 @@ function NewProductContent() {
         is_downloadable: true,
         sort_order: 0,
         }]);
+        const fullAsset = insertedAssets[0];
+        if (!fullAsset) throw new Error('The protected Item file was not recorded.');
+        if (section.id === 'books') {
+          await saveStudioBookContent({
+            itemId: insertedProductId,
+            fileAssetId: fullAsset.id,
+            previewUrl: bookPreviewUrl.trim() || null,
+            totalPages: bookTotalPages ? Number(bookTotalPages) : null,
+            samplePageLimit: bookSamplePages ? Number(bookSamplePages) : null,
+            languageCode: bookLanguage.trim() || null,
+          });
+        } else {
+          await replaceStudioSampleFiles(insertedProductId, samplePreviews.map(sample => ({
+            title: sample.title.trim(), previewUrl: sample.previewUrl.trim() || null,
+            durationSeconds: sample.durationSeconds, waveformPeaks: sample.waveformPeaks,
+            mimeType: sample.mimeType, fileSizeBytes: sample.fileSizeBytes,
+          })));
+        }
       } catch (assetInsertError) {
         setSaving(false);
         setError(assetInsertError instanceof Error ? assetInsertError.message : 'Could not save the digital file.');
@@ -400,6 +430,13 @@ function NewProductContent() {
                 <div className="dashboard-field-label">{isMerchProduct ? 'Product Name' : 'Title'}</div>
                 <input className="os-input-field" value={title} onChange={event => setTitle(event.target.value)} placeholder={isMerchProduct ? 'Example: 44 Studio Hoodie' : 'Example: Here Comes The Feeling'} />
               </label>
+
+              {(section.id === 'books' || section.id === 'assets') ? (
+                <label className="dashboard-field">
+                  <div className="dashboard-field-label">Description</div>
+                  <textarea className="os-input-field dashboard-textarea" value={description} onChange={event => setDescription(event.target.value)} />
+                </label>
+              ) : null}
 
               <div className="dashboard-form-grid dashboard-form-grid-3">
                 <label className="dashboard-field">
@@ -585,13 +622,29 @@ function NewProductContent() {
                 storage="private-item"
                 userId={user.id}
                 value={itemFileUrl}
-                accept={section.id === 'books' ? 'application/pdf,.pdf,.epub' : 'application/zip,.zip,audio/*'}
-                buttonLabel={section.id === 'books' ? 'Upload book file' : 'Upload asset file'}
+                accept={section.id === 'books' ? 'application/pdf,.pdf' : 'application/zip,.zip'}
+                buttonLabel={section.id === 'books' ? 'Upload full PDF' : 'Upload full pack ZIP'}
                 onChange={setItemFileUrl}
                 />
               ) : null}
               </div>
             </section>
+
+            {section.id === 'books' ? (
+              <StudioBookFields
+                userId={user.id}
+                previewUrl={bookPreviewUrl}
+                onPreviewUrlChange={setBookPreviewUrl}
+                totalPages={bookTotalPages}
+                onTotalPagesChange={setBookTotalPages}
+                samplePages={bookSamplePages}
+                onSamplePagesChange={setBookSamplePages}
+                languageCode={bookLanguage}
+                onLanguageCodeChange={setBookLanguage}
+              />
+            ) : null}
+
+            {section.id === 'assets' ? <StudioSamplePreviewFields userId={user.id} samples={samplePreviews} onChange={setSamplePreviews} /> : null}
 
             {isMusicProduct ? (
               <section className="dashboard-form-section studio-tracks-section">
@@ -686,7 +739,7 @@ function NewProductContent() {
                   Cancel
                 </Link>
                 <button className="os-button os-button-primary" type="submit" disabled={saving}>
-                  {saving ? 'Publishing…' : 'Publish Release'}
+                  {saving ? 'Publishing…' : `Publish ${section.itemLabel.replace(/\b\w/g, character => character.toUpperCase())}`}
                 </button>
               </div>
             </div>
