@@ -435,7 +435,7 @@ function ProductLibraryDetail({
         <div className="view-section">
           <h2 className="view-section-title">Continue Reading</h2>
           <p className="os-type-body view-description">
-            {bookContent ? 'Your page and reader appearance sync automatically across signed-in devices.' : content.emptyCopy}
+            {bookContent ? 'Your page and zoom level sync automatically across signed-in devices.' : content.emptyCopy}
           </p>
           {bookContent ? <Link className="os-button os-button-secondary" href={readerHref}>Open Reader</Link> : null}
         </div>
