@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "node scripts/clean-next-types.mjs && next typegen && tsc --noEmit",
-    "test:smoke": "node scripts/launch-smoke.mjs"
+    "test:smoke": "node scripts/launch-smoke.mjs",
+    "test:schema-replay": "supabase db reset --local --no-seed"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",

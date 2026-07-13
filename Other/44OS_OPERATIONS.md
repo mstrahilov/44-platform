@@ -6,8 +6,8 @@ This is an operational companion referenced by the three active handoff document
 
 1. Confirm `git status` is clean and the intended commit is on `main`.
 2. Run `npm run lint`, `npm run typecheck`, and `npm run build`.
-3. Start the production build locally and run `npm run test:smoke`.
-4. Run `supabase db push --linked --dry-run` and `supabase db lint --linked --level error`.
+3. Start the production build locally and run `npm run test:smoke`. The executable gate checks readiness shape, security headers, document accessibility basics, bounded response/HTML budgets, hidden-surface isolation, and one-hop canonical redirects.
+4. Run `npm run test:schema-replay` against the disposable local Supabase stack, then run `supabase db push --linked --dry-run` and `supabase db lint --linked --level error`.
 5. Back up linked data before every migration. Apply only reviewed repository migrations.
 6. After deployment, run `SMOKE_BASE_URL=https://44os.com npm run test:smoke` and manually verify anonymous, fan, creator, and admin journeys at required widths.
 7. Reviewed-but-hidden surfaces are tested only in a review environment with `NEXT_PUBLIC_ENABLE_M13_REVIEWED_SURFACES=true` and `SMOKE_REVIEWED_SURFACES=1`; never enable that flag in tester/production deployment before UI approval.

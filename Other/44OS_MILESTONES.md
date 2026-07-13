@@ -279,6 +279,8 @@ Verification evidence: zero front-facing call sites remain for Item Questions, R
 
 Trusted-testing edit correction (July 12, 2026): deployed migration `20260712057100_m13_reliable_studio_item_edits.sql` replaces the fragile published-to-draft direct table update with an ownership-checked, field-whitelisted RPC that preserves the live publication state and permanent child history. Studio no longer exposes Draft/Published pills or toggles; approved testers use Publish Release, Save Changes, and Remove. Mobile text-entry controls render at least 16px to prevent iOS Safari focus zoom while retaining pinch-to-zoom accessibility. Karen and every existing Item were preserved unchanged during deployment. Backup, dry-run, migration alignment, schema lint, generated types, lint, typecheck, and production build passed.
 
+Executable launch-gate expansion (July 12, 2026): `test:smoke` now proves the bounded health response contract, core security headers, English/title/main/zoom-safe document basics, configurable response and HTML budgets, reviewed-surface 404 isolation, and direct one-hop resolution for the highest-risk legacy routes. A production build passed the expanded gate locally and the same suite passed against `https://44os.com`. `test:schema-replay` now owns the disposable no-seed database rebuild command; a clean local database replayed every repository migration through `20260712057100`, the linked project remained migration-aligned, and linked schema lint returned zero errors. This closes the migration-chain schema replay gate, not the separate production-data backup restoration rehearsal.
+
 Completion criteria:
 
 - Anonymous, fan, creator, and admin journeys pass at 1440px, 1280px, 430px, 390px, and installed iOS PWA.

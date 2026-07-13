@@ -422,3 +422,4 @@ Acceptance:
 - Typography and material usage match this document.
 - Loading, empty, error, signed-out, and signed-in states are intentional.
 - Achievement icons render correctly from Supabase Storage.
+- Automated launch smoke verifies an English document language, a page title, a main landmark, and viewport metadata that does not disable user zoom. These are regression guards, not a substitute for the required keyboard, screen-reader, contrast, responsive, and installed-iOS review matrix.
