@@ -5,7 +5,7 @@ export const STORE_TYPES_BY_EXPERIENCE: Partial<Record<ProductExperience, readon
   music: ['Album', 'EP', 'Single', 'Mixtape', 'Live Set'],
   book: ['Novel', 'Artbook', 'Zine'],
   physical: ['Apparel', 'Accessories', 'Physical Music', 'Goods & Collectibles'],
-  asset: ['Sample Packs', 'Remix Packs', 'Game Assets'],
+  asset: ['Sample Packs'],
 };
 
 export function storeTypesForExperience(experience: ProductExperience | null | undefined) {

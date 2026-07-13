@@ -125,6 +125,8 @@ M15 Native Content Experiences is deployed in migrations `20260712058000_m15_nat
 
 M15 Studio reliability follow-up keeps in-progress add/edit form values in versioned, account-and-Item-scoped browser storage and restores them after a refresh or mobile app switch. This is device-local form recovery, not a catalog Draft/publication state; successful save, intentional Cancel, or Item removal clears it. Auth token refreshes are keyed by stable user ID so window focus cannot rehydrate stale server values over unsaved edits. Public sample audio paths commit immediately after storage succeeds, with later waveform analysis merged through functional state updates. The PDF reader pins the mature PDF.js 4.10 compatibility line and loads its legacy-compatible client and worker; PDF.js 6 is intentionally excluded because its newer runtime assumptions fail on current deployed Safari/iOS devices.
 
+M15 closes with migration `20260712061000_m15_sample_pack_category_language.sql`. The former public Assets category is renamed in place to Sample Packs with canonical Store/Library URLs `/store/sample-packs` and `/library/sample-packs`; old Assets URLs are permanent compatibility redirects. Stable internal `experience_type = 'asset'`, generic `item_assets`, storage paths, Item/category UUIDs, Library rows, entitlements, and history remain unchanged. The reader toolbar uses the active 44OS opaque paper/ink theme, a read-only `current of total` count, circular bookmark/navigation/zoom controls, title-only desktop identity, and an explicit return path to the exact Library Item page that opened it.
+
 Trusted-testing Studio saves re-run the server publication validator after all Item children are synchronized. A valid Item caught in the internal creation state becomes public automatically; creators still never receive a Draft/Published control.
 
 ---
@@ -219,7 +221,7 @@ Canonical public routes:
 
 - `/` - branded 44OS discovery front door. It shares the catalog data and sections used by Store but presents 44OS—not Store—as the document/page identity.
 - `/store` - Store front door.
-- `/store/[category]` - Store category: music, books, assets, merch.
+- `/store/[category]` - Store category: music, books, sample-packs, merch.
 - `/store/item/[identifier]` - Store item detail. Resolve by slug first where available; id fallback is supported.
 - `/cart` and `/checkout` - acquisition flow.
 - `/community` - Community front door.
@@ -353,10 +355,10 @@ Known Supabase state from the launch cleanup:
 - The canonical track ordering column is `tracks.number`; `tracks.track_number` is absent in the live schema and should not be selected by app code.
 - Public Store discovery and creator-profile Music/Books tabs sort by release year descending, then creator profile name ascending. Studio release management is intentionally independent and sorts by `created_at` descending (order added).
 - Browse discovery uses Category, Type, Tags, Features, Price, and text filters over the complete published catalog. Selecting a Category reveals its used Types and approved Tags; Tags can be selected without narrowing to a Type. Empty Categories, Types, and Tags do not appear in the filter.
-- The system-owned Category rows in `item_categories` are Music, Books, Games, Merch, and Assets; application migrations own them and administrators must not edit them. `item_types` is the admin-managed list of Types scoped to a Category. `item_tags` is the admin-managed allow-list of Tags scoped to a Category and optionally a Type. `item_type_assignments` gives each Item one Type; `item_tag_assignments` gives it zero or more approved Tags. Studio and Browse both read this same model. The superseded `catalog_taxonomy_terms` and `item_taxonomy_terms` tables have been deleted.
+- The system-owned Category rows in `item_categories` are Music, Books, Games, Merch, and Sample Packs; application migrations own them and administrators must not edit them. The Sample Packs row retains the former Assets category UUID while its canonical slug is `sample-packs`. `item_types` is the admin-managed list of Types scoped to a Category. `item_tags` is the admin-managed allow-list of Tags scoped to a Category and optionally a Type. `item_type_assignments` gives each Item one Type; `item_tag_assignments` gives it zero or more approved Tags. Studio and Browse both read this same model. The superseded `catalog_taxonomy_terms` and `item_taxonomy_terms` tables have been deleted.
 - Browse shelves are transparent and rule-based: `Featured` contains at most four explicitly featured Items; `Creators You Follow` appears only when it has results; each nonempty Category receives a `New Releases in …` shelf of at most eight Items ordered by the documented public catalog order. `View All` applies that Category in the existing Browse filter instead of creating another page. Engagement is never an undisclosed ranking input.
-- Initial Types are Music—Album, EP, Single, Mixtape, Live Set; Books—Novel, Artbook, Zine; Merch—Apparel, Accessories, Physical Music, Goods & Collectibles; Assets—Sample Packs, Remix Packs, Game Assets. Administrators can refine these in Supabase. Tags are the guarded third level for genre/style/use, such as Electronic or Hoodies, and creators cannot enter arbitrary public Tags.
-- Music and Assets use square catalog artwork, Books use 2:3 covers, and physical Merch uses 3:4 product artwork. Library keeps separate Music, Books, and Assets grid bands so portrait Books begin below square Music.
+- Initial Types are Music—Album, EP, Single, Mixtape, Live Set; Books—Novel, Artbook, Zine; Merch—Apparel, Accessories, Physical Music, Goods & Collectibles; Sample Packs—Sample Packs. The former Remix Packs and Game Assets rows are retained but inactive. Tags are the guarded third level for genre/style/use, such as Electronic or Hoodies, and creators cannot enter arbitrary public Tags.
+- Music and Sample Packs use square catalog artwork, Books use 2:3 covers, and physical Merch uses 3:4 product artwork. Library keeps separate Music, Books, and Sample Packs grid bands so portrait Books begin below square Music.
 - Anonymous access to the dormant `services` table returns zero rows; its data remains available only through admin/service-role access.
 - `supabase db push --linked --dry-run` reports the remote database is up to date.
 

@@ -662,7 +662,7 @@ function NewProductContent() {
                 </div>
               ) : needsDigitalFile ? (
                 <UploadField
-                label={section.id === 'books' ? 'Book File' : 'Asset File'}
+                label={section.id === 'books' ? 'Book File' : 'Sample Pack ZIP'}
                 folder={section.id === 'books' ? 'products/books' : 'products/assets'}
                 storage="private-item"
                 userId={user.id}

@@ -46,16 +46,16 @@ export const STUDIO_CATALOG_SECTIONS: StudioCatalogSection[] = [
   },
   {
     id: 'assets',
-    label: 'Assets',
-    href: '/studio#assets',
-    itemLabel: 'asset',
-    itemLabelPlural: 'assets',
-    newLabel: 'New Asset',
-    editTitle: 'Edit Asset',
-    createTitle: 'New Asset',
-    createCopy: 'Create an asset pack, template, preset, or creative tool.',
-    typeLabel: 'Asset Type',
-    typeOptions: ['Asset Pack', 'Remix Stems'],
+    label: 'Sample Packs',
+    href: '/studio#sample-packs',
+    itemLabel: 'sample pack',
+    itemLabelPlural: 'sample packs',
+    newLabel: 'New Sample Pack',
+    editTitle: 'Edit Sample Pack',
+    createTitle: 'New Sample Pack',
+    createCopy: 'Create a downloadable sample pack with optional audio previews.',
+    typeLabel: 'Sample Pack Type',
+    typeOptions: ['Sample Packs'],
   },
   {
     id: 'merch',
@@ -73,7 +73,8 @@ export const STUDIO_CATALOG_SECTIONS: StudioCatalogSection[] = [
 ];
 
 export function getStudioCatalogSection(id: string | null | undefined) {
-  return STUDIO_CATALOG_SECTIONS.find(section => section.id === id) ?? STUDIO_CATALOG_SECTIONS[0];
+  const normalizedId = id === 'sample-packs' ? 'assets' : id;
+  return STUDIO_CATALOG_SECTIONS.find(section => section.id === normalizedId) ?? STUDIO_CATALOG_SECTIONS[0];
 }
 
 export function getStudioCatalogSectionForProduct(product: Pick<Product, 'item_type' | 'experience_type' | 'fulfillment_type'>) {

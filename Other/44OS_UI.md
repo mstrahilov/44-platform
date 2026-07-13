@@ -229,18 +229,18 @@ Page hero rules:
 
 Catalog and Library presentation rules:
 
-- Browse artwork follows Item presentation: Music and Assets are square, Books use their 2:3 portrait cover ratio, and physical Merch uses a 3:4 portrait product ratio. Store detail artwork uses the same Category-specific ratio. Mobile shelf actions collapse from the desktop `View All` pill to a compact trailing arrow without changing their behavior or accessible label.
-- Library remains one filterable destination but renders separate grid bands in the stable order Music, Books, Assets. Existing catalog order remains intact within each band, and Books always begin on a fresh row so 2:3 covers never mix into a square Music row.
+- Browse artwork follows Item presentation: Music and Sample Packs are square, Books use their 2:3 portrait cover ratio, and physical Merch uses a 3:4 portrait product ratio. Store detail artwork uses the same Category-specific ratio. Mobile shelf actions collapse from the desktop `View All` pill to a compact trailing arrow without changing their behavior or accessible label.
+- Library remains one filterable destination but renders separate grid bands in the stable order Music, Books, Sample Packs. Existing catalog order remains intact within each band, and Books always begin on a fresh row so 2:3 covers never mix into a square Music row.
 - The `New in Merch` editorial shelf temporarily prioritizes Apparel, then Accessories, then all remaining Merch Types; products retain the normal public catalog order inside each priority group. This is editorial presentation, not a new global ranking rule.
 
 Archived primary-page descriptions (saved July 10, 2026):
 
-- Store: Find releases, books, assets, and merch from independent creators.
+- Store: Find releases, books, sample packs, and merch from independent creators.
 - Library: Everything you have saved, added, or purchased.
 - Music: Explore albums, EPs, singles, and releases built to grow over time.
 - Books: Explore art books, poetry, and stories from independent creators.
 - Merch: Explore apparel, accessories, and physical goods from creators.
-- Assets: Explore assets, remix stems, and creative tools for your work.
+- Sample Packs: Explore downloadable sample packs from independent creators.
 - Community: General posts from creators and fans.
 - Community feed filter: All Posts and Following.
 - Questions: Ask something specific and get an answer from someone who has solved it.
@@ -382,7 +382,7 @@ Dock icon sources are fixed to public assets where available:
 - Library: `public/icons/sidebar/COLLECTION.svg`
 - Community: `public/icons/sidebar/COMMUNITY.svg`
 - Radio: `public/icons/sidebar/RADIO.svg`
-- Store child routes use legacy category icons for Music, Books, Assets, and Merch.
+- Store child routes use the established category icons for Music, Books, Sample Packs, and Merch.
 - Community child routes expose Questions and Collaboration only; Following is available through the Community feed filter.
 
 Use familiar controls:

@@ -44,7 +44,7 @@ const ARTICLES: SupportArticle[] = [
     category: 'Library',
     question: 'What belongs in your Library',
     answer: [
-      'Your Library contains music, books, assets, and items you saved or purchased.',
+      'Your Library contains music, books, sample packs, and items you saved or purchased.',
       'Free saves unlock streaming or reading where supported. Paid purchases unlock downloads only when the creator enabled downloadable files.',
       'Removing an item hides it from your Library. Re-adding it should restore the existing Library item.',
     ],
@@ -62,10 +62,10 @@ const ARTICLES: SupportArticle[] = [
   },
   {
     category: 'Creator Uploads',
-    question: 'Publish music, books, assets, or merch',
+    question: 'Publish music, books, sample packs, or merch',
     answer: [
-      'Creators publish and manage work from Studio. Use the profile shortcut buttons for fast access to new releases, books, assets, and merch.',
-      'Music releases can include v1.0 achievements and Overachiever bonus content. Books, assets, and merch use simpler publishing flows until their experiences are fully built.',
+      'Creators publish and manage work from Studio. Use the profile shortcut buttons for fast access to new releases, books, sample packs, and merch.',
+      'Music releases can include v1.0 achievements and Overachiever bonus content. Books, sample packs, and merch use their dedicated publishing flows.',
       'Future formats will be added to the same catalog model after the launch foundation is stable.',
     ],
     actions: [{ label: 'Open Studio', href: '/studio' }],

@@ -153,12 +153,12 @@ export default function StudioPage() {
           {productSections.map(section => (
             <StudioProductSection
               key={section.id}
-              id={section.id}
+              id={section.id === 'assets' ? 'sample-packs' : section.id}
               title={section.label}
               itemLabel={section.itemLabel}
               items={section.items}
               healthByItemId={healthByItemId}
-              newHref={`/studio/products/new?section=${section.id}`}
+              newHref={`/studio/products/new?section=${section.id === 'assets' ? 'sample-packs' : section.id}`}
             />
           ))}
         </div>

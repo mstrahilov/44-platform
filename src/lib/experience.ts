@@ -1,5 +1,5 @@
 export type ProductExperience = 'music' | 'book' | 'asset' | 'radio' | 'physical' | 'interactive' | 'other';
-export type ExperienceAppSlug = 'music' | 'books' | 'assets';
+export type ExperienceAppSlug = 'music' | 'books' | 'sample-packs';
 
 function normalize(value: string | null | undefined) {
   return (value ?? '').trim().toLowerCase().replace(/[-_]+/g, ' ');
@@ -74,7 +74,7 @@ export function getExperienceAppSlug(product: ProductExperienceShape): Experienc
   const experience = getProductExperience(product);
   if (experience === 'music') return 'music';
   if (experience === 'book') return 'books';
-  if (experience === 'asset') return 'assets';
+  if (experience === 'asset') return 'sample-packs';
   return null;
 }
 

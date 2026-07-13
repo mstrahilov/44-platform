@@ -1,6 +1,6 @@
 const baseUrl = (process.env.SMOKE_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
 const reviewedSurfacesEnabled = process.env.SMOKE_REVIEWED_SURFACES === '1';
-const routes = ['/', '/login', '/support', '/api/health'];
+const routes = ['/', '/store/sample-packs', '/login', '/support', '/api/health'];
 if (reviewedSurfacesEnabled) routes.push('/account/recovery', '/legal/terms', '/legal/privacy', '/legal/copyright');
 const failures = [];
 const maxResponseMs = Number(process.env.SMOKE_MAX_RESPONSE_MS || 5000);
@@ -9,7 +9,7 @@ const maxHtmlBytes = Number(process.env.SMOKE_MAX_HTML_BYTES || 2_000_000);
 const compatibilityRoutes = new Map([
   ['/music', '/store/music'],
   ['/books', '/store/books'],
-  ['/assets', '/store/assets'],
+  ['/assets', '/store/sample-packs'],
   ['/product/karen', '/store/item/karen'],
   ['/studio/products', '/studio'],
 ]);

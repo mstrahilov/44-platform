@@ -80,7 +80,7 @@ export const OS_APPS: OSApp[] = [
   {
     id: 'store',
     label: 'Store',
-    description: 'Find releases, books, assets, and merch from independent creators.',
+    description: 'Find releases, books, sample packs, and merch from independent creators.',
     href: '/',
     iconClass: 'os-icon-store',
     group: 'media',
@@ -88,7 +88,7 @@ export const OS_APPS: OSApp[] = [
       { id: 'music', label: 'Music', href: '/store/music', iconClass: 'os-icon-music' },
       { id: 'books', label: 'Books', href: '/store/books', iconClass: 'os-icon-books' },
       { id: 'merch', label: 'Merch', href: '/store/merch', iconClass: 'os-icon-merch' },
-      { id: 'assets', label: 'Assets', href: '/store/assets', iconClass: 'os-icon-assets' },
+      { id: 'assets', label: 'Sample Packs', href: '/store/sample-packs', iconClass: 'os-icon-assets' },
     ],
   },
   {
@@ -111,9 +111,9 @@ export const OS_APPS: OSApp[] = [
   },
   {
     id: 'assets',
-    label: 'Assets',
-    description: 'Assets, stems, presets, and creative tools for your work.',
-    href: '/store/assets',
+    label: 'Sample Packs',
+    description: 'Downloadable sample packs from independent creators.',
+    href: '/store/sample-packs',
     iconClass: 'os-icon-assets',
     group: 'legacy',
     hidden: true,
@@ -218,7 +218,7 @@ export const OS_APPS: OSApp[] = [
       { id: 'overview', label: 'Overview', href: '/studio', iconClass: 'os-icon-dashboard' },
       { id: 'music', label: 'Music', href: '/studio#music', iconClass: 'os-icon-music' },
       { id: 'books', label: 'Books', href: '/studio#books', iconClass: 'os-icon-books' },
-      { id: 'assets', label: 'Assets', href: '/studio#assets', iconClass: 'os-icon-assets' },
+      { id: 'assets', label: 'Sample Packs', href: '/studio#sample-packs', iconClass: 'os-icon-assets' },
       { id: 'merch', label: 'Merch', href: '/studio#merch', iconClass: 'os-icon-merch' },
     ],
   },
@@ -272,6 +272,7 @@ export function getActiveOSAppId(pathname: string): OSAppId | '' {
     pathname.startsWith('/checkout') ||
     pathname.startsWith('/music') ||
     pathname.startsWith('/books') ||
+    pathname.startsWith('/sample-packs') ||
     pathname.startsWith('/assets') ||
     pathname.startsWith('/merch') ||
     pathname.startsWith('/shop')

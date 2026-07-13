@@ -31,7 +31,7 @@ import {
 import { setDiscussionLike } from '@/lib/domain/community';
 import { ExternalLinkActions } from '@/components/ExternalLinkActions';
 
-type ProfileTab = 'posts' | 'music' | 'books' | 'assets';
+type ProfileTab = 'posts' | 'music' | 'books' | 'sample-packs';
 type CurrentProfileState = {
   userId: string;
   profile: StudioProfile | null;
@@ -44,7 +44,7 @@ function parseProfileTab(value: string | null, isCreator: boolean): ProfileTab |
   if (!isCreator) return null;
   if (normalized === 'music' || normalized === 'releases' || normalized === 'products') return 'music';
   if (normalized === 'books') return 'books';
-  if (normalized === 'assets') return 'assets';
+  if (normalized === 'sample-packs' || normalized === 'assets') return 'sample-packs';
   return null;
 }
 
@@ -275,7 +275,7 @@ export default function PublicProfilePage() {
         if (generalPosts.length > 0) creatorTabs.push({ id: 'posts', label: 'Posts' });
         if (musicProducts.length > 0) creatorTabs.push({ id: 'music', label: 'Music' });
         if (bookProducts.length > 0) creatorTabs.push({ id: 'books', label: 'Books' });
-        if (assetProducts.length > 0) creatorTabs.push({ id: 'assets', label: 'Assets' });
+        if (assetProducts.length > 0) creatorTabs.push({ id: 'sample-packs', label: 'Sample Packs' });
         return creatorTabs;
       }
       return generalPosts.length > 0 ? [{ id: 'posts' as const, label: 'Posts' }] : [];
@@ -444,14 +444,14 @@ export default function PublicProfilePage() {
           </ArtifactGrid>
         )}
 
-        {tab === 'assets' && (
-          <ArtifactGrid empty="No assets published yet.">
+        {tab === 'sample-packs' && (
+          <ArtifactGrid empty="No sample packs published yet.">
             {assetProducts.map(product => (
               <SocialArtifactCard
                 key={product.id}
                 href={productBrowseHref(product)}
                 title={product.title}
-                meta={profileProductMeta(product, 'Asset')}
+                meta={profileProductMeta(product, 'Sample Pack')}
                 image={product.cover_url}
               />
             ))}

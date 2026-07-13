@@ -310,8 +310,8 @@ Then add commentary audio/text, behind-the-scenes YouTube video, general creator
 
 - [x] Define the native PDF reader content model and keep EPUB as a later additive format.
 - [x] Build entitlement-aware protected book retrieval and separate public sample-PDF foundations.
-- [x] Build server-derived reading progress, last-page restoration, appearance synchronization, and page bookmarks.
-- [x] Deliver full-viewport mobile portrait/landscape reading plus desktop fit, zoom, appearance, keyboard, and screen-reader behavior.
+- [x] Build server-derived reading progress, last-page restoration, zoom synchronization, and page bookmarks.
+- [x] Deliver full-viewport mobile portrait/landscape reading plus one compact theme-aware desktop/mobile toolbar, zoom, keyboard, and screen-reader behavior.
 - [x] Keep browser pinch zoom available and define explicit offline/expired-access recovery without caching protected PDFs.
 - [x] Define Sample Pack/file contracts with ordered preview metadata, waveform peaks, optional individual source assets, and protected full ZIP assets.
 - [x] Authorize individual and full-pack downloads through active download entitlements and short-lived signed URLs.
@@ -322,6 +322,8 @@ Then add commentary audio/text, behind-the-scenes YouTube video, general creator
 Deployment evidence: migrations `20260712058000_m15_native_books_and_sample_packs.sql`, `20260712059000_m15_reader_bookmarks.sql`, and `20260712060000_m15_native_description_edits.sql` are aligned locally and remotely. Clean no-seed schema replay, zero-error schema lint, 25 M15 pgTAP assertions (54 across the full security suite), lint, strict TypeScript, and production build passed. Signed-in local QA covered Store, Library, Studio, sample-limit enforcement, shared-player routing, protected ZIP/PDF manifests, reading restoration, bookmarks, and 390px portrait/844×390 landscape/1280px reader geometry. The linked “Drum Loops” Item and its uploaded ZIP were preserved; its optional preview rows can now be added through Studio. Payment activation, backups/restoration rehearsal, EPUB, and protected offline storage remain separate later work.
 
 Reliability follow-up (July 13, 2026): Studio add/edit recovery is device-local and scoped by account plus new section or permanent Item ID, so auth refresh, window focus changes, browser refresh, and mobile app switching do not erase unsaved inputs. It remains distinct from the removed publication Draft lifecycle and clears on Save, Cancel, or removal. Sample-preview storage now commits before optional audio analysis, and functional merges prevent waveform metadata from erasing the uploaded path. Books pin the PDF.js 4.10 legacy client and worker after PDF.js 6 produced successive unsupported-runtime failures on Safari (`getOrInsertComputed` followed by an iterator failure); protected access and reader UI are unchanged. Strict TypeScript, lint, production build, and all 54 security assertions passed.
+
+Final M15 interface and naming closure (July 13, 2026): desktop and mobile readers share one compact theme-aware toolbar with title-only desktop identity, read-only `current of total` progress, circular bookmark/page/zoom actions, restored last page, and exact return to the originating Library Item detail. The public Assets product category is renamed in place to Sample Packs through migration `20260712061000_m15_sample_pack_category_language.sql`; Store, Library, Studio, profiles, support copy, metadata, sitemap, filters, and canonical URLs use Sample Packs. Existing category and Item UUIDs, uploads, generic `item_assets`, internal asset experience values, Library relationships, entitlements, and audit history are preserved; former URLs redirect and former non-sample Types remain inactive rather than deleted.
 
 ### M16 — Events And Programming
 

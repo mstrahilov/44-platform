@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import StoreApp from '@/components/StoreApp';
 import { isStoreCategory, type StoreCategory } from '@/lib/storeRoutes';
 import { buildPageMetadata } from '@/lib/metadata';
@@ -12,9 +12,9 @@ const CATEGORY_METADATA: Record<Exclude<StoreCategory, 'all'>, { title: string; 
     title: 'Books',
     description: 'Explore art books, poetry, stories, and digital publishing from independent creators on 44OS.',
   },
-  assets: {
-    title: 'Assets',
-    description: 'Explore assets, remix stems, presets, and creative tools from independent creators on 44OS.',
+  'sample-packs': {
+    title: 'Sample Packs',
+    description: 'Explore downloadable sample packs from independent creators on 44OS.',
   },
   games: {
     title: 'Games',
@@ -28,6 +28,7 @@ const CATEGORY_METADATA: Record<Exclude<StoreCategory, 'all'>, { title: string; 
 
 export async function generateMetadata({ params }: { params: Promise<{ category: string }> }) {
   const { category } = await params;
+  if (category === 'assets') permanentRedirect('/store/sample-packs');
   if (!isStoreCategory(category) || category === 'all') return buildPageMetadata({ title: 'Store', path: '/store' });
   return buildPageMetadata({
     ...CATEGORY_METADATA[category],
@@ -37,6 +38,7 @@ export async function generateMetadata({ params }: { params: Promise<{ category:
 
 export default async function StoreCategoryPage({ params }: { params: Promise<{ category: string }> }) {
   const { category } = await params;
+  if (category === 'assets') permanentRedirect('/store/sample-packs');
   if (!isStoreCategory(category) || category === 'all') notFound();
   return <StoreApp category={category as StoreCategory} />;
 }

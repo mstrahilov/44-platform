@@ -356,10 +356,11 @@ function ProductLibraryDetail({
     (product.item_type || content.detailsTitle).toUpperCase(),
     ...(product.year ? [String(product.year)] : []),
   ];
+  const readerHref = `/reader/${product.id}?returnTo=${encodeURIComponent(`/library/item/${row.id}`)}`;
   const primaryActions: ProductDetailAction[] = [
     {
       label: isMusic ? 'Play' : isBook ? 'Read' : isAsset ? 'Download Pack' : action.label,
-      href: isBook && bookContent ? `/reader/${product.id}` : undefined,
+      href: isBook && bookContent ? readerHref : undefined,
       onClick: isMusic ? playRelease : isBook && bookContent ? undefined : () => runProductAction(action),
     },
     isMusic
@@ -436,7 +437,7 @@ function ProductLibraryDetail({
           <p className="os-type-body view-description">
             {bookContent ? 'Your page and reader appearance sync automatically across signed-in devices.' : content.emptyCopy}
           </p>
-          {bookContent ? <Link className="os-button os-button-secondary" href={`/reader/${product.id}`}>Open Reader</Link> : null}
+          {bookContent ? <Link className="os-button os-button-secondary" href={readerHref}>Open Reader</Link> : null}
         </div>
       )}
 

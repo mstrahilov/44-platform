@@ -16,7 +16,7 @@ import { FilterPopover } from '@/components/FilterPopover';
 const CATEGORY_EXPERIENCE: Partial<Record<LibraryCategory, ProductExperience>> = {
   music: 'music',
   books: 'book',
-  assets: 'asset',
+  'sample-packs': 'asset',
 };
 
 type LibraryFilter = 'all' | 'music' | 'book' | 'asset';
@@ -25,7 +25,7 @@ const FILTER_LABELS: Record<LibraryFilter, string> = {
   all: 'All',
   music: 'Music',
   book: 'Books',
-  asset: 'Assets',
+  asset: 'Sample Packs',
 };
 
 interface LibraryRow {
@@ -118,7 +118,7 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
     return (
       <PageShell>
         <main className="app-page">
-          <HubHero title="Library" copy="Saved music, books, assets, and purchases live here once you sign in." />
+          <HubHero title="Library" copy="Saved music, books, sample packs, and purchases live here once you sign in." />
           <EmptyMessage>Log in to save items to your Library.</EmptyMessage>
           <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--os-space-4)' }}>
             <Link className="os-button os-button-primary" href="/login">Log In</Link>
@@ -244,7 +244,7 @@ function getLibraryItemLabel(product: Product) {
   const experience = getProductExperience(product);
   if (experience === 'music') return 'Release';
   if (experience === 'book') return 'Book';
-  if (experience === 'asset') return 'Asset';
+  if (experience === 'asset') return 'Sample Pack';
   return 'Item';
 }
 

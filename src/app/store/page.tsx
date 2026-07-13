@@ -3,7 +3,7 @@ import { buildPageMetadata } from '@/lib/metadata';
 
 export const metadata = buildPageMetadata({
   title: 'Store',
-  description: 'Find releases, books, assets, and merch from independent creators on 44OS.',
+  description: 'Find releases, books, sample packs, and merch from independent creators on 44OS.',
   path: '/store',
 });
 

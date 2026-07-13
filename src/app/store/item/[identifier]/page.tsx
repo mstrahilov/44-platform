@@ -581,6 +581,6 @@ function buildProductDetails(product: Product, tracks: ProductTrack[], inferredD
 
 function creatorProfileTab(experience: ReturnType<typeof getProductExperience>) {
   if (experience === 'book') return 'books';
-  if (experience === 'asset') return 'assets';
+  if (experience === 'asset') return 'sample-packs';
   return 'music';
 }

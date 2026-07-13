@@ -7,10 +7,10 @@ import { getCatalogItem } from '@/lib/domain/itemDetails';
 import { getReadingSession, listReadingBookmarks, saveReadingProgress, toggleReadingBookmark, type ReadingBookmark } from '@/lib/domain/nativeContent';
 import { useAuth } from '@/lib/useAuth';
 
-type ReaderAppearance = { theme: 'system' | 'light' | 'dark' | 'sepia'; fit: 'width' | 'page'; zoom: number };
+type ReaderAppearance = { theme: 'system'; fit: 'width'; zoom: number };
 const DEFAULT_APPEARANCE: ReaderAppearance = { theme: 'system', fit: 'width', zoom: 1 };
 
-export function BookReader({ itemId, mode }: { itemId: string; mode: 'sample' | 'full' }) {
+export function BookReader({ itemId, mode, returnTo }: { itemId: string; mode: 'sample' | 'full'; returnTo?: string }) {
   const { user, loading: authLoading } = useAuth();
   const userId = user?.id ?? '';
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -19,7 +19,6 @@ export function BookReader({ itemId, mode }: { itemId: string; mode: 'sample' | 
   const [documentProxy, setDocumentProxy] = useState<PDFDocumentProxy | null>(null);
   const [pageCount, setPageCount] = useState(0);
   const [title, setTitle] = useState('Book');
-  const [creator, setCreator] = useState('44 Creator');
   const [page, setPage] = useState(1);
   const [pageText, setPageText] = useState('');
   const [bookmarks, setBookmarks] = useState<ReadingBookmark[]>([]);
@@ -27,7 +26,6 @@ export function BookReader({ itemId, mode }: { itemId: string; mode: 'sample' | 
   const [bookmarkStatus, setBookmarkStatus] = useState('');
   const [appearance, setAppearance] = useState<ReaderAppearance>(DEFAULT_APPEARANCE);
   const [stageWidth, setStageWidth] = useState(0);
-  const [stageHeight, setStageHeight] = useState(0);
   const [online, setOnline] = useState(() => typeof navigator === 'undefined' ? true : navigator.onLine);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -39,13 +37,12 @@ export function BookReader({ itemId, mode }: { itemId: string; mode: 'sample' | 
     try {
       const [product, session] = await Promise.all([getCatalogItem(itemId), getReadingSession(itemId, mode)]);
       setTitle(product?.title ?? 'Book');
-      setCreator(product?.creators?.display_name || product?.creator || '44 Creator');
       if (!session?.url) throw new Error(mode === 'sample' ? 'This book does not have a sample yet.' : 'Your reading access is unavailable or has expired.');
       const savedAppearance = session.progress?.appearance as Partial<ReaderAppearance> | null;
       if (mode === 'full' && savedAppearance) {
         setAppearance({
-          theme: ['system', 'light', 'dark', 'sepia'].includes(savedAppearance.theme ?? '') ? savedAppearance.theme! : 'system',
-          fit: savedAppearance.fit === 'page' ? 'page' : 'width',
+          theme: 'system',
+          fit: 'width',
           zoom: typeof savedAppearance.zoom === 'number' ? Math.min(2, Math.max(.7, savedAppearance.zoom)) : 1,
         });
       }
@@ -80,7 +77,7 @@ export function BookReader({ itemId, mode }: { itemId: string; mode: 'sample' | 
     if (!stageRef.current) return;
     const observer = new ResizeObserver(entries => {
       const box = entries[0]?.contentRect;
-      if (box) { setStageWidth(box.width); setStageHeight(box.height); }
+      if (box) setStageWidth(box.width);
     });
     observer.observe(stageRef.current);
     return () => observer.disconnect();
@@ -94,8 +91,7 @@ export function BookReader({ itemId, mode }: { itemId: string; mode: 'sample' | 
       if (!alive || !canvasRef.current) return;
       const initial = pdfPage.getViewport({ scale: 1 });
       const widthScale = Math.max(.2, (stageWidth - 32) / initial.width);
-      const pageScale = Math.max(.2, Math.min(widthScale, (stageHeight - 32) / initial.height));
-      const viewport = pdfPage.getViewport({ scale: (appearance.fit === 'page' ? pageScale : widthScale) * appearance.zoom });
+      const viewport = pdfPage.getViewport({ scale: widthScale * appearance.zoom });
       const outputScale = window.devicePixelRatio || 1;
       const canvas = canvasRef.current;
       canvas.width = Math.floor(viewport.width * outputScale);
@@ -113,7 +109,7 @@ export function BookReader({ itemId, mode }: { itemId: string; mode: 'sample' | 
     }
     void render().catch(renderError => setError(renderError instanceof Error ? renderError.message : 'This page could not be rendered.'));
     return () => { alive = false; renderTaskRef.current?.cancel(); };
-  }, [appearance.fit, appearance.zoom, documentProxy, page, stageHeight, stageWidth]);
+  }, [appearance.zoom, documentProxy, page, stageWidth]);
 
   useEffect(() => {
     if (mode !== 'full' || !documentProxy || !userId) return;
@@ -152,12 +148,12 @@ export function BookReader({ itemId, mode }: { itemId: string; mode: 'sample' | 
   if (error) return <div className="native-reader-state"><p>{error}</p><button className="os-button os-button-primary" type="button" onClick={() => void loadBook()} disabled={!online}>{online ? 'Refresh Access' : 'Offline'}</button></div>;
 
   return (
-    <main className={`native-reader native-reader-${appearance.theme}`} onKeyDown={handleKeyDown} tabIndex={-1}>
+    <main className="native-reader" onKeyDown={handleKeyDown} tabIndex={-1}>
       <header className="native-reader-toolbar">
-        <Link className="native-reader-close" href={mode === 'sample' ? `/store/item/${itemId}` : '/library'} aria-label="Close reader">×</Link>
-        <div className="native-reader-title"><strong>{title}</strong><span>{creator}</span></div>
+        <Link className="native-reader-close" href={returnTo || (mode === 'sample' ? `/store/item/${itemId}` : '/library')} aria-label="Close reader">×</Link>
+        <div className="native-reader-title"><strong>{title}</strong></div>
         <div className="native-reader-controls" role="group" aria-label="Reader controls">
-          <div className="native-reader-page-count" aria-live="polite">Page {page} of {pageCount}</div>
+          <div className="native-reader-page-count" aria-live="polite">{page} of {pageCount}</div>
           <div className="native-reader-page-actions">
             {mode === 'full' ? <button
               type="button"
@@ -178,19 +174,8 @@ export function BookReader({ itemId, mode }: { itemId: string; mode: 'sample' | 
             </div> : null}
             <button type="button" onClick={() => movePage(page - 1)} disabled={page <= 1} aria-label="Previous page">‹</button>
             <button type="button" onClick={() => movePage(page + 1)} disabled={page >= pageCount} aria-label="Next page">›</button>
-          </div>
-          <div className="native-reader-settings">
-            <label><span className="sr-only">Current page</span><input value={page} inputMode="numeric" onChange={event => movePage(Number(event.target.value) || 1)} aria-label={`Page ${page} of ${pageCount}`} /></label>
-            <span aria-hidden="true">/ {pageCount}</span>
-            <select value={appearance.fit} onChange={event => setAppearance(current => ({ ...current, fit: event.target.value as ReaderAppearance['fit'] }))} aria-label="Page fit">
-              <option value="width">Fit Width</option><option value="page">Fit Page</option>
-            </select>
             <button type="button" onClick={() => setAppearance(current => ({ ...current, zoom: Math.max(.7, current.zoom - .1) }))} aria-label="Zoom out">−</button>
-            <span className="native-reader-zoom" aria-live="polite">{Math.round(appearance.zoom * 100)}%</span>
             <button type="button" onClick={() => setAppearance(current => ({ ...current, zoom: Math.min(2, current.zoom + .1) }))} aria-label="Zoom in">+</button>
-            <select value={appearance.theme} onChange={event => setAppearance(current => ({ ...current, theme: event.target.value as ReaderAppearance['theme'] }))} aria-label="Reader appearance">
-              <option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option><option value="sepia">Sepia</option>
-            </select>
           </div>
         </div>
         <span className="sr-only" role="status" aria-live="polite">{bookmarkStatus}</span>

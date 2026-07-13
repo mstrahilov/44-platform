@@ -15,7 +15,7 @@ import { FilterPopover } from '@/components/FilterPopover';
 const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
   music: 'music',
   books: 'book',
-  assets: 'asset',
+  'sample-packs': 'asset',
   merch: 'physical',
   games: 'interactive',
 };
@@ -23,7 +23,7 @@ const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
 const CATEGORY_COPY: Record<StoreCategory, { title: string; copy: string; empty: string }> = {
   all: {
     title: 'Store',
-    copy: 'Find releases, books, assets, and merch from independent creators.',
+    copy: 'Find releases, books, sample packs, and merch from independent creators.',
     empty: 'No items are published yet.',
   },
   music: {
@@ -36,10 +36,10 @@ const CATEGORY_COPY: Record<StoreCategory, { title: string; copy: string; empty:
     copy: 'Explore art books, poetry, and stories from independent creators.',
     empty: 'No books are published yet.',
   },
-  assets: {
-    title: 'Assets',
-    copy: 'Explore assets, remix stems, and creative tools for your work.',
-    empty: 'No assets are published yet.',
+  'sample-packs': {
+    title: 'Sample Packs',
+    copy: 'Explore downloadable sample packs from independent creators.',
+    empty: 'No sample packs are published yet.',
   },
   games: {
     title: 'Games',
@@ -60,7 +60,7 @@ const STORE_FILTER_LABELS: Record<StoreFilter, string> = {
   all: 'All Categories',
   music: 'Music',
   book: 'Books',
-  asset: 'Assets',
+  asset: 'Sample Packs',
   physical: 'Merch',
   interactive: 'Games',
 };

@@ -6,7 +6,7 @@ const PUBLIC_ROUTES = [
   '/store',
   '/store/music',
   '/store/books',
-  '/store/assets',
+  '/store/sample-packs',
   '/store/merch',
   '/community',
   '/community/questions',

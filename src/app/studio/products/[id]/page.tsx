@@ -299,7 +299,7 @@ export default function EditProductPage() {
   const section = useMemo(() => {
     const slug = selectedCategory?.slug;
     if (slug === 'books') return getStudioCatalogSectionForProduct({ item_type: productType, experience_type: 'book', fulfillment_type: 'digital' });
-    if (slug === 'assets') return getStudioCatalogSectionForProduct({ item_type: productType, experience_type: 'asset', fulfillment_type: 'digital' });
+    if (slug === 'assets' || slug === 'sample-packs') return getStudioCatalogSectionForProduct({ item_type: productType, experience_type: 'asset', fulfillment_type: 'digital' });
     if (slug === 'merch') return getStudioCatalogSectionForProduct({ item_type: productType, experience_type: 'merch', fulfillment_type: 'physical' });
     return getStudioCatalogSectionForProduct({ item_type: productType, experience_type: 'music', fulfillment_type: 'digital' });
   }, [productType, selectedCategory]);
@@ -697,7 +697,7 @@ export default function EditProductPage() {
 
             {needsDigitalFile ? (
               <UploadField
-                label={section.id === 'books' ? 'Book File' : 'Asset File'}
+                label={section.id === 'books' ? 'Book File' : 'Sample Pack ZIP'}
                 folder={section.id === 'books' ? 'products/books' : 'products/assets'}
                 storage="private-item"
                 userId={user.id}
