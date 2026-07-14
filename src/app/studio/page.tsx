@@ -29,10 +29,16 @@ type OverviewState = {
 
 export default function StudioPage() {
   const { user, loading } = useAuth();
-  const [studioStatus] = useState<string | null>(() => (
+  const [studioStatus, setStudioStatus] = useState<string | null>(() => (
     typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('studioStatus')
   ));
   const [profile, setProfile] = useState<StudioProfile | null>(null);
+
+  useEffect(() => {
+    if (!studioStatus) return;
+    const timeout = window.setTimeout(() => setStudioStatus(null), 5000);
+    return () => window.clearTimeout(timeout);
+  }, [studioStatus]);
   const [overview, setOverview] = useState<OverviewState>({
     products: [],
     libraryItems: [],
@@ -194,6 +200,11 @@ export default function StudioPage() {
         {studioStatus === 'published' && (
           <div className="dashboard-status dashboard-status-success studio-submission-banner">
             Published successfully. Your release is now live in the catalog.
+          </div>
+        )}
+        {studioStatus === 'update-published' && (
+          <div className="dashboard-status dashboard-status-success studio-submission-banner">
+            Update published successfully.
           </div>
         )}
 

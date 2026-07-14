@@ -35,10 +35,7 @@ export type CreatorUpdate = ItemUpdate & {
 export async function listCreatorUpdates(authorIds: string | string[]) {
   const ids = Array.isArray(authorIds) ? authorIds : [authorIds];
   const result = await supabase
-    .from('product_updates')
-    // Keep the Studio query on the update table itself. The Library view uses
-    // the typed community view; joining catalog_items here can fail when the
-    // generated relationship metadata is stale, hiding otherwise valid rows.
+    .from('community_update_content')
     .select('id,item_id,author_id,title,body,version_label,status,created_at')
     .in('author_id', Array.from(new Set(ids.filter(Boolean))))
     .neq('status', 'archived')

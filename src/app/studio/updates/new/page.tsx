@@ -32,7 +32,7 @@ export default function NewUpdatePage() {
     setSaving(true); setError('');
     try {
       await createItemUpdate(itemId, title, body);
-      window.location.href = '/studio?studioStatus=published';
+      window.location.href = '/studio?studioStatus=update-published';
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Could not publish this update.');
       setSaving(false);
