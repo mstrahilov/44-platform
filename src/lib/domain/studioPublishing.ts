@@ -152,6 +152,12 @@ export async function setStudioPublicationStatus(itemId: string, status: 'draft'
   if (result.error) throw result.error;
 }
 
+export async function isPublishingReviewRequired() {
+  const result = await supabase.rpc('publishing_review_is_required');
+  if (result.error) throw result.error;
+  return Boolean(result.data);
+}
+
 export async function attestStudioItemRights(itemId: string) {
   const result = await supabase.rpc('attest_owned_item_rights', {
     target_item_id: itemId,

@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase';
 
 export type ReleaseVideoEmbed = {
   id: string;
-  item_id: string;
+  item_id?: string;
   title: string;
   youtube_video_id: string;
   sort_order: number;

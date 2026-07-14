@@ -5,6 +5,7 @@ import { SectionHeader } from '@/components/Ui';
 import type { StudioCatalogSectionId } from '@/lib/studioCatalog';
 import { getAchievementIconPath } from '@/lib/achievementIcons';
 import { replaceStudioReleaseFeatures } from '@/lib/domain/studioPublishing';
+import { replaceStudioReleaseVideoEmbeds, type ReleaseVideoEmbed } from '@/lib/domain/releaseFeatures';
 
 export type DraftAchievement = {
   code: string;
@@ -22,11 +23,18 @@ export type DraftBonusContent = {
   achievementCode: string;
 };
 
+export type DraftVideoEmbed = {
+  title: string;
+  url: string;
+};
+
 export type ReleaseFeatureState = {
   achievementsEnabled: boolean;
   commentaryEnabled: boolean;
   behindTheScenesEnabled: boolean;
   behindTheScenesUrl: string;
+  videoEmbedsEnabled: boolean;
+  videoEmbeds: DraftVideoEmbed[];
   achievements: DraftAchievement[];
   bonusItems: DraftBonusContent[];
 };
@@ -54,6 +62,7 @@ const EMPTY_BONUS_ITEM: DraftBonusContent = {
   visibility: 'achievement',
   achievementCode: OVERACHIEVER_CODE,
 };
+const EMPTY_VIDEO_EMBED: DraftVideoEmbed = { title: '', url: '' };
 
 export function createReleaseFeatureState(sectionId: StudioCatalogSectionId): ReleaseFeatureState {
   const achievements = achievementTemplates(sectionId);
@@ -62,6 +71,8 @@ export function createReleaseFeatureState(sectionId: StudioCatalogSectionId): Re
     commentaryEnabled: false,
     behindTheScenesEnabled: false,
     behindTheScenesUrl: '',
+    videoEmbedsEnabled: false,
+    videoEmbeds: [EMPTY_VIDEO_EMBED],
     achievements,
     bonusItems: [EMPTY_BONUS_ITEM],
   };
@@ -106,6 +117,8 @@ export function normalizeFeatureStateForSection(state: ReleaseFeatureState, sect
       visibility: 'achievement',
       achievementCode: supportsAchievements ? OVERACHIEVER_CODE : '',
     })),
+    videoEmbedsEnabled: supportsAchievements ? state.videoEmbedsEnabled : false,
+    videoEmbeds: normalizeVideoEmbeds(state.videoEmbeds),
     achievements,
   };
 }
@@ -120,6 +133,19 @@ function normalizeBonusItems(items: DraftBonusContent[]) {
   }));
 }
 
+function normalizeVideoEmbeds(items: DraftVideoEmbed[] | undefined) {
+  const normalized = items?.length ? items : [EMPTY_VIDEO_EMBED];
+  return normalized.slice(0, 3).map(item => ({ title: item.title ?? '', url: item.url ?? '' }));
+}
+
+function enabledVideoEmbeds(state: ReleaseFeatureState) {
+  return state.videoEmbedsEnabled
+    ? normalizeVideoEmbeds(state.videoEmbeds)
+      .filter(embed => embed.title.trim() && embed.url.trim())
+      .map(embed => ({ title: embed.title.trim(), url: embed.url.trim() }))
+    : [];
+}
+
 function enabledBonusItems(state: ReleaseFeatureState) {
   return normalizeBonusItems(state.bonusItems)
     .filter(item => item.title.trim() && item.fileUrl.trim())
@@ -132,9 +158,31 @@ function enabledBonusItems(state: ReleaseFeatureState) {
 }
 
 export function validateReleaseFeatureState(state: ReleaseFeatureState, sectionId: StudioCatalogSectionId) {
-  void state;
-  void sectionId;
+  if (supportsAchievementsForSection(sectionId) && state.videoEmbedsEnabled) {
+    for (const embed of normalizeVideoEmbeds(state.videoEmbeds)) {
+      const title = embed.title.trim();
+      const url = embed.url.trim();
+      if (!title && !url) continue;
+      if (!title || !url) return 'Each YouTube embed needs both a title and a URL.';
+      if (!isSupportedYouTubeUrl(url)) return 'Use a valid HTTPS YouTube watch, short, or Shorts URL.';
+    }
+  }
   return '';
+}
+
+function isSupportedYouTubeUrl(value: string) {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'https:') return false;
+    const host = url.hostname.toLowerCase().replace(/^www\./, '');
+    if (host === 'youtu.be') return /^[A-Za-z0-9_-]{11}$/.test(url.pathname.slice(1));
+    if (host !== 'youtube.com') return false;
+    if (url.pathname === '/watch') return /^[A-Za-z0-9_-]{11}$/.test(url.searchParams.get('v') ?? '');
+    if (url.pathname.startsWith('/shorts/')) return /^[A-Za-z0-9_-]{11}$/.test(url.pathname.split('/')[2] ?? '');
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 export function buildAchievementRows(productId: string, state: ReleaseFeatureState, sectionId: StudioCatalogSectionId) {
@@ -185,6 +233,7 @@ export function hydrateReleaseFeatureState(
   sectionId: StudioCatalogSectionId,
   achievementRows: SavedProductAchievement[],
   assetRows: SavedProductAsset[],
+  videoEmbeds: ReleaseVideoEmbed[] = [],
 ) {
   const base = createReleaseFeatureState(sectionId);
   const achievementByCode = new Map(achievementRows.map(achievement => [achievement.code, achievement]));
@@ -208,6 +257,10 @@ export function hydrateReleaseFeatureState(
     commentaryEnabled,
     behindTheScenesEnabled: false,
     behindTheScenesUrl: '',
+    videoEmbedsEnabled: videoEmbeds.length > 0,
+    videoEmbeds: videoEmbeds.length > 0
+      ? videoEmbeds.map(embed => ({ title: embed.title, url: `https://www.youtube.com/watch?v=${embed.youtube_video_id}` }))
+      : [EMPTY_VIDEO_EMBED],
     achievements: base.achievements.map(template => {
       const saved = achievementByCode.get(template.code);
       return saved ? {
@@ -243,6 +296,7 @@ export async function saveReleaseFeatures({
     // Bonus Content editing is hidden during trusted testing. Preserve any
     // existing protected bonus assets while saving achievement selections.
     await replaceStudioReleaseFeatures(productId, [], achievementRows, []);
+    await replaceStudioReleaseVideoEmbeds(productId, enabledVideoEmbeds(state));
   } catch (saveError) {
     return saveError instanceof Error ? saveError.message : 'Could not save release features.';
   }
@@ -293,11 +347,34 @@ export function StudioReleaseFeatures({
     });
   }
 
+  function toggleVideoEmbeds() {
+    patch({ videoEmbedsEnabled: !state.videoEmbedsEnabled });
+  }
+
+  function updateVideoEmbed(index: number, next: Partial<DraftVideoEmbed>) {
+    patch({
+      videoEmbeds: normalizeVideoEmbeds(state.videoEmbeds).map((embed, embedIndex) => (
+        embedIndex === index ? { ...embed, ...next } : embed
+      )),
+    });
+  }
+
+  function addVideoEmbed() {
+    if (state.videoEmbeds.length >= 3) return;
+    patch({ videoEmbeds: [...normalizeVideoEmbeds(state.videoEmbeds), { ...EMPTY_VIDEO_EMBED }] });
+  }
+
+  function removeVideoEmbed(index: number) {
+    const next = normalizeVideoEmbeds(state.videoEmbeds).filter((_, embedIndex) => embedIndex !== index);
+    patch({ videoEmbeds: next.length > 0 ? next : [{ ...EMPTY_VIDEO_EMBED }] });
+  }
+
   return (
-    <section className="dashboard-form-section studio-achievements-section">
+    <>
+      <section className="dashboard-form-section studio-achievements-section">
       <SectionHeader
         title="Achievements"
-        description="Enable achievements for listeners to unlock."
+        description="Let listeners unlock achievements."
         action={supportsAchievements ? (
           <button
             type="button"
@@ -336,6 +413,35 @@ export function StudioReleaseFeatures({
           </div>
         </div>
       ) : null}
-    </section>
+      </section>
+
+      {supportsAchievements && (
+        <section className="dashboard-form-section studio-video-embeds-section">
+          <SectionHeader
+            title="Video Embed"
+            description="Embed a video with this release."
+            action={<button type="button" role="switch" aria-checked={state.videoEmbedsEnabled} className={state.videoEmbedsEnabled ? 'settings-toggle settings-toggle-on' : 'settings-toggle'} onClick={toggleVideoEmbeds} />}
+          />
+          {state.videoEmbedsEnabled && (
+            <div className="studio-video-embed-fields">
+              {normalizeVideoEmbeds(state.videoEmbeds).map((embed, index) => (
+                <div className="studio-video-embed-row" key={`video-embed-${index}`}>
+                  <label className="dashboard-field">
+                    <span className="dashboard-field-label">Title</span>
+                    <input className="os-input-field" value={embed.title} maxLength={120} placeholder="Music video" onChange={event => updateVideoEmbed(index, { title: event.target.value })} />
+                  </label>
+                  <label className="dashboard-field">
+                    <span className="dashboard-field-label">YouTube URL</span>
+                    <input className="os-input-field" type="url" value={embed.url} placeholder="https://www.youtube.com/watch?v=..." onChange={event => updateVideoEmbed(index, { url: event.target.value })} />
+                  </label>
+                  {state.videoEmbeds.length > 1 && <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => removeVideoEmbed(index)}>Remove</button>}
+                </div>
+              ))}
+              {state.videoEmbeds.length < 3 && <button type="button" className="os-button os-button-secondary os-button-compact" onClick={addVideoEmbed}>Add another video</button>}
+            </div>
+          )}
+        </section>
+      )}
+    </>
   );
 }

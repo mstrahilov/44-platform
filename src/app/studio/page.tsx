@@ -1,16 +1,18 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { PageShell, GlassPanel, HubHero, EmptyMessage, SectionHeader } from '@/components/Ui';
 import { useAuth } from '@/lib/useAuth';
-import type { Product } from '@/lib/products';
+import { comparePublicCatalogItems, type Product } from '@/lib/products';
 import { getProductExperience } from '@/lib/experience';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { STUDIO_CATALOG_SECTIONS } from '@/lib/studioCatalog';
-import { getCreatorCatalogOverview, type StudioCatalogHealth, type StudioLibraryMetric } from '@/lib/domain/studio';
+import { getCreatorCatalogOverview, listCreatorSubmissionStatuses, type StudioCatalogHealth, type StudioLibraryMetric, type StudioSubmissionStatus } from '@/lib/domain/studio';
 import { formatEventDate } from '@/lib/eventTime';
 import { listCreatorEvents, type CreatorEvent } from '@/lib/domain/events';
+import { listCreatorUpdates, type CreatorUpdate } from '@/lib/domain/itemCommunity';
 
 type LibraryMetricRow = StudioLibraryMetric;
 
@@ -20,11 +22,16 @@ type OverviewState = {
   totalPlays: number;
   catalogHealth: StudioCatalogHealth[];
   events: CreatorEvent[];
+  submissions: StudioSubmissionStatus[];
+  updates: CreatorUpdate[];
   metricsError: string;
 };
 
 export default function StudioPage() {
   const { user, loading } = useAuth();
+  const [studioStatus] = useState<string | null>(() => (
+    typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('studioStatus')
+  ));
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [overview, setOverview] = useState<OverviewState>({
     products: [],
@@ -32,6 +39,8 @@ export default function StudioPage() {
     totalPlays: 0,
     catalogHealth: [],
     events: [],
+    submissions: [],
+    updates: [],
     metricsError: '',
   });
 
@@ -48,6 +57,8 @@ export default function StudioPage() {
       let totalPlays = 0;
       let catalogHealth: StudioCatalogHealth[] = [];
       let events: CreatorEvent[] = [];
+      let submissions: StudioSubmissionStatus[] = [];
+      let updates: CreatorUpdate[] = [];
       let metricsError = '';
       try {
         const result = await getCreatorCatalogOverview(profileId);
@@ -64,6 +75,18 @@ export default function StudioPage() {
         const eventMessage = eventsError instanceof Error ? eventsError.message : 'Could not load Studio events.';
         metricsError = metricsError ? `${metricsError} ${eventMessage}` : eventMessage;
       }
+      try {
+        submissions = await listCreatorSubmissionStatuses(profileId);
+      } catch (submissionError) {
+        const submissionMessage = submissionError instanceof Error ? submissionError.message : 'Could not load submission statuses.';
+        metricsError = metricsError ? `${metricsError} ${submissionMessage}` : submissionMessage;
+      }
+      try {
+        updates = await listCreatorUpdates([profileId, user.id]);
+      } catch (updatesError) {
+        const updatesMessage = updatesError instanceof Error ? updatesError.message : 'Could not load creator updates.';
+        metricsError = metricsError ? `${metricsError} ${updatesMessage}` : updatesMessage;
+      }
 
       setOverview({
         products: productRows,
@@ -71,6 +94,8 @@ export default function StudioPage() {
         totalPlays,
         catalogHealth,
         events,
+        submissions,
+        updates,
         metricsError,
       });
     }
@@ -129,6 +154,11 @@ export default function StudioPage() {
   }, 0);
   const totalPlays = overview.totalPlays;
   const healthByItemId = new Map(overview.catalogHealth.map(health => [health.item_id, health]));
+  const pendingSubmissionByItemId = new Map(
+    overview.submissions
+      .filter(submission => submission.status === 'pending')
+      .map(submission => [submission.item_id, submission]),
+  );
   const productSections = STUDIO_CATALOG_SECTIONS.map(section => ({
     ...section,
     items: overview.products.filter(item => {
@@ -137,7 +167,7 @@ export default function StudioPage() {
       if (section.id === 'books') return experience === 'book';
       if (section.id === 'assets') return experience === 'asset';
       return experience === 'physical';
-    }),
+    }).sort((a, b) => comparePublicCatalogItems(a, b)),
   }));
 
   return (
@@ -155,6 +185,17 @@ export default function StudioPage() {
           <OverviewStatCard label="Sold" value={soldItems} />
           <OverviewStatCard label="Earned" value={formatCurrency(revenueCents)} />
         </div>
+
+        {studioStatus === 'submitted' && (
+          <div className="dashboard-status dashboard-status-warning studio-submission-banner">
+            Submitted for review. Your release will remain in its current published state until an administrator approves the update.
+          </div>
+        )}
+        {studioStatus === 'published' && (
+          <div className="dashboard-status dashboard-status-success studio-submission-banner">
+            Published successfully. Your release is now live in the catalog.
+          </div>
+        )}
 
         {overview.metricsError && (
           <div className="dashboard-status dashboard-status-error">
@@ -187,13 +228,30 @@ export default function StudioPage() {
               itemLabel={section.itemLabel}
               items={section.items}
               healthByItemId={healthByItemId}
+              pendingSubmissionByItemId={pendingSubmissionByItemId}
             />
           ))}
+          {overview.updates.length > 0 && <StudioUpdatesSection updates={overview.updates} />}
         </div>
 
       </div>
     </PageShell>
   );
+}
+
+function StudioUpdatesSection({ updates }: { updates: CreatorUpdate[] }) {
+  return <section className="dashboard-section" id="updates">
+    <SectionHeader title="Updates" />
+    <div className="dashboard-list-surface">
+      {updates.map(update => <div key={update.id} className="dashboard-list-row studio-update-row">
+        <div className="dashboard-row-copy">
+          <div className="dashboard-row-title">{update.title}</div>
+          <div className="dashboard-row-subtitle">{new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(update.created_at))}</div>
+          <div className={update.status === 'published' ? 'dashboard-status-pill dashboard-status-pill-success studio-publication-status' : 'dashboard-status-pill dashboard-status-pill-warning studio-publication-status'}>{update.status === 'published' ? 'Published' : 'Under Review'}</div>
+        </div>
+      </div>)}
+    </div>
+  </section>;
 }
 
 function OverviewStatCard({ label, value }: { label: string; value: string | number }) {
@@ -213,6 +271,7 @@ const STUDIO_CREATE_ACTIONS = [
   { label: 'Add Event', href: '/studio/events/new' },
   { label: 'Add Merch', href: '/studio/products/new?section=merch' },
   { label: 'Add Sample Pack', href: '/studio/products/new?section=sample-packs' },
+  { label: 'Add Update', href: '/studio/updates/new' },
 ];
 
 function StudioCreateMenu() {
@@ -271,12 +330,14 @@ function StudioProductSection({
   itemLabel,
   items,
   healthByItemId,
+  pendingSubmissionByItemId,
 }: {
   id: string;
   title: string;
   itemLabel: string;
   items: Product[];
   healthByItemId: Map<string, StudioCatalogHealth>;
+  pendingSubmissionByItemId: Map<string, StudioSubmissionStatus>;
 }) {
   return (
     <section className="dashboard-section" id={id}>
@@ -288,13 +349,22 @@ function StudioProductSection({
           items.map(product => {
             const health = healthByItemId.get(product.id);
             const issueCount = health?.issue_count ?? 0;
+            const pendingSubmission = pendingSubmissionByItemId.get(product.id);
+            const publicationLabel = pendingSubmission ? 'Under Review' : product.status === 'published' ? 'Published' : 'Draft';
+            const publicationClass = pendingSubmission
+              ? 'dashboard-status-pill dashboard-status-pill-warning studio-publication-status'
+              : product.status === 'published'
+                ? 'dashboard-status-pill dashboard-status-pill-success studio-publication-status'
+                : 'dashboard-status-pill studio-status-pill-draft studio-publication-status';
             return (
             <Link key={product.id} href={`/studio/products/${product.id}`} className="dashboard-list-row studio-item-row">
+              {product.cover_url || product.hero_url ? <Image className="studio-item-artwork" src={product.cover_url || product.hero_url || ''} alt="" width={56} height={56} unoptimized /> : <div className="studio-item-artwork studio-item-artwork-empty" aria-hidden="true" />}
               <div className="dashboard-row-copy">
                 <div className="dashboard-row-title">{product.title}</div>
                 <div className="dashboard-row-subtitle">
                   {product.browse_type?.label || product.item_type || itemLabel}
                 </div>
+                <div className={publicationClass}>{publicationLabel}</div>
               </div>
               <div className="dashboard-row-actions">
                 {issueCount > 0 ? (

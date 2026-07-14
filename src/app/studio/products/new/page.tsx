@@ -19,7 +19,7 @@ import { currencyForCountry, type MarketMode } from '@/lib/marketPreferences';
 import { getStudioDisplayName, isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { normalizeTaxonomyValue } from '@/lib/taxonomy';
 import { getStudioCatalogSection, type StudioCatalogSectionId } from '@/lib/studioCatalog';
-import { addStudioAssets, addStudioTracks, attestStudioItemRights, createStudioItem, listCatalogTaxonomy, listItemCategories, replaceStudioItemTaxonomy, setStudioPublicationStatus } from '@/lib/domain/studioPublishing';
+import { addStudioAssets, addStudioTracks, attestStudioItemRights, createStudioItem, isPublishingReviewRequired, listCatalogTaxonomy, listItemCategories, replaceStudioItemTaxonomy, setStudioPublicationStatus, submitStudioItemForReview } from '@/lib/domain/studioPublishing';
 import type { Database } from '@/lib/database.types';
 import { ExternalLinksEditor } from '@/components/ExternalLinksEditor';
 import { activeExternalLinkDrafts, listExternalLinkPlatforms, materializeExternalLinkDrafts, replaceOwnedItemExternalLinks, validateExternalLinkDrafts, type ExternalLinkDraft, type ExternalLinkPlatform } from '@/lib/domain/externalLinks';
@@ -58,9 +58,9 @@ type NewItemRecovery = {
   selectedTagIds: string[]; price: string; marketMode: MarketMode; localPrice: string; localCurrency: string;
   merchFulfillmentMode: 'ship' | 'deliver'; merchShippingScope: 'local' | 'global'; coverUrl: string;
   galleryUrls: string[]; itemFileUrl: string; bookPreviewUrl: string; bookTotalPages: string;
-  bookSamplePages: string; bookLanguage: string; samplePreviews: DraftSamplePreview[]; year: string;
+  bookSamplePages: string; bookLanguage: string; samplePreviews: DraftSamplePreview[]; year: string; releaseDate?: string;
   trackCount: string; tracks: DraftTrack[]; featureState: ReturnType<typeof createReleaseFeatureState>;
-  externalLinks: ExternalLinkDraft[]; rightsConfirmed: boolean;
+  externalLinks: ExternalLinkDraft[]; externalLinksEnabled?: boolean; rightsConfirmed: boolean;
 };
 
 function createDraftTrack(): DraftTrack {
@@ -144,10 +144,12 @@ function NewProductContent() {
   const [bookLanguage, setBookLanguage] = useState('');
   const [samplePreviews, setSamplePreviews] = useState<DraftSamplePreview[]>([]);
   const [year, setYear] = useState('');
+  const [releaseDate, setReleaseDate] = useState('');
   const [trackCount, setTrackCount] = useState('1');
   const [tracks, setTracks] = useState<DraftTrack[]>([createDraftTrack()]);
   const [featureState, setFeatureState] = useState(() => createReleaseFeatureState(section.id));
   const [externalLinks, setExternalLinks] = useState<ExternalLinkDraft[]>([]);
+  const [externalLinksEnabled, setExternalLinksEnabled] = useState(false);
   const [externalLinkPlatforms, setExternalLinkPlatforms] = useState<ExternalLinkPlatform[]>([]);
   const [saving, setSaving] = useState(false);
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
@@ -186,9 +188,8 @@ function NewProductContent() {
       setTaxonomyTags(taxonomy.tags);
       setExternalLinkPlatforms(linkPlatforms);
       setExternalLinks(materializeExternalLinkDrafts(linkPlatforms, []));
-      const firstType = taxonomy.types.find(type => type.category_id === (resolvedCategories.find(category => categoryMatchesSection(category, section.id))?.id ?? resolvedCategories[0]?.id));
-      setStoreTypeId(firstType?.id ?? '');
-      setProductType(firstType?.label ?? defaultProductType);
+      setStoreTypeId('');
+      setProductType('');
 
       const recovered = readStudioFormRecovery<NewItemRecovery>(recoveryKey);
       if (recovered) {
@@ -199,9 +200,9 @@ function NewProductContent() {
         setMerchShippingScope(recovered.merchShippingScope); setCoverUrl(recovered.coverUrl);
         setGalleryUrls(recovered.galleryUrls); setItemFileUrl(recovered.itemFileUrl); setBookPreviewUrl(recovered.bookPreviewUrl);
         setBookTotalPages(recovered.bookTotalPages); setBookSamplePages(recovered.bookSamplePages);
-        setBookLanguage(recovered.bookLanguage); setSamplePreviews(recovered.samplePreviews); setYear(recovered.year);
+        setBookLanguage(recovered.bookLanguage); setSamplePreviews(recovered.samplePreviews); setYear(recovered.year); setReleaseDate(recovered.releaseDate ?? (recovered.year ? `${recovered.year}-01-01` : ''));
         setTrackCount(recovered.trackCount); setTracks(recovered.tracks); setFeatureState(recovered.featureState);
-        setExternalLinks(recovered.externalLinks); setRightsConfirmed(recovered.rightsConfirmed);
+        setExternalLinks(recovered.externalLinks); setExternalLinksEnabled(recovered.externalLinksEnabled ?? false); setRightsConfirmed(recovered.rightsConfirmed);
       }
       setFormRecoveryReady(true);
     }
@@ -215,12 +216,12 @@ function NewProductContent() {
       title, description, categoryId, productType, storeTypeId, selectedTagIds, price, marketMode,
       localPrice, localCurrency, merchFulfillmentMode, merchShippingScope, coverUrl, galleryUrls,
       itemFileUrl, bookPreviewUrl, bookTotalPages, bookSamplePages, bookLanguage, samplePreviews,
-      year, trackCount, tracks, featureState, externalLinks, rightsConfirmed,
+      year, releaseDate, trackCount, tracks, featureState, externalLinks, externalLinksEnabled, rightsConfirmed,
     } satisfies NewItemRecovery);
   }, [bookLanguage, bookPreviewUrl, bookSamplePages, bookTotalPages, categoryId, coverUrl, description,
-    externalLinks, featureState, formRecoveryReady, galleryUrls, itemFileUrl, localCurrency, localPrice,
+    externalLinks, externalLinksEnabled, featureState, formRecoveryReady, galleryUrls, itemFileUrl, localCurrency, localPrice,
     marketMode, merchFulfillmentMode, merchShippingScope, price, productType, recoveryKey, rightsConfirmed,
-    samplePreviews, selectedTagIds, storeTypeId, title, trackCount, tracks, year]);
+    samplePreviews, selectedTagIds, storeTypeId, title, trackCount, tracks, year, releaseDate]);
 
   const isMusicProduct = section.id === 'music';
   const isMerchProduct = section.id === 'merch';
@@ -280,7 +281,7 @@ function NewProductContent() {
       return;
     }
     if (isMusicProduct) {
-      const linkError = validateExternalLinkDrafts(externalLinks, externalLinkPlatforms);
+      const linkError = externalLinksEnabled ? validateExternalLinkDrafts(externalLinks, externalLinkPlatforms) : '';
       if (linkError) {
         setError(linkError);
         return;
@@ -323,7 +324,8 @@ function NewProductContent() {
       download_url: null,
       featured: false,
       status: 'draft' as const,
-      year: year ? Number(year) : null,
+      year: releaseDate ? Number(releaseDate.slice(0, 4)) : (year ? Number(year) : null),
+      release_date: releaseDate || null,
       sort_order: sortOrder,
     };
 
@@ -431,7 +433,7 @@ function NewProductContent() {
         return;
       }
       try {
-        await replaceOwnedItemExternalLinks(insertedProductId, activeExternalLinkDrafts(externalLinks));
+        await replaceOwnedItemExternalLinks(insertedProductId, externalLinksEnabled ? activeExternalLinkDrafts(externalLinks) : []);
       } catch (linkSaveError) {
         setSaving(false);
         setError(linkSaveError instanceof Error ? linkSaveError.message : 'Could not save release links.');
@@ -439,8 +441,14 @@ function NewProductContent() {
       }
     }
 
+    let reviewRequired = false;
     try {
-      await setStudioPublicationStatus(insertedProductId, 'published');
+      reviewRequired = await isPublishingReviewRequired();
+      if (reviewRequired) {
+        await submitStudioItemForReview(insertedProductId, crypto.randomUUID());
+      } else {
+        await setStudioPublicationStatus(insertedProductId, 'published');
+      }
     } catch (publicationError) {
       setSaving(false);
       setError(publicationError instanceof Error ? publicationError.message : 'This Item is not ready to publish.');
@@ -449,7 +457,7 @@ function NewProductContent() {
 
     setSaving(false);
     clearStudioFormRecovery(recoveryKey);
-    router.push(section.href);
+    router.push(`${section.href}?studioStatus=${reviewRequired ? 'submitted' : 'published'}`);
   }
 
   if (loading || !user) {
@@ -485,8 +493,8 @@ function NewProductContent() {
 
               <div className="dashboard-form-grid dashboard-form-grid-3">
                 <label className="dashboard-field">
-                  <div className="dashboard-field-label">{isMerchProduct ? 'Drop Year' : 'Release Year'}</div>
-                  <input className="os-input-field" value={year} onChange={event => setYear(event.target.value.replace(/[^0-9]/g, '').slice(0, 4))} placeholder="2026" />
+                  <div className="dashboard-field-label">{isMerchProduct ? 'Drop Year' : 'Release Date'}</div>
+                  {isMerchProduct ? <input className="os-input-field" value={year} onChange={event => setYear(event.target.value.replace(/[^0-9]/g, '').slice(0, 4))} placeholder="2026" /> : <input className="os-input-field" type="date" value={releaseDate} onChange={event => { setReleaseDate(event.target.value); setYear(event.target.value.slice(0, 4)); }} />}
                 </label>
                 {!merchUsesLocalOnlyPricing ? (
                   <label className="dashboard-field">
@@ -504,6 +512,7 @@ function NewProductContent() {
                     setProductType(taxonomyTypes.find(type => type.id === event.target.value)?.label ?? '');
                     setSelectedTagIds([]);
                   }}>
+                    <option value="">Select item type</option>
                     {taxonomyTypes.filter(type => type.category_id === categoryId).map(type => <option key={type.id} value={type.id}>{type.label}</option>)}
                   </select>
                 </label>
@@ -514,6 +523,17 @@ function NewProductContent() {
                 <TagMultiSelect options={taxonomyTags.filter(tag => tag.category_id === categoryId && (!tag.item_type_id || tag.item_type_id === storeTypeId))} value={selectedTagIds} onChange={setSelectedTagIds} />
                 <span className="dashboard-form-note">Optional. Select any approved genre, style, or format tags that apply.</span>
               </div>
+
+              {isMusicProduct ? (
+                <label className="dashboard-field">
+                  <div className="dashboard-field-label">Track Count</div>
+                  <select className="os-input-field" value={trackCount} onChange={event => setTrackCount(event.target.value)}>
+                    {Array.from({ length: 30 }, (_, index) => index + 1).map(count => (
+                      <option key={count} value={count}>{count}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
 
               {isMerchProduct ? (
                 <div className="settings-field">
@@ -695,17 +715,7 @@ function NewProductContent() {
               <section className="dashboard-form-section studio-tracks-section">
                 <SectionHeader
                   title="Tracks"
-                  description="Add up to 30 tracks for this release. Each track should have a title and an audio upload."
-                  action={(
-                    <label className="dashboard-field" style={{ minWidth: 140 }}>
-                    <div className="dashboard-field-label">Track Count</div>
-                    <select className="os-input-field" value={trackCount} onChange={event => setTrackCount(event.target.value)}>
-                      {Array.from({ length: 30 }, (_, index) => index + 1).map(count => (
-                        <option key={count} value={count}>{count}</option>
-                      ))}
-                    </select>
-                    </label>
-                  )}
+                  description="Add the audio and title for each track in this release."
                 />
 
                 <div className="dashboard-track-editor-list">
@@ -744,13 +754,10 @@ function NewProductContent() {
 
             {isMusicProduct ? (
               <section className="dashboard-form-section">
-                <SectionHeader title="Listen Elsewhere" description="Link this release to its official pages on other listening platforms." />
-                <ExternalLinksEditor
-                  links={externalLinks}
-                  platforms={externalLinkPlatforms}
-                  onChange={setExternalLinks}
-                  description="Paste the matching release link for each service you use. Leave a field blank when this release is not available there."
-                />
+                <SectionHeader title="External Links" description="Add links to this release elsewhere." action={(
+                  <button type="button" role="switch" aria-checked={externalLinksEnabled} className={externalLinksEnabled ? 'settings-toggle settings-toggle-on' : 'settings-toggle'} onClick={() => setExternalLinksEnabled(enabled => !enabled)} />
+                )} />
+                {externalLinksEnabled && <ExternalLinksEditor links={externalLinks} platforms={externalLinkPlatforms} onChange={setExternalLinks} />}
               </section>
             ) : null}
 
@@ -765,7 +772,7 @@ function NewProductContent() {
             {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
 
             <label className="dashboard-field">
-              <span className="settings-checkbox-row">
+              <span className="settings-checkbox-row studio-rights-checkbox">
                 <input type="checkbox" checked={rightsConfirmed} onChange={event => setRightsConfirmed(event.target.checked)} />
                 <span>I confirm that I own this work or have the necessary rights and permission to publish and distribute it through 44OS.</span>
               </span>
@@ -784,7 +791,7 @@ function NewProductContent() {
                   Cancel
                 </Link>
                 <button className="os-button os-button-primary" type="submit" disabled={saving}>
-                  {saving ? 'Publishing…' : `Publish ${section.itemLabel.replace(/\b\w/g, character => character.toUpperCase())}`}
+                  {saving ? 'Publishing…' : 'Publish'}
                 </button>
               </div>
             </div>

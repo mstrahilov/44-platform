@@ -12,6 +12,11 @@ export type StudioLibraryMetric = {
 
 export type StudioCatalogHealth = Database['public']['Functions']['list_managed_catalog_health']['Returns'][number];
 
+export type StudioSubmissionStatus = Pick<
+  Database['public']['Tables']['item_submissions']['Row'],
+  'id' | 'item_id' | 'status' | 'submission_kind' | 'submitted_at' | 'decision_reason'
+>;
+
 export async function listCreatorItems(profileId: string) {
   const result = await supabase
     .from('catalog_items')
@@ -45,6 +50,16 @@ export async function getCreatorCatalogOverview(profileId: string) {
     totalPlays: Number(playsResult.data ?? 0),
     catalogHealth: (healthResult.data as StudioCatalogHealth[] | null) ?? [],
   };
+}
+
+export async function listCreatorSubmissionStatuses(profileId: string) {
+  const result = await supabase
+    .from('item_submissions')
+    .select('id,item_id,status,submission_kind,submitted_at,decision_reason')
+    .eq('submitter_id', profileId)
+    .order('submitted_at', { ascending: false });
+  if (result.error) throw result.error;
+  return (result.data as StudioSubmissionStatus[] | null) ?? [];
 }
 
 export async function setItemPublicationStatus(itemId: string, status: 'published' | 'draft') {

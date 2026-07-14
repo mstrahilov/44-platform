@@ -28,6 +28,22 @@ export type ItemUpdate = {
   authors?: ContentProfile | ContentProfile[] | null;
 };
 
+export type CreatorUpdate = ItemUpdate & {
+  items?: { title: string; cover_url: string | null; hero_url: string | null } | null;
+};
+
+export async function listCreatorUpdates(authorIds: string | string[]) {
+  const ids = Array.isArray(authorIds) ? authorIds : [authorIds];
+  const result = await supabase
+    .from('product_updates')
+    .select('id,item_id,author_id,title,body,version_label,status,created_at,items:catalog_items(title,cover_url,hero_url)')
+    .in('author_id', Array.from(new Set(ids.filter(Boolean))))
+    .neq('status', 'archived')
+    .order('created_at', { ascending: false });
+  if (result.error) throw result.error;
+  return (result.data as CreatorUpdate[] | null) ?? [];
+}
+
 export type ItemQuestion = Database['public']['Views']['community_question_content']['Row'];
 
 export async function listItemReviews(itemId: string) {

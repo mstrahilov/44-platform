@@ -8,12 +8,13 @@ import { productLibraryHref } from '@/lib/experience';
 import { getProductLibraryContent, getProductLibraryPrimaryAction, getProductRuntimeKind } from '@/lib/libraryContent';
 import { creatorHref, type ProductAchievement, type Track } from '@/lib/platform';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
-import { LibraryAchievementsSection, LibraryBonusContentSection, LibraryFilesSection, LibraryProductDetailsSection, ProductDetailHeader, withSourceProduct, type LibraryBonusAsset, type LibraryFileAsset, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
+import { LibraryAchievementsSection, LibraryBonusContentSection, LibraryFilesSection, LibraryProductDetailsSection, LibraryVideoEmbedsSection, ProductDetailHeader, withSourceProduct, type LibraryBonusAsset, type LibraryFileAsset, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
 import { ProductUpdatesSection } from '@/components/ProductUpdatesSection';
 import { recordAchievementPlaybackSignal, trackProductAchievementTrigger } from '@/lib/achievementTracking';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { MUSIC_TRACK_COMPLETED_EVENT, MUSIC_TRACK_STARTED_EVENT, useMusicPlayer, type MusicQueueTrack, type MusicTrackPlaybackEventDetail } from '@/components/MusicPlayer';
 import { getLibraryItemBundle, type DetailedLibraryItemRow } from '@/lib/domain/itemDetails';
+import type { ReleaseVideoEmbed } from '@/lib/domain/releaseFeatures';
 import type { BookContent, SamplePackFile } from '@/lib/domain/nativeContent';
 import { SamplePackExperience } from '@/components/SamplePackExperience';
 
@@ -45,6 +46,7 @@ export function LibraryItemDetail({
   const [assets, setAssets] = useState<LibraryFileAsset[]>([]);
   const [bookContent, setBookContent] = useState<BookContent | null>(null);
   const [sampleFiles, setSampleFiles] = useState<SamplePackFile[]>([]);
+  const [videoEmbeds, setVideoEmbeds] = useState<ReleaseVideoEmbed[]>([]);
   const [unlockedAchievementIds, setUnlockedAchievementIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -93,6 +95,7 @@ export function LibraryItemDetail({
         setAssets(bundle.assets);
         setBookContent(bundle.nativeContent.book);
         setSampleFiles(bundle.nativeContent.samples);
+        setVideoEmbeds(bundle.videoEmbeds);
         setUnlockedAchievementIds(new Set(bundle.unlockedAchievements.map(item => item.achievement_id)));
       }
 
@@ -107,7 +110,7 @@ export function LibraryItemDetail({
   if (!user) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Sign in to view this library item.</div>;
 
   if (kind === 'product' && productRow?.products) {
-    return <ProductLibraryDetail userId={user.id} row={productRow} tracks={tracks} achievements={achievements} assets={assets} bonusAssets={bonusAssets} unlockedAchievementIds={unlockedAchievementIds} bookContent={bookContent} sampleFiles={sampleFiles} />;
+    return <ProductLibraryDetail userId={user.id} row={productRow} tracks={tracks} achievements={achievements} assets={assets} bonusAssets={bonusAssets} videoEmbeds={videoEmbeds} unlockedAchievementIds={unlockedAchievementIds} bookContent={bookContent} sampleFiles={sampleFiles} />;
   }
 
   return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Library item not found.</div>;
@@ -120,6 +123,7 @@ function ProductLibraryDetail({
   achievements,
   assets,
   bonusAssets,
+  videoEmbeds,
   unlockedAchievementIds,
   bookContent,
   sampleFiles,
@@ -130,6 +134,7 @@ function ProductLibraryDetail({
   achievements: ProductAchievement[];
   assets: LibraryFileAsset[];
   bonusAssets: LibraryBonusAsset[];
+  videoEmbeds: ReleaseVideoEmbed[];
   unlockedAchievementIds: Set<string>;
   bookContent: BookContent | null;
   sampleFiles: SamplePackFile[];
@@ -438,6 +443,7 @@ function ProductLibraryDetail({
       )}
 
       {isMusic && <LibraryAchievementsSection achievements={achievements} unlockedAchievementIds={localUnlockedAchievementIds} />}
+      {isMusic && <LibraryVideoEmbedsSection embeds={videoEmbeds} />}
       {isMusic && <LibraryBonusContentSection bonusAssets={bonusAssets} unlocked={hasOverachieverUnlocked} />}
       {!isMusic && !isBook && !isAsset && <LibraryFilesSection assets={assets} />}
       <LibraryProductDetailsSection product={product} tracks={tracks} inferredTrackDurations={inferredTrackDurations} />

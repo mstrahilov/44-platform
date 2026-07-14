@@ -311,6 +311,7 @@ export type Database = {
           upcoming_release_at: string | null
           upcoming_release_timezone: string | null
           updated_at: string
+          release_date: string | null
           year: number | null
         }
         Insert: {
@@ -349,6 +350,7 @@ export type Database = {
           upcoming_release_at?: string | null
           upcoming_release_timezone?: string | null
           updated_at?: string
+          release_date?: string | null
           year?: number | null
         }
         Update: {
@@ -387,6 +389,7 @@ export type Database = {
           upcoming_release_at?: string | null
           upcoming_release_timezone?: string | null
           updated_at?: string
+          release_date?: string | null
           year?: number | null
         }
         Relationships: [

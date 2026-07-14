@@ -14,6 +14,7 @@ export {
 export type {
   DraftAchievement,
   DraftBonusContent,
+  DraftVideoEmbed,
   ReleaseFeatureState,
   SavedProductAchievement,
   SavedProductAsset,

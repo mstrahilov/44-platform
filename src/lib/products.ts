@@ -56,6 +56,7 @@ export interface Item {
   download_url?: string | null;
   status?: string | null;
   year?: number | null;
+  release_date?: string | null;
   upcoming_release_at?: string | null;
   upcoming_release_timezone?: string | null;
   sort_order?: number | null;
@@ -108,8 +109,11 @@ function publicCatalogArtistName(product: Item) {
  * Remaining fields only provide deterministic ordering within the same artist/year.
  */
 export function comparePublicCatalogItems(a: Item, b: Item) {
-  const yearDifference = (b.year ?? Number.NEGATIVE_INFINITY) - (a.year ?? Number.NEGATIVE_INFINITY);
-  if (yearDifference !== 0) return yearDifference;
+  const releaseTime = (item: Item) => item.release_date
+    ? new Date(`${item.release_date}T00:00:00`).getTime()
+    : (item.year ? new Date(`${item.year}-01-01T00:00:00`).getTime() : Number.NEGATIVE_INFINITY);
+  const releaseDifference = releaseTime(b) - releaseTime(a);
+  if (releaseDifference !== 0) return releaseDifference;
 
   const artistDifference = publicCatalogArtistCollator.compare(
     publicCatalogArtistName(a),

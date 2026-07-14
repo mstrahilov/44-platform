@@ -41,6 +41,12 @@ const IconProfile = () => (
 );
 
 const IconStudio = () => <span className="os-icon os-icon-dashboard os-icon-sm" aria-hidden="true" />;
+const IconAdmin = () => (
+  <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M11 3.2 17.5 5.5v4.8c0 4.1-2.5 6.7-6.5 8.5-4-1.8-6.5-4.4-6.5-8.5V5.5L11 3.2Z" />
+    <path d="m8.2 10.8 1.8 1.8 3.8-4" />
+  </svg>
+);
 const IconSettings = () => <span className="os-icon os-icon-settings os-icon-sm" aria-hidden="true" />;
 
 const IconMessages = () => (
@@ -447,6 +453,11 @@ export function Topbar() {
                 <Link href="/studio" className="os-popover-item" role="menuitem">
                   <IconStudio /> Studio
                 </Link>
+                {profile?.role === 'admin' && (
+                  <Link href="/admin" className="os-popover-item" role="menuitem">
+                    <IconAdmin /> Admin
+                  </Link>
+                )}
                 <Link href="/settings" className="os-popover-item os-popover-item-mobile-only" role="menuitem">
                   <IconSettings /> Settings
                 </Link>

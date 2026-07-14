@@ -7,7 +7,6 @@ import { PageShell, HubHero, SectionHeader } from '@/components/Ui';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { UploadField } from '@/components/UploadField';
-import { StudioCreatorUpdates } from '@/components/StudioCreatorUpdates';
 import { TagMultiSelect } from '@/components/TagMultiSelect';
 import {
   StudioReleaseFeatures,
@@ -32,7 +31,9 @@ import {
   loadStudioItemEditor,
   replaceStudioAsset,
   replaceStudioItemTaxonomy,
+  isPublishingReviewRequired,
   setStudioPublicationStatus,
+  submitStudioItemForReview,
   syncStudioTracks,
   updateStudioItem,
 } from '@/lib/domain/studioPublishing';
@@ -70,8 +71,8 @@ type EditItemRecovery = {
   selectedTagIds: string[]; price: string; marketMode: MarketMode; localPrice: string; localCurrency: string;
   merchFulfillmentMode: 'ship' | 'deliver'; merchShippingScope: 'local' | 'global'; coverUrl: string;
   itemFileUrl: string; bookPreviewUrl: string; bookTotalPages: string; bookSamplePages: string;
-  bookLanguage: string; samplePreviews: DraftSamplePreview[]; year: string; trackCount: string;
-  tracks: DraftTrack[]; featureState: ReturnType<typeof createReleaseFeatureState>; externalLinks: ExternalLinkDraft[];
+  bookLanguage: string; samplePreviews: DraftSamplePreview[]; year: string; releaseDate?: string; trackCount: string;
+  tracks: DraftTrack[]; featureState: ReturnType<typeof createReleaseFeatureState>; externalLinks: ExternalLinkDraft[]; externalLinksEnabled?: boolean;
 };
 
 function createDraftTrack(): DraftTrack {
@@ -135,10 +136,12 @@ export default function EditProductPage() {
   const [bookLanguage, setBookLanguage] = useState('');
   const [samplePreviews, setSamplePreviews] = useState<DraftSamplePreview[]>([]);
   const [year, setYear] = useState('');
+  const [releaseDate, setReleaseDate] = useState('');
   const [trackCount, setTrackCount] = useState('1');
   const [tracks, setTracks] = useState<DraftTrack[]>([createDraftTrack()]);
   const [featureState, setFeatureState] = useState(() => createReleaseFeatureState('music'));
   const [externalLinks, setExternalLinks] = useState<ExternalLinkDraft[]>([]);
+  const [externalLinksEnabled, setExternalLinksEnabled] = useState(false);
   const [externalLinkPlatforms, setExternalLinkPlatforms] = useState<ExternalLinkPlatform[]>([]);
   const [hasSavedFeatures, setHasSavedFeatures] = useState(false);
   const [ownerId, setOwnerId] = useState('');
@@ -203,6 +206,7 @@ export default function EditProductPage() {
       setStoreTypeId(editor.taxonomyTypeId ?? taxonomy.types.find(type => type.category_id === product.item_category_id)?.id ?? '');
       setSelectedTagIds(editor.taxonomyTagIds);
       setExternalLinks(materializeExternalLinkDrafts(linkPlatforms, editor.externalLinks));
+      setExternalLinksEnabled(editor.externalLinks.some(link => link.url.trim().length > 0));
       setPrice(product.price_cents ? (product.price_cents / 100).toFixed(2) : '');
       setMarketMode(normalizeMarketMode(product.market_mode));
       setLocalPrice(product.local_price_cents ? (product.local_price_cents / 100).toFixed(2) : '');
@@ -225,6 +229,7 @@ export default function EditProductPage() {
         fileSizeBytes: sample.file_size_bytes,
       })));
       setYear(product.year ? String(product.year) : '');
+      setReleaseDate(product.release_date ?? (product.year ? `${product.year}-01-01` : ''));
       setFeatureState(hydrateReleaseFeatureState(
         productSection.id,
         (achievementRows as Array<{
@@ -246,6 +251,7 @@ export default function EditProductPage() {
           enabled: true,
         })) satisfies SavedProductAchievement[],
         featureAssets,
+        editor.videoEmbeds,
       ));
       setHasSavedFeatures(Boolean(achievementRows.length || featureAssets.length));
 
@@ -267,9 +273,9 @@ export default function EditProductPage() {
         setMerchShippingScope(recovered.merchShippingScope); setCoverUrl(recovered.coverUrl);
         setItemFileUrl(recovered.itemFileUrl); setBookPreviewUrl(recovered.bookPreviewUrl);
         setBookTotalPages(recovered.bookTotalPages); setBookSamplePages(recovered.bookSamplePages);
-        setBookLanguage(recovered.bookLanguage); setSamplePreviews(recovered.samplePreviews); setYear(recovered.year);
+        setBookLanguage(recovered.bookLanguage); setSamplePreviews(recovered.samplePreviews); setYear(recovered.year); setReleaseDate(recovered.releaseDate ?? (recovered.year ? `${recovered.year}-01-01` : ''));
         setTrackCount(recovered.trackCount); setTracks(recovered.tracks); setFeatureState(recovered.featureState);
-        setExternalLinks(recovered.externalLinks);
+        setExternalLinks(recovered.externalLinks); setExternalLinksEnabled(recovered.externalLinksEnabled ?? recovered.externalLinks.some(link => link.url.trim().length > 0));
       }
       setFormRecoveryReady(true);
       setFetching(false);
@@ -283,13 +289,13 @@ export default function EditProductPage() {
     writeStudioFormRecovery(recoveryKey, {
       title, description, categoryId, productType, storeTypeId, selectedTagIds, price, marketMode,
       localPrice, localCurrency, merchFulfillmentMode, merchShippingScope, coverUrl, itemFileUrl,
-      bookPreviewUrl, bookTotalPages, bookSamplePages, bookLanguage, samplePreviews, year,
-      trackCount, tracks, featureState, externalLinks,
+      bookPreviewUrl, bookTotalPages, bookSamplePages, bookLanguage, samplePreviews, year, releaseDate,
+      trackCount, tracks, featureState, externalLinks, externalLinksEnabled,
     } satisfies EditItemRecovery);
   }, [bookLanguage, bookPreviewUrl, bookSamplePages, bookTotalPages, categoryId, coverUrl, description,
-    externalLinks, featureState, formRecoveryReady, itemFileUrl, localCurrency, localPrice, marketMode,
+    externalLinks, externalLinksEnabled, featureState, formRecoveryReady, itemFileUrl, localCurrency, localPrice, marketMode,
     merchFulfillmentMode, merchShippingScope, price, productType, recoveryKey, samplePreviews,
-    selectedTagIds, storeTypeId, title, trackCount, tracks, year]);
+    selectedTagIds, storeTypeId, title, trackCount, tracks, year, releaseDate]);
 
   const selectedCategory = useMemo(
     () => categories.find(category => category.id === categoryId) ?? null,
@@ -364,7 +370,7 @@ export default function EditProductPage() {
       return;
     }
     if (isMusicProduct) {
-      const linkError = validateExternalLinkDrafts(externalLinks, externalLinkPlatforms);
+      const linkError = externalLinksEnabled ? validateExternalLinkDrafts(externalLinks, externalLinkPlatforms) : '';
       if (linkError) {
         setError(linkError);
         return;
@@ -403,7 +409,8 @@ export default function EditProductPage() {
       merch_shipping_scope: isMerchProduct ? (merchFulfillmentMode === 'deliver' ? 'local' : merchShippingScope) : null,
       read_url: null,
       download_url: null,
-      year: year ? Number(year) : null,
+      year: releaseDate ? Number(releaseDate.slice(0, 4)) : (year ? Number(year) : null),
+      release_date: releaseDate || null,
       creator: creatorName,
     };
 
@@ -494,7 +501,7 @@ export default function EditProductPage() {
     }
     if (isMusicProduct) {
       try {
-        await replaceOwnedItemExternalLinks(id, activeExternalLinkDrafts(externalLinks));
+        await replaceOwnedItemExternalLinks(id, externalLinksEnabled ? activeExternalLinkDrafts(externalLinks) : []);
       } catch (linkSaveError) {
         setSaving(false);
         setError(linkSaveError instanceof Error ? linkSaveError.message : 'Could not save release links.');
@@ -502,8 +509,14 @@ export default function EditProductPage() {
       }
     }
 
+    let reviewRequired = false;
     try {
-      await setStudioPublicationStatus(id, 'published');
+      reviewRequired = await isPublishingReviewRequired();
+      if (reviewRequired) {
+        await submitStudioItemForReview(id, crypto.randomUUID());
+      } else {
+        await setStudioPublicationStatus(id, 'published');
+      }
     } catch (publicationError) {
       setSaving(false);
       setError(publicationError instanceof Error ? publicationError.message : 'This Item is not ready to publish.');
@@ -511,9 +524,9 @@ export default function EditProductPage() {
     }
 
     setSaving(false);
-    setSuccess('Changes saved.');
+    setSuccess(reviewRequired ? 'Changes submitted for review.' : 'Changes saved and published.');
     clearStudioFormRecovery(recoveryKey);
-    router.push(section.href);
+    router.push(`${section.href}?studioStatus=${reviewRequired ? 'submitted' : 'published'}`);
   }
 
   if (loading || !user || fetching) return <PageShell><div style={{ minHeight: '40vh' }} /></PageShell>;
@@ -564,7 +577,7 @@ export default function EditProductPage() {
             ) : null}
 
               <div className="dashboard-form-grid dashboard-form-grid-3">
-              <label className="dashboard-field"><div className="dashboard-field-label">{isMerchProduct ? 'Drop Year' : 'Release Year'}</div><input className="os-input-field" value={year} onChange={e => setYear(e.target.value.replace(/\D/g, '').slice(0, 4))} /></label>
+              <label className="dashboard-field"><div className="dashboard-field-label">{isMerchProduct ? 'Drop Year' : 'Release Date'}</div>{isMerchProduct ? <input className="os-input-field" value={year} onChange={e => setYear(e.target.value.replace(/\D/g, '').slice(0, 4))} /> : <input className="os-input-field" type="date" value={releaseDate} onChange={e => { setReleaseDate(e.target.value); setYear(e.target.value.slice(0, 4)); }} />}</label>
               {!merchUsesLocalOnlyPricing ? (
                 <label className="dashboard-field">
                   <div className="dashboard-field-label">{isMerchProduct ? 'Global Price' : 'Price'}</div>
@@ -591,6 +604,17 @@ export default function EditProductPage() {
               <TagMultiSelect options={taxonomyTags.filter(tag => tag.category_id === categoryId && (!tag.item_type_id || tag.item_type_id === storeTypeId))} value={selectedTagIds} onChange={setSelectedTagIds} />
               <span className="dashboard-form-note">Optional. Select any approved genre, style, or format tags that apply.</span>
             </div>
+
+            {isMusicProduct ? (
+              <label className="dashboard-field">
+                <div className="dashboard-field-label">Track Count</div>
+                <select className="os-input-field" value={trackCount} onChange={event => setTrackCount(event.target.value)}>
+                  {Array.from({ length: 30 }, (_, index) => index + 1).map(count => (
+                    <option key={count} value={count}>{count}</option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
 
             {isMerchProduct ? (
               <div className="settings-field">
@@ -730,17 +754,7 @@ export default function EditProductPage() {
               <section className="dashboard-form-section studio-tracks-section">
                 <SectionHeader
                   title="Tracks"
-                  description="Add up to 30 tracks for this release. Each track should have a title and an audio upload."
-                  action={(
-                    <label className="dashboard-field" style={{ minWidth: 140 }}>
-                    <div className="dashboard-field-label">Track Count</div>
-                    <select className="os-input-field" value={trackCount} onChange={event => setTrackCount(event.target.value)}>
-                      {Array.from({ length: 30 }, (_, index) => index + 1).map(count => (
-                        <option key={count} value={count}>{count}</option>
-                      ))}
-                    </select>
-                    </label>
-                  )}
+                  description="Add the audio and title for each track in this release."
                 />
 
                 <div className="dashboard-track-editor-list">
@@ -779,13 +793,10 @@ export default function EditProductPage() {
 
             {isMusicProduct ? (
               <section className="dashboard-form-section">
-                <SectionHeader title="Listen Elsewhere" description="Link this release to its official pages on other listening platforms." />
-                <ExternalLinksEditor
-                  links={externalLinks}
-                  platforms={externalLinkPlatforms}
-                  onChange={setExternalLinks}
-                  description="Paste the matching release link for each service you use. Leave a field blank when this release is not available there."
-                />
+                <SectionHeader title="External Links" description="Add links to this release elsewhere." action={(
+                  <button type="button" role="switch" aria-checked={externalLinksEnabled} className={externalLinksEnabled ? 'settings-toggle settings-toggle-on' : 'settings-toggle'} onClick={() => setExternalLinksEnabled(enabled => !enabled)} />
+                )} />
+                {externalLinksEnabled && <ExternalLinksEditor links={externalLinks} platforms={externalLinkPlatforms} onChange={setExternalLinks} />}
               </section>
             ) : null}
 
@@ -810,7 +821,6 @@ export default function EditProductPage() {
               </div>
             </div>
           </form>
-          <StudioCreatorUpdates itemId={id} />
         </div>
         <ConfirmDialog
           open={showDeleteConfirm}

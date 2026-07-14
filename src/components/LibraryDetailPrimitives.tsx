@@ -9,6 +9,7 @@ import { pinDockItem } from '@/lib/dockPreferences';
 import { creatorHref, type ProductAchievement } from '@/lib/platform';
 import type { Product } from '@/lib/products';
 import { ExternalLinkActions } from '@/components/ExternalLinkActions';
+import type { ReleaseVideoEmbed } from '@/lib/domain/releaseFeatures';
 
 type ProductCreator = Product['creators'];
 type ProductDetailTrack = {
@@ -253,6 +254,32 @@ export function LibraryBonusContentSection({
   );
 }
 
+export function LibraryVideoEmbedsSection({ embeds }: { embeds: ReleaseVideoEmbed[] }) {
+  if (embeds.length === 0) return null;
+
+  return (
+    <div className="view-section library-video-embeds-section">
+      <SectionHeader title="Creator Videos" description="Videos shared by the creator for this release." />
+      <div className="library-video-embed-list">
+        {embeds.map(embed => (
+          <article className="library-video-embed" key={embed.id}>
+            <h3 className="library-video-embed-title">{embed.title}</h3>
+            <div className="library-video-embed-frame">
+              <iframe
+                src={`https://www.youtube.com/embed/${encodeURIComponent(embed.youtube_video_id)}`}
+                title={embed.title}
+                loading="lazy"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function LibraryFilesSection({ assets }: { assets: LibraryFileAsset[] }) {
   const files = assets.filter(asset => !['bonus_content', 'bonus_achievement'].includes(asset.asset_type ?? ''));
   if (files.length === 0) return null;
@@ -327,7 +354,9 @@ function buildLibraryProductDetails(product: Product, tracks: ProductDetailTrack
     return [
       { label: 'Creator', value: creator },
       ...taxonomy,
-      { label: 'Release Year', value: String(product.year ?? 'N/A') },
+      { label: 'Release Date', value: product.release_date
+        ? new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(`${product.release_date}T00:00:00`))
+        : String(product.year ?? 'N/A') },
       { label: 'Total Tracks', value: String(tracks.length) },
       { label: 'Total Length', value: formatDuration(totalLength) },
       { label: 'Upload Date', value: uploadDate },
