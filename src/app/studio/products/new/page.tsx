@@ -451,7 +451,7 @@ function NewProductContent() {
       }
     } catch (publicationError) {
       setSaving(false);
-      setError(publicationError instanceof Error ? publicationError.message : 'This Item is not ready to publish.');
+      setError(publicationError instanceof Error ? publicationError.message : (typeof publicationError === 'object' && publicationError && 'message' in publicationError ? String(publicationError.message) : 'This Item is not ready to publish.'));
       return;
     }
 
@@ -718,6 +718,7 @@ function NewProductContent() {
                   description="Add the audio and title for each track in this release."
                 />
 
+                <div className="dashboard-list-surface studio-track-panel">
                 <div className="dashboard-track-editor-list">
                     {tracks.slice(0, Number(trackCount || '0')).map((track, index) => (
                       <div key={`track-${index}`} className="dashboard-track-editor-row">
@@ -749,6 +750,7 @@ function NewProductContent() {
                       </div>
                     ))}
                 </div>
+                </div>
               </section>
             ) : null}
 
@@ -757,7 +759,7 @@ function NewProductContent() {
                 <SectionHeader title="External Links" description="Add links to this release elsewhere." action={(
                   <button type="button" role="switch" aria-checked={externalLinksEnabled} className={externalLinksEnabled ? 'settings-toggle settings-toggle-on' : 'settings-toggle'} onClick={() => setExternalLinksEnabled(enabled => !enabled)} />
                 )} />
-                {externalLinksEnabled && <ExternalLinksEditor links={externalLinks} platforms={externalLinkPlatforms} onChange={setExternalLinks} />}
+                {externalLinksEnabled && <div className="dashboard-list-surface studio-feature-panel"><ExternalLinksEditor links={externalLinks} platforms={externalLinkPlatforms} onChange={setExternalLinks} /></div>}
               </section>
             ) : null}
 

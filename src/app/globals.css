@@ -6998,6 +6998,17 @@ body.theme-dark .os-home-panel {
   border: 1px solid var(--os-color-hairline);
 }
 
+.studio-feature-panel,
+.studio-track-panel {
+  overflow: hidden;
+  padding: 0 20px;
+}
+
+.studio-feature-panel > .studio-video-embed-fields,
+.studio-feature-panel > .external-links-editor {
+  padding: 20px;
+}
+
 .dashboard-row-title-wrap {
   display: flex;
   align-items: center;
@@ -10861,6 +10872,11 @@ body.theme-dark .social-profile-tabs button[aria-selected="true"] {
   border-top: 1px solid var(--os-color-hairline);
 }
 
+.studio-video-embed-row:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
 .library-video-embed-list {
   display: grid;
   gap: 24px;
@@ -14224,6 +14240,10 @@ body:is(.theme-light, .theme-dark) .view-album-actions .os-button.os-button-acti
     grid-template-columns: minmax(0, 1fr);
     align-items: stretch;
     gap: 16px;
+  }
+
+  .studio-track-panel {
+    padding: 0 16px;
   }
 
   .dashboard-achievement-choice-row {

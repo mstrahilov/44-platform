@@ -259,14 +259,14 @@ export function LibraryVideoEmbedsSection({ embeds }: { embeds: ReleaseVideoEmbe
 
   return (
     <div className="view-section library-video-embeds-section">
-      <SectionHeader title="Creator Videos" description="Videos shared by the creator for this release." />
+      <SectionHeader title="Videos" />
       <div className="library-video-embed-list">
         {embeds.map(embed => (
           <article className="library-video-embed" key={embed.id}>
             <h3 className="library-video-embed-title">{embed.title}</h3>
             <div className="library-video-embed-frame">
               <iframe
-                src={`https://www.youtube.com/embed/${encodeURIComponent(embed.youtube_video_id)}`}
+                src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(embed.youtube_video_id)}?modestbranding=1&rel=0&playsinline=1&iv_load_policy=3`}
                 title={embed.title}
                 loading="lazy"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"

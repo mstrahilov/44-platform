@@ -175,9 +175,10 @@ function isSupportedYouTubeUrl(value: string) {
     const url = new URL(value);
     if (url.protocol !== 'https:') return false;
     const host = url.hostname.toLowerCase().replace(/^www\./, '');
-    if (host === 'youtu.be') return /^[A-Za-z0-9_-]{11}$/.test(url.pathname.slice(1));
+    if (host === 'youtu.be') return /^[A-Za-z0-9_-]{11}$/.test(url.pathname.slice(1).split('/')[0]);
     if (host !== 'youtube.com') return false;
     if (url.pathname === '/watch') return /^[A-Za-z0-9_-]{11}$/.test(url.searchParams.get('v') ?? '');
+    if (url.pathname.startsWith('/embed/')) return /^[A-Za-z0-9_-]{11}$/.test(url.pathname.split('/')[2] ?? '');
     if (url.pathname.startsWith('/shorts/')) return /^[A-Za-z0-9_-]{11}$/.test(url.pathname.split('/')[2] ?? '');
     return false;
   } catch {
@@ -423,7 +424,7 @@ export function StudioReleaseFeatures({
             action={<button type="button" role="switch" aria-checked={state.videoEmbedsEnabled} className={state.videoEmbedsEnabled ? 'settings-toggle settings-toggle-on' : 'settings-toggle'} onClick={toggleVideoEmbeds} />}
           />
           {state.videoEmbedsEnabled && (
-            <div className="studio-video-embed-fields">
+            <div className="dashboard-list-surface studio-feature-panel"><div className="studio-video-embed-fields">
               {normalizeVideoEmbeds(state.videoEmbeds).map((embed, index) => (
                 <div className="studio-video-embed-row" key={`video-embed-${index}`}>
                   <label className="dashboard-field">
@@ -431,14 +432,14 @@ export function StudioReleaseFeatures({
                     <input className="os-input-field" value={embed.title} maxLength={120} placeholder="Music video" onChange={event => updateVideoEmbed(index, { title: event.target.value })} />
                   </label>
                   <label className="dashboard-field">
-                    <span className="dashboard-field-label">YouTube URL</span>
-                    <input className="os-input-field" type="url" value={embed.url} placeholder="https://www.youtube.com/watch?v=..." onChange={event => updateVideoEmbed(index, { url: event.target.value })} />
+                    <span className="dashboard-field-label">YouTube Video URL</span>
+                    <input className="os-input-field" type="url" value={embed.url} placeholder="https://youtu.be/..." onChange={event => updateVideoEmbed(index, { url: event.target.value })} />
                   </label>
                   {state.videoEmbeds.length > 1 && <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => removeVideoEmbed(index)}>Remove</button>}
                 </div>
               ))}
               {state.videoEmbeds.length < 3 && <button type="button" className="os-button os-button-secondary os-button-compact" onClick={addVideoEmbed}>Add another video</button>}
-            </div>
+            </div></div>
           )}
         </section>
       )}

@@ -254,13 +254,13 @@ function StudioUpdatesSection({ updates }: { updates: CreatorUpdate[] }) {
   return <section className="dashboard-section" id="updates">
     <SectionHeader title="Updates" />
     <div className="dashboard-list-surface">
-      {updates.map(update => <div key={update.id} className="dashboard-list-row studio-update-row">
+      {updates.map(update => <Link key={update.id} href={`/studio/updates/${update.id}`} className="dashboard-list-row studio-update-row">
         <div className="dashboard-row-copy">
           <div className="dashboard-row-title">{update.title}</div>
           <div className="dashboard-row-subtitle">{new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(update.created_at))}</div>
           <div className={update.status === 'published' ? 'dashboard-status-pill dashboard-status-pill-success studio-publication-status' : 'dashboard-status-pill dashboard-status-pill-warning studio-publication-status'}>{update.status === 'published' ? 'Published' : 'Under Review'}</div>
         </div>
-      </div>)}
+      </Link>)}
     </div>
   </section>;
 }

@@ -90,6 +90,24 @@ export async function createItemUpdate(itemId: string, title: string, body: stri
   return result.data;
 }
 
+export async function updateItemUpdate(updateId: string, title: string, body: string) {
+  const result = await supabase
+    .from('content_entries')
+    .update({ title: title.trim(), body: body.trim() })
+    .eq('id', updateId)
+    .eq('content_type', 'creator_update');
+  if (result.error) throw result.error;
+}
+
+export async function deleteItemUpdate(updateId: string) {
+  const result = await supabase
+    .from('content_entries')
+    .delete()
+    .eq('id', updateId)
+    .eq('content_type', 'creator_update');
+  if (result.error) throw result.error;
+}
+
 export async function listItemQuestions(itemId: string) {
   const result = await supabase
     .from('community_question_content')

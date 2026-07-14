@@ -145,6 +145,7 @@ export default function EditProductPage() {
   const [externalLinkPlatforms, setExternalLinkPlatforms] = useState<ExternalLinkPlatform[]>([]);
   const [hasSavedFeatures, setHasSavedFeatures] = useState(false);
   const [ownerId, setOwnerId] = useState('');
+  const [itemStatus, setItemStatus] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -195,6 +196,7 @@ export default function EditProductPage() {
         return;
       }
       const { item: product, tracks: trackRows, assets: assetRows, achievements: achievementRows } = editor;
+      setItemStatus(product.status ?? null);
 
       const productSection = getStudioCatalogSectionForProduct(product);
       const featureAssets = assetRows.filter(asset => featureAssetTypes().includes(asset.asset_type ?? ''));
@@ -509,6 +511,17 @@ export default function EditProductPage() {
       }
     }
 
+    // An already-published release has already passed the creator rights
+    // attestation. Editing its features should not ask the creator to attest
+    // ownership again or re-run the first-publication gate.
+    if (itemStatus === 'published') {
+      setSaving(false);
+      setSuccess('Changes saved and published.');
+      clearStudioFormRecovery(recoveryKey);
+      router.push(`${section.href}?studioStatus=published`);
+      return;
+    }
+
     let reviewRequired = false;
     try {
       reviewRequired = await isPublishingReviewRequired();
@@ -519,7 +532,7 @@ export default function EditProductPage() {
       }
     } catch (publicationError) {
       setSaving(false);
-      setError(publicationError instanceof Error ? publicationError.message : 'This Item is not ready to publish.');
+      setError(publicationError instanceof Error ? publicationError.message : (typeof publicationError === 'object' && publicationError && 'message' in publicationError ? String(publicationError.message) : 'This Item is not ready to publish.'));
       return;
     }
 
@@ -757,6 +770,7 @@ export default function EditProductPage() {
                   description="Add the audio and title for each track in this release."
                 />
 
+                <div className="dashboard-list-surface studio-track-panel">
                 <div className="dashboard-track-editor-list">
                     {tracks.slice(0, Number(trackCount || '0')).map((track, index) => (
                       <div key={track.id ?? `track-${index}`} className="dashboard-track-editor-row">
@@ -788,6 +802,7 @@ export default function EditProductPage() {
                       </div>
                     ))}
                 </div>
+                </div>
               </section>
             ) : null}
 
@@ -796,7 +811,7 @@ export default function EditProductPage() {
                 <SectionHeader title="External Links" description="Add links to this release elsewhere." action={(
                   <button type="button" role="switch" aria-checked={externalLinksEnabled} className={externalLinksEnabled ? 'settings-toggle settings-toggle-on' : 'settings-toggle'} onClick={() => setExternalLinksEnabled(enabled => !enabled)} />
                 )} />
-                {externalLinksEnabled && <ExternalLinksEditor links={externalLinks} platforms={externalLinkPlatforms} onChange={setExternalLinks} />}
+                {externalLinksEnabled && <div className="dashboard-list-surface studio-feature-panel"><ExternalLinksEditor links={externalLinks} platforms={externalLinkPlatforms} onChange={setExternalLinks} /></div>}
               </section>
             ) : null}
 
