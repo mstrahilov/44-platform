@@ -77,9 +77,9 @@ export function SamplePackExperience({
   }
 
   return (
-    <div className={library ? 'view-section sample-pack-experience' : 'sample-pack-experience'}>
+    <div className={library ? 'view-section view-tracklist-section sample-pack-experience' : 'sample-pack-experience'}>
       <div className="sample-pack-heading">
-        <h2 className="view-section-title">{library ? 'Pack Contents' : 'Sample Preview'}</h2>
+        <h2 className="view-section-title">{library ? 'Pack Contents' : 'Preview Samples'}</h2>
       </div>
       {samples.length === 0 ? (
         <p className="app-empty-text">No sample previews have been added yet.{library && fullPackUrl ? ' The full pack is ready to download.' : ''}</p>

@@ -19,6 +19,21 @@ export type StudioAchievementSummary = Pick<
   'code' | 'title' | 'description' | 'trigger_type' | 'reward_config' | 'is_secret' | 'icon'
 >;
 
+export type ItemSubmissionStatus = 'pending' | 'withdrawn' | 'approved' | 'rejected';
+export type ItemSubmissionChildType =
+  | 'track'
+  | 'asset'
+  | 'offer'
+  | 'offer_entitlement'
+  | 'type_assignment'
+  | 'tag_assignment'
+  | 'capability'
+  | 'member'
+  | 'external_link'
+  | 'achievement';
+
+export type StudioItemSubmission = Database['public']['Tables']['item_submissions']['Row'];
+
 export async function listItemCategories() {
   const result = await supabase.from('item_categories').select('*').order('sort_order');
   if (result.error) throw result.error;
@@ -191,4 +206,50 @@ export async function archiveStudioItem(itemId: string, ownerId: string) {
 
   const archiveResult = await supabase.rpc('archive_owned_item', { target_item_id: itemId });
   if (archiveResult.error) throw archiveResult.error;
+}
+
+/**
+ * Dormant backend boundary for the future reviewed Studio workflow. This is
+ * intentionally not called by current trusted-testing UI.
+ */
+export async function listStudioItemSubmissions(): Promise<StudioItemSubmission[]> {
+  const result = await supabase
+    .from('item_submissions')
+    .select('*')
+    .order('submitted_at', { ascending: false });
+  if (result.error) throw result.error;
+  return result.data ?? [];
+}
+
+export async function submitStudioItemForReview(itemId: string, idempotencyKey: string, policyVersion = '2026-07-13-review-v1') {
+  const result = await supabase.rpc('submit_item_for_review', {
+    target_item_id: itemId,
+    target_idempotency_key: idempotencyKey,
+    target_policy_version: policyVersion,
+  });
+  if (result.error) throw result.error;
+  return result.data;
+}
+
+export async function withdrawStudioItemSubmission(submissionId: string, reason?: string) {
+  const result = await supabase.rpc('withdraw_item_submission', {
+    target_submission_id: submissionId,
+    reason,
+  });
+  if (result.error) throw result.error;
+}
+
+export async function proposeStudioChildRemoval(
+  submissionId: string,
+  childType: ItemSubmissionChildType,
+  sourceId: string,
+  reason: string,
+) {
+  const result = await supabase.rpc('add_item_submission_child_tombstone', {
+    target_submission_id: submissionId,
+    target_child_type: childType,
+    target_source_id: sourceId,
+    reason,
+  });
+  if (result.error) throw result.error;
 }

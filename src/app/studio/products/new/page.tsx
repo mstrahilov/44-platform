@@ -26,8 +26,6 @@ import { activeExternalLinkDrafts, listExternalLinkPlatforms, materializeExterna
 import { saveStudioBookContent, replaceStudioSampleFiles } from '@/lib/domain/nativeContent';
 import { StudioBookFields, StudioSamplePreviewFields, type DraftSamplePreview } from '@/components/StudioNativeContentFields';
 import { clearStudioFormRecovery, readStudioFormRecovery, writeStudioFormRecovery } from '@/lib/studioFormRecovery';
-import { setItemUpcomingRelease } from '@/lib/domain/events';
-import { browserTimeZone, COMMON_TIMEZONES, instantFromLocalInput } from '@/lib/eventTime';
 
 function buildSlug(title: string) {
   const base = normalizeTaxonomyValue(title) || 'item';
@@ -63,7 +61,6 @@ type NewItemRecovery = {
   bookSamplePages: string; bookLanguage: string; samplePreviews: DraftSamplePreview[]; year: string;
   trackCount: string; tracks: DraftTrack[]; featureState: ReturnType<typeof createReleaseFeatureState>;
   externalLinks: ExternalLinkDraft[]; rightsConfirmed: boolean;
-  upcomingReleaseLocal: string; upcomingReleaseTimezone: string;
 };
 
 function createDraftTrack(): DraftTrack {
@@ -147,8 +144,6 @@ function NewProductContent() {
   const [bookLanguage, setBookLanguage] = useState('');
   const [samplePreviews, setSamplePreviews] = useState<DraftSamplePreview[]>([]);
   const [year, setYear] = useState('');
-  const [upcomingReleaseLocal, setUpcomingReleaseLocal] = useState('');
-  const [upcomingReleaseTimezone, setUpcomingReleaseTimezone] = useState(browserTimeZone);
   const [trackCount, setTrackCount] = useState('1');
   const [tracks, setTracks] = useState<DraftTrack[]>([createDraftTrack()]);
   const [featureState, setFeatureState] = useState(() => createReleaseFeatureState(section.id));
@@ -207,7 +202,6 @@ function NewProductContent() {
         setBookLanguage(recovered.bookLanguage); setSamplePreviews(recovered.samplePreviews); setYear(recovered.year);
         setTrackCount(recovered.trackCount); setTracks(recovered.tracks); setFeatureState(recovered.featureState);
         setExternalLinks(recovered.externalLinks); setRightsConfirmed(recovered.rightsConfirmed);
-        setUpcomingReleaseLocal(recovered.upcomingReleaseLocal ?? ''); setUpcomingReleaseTimezone(recovered.upcomingReleaseTimezone ?? browserTimeZone());
       }
       setFormRecoveryReady(true);
     }
@@ -221,12 +215,12 @@ function NewProductContent() {
       title, description, categoryId, productType, storeTypeId, selectedTagIds, price, marketMode,
       localPrice, localCurrency, merchFulfillmentMode, merchShippingScope, coverUrl, galleryUrls,
       itemFileUrl, bookPreviewUrl, bookTotalPages, bookSamplePages, bookLanguage, samplePreviews,
-      year, trackCount, tracks, featureState, externalLinks, rightsConfirmed, upcomingReleaseLocal, upcomingReleaseTimezone,
+      year, trackCount, tracks, featureState, externalLinks, rightsConfirmed,
     } satisfies NewItemRecovery);
   }, [bookLanguage, bookPreviewUrl, bookSamplePages, bookTotalPages, categoryId, coverUrl, description,
     externalLinks, featureState, formRecoveryReady, galleryUrls, itemFileUrl, localCurrency, localPrice,
     marketMode, merchFulfillmentMode, merchShippingScope, price, productType, recoveryKey, rightsConfirmed,
-    samplePreviews, selectedTagIds, storeTypeId, title, trackCount, tracks, year, upcomingReleaseLocal, upcomingReleaseTimezone]);
+    samplePreviews, selectedTagIds, storeTypeId, title, trackCount, tracks, year]);
 
   const isMusicProduct = section.id === 'music';
   const isMerchProduct = section.id === 'merch';
@@ -446,7 +440,6 @@ function NewProductContent() {
     }
 
     try {
-      if (upcomingReleaseLocal) await setItemUpcomingRelease(insertedProductId, instantFromLocalInput(upcomingReleaseLocal, upcomingReleaseTimezone), upcomingReleaseTimezone);
       await setStudioPublicationStatus(insertedProductId, 'published');
     } catch (publicationError) {
       setSaving(false);
@@ -515,12 +508,6 @@ function NewProductContent() {
                   </select>
                 </label>
               </div>
-
-              <div className="dashboard-form-grid dashboard-form-grid-3">
-                <label className="dashboard-field"><div className="dashboard-field-label">Upcoming Release Date (Optional)</div><input type="datetime-local" className="os-input-field" value={upcomingReleaseLocal} onChange={event => setUpcomingReleaseLocal(event.target.value)} /></label>
-                <label className="dashboard-field"><div className="dashboard-field-label">Release Timezone</div><select className="os-input-field" value={upcomingReleaseTimezone} onChange={event => setUpcomingReleaseTimezone(event.target.value)}>{[...new Set([upcomingReleaseTimezone,...COMMON_TIMEZONES])].map(zone=><option key={zone}>{zone}</option>)}</select></label>
-              </div>
-              <span className="dashboard-form-note">Informational only. This date never publishes an Item or bypasses publication validation.</span>
 
               <div className="dashboard-field">
                 <div className="dashboard-field-label">Item Tags</div>

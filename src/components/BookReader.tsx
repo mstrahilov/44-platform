@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist';
 import { getCatalogItem } from '@/lib/domain/itemDetails';
 import { getReadingSession, listReadingBookmarks, saveReadingProgress, toggleReadingBookmark, type ReadingBookmark } from '@/lib/domain/nativeContent';
@@ -11,6 +12,7 @@ type ReaderAppearance = { theme: 'system'; fit: 'width'; zoom: number };
 const DEFAULT_APPEARANCE: ReaderAppearance = { theme: 'system', fit: 'width', zoom: 1 };
 
 export function BookReader({ itemId, mode, returnTo }: { itemId: string; mode: 'sample' | 'full'; returnTo?: string }) {
+  const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const userId = user?.id ?? '';
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -133,6 +135,15 @@ export function BookReader({ itemId, mode, returnTo }: { itemId: string; mode: '
     if (event.key === '-') { event.preventDefault(); setAppearance(current => ({ ...current, zoom: Math.max(.7, current.zoom - .1) })); }
   }
 
+  function closeReader() {
+    const fallback = returnTo || (mode === 'sample' ? `/store/item/${itemId}` : '/library');
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+    router.replace(fallback);
+  }
+
   async function toggleBookmark(targetPage: number) {
     try {
       setBookmarkStatus('');
@@ -150,7 +161,7 @@ export function BookReader({ itemId, mode, returnTo }: { itemId: string; mode: '
   return (
     <section className="native-reader" aria-label={`${title} reader`} onKeyDown={handleKeyDown} tabIndex={-1}>
       <header className="native-reader-toolbar">
-        <Link className="native-reader-close" href={returnTo || (mode === 'sample' ? `/store/item/${itemId}` : '/library')} aria-label="Close reader">×</Link>
+        <button className="native-reader-close" type="button" onClick={closeReader} aria-label="Close reader">×</button>
         <div className="native-reader-title"><strong>{title}</strong></div>
         <div className="native-reader-controls" role="group" aria-label="Reader controls">
           <div className="native-reader-page-count" aria-live="polite">{page} of {pageCount}</div>

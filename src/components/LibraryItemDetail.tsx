@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useContextMenu } from '@/components/ContextMenu';
 import { useAuth } from '@/lib/useAuth';
 import { productLibraryHref } from '@/lib/experience';
@@ -154,7 +153,6 @@ function ProductLibraryDetail({
   const [toast, setToast] = useState<AchievementToastData | null>(null);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [inferredTrackDurations, setInferredTrackDurations] = useState<Record<string, number>>({});
-  const [shuffleEnabled, setShuffleEnabled] = useState(false);
   const [noSkipsEligible, setNoSkipsEligible] = useState(false);
   const [fullReleaseHandled, setFullReleaseHandled] = useState(false);
   const playbackSessionIdRef = useRef('');
@@ -252,23 +250,6 @@ function ProductLibraryDetail({
     setCompletedTrackIds(new Set());
     setNoSkipsEligible(true);
     setFullReleaseHandled(false);
-    setShuffleEnabled(false);
-  }
-
-  function shuffleRelease() {
-    if (!musicQueue.length) return;
-    if (shuffleEnabled) {
-      playRelease();
-      return;
-    }
-    beginPlaybackSession();
-    const shuffled = shuffleMusicQueue(musicQueue);
-    playQueue(shuffled, 0);
-    setSelectedTrackId(shuffled[0]?.id ?? null);
-    setCompletedTrackIds(new Set());
-    setNoSkipsEligible(false);
-    setFullReleaseHandled(false);
-    setShuffleEnabled(true);
   }
 
   useEffect(() => {
@@ -360,14 +341,12 @@ function ProductLibraryDetail({
   const interactiveHref = `/launch/${product.id}?returnTo=${encodeURIComponent(`/library/item/${row.id}`)}`;
   const primaryActions: ProductDetailAction[] = [
     {
-      label: isMusic ? 'Play' : isBook ? 'Read' : isAsset ? 'Download Pack' : action.label,
+      label: isMusic ? 'Play' : isBook ? 'Read' : isAsset ? 'Download' : action.label,
       href: isBook && bookContent ? readerHref : runtimeKind === 'interactive' ? interactiveHref : undefined,
       opensInNewWindow: runtimeKind === 'interactive',
       onClick: isMusic ? playRelease : (isBook && bookContent) || runtimeKind === 'interactive' ? undefined : () => runProductAction(action),
     },
-    isMusic
-      ? { label: 'Shuffle', onClick: shuffleRelease, active: shuffleEnabled }
-      : { label: 'View Creator', href: creatorLink, secondary: true },
+    ...(!isMusic && !isBook && !isAsset ? [{ label: 'View Creator', href: creatorLink, secondary: true } satisfies ProductDetailAction] : []),
   ];
 
   return (
@@ -435,11 +414,10 @@ function ProductLibraryDetail({
 
       {isBook && (
         <div className="view-section">
-          <h2 className="view-section-title">Continue Reading</h2>
+          <h2 className="view-section-title">Description</h2>
           <p className="os-type-body view-description">
-            {bookContent ? 'Your page and zoom level sync automatically across signed-in devices.' : content.emptyCopy}
+            {product.long_description || product.short_description || content.emptyCopy}
           </p>
-          {bookContent ? <Link className="os-button os-button-secondary" href={readerHref}>Open Reader</Link> : null}
         </div>
       )}
 
@@ -474,15 +452,6 @@ function ProductLibraryDetail({
 function runProductAction(action: ReturnType<typeof getProductLibraryPrimaryAction>) {
   if (action.href) { window.open(action.href, '_blank', 'noopener,noreferrer'); return; }
   alert(action.missingMessage);
-}
-
-function shuffleMusicQueue(queue: MusicQueueTrack[]) {
-  const shuffled = [...queue];
-  for (let index = shuffled.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1));
-    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
-  }
-  return shuffled;
 }
 
 function formatDuration(seconds: number | null) {

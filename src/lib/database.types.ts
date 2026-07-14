@@ -2853,6 +2853,48 @@ export type Database = {
         }
         Relationships: []
       }
+      item_child_archives: {
+        Row: {
+          archived_at: string
+          archived_by: string
+          child_id: string
+          child_type: string
+          item_id: string
+          reason: string
+        }
+        Insert: {
+          archived_at?: string
+          archived_by: string
+          child_id: string
+          child_type: string
+          item_id: string
+          reason: string
+        }
+        Update: {
+          archived_at?: string
+          archived_by?: string
+          child_id?: string
+          child_type?: string
+          item_id?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_child_archives_archived_by_fkey"
+            columns: ["archived_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_child_archives_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       item_external_links: {
         Row: {
           created_at: string
@@ -3072,6 +3114,733 @@ export type Database = {
           {
             foreignKeyName: "item_share_visits_visitor_id_fkey"
             columns: ["visitor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_submission_achievements: {
+        Row: {
+          code: string
+          description: string | null
+          icon: string | null
+          is_secret: boolean
+          points: number
+          reward_config: Json
+          reward_item_id: string | null
+          sort_order: number
+          source_id: string
+          submission_id: string
+          template_id: string | null
+          title: string
+          trigger_config: Json
+          trigger_type: string
+        }
+        Insert: {
+          code: string
+          description?: string | null
+          icon?: string | null
+          is_secret: boolean
+          points: number
+          reward_config?: Json
+          reward_item_id?: string | null
+          sort_order: number
+          source_id?: string
+          submission_id: string
+          template_id?: string | null
+          title: string
+          trigger_config?: Json
+          trigger_type: string
+        }
+        Update: {
+          code?: string
+          description?: string | null
+          icon?: string | null
+          is_secret?: boolean
+          points?: number
+          reward_config?: Json
+          reward_item_id?: string | null
+          sort_order?: number
+          source_id?: string
+          submission_id?: string
+          template_id?: string | null
+          title?: string
+          trigger_config?: Json
+          trigger_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_submission_achievements_reward_item_id_fkey"
+            columns: ["reward_item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_submission_achievements_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "item_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_submission_achievements_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "achievement_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_submission_assets: {
+        Row: {
+          asset_type: string
+          file_url: string | null
+          is_downloadable: boolean
+          sort_order: number
+          source_id: string
+          storage_path: string | null
+          submission_id: string
+          title: string
+        }
+        Insert: {
+          asset_type: string
+          file_url?: string | null
+          is_downloadable: boolean
+          sort_order: number
+          source_id?: string
+          storage_path?: string | null
+          submission_id: string
+          title: string
+        }
+        Update: {
+          asset_type?: string
+          file_url?: string | null
+          is_downloadable?: boolean
+          sort_order?: number
+          source_id?: string
+          storage_path?: string | null
+          submission_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_submission_assets_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "item_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_submission_capabilities: {
+        Row: {
+          capability_key: string
+          config_version: number
+          is_enabled: boolean
+          submission_id: string
+        }
+        Insert: {
+          capability_key: string
+          config_version: number
+          is_enabled: boolean
+          submission_id: string
+        }
+        Update: {
+          capability_key?: string
+          config_version?: number
+          is_enabled?: boolean
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_submission_capabilities_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "item_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_submission_child_tombstones: {
+        Row: {
+          child_type: string
+          created_at: string
+          reason: string
+          source_id: string
+          submission_id: string
+        }
+        Insert: {
+          child_type: string
+          created_at?: string
+          reason: string
+          source_id: string
+          submission_id: string
+        }
+        Update: {
+          child_type?: string
+          created_at?: string
+          reason?: string
+          source_id?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_submission_child_tombstones_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "item_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_submission_decisions: {
+        Row: {
+          decided_at: string
+          decision: string
+          id: string
+          policy_version: string
+          reason: string
+          reviewer_id: string
+          submission_id: string
+        }
+        Insert: {
+          decided_at?: string
+          decision: string
+          id?: string
+          policy_version: string
+          reason: string
+          reviewer_id: string
+          submission_id: string
+        }
+        Update: {
+          decided_at?: string
+          decision?: string
+          id?: string
+          policy_version?: string
+          reason?: string
+          reviewer_id?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_submission_decisions_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_submission_decisions_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "item_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_submission_external_links: {
+        Row: {
+          label: string
+          platform: string
+          sort_order: number
+          source_id: string
+          submission_id: string
+          url: string
+        }
+        Insert: {
+          label: string
+          platform: string
+          sort_order: number
+          source_id?: string
+          submission_id: string
+          url: string
+        }
+        Update: {
+          label?: string
+          platform?: string
+          sort_order?: number
+          source_id?: string
+          submission_id?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_submission_external_links_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "item_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_submission_items: {
+        Row: {
+          author_id: string
+          available_locally_only: boolean
+          cover_url: string | null
+          creator: string
+          download_purchase_enabled: boolean
+          download_url: string | null
+          experience_type: string
+          feature_description: string | null
+          featured: boolean
+          fulfillment_type: string
+          hero_url: string | null
+          is_free: boolean
+          item_category_id: string | null
+          item_id: string
+          item_type: string
+          launch_url: string | null
+          local_currency: string | null
+          local_price_cents: number | null
+          long_description: string | null
+          market_mode: string
+          merch_fulfillment_mode: string | null
+          merch_shipping_scope: string | null
+          price_cents: number
+          read_url: string | null
+          short_description: string | null
+          slug: string
+          sort_order: number | null
+          streaming_enabled: boolean
+          submission_id: string
+          tags: string[]
+          title: string
+          year: number | null
+        }
+        Insert: {
+          author_id: string
+          available_locally_only: boolean
+          cover_url?: string | null
+          creator: string
+          download_purchase_enabled: boolean
+          download_url?: string | null
+          experience_type: string
+          feature_description?: string | null
+          featured: boolean
+          fulfillment_type: string
+          hero_url?: string | null
+          is_free: boolean
+          item_category_id?: string | null
+          item_id: string
+          item_type: string
+          launch_url?: string | null
+          local_currency?: string | null
+          local_price_cents?: number | null
+          long_description?: string | null
+          market_mode: string
+          merch_fulfillment_mode?: string | null
+          merch_shipping_scope?: string | null
+          price_cents: number
+          read_url?: string | null
+          short_description?: string | null
+          slug: string
+          sort_order?: number | null
+          streaming_enabled: boolean
+          submission_id: string
+          tags?: string[]
+          title: string
+          year?: number | null
+        }
+        Update: {
+          author_id?: string
+          available_locally_only?: boolean
+          cover_url?: string | null
+          creator?: string
+          download_purchase_enabled?: boolean
+          download_url?: string | null
+          experience_type?: string
+          feature_description?: string | null
+          featured?: boolean
+          fulfillment_type?: string
+          hero_url?: string | null
+          is_free?: boolean
+          item_category_id?: string | null
+          item_id?: string
+          item_type?: string
+          launch_url?: string | null
+          local_currency?: string | null
+          local_price_cents?: number | null
+          long_description?: string | null
+          market_mode?: string
+          merch_fulfillment_mode?: string | null
+          merch_shipping_scope?: string | null
+          price_cents?: number
+          read_url?: string | null
+          short_description?: string | null
+          slug?: string
+          sort_order?: number | null
+          streaming_enabled?: boolean
+          submission_id?: string
+          tags?: string[]
+          title?: string
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_submission_items_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_submission_items_item_category_id_fkey"
+            columns: ["item_category_id"]
+            isOneToOne: false
+            referencedRelation: "item_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_submission_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_submission_items_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: true
+            referencedRelation: "item_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_submission_members: {
+        Row: {
+          member_role: string
+          profile_id: string
+          submission_id: string
+        }
+        Insert: {
+          member_role: string
+          profile_id: string
+          submission_id: string
+        }
+        Update: {
+          member_role?: string
+          profile_id?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_submission_members_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_submission_members_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "item_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_submission_notification_events: {
+        Row: {
+          created_at: string
+          delivered_at: string | null
+          event_type: string
+          id: string
+          payload: Json
+          recipient_id: string | null
+          submission_id: string
+        }
+        Insert: {
+          created_at?: string
+          delivered_at?: string | null
+          event_type: string
+          id?: string
+          payload?: Json
+          recipient_id?: string | null
+          submission_id: string
+        }
+        Update: {
+          created_at?: string
+          delivered_at?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          recipient_id?: string | null
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_submission_notification_events_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_submission_notification_events_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "item_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_submission_offer_entitlements: {
+        Row: {
+          entitlement_type: string
+          offer_source_id: string
+          submission_id: string
+        }
+        Insert: {
+          entitlement_type: string
+          offer_source_id: string
+          submission_id: string
+        }
+        Update: {
+          entitlement_type?: string
+          offer_source_id?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_submission_offer_entitle_submission_id_offer_source_i_fkey"
+            columns: ["submission_id", "offer_source_id"]
+            isOneToOne: false
+            referencedRelation: "item_submission_offers"
+            referencedColumns: ["submission_id", "source_id"]
+          },
+          {
+            foreignKeyName: "item_submission_offer_entitlements_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "item_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_submission_offers: {
+        Row: {
+          code: string
+          currency: string
+          description: string | null
+          ends_at: string | null
+          fulfillment_type: string
+          offer_type: string
+          price_cents: number
+          quantity_limit: number | null
+          source_id: string
+          starts_at: string | null
+          status: string
+          submission_id: string
+          title: string
+        }
+        Insert: {
+          code: string
+          currency: string
+          description?: string | null
+          ends_at?: string | null
+          fulfillment_type: string
+          offer_type: string
+          price_cents: number
+          quantity_limit?: number | null
+          source_id?: string
+          starts_at?: string | null
+          status: string
+          submission_id: string
+          title: string
+        }
+        Update: {
+          code?: string
+          currency?: string
+          description?: string | null
+          ends_at?: string | null
+          fulfillment_type?: string
+          offer_type?: string
+          price_cents?: number
+          quantity_limit?: number | null
+          source_id?: string
+          starts_at?: string | null
+          status?: string
+          submission_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_submission_offers_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "item_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_submission_tag_assignments: {
+        Row: {
+          item_tag_id: string
+          submission_id: string
+        }
+        Insert: {
+          item_tag_id: string
+          submission_id: string
+        }
+        Update: {
+          item_tag_id?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_submission_tag_assignments_item_tag_id_fkey"
+            columns: ["item_tag_id"]
+            isOneToOne: false
+            referencedRelation: "item_tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_submission_tag_assignments_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "item_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_submission_tracks: {
+        Row: {
+          audio_url: string | null
+          download_url: string | null
+          duration_seconds: number | null
+          number: number
+          source_id: string
+          submission_id: string
+          title: string
+        }
+        Insert: {
+          audio_url?: string | null
+          download_url?: string | null
+          duration_seconds?: number | null
+          number: number
+          source_id?: string
+          submission_id: string
+          title: string
+        }
+        Update: {
+          audio_url?: string | null
+          download_url?: string | null
+          duration_seconds?: number | null
+          number?: number
+          source_id?: string
+          submission_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_submission_tracks_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "item_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_submission_type_assignments: {
+        Row: {
+          item_type_id: string
+          submission_id: string
+        }
+        Insert: {
+          item_type_id: string
+          submission_id: string
+        }
+        Update: {
+          item_type_id?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_submission_type_assignments_item_type_id_fkey"
+            columns: ["item_type_id"]
+            isOneToOne: false
+            referencedRelation: "item_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_submission_type_assignments_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: true
+            referencedRelation: "item_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_submissions: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_reason: string | null
+          id: string
+          idempotency_key: string
+          item_id: string
+          policy_version: string
+          status: string
+          submission_kind: string
+          submitted_at: string
+          submitter_id: string
+          withdrawal_reason: string | null
+          withdrawn_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_reason?: string | null
+          id?: string
+          idempotency_key: string
+          item_id: string
+          policy_version: string
+          status?: string
+          submission_kind: string
+          submitted_at?: string
+          submitter_id: string
+          withdrawal_reason?: string | null
+          withdrawn_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_reason?: string | null
+          id?: string
+          idempotency_key?: string
+          item_id?: string
+          policy_version?: string
+          status?: string
+          submission_kind?: string
+          submitted_at?: string
+          submitter_id?: string
+          withdrawal_reason?: string | null
+          withdrawn_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_submissions_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_submissions_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_submissions_submitter_id_fkey"
+            columns: ["submitter_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -5153,6 +5922,15 @@ export type Database = {
         Args: { lookup_email: string }
         Returns: boolean
       }
+      add_item_submission_child_tombstone: {
+        Args: {
+          reason: string
+          target_child_type: string
+          target_source_id: string
+          target_submission_id: string
+        }
+        Returns: undefined
+      }
       archive_owned_item: { Args: { target_item_id: string }; Returns: string }
       attest_owned_item_rights: {
         Args: {
@@ -5251,6 +6029,14 @@ export type Database = {
       create_or_open_direct_conversation: {
         Args: { other_profile_id: string }
         Returns: string
+      }
+      decide_item_submission: {
+        Args: {
+          reason: string
+          target_decision: string
+          target_submission_id: string
+        }
+        Returns: undefined
       }
       end_interactive_launch: {
         Args: { target_session_id: string; target_session_token: string }
@@ -5363,6 +6149,7 @@ export type Database = {
         Returns: undefined
       }
       notification_actor_name: { Args: { actor: string }; Returns: string }
+      publishing_review_is_required: { Args: never; Returns: boolean }
       record_achievement_playback_signal: {
         Args: {
           signal_metadata?: Json
@@ -5397,6 +6184,15 @@ export type Database = {
       record_item_share_visit: {
         Args: { target_item_id: string; target_referrer_id: string }
         Returns: boolean
+      }
+      record_item_submission_event: {
+        Args: {
+          target_event_type: string
+          target_payload?: Json
+          target_recipient_id: string
+          target_submission_id: string
+        }
+        Returns: undefined
       }
       record_trusted_interactive_event: {
         Args: {
@@ -5547,6 +6343,18 @@ export type Database = {
         Args: { target_profile_id: string; target_role: string }
         Returns: undefined
       }
+      snapshot_item_for_submission: {
+        Args: { target_item_id: string; target_submission_id: string }
+        Returns: undefined
+      }
+      submit_item_for_review: {
+        Args: {
+          target_idempotency_key: string
+          target_item_id: string
+          target_policy_version?: string
+        }
+        Returns: string
+      }
       sync_managed_item_achievements: {
         Args: { achievement_rows: Json; target_item_id: string }
         Returns: undefined
@@ -5568,6 +6376,10 @@ export type Database = {
           target_item_id: string
         }
         Returns: string
+      }
+      withdraw_item_submission: {
+        Args: { reason?: string; target_submission_id: string }
+        Returns: undefined
       }
     }
     Enums: {

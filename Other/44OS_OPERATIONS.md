@@ -5,7 +5,7 @@ This is an operational companion referenced by the three active handoff document
 ## Release gate
 
 1. Confirm `git status` is clean and the intended commit is on `main`.
-2. Run `npm run lint`, `npm run typecheck`, `npm run test:security`, and `npm run build`.
+2. Run `npm run lint`, `npm run typecheck`, `npm run test:security`, `npm run test:observability`, `npm run test:hardening-contract`, and `npm run build`.
 3. Start the production build locally and run `npm run test:smoke`. The executable gate checks readiness shape, security headers, document accessibility basics, bounded response/HTML budgets, hidden-surface isolation, and one-hop canonical redirects.
 4. Run `npm run test:schema-replay` against the disposable local Supabase stack, then run `supabase db push --linked --dry-run` and `supabase db lint --linked --level error`.
 5. Back up linked data before every migration. Apply only reviewed repository migrations.
@@ -48,6 +48,19 @@ This is an operational companion referenced by the three active handoff document
 - Validate row counts and permanent identifiers for profiles, Items, tracks, Library entries, entitlements, entitlement events, Community content, and storage object references before accepting a restore.
 - After restoration, regenerate types, run schema lint/security checks, and exercise signed-in journeys before changing traffic.
 - Per the July 12 launch sequence decision, the production-data backup restoration rehearsal remains grouped with payment-era final operational gates. Migration-chain replay remains mandatory during current non-payment work.
+
+## Submission-review foundation rehearsal
+
+- Keep `publishing_runtime_controls.review_required=false` during trusted testing.
+- Verify pending submissions preserve the live Item and every existing child identity before any review activation.
+- Verify `item_submission_decisions`, `item_submission_child_tombstones`, `item_child_archives`, and `item_submission_notification_events` are append-only/audit-safe; notification events are outbox metadata only and must not be delivered by this foundation.
+- Verify retrying the same creator idempotency key returns the original submission and retrying a decision fails closed.
+- Verify active review blocks legacy direct Item/child mutation paths while the administrator decision RPC can apply the approved snapshot atomically.
+- The local hardening contract checks private storage buckets, entitlement-authorized reads, creator ownership on uploads, community rate-event enforcement, typed review tombstones/audit/outbox fences, sanitized request errors, and dormant submission domain boundaries. The application-page/component fan-out audit must continue to show zero direct Supabase table/RPC calls; bounded parallel service reads remain the expected pattern.
+- `npm run test:data-restore` restores the repository’s current data backup into a disposable database cloned from the local schema and verifies non-empty profile, Item, and storage-object counts. This local data restore passed during the M13 slice; it does not replace a separate linked-production project restore with storage and permanent-ID comparison.
+- `npm run test:m13-rollback` performs a destructive-only-in-a-disposable-database simulation: it clones the local schema, removes the M13-added tables/functions/triggers, and verifies the pre-existing catalog, asset, and runtime-control relations survive. This is rollback evidence for the additive boundary, not a production down migration; any real rollback still requires reviewed forward repair or an explicitly reviewed down migration.
+- The separate-project production-data restoration rehearsal and a reviewed migration rollback rehearsal remain open operational gates; local schema replay is not a substitute for either.
+- A local schema dump was produced and restored successfully into a disposable PostgreSQL database using the Supabase Docker container; the new M13 tables were verified there. The host does not provide `pg_dump`/`psql` directly, and the separate production-data restoration gate remains open until a disposable project can be restored with permanent identifiers, storage references, and audit rows compared.
 
 ## Secrets and providers
 

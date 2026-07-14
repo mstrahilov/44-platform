@@ -290,6 +290,7 @@ export function ProductStoreDetail({
   const contentHeading = getContentHeading(product);
   const productDetails = buildProductDetails(product, tracks, inferredTrackDurations, bookContent, sampleFiles);
   const creatorDisplayName = product.creators?.display_name || product.creator || '44 Creator';
+  const productDescription = product.long_description?.trim() || product.short_description?.trim();
   const releaseMeta = [
     (product.item_type || productMeta(product)).toUpperCase(),
     ...(product.year ? [String(product.year)] : []),
@@ -308,9 +309,10 @@ export function ProductStoreDetail({
         coverClassName={`view-album-cover-${productExperience}`}
       />
 
-      {['book', 'asset'].includes(productExperience) && product.long_description?.trim() ? (
+      {['book', 'asset'].includes(productExperience) && productDescription ? (
         <div className="view-section item-description-section">
-          <p className="os-type-body view-description">{product.long_description}</p>
+          <h2 className="view-section-title">Description</h2>
+          <p className="os-type-body view-description">{productDescription}</p>
         </div>
       ) : null}
 
@@ -525,7 +527,7 @@ function getContentHeading(product: Product) {
   const experience = getProductExperience(product);
   if (experience === 'music') return 'Tracklist';
   if (experience === 'book') return 'Book Sample';
-  if (experience === 'asset') return product.item_type?.toLowerCase().includes('stem') ? 'Original Track' : 'Sample Preview';
+  if (experience === 'asset') return product.item_type?.toLowerCase().includes('stem') ? 'Original Track' : 'Preview Samples';
   return 'Product Gallery';
 }
 

@@ -9,6 +9,11 @@
     "lint": "eslint",
     "typecheck": "node scripts/clean-next-types.mjs && next typegen && tsc --noEmit",
     "test:smoke": "node scripts/launch-smoke.mjs",
+    "test:observability": "node scripts/observability-contract.mjs",
+    "test:hardening-contract": "node scripts/hardening-contract.mjs",
+    "test:data-restore": "bash scripts/data-restore-rehearsal.sh",
+    "test:m13-rollback": "bash scripts/m13-migration-rollback-rehearsal.sh",
+    "test:m13-concurrency": "bash scripts/m13-concurrency-rehearsal.sh",
     "test:schema-replay": "supabase db reset --local --no-seed",
     "test:security": "supabase test db --local supabase/tests"
   },

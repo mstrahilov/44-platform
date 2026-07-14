@@ -6474,7 +6474,7 @@ body.theme-dark .os-home-panel {
   background: var(--reader-toolbar);
   border-bottom: 1px solid color-mix(in srgb, var(--reader-ink) 16%, transparent);
 }
-.native-reader-close { position: absolute; top: 8px; left: 16px; display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid color-mix(in srgb, var(--reader-ink) 24%, transparent); border-radius: 50%; background: transparent; color: inherit; font-size: 26px; line-height: 1; text-decoration: none; }
+.native-reader-close { position: absolute; top: 8px; left: 16px; display: grid; place-items: center; width: 44px; height: 44px; appearance: none; cursor: pointer; border: 1px solid color-mix(in srgb, var(--reader-ink) 24%, transparent); border-radius: 50%; background: transparent; color: inherit; font: inherit; font-size: 26px; line-height: 1; text-decoration: none; }
 .native-reader-title { display: flex; align-items: center; min-width: 0; min-height: 44px; padding-left: 52px; }
 .native-reader-title strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .native-reader-controls,

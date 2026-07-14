@@ -101,11 +101,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <div className="app-frame">
               <div className="app-shell">
                 <Suspense fallback={null}><Sidebar /></Suspense>
-                <main className="app-main">
+                <div className="app-main">
                   <Topbar />
                   <div className="app-main-content">{children}</div>
                   <MusicPlayerBar />
-                </main>
+                </div>
               </div>
             </div>
             </ContextMenuProvider>

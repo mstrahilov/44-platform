@@ -191,7 +191,7 @@ export default function LoginPage() {
   const isLogin = accountExists === true;
 
   return (
-    <div className="login-page page-scroll">
+    <main className="login-page page-scroll">
       <section className="login-shell" aria-labelledby="login-title">
         <div className="login-copy">
           <h1 id="login-title" className="os-type-page-title">
@@ -324,6 +324,6 @@ export default function LoginPage() {
           </button>
         )}
       </section>
-    </div>
+    </main>
   );
 }
