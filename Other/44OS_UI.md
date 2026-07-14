@@ -71,7 +71,7 @@ Creator-facing rules:
 - Advanced systems should be explained through creator outcomes, not implementation language.
 - Local/global pricing should read as fairness and reach, not as a finance tool.
 - Achievement setup should describe what fans can unlock or experience, not how event tracking works.
-- Bonus Content is the first v1 unlockable release extra and can be attached to Overachiever.
+- The launch release-feature set is limited to Achievements, a named YouTube video embed, and an Item unlock through Overachiever. Art books, generic Bonus Content, Commentary, and interactive experiences remain deferred until their product behavior is defined.
 - Studio screens should prioritize clarity, previews, validation, and confidence.
 
 Fan-facing rules:
@@ -344,11 +344,11 @@ Studio publishing rules:
 - Price inputs accept normal decimal entry such as `5.99`; editing an existing music release preserves achievement row IDs and earned Library history.
 - Track editors use the recessed editable list primitive, not nested glass cards.
 - Book achievements are hidden for v1.
-- Music release features start with the eight v1 achievement templates and optional Overachiever Bonus Content.
-- Overachiever Bonus Content uses a private Studio upload. Library renders it as locked until the trusted Overachiever grant exists, then opens it through a short-lived signed URL. Books and other included private files use the same Library file treatment.
+- Music release features start with the eight v1 achievement templates, a named YouTube video embed, and an optional Overachiever Item unlock.
+- Overachiever is an achievement outcome: the reward is a separately identified Item granted through the trusted achievement path. Existing protected bonus assets remain preserved for compatibility but are not a new launch feature editor.
 - Music create/edit forms do not collect a description. Book and Sample Pack forms expose one canonical Description field because that copy appears above the native Store preview; existing music descriptions remain preserved without being exposed.
 - Music Tracks are a flat section rather than a nested paper card. Desktop track rows use a wide title column and a narrower Audio File/upload column; mobile stacks those fields. Keep generous section spacing between Details, Tracks, and Achievements.
-- Achievements use a single master switch in the section header. Off hides the picker; on reveals flat rows with white editor icons and right-aligned checkboxes. There is no minimum selection count. The unfinished Bonus Content attachment editor is hidden until its later UI review.
+- Achievements use a single master switch in the section header. Off hides the picker; on reveals flat rows with white editor icons and right-aligned checkboxes. There is no minimum selection count. Generic feature/component editors remain hidden until each feature has a defined product contract and UI review.
 - Checked achievement controls must keep a black checkmark on the light checked fill.
 - Creator Item removal uses the destructive action treatment and confirmation copy, but the operation is archival: it says `Remove`, explains that Store/active Studio visibility ends while Library history remains, and never promises permanent deletion.
 - Publication validation is server-authoritative. During trusted testing, approved creators publish and save changes directly; validation failures remain in the editor as backend-truth error states and must never imply that an invalid change succeeded.

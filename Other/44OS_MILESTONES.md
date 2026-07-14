@@ -196,11 +196,11 @@ Interface-foundation completion evidence (July 12, 2026): 44OS now has one deskt
 
 **Status: Complete**
 
-Make Library the durable view of entitlements, progress, achievements, creator updates, bonus content, downloads, and launch actions.
+Make Library the durable view of entitlements, progress, achievements, downloads, named release video embeds, and achievement-granted Item unlocks. Generic bonus content and other speculative release extras are not launch scope.
 
 Completion criteria:
 
-- The eight launch music achievements and Overachiever bonus content use trusted grant rules.
+- The eight launch music achievements use trusted grant rules, and Overachiever may grant a separately identified Item through the same achievement-authoritative path.
 - Protected downloads and bonus assets cannot be accessed by bypassing the client UI.
 
 Completion evidence (July 12, 2026): `20260712054000_m8_private_item_files_foundation.sql` establishes the private `item-files` bucket with entitlement-aware object reads. The two live book PDFs were copied to deterministic private paths, downloaded back, and matched against their source SHA-256 hashes and byte counts before `20260712054100_m8_private_book_asset_cutover.sql` removed public catalog locations and granted the existing Library owner explicit audited download entitlements. The verified legacy public copies were then removed; old public and anonymous private URLs return HTTP 400. An entitled real-user session received one unlocked manifest row and downloaded a five-minute signed URL matching the original 43,711,872-byte PDF hash, while another authenticated user received zero manifest rows and could not sign the known path.
@@ -292,7 +292,7 @@ Required review workflow: creators never control publication lifecycle states di
 
 Trusted-testing exception: until the review package exists, approved invited creators can add, edit, and archive their own releases without approval latency. This does not relax account approval, ownership checks, RLS, storage protection, permanent IDs, or audit preservation. `publishing_runtime_controls` records the phase as `trusted_testing` with review disabled; it must not be switched to `review_required` until pending revisions, admin review, notifications, and acceptance tests are complete.
 
-M13 UI Activation Review gate: backend foundations may be completed and tested without appearing on tester-facing pages. Questions, reporting, Bonus Content attachments, account-recovery/legal navigation, moderation, creator submission review, payments, and other new surfaces require a documented UI review before activation. Review covers route ownership, hierarchy, copy, desktop/mobile layout, loading/empty/error/success states, accessibility, and consistency with the established visual system. During trusted testing, Item Questions and all Report actions are hidden; the unfinished Bonus Content attachment editor is hidden while existing protected bonus assets and reward metadata remain preserved.
+M13 UI Activation Review gate: backend foundations may be completed and tested without appearing on tester-facing pages. Questions, reporting, generic feature/component editors, account-recovery/legal navigation, moderation, creator submission review, payments, and other new surfaces require a documented UI review before activation. Review covers route ownership, hierarchy, copy, desktop/mobile layout, loading/empty/error/success states, accessibility, and consistency with the established visual system. During trusted testing, Item Questions and all Report actions remain hidden; existing protected achievement-reward assets and metadata are preserved without activating a generic Bonus Content editor.
 
 Non-payment hardening package (July 12, 2026): account-recovery, Terms, Privacy, and Copyright foundations exist behind the UI activation gate. A global route error boundary, dependency-aware `/api/health`, HSTS/frame/base/object/referrer/permissions headers, executable `test:smoke`, and `Other/44OS_OPERATIONS.md` establish baseline failure handling, readiness, deployment, incident, restoration, and secret-rotation operations. Production SMTP/domain authentication, bounce/delivery monitoring, external error-alert routing, and UI activation remain open gates.
 

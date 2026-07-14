@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(45);
+select plan(47);
 
 insert into auth.users (id,email,raw_user_meta_data) values
  ('30000000-0000-0000-0000-000000000001','m13-review-member@example.test','{"username":"m13_review_member"}'),
@@ -28,6 +28,7 @@ insert into public.item_capabilities(item_id,capability_key,config_version,is_en
 insert into public.item_members(item_id,profile_id,member_role) values ('40000000-0000-0000-0000-000000000001','30000000-0000-0000-0000-000000000002','owner');
 insert into public.item_external_links(item_id,platform,label,url,sort_order) values ('40000000-0000-0000-0000-000000000001','spotify','Spotify','https://open.spotify.com/album/m13',1);
 insert into public.item_achievements(id,item_id,code,title,trigger_type,sort_order,is_secret,points) select '50000000-0000-0000-0000-000000000004','40000000-0000-0000-0000-000000000001','m13-achievement','Review Achievement','manual',1,false,0;
+insert into public.item_video_embeds(item_id,title,youtube_video_id,sort_order) values ('40000000-0000-0000-0000-000000000001','Release documentary','dQw4w9WgXcQ',0);
 
 update public.publishing_runtime_controls set phase='review_required',review_required=true,updated_at=now() where singleton;
 set local role anon;
@@ -55,6 +56,7 @@ select is((select count(*) from public.item_submission_assets where submission_i
 select ok((select count(*) from public.item_submission_offers where submission_id=(select id from public.item_submissions where idempotency_key='retry-key')) > 0,'offer proposal is snapshotted');
 select is((select count(*) from public.item_submission_type_assignments where submission_id=(select id from public.item_submissions where idempotency_key='retry-key')),1::bigint,'taxonomy type proposal is snapshotted');
 select ok((select count(*) from public.item_submission_capabilities where submission_id=(select id from public.item_submissions where idempotency_key='retry-key')) > 0,'capability proposal is snapshotted');
+select is((select count(*) from public.item_submission_video_embeds where submission_id=(select id from public.item_submissions where idempotency_key='retry-key')),1::bigint,'release video embed is snapshotted');
 select is((select count(*) from public.item_submission_members where submission_id=(select id from public.item_submissions where idempotency_key='retry-key')),1::bigint,'collaborator proposal is snapshotted');
 select is((select count(*) from public.item_submission_external_links where submission_id=(select id from public.item_submissions where idempotency_key='retry-key')),1::bigint,'external-link proposal is snapshotted');
 select is((select count(*) from public.item_submission_achievements where submission_id=(select id from public.item_submissions where idempotency_key='retry-key')),1::bigint,'achievement proposal is snapshotted');
@@ -76,6 +78,7 @@ select throws_ok($$select public.decide_item_submission((select id from public.i
 select lives_ok($$select public.decide_item_submission((select id from public.item_submissions where idempotency_key='decision-key'),'approved','reviewed by 44')$$,'admin can approve atomically');
 select is((select status from public.item_submissions where idempotency_key='decision-key'),'approved','approval is immutable in the decision record');
 select is((select title from public.catalog_items where id='40000000-0000-0000-0000-000000000001'),'Proposed title','approval applies the proposed Item while preserving identity');
+select is((select count(*) from public.item_video_embeds where item_id='40000000-0000-0000-0000-000000000001'),1::bigint,'approval applies the submitted release video embed');
 select is((select count(*) from public.tracks where item_id='40000000-0000-0000-0000-000000000001'),1::bigint,'track identity is preserved');
 select is((select count(*) from public.item_assets where item_id='40000000-0000-0000-0000-000000000001'),1::bigint,'protected asset identity is preserved');
 select is((select count(*) from public.catalog_offers where item_id='40000000-0000-0000-0000-000000000001' and id='50000000-0000-0000-0000-000000000003'),1::bigint,'offer identity is preserved');

@@ -15,7 +15,7 @@ This is an operational companion referenced by the three active handoff document
 ## Health and triage
 
 - `/api/health` checks application configuration and a bounded Supabase read. HTTP 200 means ready; HTTP 503 means configuration or Supabase is unavailable.
-- Health output includes the deployment release and region so an incident can be tied to an exact build. Unhandled server request errors emit the `request_error` JSON contract with release, runtime, method, route, framework context, and sanitized error identity. It deliberately excludes request headers, query values, user content, and tokens. Vercel logs retain the baseline events until an approved external aggregation/alert destination is connected.
+- Health output includes the deployment release and region so an incident can be tied to an exact build. Unhandled server request errors emit the `request_error` JSON contract with release, runtime, method, route, framework context, and sanitized error identity, while the server-only sink records the same sanitized event in `ops_error_events` when the service-role configuration is available. It deliberately excludes request headers, query values, user content, and credentials. Vercel logs remain the fallback evidence when the operational sink is unavailable. The M13 admin read contracts add bounded submission queue/detail retrieval and sanitized error-event lookup without activating an Admin UI or external alert delivery.
 - Record UTC time, user role, route, Item/account identifier, browser/device, error reference, and reproduction steps.
 - Determine whether the problem affects anonymous browsing, authentication, publishing, Library/entitlements, protected files, Community, or payment infrastructure.
 - Do not “repair” Item, entitlement, or audit data through dashboard-only SQL. Capture evidence, back up, and use a reviewed forward migration.
@@ -52,6 +52,7 @@ This is an operational companion referenced by the three active handoff document
 ## Submission-review foundation rehearsal
 
 - Keep `publishing_runtime_controls.review_required=false` during trusted testing.
+- Keep `notification_delivery_controls.enabled=false`; submission notifications are outbox records only until wording, delivery ownership, and the Admin/review UI are approved.
 - Verify pending submissions preserve the live Item and every existing child identity before any review activation.
 - Verify `item_submission_decisions`, `item_submission_child_tombstones`, `item_child_archives`, and `item_submission_notification_events` are append-only/audit-safe; notification events are outbox metadata only and must not be delivered by this foundation.
 - Verify retrying the same creator idempotency key returns the original submission and retrying a decision fails closed.
@@ -66,12 +67,13 @@ This is an operational companion referenced by the three active handoff document
 
 - Public Supabase URL/anon keys may be present in the client. Service-role, SMTP, Stripe, PayPal, webhook, and monitoring credentials must remain server-only environment secrets.
 - Rotate secrets after staff departure, accidental exposure, suspected compromise, or provider recommendation.
-- Payment runtime controls remain false until M11/M12 acceptance and reconciliation tests pass.
+- Payment runtime controls remain false until M11/M12 acceptance and reconciliation tests pass. `m12_disabled_payment_operations_security.sql` verifies fail-closed checkout/Stripe/PayPal controls, append-only provider evidence, and admin-only reconciliation reads; it does not authorize live provider traffic.
 
 ## Launch-specific open gates
 
 - Production SMTP, sender-domain authentication, delivery/bounce monitoring, and recovery-email rehearsal.
 - Error aggregation/alert destination and on-call ownership.
 - Submission review queue and notifications before public creator onboarding.
+- Launch release video embeds are limited to named HTTPS YouTube URLs on music, book, and game Items; generic media/component features remain deferred.
 - Payment reconciliation, refund/dispute, entitlement revocation, and payout failure testing.
 - Full accessibility and installed-iOS journey matrix.

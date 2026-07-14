@@ -21,24 +21,11 @@ The submission-review backend is deployed and dormant. The next non-UI work can 
 
 The current request-error system already creates sanitized structured events for Vercel logs. It does not yet provide a searchable admin console. We can prepare that backend contract without deciding whether the UI should be a dashboard, an inbox, a notification center, or a support tool.
 
-### 2. Audit the attachable Item components
+### 2. Keep launch features deliberately narrow
 
-44OS already has several component foundations, but they are at different levels of completion. We should create a single capability matrix showing which components are fully usable, backend-ready, or still conceptual:
+The launch feature contract is now explicit: Achievements, named YouTube video embeds, and achievement-granted Item unlocks through Overachiever. Achievements are the only feature that needs to be treated as fully active across launch music, books, and games. Video embeds are a small release metadata contract. Overachiever unlocks remain part of the trusted achievement system.
 
-| Component | Current state | Next foundation question |
-|---|---|---|
-| Streaming and playback | Working | No major foundation gap |
-| Achievements | Working and server-authoritative | Decide how creators configure and explain them |
-| Bonus content | Protected backend assets exist; attachment UI is intentionally hidden | Define how bonus content is attached, previewed, and explained |
-| Books / art-book-style content | PDF reader and protected assets are working | Decide whether an art book is its own Item, an Item component, or both |
-| Sample Packs | Working Store, Library, download, and preview flows | Continue format-specific polish as needed |
-| Commentary | Not yet built as a complete product type | Decide audio, text, video, or a combined model |
-| Creator Updates | Backend and existing surfaces exist | Decide whether updates belong to the Item, creator, or both |
-| Events | Working and deployed | No major foundation gap |
-| External links | First slice working and deployed | Decide richer creator-media presentation |
-| Interactive experiences | Secure infrastructure exists | Requires a real Unity/WebGL export |
-
-The important product distinction is between a **standalone Item** and an **attached component**. A standalone Item can have its own Store page, price, Library entry, entitlement, and identity. An attached component belongs to a parent Item and is usually discovered through that Item. We should not build a complicated DLC model until this distinction is agreed for the first few examples.
+Art books, generic bonus content, commentary mode, behind-the-scenes media, and interactive/WebGL experiences are deferred product decisions. Existing tables and asset types are preserved only when they support already-shipped book/sample functionality or the Overachiever reward path. We should not add a generic component or DLC model until a specific future feature has a defined user outcome and UI contract.
 
 ### 3. Finish backend-only slices of M14 and M17
 
@@ -161,4 +148,4 @@ Proposed only. Do not build the service database or public UI until the operatin
 
 ## The practical answer
 
-Yes, there is a meaningful batch Codex can finish before you need to make UI decisions: M13 admin and operations contracts, the component/capability audit, remaining low-risk M14/M17 foundations, payment test readiness, and operational recovery work. After that batch, the next useful step is not “build every remaining feature”; it is a focused workshop where you define the M13 Admin/review experience and choose the first component examples. Payment can remain one of the last activation sweeps, as you suggested.
+Yes, there is a meaningful batch Codex can finish before you need to make UI decisions: M13 admin and operations contracts, achievement and video-embed launch foundations, remaining low-risk M14/M17 foundations, payment test readiness, and operational recovery work. After that batch, the next useful step is a focused UI workshop for Admin/review, achievement configuration, video embeds, and the Overachiever unlock presentation. Payment can remain one of the last activation sweeps, as you suggested.

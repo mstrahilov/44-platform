@@ -19,6 +19,13 @@ export type StudioAchievementSummary = Pick<
   'code' | 'title' | 'description' | 'trigger_type' | 'reward_config' | 'is_secret' | 'icon'
 >;
 
+export type StudioVideoEmbedSummary = {
+  id: string;
+  title: string;
+  youtube_video_id: string;
+  sort_order: number;
+};
+
 export type ItemSubmissionStatus = 'pending' | 'withdrawn' | 'approved' | 'rejected';
 export type ItemSubmissionChildType =
   | 'track'
@@ -97,7 +104,7 @@ export async function loadStudioItemEditor(itemId: string, ownerId: string) {
   if (itemResult.error) throw itemResult.error;
   if (!itemResult.data) return null;
 
-  const [trackResult, assetResult, achievementResult, typeResult, tagResult, linkResult, bookResult, samplesResult] = await Promise.all([
+  const [trackResult, assetResult, achievementResult, typeResult, tagResult, linkResult, bookResult, samplesResult, videoResult] = await Promise.all([
     supabase.from('tracks').select('*').eq('item_id', itemId).order('number'),
     supabase.from('item_assets').select('asset_type,title,file_url,storage_path').eq('item_id', itemId).order('sort_order'),
     supabase
@@ -110,8 +117,9 @@ export async function loadStudioItemEditor(itemId: string, ownerId: string) {
     supabase.from('item_external_links').select('platform,url,sort_order').eq('item_id', itemId).order('sort_order'),
     supabase.from('book_contents').select('*').eq('item_id', itemId).maybeSingle(),
     supabase.from('sample_pack_files').select('*').eq('item_id', itemId).order('sort_order'),
+    supabase.from('item_video_embeds' as never).select('id,title,youtube_video_id,sort_order').eq('item_id', itemId).order('sort_order'),
   ]);
-  const error = trackResult.error || assetResult.error || achievementResult.error || typeResult.error || tagResult.error || linkResult.error || bookResult.error || samplesResult.error;
+  const error = trackResult.error || assetResult.error || achievementResult.error || typeResult.error || tagResult.error || linkResult.error || bookResult.error || samplesResult.error || videoResult.error;
   if (error) throw error;
 
   return {
@@ -124,6 +132,7 @@ export async function loadStudioItemEditor(itemId: string, ownerId: string) {
     externalLinks: (linkResult.data ?? []).map(row => ({ platform: row.platform, url: row.url })),
     bookContent: bookResult.data,
     sampleFiles: samplesResult.data ?? [],
+    videoEmbeds: (videoResult.data as StudioVideoEmbedSummary[] | null) ?? [],
   };
 }
 
