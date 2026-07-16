@@ -159,6 +159,9 @@ Quality gates for production-facing work:
 
 - `npm run lint` must pass with zero errors and zero warnings.
 - `npm run build` must pass.
+- `npm run audit:ui-cleanup` must report zero unreachable components, dead
+  component exports, all-source CSS orphans, and exact-shadowed declarations
+  for any UI-system release.
 - `npm run dev` should start without Turbopack root warnings.
 - Route and auth changes require manual browser QA at desktop and mobile widths.
 - Mobile launch QA targets 390px and 430px widths and must include normal Safari plus an iOS home-screen installation.
@@ -166,6 +169,16 @@ Quality gates for production-facing work:
 - `Other/44OS_OPERATIONS.md` owns deployment, health, incident, restoration, and secret-rotation runbooks. `npm run test:smoke` is the executable anonymous launch check and `/api/health` is the bounded application/Supabase readiness endpoint.
 - `npm run test:schema-replay` rebuilds a disposable local Supabase database from repository migrations without seed data. It is the required migration-chain replay gate and must never target linked staging or production. The launch smoke also enforces one-hop canonical redirects, hidden reviewed-surface isolation, health response semantics, core security headers, English/title/main/zoom-safe document basics, a 5-second response ceiling, and a 2 MB HTML ceiling; thresholds may be tightened through environment variables as measured budgets mature.
 - `npm run test:security` executes transactional pgTAP role and publishing journeys against local Supabase. Its anonymous, member, creator, and admin fixtures always roll back; linked execution is prohibited. `src/instrumentation.ts` is the provider-neutral server error contract: it records release/runtime/route context and sanitized error identity while excluding headers, query values, user content, and tokens.
+
+UI implementation authority (locked July 15, 2026): the root layout imports
+only `src/app/globals.css` and `src/styles/44-ui/canonical-system.css` for the
+production cascade. The responsive `/44OS_UI` route owns
+`system-reference.css` and generates its component/token/class registries from
+current source. `Other/44OS_UI.md` is the active visual contract; the completed
+migration ledger is preserved under `Other/archive/` as historical evidence,
+not as a second implementation roadmap. Ordinary panels use canonical Glass,
+Paper is transient-menu/selection only, and App Shell/Dock/Radio/reader/launch
+remain explicitly owned specialized compositions.
 
 ---
 
