@@ -6,8 +6,8 @@ This is one of the three active handoff documents for 44OS. Read it before chang
 
 > **UI system lock (July 15, 2026):** the owner completed the page-by-page
 > desktop and mobile review, approved the canonical implementation, and closed
-> the migration. The historical source census and retirement ledger is archived
-> under `Other/archive/`; this document is the active visual contract.
+> the migration. The relevant source census and retirement results are retained
+> below; this document is the only active visual contract.
 
 44OS should feel like a premium operating system: calm, spatially consistent, tactile, legible, and fast. It is not a marketing site and should not look like a stack of unrelated pages.
 
@@ -58,7 +58,7 @@ Current implementation snapshot, July 15, 2026:
   links share one stable desktop hierarchy.
 
 - Store, Community, Library, Radio, Search, Profiles, Studio, Notifications, Settings, and Inbox have been through the desktop and mobile system-UI consolidation pass.
-- Verified after the pass: `npm run lint`, `npx tsc --noEmit`, `npm run build`, migration dry-run, and route smoke checks for `/store`, `/community`, `/library`, `/radio`, `/search`, `/profile/[username]`, `/studio`, and `/notifications`.
+- Verified after the pass: `npm run lint`, `npm run typecheck`, `npm run audit:ui-cleanup`, `npm run build`, and route smoke checks for `/store`, `/community`, `/library`, `/radio`, `/search`, `/profile/[username]`, `/studio`, and `/notifications`.
 - Mobile rendered checks confirmed the root and Store title/filter rows, hidden local mobile search, visible Search page title with no placeholder, and the current mobile Dock order: Home (`/`), Library, Radio, Community, Search.
 - Radio and Notifications also have source-level implementation aligned with this document; their live visual state may depend on signed-in/session data or Radio playlist setup.
 - The root URL is the branded 44OS discovery front door. It may reuse Store catalog sections, but the page title, metadata, search label, and shared-link identity say 44OS rather than Store.
@@ -232,7 +232,7 @@ The Dock is the OS taskbar and app launcher. It renders from `src/lib/osApps.ts`
 
 Current Dock order:
 
-- Signed in desktop: Home (`/`), Radio, Library, Community, optional pinned-item divider and pinned items, spacer, Support, divider, Settings.
+- Signed in desktop: Library, divider, Home (`/`), Radio, Community, optional pinned-item divider and pinned items, spacer, Support, divider, Settings.
 - Signed out desktop: Home (`/`), Radio, Community, spacer, Support, Log In.
 - Mobile fixed Dock: Home (`/`), Library, Radio, Community, Search.
 
@@ -299,6 +299,22 @@ Catalog and Library presentation rules:
 - Browse artwork follows Item presentation: Music and Sample Packs are square, Books use their 2:3 portrait cover ratio, and physical Merch uses a 3:4 portrait product ratio. Store detail artwork uses the same Category-specific ratio. Mobile shelf actions collapse from the desktop `View All` pill to a compact trailing arrow without changing their behavior or accessible label.
 - Library remains one filterable destination but renders separate grid bands in the stable order Music, Books, Sample Packs. Existing catalog order remains intact within each band, and Books always begin on a fresh row so 2:3 covers never mix into a square Music row.
 - The `New in Merch` editorial shelf temporarily prioritizes Apparel, then Accessories, then all remaining Merch Types; products retain the normal public catalog order inside each priority group. This is editorial presentation, not a new global ranking rule.
+- Beats use the existing square Item card and permanent `/store/item/[slug]` detail route. They remain Music Items, but Store gives them a separate `New in Beats` shelf whose arrow opens `/store/music?type=beat`; Beat Items are excluded from generic `New in Music` to avoid duplicate front-door placement.
+- The Beat catalog keeps Type in the URL and adds BPM range, key, genre/style Tag, mood, instrument, creator, price, and available-license-tier filters. Individual cards remain the launch browsing pattern; a dense playlist/audition view is deferred until catalog volume and user testing justify it.
+- A Beat detail uses the normal Item composition: square artwork and producer identity, BPM/key/time-signature metadata, one prominent tagged preview through the shared global player, description/sample disclosure, standardized license rows with exact included files and terms, then reviews, updates, similar Beats, and sharing. Draft legal terms and inactive commerce always render as review-only/unavailable, never as enabled purchase controls.
+- Studio adds a separate recoverable Add/Edit Beat form rather than branching the ordinary release editor. It collects artwork, tagged preview, BPM/key/time signature, approved genre/style Tags, controlled moods/instruments, sample disclosure, YouTube link, private MP3/WAV/stems, and tier prices. Beats never expose music achievement configuration.
+- Creator profiles add a Beats tab only when populated. Cart identity is offer-based so selecting another license for the same Beat replaces that Beat line while different Beats coexist. Cart rows name the exact tier and files. Library keeps one Beat Item and lists every immutable license, status, terms digest, and only its authorized downloads.
+- Every Beat surface is absent unless `NEXT_PUBLIC_ENABLE_BEAT_REVIEW_SURFACES=true`; creator saves additionally require the database review gate. Review UI follows the same Glass/Paper, spacing, focus, 44px target, 390/430/1280/1440, shared-player, and installed-iOS rules as the rest of 44OS.
+
+Admin Control Center rules:
+
+- Admin appears in the Dock and account navigation only for authenticated admin profiles. The database remains authoritative for every read and mutation even when a route is opened directly.
+- `/admin` is a single-column hub on desktop and mobile: total-user, creator, pending-review, and recent-error cards lead into People, Content, and Errors navigation rows. System status uses plain language for creator publishing, email, payments, and Beat Store state; switches are read-only.
+- People and Content lists use eight records per page, newest first, with URL-backed page, search, and role/status/type filters. Desktop uses labeled columns; mobile collapses the same facts into stacked cards. Every row opens its canonical detail page.
+- People detail exposes only safe identity, account, authored-Item, access, and role-history facts. Passwords, hashes, tokens, phone numbers, raw auth metadata, and provider credentials never render. Admins may change only Member to Creator or Creator to Member, with a required reason and confirmation.
+- Content keeps publication (`Draft`, `Published`, `Archived`) separate from review (`None`, `Pending`, `Approved`, `Rejected`, `Withdrawn`). Detail is read-only for metadata, taxonomy, tracks, asset-presence summaries, offers, health findings, review history, and lifecycle history. Pending submissions expose Approve and Reject; existing Items expose only the server-authorized publish, unpublish, or archive actions.
+- Every mutation uses a confirmation dialog, required reason, pending state, success feedback, and authoritative refetch. Archive additionally requires exact title confirmation and is described as permanent public removal that preserves buyer and historical records.
+- Errors render as a chronological sanitized text log with timestamp, route, method, runtime, release, safe message, code, and copyable digest. Headers, query values, request bodies, user content, and credentials never appear.
 
 Archived primary-page descriptions (saved July 10, 2026):
 
@@ -439,11 +455,11 @@ Studio publishing rules:
 - Publication validation is server-authoritative. During trusted testing, approved creators publish and save changes directly; validation failures remain in the editor as backend-truth error states and must never imply that an invalid change succeeded.
 - Save Changes revalidates and automatically publishes a valid Item that was caught in the internal creation state; this recovery does not expose a lifecycle switch or let creators move public Items back to draft.
 - New releases require a plain-language publishing-rights checkbox. The UI says this records the creator's confirmation and does not imply independent verification by 44; the backend stores the policy version and blocks publication without a current attestation.
-- Backend completion does not authorize front-facing activation. New Questions, Report, Bonus Content, recovery/legal navigation, moderation, submission-review, payment, or comparable surfaces require an M13 UI Activation Review covering placement, copy, desktop/mobile behavior, empty/loading/error states, accessibility, and visual-system fit before they are linked or rendered. Hidden UI must preserve existing backend data.
-- The local submission-review backend foundation is intentionally invisible: no Pending Review labels, creator submission controls, admin queue, notifications, or review navigation may render until its separate M13 UI Activation Review is complete. Existing trusted-testing Studio behavior remains the active tester contract.
+- Backend completion does not authorize front-facing activation. New Questions, Report, Bonus Content, recovery/legal navigation, moderation, creator submission-review, payment, or comparable surfaces require an M13 UI Activation Review covering placement, copy, desktop/mobile behavior, empty/loading/error states, accessibility, and visual-system fit before they are linked or rendered. Hidden UI must preserve existing backend data. The approved Admin Control Center is the narrow exception for administrator operations.
+- Creator submission controls, Pending Review labels, and review notifications remain intentionally invisible while trusted-testing direct publishing is active. The Admin Content queue may inspect and decide any existing pending submission without activating creator-facing submission UI.
 - Creators never see or control Draft/Published lifecycle toggles. The review workflow shows `Pending Review` after submission; only 44 admins see approval controls. When an existing live Item has proposed changes, its last approved public version remains visible until review succeeds.
 - Studio catalog rows show a compact issue count when server catalog-health checks find incomplete taxonomy, artwork, year, tracks, books, or downloadable assets. Trusted testers do not see Draft/Published controls; the future review workflow will show Pending Review only where applicable.
-- Studio overview is a consolidated landing page: four operational metric cards—Saves, Plays, Sold, and Earned—followed only by populated Events and Item-management sections. A Community-style circular plus in the title row is visible on desktop and mobile and opens a solid accessible menu with Add Music, Add Book, Add Event, and Add Sample Pack. Merch creation remains hidden without deleting its preserved implementation. The menu reuses the canonical creation routes and is Studio's only creation affordance; section-level New buttons do not render. Empty content sections do not render, and Events list actual event records rather than a generic Manage Events row. Desktop uses four metric cards per row and mobile uses two. Item rows show title, Type, and catalog-health issues without Draft/Published pills. The bottom Earnings list is hidden on desktop and mobile until payment UI is reviewed.
+- Studio overview is a consolidated landing page: four operational metric cards—Saves, Plays, Sold, and Earned—followed only by populated Events and Item-management sections. A Community-style circular plus in the title row is visible on desktop and mobile and opens a solid accessible menu with Add Music, Add Book, Add Event, Add Sample Pack, and Add Update. Merch creation remains hidden without deleting its preserved implementation. The menu reuses the canonical creation routes and is Studio's only creation affordance; section-level New buttons do not render. Empty content sections do not render, and Events list actual event records rather than a generic Manage Events row. Desktop uses four metric cards per row and mobile uses two. Item rows show title, Type, and catalog-health issues without Draft/Published pills. The bottom Earnings list is hidden on desktop and mobile until payment UI is reviewed.
 
 - Creator-profile content navigation uses a flat, horizontally scrollable tab
   rail between full-width hairlines. The active tab uses primary text and a
@@ -533,6 +549,7 @@ Visual QA target pages:
 - Library item
 - Studio overview
 - Studio release editor
+- Admin overview, People, Content, Content detail, and Errors
 - Community Posts/Questions/Collaboration
 - Search
 - Radio
@@ -554,5 +571,5 @@ Acceptance:
 - Loading, empty, error, signed-out, and signed-in states are intentional.
 - Achievement icons render correctly from Supabase Storage.
 - Automated launch smoke verifies an English document language, a page title, a main landmark, and viewport metadata that does not disable user zoom. These are regression guards, not a substitute for the required keyboard, screen-reader, contrast, responsive, and installed-iOS review matrix.
-- M13 role/security automation and provider-neutral server telemetry are behind-the-scenes foundations only. They do not authorize new navigation, status labels, report controls, recovery/legal links, or other visible surfaces before UI Activation Review.
+- M13 role/security automation and provider-neutral server telemetry remain private foundations outside the approved Admin Control Center. They do not authorize public navigation, report controls, recovery/legal links, or other visible surfaces before UI Activation Review.
 - The public M13 responsive matrix covers Home, Item detail, Community, Support, Login, and Radio at 390px, 430px, 1280px, and 1440px. Root metadata must say 44OS; only the explicit `/store` surface may use Store as its page identity.

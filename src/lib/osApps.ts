@@ -29,6 +29,7 @@ export type OSAppId =
   | 'library'
   | 'store'
   | 'studio'
+  | 'admin'
   | 'settings'
   | 'support';
 
@@ -54,6 +55,8 @@ export type OSApp = {
   requiresAuth?: boolean;
   /** Only rendered for creator/admin profiles. */
   requiresCreator?: boolean;
+  /** Only rendered for administrator profiles. */
+  requiresAdmin?: boolean;
   /** Registered but not shipped yet — never rendered. */
   hidden?: boolean;
   /** Cannot be hidden from the Dock via Settings. */
@@ -234,6 +237,22 @@ export const OS_APPS: OSApp[] = [
     ],
   },
   {
+    id: 'admin',
+    label: 'Admin',
+    description: 'People, content review, and operational health controls.',
+    href: '/admin',
+    iconClass: 'os-icon-dashboard',
+    group: 'system',
+    requiresAuth: true,
+    requiresAdmin: true,
+    children: [
+      { id: 'overview', label: 'Overview', href: '/admin', iconClass: 'os-icon-dashboard' },
+      { id: 'people', label: 'People', href: '/admin/people', iconClass: 'os-icon-user' },
+      { id: 'content', label: 'Content', href: '/admin/content', iconClass: 'os-icon-store' },
+      { id: 'errors', label: 'Errors', href: '/admin/errors', iconClass: 'os-icon-support' },
+    ],
+  },
+  {
     id: 'settings',
     label: 'Settings',
     description: 'Account, region, appearance, and Dock controls.',
@@ -255,7 +274,7 @@ export const OS_APPS: OSApp[] = [
   },
 ];
 
-export const DOCK_APP_IDS: OSAppId[] = ['library', 'store', 'radio', 'community', 'support', 'settings'];
+export const DOCK_APP_IDS: OSAppId[] = ['library', 'store', 'radio', 'community', 'admin', 'support', 'settings'];
 
 export function getOSApp(id: OSAppId): OSApp | undefined {
   return OS_APPS.find(app => app.id === id);
@@ -297,6 +316,7 @@ export function getActiveOSAppId(pathname: string): OSAppId | '' {
   if (pathname.startsWith('/notifications')) return 'notifications';
   if (pathname.startsWith('/account')) return 'settings';
   if (pathname.startsWith('/dashboard') || pathname.startsWith('/studio')) return 'studio';
+  if (pathname.startsWith('/admin')) return 'admin';
   if (pathname.startsWith('/settings')) return 'settings';
   if (pathname.startsWith('/support')) return 'support';
   return '';
@@ -306,12 +326,14 @@ export function getActiveOSAppId(pathname: string): OSAppId | '' {
 export function getAvailableDockApps(options: {
   signedIn: boolean;
   isCreator: boolean;
+  isAdmin?: boolean;
 }): OSApp[] {
   return OS_APPS.filter(app => {
     if (!DOCK_APP_IDS.includes(app.id)) return false;
     if (app.hidden) return false;
     if (app.requiresAuth && !options.signedIn) return false;
     if (app.requiresCreator && !options.isCreator) return false;
+    if (app.requiresAdmin && !options.isAdmin) return false;
     return true;
   }).sort((a, b) => DOCK_APP_IDS.indexOf(a.id) - DOCK_APP_IDS.indexOf(b.id));
 }

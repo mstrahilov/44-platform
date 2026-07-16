@@ -18,6 +18,8 @@ import type { ReleaseVideoEmbed } from '@/lib/domain/releaseFeatures';
 import type { BookContent, SamplePackFile } from '@/lib/domain/nativeContent';
 import { SamplePackExperience } from '@/components/SamplePackExperience';
 import { Ui44OverflowTrackTitle } from '@/components/ui44/OverflowTrackTitle';
+import type { BeatLicenseGrant } from '@/lib/domain/beats';
+import { supabase } from '@/lib/supabase';
 
 type LibraryKind = 'product';
 
@@ -48,6 +50,7 @@ export function LibraryItemDetail({
   const [bookContent, setBookContent] = useState<BookContent | null>(null);
   const [sampleFiles, setSampleFiles] = useState<SamplePackFile[]>([]);
   const [videoEmbeds, setVideoEmbeds] = useState<ReleaseVideoEmbed[]>([]);
+  const [beatLicenses, setBeatLicenses] = useState<BeatLicenseGrant[]>([]);
   const [unlockedAchievementIds, setUnlockedAchievementIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -97,6 +100,7 @@ export function LibraryItemDetail({
         setBookContent(bundle.nativeContent.book);
         setSampleFiles(bundle.nativeContent.samples);
         setVideoEmbeds(bundle.videoEmbeds);
+        setBeatLicenses(bundle.beatLicenses);
         setUnlockedAchievementIds(new Set(bundle.unlockedAchievements.map(item => item.achievement_id)));
       }
 
@@ -111,7 +115,7 @@ export function LibraryItemDetail({
   if (!user) return <div className="ui44-route-state">Sign in to view this library item.</div>;
 
   if (kind === 'product' && productRow?.products) {
-    return <ProductLibraryDetail userId={user.id} row={productRow} tracks={tracks} achievements={achievements} assets={assets} bonusAssets={bonusAssets} videoEmbeds={videoEmbeds} unlockedAchievementIds={unlockedAchievementIds} bookContent={bookContent} sampleFiles={sampleFiles} />;
+    return <ProductLibraryDetail userId={user.id} row={productRow} tracks={tracks} achievements={achievements} assets={assets} bonusAssets={bonusAssets} videoEmbeds={videoEmbeds} beatLicenses={beatLicenses} unlockedAchievementIds={unlockedAchievementIds} bookContent={bookContent} sampleFiles={sampleFiles} />;
   }
 
   return <div className="ui44-route-state">Library item not found.</div>;
@@ -125,6 +129,7 @@ function ProductLibraryDetail({
   assets,
   bonusAssets,
   videoEmbeds,
+  beatLicenses,
   unlockedAchievementIds,
   bookContent,
   sampleFiles,
@@ -136,6 +141,7 @@ function ProductLibraryDetail({
   assets: LibraryFileAsset[];
   bonusAssets: LibraryBonusAsset[];
   videoEmbeds: ReleaseVideoEmbed[];
+  beatLicenses: BeatLicenseGrant[];
   unlockedAchievementIds: Set<string>;
   bookContent: BookContent | null;
   sampleFiles: SamplePackFile[];
@@ -445,6 +451,7 @@ function ProductLibraryDetail({
       )}
 
       {isMusic && <LibraryAchievementsSection achievements={achievements} unlockedAchievementIds={localUnlockedAchievementIds} />}
+      {beatLicenses.length > 0 && <LibraryBeatLicensesSection licenses={beatLicenses} assets={assets} />}
       {isMusic && <LibraryVideoEmbedsSection embeds={videoEmbeds} />}
       {isMusic && <LibraryBonusContentSection bonusAssets={bonusAssets} unlocked={hasOverachieverUnlocked} />}
       {!isMusic && !isBook && !isAsset && <LibraryFilesSection assets={assets} />}
@@ -455,6 +462,39 @@ function ProductLibraryDetail({
       <AchievementToast toast={toast} onDone={() => setToast(null)} />
     </div>
   );
+}
+
+function LibraryBeatLicensesSection({ licenses, assets }: { licenses: BeatLicenseGrant[]; assets: LibraryFileAsset[] }) {
+  const assetsById = new Map(assets.map(asset => [asset.id, asset]));
+  async function download(grantId: string, beatFileId: string, assetId: string) {
+    const asset = assetsById.get(assetId);
+    if (!asset?.file_url) return;
+    const result = await supabase.rpc('record_beat_file_download', { target_grant_id: grantId, target_beat_file_id: beatFileId, target_user_agent: navigator.userAgent });
+    if (result.error) { alert(result.error.message); return; }
+    window.open(asset.file_url, '_blank', 'noopener,noreferrer');
+  }
+  return <div className="view-section library-beat-licenses">
+    <h2 className="view-section-title">Beat Licenses</h2>
+    <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
+      {licenses.map(license => {
+        const manifest = Array.isArray(license.file_manifest) ? license.file_manifest : [];
+        return <details key={license.id} className="beat-library-license" open={licenses.length === 1}>
+          <summary className="dashboard-list-row"><span className="dashboard-row-copy"><strong className="dashboard-row-title">{license.tier_code[0].toUpperCase() + license.tier_code.slice(1)} · {license.license_number}</strong><span className="dashboard-row-subtitle">Granted {new Date(license.granted_at).toLocaleDateString()} · Terms {license.terms_sha256.slice(0, 12)}…</span></span><span className={`dashboard-status-pill ui44-badge${license.status === 'active' ? ' dashboard-status-pill-success' : ' dashboard-status-pill-warning'}`}>{license.status}</span></summary>
+          <div className="beat-library-license-body">
+            <p className="os-type-body">{license.terms_text}</p>
+            <div className="dashboard-form-actions">{manifest.flatMap(entry => {
+              if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
+              const beatFileId = typeof entry.beatFileId === 'string' ? entry.beatFileId : '';
+              const assetId = typeof entry.assetId === 'string' ? entry.assetId : '';
+              const kind = typeof entry.kind === 'string' ? entry.kind : 'file';
+              const asset = assetsById.get(assetId);
+              return asset?.file_url ? [<button key={beatFileId} type="button" className="os-button os-button-secondary os-button-compact" disabled={license.status !== 'active'} onClick={() => void download(license.id, beatFileId, assetId)}>Download {kind.replaceAll('_', ' ')}</button>] : [];
+            })}</div>
+          </div>
+        </details>;
+      })}
+    </div>
+  </div>;
 }
 
 function runProductAction(action: ReturnType<typeof getProductLibraryPrimaryAction>) {

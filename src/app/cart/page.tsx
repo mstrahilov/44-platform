@@ -64,7 +64,7 @@ export default function CartPage() {
 
         <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
           {items.map(item => (
-            <div key={item.item_id} className="dashboard-list-row cart-row ui44-list-row ui44-list-row-cart">
+            <div key={item.line_id || item.item_id} className="dashboard-list-row cart-row ui44-list-row ui44-list-row-cart">
               <div className="cart-row-item">
                 <div className="cart-row-art">
                   {item.cover_url && (
@@ -81,7 +81,8 @@ export default function CartPage() {
                       {item.title}
                     </Link>
                   </div>
-                  <div className="dashboard-row-subtitle">{item.item_type || legacyItemTypes[item.item_id] || 'Item'}</div>
+                  <div className="dashboard-row-subtitle">{item.offer_title || item.item_type || legacyItemTypes[item.item_id] || 'Item'}</div>
+                  {item.tier_code ? <div className="os-type-meta">{item.included_files?.map(file => file.replaceAll('_', ' ')).join(' · ')}</div> : null}
                 </div>
               </div>
 
@@ -92,7 +93,7 @@ export default function CartPage() {
               <button
                 type="button"
                 className="cart-row-remove-button"
-                onClick={() => removeFromCart(item.item_id)}
+                onClick={() => removeFromCart(item.line_id || item.item_id)}
                 aria-label={`Remove ${item.title} from cart`}
                 title="Remove from cart"
               >

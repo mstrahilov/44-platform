@@ -12,6 +12,7 @@ import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/s
 import { STUDIO_CATALOG_SECTIONS } from '@/lib/studioCatalog';
 import { getCreatorCatalogOverview, listCreatorSubmissionStatuses, type StudioCatalogHealth, type StudioLibraryMetric, type StudioSubmissionStatus } from '@/lib/domain/studio';
 import { formatEventDate } from '@/lib/eventTime';
+import { beatReviewSurfacesEnabled } from '@/lib/domain/beats';
 import { listCreatorEvents, type CreatorEvent } from '@/lib/domain/events';
 import { listCreatorUpdates, type CreatorUpdate } from '@/lib/domain/itemCommunity';
 
@@ -166,11 +167,15 @@ export default function StudioPage() {
       .filter(submission => submission.status === 'pending')
       .map(submission => [submission.item_id, submission]),
   );
-  const productSections = STUDIO_CATALOG_SECTIONS.map(section => ({
+  const productSections = [
+    ...(beatReviewSurfacesEnabled ? [{ id: 'beats', label: 'Beats', itemLabel: 'Beat', href: '/studio#beats', typeOptions: ['Beat'] }] : []),
+    ...STUDIO_CATALOG_SECTIONS,
+  ].map(section => ({
     ...section,
     items: overview.products.filter(item => {
       const experience = getProductExperience(item);
-      if (section.id === 'music') return experience === 'music';
+      if (section.id === 'beats') return item.browse_type?.slug === 'beat';
+      if (section.id === 'music') return experience === 'music' && item.browse_type?.slug !== 'beat';
       if (section.id === 'books') return experience === 'book';
       if (section.id === 'assets') return experience === 'asset';
       return experience === 'physical';
@@ -278,6 +283,7 @@ function OverviewStatCard({ label, value }: { label: string; value: string | num
 }
 
 const STUDIO_CREATE_ACTIONS = [
+  ...(beatReviewSurfacesEnabled ? [{ label: 'Add Beat', href: '/studio/beats/new' }] : []),
   { label: 'Add Music', href: '/studio/products/new?section=music' },
   { label: 'Add Book', href: '/studio/products/new?section=books' },
   { label: 'Add Event', href: '/studio/events/new' },
@@ -368,7 +374,7 @@ function StudioProductSection({
                 ? 'dashboard-status-pill dashboard-status-pill-success studio-publication-status'
                 : 'dashboard-status-pill studio-status-pill-draft studio-publication-status';
             return (
-            <Link key={product.id} href={`/studio/products/${product.id}`} className="dashboard-list-row studio-item-row ui44-list-row ui44-list-row-studio ui44-list-row-interactive">
+            <Link key={product.id} href={id === 'beats' ? `/studio/beats/${product.id}` : `/studio/products/${product.id}`} className="dashboard-list-row studio-item-row ui44-list-row ui44-list-row-studio ui44-list-row-interactive">
               {product.cover_url || product.hero_url ? <Image className="studio-item-artwork" src={product.cover_url || product.hero_url || ''} alt="" width={56} height={56} unoptimized /> : <div className="studio-item-artwork studio-item-artwork-empty" aria-hidden="true" />}
               <div className="dashboard-row-copy">
                 <div className="dashboard-row-title">{product.title}</div>

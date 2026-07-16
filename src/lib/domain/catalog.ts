@@ -1,6 +1,7 @@
 import type { Database } from '@/lib/database.types';
 import type { Product } from '@/lib/products';
 import { supabase } from '@/lib/supabase';
+import { beatReviewSurfacesEnabled, hydrateBeatProducts } from '@/lib/domain/beats';
 
 export type PlayableTrack = Pick<
   Database['public']['Tables']['tracks']['Row'],
@@ -19,7 +20,16 @@ export async function listPublishedCatalogItems(limit = 120) {
   return (result.data ?? []) as Product[];
 }
 
-export async function loadStoreDiscoveryCatalog(limit = 200) {
+export async function loadStoreDiscoveryCatalog(limit = 200, reviewOwnerId?: string | null) {
+  const reviewDraftResult = beatReviewSurfacesEnabled && reviewOwnerId
+    ? await supabase
+      .from('catalog_items')
+      .select('*, creators:profiles!author_id(*)')
+      .eq('author_id', reviewOwnerId)
+      .neq('status', 'archived')
+      .order('created_at', { ascending: false })
+      .limit(limit)
+    : { data: [], error: null };
   const [itemResult, capabilityResult, typeResult, tagResult, typeAssignmentResult, tagAssignmentResult] = await Promise.all([
     supabase
       .from('catalog_items')
@@ -33,7 +43,7 @@ export async function loadStoreDiscoveryCatalog(limit = 200) {
     supabase.from('item_type_assignments').select('item_id,item_type_id'),
     supabase.from('item_tag_assignments').select('item_id,item_tag_id'),
   ]);
-  const error = itemResult.error || capabilityResult.error || typeResult.error || tagResult.error || typeAssignmentResult.error || tagAssignmentResult.error;
+  const error = reviewDraftResult.error || itemResult.error || capabilityResult.error || typeResult.error || tagResult.error || typeAssignmentResult.error || tagAssignmentResult.error;
   if (error) throw error;
   const capabilitiesByItem = new Map<string, string[]>();
   (capabilityResult.data ?? []).forEach(row => {
@@ -48,12 +58,19 @@ export async function loadStoreDiscoveryCatalog(limit = 200) {
     const tag = tagsById.get(row.item_tag_id);
     if (tag) tagsByItem.set(row.item_id, [...(tagsByItem.get(row.item_id) ?? []), tag]);
   });
-  return ((itemResult.data ?? []) as Product[]).map(item => ({
+  const publicItems = (itemResult.data ?? []) as Product[];
+  const publicItemIds = new Set(publicItems.map(item => item.id));
+  const reviewBeatItems = ((reviewDraftResult.data ?? []) as Product[]).filter(item => {
+    const type = typeByItem.get(item.id);
+    return !publicItemIds.has(item.id) && type?.slug === 'beat';
+  });
+  const products = [...publicItems, ...reviewBeatItems].map(item => ({
     ...item,
     capability_keys: capabilitiesByItem.get(item.id) ?? [],
     browse_type: typeByItem.get(item.id) ?? null,
     browse_tags: tagsByItem.get(item.id) ?? [],
   }));
+  return hydrateBeatProducts(products);
 }
 
 export async function listPlayableItemTracks(itemId: string) {

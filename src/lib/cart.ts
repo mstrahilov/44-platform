@@ -6,7 +6,9 @@ const STORAGE_KEY = '44-cart-v1';
 const CHANGE_EVENT = '44-cart-changed';
 
 export type CartItem = {
+  line_id?: string;
   item_id: string;
+  offer_id?: string | null;
   title: string;
   creator: string;
   item_type?: string | null;
@@ -15,6 +17,10 @@ export type CartItem = {
   currency: string;
   slug?: string | null;
   href?: string | null;
+  offer_title?: string | null;
+  tier_code?: string | null;
+  included_files?: string[];
+  terms_sha256?: string | null;
 };
 
 const EMPTY_CART: readonly CartItem[] = Object.freeze([]);
@@ -39,7 +45,7 @@ function readCart(): CartItem[] {
           const current = { ...entry };
           delete current.product_id;
           delete current.quantity;
-          return [{ ...current, item_id: itemId }];
+          return [{ ...current, item_id: itemId, line_id: current.line_id || (current.offer_id ? `offer:${current.offer_id}` : `item:${itemId}`) }];
         })
       : [];
   } catch {
@@ -59,14 +65,16 @@ export function getCart(): CartItem[] {
 }
 
 export function addToCart(item: CartItem) {
-  const items = readCart();
-  const existing = items.find(entry => entry.item_id === item.item_id);
-  if (!existing) items.push(item);
+  let items = readCart();
+  const lineId = item.line_id || (item.offer_id ? `offer:${item.offer_id}` : `item:${item.item_id}`);
+  if (item.offer_id) items = items.filter(entry => entry.item_id !== item.item_id);
+  const existing = items.find(entry => (entry.line_id || `item:${entry.item_id}`) === lineId);
+  if (!existing) items.push({ ...item, line_id: lineId });
   writeCart(items);
 }
 
-export function removeFromCart(itemId: string) {
-  writeCart(readCart().filter(entry => entry.item_id !== itemId));
+export function removeFromCart(lineOrItemId: string) {
+  writeCart(readCart().filter(entry => entry.item_id !== lineOrItemId && entry.line_id !== lineOrItemId));
 }
 
 export function clearCart() {
@@ -107,6 +115,10 @@ export function useCart() {
     (itemId: string) => items.some(entry => entry.item_id === itemId),
     [items],
   );
+  const hasOffer = useCallback(
+    (offerId: string) => items.some(entry => entry.offer_id === offerId),
+    [items],
+  );
 
   // No-op effect just to keep the hook stable; useSyncExternalStore handles updates.
   useEffect(() => {}, []);
@@ -116,5 +128,6 @@ export function useCart() {
     count: cartCount(items),
     subtotalCents: cartSubtotalCents(items),
     has,
+    hasOffer,
   };
 }

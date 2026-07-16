@@ -201,6 +201,7 @@ export default function Sidebar() {
   const availableApps = getAvailableDockApps({
     signedIn: Boolean(user),
     isCreator: isCreatorProfile(profile),
+    isAdmin: profile?.role === 'admin',
   });
   const dockApps = availableApps;
   const activePinnedItem = pinnedItems.find(item => isPinnedDockItemActive(pathname, item.href));
@@ -213,8 +214,9 @@ export default function Sidebar() {
   const supportApp = dockApps.find(app => app.id === 'support') ?? null;
   const settingsApp = dockApps.find(app => app.id === 'settings') ?? null;
   const studioApp = dockApps.find(app => app.id === 'studio') ?? getOSApp('studio') ?? null;
+  const adminApp = dockApps.find(app => app.id === 'admin') ?? null;
   const menuLibraryApp = libraryApp ?? getOSApp('library') ?? null;
-  const menuApps = [menuLibraryApp, getOSApp('store'), getOSApp('radio'), getOSApp('community'), studioApp, supportApp, settingsApp]
+  const menuApps = [menuLibraryApp, getOSApp('store'), getOSApp('radio'), getOSApp('community'), studioApp, adminApp, supportApp, settingsApp]
     .filter((app): app is OSApp => Boolean(app))
     .filter((app, index, apps) => apps.findIndex(candidate => candidate.id === app.id) === index);
   const mobileDockApps = ['store', 'library', 'radio', 'community', 'search']
@@ -267,6 +269,10 @@ export default function Sidebar() {
 
         {supportApp && (
           <DockItem app={supportApp} active={mainActiveAppId === supportApp.id} compact={compact} />
+        )}
+
+        {adminApp && (
+          <DockItem app={adminApp} active={mainActiveAppId === adminApp.id} compact={compact} />
         )}
 
         {user && settingsApp && (

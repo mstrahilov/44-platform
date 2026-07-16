@@ -7,31 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       achievement_events: {
@@ -223,6 +198,690 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_item_lifecycle_events: {
+        Row: {
+          action: string
+          changed_by: string
+          created_at: string
+          id: string
+          item_id: string
+          new_status: string
+          previous_status: string
+          reason: string
+        }
+        Insert: {
+          action: string
+          changed_by: string
+          created_at?: string
+          id?: string
+          item_id: string
+          new_status: string
+          previous_status: string
+          reason: string
+        }
+        Update: {
+          action?: string
+          changed_by?: string
+          created_at?: string
+          id?: string
+          item_id?: string
+          new_status?: string
+          previous_status?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_item_lifecycle_events_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_item_lifecycle_events_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_profile_role_events: {
+        Row: {
+          changed_by: string
+          created_at: string
+          id: string
+          new_role: string
+          previous_role: string
+          profile_id: string
+          reason: string
+        }
+        Insert: {
+          changed_by: string
+          created_at?: string
+          id?: string
+          new_role: string
+          previous_role: string
+          profile_id: string
+          reason: string
+        }
+        Update: {
+          changed_by?: string
+          created_at?: string
+          id?: string
+          new_role?: string
+          previous_role?: string
+          profile_id?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_profile_role_events_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_profile_role_events_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      beat_attribute_assignments: {
+        Row: {
+          created_at: string
+          item_id: string
+          term_id: string
+        }
+        Insert: {
+          created_at?: string
+          item_id: string
+          term_id: string
+        }
+        Update: {
+          created_at?: string
+          item_id?: string
+          term_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beat_attribute_assignments_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "beat_details"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "beat_attribute_assignments_term_id_fkey"
+            columns: ["term_id"]
+            isOneToOne: false
+            referencedRelation: "beat_attribute_terms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      beat_attribute_terms: {
+        Row: {
+          attribute_kind: string
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          attribute_kind: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          attribute_kind?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      beat_collaborator_splits: {
+        Row: {
+          acceptance_status: string
+          accepted_at: string | null
+          created_at: string
+          item_id: string
+          profile_id: string
+          publishing_share_bps: number
+          revenue_share_bps: number
+          updated_at: string
+        }
+        Insert: {
+          acceptance_status?: string
+          accepted_at?: string | null
+          created_at?: string
+          item_id: string
+          profile_id: string
+          publishing_share_bps: number
+          revenue_share_bps: number
+          updated_at?: string
+        }
+        Update: {
+          acceptance_status?: string
+          accepted_at?: string | null
+          created_at?: string
+          item_id?: string
+          profile_id?: string
+          publishing_share_bps?: number
+          revenue_share_bps?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beat_collaborator_splits_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "beat_details"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "beat_collaborator_splits_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      beat_details: {
+        Row: {
+          bpm: number
+          created_at: string
+          item_id: string
+          key_mode: string | null
+          key_not_applicable: boolean
+          key_root: string | null
+          preview_track_id: string
+          sale_status: string
+          sample_disclosure: string | null
+          sample_status: string
+          sold_at: string | null
+          time_signature: string
+          updated_at: string
+        }
+        Insert: {
+          bpm: number
+          created_at?: string
+          item_id: string
+          key_mode?: string | null
+          key_not_applicable?: boolean
+          key_root?: string | null
+          preview_track_id: string
+          sale_status?: string
+          sample_disclosure?: string | null
+          sample_status?: string
+          sold_at?: string | null
+          time_signature?: string
+          updated_at?: string
+        }
+        Update: {
+          bpm?: number
+          created_at?: string
+          item_id?: string
+          key_mode?: string | null
+          key_not_applicable?: boolean
+          key_root?: string | null
+          preview_track_id?: string
+          sale_status?: string
+          sample_disclosure?: string | null
+          sample_status?: string
+          sold_at?: string | null
+          time_signature?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beat_details_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: true
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "beat_details_preview_track_id_fkey"
+            columns: ["preview_track_id"]
+            isOneToOne: true
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      beat_exclusive_reservations: {
+        Row: {
+          buyer_id: string
+          completed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          idempotency_key: string
+          item_id: string
+          offer_id: string
+          order_id: string | null
+          status: string
+        }
+        Insert: {
+          buyer_id: string
+          completed_at?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          idempotency_key: string
+          item_id: string
+          offer_id: string
+          order_id?: string | null
+          status?: string
+        }
+        Update: {
+          buyer_id?: string
+          completed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          idempotency_key?: string
+          item_id?: string
+          offer_id?: string
+          order_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beat_exclusive_reservations_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "beat_details"
+            referencedColumns: ["item_id"]
+          },
+          {
+            foreignKeyName: "beat_exclusive_reservations_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "beat_exclusive_reservations_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "commerce_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      beat_files: {
+        Row: {
+          asset_id: string
+          created_at: string
+          file_kind: string
+          id: string
+          item_id: string
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string
+          file_kind: string
+          id?: string
+          item_id: string
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string
+          file_kind?: string
+          id?: string
+          item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beat_files_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: true
+            referencedRelation: "item_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "beat_files_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "beat_details"
+            referencedColumns: ["item_id"]
+          },
+        ]
+      }
+      beat_license_download_events: {
+        Row: {
+          beat_file_id: string
+          buyer_id: string
+          grant_id: string
+          id: string
+          ip_hash: string | null
+          occurred_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          beat_file_id: string
+          buyer_id: string
+          grant_id: string
+          id?: string
+          ip_hash?: string | null
+          occurred_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          beat_file_id?: string
+          buyer_id?: string
+          grant_id?: string
+          id?: string
+          ip_hash?: string | null
+          occurred_at?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beat_license_download_events_beat_file_id_fkey"
+            columns: ["beat_file_id"]
+            isOneToOne: false
+            referencedRelation: "beat_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "beat_license_download_events_grant_id_fkey"
+            columns: ["grant_id"]
+            isOneToOne: false
+            referencedRelation: "beat_license_grants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      beat_license_grants: {
+        Row: {
+          buyer_id: string
+          collaborator_snapshot: Json
+          created_at: string
+          currency: string
+          file_manifest: Json
+          granted_at: string
+          id: string
+          is_exclusive: boolean
+          item_id: string
+          license_number: string
+          offer_id: string
+          order_item_id: string
+          price_cents: number
+          seller_id: string
+          seller_snapshot: Json
+          status: string
+          status_changed_at: string
+          template_id: string
+          terms_sha256: string
+          terms_text: string
+          tier_code: string
+        }
+        Insert: {
+          buyer_id: string
+          collaborator_snapshot: Json
+          created_at?: string
+          currency: string
+          file_manifest: Json
+          granted_at?: string
+          id?: string
+          is_exclusive: boolean
+          item_id: string
+          license_number: string
+          offer_id: string
+          order_item_id: string
+          price_cents: number
+          seller_id: string
+          seller_snapshot: Json
+          status?: string
+          status_changed_at?: string
+          template_id: string
+          terms_sha256: string
+          terms_text: string
+          tier_code: string
+        }
+        Update: {
+          buyer_id?: string
+          collaborator_snapshot?: Json
+          created_at?: string
+          currency?: string
+          file_manifest?: Json
+          granted_at?: string
+          id?: string
+          is_exclusive?: boolean
+          item_id?: string
+          license_number?: string
+          offer_id?: string
+          order_item_id?: string
+          price_cents?: number
+          seller_id?: string
+          seller_snapshot?: Json
+          status?: string
+          status_changed_at?: string
+          template_id?: string
+          terms_sha256?: string
+          terms_text?: string
+          tier_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beat_license_grants_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "beat_license_grants_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "beat_license_grants_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: true
+            referencedRelation: "commerce_order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "beat_license_grants_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "beat_license_grants_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "beat_license_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      beat_license_offers: {
+        Row: {
+          created_at: string
+          offer_id: string
+          template_id: string
+        }
+        Insert: {
+          created_at?: string
+          offer_id: string
+          template_id: string
+        }
+        Update: {
+          created_at?: string
+          offer_id?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beat_license_offers_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: true
+            referencedRelation: "catalog_offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "beat_license_offers_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "beat_license_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      beat_license_templates: {
+        Row: {
+          approved_by: string | null
+          counsel_approved_at: string | null
+          created_at: string
+          id: string
+          included_file_kinds: string[]
+          is_exclusive: boolean
+          short_summary: string
+          status: string
+          terms_sha256: string | null
+          terms_text: string
+          tier_code: string
+          title: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          approved_by?: string | null
+          counsel_approved_at?: string | null
+          created_at?: string
+          id?: string
+          included_file_kinds: string[]
+          is_exclusive: boolean
+          short_summary: string
+          status?: string
+          terms_sha256?: string | null
+          terms_text: string
+          tier_code: string
+          title: string
+          updated_at?: string
+          version: number
+        }
+        Update: {
+          approved_by?: string | null
+          counsel_approved_at?: string | null
+          created_at?: string
+          id?: string
+          included_file_kinds?: string[]
+          is_exclusive?: boolean
+          short_summary?: string
+          status?: string
+          terms_sha256?: string | null
+          terms_text?: string
+          tier_code?: string
+          title?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beat_license_templates_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      beat_offer_files: {
+        Row: {
+          beat_file_id: string
+          created_at: string
+          offer_id: string
+        }
+        Insert: {
+          beat_file_id: string
+          created_at?: string
+          offer_id: string
+        }
+        Update: {
+          beat_file_id?: string
+          created_at?: string
+          offer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beat_offer_files_beat_file_id_fkey"
+            columns: ["beat_file_id"]
+            isOneToOne: false
+            referencedRelation: "beat_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "beat_offer_files_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "beat_license_offers"
+            referencedColumns: ["offer_id"]
+          },
+        ]
+      }
+      beat_runtime_controls: {
+        Row: {
+          catalog_enabled: boolean
+          checkout_enabled: boolean
+          exclusive_sales_enabled: boolean
+          nonexclusive_pilot_enabled: boolean
+          publishing_enabled: boolean
+          review_surfaces_enabled: boolean
+          singleton: boolean
+          split_sales_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          catalog_enabled?: boolean
+          checkout_enabled?: boolean
+          exclusive_sales_enabled?: boolean
+          nonexclusive_pilot_enabled?: boolean
+          publishing_enabled?: boolean
+          review_surfaces_enabled?: boolean
+          singleton?: boolean
+          split_sales_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          catalog_enabled?: boolean
+          checkout_enabled?: boolean
+          exclusive_sales_enabled?: boolean
+          nonexclusive_pilot_enabled?: boolean
+          publishing_enabled?: boolean
+          review_surfaces_enabled?: boolean
+          singleton?: boolean
+          split_sales_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       book_contents: {
         Row: {
           created_at: string
@@ -301,6 +960,7 @@ export type Database = {
           merch_shipping_scope: string | null
           price_cents: number
           read_url: string | null
+          release_date: string | null
           short_description: string | null
           slug: string
           sort_order: number | null
@@ -311,7 +971,6 @@ export type Database = {
           upcoming_release_at: string | null
           upcoming_release_timezone: string | null
           updated_at: string
-          release_date: string | null
           year: number | null
         }
         Insert: {
@@ -340,6 +999,7 @@ export type Database = {
           merch_shipping_scope?: string | null
           price_cents?: number
           read_url?: string | null
+          release_date?: string | null
           short_description?: string | null
           slug: string
           sort_order?: number | null
@@ -350,7 +1010,6 @@ export type Database = {
           upcoming_release_at?: string | null
           upcoming_release_timezone?: string | null
           updated_at?: string
-          release_date?: string | null
           year?: number | null
         }
         Update: {
@@ -379,6 +1038,7 @@ export type Database = {
           merch_shipping_scope?: string | null
           price_cents?: number
           read_url?: string | null
+          release_date?: string | null
           short_description?: string | null
           slug?: string
           sort_order?: number | null
@@ -389,7 +1049,6 @@ export type Database = {
           upcoming_release_at?: string | null
           upcoming_release_timezone?: string | null
           updated_at?: string
-          release_date?: string | null
           year?: number | null
         }
         Relationships: [
@@ -3237,6 +3896,226 @@ export type Database = {
           },
         ]
       }
+      item_submission_beat_attributes: {
+        Row: {
+          submission_id: string
+          term_id: string
+        }
+        Insert: {
+          submission_id: string
+          term_id: string
+        }
+        Update: {
+          submission_id?: string
+          term_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_submission_beat_attributes_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "item_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_submission_beat_attributes_term_id_fkey"
+            columns: ["term_id"]
+            isOneToOne: false
+            referencedRelation: "beat_attribute_terms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_submission_beat_details: {
+        Row: {
+          bpm: number
+          item_id: string
+          key_mode: string | null
+          key_not_applicable: boolean
+          key_root: string | null
+          preview_track_source_id: string
+          sale_status: string
+          sample_disclosure: string | null
+          sample_status: string
+          sold_at: string | null
+          submission_id: string
+          time_signature: string
+        }
+        Insert: {
+          bpm: number
+          item_id: string
+          key_mode?: string | null
+          key_not_applicable: boolean
+          key_root?: string | null
+          preview_track_source_id: string
+          sale_status: string
+          sample_disclosure?: string | null
+          sample_status: string
+          sold_at?: string | null
+          submission_id: string
+          time_signature: string
+        }
+        Update: {
+          bpm?: number
+          item_id?: string
+          key_mode?: string | null
+          key_not_applicable?: boolean
+          key_root?: string | null
+          preview_track_source_id?: string
+          sale_status?: string
+          sample_disclosure?: string | null
+          sample_status?: string
+          sold_at?: string | null
+          submission_id?: string
+          time_signature?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_submission_beat_details_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_submission_beat_details_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: true
+            referencedRelation: "item_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_submission_beat_files: {
+        Row: {
+          asset_source_id: string
+          file_kind: string
+          source_id: string
+          submission_id: string
+        }
+        Insert: {
+          asset_source_id: string
+          file_kind: string
+          source_id: string
+          submission_id: string
+        }
+        Update: {
+          asset_source_id?: string
+          file_kind?: string
+          source_id?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_submission_beat_files_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "item_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_submission_beat_license_offers: {
+        Row: {
+          offer_source_id: string
+          submission_id: string
+          template_id: string
+        }
+        Insert: {
+          offer_source_id: string
+          submission_id: string
+          template_id: string
+        }
+        Update: {
+          offer_source_id?: string
+          submission_id?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_submission_beat_license_offers_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "item_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_submission_beat_license_offers_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "beat_license_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_submission_beat_offer_files: {
+        Row: {
+          beat_file_source_id: string
+          offer_source_id: string
+          submission_id: string
+        }
+        Insert: {
+          beat_file_source_id: string
+          offer_source_id: string
+          submission_id: string
+        }
+        Update: {
+          beat_file_source_id?: string
+          offer_source_id?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_submission_beat_offer_files_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "item_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_submission_beat_splits: {
+        Row: {
+          acceptance_status: string
+          accepted_at: string | null
+          profile_id: string
+          publishing_share_bps: number
+          revenue_share_bps: number
+          submission_id: string
+        }
+        Insert: {
+          acceptance_status: string
+          accepted_at?: string | null
+          profile_id: string
+          publishing_share_bps: number
+          revenue_share_bps: number
+          submission_id: string
+        }
+        Update: {
+          acceptance_status?: string
+          accepted_at?: string | null
+          profile_id?: string
+          publishing_share_bps?: number
+          revenue_share_bps?: number
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_submission_beat_splits_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_submission_beat_splits_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "item_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       item_submission_capabilities: {
         Row: {
           capability_key: string
@@ -3549,6 +4428,9 @@ export type Database = {
         Row: {
           created_at: string
           delivered_at: string | null
+          delivery_attempts: number
+          delivery_claimed_at: string | null
+          delivery_last_error: string | null
           event_type: string
           id: string
           payload: Json
@@ -3558,6 +4440,9 @@ export type Database = {
         Insert: {
           created_at?: string
           delivered_at?: string | null
+          delivery_attempts?: number
+          delivery_claimed_at?: string | null
+          delivery_last_error?: string | null
           event_type: string
           id?: string
           payload?: Json
@@ -3567,6 +4452,9 @@ export type Database = {
         Update: {
           created_at?: string
           delivered_at?: string | null
+          delivery_attempts?: number
+          delivery_claimed_at?: string | null
+          delivery_last_error?: string | null
           event_type?: string
           id?: string
           payload?: Json
@@ -3772,6 +4660,38 @@ export type Database = {
             foreignKeyName: "item_submission_type_assignments_submission_id_fkey"
             columns: ["submission_id"]
             isOneToOne: true
+            referencedRelation: "item_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_submission_video_embeds: {
+        Row: {
+          sort_order: number
+          source_id: string
+          submission_id: string
+          title: string
+          youtube_video_id: string
+        }
+        Insert: {
+          sort_order: number
+          source_id?: string
+          submission_id: string
+          title: string
+          youtube_video_id: string
+        }
+        Update: {
+          sort_order?: number
+          source_id?: string
+          submission_id?: string
+          title?: string
+          youtube_video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_submission_video_embeds_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
             referencedRelation: "item_submissions"
             referencedColumns: ["id"]
           },
@@ -4008,6 +4928,44 @@ export type Database = {
           },
         ]
       }
+      item_video_embeds: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          sort_order: number
+          title: string
+          updated_at: string
+          youtube_video_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+          youtube_video_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          youtube_video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_video_embeds_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       library_entries: {
         Row: {
           acquired_at: string
@@ -4217,6 +5175,38 @@ export type Database = {
           },
         ]
       }
+      notification_delivery_controls: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          enabled: boolean
+          singleton: boolean
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          enabled?: boolean
+          singleton?: boolean
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          enabled?: boolean
+          singleton?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_delivery_controls_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       offer_entitlements: {
         Row: {
           created_at: string
@@ -4242,6 +5232,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ops_error_events: {
+        Row: {
+          created_at: string
+          error_code: string | null
+          error_digest: string | null
+          error_name: string
+          framework_context: Json
+          id: string
+          method: string
+          occurred_at: string
+          path: string
+          release: string
+          runtime: string
+          safe_message: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_code?: string | null
+          error_digest?: string | null
+          error_name: string
+          framework_context?: Json
+          id?: string
+          method: string
+          occurred_at?: string
+          path: string
+          release: string
+          runtime: string
+          safe_message?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_code?: string | null
+          error_digest?: string | null
+          error_name?: string
+          framework_context?: Json
+          id?: string
+          method?: string
+          occurred_at?: string
+          path?: string
+          release?: string
+          runtime?: string
+          safe_message?: string | null
+        }
+        Relationships: []
       }
       payment_attempts: {
         Row: {
@@ -5943,6 +6978,15 @@ export type Database = {
         }
         Returns: string
       }
+      beat_catalog_enabled: { Args: never; Returns: boolean }
+      beat_configuration_health: {
+        Args: { target_item_id: string }
+        Returns: {
+          code: string
+          message: string
+        }[]
+      }
+      beat_review_surfaces_enabled: { Args: never; Returns: boolean }
       begin_interactive_launch: {
         Args: { client_context?: Json; target_item_id: string }
         Returns: {
@@ -5991,6 +7035,21 @@ export type Database = {
           code: string
           message: string
         }[]
+      }
+      claim_item_submission_notification_events: {
+        Args: { target_limit?: number }
+        Returns: {
+          created_at: string
+          event_type: string
+          id: string
+          payload: Json
+          recipient_id: string
+          submission_id: string
+        }[]
+      }
+      complete_item_submission_notification_event: {
+        Args: { target_error?: string; target_event_id: string }
+        Returns: undefined
       }
       create_content_collaboration: {
         Args: {
@@ -6061,6 +7120,7 @@ export type Database = {
           trigger_type: string
         }[]
       }
+      expire_beat_reservations: { Args: never; Returns: number }
       external_link_host: { Args: { target_url: string }; Returns: string }
       external_link_is_valid: {
         Args: {
@@ -6069,6 +7129,23 @@ export type Database = {
           target_url: string
         }
         Returns: boolean
+      }
+      finalize_beat_license_purchase: {
+        Args: { target_order_item_id: string; target_reservation_id?: string }
+        Returns: string
+      }
+      get_admin_content_detail: {
+        Args: { target_item_id: string }
+        Returns: Json
+      }
+      get_admin_dashboard_summary: { Args: never; Returns: Json }
+      get_admin_person_detail: {
+        Args: { target_profile_id: string }
+        Returns: Json
+      }
+      get_admin_submission_detail: {
+        Args: { target_submission_id: string }
+        Returns: Json
       }
       get_creator_total_plays: { Args: never; Returns: number }
       grant_achievement_entitlement: {
@@ -6091,6 +7168,10 @@ export type Database = {
         }
         Returns: string
       }
+      has_active_beat_file_grant: {
+        Args: { target_asset_id: string; target_user_id: string }
+        Returns: boolean
+      }
       has_item_entitlement: {
         Args: {
           target_entitlement_type: string
@@ -6107,6 +7188,7 @@ export type Database = {
         Args: { target_profile_id?: string }
         Returns: boolean
       }
+      is_beat_item: { Args: { target_item_id: string }; Returns: boolean }
       is_conversation_member: {
         Args: { p_conversation_id: string; p_profile_id: string }
         Returns: boolean
@@ -6122,6 +7204,122 @@ export type Database = {
           target_user_id: string
         }
         Returns: boolean
+      }
+      list_admin_content: {
+        Args: {
+          target_limit?: number
+          target_offset?: number
+          target_query?: string
+          target_status?: string
+          target_type?: string
+        }
+        Returns: {
+          assigned_type: string
+          cover_url: string
+          created_at: string
+          creator_id: string
+          creator_name: string
+          creator_username: string
+          experience_type: string
+          item_id: string
+          item_type: string
+          pending_submission_id: string
+          publication_status: string
+          review_status: string
+          slug: string
+          title: string
+          total_count: number
+          updated_at: string
+        }[]
+      }
+      list_admin_error_events: {
+        Args: {
+          target_limit?: number
+          target_offset?: number
+          target_path?: string
+          target_release?: string
+          target_since?: string
+        }
+        Returns: {
+          error_code: string
+          error_digest: string
+          error_name: string
+          framework_context: Json
+          id: string
+          method: string
+          occurred_at: string
+          path: string
+          release: string
+          runtime: string
+          safe_message: string
+        }[]
+      }
+      list_admin_error_events_page: {
+        Args: {
+          target_limit?: number
+          target_offset?: number
+          target_path?: string
+          target_release?: string
+          target_since?: string
+        }
+        Returns: {
+          error_code: string
+          error_digest: string
+          error_name: string
+          framework_context: Json
+          id: string
+          method: string
+          occurred_at: string
+          path: string
+          release: string
+          runtime: string
+          safe_message: string
+          total_count: number
+        }[]
+      }
+      list_admin_people: {
+        Args: {
+          target_limit?: number
+          target_offset?: number
+          target_query?: string
+          target_role?: string
+        }
+        Returns: {
+          avatar_url: string
+          creator_type: string
+          display_name: string
+          email: string
+          email_confirmed_at: string
+          item_count: number
+          last_sign_in_at: string
+          profile_id: string
+          profile_missing: boolean
+          profile_role: string
+          signed_up_at: string
+          total_count: number
+          username: string
+        }[]
+      }
+      list_admin_submission_queue: {
+        Args: {
+          target_limit?: number
+          target_offset?: number
+          target_status?: string
+        }
+        Returns: {
+          creator_name: string
+          decided_at: string
+          decision_reason: string
+          item_id: string
+          item_slug: string
+          item_title: string
+          pending_notification_count: number
+          status: string
+          submission_id: string
+          submission_kind: string
+          submitted_at: string
+          submitter_id: string
+        }[]
       }
       list_item_asset_manifest: {
         Args: { target_item_id: string }
@@ -6163,6 +7361,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      record_beat_file_download: {
+        Args: {
+          target_beat_file_id: string
+          target_grant_id: string
+          target_ip_hash?: string
+          target_user_agent?: string
+        }
+        Returns: string
+      }
       record_interactive_progress: {
         Args: {
           event_payload: Json
@@ -6197,6 +7404,21 @@ export type Database = {
         }
         Returns: undefined
       }
+      record_sanitized_error_event: {
+        Args: {
+          target_error_code?: string
+          target_error_digest?: string
+          target_error_name: string
+          target_framework_context?: Json
+          target_method: string
+          target_occurred_at: string
+          target_path: string
+          target_release: string
+          target_runtime: string
+          target_safe_message?: string
+        }
+        Returns: string
+      }
       record_trusted_interactive_event: {
         Args: {
           event_payload: Json
@@ -6227,12 +7449,26 @@ export type Database = {
         Args: { link_rows: Json; target_item_id: string }
         Returns: undefined
       }
+      replace_owned_item_video_embeds: {
+        Args: { target_embeds?: Json; target_item_id: string }
+        Returns: undefined
+      }
       report_content: {
         Args: {
           report_details?: string
           report_reason?: string
           target_entry_id?: string
           target_reply_id?: string
+        }
+        Returns: string
+      }
+      reserve_exclusive_beat_offer: {
+        Args: {
+          target_buyer_id: string
+          target_idempotency_key: string
+          target_offer_id: string
+          target_order_id?: string
+          target_ttl_seconds?: number
         }
         Returns: string
       }
@@ -6263,6 +7499,30 @@ export type Database = {
       }
       save_item_to_library: {
         Args: { target_item_id: string }
+        Returns: string
+      }
+      save_owned_beat_draft: {
+        Args: {
+          target_attribute_term_ids: string[]
+          target_bpm: number
+          target_cover_url: string
+          target_description: string
+          target_external_url: string
+          target_item_id: string
+          target_key_mode: string
+          target_key_not_applicable: boolean
+          target_key_root: string
+          target_preview_duration: number
+          target_preview_url: string
+          target_private_files: Json
+          target_release_date: string
+          target_sample_disclosure: string
+          target_sample_status: string
+          target_tag_ids: string[]
+          target_tier_prices: Json
+          target_time_signature: string
+          target_title: string
+        }
         Returns: string
       }
       save_reading_progress: {
@@ -6326,6 +7586,26 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_admin_creator_access: {
+        Args: {
+          target_profile_id: string
+          target_reason: string
+          target_role: string
+        }
+        Returns: undefined
+      }
+      set_admin_item_lifecycle: {
+        Args: {
+          target_action: string
+          target_item_id: string
+          target_reason: string
+        }
+        Returns: string
+      }
+      set_beat_license_grant_status: {
+        Args: { target_grant_id: string; target_status: string }
+        Returns: undefined
+      }
       set_creator_event_state: {
         Args: { target_event_id: string; target_state: string }
         Returns: undefined
@@ -6347,6 +7627,10 @@ export type Database = {
         Returns: undefined
       }
       snapshot_item_for_submission: {
+        Args: { target_item_id: string; target_submission_id: string }
+        Returns: undefined
+      }
+      snapshot_item_for_submission_core: {
         Args: { target_item_id: string; target_submission_id: string }
         Returns: undefined
       }
@@ -6383,6 +7667,10 @@ export type Database = {
       withdraw_item_submission: {
         Args: { reason?: string; target_submission_id: string }
         Returns: undefined
+      }
+      youtube_video_id_from_url: {
+        Args: { target_url: string }
+        Returns: string
       }
     }
     Enums: {
@@ -6512,9 +7800,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

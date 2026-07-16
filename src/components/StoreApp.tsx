@@ -13,6 +13,7 @@ import { listFollowedProfileIds } from '@/lib/domain/community';
 import { FilterPopover } from '@/components/FilterPopover';
 import { Ui44SectionArrow } from '@/components/ui44/Controls';
 import { Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
+import { beatReviewSurfacesEnabled } from '@/lib/domain/beats';
 
 const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
   music: 'music',
@@ -73,6 +74,10 @@ function creatorFilterKey(product: Product) {
   return product.author_id || product.creators?.id || product.creator;
 }
 
+function isBeatProduct(product: Product) {
+  return product.browse_type?.slug === 'beat' || product.capability_keys?.includes('beat_licensing') || Boolean(product.beat);
+}
+
 function compareMerchShelfProducts(left: Product, right: Product) {
   const priority = (product: Product) => {
     const type = (product.browse_type?.label || product.item_type || '').trim().toLowerCase();
@@ -94,9 +99,16 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   const [activeFilter, setActiveFilter] = useState<StoreFilter>('all');
   const [priceFilter, setPriceFilter] = useState<PriceFilter>('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [urlFilterReady, setUrlFilterReady] = useState(false);
   const [tagFilter, setTagFilter] = useState('all');
   const [capabilityFilter, setCapabilityFilter] = useState<'all' | 'achievements'>('all');
   const [creatorFilter, setCreatorFilter] = useState('all');
+  const [beatBpmMin, setBeatBpmMin] = useState('');
+  const [beatBpmMax, setBeatBpmMax] = useState('');
+  const [beatKey, setBeatKey] = useState('all');
+  const [beatMood, setBeatMood] = useState('all');
+  const [beatInstrument, setBeatInstrument] = useState('all');
+  const [beatTier, setBeatTier] = useState('all');
 
   useEffect(() => {
     let alive = true;
@@ -105,8 +117,9 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
       setLoading(true);
       setError('');
 
+      if (authLoading) return;
       try {
-        const items = await loadStoreDiscoveryCatalog();
+        const items = await loadStoreDiscoveryCatalog(200, user?.id);
         if (!alive) return;
         setProducts(items);
       } catch (loadError) {
@@ -119,7 +132,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
 
     load();
     return () => { alive = false; };
-  }, []);
+  }, [authLoading, user?.id]);
 
   useEffect(() => {
     let alive = true;
@@ -142,6 +155,20 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     return () => { alive = false; };
   }, [authLoading, user]);
 
+  useEffect(() => {
+    let alive = true;
+    if (typeof window === 'undefined') return;
+    const requestedType = beatReviewSurfacesEnabled && category === 'music'
+      ? new URLSearchParams(window.location.search).get('type') || 'all'
+      : 'all';
+    Promise.resolve().then(() => {
+      if (!alive) return;
+      setTypeFilter(requestedType);
+      setUrlFilterReady(true);
+    });
+    return () => { alive = false; };
+  }, [category]);
+
   const availableStoreFilters = useMemo(() => {
     const expected = CATEGORY_EXPERIENCE[category] as StoreFilter | undefined;
     return expected ? [expected] : STORE_FILTER_ORDER.filter(filter => (
@@ -151,17 +178,22 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   const effectiveFilter = CATEGORY_EXPERIENCE[category] as StoreFilter | undefined
     ?? (availableStoreFilters.includes(activeFilter) ? activeFilter : 'all');
   const selectedExperience = CATEGORY_EXPERIENCE[category] ?? (effectiveFilter === 'all' ? null : effectiveFilter);
-  const availableTypes = useMemo(
-    () => Array.from(new Set(products
+  const availableTypes = useMemo(() => {
+    const types = new Set(products
       .filter(product => getProductExperience(product) === selectedExperience)
-      .flatMap(product => product.browse_type?.label ? [product.browse_type.label] : []),
-    )).sort((a, b) => a.localeCompare(b)),
-    [products, selectedExperience],
-  );
+      .flatMap(product => product.browse_type?.label ? [product.browse_type.label] : []));
+    if (beatReviewSurfacesEnabled && selectedExperience === 'music') types.add('Beat');
+    return Array.from(types).sort((a, b) => a.localeCompare(b));
+  }, [products, selectedExperience]);
   const effectiveTypeFilter = selectedExperience
-    && availableTypes.some(type => type.toLowerCase() === typeFilter.toLowerCase())
-    ? typeFilter
+    ? availableTypes.find(type => type.toLowerCase() === typeFilter.toLowerCase()) ?? 'all'
     : 'all';
+  const beatFiltersVisible = beatReviewSurfacesEnabled && selectedExperience === 'music' && effectiveTypeFilter.toLowerCase() === 'beat';
+  const availableBeatKeys = useMemo(() => Array.from(new Set(products.filter(isBeatProduct).map(product => (
+    product.beat?.keyNotApplicable ? 'Atonal / N/A' : [product.beat?.keyRoot, product.beat?.keyMode].filter(Boolean).join(' ')
+  )).filter(Boolean))).sort(), [products]);
+  const availableBeatMoods = useMemo(() => Array.from(new Set(products.filter(isBeatProduct).flatMap(product => product.beat?.moods ?? []))).sort(), [products]);
+  const availableBeatInstruments = useMemo(() => Array.from(new Set(products.filter(isBeatProduct).flatMap(product => product.beat?.instruments ?? []))).sort(), [products]);
   const availableTags = useMemo(() => {
     if (!selectedExperience) return [];
     return Array.from(new Set(products
@@ -202,8 +234,20 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
       if (expected && experience !== expected) return false;
       if (effectiveFilter !== 'all' && experience !== effectiveFilter) return false;
       if (effectiveTypeFilter !== 'all' && !itemMatchesStoreType(product, effectiveTypeFilter)) return false;
-      if (priceFilter === 'free' && !(product.is_free || product.price_cents === 0)) return false;
-      if (priceFilter === 'paid' && (product.is_free || product.price_cents === 0)) return false;
+      if (beatFiltersVisible) {
+        if (!product.beat) return false;
+        const minimum = Number(beatBpmMin || 0);
+        const maximum = Number(beatBpmMax || 999);
+        const key = product.beat.keyNotApplicable ? 'Atonal / N/A' : [product.beat.keyRoot, product.beat.keyMode].filter(Boolean).join(' ');
+        if (product.beat.bpm < minimum || product.beat.bpm > maximum) return false;
+        if (beatKey !== 'all' && key !== beatKey) return false;
+        if (beatMood !== 'all' && !product.beat.moods.includes(beatMood)) return false;
+        if (beatInstrument !== 'all' && !product.beat.instruments.includes(beatInstrument)) return false;
+        if (beatTier !== 'all' && !product.beat.availableTierCodes.includes(beatTier)) return false;
+      }
+      const hasPaidPrice = product.beat ? product.beat.hasPaidOffers : !(product.is_free || product.price_cents === 0);
+      if (priceFilter === 'free' && hasPaidPrice) return false;
+      if (priceFilter === 'paid' && !hasPaidPrice) return false;
       if (effectiveTagFilter !== 'all' && !(product.browse_tags ?? []).some(tag => tag.label.toLowerCase() === effectiveTagFilter.toLowerCase())) return false;
       if (capabilityFilter !== 'all' && !(product.capability_keys ?? []).includes(capabilityFilter)) return false;
       if (effectiveCreatorFilter === 'following' && !(product.author_id && followedProfileIds.has(product.author_id))) return false;
@@ -213,13 +257,14 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
       const taxonomy = [product.browse_type?.label, ...(product.browse_tags ?? []).map(tag => tag.label)].filter(Boolean).join(' ');
       return `${product.title} ${creator} ${taxonomy}`.toLowerCase().includes(normalizedQuery);
     }).sort(comparePublicCatalogProducts);
-  }, [capabilityFilter, category, effectiveCreatorFilter, effectiveFilter, effectiveTagFilter, effectiveTypeFilter, followedProfileIds, priceFilter, products, query]);
+  }, [beatBpmMax, beatBpmMin, beatFiltersVisible, beatInstrument, beatKey, beatMood, beatTier, capabilityFilter, category, effectiveCreatorFilter, effectiveFilter, effectiveTagFilter, effectiveTypeFilter, followedProfileIds, priceFilter, products, query]);
   const hasActiveFilters = (category === 'all' && effectiveFilter !== 'all')
     || priceFilter !== 'all'
     || effectiveTypeFilter !== 'all'
     || effectiveTagFilter !== 'all'
     || capabilityFilter !== 'all'
     || effectiveCreatorFilter !== 'all'
+    || (beatFiltersVisible && Boolean(beatBpmMin || beatBpmMax || beatKey !== 'all' || beatMood !== 'all' || beatInstrument !== 'all' || beatTier !== 'all'))
     || Boolean(query.trim());
 
   const surfaceName = hasActiveFilters ? 'Browse' : 'Store';
@@ -230,6 +275,11 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     effectiveCreatorFilter !== 'all' ? { id: 'creator', label: effectiveCreatorFilter === 'following' ? 'Creators You Follow' : availableCreators.find(creator => creator.id === effectiveCreatorFilter)?.label || 'Creator', clear: () => setCreatorFilter('all') } : null,
     capabilityFilter !== 'all' ? { id: 'feature', label: 'Achievements', clear: () => setCapabilityFilter('all') } : null,
     priceFilter !== 'all' ? { id: 'price', label: priceFilter === 'free' ? 'Free' : 'Paid', clear: () => setPriceFilter('all') } : null,
+    beatBpmMin || beatBpmMax ? { id: 'bpm', label: `BPM ${beatBpmMin || '40'}–${beatBpmMax || '240'}`, clear: () => { setBeatBpmMin(''); setBeatBpmMax(''); } } : null,
+    beatKey !== 'all' ? { id: 'beat-key', label: beatKey, clear: () => setBeatKey('all') } : null,
+    beatMood !== 'all' ? { id: 'beat-mood', label: beatMood, clear: () => setBeatMood('all') } : null,
+    beatInstrument !== 'all' ? { id: 'beat-instrument', label: beatInstrument, clear: () => setBeatInstrument('all') } : null,
+    beatTier !== 'all' ? { id: 'beat-tier', label: `${beatTier} license`, clear: () => setBeatTier('all') } : null,
   ].filter((chip): chip is { id: string; label: string; clear: () => void } => Boolean(chip));
   const renderActiveFilters = (className: string) => activeFilterChips.length > 0 ? (
     <div className={`store-active-filters ${className}`} aria-label="Active filters">
@@ -271,6 +321,19 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
               {availableTypes.map(type => <option key={type} value={type}>{type}</option>)}
             </Ui44SelectInput>
           </label>}
+          {beatFiltersVisible && <>
+            <div className="store-filter-group">
+              <span className="store-filter-label">BPM range</span>
+              <div className="store-beat-range">
+                <Ui44TextInput inputMode="numeric" value={beatBpmMin} onChange={event => setBeatBpmMin(event.target.value.replace(/\D/g, '').slice(0, 3))} placeholder="40" aria-label="Minimum BPM" />
+                <Ui44TextInput inputMode="numeric" value={beatBpmMax} onChange={event => setBeatBpmMax(event.target.value.replace(/\D/g, '').slice(0, 3))} placeholder="240" aria-label="Maximum BPM" />
+              </div>
+            </div>
+            <label className="store-filter-group"><span className="store-filter-label">Key</span><Ui44SelectInput value={beatKey} onChange={event => setBeatKey(event.target.value)}><option value="all">Any key</option>{availableBeatKeys.map(value => <option key={value} value={value}>{value}</option>)}</Ui44SelectInput></label>
+            <label className="store-filter-group"><span className="store-filter-label">Mood</span><Ui44SelectInput value={beatMood} onChange={event => setBeatMood(event.target.value)}><option value="all">Any mood</option>{availableBeatMoods.map(value => <option key={value} value={value}>{value}</option>)}</Ui44SelectInput></label>
+            <label className="store-filter-group"><span className="store-filter-label">Instrument</span><Ui44SelectInput value={beatInstrument} onChange={event => setBeatInstrument(event.target.value)}><option value="all">Any instrument</option>{availableBeatInstruments.map(value => <option key={value} value={value}>{value}</option>)}</Ui44SelectInput></label>
+            <label className="store-filter-group"><span className="store-filter-label">License</span><Ui44SelectInput value={beatTier} onChange={event => setBeatTier(event.target.value)}><option value="all">Any tier</option>{['basic','premium','trackout','exclusive'].map(value => <option key={value} value={value}>{value[0].toUpperCase() + value.slice(1)}</option>)}</Ui44SelectInput></label>
+          </>}
           {availableTags.length > 0 && <label className="store-filter-group">
             <span className="store-filter-label">Tags</span>
             <Ui44SelectInput value={effectiveTagFilter} onChange={event => { setTagFilter(event.target.value); setCreatorFilter('all'); }}>
@@ -308,6 +371,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
               setTagFilter('all');
               setCapabilityFilter('all');
               setCreatorFilter('all');
+              setBeatBpmMin(''); setBeatBpmMax(''); setBeatKey('all'); setBeatMood('all'); setBeatInstrument('all'); setBeatTier('all');
               setQuery('');
             }}><span className="store-clear-filters">Clear filters</span></button>
           )}
@@ -336,6 +400,14 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     document.querySelector<HTMLElement>('.app-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  useEffect(() => {
+    if (!beatReviewSurfacesEnabled || !urlFilterReady || typeof window === 'undefined' || category !== 'music') return;
+    const url = new URL(window.location.href);
+    if (effectiveTypeFilter === 'all') url.searchParams.delete('type');
+    else url.searchParams.set('type', effectiveTypeFilter.toLowerCase());
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+  }, [category, effectiveTypeFilter, urlFilterReady]);
+
   function browseFollowedCreators() {
     setActiveFilter('all');
     setTypeFilter('all');
@@ -356,11 +428,12 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
         filter,
         title: `New in ${STORE_FILTER_LABELS[filter]}`,
         products: products
-          .filter(product => getProductExperience(product) === filter)
+          .filter(product => getProductExperience(product) === filter && (filter !== 'music' || !isBeatProduct(product)))
           .sort(filter === 'physical' ? compareMerchShelfProducts : comparePublicCatalogProducts)
           .slice(0, 8),
       }))
       .filter(shelf => shelf.products.length > 0);
+    const beatShelf = beatReviewSurfacesEnabled ? products.filter(isBeatProduct).sort(comparePublicCatalogProducts).slice(0, 8) : [];
 
     return (
       <PageShell>
@@ -403,6 +476,12 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
                   </ProductGrid>
               </HubSection>
                 ))}
+                {beatShelf.length > 0 && <HubSection
+                  title="New in Beats"
+                  action={<Ui44SectionArrow label="View all New in Beats" onClick={() => { window.location.href = '/store/music?type=beat'; }} />}
+                >
+                  <ProductGrid>{beatShelf.map(product => <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />)}</ProductGrid>
+                </HubSection>}
                 {followingProducts.length > 0 && (
                 <HubSection title="Creators You Follow" action={<Ui44SectionArrow label="View all from creators you follow" onClick={browseFollowedCreators} />}>
                   <ProductGrid>

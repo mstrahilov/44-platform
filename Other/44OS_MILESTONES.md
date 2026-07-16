@@ -1,437 +1,286 @@
 # 44OS Milestones
 
-This is the execution roadmap for evolving the current staging application into the durable 44OS architecture. Read it after `44OS_FOUNDATION.md` and `44OS_UI.md` before beginning platform work.
+This is the execution and launch-readiness source of truth. Read it after `44OS_FOUNDATION.md` and `44OS_UI.md`.
 
-The active handoff set is:
+The only active handoff documents are:
 
-- `Other/44OS_FOUNDATION.md` — approved product and technical architecture.
-- `Other/44OS_UI.md` — visual system, interaction principles, and quality bar.
-- `Other/44OS_MILESTONES.md` — sequencing, current status, dependencies, and completion criteria.
+- `44OS_FOUNDATION.md` — product, architecture, data, operations, payments, and interactive contracts.
+- `44OS_UI.md` — approved visual and interaction system.
+- `44OS_MILESTONES.md` — completed work, open gates, sequencing, and acceptance.
 
-The milestone document is a checklist, not blanket permission to begin the next milestone. Each milestone is discussed and approved before implementation. Update its status and evidence when work changes the platform.
-
-Status vocabulary: `Not started`, `In discussion`, `Approved`, `In progress`, `Blocked`, `Complete`.
+Status vocabulary: `Not started`, `In discussion`, `Approved`, `In progress`, `Blocked`, `Complete`, and `Deferred`.
 
 ---
 
-## Architectural Destination
+## Current System Check — July 16, 2026
 
-`catalog_items.id` is the permanent 44OS equivalent of a Steam App ID. The domain noun is **Item** and the universal foreign key is `item_id`. Store, Library, and Community are three faces of the same item identity. An Item may be free, paid, granted, physical, downloadable, streamable, readable, or interactive; acquisition is deliberately not part of its name.
+The application is already live at `https://44os.com`. At audit time, production served the exact repository `main` commit `c45b1df4801e9a2dd1b3d7e8600d3662ad500445`; `/api/health` returned healthy in `iad1` with Supabase HTTP 200.
 
-- **Store** discovers and acquires Items through transparent filters and curated editorial shelves.
-- **Library** records entitlement, access, progress, achievements, updates, bonus content, and launch actions.
-- **Community** hosts general conversation plus typed content anchored to an Item where appropriate.
+Current passing evidence:
 
-Capabilities attach to the Item without changing its identity. Shared content mechanics use a typed spine with explicit extension tables rather than an unconstrained JSON container. Commerce, entitlements, and Library state remain separate concepts so a payment provider can be selected later without redesigning ownership.
+- Clean Git worktree before documentation consolidation.
+- Zero-warning `npm run lint`.
+- `npm run typecheck` with generated Next.js route types and strict TypeScript.
+- `npm run audit:ui-cleanup`: zero unreachable components, dead exports, all-source CSS orphans, and exact-shadowed declarations.
+- `npm run test:observability` and `npm run test:hardening-contract`.
+- Optimized Next.js production build across the current application, including the Admin overview, People, Content, detail, and Errors routes.
+- Local production launch smoke, including health, security headers, accessibility document basics, hidden-surface isolation, budgets, and canonical redirects.
+- Production launch smoke against `https://44os.com`.
+- All 243 local pgTAP security assertions, including Beat Store isolation and Admin Control Center authorization/lifecycle coverage.
+- Local data restoration rehearsal: 14 profiles, 51 Items, and 401 storage objects restored into a disposable database.
+- Disposable M13 rollback and two-session concurrency rehearsals.
+- Local migration history and disposable replay include every repository migration through `20260716010000_m13_admin_control_center.sql`.
+- Linked schema lint returns zero errors.
 
-Existing users, uploads, Item IDs, Library relationships, achievements, posts, questions, collaborations, reviews, and updates must be preserved through additive migrations and verified cutovers.
+Current verification debt:
+
+- Linked `migration list` and `db push --linked --dry-run` could not be refreshed during this audit because the configured database password was rejected/missing. Refresh `SUPABASE_DB_PASSWORD`, then rerun both before a migration release.
+- Strict empty schema replay still stops at `20260714010000_grant_olsten_admin_role.sql`, which asserts a real production profile exists. The approved temporary evidence path is a disposable local profile fixture followed by the remaining migrations and full security suite. The permanent fix is a reviewed baseline reconsolidation, not editing the deployed migration.
+
+Readiness conclusion:
+
+- **UI system:** complete and owner-approved.
+- **Core product foundation:** complete for trusted testing and a free beta.
+- **Current production:** healthy and matched to `main` at audit time.
+- **Paid commerce launch:** not ready; M11/M12 remain open and all payment switches must remain off.
+- **Unrestricted public creator onboarding:** not ready; submission review, notification delivery, recovery/legal activation, and operational ownership remain open.
+- **Interactive Unity launch:** infrastructure is ready, but a real export has not passed runtime acceptance.
+
+### Two Valid Release Boundaries
+
+**Free/trusted-testing release candidate:** may ship with checkout, payouts, public creator onboarding, reviewed M13 surfaces, and interactive runtime disabled. It still requires the non-payment launch gates under M13.
+
+**Paid public launch:** additionally requires every M11/M12 payment, legal, tax, provider, webhook, refund/dispute, reconciliation, payout, and fulfillment gate. Opening a bank or Stripe account is necessary setup, not acceptance by itself.
 
 ---
 
-## Current Baseline
-
-**Status: Complete**
-
-The staging system provides the persistent Next.js shell, canonical `catalog_items` catalog, Store, Library, Community, profiles, Studio publishing, Radio, messaging, music playback, music achievements, bonus assets, theme preferences, and canonical route redirects. The repository and linked staging migration histories are aligned through `20260712010000`.
-
-Baseline quality gates pass: ESLint, TypeScript, and the production Next.js build. This is a migration of a working system, not a restart.
-
-Known foundation gaps to resolve before public launch:
-
-- Community mechanisms are split across unrelated table families without a shared Item/content identity.
-- Library rows currently mix presentation state with acquisition proof.
-- Paid checkout can create purchase rows without a verified payment processor and must not be considered production commerce.
-- Achievement and protected-asset grants need server-authoritative enforcement before they carry economic value.
-- Supabase queries and legacy route implementations remain more distributed than the long-term architecture should allow.
-
----
-
-## Pre-launch Milestones
-
-Execution-order update (July 12, 2026): M8, M9, and M10 are complete. While production payment accounts are pending, continue non-payment M13 hardening and build only fail-closed M12 foundations. Stripe payment collection and PayPal creator payouts are provisional; checkout and payouts remain disabled until M11 approval and M12 sandbox/failure testing are complete.
-
-### Current Program Order — Foundation Before Activation
-
-**Approved working order (July 13, 2026):** milestone numbers continue to identify product domains, but implementation and activation now follow the phases below. The immediate goal is a durable 5–10 year platform foundation, not rapid exposure of unfinished surfaces to testers.
-
-1. **Foundational buildout:** complete safe, additive, server-authoritative work that can remain invisible to testers. Start with the M13 creator submission-review foundation, then continue other non-blocked infrastructure in coherent slices. Preserve current trusted-testing behavior unless a separately reviewed activation changes it.
-2. **Master foundation sweep:** after the planned foundations exist, audit the platform as one long-lived system: schema and Item identity, ownership/RLS/RPC boundaries, migrations and replay, storage and entitlements, domain-service boundaries, performance and request fan-out, observability, rate limits, accessibility contracts, PWA/desktop resilience, dependency risk, operational recovery, and intentional retirement of compatibility paths. Optimize only from evidence and preserve all permanent records.
-3. **Feature-by-feature UI Activation Review:** review each hidden or newly founded capability one at a time before adding navigation or tester-facing controls. Each review owns hierarchy, copy, responsive layout, loading/empty/error/success states, keyboard and screen-reader behavior, and consistency with `44OS_UI.md`.
-4. **Payment decisions and activation:** resolve M11 legal/accounting/provider blockers, complete M12 sandbox and failure-path verification, then review payment and earnings UI. Commerce remains fail-closed until every operating and technical gate passes.
-5. **Master UI sweep:** once individual activations are accepted, review the complete product across desktop, mobile, installed iOS/PWA, signed-out, fan, creator, and admin journeys.
-6. **Final foundation sweep:** re-audit security, data preservation, performance, migrations, storage, observability, operations, and dependency/runtime compatibility against the finished interface and payment behavior.
-7. **Release-candidate testing:** run schema replay, RLS/security suites, migration rollback and restoration rehearsals, payment reconciliation where applicable, lint, strict TypeScript, production build, launch smoke, browser/device accessibility, and responsive acceptance.
-8. **Deployment:** production is never an automatic end to a slice. Stop after local/repository verification and present the change set for owner review. Deploy or apply linked production changes only after Miro gives explicit approval for that reviewed version.
-
-Foundation work must not silently activate routes, menus, status labels, emails, review requirements, payments, or other user-visible behavior. A completed backend contract may remain dormant until its UI and runtime activation phase.
+## Completed Foundation
 
 ### M1 — Architecture Contract And Handoff
 
 **Status: Complete**
 
-Approve the Item spine, typed content model, entitlement separation, curated-creator launch policy, launch feature boundary, and documentation ownership.
+Established the permanent Item noun/identity, typed content direction, entitlement separation, curated creator launch policy, and three-document handoff system.
 
-Completion criteria:
+### M2 — Data Safety, Types, And Environment
 
-- Foundation, UI, and Milestones describe one non-contradictory destination.
-- The old proposal is retired after all approved ideas are captured here.
-- `catalog_items` becomes the permanent canonical table, `Item` the application/domain type, and `item_id` the universal foreign key. Format-specific user-facing nouns remain preferred where known.
+**Status: Complete, with replay debt tracked in M13**
 
-### M2 — Data Safety, Types, And Environment Foundation
-
-**Status: Complete**
-
-Establish the safe workflow used by every later database milestone.
-
-Deliverables:
-
-- Fresh linked-database backup before each write, reviewed repo migration, dry run, and post-apply probes.
-- Generated Supabase database types and typed domain boundaries for new foundation tables.
-- Repeatable clean migration replay plus RLS and data-preservation checks.
-- Dated verification evidence; volatile row counts are never treated as architecture.
-
-Completion criteria:
-
-- Staging can be restored and a clean database can replay the ordered migrations.
-- Schema changes never depend on untracked SQL or destructive manual edits.
-
-Completion evidence (July 11, 2026): a linked schema/data backup, dry run, generated `Database` types, full data-clone rehearsal, post-apply probes, and deployed smoke tests are complete. The historical chain was consolidated into the canonical `20260712010000_44os_item_baseline.sql`; it rebuilds a clean local database including auth and storage integration, produces no public-schema difference from staging, and is the sole aligned local/remote migration-history entry. Future changes begin as new timestamped migrations after this baseline.
+Established reviewed migrations, backups before linked writes, generated database types, local security testing, preservation probes, and the canonical baseline migration.
 
 ### M3 — Canonical Item And Capability Spine
 
 **Status: Complete**
 
-Keep every existing UUID while migrating the current `products` domain to `catalog_items` and making Items the anchor for future capabilities and collaborators. Rename the user relationship from `library_items` to `library_entries`; it owns Library display state rather than acquisition authority.
-
-Deliverables:
-
-- Versioned `item_capabilities` registry with unique Item/capability pairs; feature payloads remain in typed feature-owned tables.
-- `item_members` roles for owner/editor/contributor, initially backfilled from the current Item author.
-- Structured Item/profile external links.
-- Existing tracks, assets, achievements, Radio entries, and Library relationships continue to reference the same Item IDs.
-
-Completion criteria:
-
-- Store, Library, Studio, Community attachments, Radio, and release features resolve through one stable Item identity.
-- Existing creators retain ownership and existing uploads remain addressable.
-
-Completion evidence (July 11, 2026): the canonical Item foundation is applied to staging and captured in `20260712010000_44os_item_baseline.sql`; 49 Items, 32 Library entries, 248 tracks, and 14 profiles were preserved. It backfilled 49 Item owners and 213 capability registrations, applied the approved one-admin/five-creator/eight-member mapping, and deployed successfully to `https://44os.com`. Public Item, Store, Community, Questions, Radio, Login, and signed-out Library smoke tests passed at desktop, 390px, and 430px with no application error or horizontal overflow.
+`catalog_items.id` is the permanent Item ID shared by Store, Library, Community, Radio, Studio, capabilities, assets, and later interactive experiences. Existing IDs and relationships were preserved.
 
 ### M4 — Typed Community Content Spine
 
 **Status: Complete**
 
-Unify shared identity, Item anchoring, replies, and reactions while retaining purpose-built data constraints.
-
-Deliverables:
-
-- `content_entries`, `content_replies`, `content_entry_reactions`, and `content_reply_reactions` for shared mechanics.
-- Typed detail tables for questions, collaborations, reviews, and creator updates; events and videos remain later additive detail types.
-- Nullable `item_id`: null means platform-wide Community content; set means content associated with one canonical Item.
-- Deterministic backfill from posts, questions, collaborations, reviews, and updates with authorship and timestamps preserved.
-- Application cutover followed by a verification period before legacy table retirement.
-
-Completion criteria:
-
-- General discussions/questions/collaborations render in Community.
-- Reviews, updates, and future scoped questions attach to the correct Store/Library Item.
-- No user-visible behavior or current staging content is lost.
-
-Completion evidence (July 11, 2026): migration `20260712020000_typed_community_content_spine.sql` established canonical `content_entries`, shared replies/reactions, and constrained question, collaboration, review, and creator-update detail tables. The app now reads and writes through canonical Community contracts rather than the legacy table families. A full linked-data rehearsal preserved every existing content and reply UUID with zero missing IDs, including 24 discussions, 2 questions, 2 collaborations, 2 reviews, 63 discussion replies, 3 answers, 1 collaboration response, and their reactions. Anonymous writes and forged creator updates were denied; authenticated discussion, reply, question, vote, and review creation passed. Feed, Questions, Collaboration, thread, and Item-review UI checks passed locally against the cloned data with no application or console errors. The linked migration history is aligned through `20260712020000`; legacy tables remain only as temporary verification-period compatibility sources before retirement.
+Unified discussions, questions, collaboration, reviews, creator updates, replies, reactions, and optional Item scope behind typed records and domain services.
 
 ### M5 — Entitlements And Provider-neutral Commerce Core
 
-**Status: Complete**
+**Status: Complete; payment activation intentionally excluded**
 
-Separate catalog offers, money movement, access rights, and Library presentation before choosing a payment provider.
-
-Deliverables:
-
-- Offers/prices, orders/order items, payment attempts/events, entitlements, and auditable grant/revoke operations.
-- Free adds, purchases, manual grants, and achievement rewards use server-authoritative operations.
-- `library_entries` represents the visible per-user Library state; it is not proof of payment by itself.
-- Public paid checkout remains disabled until verified payments are complete.
-
-Completion criteria:
-
-- A client-authored row cannot forge a purchase, entitlement, achievement, or protected-asset unlock.
-- The commerce domain can accept a later processor adapter without changing Item or Library identity.
-
-Completion evidence (July 12, 2026): `20260712030000_m5_provider_neutral_commerce.sql` establishes `catalog_offers`, typed offer grants, provider-neutral commerce orders and line snapshots, addresses, payment attempts/events, entitlements, and an immutable entitlement event ledger. Existing Library relationships are preserved as `legacy_library` entitlements without claiming processor verification. Active zero-cost Library offers preserve the tester experience; downloadable and physical offers are draft-only. `save_item_to_library` is server-authoritative, direct Library insertion is revoked, paid placeholder checkout is disabled, and repeated free saves are idempotent. The linked-data rehearsal preserved all 32 Library entries with 32 matching Library entitlements.
-
-`20260712040000_m5_trusted_achievements_and_assets.sql` completes the trust boundary. Playback evidence is recorded through validated server operations; achievement evaluation and reward entitlements are server-authoritative; clients cannot directly write unlock, event, or progress records. Protected asset manifests reveal file locations only to an entitled user or Item manager, public track/Item download URLs are prohibited, and legacy client-authored merchandise orders are disabled. Rehearsals preserved all 12 existing achievement unlocks. Denial-path tests confirmed that direct unlock writes fail and locked assets withhold their URLs, while a valid download entitlement reveals the protected asset. The approved music contract is free listening, free Library saves, optional `Buy Download`, and separate `Buy Physical` actions.
+Separated catalog offers, orders, provider evidence, entitlements, audit events, and Library presentation. Free saves and trusted grants are server-authoritative; paid checkout remains fail-closed.
 
 ### M6 — Application And Route Consolidation
 
 **Status: Complete**
 
-Move catalog, Library, Community, Studio, profile, and acquisition queries behind typed domain services. Remove duplicate Dashboard implementations while preserving intentional redirects.
-
-Completion criteria:
-
-- Each canonical route has one implementation.
-- Compatibility routes contain redirects only.
-- Repeated cards and pages do not produce session or row-by-row request fan-out.
-
-Completion evidence (July 12, 2026): Studio is the single creator-management implementation; the former 13-page `/dashboard` copy is one permanent redirect preserving paths and query parameters. Typed domain services own catalog, Library, Item details, entitlements/acquisition, profiles, search, preferences, Community, messaging, Studio publishing, protected assets, and current commerce-history access. There are zero direct database table or RPC calls in application pages or UI components; authentication SDK calls remain intentionally at the login/settings boundary. Store/Library detail bundles and Community/profile engagement data load through bounded parallel service queries rather than card-level or row-level request loops. Specialized music and book UI remains distinct for playback/achievement and reader behavior while sharing its data orchestration. `/product`, typed legacy Library paths, and Dashboard paths are permanent compatibility redirects to canonical Store, Library, and Studio routes. Typecheck, lint, production build, redirect probes, and signed-out production smoke tests passed.
+Studio is the sole creator workspace, canonical routes have one implementation, compatibility routes redirect once, and application UI reads platform data through typed domain services rather than direct table calls.
 
 ### M7 — Store And Discovery Launch Loop
 
 **Status: Complete**
 
-Ship one transparent catalog engine behind `/store` and `/store/[category]`, presented publicly as Browse, with curated editorial shelves and explicit category, price, category-relevant tag, and feature filters. `/browse` remains compatibility-only.
-
-Completion criteria:
-
-- The full catalog is discoverable without bespoke category implementations or opaque popularity ranking.
-- Profiles and Items expose structured external-platform links.
-
-Completion evidence (July 12, 2026): `/store` and every category route use one `loadStoreDiscoveryCatalog` contract over all 49 published Items and their capability registrations, while the page, sidebar, topbar, metadata, and navigation label the surface Browse. The five system Categories are Music, Books, Games, Merch, and Assets. Discovery exposes Category, Type, Tags, Features, Price, and text filtering; unused Categories, Types, and Tags stay hidden. The public Features filter currently exposes Achievements alone while the backend capability registry remains extensible. Editorial surfaces are deterministic and explainable: `Featured` is explicitly curated and capped at four, `Creators You Follow` is personalized and omitted when empty, and each nonempty Category has a release-ordered eight-Item shelf whose `View All` action applies the existing Category filter—no engagement/popularity score is used. `20260712050000_m7_catalog_discovery_truth.sql` removed inherited false capability claims: streaming now covers only 28 music Items, and downloads cover 28 music plus 2 books rather than 19 physical merch Items with no downloadable asset/offer. Item and profile pages render ordered `item_external_links` and `profile_external_links` when populated; both live tables are currently empty, so no fake outbound links were invented. `/browse` remains permanent compatibility-only. Typecheck, lint, production build, local filter markup, clean schema replay, linked migration alignment, and public capability probes passed.
-
-Post-completion foundation refinement (July 12, 2026): the permanent public hierarchy is Category → Type → Tags: Music → Album → Electronic and Merch → Apparel → Hoodies are representative paths. `item_categories` is immutable application-owned vocabulary; administrators manage `item_types` and the approved `item_tags` allow-list in Supabase. `item_type_assignments` and `item_tag_assignments` are the canonical Item relationships read by both Studio and Browse. Creators select one Item Type and any number of available approved Item Tags, never arbitrary public text. The superseded combined taxonomy tables are deleted, Browse/Studio no longer use free-form Item tags, and the 49 existing Items have Category-consistent Type assignments; two ambiguous music backfills were corrected to Single. Music begins with 32 controlled Apple Music-aligned genre Tags shared across every Music Type. Front-facing Store/Home labels are Browse while `/store` remains the stable internal route/domain. Music and Assets use square catalog artwork, Books use 2:3 covers, and physical Merch uses 3:4 product artwork in Store grids and detail pages. `New in Merch` temporarily prioritizes Apparel, then Accessories, without changing global catalog ordering. This taxonomy foundation is applied through `20260712052300_m7_seed_music_genre_tags.sql`.
-
-Interface-foundation completion evidence (July 12, 2026): 44OS now has one desktop and mobile component language for theme-through workspace materials, opaque paper dropdowns/player surfaces, system radii, safe spacing, neutral borders, elevation, input focus, buttons, navigation pills, and shared Community post mechanics. The app environment, themes, shell, and Dock glass remain unchanged. Store, Library, Community, Search, profiles, Reviews, Settings, Studio forms and metrics, Notifications, achievements, and the music player were migrated away from conflicting page-level material overrides. Shared filters close on outside interaction; their triggers and paper popovers remain inside one mobile safe-margin contract. Store filters remain open for multi-step refinement and expose wrapping, removable state pills below the header divider. Search and profile posts use canonical Community counts and interaction routing. Profile headers were retired in favor of identity-first profiles whose mobile identity row separates compact avatar/name/handle from a full-width bio. Desktop Dock order is Home, Radio, Library, Community, with the first divider reserved for pinned Items. Library is one filterable destination with Music, Books, and Assets rendered as separate ordered grid bands so portrait Books start below square Music. Radio is a fixed titleless Now Playing panel with Stream/Stop behavior, text-only creator navigation, and a reliable Radio return path from releases and creator profiles. Mobile Browse shelf actions use backgroundless trailing chevrons to preserve long editorial titles. Studio presents Saves, Plays, Sold, and Earned as its four overview signals; `item_play_events` and `record_item_play` provide creator-authorized totals for every validated Store, Library, Radio, creator-owned, or other-user playback start, with historical completed-track evidence backfilled. Profile header storage is retired and existing music achievements are enabled without restoring the former bonus-content save requirement. Lint, TypeScript, production build, responsive signed-in visual review, migration dry-run, and route probes are the release gates for this pass.
-
-UI system lock (July 15, 2026): the owner completed the page-by-page desktop and mobile review and approved the canonical migration. The Wave 8 retirement sweep consolidated five proposal stylesheets into the canonical system, isolated reference-route CSS, removed eight unreachable components and 17 dead exports, cut the former Glass wrapper over to `Ui44Panel`, and removed every source-proven unused rule/token plus every exact-selector/context shadowed declaration. The final audit reports zero unreachable components, dead component exports, all-source CSS orphans, or exact-shadowed declarations. Glass is now the one ordinary panel surface, reusing the Dock tint without panel blur, saturation, or shadow; Paper is limited to transient menu/selection surfaces; expanded Now Playing is transparent over the App Shell; Flat/Raised are the only content elevations. Community threads, profiles, Studio editors, the player, typography, and mobile Dock boundaries received owner-reviewed final refinements. The environment gradient and documented Shell, Dock, Radio, reader, launch, and App Shell shadow exceptions remain preserved. The migration ledger is archived as historical evidence under `Other/archive/`.
-
-Living UI-reference follow-up (July 15, 2026): the temporary split desktop/mobile audit routes were retired and replaced by one responsive `/44OS_UI` route. It renders the current materials, type, geometry, controls, Shell/navigation, content patterns, states, and specialized surfaces, and generates searchable component/token/class registries directly from source. Its route-owned stylesheet arranges and labels specimens without redefining product primitives. The follow-up also retired the audit-only rules and token definitions orphaned by removing the temporary pages; the final cleanup audit remains at zero all-source CSS orphans and zero dead component exports.
-
-UI release-candidate verification (July 15, 2026): zero-warning lint, strict TypeScript, production build, UI cleanup audit, observability contract, hardening contract, local production launch smoke, linked schema lint, linked migration alignment/dry-run, and all 178 pgTAP security assertions pass. The documented empty `test:schema-replay` currently reaches migration `20260714010000_grant_olsten_admin_role.sql` and stops because that already-deployed production bootstrap migration asserts the presence of the real ØLSTEN profile. A disposable local profile fixture allowed that migration and every remaining migration through `20260714031000` to apply without changing repository SQL; this is a pre-existing replay/runbook defect, not a schema difference or part of the UI release. No migration, linked data, payment control, or feature flag changes in this release.
-
-UI production deployment evidence (July 15, 2026): reviewed application commit `a90d32cf94160c16f5ba37b3e308bf76be5fc6a2` deployed as Vercel production deployment `dpl_cKDGyAM7ZNDy72zFDkyZj86sdARa` (`https://44-platform-7rfg8lgnx-44os.vercel.app`). Vercel reported Ready and aliased the deployment to `https://44os.com` and `https://www.44os.com`; `/api/health` returned `healthy` with the exact release SHA in `iad1`, `/44OS_UI` returned 200 with the production security headers, and the complete canonical-domain launch smoke passed.
+One catalog engine powers Store/Browse discovery with Category → Type → approved Tags, transparent editorial shelves, category-correct artwork, and structured creator/Item external links.
 
 ### M8 — Library, Achievements, And Item Memory
 
 **Status: Complete**
 
-Make Library the durable view of entitlements, progress, achievements, downloads, named release video embeds, and achievement-granted Item unlocks. Generic bonus content and other speculative release extras are not launch scope.
-
-Completion criteria:
-
-- The eight launch music achievements use trusted grant rules, and Overachiever may grant a separately identified Item through the same achievement-authoritative path.
-- Protected downloads and bonus assets cannot be accessed by bypassing the client UI.
-
-Completion evidence (July 12, 2026): `20260712054000_m8_private_item_files_foundation.sql` establishes the private `item-files` bucket with entitlement-aware object reads. The two live book PDFs were copied to deterministic private paths, downloaded back, and matched against their source SHA-256 hashes and byte counts before `20260712054100_m8_private_book_asset_cutover.sql` removed public catalog locations and granted the existing Library owner explicit audited download entitlements. The verified legacy public copies were then removed; old public and anonymous private URLs return HTTP 400. An entitled real-user session received one unlocked manifest row and downloaded a five-minute signed URL matching the original 43,711,872-byte PDF hash, while another authenticated user received zero manifest rows and could not sign the known path.
-
-`20260712054200_m8_trusted_achievement_edges.sql` closes direct execution of internal grant helpers, replaces client-authored Signal Boost rows with one idempotent authenticated non-self visitor RPC, and enforces private storage for every future downloadable or bonus asset. Studio book, asset, and optional Overachiever uploads now write private paths; Library resolves authorized paths to short-lived signed URLs and shows included files, achievements, bonus state, creator updates, and configured actions. The canonical Library music surface evaluates Front to Back, No Skips, Nightbird, and Heavy Rotation from validated playback evidence; creator follow, published review, and distinct share-visitor evidence drive Joined the Orbit, Left Your Mark, and Signal Boost; Overachiever remains server-derived from all enabled non-final achievements and grants bonus entitlement through the immutable ledger.
-
-`20260712054300_m8_achievement_evaluator_cast.sql` removes the final schema-lint warning in the trusted evaluator. Direct anonymous manifest, internal grant, share-RPC, and share-table calls return HTTP 401; an attempted public protected-asset insert returns HTTP 400. Final preservation probes show 49 published Items, 248 tracks, 33 Library entries, 12 existing achievement unlocks, and zero protected assets with public locations. TypeScript, zero-warning lint, production build, migration alignment/dry-run, and schema lint all pass. M8 is complete.
+Library is the durable view of access, progress, eight trusted music achievements, Overachiever Item rewards, protected downloads, creator updates, and named release videos.
 
 ### M9 — Community And Item Hubs
 
 **Status: Complete**
 
-Complete general discussions, questions, collaboration, follows, reviews, creator updates, and Item-scoped questions on the typed content spine. Add reporting, moderation state, rate limits, and admin handling.
-
-Completion criteria:
-
-- Every content type has intentional loading, empty, error, ownership, moderation, and signed-out behavior.
-- General and Item-scoped content appear on the correct Community, Store, or Library surface.
-
-Preflight release-edit correction (July 12, 2026): the existing Studio price input reformatted every keystroke as cents, and music edits deleted/recreated achievement rows even when only changing price. `20260712054400_safe_studio_release_edits.sql` replaces destructive achievement replacement with an ID-preserving server sync; earned achievement rows cannot be removed. Price fields now accept ordinary decimals. A real owner acceptance test changed one healthy published release from 499¢ to 500¢ through the same RLS/publication path, verified the published value, then restored the exact original 499¢ published state.
-
-Completion evidence (July 12, 2026): `20260712055000_m9_moderation_reporting_rate_limits.sql` establishes `content_reports`, an administrator resolution queue, author-immutable moderation state, public hiding/removal behavior, and database-triggered hourly limits for entries, replies, and reactions. Report controls cover discussions/replies, questions/answers, collaborations/responses, reviews, and Creator Updates. A disposable-user rehearsal proved report creation, HTTP 403 author moderation denial, administrator resolution, audit status, and immediate anonymous hiding. The eleventh entry in one hour returned HTTP 400 while exactly ten valid entries persisted; all disposable content/accounts were removed afterward.
-
-`20260712055100_m9_creator_updates.sql` adds atomic ownership-checked Creator Update creation for active Items, exposed beneath the Studio Item editor and read on Store/Library hubs. A regular member's forged update returned HTTP 403; an actual Item owner created a published update successfully in the acceptance rehearsal. Store and Library now expose Item-scoped Questions; a real typed creation appeared with its permanent `item_id` while a direct malformed Question row returned HTTP 400. `20260712055200_m9_typed_content_integrity.sql` enforces required detail rows, published Item scope, reply types/parents, and content lengths at the database boundary.
-
-Final preservation probes retained 24 discussions, 2 questions, 2 collaborations, 2 reviews, 66 shared replies, and all 14 profiles; temporary reports/content were removed. Rendered signed-in checks passed Community, Questions, an Item hub, Studio release editing/Creator Updates, and non-admin moderation denial. Community Questions and Item hubs have no horizontal overflow at 390px. TypeScript, zero-warning lint, production build, migration alignment/dry-run, and clean schema lint pass. M9 is complete.
+Community, Item questions/reviews, reporting, moderation records, rate limits, and Creator Updates use typed ownership and integrity boundaries. Some reviewed surfaces remain hidden pending M13 activation.
 
 ### M10 — Studio And Curated Creator Launch
 
-**Status: Complete**
+**Status: Complete for trusted testing**
 
-Keep fan registration public while publishing remains invite/approval based. Move Studio publishing onto the Item/capability services with validation, previews, upload policies, and catalog-health checks.
+Approved creators can create, validate, edit, publish, and archive owned Items. Permanent IDs and history survive removal. Rights attestation, catalog health, safe child synchronization, form recovery, Events, and Creator Updates are implemented.
 
-Lifecycle slice complete (July 12, 2026): `20260712052700_m10_permanent_item_lifecycle.sql` replaces creator hard deletion with the ownership-checked `archive_owned_item` operation. `catalog_items.id` remains permanent; removal archives every offer and hides the Item from Store and active Studio views while preserving existing Library access, entitlements, immutable `entitlement_events`, tracks, achievements, assets, and creator updates for authorized users. Direct anonymous/authenticated deletion is revoked, archived Items cannot be republished through normal creator updates, migration history is aligned, linked schema lint completes with only the pre-existing `evaluate_item_achievements` cast warning, and the anonymous RPC denial path returns HTTP 401. The owner acceptance path is ready to retry in signed-in Studio.
+Approved role assignment remains server-authoritative. Public self-service creator publishing is not active.
 
-Curated publishing boundary complete (July 12, 2026): `20260712053000_m10_curated_publishing_boundary.sql` prevents self-service role escalation, provides admin-only role assignment, limits Item creation/mutation to approved creators/admins, and makes publication an authenticated ownership-checked RPC with server-side taxonomy, artwork, year, track, book, and asset validation. Studio edits save dependent rows in draft before the final publication request. Catalog-health findings are available without modifying Items, and upload update/delete access is owner-scoped; creator media roots require an approved publisher. All 14 approved roles were verified, all 49 published Items remain public, anonymous publication and role escalation return HTTP 401, migration history is aligned, TypeScript/lint/build pass, and schema lint retains only the pre-existing achievement cast warning.
+---
 
-Completion evidence (July 12, 2026): migrations `20260712053100_m10_catalog_health_reporting.sql`, `20260712053200_m10_studio_child_write_boundary.sql`, and `20260712053300_m10_rpc_execute_boundary.sql` complete the launch boundary. Studio loads one bounded catalog-health result set and shows issue counts without row fan-out. Approval revocation consistently removes mutation access across Item rows, tracks, assets, taxonomy, capabilities, collaborators, offers, links, and achievement configuration. Upload mutation is object-owner scoped, catalog upload roots require creator/admin approval, protected asset locations remain entitlement-gated through the M5 manifest, and existing public upload URLs are preserved rather than destructively relocated. Supabase's default direct anonymous function grants are explicitly removed from role, publication, approval, and health RPCs.
+## Launch-critical Work
 
-Final live verification preserved 49 published Items, 248 public tracks, 14 profiles, the approved one-admin/five-creator/eight-member mapping, permanent Item IDs, Library/Community/entitlement history, and all existing uploads. Anonymous health, publication, and role RPC calls return HTTP 401. Linked migrations are aligned through `20260712053300`; dry-run is clean; TypeScript, zero-warning lint, and production build pass. M10 is complete. The protected-file cutover and clean schema lint were subsequently completed in M8.
-
-Approved staging role mapping:
-
-- Admin: `44corp`.
-- Creators: `olsten44`, `asagittariusspeaks1`, `callmetellali`, `spiiriit`, `lvminvs247`.
-- Members: `sam_bridges`, `rainy_day`, `g_fraz_2020`, `bigboss`, `ajhardin3`, `smenick`, `quiet_strike`, `mstrahilov`.
-
-All accounts and their Library, achievement, messaging, and Community history are preserved. Role changes do not delete uploads or authorship.
-
-### M11 — Payment Operating Model Decision
+### M11 — Payment Operating Model
 
 **Status: In discussion**
 
-Compare Stripe Connect, 44 acting as seller, and other viable models with legal/accounting input. Decide platform fees, tax responsibility, payouts, refunds, disputes, physical fulfillment, supported countries/currencies, and provider.
+Working direction: Stripe collects customer payments, PayPal Payouts pays eligible creators, and 44 provisionally acts as seller. This is not approved legal/accounting architecture.
 
-Completion criteria: an approved decision record leaves no payment-policy choices to implementation.
+Required decisions:
 
-Progress evidence (July 12, 2026): `Other/M11_PROVISIONAL_PAYMENT_MODEL.md` records Stripe customer collection plus PayPal creator payouts as the working direction and lists the legal, tax, fee, refund, dispute, fulfillment, country, currency, KYC, reserve, and fallback decisions still requiring approval. The milestone is intentionally not Complete.
+- Seller/merchant-of-record and marketplace or money-transmission obligations.
+- Taxes, invoices, remittance, creator tax reporting, supported countries, and currencies.
+- Platform/processor fees, reserves, payout timing/minimums, currency conversion, negative balances, and unclaimed funds.
+- Refunds, disputes, entitlement revocation, physical fulfillment, shipping, returns, inventory, and support ownership.
+- Creator KYC/sanctions checks, PayPal eligibility, and fallback payout paths.
+
+Completion criterion: an approved operating decision leaves no policy choices to implementation.
 
 ### M12 — Verified Payments And Earnings
 
-**Status: In progress (infrastructure only; commerce disabled)**
+**Status: In progress — infrastructure only; commerce disabled**
 
-Implement the selected provider behind the commerce boundary using signed webhooks, idempotency, immutable transaction records, refund/revocation handling, and reconciled creator earnings.
+Complete foundation:
 
-Completion criteria: sandbox and failure testing prove money, orders, entitlements, payouts, and Library access cannot diverge.
+- Fail-closed runtime controls.
+- Provider-neutral orders and payment evidence.
+- Append-only creator earnings, payout batches/items, webhook records, and reconciliation runs.
+- Security tests proving disabled checkout/Stripe/PayPal paths remain closed.
 
-Progress evidence (July 12, 2026): deployed migration `20260712056000_m12_disabled_payment_operations_foundation.sql` adds fail-closed runtime controls, private creator payout eligibility, append-only earnings entries, idempotent PayPal payout batches/items, verified Stripe/PayPal webhook records, and reconciliation runs. It activates no offer, grants no entitlement, and moves no money. Backup, dry-run, migration alignment, schema lint, generated types, lint, typecheck, and production build passed.
+Still required:
+
+- Stripe test-mode checkout, signed webhook replay, duplicate/out-of-order delivery, delayed success, failure, refunds, partial refunds, and disputes.
+- PayPal sandbox approval, signed webhook validation, duplicate delivery, reconciliation, blocked/held/failed/returned/refunded/unclaimed payouts, and insufficient-funds behavior.
+- End-to-end reconciliation proving provider totals, orders, entitlements, earnings, and payouts cannot diverge silently.
+- Explicit reviewed production activation; adding credentials alone must not enable commerce.
 
 ### M13 — Launch Hardening
 
 **Status: In progress**
 
-Finish transactional email, recovery flows, observability, storage security, abuse controls, privacy/legal surfaces, accessibility, performance budgets, automated end-to-end tests, and operational runbooks.
+Complete evidence:
 
-Execution note: complete and verify the non-payment work first. Payment reconciliation and provider-dependent launch checks remain the final M13 gate after M11 and M12.
+- Health endpoint, global error boundary, production security headers, sanitized error contract, hardening contract, launch smoke, and route budgets.
+- Account recovery, Terms, Privacy, Copyright, and moderation foundations exist behind a review flag. The administrator-only Admin Control Center is implemented as an active operating surface.
+- Creator submission snapshots, audited decisions, child tombstones/archives, mutation fences, and dormant notification outbox exist behind fail-closed runtime controls.
+- Admin People, Content, Errors, and system-status surfaces; creator review foundations; release-video validation; storage/entitlement controls; Beat license file isolation; rate limits; data restoration; rollback; and concurrency pass locally. The security suite now includes dedicated Admin role, lifecycle, visibility, audit, pagination, and sanitization assertions.
+- Public responsive checks and the owner-approved UI system cover the primary application at 390px, 430px, 1280px, and 1440px.
 
-Next foundational slice (July 13, 2026): build the creator submission-review contract beneath the existing trusted-testing experience. The slice must support creator-owned proposed revisions and withdrawal, preserve the last approved public Item while changes are pending, provide audited 44-admin approve/reject authority, enforce ownership and direct-write boundaries through RLS/RPCs, and add security/replay coverage. It remains dormant behind `publishing_runtime_controls`; do not switch to `review_required`, expose queue/status UI, or send review notifications. The repository migration and tests were reviewed and explicitly approved by Miro before deployment.
+Open non-payment gates before a free public release:
 
-Local foundation evidence (July 13, 2026): migration `20260713030000_m13_creator_submission_review_foundation.sql` adds permanent-Item-keyed `item_submissions`, append-only `item_submission_decisions`, typed proposed Item and child snapshots, typed child tombstones plus immutable child-archive records, dormant notification outbox events, explicit pending/withdrawn/approved/rejected transitions, idempotent submission retries, creator-owned withdrawal, administrator-only decisions, immutable decision metadata, and a mutation fence that blocks existing live Item/child write paths when review is later enabled. `publishing_runtime_controls` remains `trusted_testing` with `review_required=false`; no review UI, notification delivery, Radio/payment/interactive change, or runtime activation was performed. A clean local no-seed schema replay passed; the focused M13 suite passed 45 pgTAP assertions for anonymous/member/creator/foreign-creator/admin, ownership, protected-asset/offer/taxonomy/capability/collaborator/link/achievement preservation, pending preservation, withdrawal, duplicate/replay, invalid transitions, typed tombstones, decision audit, dormant outbox events, direct-write-fence behavior, and failed-approval rollback. A disposable two-session local rehearsal produced one approval and one fail-closed `Submission is not pending` result. The full local security suite passed 142 assertions. Local data restore passed against the repository backup with 14 profiles, 51 Items, and 401 storage objects; the disposable M13 rollback simulation preserved baseline catalog, asset, and runtime-control relations after removing only M13 objects. Local schema lint passed with only the two pre-existing warnings in `save_sample_playback_progress` and `save_interactive_build`; the tracked hardening contract passed 12 storage/abuse/review/observability/domain invariants; generated types, strict TypeScript, zero-warning application lint, sanitized observability contract, production build, local launch smoke, local schema dump/restore of the new M13 tables, responsive browser checks at 1440px and 390px, the duplicate-main landmark correction, and `git diff --check` passed.
+- Configure production SMTP, sender-domain authentication, bounce/delivery monitoring, and rehearse signup confirmation plus password recovery.
+- Review and activate final Terms, Privacy, Copyright, and account-recovery navigation; obtain legal review where appropriate.
+- Choose external error aggregation/alert delivery and assign on-call ownership.
+- Decide whether launch remains invite-only. Before unrestricted public creator onboarding, finish/approve creator submission controls and notification delivery, then rehearse the implemented Admin operating workflow against the production-ready migration.
+- Add the deferred Admin email phase: a server-only Auth Admin boundary, invitations, official domain sender, confirmation/recovery templates, delivery monitoring, and provider approval. Account suspension/deletion, password administration, admin-role assignment, Community moderation, creator-event moderation, entitlement grants, interactive-build approval, taxonomy, Radio programming, and payment reconciliation remain separate reviewed modules.
+- Complete signed-in fan/creator/admin keyboard, screen-reader, contrast, 390/430/1280/1440, normal Safari, and installed-iOS/PWA journeys.
+- Refresh linked database credentials and re-prove migration history/dry-run. Resolve or formally rehearse the strict replay exception.
+- Perform a separate-project production-data and storage restoration rehearsal with permanent-ID/audit comparison.
+- Review production content, support ownership, abuse escalation, privacy requests, and release rollback responsibility.
 
-Deployment evidence (July 13/14, 2026): a fresh linked data backup was captured at `supabase/backups/20260713_before_m13_submission_review_data.sql`; linked dry-run and schema lint passed; migration `20260713030000_m13_creator_submission_review_foundation.sql` applied successfully and remote history is aligned. Commit `f5100275` deployed to Vercel production at `https://44-platform-pr9lfuxov-44os.vercel.app` and is aliased to `https://44os.com`. Live launch smoke and `/api/health` passed with release `f5100275`, Supabase dependency status 200, and all reviewed M13 surfaces remaining hidden.
-
-After the non-blocked foundations are assembled, M13 owns the first master foundation sweep described in the Current Program Order. Findings should become bounded corrective slices with preservation tests, not speculative rewrites. Payment reconciliation, production backup restoration, provider SMTP/alert routing, real Unity export acceptance, and Radio programming remain outside that sweep when their external decisions or artifacts are unavailable.
-
-Progress evidence (July 12, 2026): deployed migration `20260712057000_m13_publishing_rights_attestation.sql` adds immutable, versioned Item-rights attestations and makes the ownership-checked publication RPC reject publication without the current acknowledgement. Studio creation and publication require the plain-language confirmation and explicitly avoid claiming independent verification by 44. Existing published Items and history were not rewritten; enforcement applies on the next creator-requested publication. Backup, dry-run, linked schema lint, generated types, lint, typecheck, and production build passed.
-
-Required review workflow: creators never control publication lifecycle states directly. A creator submits a new release or proposed changes and sees only `Pending Review`; 44 admins privately approve or reject the submission. Public Item pages continue showing the last approved version while edits are pending. Approval must be server-authoritative and audited with reviewer, submitter, timestamps, policy version, and decision reason. Removal remains archival rather than hard deletion. This review queue is a later M13 slice; Draft is not a creator-facing state or action.
-
-Trusted-testing exception: until the review package exists, approved invited creators can add, edit, and archive their own releases without approval latency. This does not relax account approval, ownership checks, RLS, storage protection, permanent IDs, or audit preservation. `publishing_runtime_controls` records the phase as `trusted_testing` with review disabled; it must not be switched to `review_required` until pending revisions, admin review, notifications, and acceptance tests are complete.
-
-M13 UI Activation Review gate: backend foundations may be completed and tested without appearing on tester-facing pages. Questions, reporting, generic feature/component editors, account-recovery/legal navigation, moderation, creator submission review, payments, and other new surfaces require a documented UI review before activation. Review covers route ownership, hierarchy, copy, desktop/mobile layout, loading/empty/error/success states, accessibility, and consistency with the established visual system. During trusted testing, Item Questions and all Report actions remain hidden; existing protected achievement-reward assets and metadata are preserved without activating a generic Bonus Content editor.
-
-Non-payment hardening package (July 12, 2026): account-recovery, Terms, Privacy, and Copyright foundations exist behind the UI activation gate. A global route error boundary, dependency-aware `/api/health`, HSTS/frame/base/object/referrer/permissions headers, executable `test:smoke`, and `Other/44OS_OPERATIONS.md` establish baseline failure handling, readiness, deployment, incident, restoration, and secret-rotation operations. Production SMTP/domain authentication, bounce/delivery monitoring, external error-alert routing, and UI activation remain open gates.
-
-Canonical-route cleanup (July 12, 2026): the app route graph was reduced from 64 routes to 33. The duplicate `/studio/products` list, abandoned `/studio/44os*` and `/home` concepts, unreachable `/product` implementation, duplicate typed Music/Books/Assets Library implementations, and legacy redirect/404 components were removed. Current Item and Library implementations live only at `/store/item/[identifier]` and `/library/item/[id]`; Studio saves return directly to `/studio#music|books|assets|merch`. Compatibility URLs redirect once from `next.config.ts` to canonical destinations.
-
-Verification evidence: zero front-facing call sites remain for Item Questions, Report actions, or Bonus Content attachments. Reviewed recovery/legal/moderation URLs return 404 with the activation flag off. Lint, clean route type generation, strict TypeScript, production build, linked migration dry-run, schema lint, anonymous health/security smoke, canonical Karen Item load, and one-hop compatibility redirect probes passed.
-
-Trusted-testing edit correction (July 12, 2026): deployed migration `20260712057100_m13_reliable_studio_item_edits.sql` replaces the fragile published-to-draft direct table update with an ownership-checked, field-whitelisted RPC that preserves the live publication state and permanent child history. Studio no longer exposes Draft/Published pills or toggles; approved testers use Publish Release, Save Changes, and Remove. Mobile text-entry controls render at least 16px to prevent iOS Safari focus zoom while retaining pinch-to-zoom accessibility. Karen and every existing Item were preserved unchanged during deployment. Backup, dry-run, migration alignment, schema lint, generated types, lint, typecheck, and production build passed.
-
-Executable launch-gate expansion (July 12, 2026): `test:smoke` now proves the bounded health response contract, core security headers, English/title/main/zoom-safe document basics, configurable response and HTML budgets, reviewed-surface 404 isolation, and direct one-hop resolution for the highest-risk legacy routes. A production build passed the expanded gate locally and the same suite passed against `https://44os.com`. `test:schema-replay` now owns the disposable no-seed database rebuild command; a clean local database replayed every repository migration through `20260712057100`, the linked project remained migration-aligned, and linked schema lint returned zero errors. This closes the migration-chain schema replay gate, not the separate production-data backup restoration rehearsal.
-
-Role-security and observability foundation (July 12, 2026): a rollback-only pgTAP suite now exercises the database as anonymous, member, creator, and admin. Twelve assertions prove anonymous RPC denial, public fan registration without publishing authority, member Item-creation/foreign-edit/self-promotion denial, approved creator editing with price and publication-state preservation, lifecycle-field rejection, and admin-only role approval. Provider-neutral request-error instrumentation emits sanitized structured events with release/runtime/route context but no headers, query values, user content, or tokens; health output now identifies deployment release and region. The production-data restoration rehearsal is deliberately deferred alongside the final payment-era operational gates; external alert routing still requires provider/on-call selection.
-
-Public responsive acceptance (July 12, 2026): Home, Karen Item detail, Community, Support, Login, and Radio were exercised in production at 390px, 430px, 1280px, and 1440px. All 24 combinations retained the English document contract, main landmark, exact viewport width, and zero horizontal overflow; every visible mobile input remained at least 16px. The audit caught and corrected the root metadata regression so `/` identifies itself as 44OS while `/store` remains Store. This closes the automated/public responsive subset, not signed-in screen-reader/keyboard or installed-iOS acceptance.
-
-Completion criteria:
-
-- Anonymous, fan, creator, and admin journeys pass at 1440px, 1280px, 430px, 390px, and installed iOS PWA.
-- Lint, typecheck, build, schema replay, RLS/security tests, backup restoration, migration rollback, payment reconciliation, and launch smoke tests pass.
+Payment reconciliation and provider failure paths remain additional M13 gates for a paid launch.
 
 ---
 
-## Post-launch Milestones
+## Completed Expansion Foundations
 
-### M14 — Creator Media
+### M14 — Cross-platform Creator Reach
 
-**Status: In progress (Cross-Platform Reach deployed; remaining Creator Media slices pending)**
+**Status: Complete**
 
-Cross-Platform Reach is the first M14 slice: add creator-facing editors for structured profile links (Spotify, Apple Music, Bandcamp, YouTube, Instagram, X, creator website, and extensible approved platforms) and release-level Spotify/Apple Music/Bandcamp/YouTube links. Validate canonical HTTPS hosts, allow ordering/removal, render accessible outbound actions on profiles and Item pages, and preserve 44OS as a creator-owned hub rather than treating external platforms as competitors. The schema and public rendering foundations already exist in `profile_external_links` and `item_external_links`; do not create parallel URL columns.
+Validated, ordered, owner-managed external destinations connect creator profiles and Items to approved platforms without arbitrary unsafe URLs.
 
-Cross-Platform Reach completed (July 12, 2026): migration `20260712057200_m14_cross_platform_reach.sql` is applied to the linked project and adds the extensible approved-platform registry and atomic owner-managed profile/Item sync operations without parallel URL columns. It enforces creator approval, Item ownership, HTTPS, canonical Spotify/Apple Music/Bandcamp/YouTube/Instagram/X hosts, secure general websites, scope eligibility, one link per platform, maximum counts, fixed approved ordering, removal, and direct-write revocation. Profile and Studio editors show every approved destination as a labeled empty field; public profiles render left-aligned monochrome icons beneath Bio and Item pages render descriptive listening-platform actions. The real `olsten44` profile editor and KΛREN release editor passed linked-schema review at 1280px/362px with no horizontal overflow, matching field styles, 16px fields, and no URL placeholder. Clean replay, 17 M14 pgTAP assertions covering all seven profile and all four Item platforms (29 total suite assertions), zero-error local schema lint, linked dry-run/migration-history verification, anonymous live-RPC denial, lint, strict TypeScript, and production build pass. The Cross-Platform Reach slice is complete; commentary audio/text, behind-the-scenes video, and richer creator updates remain later M14 work.
+### M15 — Native Books And Sample Packs
 
-Then add commentary audio/text, behind-the-scenes YouTube video, general creator video, and richer creator updates.
+**Status: Complete**
 
-### M15 — Native Content Experiences
-
-**Status: Complete (deployed July 13, 2026)**
-
-- [x] Define the native PDF reader content model and keep EPUB as a later additive format.
-- [x] Build entitlement-aware protected book retrieval and separate public sample-PDF foundations.
-- [x] Build server-derived reading progress, last-page restoration, zoom synchronization, and page bookmarks.
-- [x] Deliver full-viewport mobile portrait/landscape reading plus one compact theme-aware desktop/mobile toolbar, zoom, keyboard, and screen-reader behavior.
-- [x] Keep browser pinch zoom available and define explicit offline/expired-access recovery without caching protected PDFs.
-- [x] Define Sample Pack/file contracts with ordered preview metadata, waveform peaks, optional individual source assets, and protected full ZIP assets.
-- [x] Authorize individual and full-pack downloads through active download entitlements and short-lived signed URLs.
-- [x] Save clamped sample-preview playback position while routing previews through the existing global music player.
-- [x] Deliver Store and Library Book/Sample Pack experiences plus PDF/ZIP-aware Studio create/edit flows and canonical Description fields.
-- [x] Preserve existing users, Item IDs, uploads, Library relationships, Community data, entitlements, and entitlement audit history.
-
-Deployment evidence: migrations `20260712058000_m15_native_books_and_sample_packs.sql`, `20260712059000_m15_reader_bookmarks.sql`, and `20260712060000_m15_native_description_edits.sql` are aligned locally and remotely. Clean no-seed schema replay, zero-error schema lint, 25 M15 pgTAP assertions (54 across the full security suite), lint, strict TypeScript, and production build passed. Signed-in local QA covered Store, Library, Studio, sample-limit enforcement, shared-player routing, protected ZIP/PDF manifests, reading restoration, bookmarks, and 390px portrait/844×390 landscape/1280px reader geometry. The linked “Drum Loops” Item and its uploaded ZIP were preserved; its optional preview rows can now be added through Studio. Payment activation, backups/restoration rehearsal, EPUB, and protected offline storage remain separate later work.
-
-Reliability follow-up (July 13, 2026): Studio add/edit recovery is device-local and scoped by account plus new section or permanent Item ID, so auth refresh, window focus changes, browser refresh, and mobile app switching do not erase unsaved inputs. It remains distinct from the removed publication Draft lifecycle and clears on Save, Cancel, or removal. Sample-preview storage now commits before optional audio analysis, and functional merges prevent waveform metadata from erasing the uploaded path. Books pin the PDF.js 4.10 legacy client and worker after PDF.js 6 produced successive unsupported-runtime failures on Safari (`getOrInsertComputed` followed by an iterator failure); protected access and reader UI are unchanged. Strict TypeScript, lint, production build, and all 54 security assertions passed.
-
-Final M15 interface and naming closure (July 13, 2026): desktop and mobile readers share one compact theme-aware toolbar with title-only desktop identity, read-only `current of total` progress, circular bookmark/page/zoom actions, restored last page, and exact return to the originating Library Item detail. The public Assets product category is renamed in place to Sample Packs through migration `20260712061000_m15_sample_pack_category_language.sql`; Store, Library, Studio, profiles, support copy, metadata, sitemap, filters, and canonical URLs use Sample Packs. Existing category and Item UUIDs, uploads, generic `item_assets`, internal asset experience values, Library relationships, entitlements, and audit history are preserved; former URLs redirect and former non-sample Types remain inactive rather than deleted.
-
-Desktop shell follow-up (July 13, 2026): `/reader/[itemId]` now keeps the Sidebar and rounded app window visible while replacing the full content pane, normal Topbar, and global player with the reader's aligned 60px toolbar and page stage. Mobile portrait and compact-landscape readers remain full viewport. This is a route-shell change only; reader retrieval, entitlement, progress, bookmark, asset, and publication contracts are unchanged.
-
-Post-deployment Library/Store polish (July 13, 2026): Library detail pages now expose a single format action--Music Play, Book Read, and Sample Pack Download--with duplicate View Creator, Open Reader, and Shuffle actions removed from those surfaces. Book Library pages replace the former Continue Reading card with the creator-written Description, and reader close now uses history-aware navigation so the shell Back control does not reopen the reader after closing it. Store Sample Pack pages render creator-written Description before Preview Samples and Product Details, while both Store and Library sample previews continue through the shared release-row/player interaction. No entitlement, asset, progress, publication, or Item identity contracts changed. Zero-warning lint, strict TypeScript, production build, and `git diff --check` passed before deployment.
+Protected PDF reading, synchronized progress/bookmarks, public samples, protected ZIP/sample downloads, shared preview playback, creator descriptions, Studio form recovery, Safari-compatible PDF.js, and Sample Packs naming are deployed.
 
 ### M16 — Creator Events And Community Calendar
 
-**Status: Complete (deployed July 13, 2026)**
+**Status: Complete**
 
-Ship creator-owned event listings and the shared 44OS Calendar without coupling either surface to the later Radio programming workflow. Calendar is an aggregate view over authoritative source records, not an independent writable data source. Existing Radio behavior remains unchanged.
-
-- [x] Audit current profile, Studio, catalog release-date, navigation, RLS, and timezone contracts read-only before choosing the migration shape.
-- [x] Define creator Event records with `In Person`, `Online`, and `Hybrid` formats; timezone-aware start and optional end; description; venue/address; online destination; ticket/information URL; and cancellation state.
-- [x] Add reviewed additive migrations, server validation, creator-ownership RLS/RPCs, and 44 admin moderation while preserving every existing user and Item record.
-- [x] Add secure Studio Event list/create/edit/cancel/remove flows with device-local unsaved-form recovery and truthful validation/failure states.
-- [x] Add a creator-profile Events tab with clear upcoming, past, cancelled, empty, and external-destination behavior.
-- [x] Add an optional informational upcoming release date to Items after confirming no durable field existed; it does not bypass publication validation or auto-publish an Item.
-- [x] Build one server-authoritative Calendar feed contract that aggregates creator Events and eligible upcoming Item releases without copying ownership into a generic writable calendar table.
-- [x] Build `/calendar` as a full-width titled surface with divider and rounded desktop calendar, plus an accessible responsive mobile agenda/list view.
-- [x] Verify IANA timezone and daylight-saving behavior, URL safety, keyboard/screen-reader navigation, creator/admin boundaries, and public visibility with schema replay, security tests, lint, typecheck, build, and responsive acceptance.
-- [x] Deploy through reviewed repository migrations and record production evidence before marking M16 complete.
-
-Completion evidence: the read-only audit found no event/calendar source and no durable Item release date beyond integer `year`. Deployed migration `20260713010000_m16_creator_events_calendar.sql` adds the authoritative `creator_events` source, optional paired Item upcoming-release instant/timezone fields, owner/admin RPCs, moderation state, RLS, URL/IANA validation, and bounded `calendar_feed`; it does not add a writable Calendar table or touch Radio. A fresh linked data dump preceded deployment, dry-run was clean, local no-seed replay passed, local/remote history is aligned, and linked lint retains only the pre-existing Sample Pack composite warning. The full pgTAP suite passes 72 assertions, including 18 M16 creator/member/admin, foreign-owner, direct-write, unsafe-URL, required-format-field, DST fallback, hidden-public, aggregate-feed, and publication-state tests. Typecheck, zero-warning lint, production build, and `git diff --check` pass. Rendered Calendar acceptance at 390px, 430px, 1280px, and 1440px confirmed exact viewport width/no overflow, mobile agenda, desktop month view, native accessible controls, and successful public feed loading. Vercel production deployment `dpl_6ydyrgLrTn5SuCUXSd4yAUZZrXqG` is Ready, `https://44os.com/calendar` returns 200 with canonical Calendar metadata, and the production launch smoke passes. Existing users, Item IDs, uploads, Library/Community/entitlement/audit records, Radio player, and `radio_playlist_entries` remain unchanged.
-
-Release-editor safety follow-up (July 13, 2026): the optional Item upcoming-release controls and their save RPC call were removed from every Studio Item creation/edit flow after they blocked ordinary Item updates. The durable informational columns remain additive and untouched, but creator-facing date/timezone controls are now exclusive to Events. Existing Item records, publication validation, Calendar source semantics, and Event timezone handling are preserved. Lint, strict TypeScript, production build, production Studio/Event/health route checks, and diff checks passed. Corrective deployment `https://44-platform-mtzas49je-44os.vercel.app` is Ready and aliased to `https://44os.com`.
-
-Studio refinement (July 13, 2026): the overview header now owns one circular plus menu on desktop and mobile linking to the existing Music, Book, Event, Merch, and Sample Pack creation routes. It is the sole creation affordance; section-level New buttons are removed. Empty creator-content sections are omitted, populated sections retain their management rows, and Events render owned event records instead of the generic Manage Events link. The otherwise unreachable Events empty state uses the same rounded list-surface treatment as other Studio categories. The unfinished bottom Earnings list is hidden on desktop and mobile pending payment UI review. Mobile Notifications and profile tabs now share full-width dividers, balanced pill spacing, leading-edge scroll reset, and hidden scrollbars; profile tabs are content-conditional and ordered Posts, Music, Books, Sample Packs, Merch, Events, with empty Events omitted. Roles, RLS, RPCs, persistence, publication behavior, and source records are unchanged. Zero-warning lint, strict TypeScript, production build, and diff checks pass. Production deployment `https://44-platform-jkwcxyx5e-44os.vercel.app` is Ready and aliased to `https://44os.com`.
+Creator-owned timezone-aware Events and the aggregate Calendar are deployed without coupling Calendar to publication state or Radio programming.
 
 ### M17 — Interactive Platform
 
-**Status: Infrastructure complete — Unity export acceptance pending**
+**Status: Infrastructure complete; runtime acceptance pending**
 
-Prepare 44OS to launch isolated Unity/WebGL Items without claiming that an untested export is production-ready. The executable manifest, session, bridge, trusted-event, compatibility, sandbox, resource, and future-wrapper contracts are now defined; resume runtime acceptance when the launch export exists.
+Implemented manifests, exact origins, expiring sessions, sandboxed launch UI, bounded untrusted progress, signed trusted events, replay protection, and achievement issuance. The complete contract is in Foundation section 10.
 
-- [x] Define WebGL and Unity Item capabilities.
-- [x] Define the interactive launch contract.
-- [x] Define trusted interactive progress events.
-- [x] Define trusted interactive achievement events.
-- [x] Design signed event validation and replay protection.
-- [x] Define browser/device compatibility metadata.
-- [x] Define interactive loading, failure, and unsupported-device states.
-- [x] Research sandboxing and resource limits.
-- [x] Document future desktop-wrapper requirements.
-- [ ] Host and validate a real Unity export across the approved browser/device matrix before marking M17 complete.
+Remaining acceptance: host a real Unity/WebGL export and test headers, bridge behavior, memory/download size, inputs, fullscreen, browsers/devices, network failure, expiry, replay, and a signed achievement.
 
-Infrastructure evidence: deployed additive migration `20260713020000_m17_interactive_platform_foundation.sql` defines reviewed per-Item build manifests, exact isolated origins, compatibility/resource metadata, owner/admin boundaries, expiring hashed-token launch sessions, bounded client progress, append-only trusted events, durable nonce/external-ID replay rejection, signed-progress precedence, and service-only achievement issuance. `/launch/[itemId]` supplies accessible loading/unavailable/unsupported/failure/expiry/exit states, exact-origin versioned `postMessage` handling, a sandboxed isolated iframe, and an exact Library return path. `POST /api/interactive/events` verifies a timestamped HMAC envelope in constant time and fails closed without server secrets. `Other/44OS_INTERACTIVE_CONTRACT.md` is the export and wrapper handoff. No Unity placeholder, Radio UI, Radio schema, or `radio_playlist_entries` change was introduced.
+M17 is not a blocker if interactive Items remain disabled for the initial release.
 
-Deployment evidence (July 13, 2026): a current linked data dump was captured at `supabase/backups/20260713_before_m17_interactive_foundation_data.sql`; linked dry-run and zero-error schema lint passed; local no-seed replay passed; all 97 pgTAP assertions passed, including 25 M17 ownership, admin-review, entitlement, URL-lookalike, direct-write, client/trusted, replay, and achievement tests; generated database types, strict TypeScript, zero-warning lint, and production build passed. Remote migration history is aligned through `20260713020000`. Browser acceptance at 1280px, 390px, and 430px found exact viewport width with no overflow, a 44px return target, polite status semantics, and no console errors. Production deployment `https://44-platform-1pe4z7am3-44os.vercel.app` is Ready and aliased to `https://44os.com`; `/launch/[itemId]` returns 200 with the restricted frame/CSP/permissions headers, anonymous manifest reading is bounded by RLS, anonymous session issuance returns 401, and the production launch smoke passes. Runtime acceptance is still intentionally open until the real Unity export exists.
+### M18 — Beat Store
 
-Immersive-shell follow-up (July 13, 2026): the desktop launch route now fills the entire rounded 44OS app window instead of rendering a smaller page card; Sidebar, Topbar, ordinary heading/divider, and global player are suppressed, while a 44px focused return control remains over the runtime. Mobile and narrow layouts stop before build lookup/session issuance and present a full-viewport `Desktop Required` state with keyboard/mouse guidance. Local acceptance at 1440×900 and 390×844 confirmed exact full-shell geometry, preserved desktop outer margin/radius, hidden launch chrome, zero reserved player space, accessible heading/list/return semantics, and preserved full-viewport mobile reader behavior. Zero-warning lint, strict TypeScript, production build, and diff checks passed; production deployment `https://44-platform-e9yp4065n-44os.vercel.app` is Ready and aliased to `https://44os.com`; both immersive routes return 200 and the post-deployment launch smoke passes. A real Unity export remains the only open M17 acceptance item.
+**Status: In progress — hidden foundation and review implementation complete; activation blocked**
 
-Installed-app safety follow-up (July 13, 2026): Safari standalone/PWA acceptance exposed a partial-shell regression after the route-aware client wrapper was deployed, although the ordinary website recovered after hydration. The wrapper was removed and the proven server-rendered root shell restored. Reader/launch presentation is now selected by route-local content markers rather than a client boundary around Sidebar, Topbar, route content, and player. Interactive Library actions explicitly open the launch route in a separate window/tab with `noopener` isolation and an accessible new-window label, keeping the main 44OS window and player intact. `/` and `/store` now share the same Store header and neither renders the redundant inline search field. Zero-warning lint, strict TypeScript, and production build passed; cold production responses for `/`, `/store`, and `/api/health` return 200, both Store responses omit `Search Store`, and the corrected deployment `https://44-platform-dozfutzzk-44os.vercel.app` is Ready and aliased to `https://44os.com`. The installed Safari app must be fully quit and reopened once to discard the already-loaded broken client shell; real Unity runtime acceptance remains open until the export exists.
+Foundation complete:
 
-### M18 — Radio Programming And Schedule
+- Beats are canonical Music Items with an assigned Beat Type/capability, permanent URL, square artwork, tagged preview, controlled BPM/key/time-signature/sample metadata, Music genre/style Tags, and controlled mood/instrument attributes.
+- Private untagged MP3, WAV, and stems assets use explicit offer-to-file grants; generic Library/download entitlements cannot reveal them.
+- Versioned platform Basic, Premium, Trackout, and Exclusive templates are seeded as legally inactive drafts. Offers, immutable buyer grants, terms/price/seller/collaborator/file snapshots, license numbers, download history, split basis points, and exclusive reservations are implemented.
+- Exclusive finalization is service-only, idempotent, reservation-aware, and archives the sold Beat/offers while preserving earlier non-exclusive grants.
+- Beat metadata, files, offers, mappings, attributes, and splits participate in the dormant M13 submission-review snapshot and approval boundary.
+- Every environment/database catalog, publishing, checkout, pilot, split, and exclusive switch defaults off.
 
-**Status: Not started — deliberately deferred**
+Review implementation complete in source:
 
-Keep Radio v1 as-is for launch unless this milestone is separately reviewed and approved. Later, support pre-recorded creator sets, podcasts, talk shows, and 44-curated programming blocks through a Radio-specific submission and scheduling lifecycle.
+- Dedicated device-recoverable Add/Edit Beat Studio form and transactional save RPC.
+- Separate Studio Beats section; Store `New in Beats` shelf; URL-backed `/store/music?type=beat`; Beat-specific filters; square Item cards; producer profile Beats tab.
+- Beat Item metadata/preview/license review, offer-keyed Cart lines, and Library license/file/status presentation.
+- Generated database types, schema lint, and M18 pgTAP file-boundary/runtime/immutability coverage.
 
-- [ ] Define the pre-recorded program/media contract independently from creator Events.
-- [ ] Define creator submission, revision, withdrawal, and 44 admin approval/rejection states.
-- [ ] Define timezone-aware programming blocks, conflict handling, repeat scheduling, and fallback music behavior.
-- [ ] Build protected program-media ingestion and server-authoritative playout eligibility.
-- [ ] Build the 44 admin review and scheduling workspace before exposing creator submission controls.
-- [ ] Add a Radio-page schedule only after its mobile/desktop UI Activation Review.
-- [ ] Feed only approved scheduled programs into the M16 Calendar read contract.
-- [ ] Preserve the existing `radio_playlist_entries` queue and current Radio player until a verified cutover exists.
+Remaining review acceptance:
 
-### M19 — Ecosystem Expansion
+- Enable both review flags in a non-production environment and exercise real artwork, tagged MP3, private MP3/WAV/stems uploads, editing, recovery, Store filters, direct sharing, shared-player playback, profile tab, Cart tier replacement, and Library signed downloads.
+- Complete keyboard, screen-reader, light/dark, 1440/1280/430/390, Safari, and installed-iOS rendered acceptance with the feature flag both off and on.
 
-Livestream status, guides/showcases, contributor organizations, services represented through the Item spine, points/rewards, and other capabilities validated by real creator demand.
+Activation stages:
+
+- **Pilot sales: Blocked** until counsel approves new template versions and M11/M12 Stripe/webhook/refund/dispute/reconciliation/earnings/payout acceptance is complete. First activation is non-exclusive, single-owner only.
+- **Splits: Deferred activation** until exact earnings allocation and reconciliation pass.
+- **Exclusivity: Deferred activation** until two-session reservation/expiry/concurrency, duplicate webhook, simultaneous purchase, archival, and prior-license preservation acceptance passes.
+
+No Beat switch may be enabled in production as part of the initial hidden-foundation deployment.
+
+---
+
+## Deferred Work
+
+### M19 — Radio Programming And Schedule
+
+**Status: Deferred**
+
+Keep current Radio behavior for launch. Later define creator program submission, media ingestion, 44 approval, scheduling, conflict/fallback behavior, and Calendar integration without changing `radio_playlist_entries` until a verified cutover exists.
+
+### M20 — Ecosystem Expansion
+
+**Status: Deferred**
+
+Livestreams, guides/showcases, contributor organizations, services through the Item spine, points/rewards, desktop distribution, and other capabilities proceed only after real creator demand and separate approval.
+
+---
+
+## Next Recommended Sequence
+
+1. Keep the current free/trusted-testing production behavior stable while final tweaks are reviewed.
+2. Refresh the linked database password and close migration verification debt.
+3. Complete SMTP/recovery, legal activation, alerting/on-call, restoration, and signed-in accessibility/PWA acceptance.
+4. Decide invite-only versus public creator onboarding and activate the review workflow only if public onboarding is required.
+5. Complete M11 operating decisions, then connect Stripe/PayPal in test mode and finish M12 failure/reconciliation acceptance.
+6. Run M18 Beat review acceptance in an isolated environment while every public/commerce switch remains off; obtain counsel-approved standard license versions.
+7. Review payment/earnings UI only after server-authoritative provider states are proven, then pilot non-exclusive single-owner Beats before splits or exclusivity.
+8. Run the full release gate in Foundation section 9, deploy the approved commit, and repeat production smoke/manual journeys.
 
 ---
 
 ## Milestone Maintenance
 
-- A milestone is discussed before it moves to `Approved` or `In progress`.
-- A milestone is not `Complete` because its UI exists; schema, RLS, migration, failure states, and acceptance journeys must pass.
-- Record meaningful completion evidence in the milestone section without turning this file into a daily changelog.
-- When a decision changes architecture, update Foundation, UI where relevant, and this roadmap in the same change.
+- A milestone must be discussed before moving to `Approved` or `In progress`.
+- UI presence alone never makes a milestone complete; schema, permissions, failure states, preservation, and acceptance journeys must pass.
+- Keep evidence concise and current. Git history retains the detailed implementation chronology.
+- Update Foundation, UI, and Milestones together when a decision affects more than one contract.

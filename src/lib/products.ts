@@ -1,6 +1,38 @@
 import type { Profile } from '@/lib/platform';
 import { formatPrice } from '@/lib/pricing';
 
+export type BeatLicenseOfferSummary = {
+  id: string;
+  tierCode: string;
+  title: string;
+  summary: string;
+  priceCents: number;
+  currency: string;
+  status: string;
+  includedFileKinds: string[];
+  isExclusive: boolean;
+  termsText: string;
+  termsSha256: string;
+};
+
+export type BeatCatalogSummary = {
+  bpm: number;
+  keyRoot: string | null;
+  keyMode: string | null;
+  keyNotApplicable: boolean;
+  timeSignature: string;
+  sampleStatus: string;
+  sampleDisclosure: string | null;
+  saleStatus: string;
+  previewTrackId: string;
+  moods: string[];
+  instruments: string[];
+  startingPriceCents: number | null;
+  hasPaidOffers: boolean;
+  availableTierCodes: string[];
+  licenseOffers: BeatLicenseOfferSummary[];
+};
+
 /** Canonical 44OS publishable entity. Price and acquisition are separate concerns. */
 export interface Item {
   id: string;
@@ -21,6 +53,7 @@ export interface Item {
   featured: boolean;
   tags: string[] | null;
   capability_keys?: string[];
+  beat?: BeatCatalogSummary;
   external_links?: Array<{
     id: string;
     label: string;

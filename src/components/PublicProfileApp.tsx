@@ -32,8 +32,9 @@ import { setDiscussionLike } from '@/lib/domain/community';
 import { ExternalLinkActions } from '@/components/ExternalLinkActions';
 import type { CreatorEvent } from '@/lib/domain/events';
 import { formatEventDate } from '@/lib/eventTime';
+import { beatReviewSurfacesEnabled, hydrateBeatProducts } from '@/lib/domain/beats';
 
-type ProfileTab = 'posts' | 'music' | 'books' | 'sample-packs' | 'merch' | 'events';
+type ProfileTab = 'posts' | 'music' | 'beats' | 'books' | 'sample-packs' | 'merch' | 'events';
 type CurrentProfileState = {
   userId: string;
   profile: StudioProfile | null;
@@ -45,6 +46,7 @@ function parseProfileTab(value: string | null, isCreator: boolean): ProfileTab |
   if (normalized === 'posts') return 'posts';
   if (!isCreator) return null;
   if (normalized === 'music' || normalized === 'releases' || normalized === 'products') return 'music';
+  if (normalized === 'beats' && beatReviewSurfacesEnabled) return 'beats';
   if (normalized === 'books') return 'books';
   if (normalized === 'sample-packs' || normalized === 'assets') return 'sample-packs';
   if (normalized === 'merch') return 'merch';
@@ -95,7 +97,7 @@ export default function PublicProfilePage() {
       }
 
       const content = await getPublicProfileContent(resolvedProfile);
-      setProducts(content.items.filter(Boolean));
+      setProducts(await hydrateBeatProducts(content.items.filter(Boolean)));
       setExternalLinks(content.links);
       const nextPosts = content.posts;
       setPosts(nextPosts);
@@ -255,8 +257,12 @@ export default function PublicProfilePage() {
   );
   const musicProducts = useMemo(
     () => publishedProducts
-      .filter(product => getProductExperience(product) === 'music')
+      .filter(product => getProductExperience(product) === 'music' && !product.beat)
       .sort(comparePublicCatalogProducts),
+    [publishedProducts],
+  );
+  const beatProducts = useMemo(
+    () => beatReviewSurfacesEnabled ? publishedProducts.filter(product => Boolean(product.beat)).sort(comparePublicCatalogProducts) : [],
     [publishedProducts],
   );
   const bookProducts = useMemo(
@@ -287,6 +293,7 @@ export default function PublicProfilePage() {
         const creatorTabs: Array<{ id: ProfileTab; label: string }> = [];
         if (generalPosts.length > 0) creatorTabs.push({ id: 'posts', label: 'Posts' });
         if (musicProducts.length > 0) creatorTabs.push({ id: 'music', label: 'Music' });
+        if (beatProducts.length > 0) creatorTabs.push({ id: 'beats', label: 'Beats' });
         if (bookProducts.length > 0) creatorTabs.push({ id: 'books', label: 'Books' });
         if (assetProducts.length > 0) creatorTabs.push({ id: 'sample-packs', label: 'Sample Packs' });
         if (merchProducts.length > 0) creatorTabs.push({ id: 'merch', label: 'Merch' });
@@ -295,7 +302,7 @@ export default function PublicProfilePage() {
       }
       return generalPosts.length > 0 ? [{ id: 'posts' as const, label: 'Posts' }] : [];
     },
-    [assetProducts.length, bookProducts.length, events.length, generalPosts.length, isCreator, merchProducts.length, musicProducts.length],
+    [assetProducts.length, beatProducts.length, bookProducts.length, events.length, generalPosts.length, isCreator, merchProducts.length, musicProducts.length],
   );
 
   useEffect(() => {
@@ -447,6 +454,14 @@ export default function PublicProfilePage() {
                 meta={profileProductMeta(product, 'Release')}
                 image={product.cover_url}
               />
+            ))}
+          </ArtifactGrid>
+        )}
+
+        {tab === 'beats' && (
+          <ArtifactGrid empty="No beats published yet.">
+            {beatProducts.map(product => (
+              <SocialArtifactCard key={product.id} href={productBrowseHref(product)} title={product.title} meta={`${product.beat?.bpm ?? ''} BPM · ${product.beat?.keyNotApplicable ? 'Atonal' : `${product.beat?.keyRoot ?? ''} ${product.beat?.keyMode ?? ''}`}`.trim()} image={product.cover_url} />
             ))}
           </ArtifactGrid>
         )}

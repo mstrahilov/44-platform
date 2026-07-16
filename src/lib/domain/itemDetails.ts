@@ -6,6 +6,7 @@ import type { ProductAchievement, Track, UserAchievement } from '@/lib/platform'
 import { supabase } from '@/lib/supabase';
 import { getPublicNativeContent } from '@/lib/domain/nativeContent';
 import type { ReleaseVideoEmbed } from '@/lib/domain/releaseFeatures';
+import { beatReviewSurfacesEnabled, listBuyerBeatLicenses } from '@/lib/domain/beats';
 
 export type DetailedLibraryItemRow = {
   id: string;
@@ -34,7 +35,7 @@ export async function getLibraryItemBundle(userId: string, libraryEntryId: strin
   const row = await getDetailedLibraryItem(userId, libraryEntryId);
   if (!row?.products) return null;
 
-  const [trackResult, achievementResult, unlockedResult, assetResult, videoResult, nativeContent] = await Promise.all([
+  const [trackResult, achievementResult, unlockedResult, assetResult, videoResult, nativeContent, beatLicenses] = await Promise.all([
     supabase
       .from('tracks')
       .select('id,item_id,number,title,duration_seconds,audio_url,download_url')
@@ -53,6 +54,7 @@ export async function getLibraryItemBundle(userId: string, libraryEntryId: strin
     supabase.rpc('list_item_asset_manifest', { target_item_id: row.item_id }),
     supabase.from('item_video_embeds' as never).select('id,item_id,title,youtube_video_id,sort_order').eq('item_id', row.item_id).order('sort_order'),
     getPublicNativeContent(row.item_id),
+    beatReviewSurfacesEnabled ? listBuyerBeatLicenses(row.item_id) : Promise.resolve([]),
   ]);
 
   const error = trackResult.error || achievementResult.error || unlockedResult.error || assetResult.error;
@@ -76,6 +78,7 @@ export async function getLibraryItemBundle(userId: string, libraryEntryId: strin
     assets: authorizedAssets,
     videoEmbeds: (videoResult.data as ReleaseVideoEmbed[] | null) ?? [],
     nativeContent,
+    beatLicenses,
   };
 }
 

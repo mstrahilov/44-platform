@@ -30,6 +30,7 @@ import { getPublicNativeContent, type BookContent, type SamplePackFile } from '@
 import { SamplePackExperience } from '@/components/SamplePackExperience';
 import { Ui44OverflowTrackTitle } from '@/components/ui44/OverflowTrackTitle';
 import { Ui44SectionArrow } from '@/components/ui44/Controls';
+import { beatReviewSurfacesEnabled, loadBeatCatalogSummaries } from '@/lib/domain/beats';
 
 type ProductTrack = {
   id: string;
@@ -107,6 +108,11 @@ export function ProductStoreDetail({
       }
 
       if (data) {
+        if (beatReviewSurfacesEnabled) {
+          const beatSummaries = await loadBeatCatalogSummaries([data.id]);
+          data.beat = beatSummaries.get(data.id);
+          setProduct({ ...data });
+        }
         if (releasePage || getProductExperience(data) === 'music') {
           const trackRows = await listPlayableItemTracks(data.id);
           setTracks(trackRows.sort((a, b) => trackOrder(a) - trackOrder(b)));
@@ -225,12 +231,13 @@ export function ProductStoreDetail({
   if (!product) return <div className="ui44-route-state">Item not found</div>;
 
   const productExperience = getProductExperience(product);
+  const isBeat = beatReviewSurfacesEnabled && Boolean(product.beat);
   const isReleasePage = releasePage || productExperience === 'music';
   const canClaimToLibrary = canSaveProductToLibrary(product);
   const hasDownloadUnlock = ownedAcquisitionType === 'purchase';
   const creatorLink = creatorHref(product.creators ?? product.creator);
-  const creatorTabLink = `${creatorLink}${creatorLink.includes('?') ? '&' : '?'}tab=${creatorProfileTab(productExperience)}${product.id ? `&fromProduct=${encodeURIComponent(product.id)}` : ''}`;
-  const creatorMoreLink = `${creatorLink}${creatorLink.includes('?') ? '&' : '?'}tab=${creatorProfileTab(productExperience)}`;
+  const creatorTabLink = `${creatorLink}${creatorLink.includes('?') ? '&' : '?'}tab=${isBeat ? 'beats' : creatorProfileTab(productExperience)}${product.id ? `&fromProduct=${encodeURIComponent(product.id)}` : ''}`;
+  const creatorMoreLink = `${creatorLink}${creatorLink.includes('?') ? '&' : '?'}tab=${isBeat ? 'beats' : creatorProfileTab(productExperience)}`;
   const libraryHref = ownedLibraryItemId ? productLibraryHref(product, ownedLibraryItemId) : browseIndexHref(product).replace('/store', '/library');
 
   const playableTracks: MusicQueueTrack[] = (
@@ -312,7 +319,9 @@ export function ProductStoreDetail({
         showCreatorAvatar={false}
       />
 
-      {['book', 'asset'].includes(productExperience) && productDescription ? (
+      {isBeat && product.beat ? <BeatLicenseReviewPanel product={product} /> : null}
+
+      {(['book', 'asset'].includes(productExperience) || isBeat) && productDescription ? (
         <div className="view-section item-description-section">
           <h2 className="view-section-title">Description</h2>
           <p className="os-type-body view-description">{productDescription}</p>
@@ -436,6 +445,7 @@ function trackOrder(track: ProductTrack) {
 }
 
 function canSaveProductToLibrary(product: Product) {
+  if (product.beat) return false;
   const experience = getProductExperience(product);
   if (experience === 'physical') return false;
   if (experience === 'music') return true;
@@ -526,6 +536,7 @@ function resolveStoreActions({
 }
 
 function getContentHeading(product: Product) {
+  if (product.beat) return 'Tagged Preview';
   const experience = getProductExperience(product);
   if (experience === 'music') return 'Tracklist';
   if (experience === 'book') return 'Book Sample';
@@ -542,6 +553,20 @@ function buildProductDetails(product: Product, tracks: ProductTrack[], inferredD
     { label: 'Type', value: product.browse_type?.label || 'Unassigned' },
   ];
   if (experience === 'music') {
+    if (product.beat) {
+      const beat = product.beat;
+      return [
+        { label: 'Producer', value: creator },
+        ...taxonomy,
+        { label: 'BPM', value: String(beat.bpm) },
+        { label: 'Key', value: beat.keyNotApplicable ? 'Atonal / N/A' : `${beat.keyRoot} ${beat.keyMode}` },
+        { label: 'Time Signature', value: beat.timeSignature },
+        { label: 'Mood', value: beat.moods.join(', ') || 'Not provided' },
+        { label: 'Instruments', value: beat.instruments.join(', ') || 'Not provided' },
+        { label: 'Samples', value: beat.sampleStatus === 'none' ? 'None declared' : beat.sampleStatus.replaceAll('_', ' ') },
+        { label: 'Upload Date', value: uploadDate },
+      ];
+    }
     const totalLengthSeconds = tracks.reduce((sum, track) => sum + (getTrackDurationSeconds(track, inferredDurations) ?? 0), 0);
     return [
       { label: 'Creator', value: creator },
@@ -581,6 +606,29 @@ function buildProductDetails(product: Product, tracks: ProductTrack[], inferredD
     { label: 'Materials', value: 'Coming soon' },
     { label: 'Upload Date', value: uploadDate },
   ];
+}
+
+function BeatLicenseReviewPanel({ product }: { product: Product }) {
+  const beat = product.beat;
+  const cart = useCart();
+  if (!beat) return null;
+  return <div className="view-section beat-license-section">
+    <div className="item-community-header item-community-section-header"><h2 className="view-section-title item-community-section-title">Licenses</h2></div>
+    <div className="beat-meta-strip" aria-label="Beat metadata">
+      <span>{beat.bpm} BPM</span><span>{beat.keyNotApplicable ? 'Atonal / N/A' : `${beat.keyRoot} ${beat.keyMode}`}</span><span>{beat.timeSignature}</span>
+    </div>
+    {beat.sampleDisclosure ? <p className="os-type-body beat-sample-disclosure"><strong>Sample disclosure:</strong> {beat.sampleDisclosure}</p> : null}
+    {beat.licenseOffers.length ? <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
+      {beat.licenseOffers.map(offer => <details className="beat-license-offer" key={offer.id}>
+        <summary className="dashboard-list-row">
+          <span className="dashboard-row-copy"><strong className="dashboard-row-title">{offer.title}</strong><span className="dashboard-row-subtitle">{offer.summary} · {offer.includedFileKinds.map(kind => kind.replaceAll('_', ' ')).join(', ')}</span></span>
+          <span className="dashboard-row-actions"><strong>{new Intl.NumberFormat('en-US', { style: 'currency', currency: offer.currency }).format(offer.priceCents / 100)}</strong>{offer.status === 'active' ? <button type="button" className="os-button os-button-primary os-button-compact" onClick={event => { event.preventDefault(); addToCart({ item_id: product.id, offer_id: offer.id, title: product.title, creator: product.creators?.display_name || product.creator, item_type: 'Beat', cover_url: product.cover_url, price_cents: offer.priceCents, currency: offer.currency, slug: product.slug, href: productBrowseHref(product), offer_title: offer.title, tier_code: offer.tierCode, included_files: offer.includedFileKinds, terms_sha256: offer.termsSha256 }); }}>{cart.hasOffer(offer.id) ? 'Selected' : 'Choose'}</button> : <span className="dashboard-status-pill studio-status-pill-draft ui44-badge">Review only</span>}</span>
+        </summary>
+        <div className="beat-license-terms"><p className="os-type-body">{offer.termsText}</p><small>Terms digest: {offer.termsSha256 || 'Created when counsel-approved terms activate.'}</small></div>
+      </details>)}
+    </div> : <p className="os-type-body view-description">No license tiers are enabled for this Beat.</p>}
+    <p className="os-type-meta">Purchasing is unavailable while Beat commerce and approved legal templates are off.</p>
+  </div>;
 }
 
 function creatorProfileTab(experience: ReturnType<typeof getProductExperience>) {

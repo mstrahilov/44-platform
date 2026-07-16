@@ -25,7 +25,16 @@ export async function listCreatorItems(profileId: string) {
     .neq('status', 'archived')
     .order('created_at', { ascending: false });
   if (result.error) throw result.error;
-  return (result.data as Product[] | null) ?? [];
+  const items = (result.data as Product[] | null) ?? [];
+  if (items.length === 0) return items;
+  const assignmentResult = await supabase.from('item_type_assignments').select('item_id,item_type_id').in('item_id', items.map(item => item.id));
+  if (assignmentResult.error) throw assignmentResult.error;
+  const typeIds = Array.from(new Set((assignmentResult.data ?? []).map(row => row.item_type_id)));
+  const typeResult = typeIds.length ? await supabase.from('item_types').select('*').in('id', typeIds) : { data: [], error: null };
+  if (typeResult.error) throw typeResult.error;
+  const typeById = new Map((typeResult.data ?? []).map(type => [type.id, type]));
+  const assignmentByItem = new Map((assignmentResult.data ?? []).map(row => [row.item_id, typeById.get(row.item_type_id) ?? null]));
+  return items.map(item => ({ ...item, browse_type: assignmentByItem.get(item.id) ?? null }));
 }
 
 export async function getCreatorCatalogOverview(profileId: string) {
