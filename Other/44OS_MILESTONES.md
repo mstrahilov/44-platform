@@ -198,6 +198,8 @@ Living UI-reference follow-up (July 15, 2026): the temporary split desktop/mobil
 
 UI release-candidate verification (July 15, 2026): zero-warning lint, strict TypeScript, production build, UI cleanup audit, observability contract, hardening contract, local production launch smoke, linked schema lint, linked migration alignment/dry-run, and all 178 pgTAP security assertions pass. The documented empty `test:schema-replay` currently reaches migration `20260714010000_grant_olsten_admin_role.sql` and stops because that already-deployed production bootstrap migration asserts the presence of the real ØLSTEN profile. A disposable local profile fixture allowed that migration and every remaining migration through `20260714031000` to apply without changing repository SQL; this is a pre-existing replay/runbook defect, not a schema difference or part of the UI release. No migration, linked data, payment control, or feature flag changes in this release.
 
+UI production deployment evidence (July 15, 2026): reviewed application commit `a90d32cf94160c16f5ba37b3e308bf76be5fc6a2` deployed as Vercel production deployment `dpl_cKDGyAM7ZNDy72zFDkyZj86sdARa` (`https://44-platform-7rfg8lgnx-44os.vercel.app`). Vercel reported Ready and aliased the deployment to `https://44os.com` and `https://www.44os.com`; `/api/health` returned `healthy` with the exact release SHA in `iad1`, `/44OS_UI` returned 200 with the production security headers, and the complete canonical-domain launch smoke passed.
+
 ### M8 — Library, Achievements, And Item Memory
 
 **Status: Complete**
