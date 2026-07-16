@@ -31,7 +31,7 @@ Current passing evidence:
 - Disposable M13 rollback and two-session concurrency rehearsals.
 - Local migration history and disposable replay include every repository migration through `20260716010000_m13_admin_control_center.sql`.
 - Linked production history is aligned through `20260716010000_m13_admin_control_center.sql`, linked schema lint returns zero errors, and the post-deploy dry-run reports the remote database is up to date.
-- Live Admin probes return 27 accounts, 5 creators, 51 Items, bounded eight-row People/Content pages, and working person/content detail documents. Anonymous Admin RPC calls remain denied with SQL `42501`; payments and Beat Store remain off.
+- Live Admin probes return 17 approved accounts, 5 creators, 51 Items, bounded eight-row People/Content pages, and working person/content detail documents. Ten owner-approved obsolete accounts were removed through the Auth Admin boundary after a fresh backup; before/after preservation checks matched across Items, Community content, messages, reviews, Library records, entitlements, orders, achievements, events, and playback. Anonymous Admin RPC calls remain denied with SQL `42501`; payments and Beat Store remain off.
 
 Current verification debt:
 
