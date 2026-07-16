@@ -17,6 +17,7 @@ import { getLibraryItemBundle, type DetailedLibraryItemRow } from '@/lib/domain/
 import type { ReleaseVideoEmbed } from '@/lib/domain/releaseFeatures';
 import type { BookContent, SamplePackFile } from '@/lib/domain/nativeContent';
 import { SamplePackExperience } from '@/components/SamplePackExperience';
+import { Ui44OverflowTrackTitle } from '@/components/ui44/OverflowTrackTitle';
 
 type LibraryKind = 'product';
 
@@ -105,15 +106,15 @@ export function LibraryItemDetail({
     fetchItem(userId);
   }, [authLoading, id, kind, legacyRedirect, router, userId]);
 
-  if (authLoading || loading) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Loading…</div>;
-  if (error) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>{error}</div>;
-  if (!user) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Sign in to view this library item.</div>;
+  if (authLoading || loading) return <div className="ui44-route-state ui44-state ui44-state-loading" role="status" aria-live="polite">Loading…</div>;
+  if (error) return <div className="ui44-route-state">{error}</div>;
+  if (!user) return <div className="ui44-route-state">Sign in to view this library item.</div>;
 
   if (kind === 'product' && productRow?.products) {
     return <ProductLibraryDetail userId={user.id} row={productRow} tracks={tracks} achievements={achievements} assets={assets} bonusAssets={bonusAssets} videoEmbeds={videoEmbeds} unlockedAchievementIds={unlockedAchievementIds} bookContent={bookContent} sampleFiles={sampleFiles} />;
   }
 
-  return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Library item not found.</div>;
+  return <div className="ui44-route-state">Library item not found.</div>;
 }
 
 function ProductLibraryDetail({
@@ -370,10 +371,10 @@ function ProductLibraryDetail({
       {isMusic && tracks.length > 0 && (
         <div className="view-section view-tracklist-section">
           <h2 className="view-section-title">Tracklist</h2>
-          <div className="view-tracklist">
+          <div className="view-tracklist ui44-track-list ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
             {tracks.map((track, index) => (
               <div
-                className={selectedTrackId === track.id ? 'view-track-row view-track-row-selected' : 'view-track-row'}
+                className={selectedTrackId === track.id || currentTrack?.id === track.id ? 'view-track-row view-track-row-selected ui44-track-row ui44-track-row-interactive ui44-track-row-selected' : 'view-track-row ui44-track-row ui44-track-row-interactive'}
                 key={track.id}
                 onClick={() => {
                   setSelectedTrackId(track.id);
@@ -385,6 +386,7 @@ function ProductLibraryDetail({
                 ])}
                 role="button"
                 tabIndex={0}
+                aria-pressed={selectedTrackId === track.id || currentTrack?.id === track.id}
                 onKeyDown={event => {
                   if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
@@ -393,11 +395,11 @@ function ProductLibraryDetail({
                   }
                 }}
               >
-                <div className={currentTrack?.id === track.id ? 'view-track-leading view-track-leading-current' : 'view-track-leading'}>
-                  <span className="view-track-number">{trackNumbers.get(track.id) ?? index + 1}</span>
+                <div className={currentTrack?.id === track.id ? 'view-track-leading view-track-leading-current ui44-track-leading' : 'view-track-leading ui44-track-leading'}>
+                  <span className="view-track-number ui44-track-index">{trackNumbers.get(track.id) ?? index + 1}</span>
                   <button
                     type="button"
-                    className="view-track-play"
+                    className="view-track-play ui44-track-play-action"
                     aria-label={`${currentTrack?.id === track.id && isPlaying ? 'Pause' : 'Play'} ${track.title}`}
                     onClick={event => {
                       event.stopPropagation();
@@ -406,11 +408,11 @@ function ProductLibraryDetail({
                     }}
                     disabled={!track.audio_url}
                   >
-                    <span className={currentTrack?.id === track.id ? `view-track-icon view-track-icon-equalizer${isPlaying ? ' view-track-icon-equalizer-playing' : ''}` : 'view-track-icon view-track-icon-play'} aria-hidden="true" />
+                    <span className={currentTrack?.id === track.id ? (isPlaying ? 'view-track-icon view-track-icon-equalizer view-track-icon-equalizer-playing' : 'view-track-icon view-track-icon-pause') : 'view-track-icon view-track-icon-play'} aria-hidden="true" />
                   </button>
                 </div>
-                <span className={currentTrack?.id === track.id && isPlaying ? 'view-track-title view-track-title-active' : 'view-track-title'}>{track.title}</span>
-                <span className="view-track-duration">{formatDuration(getTrackDurationSeconds(track, inferredTrackDurations))}</span>
+                <Ui44OverflowTrackTitle title={track.title} active={currentTrack?.id === track.id && isPlaying} className="ui44-track-title" />
+                <span className="view-track-duration ui44-track-duration">{formatDuration(getTrackDurationSeconds(track, inferredTrackDurations))}</span>
               </div>
             ))}
           </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import type { ExternalLinkDraft, ExternalLinkPlatform } from '@/lib/domain/externalLinks';
+import { Ui44TextInput } from '@/components/ui44/Inputs';
 
 export function ExternalLinksEditor({ links, platforms, onChange, description }: {
   links: ExternalLinkDraft[];
@@ -24,7 +25,7 @@ export function ExternalLinksEditor({ links, platforms, onChange, description }:
               <div className="external-link-row" key={`${link.platform}-${index}`}>
                 <label className="profile-edit-field dashboard-field external-link-url-field">
                   <span className="profile-edit-label external-link-service-name">{selectedPlatform?.label ?? link.platform}</span>
-                  <input className="profile-edit-input os-input-field" type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" value={link.url} onChange={event => update(index, { url: event.target.value })} />
+                  <Ui44TextInput className="profile-edit-input os-input-field" type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" value={link.url} placeholder={`Enter ${selectedPlatform?.label ?? link.platform} URL`} onChange={event => update(index, { url: event.target.value })} />
                 </label>
               </div>
             );

@@ -28,6 +28,8 @@ import {
 } from '@/lib/domain/itemDetails';
 import { getPublicNativeContent, type BookContent, type SamplePackFile } from '@/lib/domain/nativeContent';
 import { SamplePackExperience } from '@/components/SamplePackExperience';
+import { Ui44OverflowTrackTitle } from '@/components/ui44/OverflowTrackTitle';
+import { Ui44SectionArrow } from '@/components/ui44/Controls';
 
 type ProductTrack = {
   id: string;
@@ -219,8 +221,8 @@ export function ProductStoreDetail({
     };
   }, [tracks]);
 
-  if (loading) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Loading…</div>;
-  if (!product) return <div style={{ padding: 80, textAlign: 'center', color: 'var(--os-color-ink-muted)' }}>Item not found</div>;
+  if (loading) return <div className="ui44-route-state ui44-state ui44-state-loading" role="status" aria-live="polite">Loading…</div>;
+  if (!product) return <div className="ui44-route-state">Item not found</div>;
 
   const productExperience = getProductExperience(product);
   const isReleasePage = releasePage || productExperience === 'music';
@@ -307,6 +309,7 @@ export function ProductStoreDetail({
         actions={primaryActions}
         externalLinks={product.external_links ?? []}
         coverClassName={`view-album-cover-${productExperience}`}
+        showCreatorAvatar={false}
       />
 
       {['book', 'asset'].includes(productExperience) && productDescription ? (
@@ -317,20 +320,20 @@ export function ProductStoreDetail({
       ) : null}
 
       <div className="view-section view-tracklist-section">
-        {productExperience !== 'asset' ? <div className="item-community-header" style={{ marginBottom: 28 }}>
-          <h2 className="view-section-title" style={{ margin: 0 }}>{contentHeading}</h2>
+        {productExperience !== 'asset' ? <div className="item-community-header item-community-section-header">
+          <h2 className="view-section-title item-community-section-title">{contentHeading}</h2>
         </div> : null}
         {isReleasePage ? (
           tracks.length === 0 ? (
             <p className="os-type-body view-description view-content-empty">No tracks are published for this release yet.</p>
           ) : (
-            <div className="view-tracklist">
+            <div className="view-tracklist ui44-track-list ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
               {tracks.map((track, index) => {
                 const active = currentTrack?.id === track.id;
                 const selected = selectedTrackId === track.id;
                 return (
                   <div
-                    className={selected ? 'view-track-row view-track-row-selected' : 'view-track-row'}
+                    className={selected || active ? 'view-track-row view-track-row-selected ui44-track-row ui44-track-row-interactive ui44-track-row-selected' : 'view-track-row ui44-track-row ui44-track-row-interactive'}
                     key={track.id}
                     onClick={() => {
                       setSelectedTrackId(track.id);
@@ -345,6 +348,7 @@ export function ProductStoreDetail({
                     ])}
                     role="button"
                     tabIndex={0}
+                    aria-pressed={selected || active}
                     onKeyDown={event => {
                       if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
@@ -353,10 +357,10 @@ export function ProductStoreDetail({
                       }
                     }}
                   >
-                    <div className={active ? 'view-track-leading view-track-leading-current' : 'view-track-leading'}>
-                      <span className="view-track-number">{trackNumbers.get(track.id) ?? index + 1}</span>
+                    <div className={active ? 'view-track-leading view-track-leading-current ui44-track-leading' : 'view-track-leading ui44-track-leading'}>
+                      <span className="view-track-number ui44-track-index">{trackNumbers.get(track.id) ?? index + 1}</span>
                       <button
-                        className="view-track-play"
+                        className="view-track-play ui44-track-play-action"
                         type="button"
                         disabled={!track.audio_url}
                         aria-label={`${active && isPlaying ? 'Pause' : 'Play'} ${track.title}`}
@@ -365,11 +369,11 @@ export function ProductStoreDetail({
                           toggleReleaseTrack(track);
                         }}
                       >
-                        <span className={active ? `view-track-icon view-track-icon-equalizer${isPlaying ? ' view-track-icon-equalizer-playing' : ''}` : 'view-track-icon view-track-icon-play'} aria-hidden="true" />
+                        <span className={active ? (isPlaying ? 'view-track-icon view-track-icon-equalizer view-track-icon-equalizer-playing' : 'view-track-icon view-track-icon-pause') : 'view-track-icon view-track-icon-play'} aria-hidden="true" />
                       </button>
                     </div>
-                    <div className={active && isPlaying ? 'view-track-title view-track-title-active' : 'view-track-title'}>{track.title}</div>
-                    <div className="view-track-duration">{formatTrackDuration(getTrackDurationSeconds(track, inferredTrackDurations))}</div>
+                    <Ui44OverflowTrackTitle title={track.title} active={active && isPlaying} className="ui44-track-title" />
+                    <div className="view-track-duration ui44-track-duration">{formatTrackDuration(getTrackDurationSeconds(track, inferredTrackDurations))}</div>
                   </div>
                 );
               })}
@@ -398,9 +402,9 @@ export function ProductStoreDetail({
 
       <div className="view-section">
         <h2 className="view-section-title">Product Details</h2>
-        <div>
+        <div className="ui44-panel ui44-panel-glass ui44-panel-overflow-clip ui44-detail-list">
           {productDetails.map(detail => (
-            <div className="view-row" key={detail.label}>
+            <div className="view-row ui44-list-row ui44-list-row-detail" key={detail.label}>
               <span className="view-row-label">{detail.label}</span>
               <span className="view-row-value">{detail.value}</span>
             </div>
@@ -410,11 +414,9 @@ export function ProductStoreDetail({
 
       {related.length > 0 && (
         <div className="view-section">
-          <div className="item-community-header" style={{ marginBottom: 28 }}>
-            <h2 className="view-section-title" style={{ margin: 0 }}>Similar Items</h2>
-            <Link className="os-button os-button-secondary os-button-compact" href={creatorMoreLink}>
-              View More
-            </Link>
+          <div className="item-community-header item-community-section-header">
+            <h2 className="view-section-title item-community-section-title">Similar Items</h2>
+            <Ui44SectionArrow href={creatorMoreLink} label="View more similar items" />
           </div>
           <ProductGrid>
             {related.map(item => <ProductCard key={item.id} product={item} />)}

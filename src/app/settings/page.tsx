@@ -8,6 +8,7 @@ import { useAuth } from '@/lib/useAuth';
 import { getThemePreference, saveThemePreference } from '@/lib/domain/preferences';
 import { getProfileMarketPreferences, saveProfileMarketPreferences } from '@/lib/domain/profiles';
 import { PageShell, HubHero, EmptyMessage, SectionHeader } from '@/components/Ui';
+import { Ui44TextInput } from '@/components/ui44/Inputs';
 import {
   ACCENTS,
   applyTheme,
@@ -31,6 +32,7 @@ import { getLandingPageId, LANDING_PAGES, setLandingPageId, type LandingPageId }
 import { isMissingColumnError } from '@/lib/schemaCompat';
 import { getSitePathUrl } from '@/lib/siteUrl';
 import { getNotificationPreference, setNotificationPreference, type NotificationPreferenceKind } from '@/lib/notificationPreferences';
+import { Ui44SelectInput } from '@/components/ui44/Inputs';
 
 type SettingsAnchorId = 'account' | 'notifications' | 'appearance' | 'dock';
 
@@ -84,7 +86,7 @@ function SettingsContent() {
   }, [loading, searchParams]);
 
   if (loading) {
-    return <PageShell><div style={{ minHeight: '40vh' }} /></PageShell>;
+    return <PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>;
   }
 
   if (!user) {
@@ -93,7 +95,7 @@ function SettingsContent() {
         <main className="dashboard-page">
           <HubHero title="Settings" />
           <EmptyMessage>Log in to manage your 44OS settings.</EmptyMessage>
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--os-space-4)' }}>
+          <div className="ui44-centered-action">
             <Link href="/login" className="os-button os-button-primary">
               Log In
             </Link>
@@ -155,7 +157,7 @@ function SettingsPageSection({
 
 function AppearanceSettings() {
   return (
-    <div className="settings-section settings-section-wide settings-two-column" id="dock">
+    <div className="settings-section settings-section-wide settings-two-column ui44-form-grid" id="dock">
       <ThemeSettings />
       <LandingAppSettings />
     </div>
@@ -200,12 +202,14 @@ function ThemeSettings() {
         <div className="settings-field-head">
           <div className="os-type-field-title">Theme</div>
         </div>
-        <div className="settings-segment" role="group" aria-label="Theme mode">
+        <div className="ui44-segmented settings-segment" role="radiogroup" aria-label="Theme mode">
           {MODES.map(m => (
             <button
               key={m.id}
               type="button"
-              className={m.id === mode ? 'settings-segment-item settings-segment-item-active' : 'settings-segment-item'}
+              className={m.id === mode ? 'ui44-segmented-item ui44-segmented-item-active settings-segment-item settings-segment-item-active' : 'ui44-segmented-item settings-segment-item'}
+              role="radio"
+              aria-checked={m.id === mode}
               onClick={() => chooseMode(m.id)}
             >
               {m.label}
@@ -223,7 +227,7 @@ function ThemeSettings() {
             <button
               key={a.id}
               type="button"
-              className={a.id === accent ? 'settings-swatch settings-swatch-active' : 'settings-swatch'}
+              className={a.id === accent ? 'settings-swatch settings-swatch-active ui44-swatch ui44-swatch-active' : 'settings-swatch ui44-swatch'}
               onClick={() => chooseAccent(a.id)}
               aria-pressed={a.id === accent}
             >
@@ -298,8 +302,7 @@ function RegionSettingsFields({ onStatus }: { onStatus: (status: string) => void
         <div className="settings-field-head">
           <div className="os-type-field-title">Region</div>
         </div>
-        <select
-          className="os-input-field"
+        <Ui44SelectInput
           value={countryCode}
           onChange={event => {
             const nextCountry = event.target.value;
@@ -309,15 +312,14 @@ function RegionSettingsFields({ onStatus }: { onStatus: (status: string) => void
           {COUNTRIES.map(country => (
             <option key={country.code} value={country.code}>{country.name}</option>
           ))}
-        </select>
+        </Ui44SelectInput>
       </div>
 
       <div className="settings-field settings-market-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Display Currency</div>
         </div>
-        <select
-          className="os-input-field"
+        <Ui44SelectInput
           value={displayCurrency}
           onChange={event => void saveMarketPreferences(countryCode, event.target.value)}
         >
@@ -326,7 +328,7 @@ function RegionSettingsFields({ onStatus }: { onStatus: (status: string) => void
               {currency.code} - {currency.label}
             </option>
           ))}
-        </select>
+        </Ui44SelectInput>
       </div>
     </>
   );
@@ -349,12 +351,14 @@ function LandingAppSettings() {
         <div className="settings-field-head">
           <div className="os-type-field-title">Landing App</div>
         </div>
-        <div className="settings-segment" role="group" aria-label="Landing app">
+        <div className="ui44-segmented settings-segment" role="radiogroup" aria-label="Landing app">
           {LANDING_PAGES.map(app => (
             <button
               key={app.id}
               type="button"
-              className={app.id === landingPage ? 'settings-segment-item settings-segment-item-active' : 'settings-segment-item'}
+              className={app.id === landingPage ? 'ui44-segmented-item ui44-segmented-item-active settings-segment-item settings-segment-item-active' : 'ui44-segmented-item settings-segment-item'}
+              role="radio"
+              aria-checked={app.id === landingPage}
               onClick={() => chooseLandingPage(app.id as LandingPageId)}
             >
               {app.label}
@@ -406,18 +410,18 @@ function AccountSettings() {
   }
 
   return (
-    <div className="settings-section settings-section-wide settings-two-column">
+    <div className="settings-section settings-section-wide settings-two-column ui44-form-grid">
       <div className="settings-field">
         <div className="settings-field-head">
           <div className="os-type-field-title">Email</div>
         </div>
         <form className="settings-inline-form" onSubmit={changeEmail}>
-          <input
+          <Ui44TextInput
             className="os-input-field"
             type="email"
             value={newEmail}
             onChange={event => setNewEmail(event.target.value)}
-            placeholder={user?.email ?? 'email@example.com'}
+            placeholder="Enter new email"
             autoComplete="email"
           />
           <button className="os-button os-button-secondary" type="submit" disabled={!user?.email || savingEmail}>
@@ -431,12 +435,12 @@ function AccountSettings() {
           <div className="os-type-field-title">Password</div>
         </div>
         <form className="settings-inline-form" onSubmit={changePassword}>
-          <input
+          <Ui44TextInput
             className="os-input-field"
             type="password"
             value={newPassword}
             onChange={event => setNewPassword(event.target.value)}
-            placeholder="New password"
+            placeholder="Enter new password"
             autoComplete="new-password"
             minLength={6}
           />
@@ -448,7 +452,7 @@ function AccountSettings() {
 
       <RegionSettingsFields onStatus={setStatus} />
 
-      {status && <p className="settings-status os-type-body-small">{status}</p>}
+      {status && <p className="settings-status os-type-body-small ui44-status" role="status" aria-live="polite">{status}</p>}
     </div>
   );
 }
@@ -456,7 +460,7 @@ function AccountSettings() {
 function NotificationSettings() {
   return (
     <div className="settings-section settings-section-wide">
-      <div className="settings-list">
+      <div className="settings-list ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
         <ToggleRow preferenceKind={ACCOUNT_KEYS.mentions} title="Mentions" defaultOn />
         <ToggleRow preferenceKind={ACCOUNT_KEYS.replies} title="Replies" defaultOn />
         <ToggleRow preferenceKind={ACCOUNT_KEYS.likes} title="Likes" defaultOn />
@@ -492,7 +496,7 @@ function ToggleRow({
   }
 
   return (
-    <div className="settings-row">
+    <div className="settings-row ui44-list-row ui44-list-row-settings">
       <div className="settings-row-copy">
         <div className="os-type-card-title">{title}</div>
       </div>
@@ -501,7 +505,7 @@ function ToggleRow({
         role="switch"
         aria-checked={on}
         aria-label={title}
-        className={on ? 'settings-toggle settings-toggle-on' : 'settings-toggle'}
+        className={on ? 'settings-toggle settings-toggle-on ui44-switch ui44-switch-on' : 'settings-toggle ui44-switch'}
         onClick={toggle}
       />
     </div>

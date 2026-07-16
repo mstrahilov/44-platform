@@ -41,13 +41,13 @@ export function ProductUpdatesSection({
     <div className="view-section">
       <SectionHeader title="Creator Updates" />
 
-      {error && <div className="dashboard-status dashboard-status-error" style={{ marginBottom: 16 }}>{error}</div>}
+      {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error ui44-section-gap-after-small" role="alert">{error}</div>}
 
-      <div className="dashboard-list-surface item-domain-surface">
+      <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip item-domain-surface">
         {updates.map(update => {
           const author = resolveAuthor(update);
           return (
-            <article key={update.id} className="product-update-row">
+            <article key={update.id} className="product-update-row ui44-list-row ui44-list-row-update">
               <div className="product-domain-head">
                 <div>
                   <h3 className="os-type-card-title">{update.title}</h3>
@@ -60,7 +60,7 @@ export function ProductUpdatesSection({
                     <span>{formatDate(update.created_at)}</span>
                   </div>
                 </div>
-                {update.version_label && <span className="os-pill os-status-owned">{update.version_label}</span>}
+                {update.version_label && <span className="os-pill os-status-owned ui44-pill">{update.version_label}</span>}
               </div>
               <p className="os-type-body product-domain-body">{update.body}</p>
             </article>

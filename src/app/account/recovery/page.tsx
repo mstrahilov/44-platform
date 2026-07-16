@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { getSitePathUrl } from '@/lib/siteUrl';
 import { notFound } from 'next/navigation';
+import { Ui44TextInput } from '@/components/ui44/Inputs';
 
 type RecoveryMode = 'request' | 'reset' | 'complete';
 
@@ -74,7 +75,7 @@ export default function AccountRecoveryPage() {
     <div className="login-page page-scroll">
       <section className="login-shell" aria-labelledby="recovery-title">
         <div className="login-copy">
-          <h1 id="recovery-title" className="os-type-page-title">
+          <h1 id="recovery-title" className="os-type-page-title ui44-type ui44-type-page-title">
             {mode === 'request' ? 'Reset your password' : mode === 'reset' ? 'Choose a new password' : 'Password updated'}
           </h1>
           <p className="os-type-body">
@@ -90,7 +91,7 @@ export default function AccountRecoveryPage() {
           <form className="login-form" onSubmit={requestReset}>
             <label className="login-field">
               <span className="os-type-field-title">Email</span>
-              <input className="os-input-field os-input-large" type="email" value={email} autoComplete="email" required onChange={event => setEmail(event.target.value)} />
+              <Ui44TextInput className="os-input-field os-input-large" type="email" value={email} autoComplete="email" required onChange={event => setEmail(event.target.value)} />
             </label>
             <button className="os-button os-button-primary os-button-large login-primary-action" type="submit" disabled={submitting}>
               {submitting ? 'Sending…' : 'Send recovery link'}
@@ -98,8 +99,8 @@ export default function AccountRecoveryPage() {
           </form>
         ) : mode === 'reset' ? (
           <form className="login-form" onSubmit={savePassword}>
-            <label className="login-field"><span className="os-type-field-title">New password</span><input className="os-input-field os-input-large" type="password" value={password} autoComplete="new-password" minLength={8} required onChange={event => setPassword(event.target.value)} /></label>
-            <label className="login-field"><span className="os-type-field-title">Confirm password</span><input className="os-input-field os-input-large" type="password" value={confirmation} autoComplete="new-password" minLength={8} required onChange={event => setConfirmation(event.target.value)} /></label>
+            <label className="login-field"><span className="os-type-field-title">New password</span><Ui44TextInput className="os-input-field os-input-large" type="password" value={password} autoComplete="new-password" minLength={8} required onChange={event => setPassword(event.target.value)} /></label>
+            <label className="login-field"><span className="os-type-field-title">Confirm password</span><Ui44TextInput className="os-input-field os-input-large" type="password" value={confirmation} autoComplete="new-password" minLength={8} required onChange={event => setConfirmation(event.target.value)} /></label>
             <button className="os-button os-button-primary os-button-large login-primary-action" type="submit" disabled={submitting}>{submitting ? 'Saving…' : 'Update password'}</button>
           </form>
         ) : <Link className="os-button os-button-primary os-button-large login-primary-action" href="/login">Return to Log In</Link>}

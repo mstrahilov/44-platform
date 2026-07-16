@@ -14,6 +14,7 @@ import { notificationIsEnabled } from '@/lib/notificationPreferences';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTopbar } from './TopbarContext';
 import { useCart } from '@/lib/cart';
+import { Ui44TextInput } from '@/components/ui44/Inputs';
 import {
   loadNotificationReadState,
   NOTIFICATION_STATE_UPDATED,
@@ -258,8 +259,24 @@ export function Topbar() {
       if (notifMenuOpen && notifWrapRef.current && !notifWrapRef.current.contains(e.target as Node)) setNotifMenuOpen(false);
       if (searchOpen && searchWrapRef.current && !searchWrapRef.current.contains(e.target as Node)) setSearchOpen(false);
     }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return;
+      const returnTarget = userMenuOpen
+        ? userWrapRef.current
+        : notifMenuOpen
+          ? notifWrapRef.current
+          : searchWrapRef.current;
+      setUserMenuOpen(false);
+      setNotifMenuOpen(false);
+      setSearchOpen(false);
+      window.requestAnimationFrame(() => returnTarget?.querySelector<HTMLElement>('button, a')?.focus());
+    }
     document.addEventListener('mousedown', onClick);
-    return () => document.removeEventListener('mousedown', onClick);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('keydown', onKeyDown);
+    };
   }, [userMenuOpen, notifMenuOpen, searchOpen]);
 
   const profile = profileState && profileState.userId === userId ? profileState.profile : null;
@@ -311,7 +328,7 @@ export function Topbar() {
         {back && (
           <button
             type="button"
-            className="os-topbar-back"
+            className="ui44-symbol-button ui44-symbol-button-back os-topbar-back"
             aria-label={backLabel}
             title={backLabel}
             onClick={() => {
@@ -339,7 +356,7 @@ export function Topbar() {
 
       <div className="os-topbar-right">
         {cartCount > 0 && (
-          <Link href="/cart" className="os-topbar-icon-button os-topbar-cart-button" aria-label={`Cart · ${cartCount} item${cartCount === 1 ? '' : 's'}`}>
+          <Link href="/cart" className="ui44-symbol-button ui44-symbol-button-cart os-topbar-icon-button os-topbar-cart-button" aria-label={`Cart · ${cartCount} item${cartCount === 1 ? '' : 's'}`}>
             <IconCart />
             <span className="os-topbar-cart-count">{cartCount}</span>
           </Link>
@@ -347,9 +364,10 @@ export function Topbar() {
 
         <div className="os-topbar-search" ref={searchWrapRef}>
           {searchOpen ? (
-            <form className="os-topbar-search-form" role="search" onSubmit={submitSearch}>
+            <form className="os-topbar-search-form ui44-composed-field ui44-composed-field-search" role="search" onSubmit={submitSearch}>
               <span className="os-topbar-search-icon os-icon os-icon-search os-icon-sm" aria-hidden="true" />
-              <input
+              <Ui44TextInput
+                surface="bare"
                 autoFocus
                 className="os-topbar-search-input"
                 value={searchDraft}
@@ -360,7 +378,7 @@ export function Topbar() {
               {searchDraft && <button type="button" className="os-topbar-search-clear" aria-label="Clear search" onClick={() => setSearchDraft('')}>×</button>}
             </form>
           ) : (
-            <button type="button" className="os-topbar-icon-button" aria-label="Search" onClick={() => {
+            <button type="button" className="ui44-symbol-button ui44-symbol-button-search os-topbar-icon-button" aria-label="Search" onClick={() => {
               setSearchOpen(true);
               setUserMenuOpen(false);
               setNotifMenuOpen(false);
@@ -371,10 +389,10 @@ export function Topbar() {
         </div>
 
         {user && (
-          <div ref={notifWrapRef} style={{ position: 'relative' }}>
+          <div ref={notifWrapRef} className="os-topbar-notification-menu">
             <button
               type="button"
-              className={notifMenuOpen ? 'os-topbar-icon-button os-topbar-icon-button-active' : 'os-topbar-icon-button'}
+              className={notifMenuOpen ? 'ui44-symbol-button ui44-symbol-button-notifications os-topbar-icon-button os-topbar-icon-button-active' : 'ui44-symbol-button ui44-symbol-button-notifications os-topbar-icon-button'}
               aria-label="Notifications"
               aria-expanded={notifMenuOpen}
               onClick={openNotifMenu}
@@ -385,7 +403,7 @@ export function Topbar() {
               </span>
             </button>
             {notifMenuOpen && (
-              <div className="os-popover os-popover-wide" role="menu">
+              <div className="ui44-paper-menu os-popover os-popover-wide" role="dialog" aria-label="Notifications">
                 <div className="os-popover-header">
                   <span className="os-popover-heading">Notifications</span>
                   {visibleNotifications.length > 0 && (
@@ -419,7 +437,7 @@ export function Topbar() {
                     ))}
                   </div>
                 )}
-                <Link href="/notifications" className="os-popover-footer-link">
+                <Link href="/notifications" className="ui44-paper-menu-item os-popover-footer-link">
                   View all notifications
                 </Link>
               </div>
@@ -428,7 +446,7 @@ export function Topbar() {
         )}
 
         {user ? (
-          <div ref={userWrapRef} style={{ position: 'relative' }}>
+          <div ref={userWrapRef} className="os-topbar-account-menu">
             <button
               type="button"
               className="os-topbar-avatar"
@@ -443,26 +461,26 @@ export function Topbar() {
               )}
             </button>
             {userMenuOpen && (
-              <div className="os-popover os-account-popover" role="menu">
-                <Link href={profileHref} className="os-popover-item" role="menuitem">
+              <div className="ui44-paper-menu os-popover os-account-popover" role="menu">
+                <Link href={profileHref} className="ui44-paper-menu-item os-popover-item" role="menuitem">
                   <IconProfile /> Profile
                 </Link>
-                <Link href="/inbox" className="os-popover-item" role="menuitem">
+                <Link href="/inbox" className="ui44-paper-menu-item os-popover-item" role="menuitem">
                   <IconMessages /> Inbox
                 </Link>
-                <Link href="/studio" className="os-popover-item" role="menuitem">
+                <Link href="/studio" className="ui44-paper-menu-item os-popover-item" role="menuitem">
                   <IconStudio /> Studio
                 </Link>
                 {profile?.role === 'admin' && (
-                  <Link href="/admin" className="os-popover-item" role="menuitem">
+                  <Link href="/admin" className="ui44-paper-menu-item os-popover-item" role="menuitem">
                     <IconAdmin /> Admin
                   </Link>
                 )}
-                <Link href="/settings" className="os-popover-item os-popover-item-mobile-only" role="menuitem">
+                <Link href="/settings" className="ui44-paper-menu-item os-popover-item os-popover-item-mobile-only" role="menuitem">
                   <IconSettings /> Settings
                 </Link>
                 <div className="os-popover-divider" />
-                <button type="button" className="os-popover-item" role="menuitem" onClick={handleSignOut}>
+                <button type="button" className="ui44-paper-menu-item os-popover-item" role="menuitem" onClick={handleSignOut}>
                   <IconSignOut /> Log Out
                 </button>
               </div>

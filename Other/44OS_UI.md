@@ -4,11 +4,58 @@ Payment infrastructure must not change the established Store or Studio UI while 
 
 This is one of the three active handoff documents for 44OS. Read it before changing layout, styling, app chrome, component primitives, or visual behavior. Architecture and sequencing live in `44OS_FOUNDATION.md` and `44OS_MILESTONES.md`; this document remains the visual and interaction contract.
 
+> **UI system lock (July 15, 2026):** the owner completed the page-by-page
+> desktop and mobile review, approved the canonical implementation, and closed
+> the migration. The historical source census and retirement ledger is archived
+> under `Other/archive/`; this document is the active visual contract.
+
 44OS should feel like a premium operating system: calm, spatially consistent, tactile, legible, and fast. It is not a marketing site and should not look like a stack of unrelated pages.
 
 The local screenshot reference folder is `UI Elements/`. Treat those images as reference material, not production assets.
 
-Current implementation snapshot, July 13, 2026:
+Current implementation snapshot, July 15, 2026:
+
+- July 15 local cleanup update: production now imports only `globals.css` and
+  `canonical-system.css`; the single responsive `/44OS_UI` reference route
+  owns `system-reference.css`. The former `/desktop_UI` and `/mobile_UI`
+  routes are retired. `/44OS_UI` is the living visual/component/CSS registry
+  for designers, developers, and future implementation reviews; it reads its
+  component, token, and class indexes from current source rather than a copied
+  hand-maintained list.
+  Five proposal stylesheets, eight unreachable component files, 17 dead
+  component exports, the old Glass wrapper, 672 unreferenced CSS rules, 240
+  unused custom-property definitions, and 266 exact-shadowed declarations were
+  retired. The final source audit reports zero unreachable components, zero
+  dead exports, zero all-source unused CSS rules/selectors, and zero
+  exact-shadowed declarations.
+
+- July 15 material simplification: the former transparent content-panel
+  variant was retired. Glass is now the single ordinary panel surface across
+  Tracklists, Product/Release Details, forms, lists, dialogs, Community, and
+  Studio; Paper remains the transient menu/dropdown surface. The component API,
+  canonical tokens, production emitters, and `/44OS_UI` reference expose only
+  Glass and Paper panel variants.
+
+- July 15 elevation simplification: canonical content elevation now has only
+  `Flat` and `Raised`. Every Glass surface is Flat with no shadow. Paper menus,
+  dropdowns, context menus, and catalog/media cards use the former Floating
+  shadow as the single Raised value. The specialized App Shell window shadow
+  remains independent and unchanged.
+
+- July 15 final material lock: ordinary Glass panels use the same semantic
+  tint as the desktop Dock/Sidebar, with no panel-level blur, saturation, or
+  shadow. The App Shell remains the sole owner of environmental blur. Expanded
+  Now Playing is transparent over the App Shell; its artwork is shadowless.
+  Paper is reserved for transient menus, dropdowns, context menus, and
+  selection surfaces.
+
+- July 15 interaction lock: Community and profile post rows share one action,
+  hover, divider, identity, and routing contract. Thread branches use a
+  profile-to-profile connector only for replies to replies; every row can open
+  its focused thread while identity and action controls retain their own
+  destinations. Profiles use flat, hairline-separated, horizontally scrollable
+  tabs; action pairs are equal-width on mobile and identity/actions/platform
+  links share one stable desktop hierarchy.
 
 - Store, Community, Library, Radio, Search, Profiles, Studio, Notifications, Settings, and Inbox have been through the desktop and mobile system-UI consolidation pass.
 - Verified after the pass: `npm run lint`, `npx tsc --noEmit`, `npm run build`, migration dry-run, and route smoke checks for `/store`, `/community`, `/library`, `/radio`, `/search`, `/profile/[username]`, `/studio`, and `/notifications`.
@@ -46,7 +93,8 @@ Every shipped screen must pass these checks:
 
 - Premium, quiet, and focused.
 - Editorial enough for creative work, but operational enough for repeated use.
-- Glassy only in the unified app shell, solid and readable everywhere else.
+- Environmentally blurred only in the unified app shell; content Glass uses a
+  stable tint over that already-blurred shell.
 - Spatially consistent.
 - Minimal without feeling empty.
 
@@ -91,8 +139,12 @@ Use four material roles:
 
 - **Environment**: the fixed background behind the OS window.
 - **Shell glass**: the single unified `.app-shell` surface behind Dock, Topbar, and workspace.
-- **Theme-through control/content material**: the shared translucent tint used by controls, inputs, overview cards, achievements, Community surfaces, reviews, creator forms, and comparable workspace panels.
-- **Opaque paper**: dropdowns, filters, account/notification menus, modal sheets, and the music player.
+- **Glass**: the shared Dock/Sidebar tint used by ordinary panels, controls,
+  inputs, overview cards, achievements, Community, reviews, dialogs, creator
+  forms, and comparable workspace content. Glass has no blur, saturation, or
+  shadow of its own.
+- **Paper**: the opaque transient surface for dropdowns, filters, account and
+  notification menus, context menus, and selection lists.
 
 Use three content surface families:
 
@@ -103,11 +155,16 @@ Use three content surface families:
 Rules:
 
 - The app environment and shell glass are not changed when tuning content components.
-- Menus, popovers, filters, modal sheets, and the music player use the same opaque semantic paper family.
-- Panels and controls use the shared theme-through material; do not introduce page-specific gray fills or legacy glass overrides.
-- On desktop, content-first list surfaces may be transparent so the shell theme reads through them. This applies to Library tracklists/achievements, Community feed rows/composer, related detail lists, and similar repeated content; it does not turn controls or modal surfaces into glass.
-- Mobile keeps its established surface treatment outside the Studio editor. Do not apply desktop transparency sweeps to mobile pages.
-- Dense content should use readable paper/material surfaces.
+- Menus, popovers, filters, context menus, and selection lists use Paper.
+- Panels and controls use canonical Glass; do not introduce page-specific gray
+  fills, panel blur/saturation, or legacy Glass overrides.
+- Desktop and mobile use the same Glass recipe. The App Shell supplies the
+  environmental blur beneath it, and Glass panels never overlap one another.
+- Expanded Now Playing is a transparent workspace composition rather than a
+  Paper panel. Dialog content uses Glass unless it is a transient selection
+  menu.
+- Dense content uses Glass-with-rows and hairline dividers rather than an
+  alternate opaque panel material.
 - Do not place cards inside cards.
 - Page sections are layout regions, not floating cards.
 - Individual repeated items may be cards when that helps scanning.
@@ -144,6 +201,12 @@ Rules:
 - Do not hardcode left offsets for one page.
 - Do not tune spacing with random inline `style` props.
 - Use the shared type classes and tokens.
+- Field labels use primary ink for reliable contrast on Glass in both themes.
+  Secondary ink is reserved for descriptions and metadata; tertiary/placeholder
+  ink is reserved for placeholder text inside inputs and textareas.
+- Product Details rows use primary ink for the left-hand label and secondary
+  ink for the right-hand value. Equivalent release-detail panels use the
+  shared `Product Details` title.
 - Do not use negative letter spacing.
 - Do not scale body text with viewport width.
 - Reserve hero-scale type for app front doors and true hero/detail moments.
@@ -279,7 +342,21 @@ Community state rules:
 - Read failures surface as errors; they must not silently look like an empty community.
 - Regular Community feed posts are links to `/community/thread/[id-or-slug]`; do not reintroduce inline reply drawers on the feed.
 - Inline reply forms live on the thread page only.
-- On mobile, thread posts, replies, and their dividers use the full thread width. Nested replies indent content once; all reply composers expand to the full remaining width.
+- Every Community post or reply row is a focused-thread destination except its
+  profile identity, Like, Reply, and owner Delete controls, which retain their
+  own actions. Username hover/focus communicates profile navigation.
+- Thread roots and their direct replies use full-width rows separated by the
+  canonical hairline. A reply to a reply stays in the same width and is linked
+  to its parent by one centered profile-to-profile connector; connected rows do
+  not add a divider between them. Opening any reply promotes that reply to the
+  unconnected root of its own focused thread.
+- Thread post bodies and actions align beneath the username column. Reply
+  composers use the full safe content width and suppress branch connectors
+  until content has actually been posted.
+- Like, Reply, and Delete use one neutral theme-aware action color and one
+  consistent hover hit area. Only an activated Like fills its heart; no post
+  action uses red. Like count presence must not change the system spacing to
+  Reply.
 - The feed composer placeholder is `Start a new post...` for the general feed.
 - Signed-in users can report posts, replies, questions, answers, collaborations, responses, reviews, and Creator Updates they do not own. Reports enter an administrator-only moderation queue; hidden or removed content disappears from public views without deleting its audit record.
 - Store and Library Item hubs include Item-scoped Questions with explicit loading, empty, error, and signed-in Ask states. Studio Item editors include Creator Update publishing beneath the release editor.
@@ -325,7 +402,15 @@ Rules:
 - Lists should prefer row surfaces with clear dividers over decorative cards.
 - Repeated cards must have consistent image ratio, title line behavior, metadata rhythm, and action placement.
 - Track titles do not marquee. They stay single-line with truncation before the duration column.
-- The desktop mini-player keeps its close control at the far-right edge. Expanded Now Playing uses an opaque paper state filling the workspace below the topbar and beside the sidebar, with centered artwork and controls. Opening Queue shifts Now Playing into a 60/40 split and slides the Queue into the right column; opening Queue directly from the mini-player starts in this split state. The top-right X always closes/minimizes the full player. Queue opens and closes from the Queue control itself, and active Queue and Shuffle controls use the accent color.
+- The desktop mini-player keeps its close control at the far-right edge and
+  uses canonical Glass. Expanded Now Playing hides the mini-player and renders
+  as a transparent, shadowless composition over the App Shell, with centered
+  shadowless artwork and controls. Opening Queue divides the desktop workspace
+  with one vertical hairline; on mobile Queue replaces the player at the same
+  sheet height, and its X returns to full Now Playing before the player itself
+  can be closed. Player, mini-player, Queue, and the mobile Paper Dock meet with
+  one persistent hairline and no gap. The expanded close action aligns beneath
+  the account avatar on desktop and mobile.
 - The mini-player artwork and metadata always open expanded Now Playing; they are not navigation links. Inside expanded Now Playing on mobile and desktop, artist opens the creator profile, artwork opens the release at its playback source (Library or Store), and track title opens that release with the current track selected/highlighted.
 
 Radio rules:
@@ -358,9 +443,19 @@ Studio publishing rules:
 - The local submission-review backend foundation is intentionally invisible: no Pending Review labels, creator submission controls, admin queue, notifications, or review navigation may render until its separate M13 UI Activation Review is complete. Existing trusted-testing Studio behavior remains the active tester contract.
 - Creators never see or control Draft/Published lifecycle toggles. The review workflow shows `Pending Review` after submission; only 44 admins see approval controls. When an existing live Item has proposed changes, its last approved public version remains visible until review succeeds.
 - Studio catalog rows show a compact issue count when server catalog-health checks find incomplete taxonomy, artwork, year, tracks, books, or downloadable assets. Trusted testers do not see Draft/Published controls; the future review workflow will show Pending Review only where applicable.
-- Studio overview is a consolidated landing page: four operational metric cards—Saves, Plays, Sold, and Earned—followed only by populated Events and Item-management sections. A Community-style circular plus in the title row is visible on desktop and mobile and opens a solid accessible menu with Add Music, Add Book, Add Event, Add Merch, and Add Sample Pack. It reuses the canonical creation routes and is Studio's only creation affordance; section-level New buttons do not render. Empty content sections do not render, and Events list actual event records rather than a generic Manage Events row. Desktop uses four metric cards per row and mobile uses two. Item rows show title, Type, and catalog-health issues without Draft/Published pills. The bottom Earnings list is hidden on desktop and mobile until payment UI is reviewed.
+- Studio overview is a consolidated landing page: four operational metric cards—Saves, Plays, Sold, and Earned—followed only by populated Events and Item-management sections. A Community-style circular plus in the title row is visible on desktop and mobile and opens a solid accessible menu with Add Music, Add Book, Add Event, and Add Sample Pack. Merch creation remains hidden without deleting its preserved implementation. The menu reuses the canonical creation routes and is Studio's only creation affordance; section-level New buttons do not render. Empty content sections do not render, and Events list actual event records rather than a generic Manage Events row. Desktop uses four metric cards per row and mobile uses two. Item rows show title, Type, and catalog-health issues without Draft/Published pills. The bottom Earnings list is hidden on desktop and mobile until payment UI is reviewed.
 
-- Mobile Notifications and creator-profile content navigation use the same horizontally scrollable pill strip with edge-to-edge dividers and equal vertical padding. Notifications always reset to All when opened normally. Profile tabs render only populated content in the stable order Posts, Music, Books, Sample Packs, Merch, Events; empty Events are omitted, and the first visible profile tab starts at the leading scroll edge.
+- Creator-profile content navigation uses a flat, horizontally scrollable tab
+  rail between full-width hairlines. The active tab uses primary text and a
+  two-pixel underline; inactive tabs use secondary text. Tabs render only
+  populated content in the stable order Posts, Music, Books, Sample Packs,
+  Merch, Events; empty Events are omitted, and the first visible tab starts at
+  the leading scroll edge. Do not restore the former pill-strip profile tabs.
+- Profile action pairs are ordered Follow then Message for other users and
+  Edit Profile then Open Studio for the owner. On mobile they occupy equal
+  columns across the safe content width. On desktop actions lead the shared
+  action/platform-link row and outbound platform icons align on the opposite
+  edge.
 - Studio Plays is sourced from the append-only `item_play_events` ledger. A validated playback start counts regardless of whether it came from Store, Library, Radio, the creator, or another user; playback analytics must never interrupt audio.
 - M14 Cross-Platform Reach places an `Around the Web` list directly beneath Bio in creator profile editing and a music-only `Listen Elsewhere` list in Studio release creation/editing. Every supported service is always visible in the approved fixed order as a platform heading with its empty URL field directly below—no URL placeholder, dropdown, Add Link, Clear, or reorder controls. Deleting a URL and saving removes that destination; blank fields remain off the public surface. Website stays last. Profile editing uses the same label, control, and spacing treatment for Display name, Username, Bio, and outbound links on desktop and mobile; Username has a permanent non-editable `@` prefix, Bio has no creator-specific placeholder, and all text inputs remain at least 16px to prevent iOS focus zoom. The mobile editor identity block matches the public-profile avatar/name/handle geometry. Creator profiles and Item heroes use compact monochrome icon rows with recognizable platform shapes, native hover titles, descriptive new-tab accessible names, visible keyboard focus, and `noopener noreferrer`. The approved editor UI passed linked-account review at 1280px and 362px and is authorized for deployment.
 - Creator and Item outbound icons never stack vertically: they remain one compact, non-wrapping row using the shared recognizable platform glyphs. Item icons live inside the hero after Type/year and before Add to Library, Buy, Read, or Download actions. Product/Release Details omit Tags and the duplicate tag-pill row on desktop and mobile; taxonomy remains available to Browse/search without consuming the Item detail hierarchy.

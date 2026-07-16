@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/useAuth';
 import { PageShell, CenteredMessage } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
+import { Ui44Textarea } from '@/components/ui44/Inputs';
 import {
   SocialAuthorLine,
   SocialAvatar,
@@ -43,11 +44,11 @@ type ThreadProfileState = {
 };
 
 export default function CommunityThreadPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id, replyId } = useParams<{ id: string; replyId?: string }>();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const userId = user?.id ?? null;
-  useTopbarBack({ href: '/community', label: 'Community' });
+  useTopbarBack({ href: replyId ? `/community/thread/${id}` : '/community', label: replyId ? 'Post' : 'Community' });
   const [thread, setThread] = useState<SocialPost | null>(null);
   const [replies, setReplies] = useState<SocialReply[]>([]);
   const [likes, setLikes] = useState<LikeRow[]>([]);
@@ -133,35 +134,58 @@ export default function CommunityThreadPage() {
     return set;
   }, [replyLikes, user]);
 
-  const replyTree = useMemo(() => {
+  const { focusedReply, replyTree } = useMemo(() => {
     const byId = new Map<string, SocialReply>();
     replies.forEach(r => byId.set(r.id, r));
-    function topLevelAncestor(r: SocialReply): SocialReply {
-      let cur = r;
-      const seen = new Set<string>();
-      while (cur.parent_reply_id && byId.has(cur.parent_reply_id) && !seen.has(cur.id)) {
-        seen.add(cur.id);
-        cur = byId.get(cur.parent_reply_id)!;
-      }
-      return cur;
-    }
-    const tops: SocialReply[] = [];
-    const childrenMap = new Map<string, SocialReply[]>();
+    const childrenByParent = new Map<string, SocialReply[]>();
     replies.forEach(r => {
-      if (!r.parent_reply_id) {
-        tops.push(r);
-        return;
-      }
-      const ancestor = topLevelAncestor(r);
-      if (ancestor.id === r.id) return;
-      if (!childrenMap.has(ancestor.id)) childrenMap.set(ancestor.id, []);
-      childrenMap.get(ancestor.id)!.push(r);
+      if (!r.parent_reply_id || !byId.has(r.parent_reply_id)) return;
+      if (!childrenByParent.has(r.parent_reply_id)) childrenByParent.set(r.parent_reply_id, []);
+      childrenByParent.get(r.parent_reply_id)!.push(r);
     });
     const byNewest = (a: SocialReply, b: SocialReply) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    return tops
-      .sort(byNewest)
-      .map(top => ({ top, children: (childrenMap.get(top.id) ?? []).sort(byNewest) }));
-  }, [replies]);
+    childrenByParent.forEach(children => children.sort(byNewest));
+
+    function descendantsOf(parentId: string) {
+      const descendants: SocialReply[] = [];
+      const seen = new Set<string>();
+      function visit(nextParentId: string) {
+        (childrenByParent.get(nextParentId) ?? []).forEach(child => {
+          if (seen.has(child.id)) return;
+          seen.add(child.id);
+          descendants.push(child);
+          visit(child.id);
+        });
+      }
+      visit(parentId);
+      return descendants;
+    }
+
+    const focused = replyId ? byId.get(replyId) ?? null : null;
+    if (focused) {
+      const directReplies = childrenByParent.get(focused.id) ?? [];
+      return {
+        focusedReply: focused,
+        replyTree: directReplies.map(top => {
+          const allChildren = descendantsOf(top.id);
+          return { top, children: allChildren, totalChildren: allChildren.length };
+        }),
+      };
+    }
+
+    const tops = replies.filter(reply => !reply.parent_reply_id || !byId.has(reply.parent_reply_id)).sort(byNewest);
+    return {
+      focusedReply: null,
+      replyTree: tops.map(top => {
+        const allChildren = descendantsOf(top.id);
+        return {
+          top,
+          children: allChildren.slice(0, 3),
+          totalChildren: allChildren.length,
+        };
+      }),
+    };
+  }, [replies, replyId]);
 
   const canInteract = hasCommunityIdentity(profile);
   const isThreadAuthor = Boolean(user && thread && thread.author_id === user.id);
@@ -318,7 +342,7 @@ export default function CommunityThreadPage() {
   }
 
   if (loading || authLoading) {
-    return <PageShell><CenteredMessage>Loading thread...</CenteredMessage></PageShell>;
+    return <PageShell><CenteredMessage status>Loading thread...</CenteredMessage></PageShell>;
   }
 
   if (!thread) {
@@ -338,73 +362,105 @@ export default function CommunityThreadPage() {
     <PageShell>
       <main className="social-shell social-thread-page">
         <section aria-label="Replies">
-          {error && <div className="dashboard-status dashboard-status-error" style={{ marginTop: 14 }}>{error}</div>}
+          {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error ui44-field-error" role="alert">{error}</div>}
 
-          <div className="dashboard-list-surface social-feed social-feed-list" aria-label="Thread replies">
-            <SocialPostRow
-              post={thread}
-              replyCount={replies.length}
-              likeCount={likes.length}
-              liked={likedByUser}
-              likers={threadLikers}
-              repliers={repliers}
-              onLike={toggleLike}
-              onReplyClick={() => requireCommunityInteraction(() => setReplyComposerOpen(open => !open))}
-              replyActionLabel="Reply"
-              canDelete={isThreadAuthor}
-              onDelete={deleteThread}
-              disabled={liking}
-              titleSize="lg"
-              handleOnly={false}
-              rowClickable={false}
-            />
-            {replyComposerOpen && (
-              user && canInteract ? (
-                <form className="social-composer social-composer-inline-surface" onSubmit={submitReply}>
-                  <div className="social-composer-box">
-                    <textarea
-                      className="os-input-textarea"
-                      value={replyBody}
-                      onChange={event => setReplyBody(event.target.value)}
-                      placeholder="Write your reply..."
-                      autoFocus
-                    />
-                    <div className="social-composer-actions">
-                      <div className="social-note os-type-meta">Reply publicly to this conversation.</div>
-                      <div className="social-inline-composer-actions">
-                        <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => { setReplyComposerOpen(false); setReplyBody(''); }}>
-                          Cancel
-                        </button>
-                        <button className="os-button os-button-primary os-button-compact" type="submit" disabled={submitting || !replyBody.trim()}>
-                          {submitting ? 'Posting...' : 'Reply'}
-                        </button>
+          <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip social-feed social-feed-list" aria-label="Thread replies">
+            {!focusedReply && (
+              <>
+                <SocialPostRow
+                  post={thread}
+                  replyCount={replies.length}
+                  likeCount={likes.length}
+                  liked={likedByUser}
+                  likers={threadLikers}
+                  repliers={repliers}
+                  onLike={toggleLike}
+                  onReplyClick={() => requireCommunityInteraction(() => setReplyComposerOpen(open => !open))}
+                  replyActionLabel="Reply"
+                  canDelete={isThreadAuthor}
+                  onDelete={deleteThread}
+                  disabled={liking}
+                  titleSize="lg"
+                  handleOnly
+                  rowClickable={false}
+                />
+                {replyComposerOpen && (
+                  user && canInteract ? (
+                    <form className="social-composer social-composer-inline-surface" onSubmit={submitReply}>
+                      <div className="social-composer-box ui44-composed-field ui44-composed-field-editor">
+                        <Ui44Textarea
+                          surface="bare"
+                          className="os-input-textarea"
+                          value={replyBody}
+                          onChange={event => setReplyBody(event.target.value)}
+                          placeholder="Write reply"
+                          autoFocus
+                        />
+                        <div className="social-composer-actions">
+                          <div className="social-inline-composer-actions">
+                            <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => { setReplyComposerOpen(false); setReplyBody(''); }}>
+                              Cancel
+                            </button>
+                            <button className="os-button os-button-primary os-button-compact" type="submit" disabled={submitting || !replyBody.trim()}>
+                              {submitting ? 'Posting...' : 'Reply'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </form>
+                  ) : user ? (
+                    <div className="social-composer social-composer-inline-surface">
+                      <div className="social-composer-actions">
+                        <div className="social-note os-type-body">Finish your community profile to reply and like posts.</div>
+                        <button type="button" className="os-button os-button-primary os-button-compact" onClick={() => setSetupGateOpen(true)}>Finish Setup</button>
                       </div>
                     </div>
-                  </div>
-                </form>
-              ) : user ? (
-                <div className="social-composer social-composer-inline-surface">
-                  <div className="social-composer-actions">
-                    <div className="social-note os-type-body">Finish your community profile to reply and like posts.</div>
-                    <button type="button" className="os-button os-button-primary os-button-compact" onClick={() => setSetupGateOpen(true)}>Finish Setup</button>
-                  </div>
-                </div>
-              ) : (
-                <div className="social-composer social-composer-inline-surface">
-                  <div className="social-composer-actions">
-                    <div className="social-note os-type-body">Sign in to join this conversation.</div>
-                    <Link href="/login" className="os-button os-button-primary os-button-compact">Sign In</Link>
-                  </div>
-                </div>
-              )
+                  ) : (
+                    <div className="social-composer social-composer-inline-surface">
+                      <div className="social-composer-actions">
+                        <div className="social-note os-type-body">Sign in to join this conversation.</div>
+                        <Link href="/login" className="os-button os-button-primary os-button-compact">Sign In</Link>
+                      </div>
+                    </div>
+                  )
+                )}
+              </>
+            )}
+            {focusedReply && (
+              <ReplyConversation
+                top={focusedReply}
+                isFocusedRoot
+                currentUserId={user?.id ?? null}
+                canInteract={canInteract}
+                replyingTo={replyingTo}
+                onOpenReply={replyIdToOpen => requireCommunityInteraction(() => { setReplyingTo(replyIdToOpen); setInlineBody(''); })}
+                onCancelReply={() => { setReplyingTo(null); setInlineBody(''); }}
+                inlineBody={inlineBody}
+                onInlineChange={setInlineBody}
+                onSubmitInline={submitInlineReply}
+                submitting={submitting}
+                replyLikeCounts={replyLikeCounts}
+                replyLikedByUser={replyLikedByUser}
+                onLikeReply={toggleReplyLike}
+                replyLiking={replyLiking}
+                onDeleteReply={deleteReply}
+                onOpenThread={reply => router.push(`/community/thread/${id}/reply/${reply.id}`)}
+                onBlockedInteraction={() => requireCommunityInteraction(() => {})}
+              >
+                {[]}
+              </ReplyConversation>
             )}
             {replyTree.length === 0 ? (
-              <div className="dashboard-empty">No replies yet.</div>
+              null
             ) : (
-              replyTree.map(({ top, children }) => (
-                <ReplyBranch
+              replyTree.map(({ top, children, totalChildren }) => (
+                <ReplyConversation
                   key={top.id}
                   top={top}
+                  viewAllHref={!focusedReply && totalChildren > children.length
+                    ? `/community/thread/${id}/reply/${top.id}`
+                    : undefined}
+                  totalReplyCount={totalChildren}
                   currentUserId={user?.id ?? null}
                   canInteract={canInteract}
                   replyingTo={replyingTo}
@@ -419,10 +475,11 @@ export default function CommunityThreadPage() {
                   onLikeReply={toggleReplyLike}
                   replyLiking={replyLiking}
                   onDeleteReply={deleteReply}
+                  onOpenThread={reply => router.push(`/community/thread/${id}/reply/${reply.id}`)}
                   onBlockedInteraction={() => requireCommunityInteraction(() => {})}
                 >
                   {children}
-                </ReplyBranch>
+                </ReplyConversation>
               ))
             )}
           </div>
@@ -433,9 +490,12 @@ export default function CommunityThreadPage() {
   );
 }
 
-function ReplyBranch({
+function ReplyConversation({
   top,
   children,
+  isFocusedRoot = false,
+  viewAllHref,
+  totalReplyCount,
   currentUserId,
   canInteract,
   replyingTo,
@@ -450,10 +510,14 @@ function ReplyBranch({
   onLikeReply,
   replyLiking,
   onDeleteReply,
+  onOpenThread,
   onBlockedInteraction,
 }: {
   top: SocialReply;
   children: SocialReply[];
+  isFocusedRoot?: boolean;
+  viewAllHref?: string;
+  totalReplyCount?: number;
   currentUserId: string | null;
   canInteract: boolean;
   replyingTo: string | null;
@@ -468,12 +532,16 @@ function ReplyBranch({
   onLikeReply: (reply: SocialReply) => void;
   replyLiking: string;
   onDeleteReply: (reply: SocialReply) => void;
+  onOpenThread: (reply: SocialReply) => void;
   onBlockedInteraction: () => void;
 }) {
   return (
-    <div className="social-reply-branch">
+    <div className={isFocusedRoot ? 'social-reply-group social-reply-group-focused' : 'social-reply-group'}>
       <ReplyRow
         reply={top}
+        rowClickable={!isFocusedRoot}
+        connectAfter={children.length > 0}
+        onOpenThread={() => onOpenThread(top)}
         onReplyClick={() => (currentUserId && canInteract ? onOpenReply(top.id) : onBlockedInteraction())}
         likeCount={replyLikeCounts[top.id] ?? 0}
         liked={replyLikedByUser.has(top.id)}
@@ -489,13 +557,15 @@ function ReplyBranch({
           onCancel={onCancelReply}
           onSubmit={event => onSubmitInline(event, top.id)}
           submitting={submitting}
-          nested
         />
       )}
-      {children.map(child => (
-        <div key={child.id} className="social-reply-child">
+      {children.map((child, index) => (
+        <div key={child.id} className="social-reply-item">
           <ReplyRow
             reply={child}
+            connectBefore
+            connectAfter={index < children.length - 1}
+            onOpenThread={() => onOpenThread(child)}
             onReplyClick={() => (currentUserId && canInteract ? onOpenReply(child.id) : onBlockedInteraction())}
             likeCount={replyLikeCounts[child.id] ?? 0}
             liked={replyLikedByUser.has(child.id)}
@@ -515,12 +585,21 @@ function ReplyBranch({
           )}
         </div>
       ))}
+      {viewAllHref ? (
+        <Link className="social-reply-view-all" href={viewAllHref}>
+          View all {totalReplyCount ?? children.length} replies
+        </Link>
+      ) : null}
     </div>
   );
 }
 
 function ReplyRow({
   reply,
+  rowClickable = true,
+  connectBefore = false,
+  connectAfter = false,
+  onOpenThread,
   onReplyClick,
   likeCount,
   liked,
@@ -530,6 +609,10 @@ function ReplyRow({
   onDelete,
 }: {
   reply: SocialReply;
+  rowClickable?: boolean;
+  connectBefore?: boolean;
+  connectAfter?: boolean;
+  onOpenThread: () => void;
   onReplyClick: () => void;
   likeCount: number;
   liked: boolean;
@@ -539,28 +622,49 @@ function ReplyRow({
   onDelete: () => void;
 }) {
   return (
-    <article className="social-row">
-      <Link href={authorHref(reply.authors)} aria-label={authorDisplayName(reply.authors)}>
+    <article
+      className={`social-row ui44-list-row ui44-list-row-reply${rowClickable ? ' ui44-list-row-interactive' : ''}${connectBefore ? ' social-reply-connect-before' : ''}${connectAfter ? ' social-reply-connect-after' : ''}`}
+      role={rowClickable ? 'link' : undefined}
+      tabIndex={rowClickable ? 0 : undefined}
+      onClick={rowClickable ? onOpenThread : undefined}
+      onKeyDown={rowClickable ? event => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onOpenThread();
+        }
+      } : undefined}
+    >
+      <Link
+        className="ui44-reply-avatar-link"
+        href={authorHref(reply.authors)}
+        aria-label={authorDisplayName(reply.authors)}
+        onClick={event => event.stopPropagation()}
+      >
         <SocialAvatar profile={reply.authors} />
       </Link>
-      <div className="social-row-main">
-        <SocialAuthorLine author={reply.authors} createdAt={reply.created_at} handleOnly />
+      <div className="social-row-main ui44-reply-copy">
+        <div className="ui44-community-author-line ui44-reply-author-line">
+          <SocialAuthorLine author={reply.authors} createdAt={reply.created_at} handleOnly />
+        </div>
         <p className="social-row-body"><SocialRichText text={reply.body} /></p>
-        <div className="social-actions">
+        <div className="social-actions" onClick={event => event.stopPropagation()}>
           <button
             type="button"
-            className="social-action social-action-like"
+            className="social-action social-action-like ui44-row-action"
             data-liked={liked ? 'true' : 'false'}
             onClick={onLike}
             disabled={likeDisabled}
             aria-label={liked ? 'Unlike' : 'Like'}
           >
-            <SocialHeartIcon filled={liked} />
-            {likeCount > 0 && <span className="social-action-count">{likeCount}</span>}
+            <span className={likeCount > 0 ? 'social-action-like-hit social-action-like-hit-count' : 'social-action-like-hit'}>
+              <SocialHeartIcon filled={liked} />
+              {likeCount > 0 && <span className="social-action-count">{likeCount}</span>}
+            </span>
           </button>
           <button
             type="button"
-            className="social-action"
+            className="social-action social-action-reply-label ui44-row-action"
             onClick={onReplyClick}
             aria-label="Reply"
           >
@@ -570,10 +674,9 @@ function ReplyRow({
           {canDelete && (
             <button
               type="button"
-              className="social-action social-action-danger"
+              className="social-action social-action-danger social-action-flush ui44-row-action ui44-row-action-delete"
               onClick={onDelete}
               aria-label="Delete reply"
-              style={{ marginLeft: 0 }}
             >
               <SocialTrashIcon />
             </button>
@@ -590,26 +693,25 @@ function InlineReplyForm({
   onCancel,
   onSubmit,
   submitting,
-  nested,
 }: {
   value: string;
   onChange: (value: string) => void;
   onCancel: () => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
   submitting: boolean;
-  nested?: boolean;
 }) {
   return (
     <form
-      className={nested ? 'social-inline-composer social-inline-composer-nested' : 'social-inline-composer'}
+      className="social-inline-composer"
       onSubmit={onSubmit}
     >
-      <div className="social-inline-composer-box">
-        <textarea
+      <div className="social-inline-composer-box ui44-composed-field ui44-composed-field-editor">
+        <Ui44Textarea
+          surface="bare"
           className="os-input-textarea"
           value={value}
           onChange={event => onChange(event.target.value)}
-          placeholder="Write a reply..."
+          placeholder="Write reply"
           autoFocus
         />
         <div className="social-inline-composer-actions">

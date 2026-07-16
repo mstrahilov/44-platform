@@ -319,7 +319,7 @@ export default function PublicProfilePage() {
   const handle = authorHandle(profile ?? undefined);
   const profileHref = profile ? `/profile/${profile.slug || profile.username || profile.id}` : '/community';
   if (loading) {
-    return <PageShell><CenteredMessage>Loading...</CenteredMessage></PageShell>;
+    return <PageShell><CenteredMessage status>Loading...</CenteredMessage></PageShell>;
   }
 
   if (!profile) {
@@ -328,7 +328,7 @@ export default function PublicProfilePage() {
 
   return (
     <PageShell>
-      <main className="social-shell social-shell-wide">
+      <main className="social-shell social-shell-wide social-profile-page">
         <section className="social-profile-head">
           <div className="social-profile-main">
             <div className="social-profile-identity">
@@ -356,16 +356,35 @@ export default function PublicProfilePage() {
                 <p className="social-profile-bio">
                   {profile.bio || 'This member has not added a bio yet.'}
                 </p>
-                <ExternalLinkActions links={externalLinks} context="profile" label={`${displayName} around the web`} />
+                <div className="social-profile-link-row">
+                  <ExternalLinkActions links={externalLinks} context="profile" label={`${displayName} around the web`} />
+                  <div className="social-profile-actions">
+                    {isOwn ? (
+                      <>
+                        <Link href="/profile/edit" className="os-button os-button-secondary">Edit Profile</Link>
+                        {isCreator && <Link href="/studio" className="os-button os-button-primary">Open Studio</Link>}
+                      </>
+                    ) : (
+                      <>
+                        <button type="button" className="os-button os-button-primary" onClick={handleFollowAction} disabled={busy === 'follow'}>
+                          {isFollowing ? 'Following' : 'Follow'}
+                        </button>
+                        <button type="button" className="os-button os-button-secondary" onClick={openMessage} disabled={busy === 'message'}>
+                          Message
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
           </div>
 
-          {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
+          {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div>}
 
-          <div className="social-profile-toolbar">
-            {tabs.length > 0 ? (
+          {tabs.length > 0 && (
+            <div className="social-profile-toolbar">
               <nav ref={profileTabsRef} className="social-profile-tabs" aria-label="Profile sections" role="tablist">
                 {tabs.map(item => (
                   <button
@@ -379,25 +398,8 @@ export default function PublicProfilePage() {
                   </button>
                 ))}
               </nav>
-            ) : <span />}
-            <div className="social-profile-actions">
-              {isOwn ? (
-                <>
-                  {isCreator && <Link href="/studio" className="os-button os-button-primary">Open Studio</Link>}
-                  <Link href="/profile/edit" className="os-button os-button-secondary">Edit Profile</Link>
-                </>
-              ) : (
-                <>
-                  <button type="button" className="os-button os-button-secondary" onClick={openMessage} disabled={busy === 'message'}>
-                    Message
-                  </button>
-                  <button type="button" className="os-button os-button-primary" onClick={handleFollowAction} disabled={busy === 'follow'}>
-                    {isFollowing ? 'Following' : 'Follow'}
-                  </button>
-                </>
-              )}
             </div>
-          </div>
+          )}
 
         </section>
 
@@ -406,7 +408,7 @@ export default function PublicProfilePage() {
         )}
 
         {tab === 'posts' && tabs.some(item => item.id === 'posts') && (
-          <section className="social-feed" aria-label="Posts">
+          <section className="social-feed social-profile-posts ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip" aria-label="Posts">
             {generalPosts.length ? (
               generalPosts.map(post => (
                 <SocialPostRow
@@ -510,7 +512,7 @@ function ProfileEvents({ events }: { events: CreatorEvent[] }) {
     { label: 'Cancelled', rows: events.filter(event => event.lifecycle_state === 'cancelled') },
     { label: 'Past', rows: events.filter(event => event.lifecycle_state === 'scheduled' && new Date(event.starts_at).getTime() < now).reverse() },
   ];
-  return <section className="profile-events" aria-label="Events">{groups.map(group => group.rows.length ? <section key={group.label}><h2>{group.label}</h2><div className="dashboard-list-surface">{group.rows.map(event => <article key={event.id} className={`profile-event-row ${event.lifecycle_state === 'cancelled' ? 'calendar-entry-cancelled' : ''}`}><div><strong>{event.title}</strong><time dateTime={event.starts_at}>{formatEventDate(event.starts_at,event.timezone)}</time><p>{event.short_description}</p>{event.venue_name && <span>{[event.venue_name,event.locality,event.region].filter(Boolean).join(' · ')}</span>}</div><div className="calendar-entry-actions">{event.online_url&&<a href={event.online_url} target="_blank" rel="noopener noreferrer">Online Destination</a>}{event.info_url&&<a href={event.info_url} target="_blank" rel="noopener noreferrer">Tickets / Information</a>}</div></article>)}</div></section>:null)}</section>;
+  return <section className="profile-events" aria-label="Events">{groups.map(group => group.rows.length ? <section key={group.label}><h2>{group.label}</h2><div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">{group.rows.map(event => <article key={event.id} className={`profile-event-row ui44-list-row ui44-list-row-event ${event.lifecycle_state === 'cancelled' ? 'calendar-entry-cancelled' : ''}`}><div><strong>{event.title}</strong><time dateTime={event.starts_at}>{formatEventDate(event.starts_at,event.timezone)}</time><p>{event.short_description}</p>{event.venue_name && <span>{[event.venue_name,event.locality,event.region].filter(Boolean).join(' · ')}</span>}</div><div className="calendar-entry-actions">{event.online_url&&<a href={event.online_url} target="_blank" rel="noopener noreferrer">Online Destination</a>}{event.info_url&&<a href={event.info_url} target="_blank" rel="noopener noreferrer">Tickets / Information</a>}</div></article>)}</div></section>:null)}</section>;
 }
 
 function profileProductMeta(product: Product, fallbackType: string) {
@@ -522,7 +524,7 @@ function profileProductMeta(product: Product, fallbackType: string) {
 function ArtifactGrid({ children, empty }: { children: ReactNode; empty: string }) {
   const count = Array.isArray(children) ? children.length : 1;
   return count ? (
-    <section className="social-card-grid">{children}</section>
+    <section className="social-card-grid ui44-catalog-grid">{children}</section>
   ) : (
     <div className="app-empty-text">{empty}</div>
   );

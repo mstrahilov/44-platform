@@ -12,6 +12,7 @@ import { countById, type LikeRow, type ReplyEngagerRow, type SocialPost } from '
 import { loadPlatformSearchIndex, type SearchProfile } from '@/lib/domain/search';
 import { setDiscussionLike } from '@/lib/domain/community';
 import { useAuth } from '@/lib/useAuth';
+import { Ui44TextInput } from '@/components/ui44/Inputs';
 
 type SearchIndex = {
   products: Product[];
@@ -139,12 +140,13 @@ function SearchContent() {
           copy={query ? `Results for "${query}".` : 'Find items, creators, posts, questions, and collaborations.'}
         />
 
-        <form className="page-search-control search-page-form" onSubmit={submitSearch} role="search">
+        <form className="page-search-control search-page-form ui44-composed-field ui44-composed-field-search" onSubmit={submitSearch} role="search">
           <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
-          <input
+          <Ui44TextInput
+            surface="bare"
             value={draft}
             onChange={event => setDraft(event.target.value)}
-            placeholder=""
+            placeholder="Search 44OS"
             aria-label="Search"
           />
         </form>
@@ -169,12 +171,12 @@ function SearchContent() {
 
             {profileMatches.length > 0 && (
               <HubSection title="Creators">
-                <div className="search-profile-list">
+                <div className="search-profile-list ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
                   {profileMatches.map(profile => (
                     <Link
                       key={profile.id}
                       href={creatorHref(profile)}
-                      className="search-profile-row"
+                      className="search-profile-row ui44-list-row ui44-list-row-profile ui44-list-row-interactive"
                     >
                       <SocialAvatar profile={profile} />
                       <span className="search-profile-copy">

@@ -65,7 +65,7 @@ export default function StudioOrdersPage() {
   }
 
   if (loading) {
-    return <PageShell><div style={{ minHeight: '40vh' }} /></PageShell>;
+    return <PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>;
   }
 
   if (!user) {
@@ -96,30 +96,33 @@ export default function StudioOrdersPage() {
         <HubHero title="Orders" copy="Local-fulfillment merch orders from buyers appear here after checkout." />
 
         {status ? (
-          <div className={statusKind === 'success' ? 'dashboard-status dashboard-status-success' : 'dashboard-status dashboard-status-error'} style={{ marginBottom: 'var(--os-space-5)' }}>
+          <div
+            className={`${statusKind === 'success' ? 'dashboard-status dashboard-status-success ui44-status ui44-status-success' : 'dashboard-status dashboard-status-error ui44-status ui44-status-error'} ui44-status-block`}
+            role={statusKind === 'success' ? 'status' : 'alert'}
+          >
             {status}
           </div>
         ) : null}
 
-        <div className="dashboard-list-surface">
+        <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
           {fetching ? (
-            <div className="dashboard-empty">Loading orders…</div>
+            <div className="dashboard-empty ui44-state ui44-state-loading" role="status" aria-live="polite">Loading orders…</div>
           ) : orders.length === 0 ? (
             <div className="dashboard-empty">
               No merch orders yet.
-              <div style={{ marginTop: 'var(--os-space-4)' }}>
+              <div className="ui44-section-gap-before">
                 <Link className="os-button os-button-primary os-button-compact" href="/studio#merch">Open Merch</Link>
               </div>
             </div>
           ) : (
             orders.map(order => (
-              <div key={order.id} className="dashboard-list-row" style={{ gridTemplateColumns: 'minmax(0, 1fr) auto' }}>
+              <div key={order.id} className="dashboard-list-row ui44-list-row ui44-list-row-dashboard ui44-list-row-wide-actions">
                 <div className="dashboard-row-copy">
                   <div className="dashboard-row-title">{order.buyer_name}</div>
                   <div className="dashboard-row-subtitle">
                     {formatMoney(order.subtotal_cents, order.currency)} · {order.status}
                   </div>
-                  <div className="dashboard-row-meta" style={{ marginTop: 8 }}>
+                  <div className="dashboard-row-meta ui44-meta-offset">
                     {order.delivery_name} · {order.delivery_address_1}
                     {order.delivery_address_2 ? `, ${order.delivery_address_2}` : ''}
                     {`, ${order.delivery_city}, ${order.delivery_region} ${order.delivery_postal_code}, ${order.delivery_country}`}

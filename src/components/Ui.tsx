@@ -1,43 +1,26 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
-import type { CommunityPost } from '@/lib/platform';
-import { communityThreadHref, creatorHref } from '@/lib/platform';
+import { useEffect, useState, type ReactNode } from 'react';
+import { creatorHref } from '@/lib/platform';
 import { useContextMenu } from '@/components/ContextMenu';
 import type { Product } from '@/lib/products';
 import { formatProductPrice } from '@/lib/products';
 import { getProductExperience, productBrowseHref } from '@/lib/experience';
-import { getPostMetaLabel } from '@/lib/social';
 import { useAuth } from '@/lib/useAuth';
 import { COPY_TO_CLIPBOARD_TOAST_EVENT } from '@/components/ContextMenu';
 import { addToCart, removeFromCart, useCart } from '@/lib/cart';
 import { isFreeLibraryClaim } from '@/lib/libraryContent';
 import { getItemLibraryOwnership, saveItemToLibrary } from '@/lib/domain/itemDetails';
+import { Ui44SectionArrow } from '@/components/ui44/Controls';
+import { Ui44Text } from '@/components/ui44/Typography';
 
 export function PageShell({ children }: { children: ReactNode }) {
   return <div className="view-hub">{children}</div>;
 }
 
-export function GlassPanel({
-  children,
-  className = '',
-  style,
-}: {
-  children: ReactNode;
-  className?: string;
-  style?: CSSProperties;
-}) {
-  return (
-    <section className={`glass-panel ${className}`} style={style}>
-      {children}
-    </section>
-  );
-}
-
 export function SectionHeader({
   title,
-  description,
   action,
 }: {
   title: string;
@@ -45,57 +28,12 @@ export function SectionHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className={description ? 'hub-section-head hub-section-head-described' : 'hub-section-head'}>
-      <div className="hub-section-copy">
-        <h2 className="hub-section-title">{title}</h2>
-        {description && <p className="hub-section-description">{description}</p>}
+    <div className="hub-section-head ui44-section-header">
+      <div className="hub-section-copy ui44-section-header-copy">
+        <Ui44Text as="h2" variant="section-title" className="hub-section-title">{title}</Ui44Text>
       </div>
       {action}
     </div>
-  );
-}
-
-export function DockedLayout({ side = 'left', children }: { side?: 'left' | 'right'; children: ReactNode }) {
-  return <div className={`docked-layout docked-layout-${side}`}>{children}</div>;
-}
-
-export function DockedPanel({ children }: { children: ReactNode }) {
-  return <aside className="docked-panel">{children}</aside>;
-}
-
-export function DockedContent({ children }: { children: ReactNode }) {
-  return <main className="docked-content">{children}</main>;
-}
-
-export function PanelListItem({
-  active,
-  eyebrow,
-  title,
-  subtitle,
-  image,
-  onClick,
-}: {
-  active?: boolean;
-  eyebrow?: string;
-  title: string;
-  subtitle?: string;
-  image?: string | null;
-  onClick?: () => void;
-}) {
-  return (
-    <button className={active ? 'panel-list-item panel-list-item-active' : 'panel-list-item'} onClick={onClick} type="button">
-      <span className="panel-list-thumb">
-        {image && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" />
-        )}
-      </span>
-      <span className="panel-list-copy">
-        {eyebrow && <span className="panel-list-eyebrow">{eyebrow}</span>}
-        <span className="panel-list-title">{title}</span>
-        {subtitle && <span className="panel-list-subtitle">{subtitle}</span>}
-      </span>
-    </button>
   );
 }
 
@@ -178,18 +116,18 @@ export function ProductCard({ product, owned: ownedProp }: { product: Product; o
   return (
     <Link
       href={href}
-      className="product-tile"
+      className="product-tile ui44-catalog-card"
       onContextMenu={event => openContextMenu(event, entries)}
     >
-      <div className={`product-tile-art product-tile-art-${shape}`}>
+      <div className={`product-tile-art product-tile-art-${shape} ui44-catalog-art`}>
         {image && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={image} alt="" loading="lazy" decoding="async" />
         )}
       </div>
-      <div className="product-tile-info">
-        <div className="product-tile-title">{product.title}</div>
-        <div className="product-tile-subtitle">{subtitle}</div>
+      <div className="product-tile-info ui44-catalog-copy">
+        <div className="product-tile-title ui44-catalog-title">{product.title}</div>
+        <div className="product-tile-subtitle ui44-catalog-subheadline">{subtitle}</div>
       </div>
     </Link>
   );
@@ -265,89 +203,6 @@ function getProductTileSubtitle(product: Product): string {
   return product.creator || 'Creator';
 }
 
-export function PostCard({ post }: { post: CommunityPost }) {
-  const { openContextMenu } = useContextMenu();
-  const href = communityThreadHref(post);
-  return (
-    <Link
-      href={href}
-      className="app-card"
-      onContextMenu={event =>
-        openContextMenu(event, [
-          { id: 'open', label: 'Open Post', href },
-          { id: 'author', label: 'View Author', href: creatorHref(post.creators ?? '44 Community') },
-        ])
-      }
-    >
-      <div className="app-card-body">
-        <span className="os-pill os-type-pill app-card-chip">{getPostMetaLabel()}</span>
-        <div className="app-card-creator os-type-meta">by {post.creators?.name ?? '44 Community'}</div>
-        <div className="app-card-desc os-type-body-small">{post.body}</div>
-      </div>
-    </Link>
-  );
-}
-
-export function ThreadRow({
-  post,
-  replyCount = 0,
-  likeCount = 0,
-  pinned = false,
-}: {
-  post: CommunityPost;
-  replyCount?: number;
-  likeCount?: number;
-  pinned?: boolean;
-}) {
-  const author = post.creators?.name ?? '44 Community';
-  const meta = getPostMetaLabel();
-
-  return (
-    <Link href={communityThreadHref(post)} className="thread-row">
-      <div style={{ minWidth: 0 }}>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
-          {pinned && (
-            <span className="os-pill os-type-pill" style={{ color: 'var(--os-color-accent)' }}>
-              Pinned
-            </span>
-          )}
-          <span className="os-pill os-type-pill">{meta}</span>
-        </div>
-        <div className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', marginBottom: 10, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-          {post.body}
-        </div>
-        <div className="os-type-meta" style={{ color: 'var(--os-color-ink-muted)' }}>
-          by {author}
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gap: 8, justifyItems: 'end', minWidth: 110 }}>
-        <div className="os-type-meta" style={{ color: 'var(--os-color-ink-muted)' }}>
-          {new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-        </div>
-        <div className="os-type-meta" style={{ display: 'flex', gap: 14, color: 'var(--os-color-ink-secondary)' }}>
-          <span>{likeCount} likes</span>
-          <span>{replyCount} replies</span>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
-export function CategoryCard({ label, href, icon }: { label: string; href: string; icon?: string }) {
-  return (
-    <Link href={href} className="os-category-card os-category-icon-card">
-      {icon && (
-        <div className="os-category-icon">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={icon} alt="" />
-        </div>
-      )}
-      <div className="os-category-card-title os-type-section-title">{label}</div>
-    </Link>
-  );
-}
-
 export function HubHero({
   title,
   actions,
@@ -359,9 +214,9 @@ export function HubHero({
   className?: string;
 }) {
   return (
-    <header className={`app-header ${className}`.trim()}>
-      <div className="app-header-copy">
-        <h1 className="os-type-display">{title}</h1>
+    <header className={`app-header ui44-page-header ${className}`.trim()}>
+      <div className="app-header-copy ui44-page-header-copy">
+        <Ui44Text as="h1" variant="page-title">{title}</Ui44Text>
       </div>
       {actions}
     </header>
@@ -386,56 +241,39 @@ export function HubSection({
       <SectionHeader
         title={title}
         description={description}
-        action={action ?? (href ? <Link href={href} className="os-button os-button-primary">View All</Link> : undefined)}
+        action={action ?? (href ? <Ui44SectionArrow href={href} label={`View all ${title}`} /> : undefined)}
       />
       {children}
     </section>
   );
 }
 
-export function Shelf({ children }: { children: ReactNode }) {
-  return <div className="app-shelf">{children}</div>;
-}
-
 export function ProductGrid({ children }: { children: ReactNode }) {
-  return <div className="app-grid">{children}</div>;
-}
-
-export function EmptyPanel({ title, body }: { title: string; body?: string }) {
-  return (
-    <div className="app-empty">
-      <div className="os-type-section-title">{title}</div>
-      {body && (
-        <p className="os-type-body" style={{ marginTop: 'var(--os-space-2)', color: 'var(--os-color-ink-secondary)' }}>{body}</p>
-      )}
-    </div>
-  );
+  return <div className="app-grid ui44-catalog-grid">{children}</div>;
 }
 
 /* Plain text empty state — no panel, no shadow, no card. Cards are for
    clickable stuff; empty pages should just be quiet copy. */
-export function EmptyMessage({ children }: { children: ReactNode }) {
-  return <div className="app-empty-text">{children}</div>;
-}
-
-export function DetailLayout({ children, inspector }: { children: ReactNode; inspector: ReactNode }) {
+export function EmptyMessage({ children, status = false }: { children: ReactNode; status?: boolean }) {
   return (
-    <div className="app-detail">
-      <div className="app-detail-main app-detail-stack">{children}</div>
-      <aside className="app-detail-inspector">{inspector}</aside>
+    <div
+      className={`app-empty-text ui44-state ${status ? 'ui44-state-loading' : 'ui44-state-empty'}`}
+      role={status ? 'status' : undefined}
+      aria-live={status ? 'polite' : undefined}
+    >
+      {children}
     </div>
   );
 }
 
-export function DetailRow({ label, value }: { label: string; value: ReactNode }) {
+export function CenteredMessage({ children, status = false }: { children: ReactNode; status?: boolean }) {
   return (
-    <div className="app-detail-row os-type-body-small">
-      <span>{label}</span>
-      <strong>{value}</strong>
+    <div
+      className={`app-centered os-type-body ui44-state ui44-route-state${status ? ' ui44-state-loading' : ''}`}
+      role={status ? 'status' : undefined}
+      aria-live={status ? 'polite' : undefined}
+    >
+      {children}
     </div>
   );
-}
-
-export function CenteredMessage({ children }: { children: ReactNode }) {
-  return <div className="app-centered os-type-body">{children}</div>;
 }

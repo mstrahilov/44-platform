@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { accountExistsForEmail, usernameIsTaken } from '@/lib/domain/accounts';
 import { useAuth } from '@/lib/useAuth';
 import { getSitePathUrl } from '@/lib/siteUrl';
+import { Ui44TextInput } from '@/components/ui44/Inputs';
 
 type AuthStep = 'email' | 'password';
 
@@ -194,7 +195,7 @@ export default function LoginPage() {
     <main className="login-page page-scroll">
       <section className="login-shell" aria-labelledby="login-title">
         <div className="login-copy">
-          <h1 id="login-title" className="os-type-page-title">
+          <h1 id="login-title" className="os-type-page-title ui44-type ui44-type-page-title">
             {step === 'email' ? '44OS' : isLogin ? 'Welcome back' : 'Create your account'}
           </h1>
           <p className="os-type-body">
@@ -210,7 +211,7 @@ export default function LoginPage() {
           {step === 'email' ? (
             <label className="login-field">
               <span className="os-type-field-title">Email</span>
-              <input
+              <Ui44TextInput
                 className="os-input-field os-input-large"
                 type="email"
                 value={email}
@@ -234,7 +235,7 @@ export default function LoginPage() {
               {!isLogin && (
                 <label className="login-field">
                   <span className="os-type-field-title">Name</span>
-                  <input
+                  <Ui44TextInput
                     className="os-input-field os-input-large"
                     type="text"
                     value={displayName}
@@ -252,7 +253,7 @@ export default function LoginPage() {
               {!isLogin && (
                 <label className="login-field">
                   <span className="os-type-field-title">Username</span>
-                  <input
+                  <Ui44TextInput
                     className="os-input-field os-input-large"
                     type="text"
                     value={username}
@@ -272,7 +273,7 @@ export default function LoginPage() {
               )}
               <label className="login-field">
                 <span className="os-type-field-title">Password</span>
-                <input
+                <Ui44TextInput
                   className="os-input-field os-input-large"
                   type="password"
                   value={password}
@@ -311,7 +312,7 @@ export default function LoginPage() {
           )}
         </form>
 
-        {status && <p className="login-status os-type-body-small" role="status">{status}</p>}
+        {status && <p className="login-status os-type-body-small" role="status" aria-live="polite">{status}</p>}
 
         {signupComplete && (
           <button

@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { HubHero, PageShell } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
+import { Ui44TextInput, Ui44Textarea } from '@/components/ui44/Inputs';
 import {
   SocialAuthorLine,
   SocialAvatar,
@@ -318,7 +319,7 @@ function CommunityPageContent() {
       {!postComposerOpen && (
         <button
           type="button"
-          className="page-compose-button"
+          className="ui44-symbol-button ui44-symbol-button-add page-compose-button"
           aria-label="Create a new post"
           aria-expanded={false}
           onClick={() => requireCommunityAction(() => setPostComposerOpen(true))}
@@ -327,7 +328,7 @@ function CommunityPageContent() {
         </button>
       )}
       {activeCommunityTab === 'feed' && !requestedTopic ? (
-        <FilterPopover label="Filter Community">
+        <FilterPopover label="Filter Community" active={postFilter !== 'all'}>
           {({ close }) => <>
             {[
               { id: 'all', label: 'All Posts', href: '/community' },
@@ -336,7 +337,7 @@ function CommunityPageContent() {
               <button
                 key={option.id}
                 type="button"
-                className={postFilter === option.id ? 'page-filter-option page-filter-option-active' : 'page-filter-option'}
+                className={postFilter === option.id ? 'ui44-paper-menu-item ui44-paper-menu-item-selected page-filter-option page-filter-option-active' : 'ui44-paper-menu-item page-filter-option'}
                 onClick={() => {
                   close();
                   router.push(option.href);
@@ -726,22 +727,24 @@ function CommunityPageContent() {
   return (
     <PageShell>
       <main className="app-page community-app-page">
-        <HubHero title={pageCopy.title} copy={pageCopy.copy} actions={communityTools} />
+        <HubHero title={pageCopy.title} actions={communityTools} />
 
-        {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
+        {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div>}
 
-        <form className={postComposerOpen ? 'social-feed-composer social-feed-composer-open' : 'social-feed-composer social-feed-composer-compact'} onSubmit={submitPost}>
+        <form className={postComposerOpen ? 'social-feed-composer social-feed-composer-open ui44-composer-surface ui44-panel ui44-panel-glass ui44-panel-overflow-visible' : 'social-feed-composer social-feed-composer-compact ui44-composer-surface ui44-panel ui44-panel-glass ui44-panel-overflow-visible'} onSubmit={submitPost}>
             <div className="social-feed-composer-box">
               {postComposerOpen && (activeCommunityTab === 'questions' || activeCommunityTab === 'collaboration') && (
-                <input
+                <Ui44TextInput
+                  surface="bare"
                   className="os-input-field"
                   value={postTitle}
                   onChange={event => setPostTitle(event.target.value)}
-                  placeholder={activeCommunityTab === 'questions' ? 'Question title' : 'Collaboration title'}
+                  placeholder={activeCommunityTab === 'questions' ? 'Enter question title' : 'Enter collaboration title'}
                   disabled={!user || posting}
                 />
               )}
-              <textarea
+              <Ui44Textarea
+                surface="bare"
                 value={postComposerValue}
                 onChange={event => setPostBody(parseLockedBody(event.target.value, forcedTopic))}
                 onFocus={() => requireCommunityAction(() => setPostComposerOpen(true))}
@@ -751,7 +754,7 @@ function CommunityPageContent() {
                       ? 'What do you need help with?'
                       : activeCommunityTab === 'collaboration'
                         ? 'Who are you looking for, and what are you building?'
-                        : 'Start a new post...'
+                        : 'Write your post'
                     : 'Sign in to post to Community.'
                 }
                 rows={3}
@@ -759,12 +762,14 @@ function CommunityPageContent() {
               />
               {forcedTopic && activeCommunityTab === 'feed' && <div className="social-composer-lock">This post will publish with #{forcedTopic}.</div>}
               {visibleMentionOptions.length > 0 && (
-                <div className="social-mention-list">
+                <div className="ui44-paper-menu social-mention-list" role="listbox" aria-label="Mention suggestions">
                   {visibleMentionOptions.map(option => (
                     <button
                       key={option.id}
                       type="button"
-                      className="social-mention-option"
+                      className="ui44-paper-menu-item social-mention-option"
+                      role="option"
+                      aria-selected="false"
                       onClick={() => applyMention(option.username || option.display_name || '')}
                     >
                       <SocialAvatar profile={option} />
@@ -797,17 +802,28 @@ function CommunityPageContent() {
           </form>
 
         {activeCommunityTab === 'questions' ? (
-          <section className="dashboard-list-surface social-feed social-feed-list social-feed-panel" aria-label="Community questions">
+          <section className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip social-feed social-feed-list social-feed-panel" aria-label="Community questions">
             {structuredLoading ? (
-              <div className="dashboard-empty">Loading questions...</div>
+              <div className="dashboard-empty ui44-state ui44-state-loading" role="status" aria-live="polite">Loading questions...</div>
             ) : structuredRequiresSetup ? (
               <div className="dashboard-empty">Questions needs the reviewed Community SQL applied in Supabase first.</div>
             ) : filteredQuestions.length === 0 ? (
               <div className="dashboard-empty">{pageCopy.empty}</div>
             ) : (
               filteredQuestions.map(question => (
-                <article key={question.id} className="social-feed-post social-structured-clickable" onClick={() => { void openQuestion(question); }}>
-                  <div className="social-row social-structured-row">
+                <article
+                  key={question.id}
+                  className="social-feed-post social-structured-clickable"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => { void openQuestion(question); }}
+                  onKeyDown={event => {
+                    if (event.key !== 'Enter' && event.key !== ' ') return;
+                    event.preventDefault();
+                    void openQuestion(question);
+                  }}
+                >
+                  <div className="social-row social-structured-row ui44-list-row ui44-list-row-social-structured ui44-list-row-interactive">
                     <SocialAvatar profile={question.authors} />
                     <div className="social-row-main">
                       <div className="social-structured-topline">
@@ -840,12 +856,13 @@ function CommunityPageContent() {
                       </div>
                       {openStructuredId === question.id && (
                         <div className="social-structured-thread" onClick={event => event.stopPropagation()}>
-                          <form className="social-feed-composer social-feed-composer-open social-structured-composer" onSubmit={event => submitQuestionAnswer(event, question)}>
+                          <form className="social-feed-composer social-feed-composer-open social-structured-composer ui44-composer-surface ui44-panel ui44-panel-glass ui44-panel-overflow-visible" onSubmit={event => submitQuestionAnswer(event, question)}>
                             <div className="social-feed-composer-box">
-                              <textarea
+                              <Ui44Textarea
+                                surface="bare"
                                 value={structuredReplyBody}
                                 onChange={event => setStructuredReplyBody(event.target.value)}
-                                placeholder="Write an answer..."
+                                placeholder="Write answer"
                                 rows={3}
                                 disabled={structuredSubmitting}
                               />
@@ -860,9 +877,9 @@ function CommunityPageContent() {
                             </div>
                           </form>
                           {(questionAnswers[question.id] ?? []).length ? (
-                            <div className="social-structured-list">
+                            <div className="social-structured-list ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
                               {[...(questionAnswers[question.id] ?? [])].sort((a, b) => Number(b.is_accepted) - Number(a.is_accepted) || b.vote_count - a.vote_count).map(answer => (
-                                <div key={answer.id} className={answer.is_accepted ? 'social-structured-item social-structured-item-accepted' : 'social-structured-item'}>
+                                <div key={answer.id} className={answer.is_accepted ? 'social-structured-item social-structured-item-accepted ui44-list-row ui44-list-row-structured-item ui44-list-row-selected' : 'social-structured-item ui44-list-row ui44-list-row-structured-item'}>
                                   <div className="social-structured-topline">
                                     <SocialAuthorLine author={answer.authors} createdAt={answer.created_at} handleOnly />
                                     <div className="social-structured-metrics">
@@ -901,22 +918,33 @@ function CommunityPageContent() {
             )}
           </section>
         ) : activeCommunityTab === 'collaboration' ? (
-          <section className="dashboard-list-surface social-feed social-feed-list social-feed-panel" aria-label="Community collaboration">
+          <section className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip social-feed social-feed-list social-feed-panel" aria-label="Community collaboration">
             {structuredLoading ? (
-              <div className="dashboard-empty">Loading collaborations...</div>
+              <div className="dashboard-empty ui44-state ui44-state-loading" role="status" aria-live="polite">Loading collaborations...</div>
             ) : structuredRequiresSetup ? (
               <div className="dashboard-empty">Collaboration needs the reviewed Community SQL applied in Supabase first.</div>
             ) : filteredCollaborations.length === 0 ? (
               <div className="dashboard-empty">{pageCopy.empty}</div>
             ) : (
               filteredCollaborations.map(collaboration => (
-                <article key={collaboration.id} className="social-feed-post social-structured-clickable" onClick={() => { void openCollaboration(collaboration); }}>
-                  <div className="social-row social-structured-row">
+                <article
+                  key={collaboration.id}
+                  className="social-feed-post social-structured-clickable"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => { void openCollaboration(collaboration); }}
+                  onKeyDown={event => {
+                    if (event.key !== 'Enter' && event.key !== ' ') return;
+                    event.preventDefault();
+                    void openCollaboration(collaboration);
+                  }}
+                >
+                  <div className="social-row social-structured-row ui44-list-row ui44-list-row-social-structured ui44-list-row-interactive">
                     <SocialAvatar profile={collaboration.authors} />
                     <div className="social-row-main">
                       <div className="social-structured-topline">
                         <SocialAuthorLine author={collaboration.authors} createdAt={collaboration.created_at} handleOnly />
-                        <span className={collaboration.status === 'filled' ? 'dashboard-status-pill dashboard-status-pill-success' : 'dashboard-status-pill dashboard-status-pill-warning'}>
+                        <span className={collaboration.status === 'filled' ? 'dashboard-status-pill dashboard-status-pill-success ui44-badge' : 'dashboard-status-pill dashboard-status-pill-warning ui44-badge'}>
                           {collaboration.status === 'filled' ? 'Closed' : 'Open'}
                         </span>
                       </div>
@@ -939,12 +967,13 @@ function CommunityPageContent() {
                       </div>
                       {openStructuredId === collaboration.id && (
                         <div className="social-structured-thread" onClick={event => event.stopPropagation()}>
-                          <form className="social-feed-composer social-feed-composer-open social-structured-composer" onSubmit={event => submitCollaborationResponse(event, collaboration)}>
+                          <form className="social-feed-composer social-feed-composer-open social-structured-composer ui44-composer-surface ui44-panel ui44-panel-glass ui44-panel-overflow-visible" onSubmit={event => submitCollaborationResponse(event, collaboration)}>
                             <div className="social-feed-composer-box">
-                              <textarea
+                              <Ui44Textarea
+                                surface="bare"
                                 value={structuredReplyBody}
                                 onChange={event => setStructuredReplyBody(event.target.value)}
-                                placeholder="Introduce yourself and explain why you're a fit..."
+                                placeholder="Introduce yourself and explain why you are a fit"
                                 rows={3}
                                 disabled={structuredSubmitting}
                               />
@@ -959,9 +988,9 @@ function CommunityPageContent() {
                             </div>
                           </form>
                           {(collaborationResponses[collaboration.id] ?? []).length ? (
-                            <div className="social-structured-list">
+                            <div className="social-structured-list ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
                               {(collaborationResponses[collaboration.id] ?? []).map(response => (
-                                <div key={response.id} className="social-structured-item">
+                                <div key={response.id} className="social-structured-item ui44-list-row ui44-list-row-structured-item">
                                   <div className="social-structured-topline">
                                     <SocialAuthorLine author={response.authors} createdAt={response.created_at} handleOnly />
                                     {user && response.author_id === user.id ? (
@@ -986,9 +1015,9 @@ function CommunityPageContent() {
             )}
           </section>
         ) : (
-        <section className="dashboard-list-surface social-feed social-feed-list social-feed-panel" aria-label="Community feed">
+        <section className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip social-feed social-feed-list social-feed-panel" aria-label="Community feed">
           {postsLoading ? (
-            <div className="dashboard-empty">Loading posts...</div>
+            <div className="dashboard-empty ui44-state ui44-state-loading" role="status" aria-live="polite">Loading posts...</div>
           ) : visiblePosts.length === 0 ? (
             <div className="dashboard-empty">{pageCopy.empty}</div>
           ) : (
@@ -1023,7 +1052,7 @@ export default function CommunityPage() {
       fallback={(
         <PageShell>
           <main className="social-shell">
-            <div className="dashboard-empty">Loading community...</div>
+            <div className="dashboard-empty ui44-state ui44-state-loading" role="status" aria-live="polite">Loading community...</div>
           </main>
         </PageShell>
       )}

@@ -1,8 +1,10 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { recordItemPlay } from '@/lib/domain/playAnalytics';
+import { Ui44RangeInput } from '@/components/ui44/Inputs';
 
 export type MusicQueueTrack = {
   id: string;
@@ -823,7 +825,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   return (
     <MusicPlayerContext.Provider value={value}>
       {children}
-      <audio ref={audioRef} preload="metadata" playsInline style={{ display: 'none' }} aria-hidden="true" />
+      <audio ref={audioRef} className="ui44-visually-hidden-media" preload="metadata" playsInline aria-hidden="true" />
     </MusicPlayerContext.Provider>
   );
 }
@@ -866,6 +868,7 @@ function PlayerIcon({ name }: { name: 'play' | 'pause' | 'stop' | 'previous' | '
 }
 
 export function MusicPlayerBar() {
+  const pathname = usePathname();
   const {
     currentTrack,
     currentIndex,
@@ -893,6 +896,57 @@ export function MusicPlayerBar() {
   const [queueOpen, setQueueOpen] = useState(false);
   const [shuffleEnabled, setShuffleEnabled] = useState(false);
   const dragStartYRef = useRef<number | null>(null);
+  const expandedTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const sheetRef = useRef<HTMLElement | null>(null);
+  const lastPathnameRef = useRef(pathname);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const frame = window.requestAnimationFrame(() => closeButtonRef.current?.focus());
+    return () => window.cancelAnimationFrame(frame);
+  }, [expanded]);
+
+  useEffect(() => {
+    if (lastPathnameRef.current === pathname) return;
+    lastPathnameRef.current = pathname;
+    setExpanded(false);
+    setQueueOpen(false);
+  }, [pathname, setExpanded]);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setExpanded(false);
+        setQueueOpen(false);
+        window.requestAnimationFrame(() => expandedTriggerRef.current?.focus());
+        return;
+      }
+      if (event.key !== 'Tab' || !sheetRef.current) return;
+      const focusable = Array.from(sheetRef.current.querySelectorAll<HTMLElement>(
+        'a[href], button:not(:disabled), input:not(:disabled), [tabindex]:not([tabindex="-1"])',
+      ));
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [expanded, setExpanded]);
 
   if (!currentTrack) return null;
 
@@ -906,17 +960,19 @@ export function MusicPlayerBar() {
   const currentTrackHref = trackHref(currentTrack);
   const showingQueue = queueOpen && !isRadioPlayback;
   const playerClassName = [
-    'music-player-bar',
+    'ui44-player-bar music-player-bar',
     isRadioPlayback ? 'music-player-bar-radio' : '',
     expanded ? 'music-player-bar-expanded' : '',
   ].filter(Boolean).join(' ');
 
-  function openExpanded() {
+  function openExpanded(event: React.MouseEvent<HTMLButtonElement>) {
+    expandedTriggerRef.current = event.currentTarget;
     setExpanded(true);
     setQueueOpen(false);
   }
 
-  function openQueue() {
+  function openQueue(event: React.MouseEvent<HTMLButtonElement>) {
+    expandedTriggerRef.current = event.currentTarget;
     setExpanded(true);
     setQueueOpen(true);
   }
@@ -924,6 +980,15 @@ export function MusicPlayerBar() {
   function minimizeExpanded() {
     setExpanded(false);
     setQueueOpen(false);
+    window.requestAnimationFrame(() => expandedTriggerRef.current?.focus());
+  }
+
+  function closeExpandedLayer() {
+    if (queueOpen && window.matchMedia('(max-width: 768px)').matches) {
+      setQueueOpen(false);
+      return;
+    }
+    minimizeExpanded();
   }
 
   function toggleExpandedQueue() {
@@ -979,7 +1044,7 @@ export function MusicPlayerBar() {
             </button>
           ) : (
             <>
-            <button type="button" className="music-player-button music-player-button-icon" onClick={playPrevious} aria-label="Previous track" disabled={!canPlayPrevious}>
+            <button type="button" className="music-player-button music-player-button-icon music-player-mini-skip music-player-mini-previous" onClick={playPrevious} aria-label="Previous track" disabled={!canPlayPrevious}>
               <PlayerIcon name="previous" />
             </button>
             <button type="button" className="music-player-button music-player-button-primary music-player-button-icon" onClick={togglePlayback} aria-label={isPlaying ? 'Pause' : 'Play'}>
@@ -988,7 +1053,7 @@ export function MusicPlayerBar() {
             <button type="button" className="music-player-button music-player-button-icon music-player-close music-player-close-mobile" onClick={clear} aria-label="Close player">
               <PlayerIcon name="remove" />
             </button>
-            <button type="button" className="music-player-button music-player-button-icon" onClick={playNext} aria-label="Next track" disabled={!canPlayNext}>
+            <button type="button" className="music-player-button music-player-button-icon music-player-mini-skip music-player-mini-next" onClick={playNext} aria-label="Next track" disabled={!canPlayNext}>
               <PlayerIcon name="next" />
             </button>
             </>
@@ -996,8 +1061,7 @@ export function MusicPlayerBar() {
         </div>
         <div className="music-player-progress">
           <span>{formatPlayerTime(currentTime)}</span>
-          <input
-            type="range"
+          <Ui44RangeInput
             min="0"
             max={Math.max(1, Math.round(effectiveDuration))}
             value={Math.min(Math.round(currentTime), Math.max(1, Math.round(effectiveDuration)))}
@@ -1010,8 +1074,7 @@ export function MusicPlayerBar() {
           <button type="button" className="music-player-button music-player-button-icon" onClick={toggleMute} aria-label={muted ? 'Unmute' : 'Mute'}>
             <PlayerIcon name={muted || volume === 0 ? 'muted' : 'volume'} />
           </button>
-          <input
-            type="range"
+          <Ui44RangeInput
             min="0"
             max="1"
             step="0.01"
@@ -1022,7 +1085,7 @@ export function MusicPlayerBar() {
         </div>
         <div className="music-player-actions">
           {!isRadioPlayback && (
-            <button type="button" className="music-player-button music-player-button-icon" onClick={openQueue} aria-label="Open queue">
+            <button type="button" className="music-player-button music-player-button-icon music-player-mini-queue" onClick={openQueue} aria-label="Open queue">
               <PlayerIcon name="queue" />
             </button>
           )}
@@ -1033,13 +1096,14 @@ export function MusicPlayerBar() {
       </div>
 
       {expanded && (
-        <div className="music-player-overlay" role="presentation">
+        <div className="ui44-player-overlay music-player-overlay" role="presentation">
           <button type="button" className="music-player-scrim" aria-label="Minimize Now Playing" onClick={minimizeExpanded} />
           <section
-            className={showingQueue ? 'music-player-sheet music-player-sheet-queue-open' : 'music-player-sheet'}
+            ref={sheetRef}
+            className={showingQueue ? 'ui44-player-sheet music-player-sheet music-player-sheet-queue-open' : 'ui44-player-sheet music-player-sheet'}
             role="dialog"
-            aria-modal="true"
             aria-label="Now Playing"
+            aria-modal="true"
             onPointerDown={onSheetPointerDown}
             onPointerUp={onSheetPointerUp}
             style={{ '--music-progress': String(percent / 100) } as CSSProperties}
@@ -1048,10 +1112,11 @@ export function MusicPlayerBar() {
               <span className="music-player-sheet-header-spacer" aria-hidden="true" />
               <span className="music-player-sheet-header-spacer" aria-hidden="true" />
               <button
+                ref={closeButtonRef}
                 type="button"
                 className="music-player-sheet-minimize"
-                onClick={minimizeExpanded}
-                aria-label="Close player"
+                onClick={closeExpandedLayer}
+                aria-label={showingQueue ? 'Close queue or player' : 'Close player'}
               >
                 <PlayerIcon name="remove" />
               </button>
@@ -1078,8 +1143,7 @@ export function MusicPlayerBar() {
                 <p>{currentTrack.artistHref ? <Link href={currentTrack.artistHref} onClick={minimizeExpanded}>{currentTrack.artist}</Link> : currentTrack.artist}</p>
               </div>
               {!isRadioPlayback && <div className="music-player-sheet-progress">
-                <input
-                  type="range"
+                <Ui44RangeInput
                   min="0"
                   max={Math.max(1, Math.round(effectiveDuration))}
                   value={Math.min(Math.round(currentTime), Math.max(1, Math.round(effectiveDuration)))}
@@ -1127,6 +1191,7 @@ export function MusicPlayerBar() {
                     className={showingQueue ? 'music-player-sheet-button music-player-sheet-button-utility music-player-sheet-button-queue music-player-sheet-button-active' : 'music-player-sheet-button music-player-sheet-button-utility music-player-sheet-button-queue'}
                     onClick={toggleExpandedQueue}
                     aria-label={showingQueue ? 'Hide queue' : 'Show queue'}
+                    aria-pressed={showingQueue}
                   >
                     <PlayerIcon name="queue" />
                   </button>
@@ -1135,7 +1200,7 @@ export function MusicPlayerBar() {
               </div>
             </div>
 
-            {!isRadioPlayback && <div className={showingQueue ? 'music-player-queue music-player-queue-open' : 'music-player-queue'}>
+            {!isRadioPlayback && <div className={showingQueue ? 'ui44-player-queue music-player-queue music-player-queue-open' : 'ui44-player-queue music-player-queue'}>
               <div className="music-player-queue-head">
                 <span>Queue</span>
                 <span>{isRadioPlayback ? 'Live Radio' : `${Math.max(0, queue.length - currentIndex - 1)} next`}</span>

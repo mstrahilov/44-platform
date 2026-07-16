@@ -47,7 +47,9 @@ export function SocialAvatar({
 }) {
   const name = authorDisplayName(profile);
   return (
-    <span className={size === 'large' ? 'social-avatar social-avatar-large' : 'social-avatar'} aria-hidden="true">
+    <span className={size === 'large'
+      ? 'social-avatar social-avatar-large ui44-identity-avatar ui44-identity-avatar-specialized'
+      : 'social-avatar ui44-identity-avatar ui44-identity-avatar-inline'} aria-hidden="true">
       {profile?.avatar_url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={profile.avatar_url} alt="" />
@@ -104,7 +106,7 @@ export function SocialAuthorLine({
 
 function HeartIcon({ filled }: { filled?: boolean }) {
   return (
-    <svg className="social-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+    <svg className="social-action-icon ui44-row-action-icon" viewBox="0 0 24 24" aria-hidden="true">
       <path
         d="M12 20.5s-7.5-4.35-9.5-9.4C1.2 7.9 3.3 5 6.4 5c1.9 0 3.5 1.1 4.4 2.7l1.2.1C12.9 6.1 14.5 5 16.4 5c3.1 0 5.2 2.9 3.9 6.1-2 5.05-9.5 9.4-9.5 9.4z"
         fill={filled ? 'currentColor' : 'none'}
@@ -113,9 +115,18 @@ function HeartIcon({ filled }: { filled?: boolean }) {
   );
 }
 
+function LikeActionContent({ filled, count }: { filled: boolean; count: number }) {
+  return (
+    <span className={count > 0 ? 'social-action-like-hit social-action-like-hit-count' : 'social-action-like-hit'}>
+      <HeartIcon filled={filled} />
+      {count > 0 && <span className="social-action-count">{count}</span>}
+    </span>
+  );
+}
+
 function ChatBubbleIcon() {
   return (
-    <svg className="social-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+    <svg className="social-action-icon ui44-row-action-icon" viewBox="0 0 24 24" aria-hidden="true">
       <path d="M4 12c0-4.4 3.6-8 8-8s8 3.6 8 8-3.6 8-8 8c-1.2 0-2.3-.2-3.3-.7L4 20l1-4.2C4.4 14.7 4 13.4 4 12z" />
     </svg>
   );
@@ -123,7 +134,7 @@ function ChatBubbleIcon() {
 
 function TrashIcon() {
   return (
-    <svg className="social-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+    <svg className="social-action-icon ui44-row-action-icon" viewBox="0 0 24 24" aria-hidden="true">
       <path d="M5 7h14M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
     </svg>
   );
@@ -184,8 +195,8 @@ export function SocialPostRow({
     router.push(href);
   }
 
-  function handleRowKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
-    if (!rowClickable) return;
+  function handleRowKeyDown(event: React.KeyboardEvent<HTMLElement>) {
+    if (!rowClickable || event.target !== event.currentTarget) return;
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       openThread();
@@ -227,10 +238,17 @@ export function SocialPostRow({
 
   return (
     <article
-      className={rowClickable ? 'social-row social-row-interactive' : 'social-row'}
+      className={rowClickable
+        ? 'social-row social-row-interactive ui44-list-row ui44-list-row-community ui44-list-row-interactive'
+        : 'social-row ui44-list-row ui44-list-row-community'}
+      role={rowClickable ? 'link' : undefined}
+      tabIndex={rowClickable ? 0 : undefined}
+      onClick={rowClickable ? openThread : undefined}
+      onKeyDown={rowClickable ? handleRowKeyDown : undefined}
       onContextMenu={event => openContextMenu(event, postMenuEntries())}
     >
       <Link
+        className="ui44-community-avatar-link"
         href={authorLink}
         aria-label={authorName}
         onClick={stopRowNavigation}
@@ -238,46 +256,43 @@ export function SocialPostRow({
       >
         <SocialAvatar profile={post.creators} />
       </Link>
-
       <div
-        className={rowClickable ? 'social-row-main social-row-main-clickable' : 'social-row-main'}
-        role={rowClickable ? 'link' : undefined}
-        tabIndex={rowClickable ? 0 : undefined}
-        onClick={rowClickable ? openThread : undefined}
-        onKeyDown={rowClickable ? handleRowKeyDown : undefined}
+        className={rowClickable
+          ? 'social-row-main social-row-main-clickable ui44-community-copy'
+          : 'social-row-main ui44-community-copy'}
       >
-        <SocialAuthorLine author={post.creators} createdAt={post.created_at} handleOnly={handleOnly} meta={meta} />
-        <div style={{ color: 'inherit', textDecoration: 'none', display: 'grid', gap: 6 }}>
+        <div className="ui44-community-author-line">
+          <SocialAuthorLine author={post.creators} createdAt={post.created_at} handleOnly={handleOnly} meta={meta} />
+        </div>
+        <div className="ui44-community-content">
           {showTitle && (
             <h2 className={titleSize === 'lg' ? 'social-row-title social-row-title-lg' : 'social-row-title'}>
               {post.title}
             </h2>
           )}
-          {body && <p className="social-row-body"><SocialRichText text={body} /></p>}
+          {body && <p className="social-row-body ui44-type ui44-type-body ui44-tone-secondary ui44-community-body"><SocialRichText text={body} /></p>}
         </div>
-        <div className="social-actions" onClick={stopRowNavigation}>
+        <div className="social-actions ui44-community-actions" onClick={stopRowNavigation}>
           {onLike ? (
             <button
               type="button"
-              className="social-action social-action-like"
+              className="social-action social-action-like ui44-row-action"
               data-liked={liked ? 'true' : 'false'}
               onClick={onLike}
               disabled={disabled}
               aria-label={liked ? 'Unlike' : 'Like'}
             >
-              <HeartIcon filled={liked} />
-              {likeCount > 0 && <span className="social-action-count">{likeCount}</span>}
+              <LikeActionContent filled={liked} count={likeCount} />
             </button>
           ) : (
-            <span className="social-action social-action-like" data-liked={liked ? 'true' : 'false'} aria-label={`${likeCount} likes`}>
-              <HeartIcon filled={liked} />
-              {likeCount > 0 && <span className="social-action-count">{likeCount}</span>}
+            <span className="social-action social-action-like ui44-row-action" data-liked={liked ? 'true' : 'false'} aria-label={`${likeCount} likes`}>
+              <LikeActionContent filled={liked} count={likeCount} />
             </span>
           )}
           {onReplyClick ? (
             <button
               type="button"
-              className="social-action"
+              className={replyActionLabel ? 'social-action social-action-reply-label ui44-row-action' : 'social-action ui44-row-action'}
               onClick={onReplyClick}
               aria-label={`${replyCount} replies`}
               aria-expanded={repliesOpen}
@@ -288,7 +303,7 @@ export function SocialPostRow({
                 : replyCount > 0 && <span className="social-action-count">{replyCount}</span>}
             </button>
           ) : (
-            <Link href={href} className="social-action" aria-label={`${replyCount} replies`} onClick={stopRowNavigation}>
+            <Link href={href} className="social-action social-action-icon-only ui44-row-action" aria-label={`${replyCount} replies`} onClick={stopRowNavigation}>
               <ChatBubbleIcon />
               {replyCount > 0 && <span className="social-action-count">{replyCount}</span>}
             </Link>
@@ -296,7 +311,7 @@ export function SocialPostRow({
           {canDelete && onDelete && (
             <button
               type="button"
-              className="social-action social-action-danger"
+              className="social-action social-action-danger ui44-row-action ui44-row-action-delete"
               onClick={onDelete}
               aria-label="Delete post"
             >
@@ -334,12 +349,12 @@ export function SocialProfileRow({
     }) },
   ];
   return (
-    <div className="social-row">
+    <div className="social-row ui44-profile-row">
       <Link href={href} aria-label={name} onContextMenu={event => openContextMenu(event, entries)}>
         <SocialAvatar profile={profile} />
       </Link>
       <div className="social-row-main">
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        <div className="social-profile-row-head">
           <div>
             <Link href={authorHref(profile)} className="social-author-name">
               {authorDisplayName(profile)}
@@ -368,16 +383,16 @@ export function SocialArtifactCard({
   shape?: 'square' | 'portrait';
 }) {
   return (
-    <Link href={href} className="social-artifact-card">
-      <div className={shape === 'portrait' ? 'social-artifact-cover social-artifact-cover-portrait' : 'social-artifact-cover'}>
+    <Link href={href} className="social-artifact-card ui44-catalog-card">
+      <div className={shape === 'portrait' ? 'social-artifact-cover social-artifact-cover-portrait ui44-catalog-art' : 'social-artifact-cover ui44-catalog-art'}>
         {image && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={image} alt="" />
         )}
       </div>
-      <div className="social-artifact-info">
-        <div className="os-type-card-title">{title}</div>
-        <div className="os-type-meta" style={{ color: 'var(--os-color-ink-secondary)' }}>{meta}</div>
+      <div className="social-artifact-info ui44-catalog-copy">
+        <div className="os-type-card-title ui44-catalog-title">{title}</div>
+        <div className="os-type-meta ui44-catalog-meta">{meta}</div>
       </div>
     </Link>
   );

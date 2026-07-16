@@ -38,7 +38,7 @@ export default function StudioEarningsPage() {
     loadEarnings();
   }, [user]);
 
-  if (loading || !user) return <PageShell><div style={{ minHeight: '40vh' }} /></PageShell>;
+  if (loading || !user) return <PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>;
 
   return (
     <PageShell>
@@ -47,15 +47,15 @@ export default function StudioEarningsPage() {
 
         <HubSection title="Sold Items">
           {fetching ? (
-            <p className="library-empty-text">Loading sold items...</p>
+            <p className="library-empty-text ui44-state ui44-state-loading" role="status" aria-live="polite">Loading sold items...</p>
           ) : error ? (
-            <div className="dashboard-status dashboard-status-error">{error}</div>
+            <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div>
           ) : rows.length === 0 ? (
             <p className="library-empty-text">No items sold yet.</p>
           ) : (
-            <div className="dashboard-list-surface">
-              {rows.map((row, index) => (
-                <div key={row.id} className="dashboard-list-row" style={{ borderTop: index === 0 ? 'none' : undefined }}>
+            <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
+              {rows.map(row => (
+                <div key={row.id} className="dashboard-list-row ui44-list-row ui44-list-row-dashboard">
                   <div className="dashboard-row-copy">
                     <div className="dashboard-row-title">{getPurchasedProduct(row)?.title ?? 'Item'}</div>
                     <div className="dashboard-row-subtitle">{row.acquired_at ? formatDate(row.acquired_at) : 'Purchase date unavailable'}</div>

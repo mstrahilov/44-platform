@@ -44,17 +44,17 @@ export default function CheckoutPage() {
   });
   const canCompleteFreeSave = items.length > 0 && subtotalCents === 0 && !hasPhysicalItem;
 
-  if (loading) return <PageShell><CenteredMessage>Loading…</CenteredMessage></PageShell>;
+  if (loading) return <PageShell><CenteredMessage status>Loading…</CenteredMessage></PageShell>;
 
   if (!user) {
     return (
       <PageShell>
         <main className="dashboard-page">
           <HubHero title="Checkout" copy="Sign in to add free Items to your Library." />
-          <div className="dashboard-list-surface">
+          <div className="dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
             <div className="dashboard-empty">
               You need an account so 44OS can save these Items to your Library.
-              <div style={{ marginTop: 'var(--os-space-4)', display: 'flex', gap: 'var(--os-space-3)' }}>
+              <div className="checkout-inline-actions">
                 <Link className="os-button os-button-primary os-button-compact" href="/login">Log In</Link>
                 <Link className="os-button os-button-secondary os-button-compact" href="/cart">Back to Cart</Link>
               </div>
@@ -70,10 +70,10 @@ export default function CheckoutPage() {
       <PageShell>
         <main className="dashboard-page">
           <HubHero title="Checkout" copy="Your cart is empty." />
-          <div className="dashboard-list-surface">
+          <div className="dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
             <div className="dashboard-empty">
               Add an Item from Store when you are ready.
-              <div style={{ marginTop: 'var(--os-space-4)' }}>
+              <div className="ui44-section-gap-before">
                 <Link className="os-button os-button-primary os-button-compact" href="/store">Go to Store</Link>
               </div>
             </div>
@@ -110,10 +110,10 @@ export default function CheckoutPage() {
       <PageShell>
         <main className="dashboard-page">
           <HubHero title="Added to Library" copy="Your free Items are ready in 44OS." />
-          <div className="dashboard-list-surface">
+          <div className="dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
             <div className="dashboard-empty">
               No payment was required. Library keeps the Items you want to return to; public listening remains free where enabled.
-              <div style={{ marginTop: 'var(--os-space-4)', display: 'flex', gap: 'var(--os-space-3)' }}>
+              <div className="checkout-inline-actions">
                 <Link className="os-button os-button-primary os-button-compact" href="/library">Open Library</Link>
                 <Link className="os-button os-button-secondary os-button-compact" href="/store">Keep Exploring</Link>
               </div>
@@ -129,7 +129,7 @@ export default function CheckoutPage() {
       <main className="dashboard-page">
         <HubHero title="Checkout" copy={`${count} item${count === 1 ? '' : 's'} · ${formatMoney(subtotalCents, currency)}`} />
         <form className="checkout-grid" onSubmit={placeOrder}>
-          <section className="settings-section" style={{ maxWidth: 'none' }}>
+          <section className="settings-section checkout-summary-section">
             <div className="settings-field">
               <div className="settings-field-head">
                 <div className="os-type-field-title">
@@ -143,7 +143,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {errorMessage && <div className="dashboard-status dashboard-status-error">{errorMessage}</div>}
+            {errorMessage && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{errorMessage}</div>}
 
             <div className="cart-summary-actions">
               <Link className="os-button os-button-secondary" href="/cart">Back to Cart</Link>
@@ -153,18 +153,18 @@ export default function CheckoutPage() {
             </div>
           </section>
 
-          <aside className="checkout-summary dashboard-list-surface">
+          <aside className="checkout-summary dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
             <div className="checkout-summary-head"><h2 className="os-type-field-title">Summary</h2></div>
             <div className="checkout-summary-items">
               {items.map(item => (
-                <div key={item.item_id} className="checkout-summary-row">
+                <div key={item.item_id} className="checkout-summary-row ui44-list-row ui44-list-row-checkout">
                   <div className="checkout-summary-art">
                     {item.cover_url && (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={item.cover_url} alt="" />
                     )}
                   </div>
-                  <div style={{ minWidth: 0 }}>
+                  <div className="ui44-min-width-zero">
                     <div className="checkout-summary-title">{item.title}</div>
                     <div className="dashboard-row-subtitle">{item.creator}</div>
                   </div>

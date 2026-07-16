@@ -38,15 +38,15 @@ export default function StudioEventsPage() {
     <HubHero title="Events" />
     <SectionHeader title="Your Events" action={<Link href="/studio/events/new" className="os-button os-button-primary os-button-compact">New Event</Link>} />
     <p className="os-type-body event-ticket-note">44OS lists events but does not sell or fulfill tickets.</p>
-    {error && <div className="dashboard-status dashboard-status-error" role="alert">{error}</div>}
-    {loading ? <div className="dashboard-empty">Loading events...</div> : events.length === 0 ? <div className="dashboard-list-surface"><div className="dashboard-empty studio-events-empty">No events yet.</div></div> :
-      <div className="dashboard-list-surface">{events.map(event => <div className="dashboard-list-row event-studio-row" key={event.id}>
+    {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div>}
+    {loading ? <div className="dashboard-empty ui44-state ui44-state-loading" role="status" aria-live="polite">Loading events...</div> : events.length === 0 ? <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip"><div className="dashboard-empty studio-events-empty">No events yet.</div></div> :
+      <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">{events.map(event => <div className="dashboard-list-row event-studio-row ui44-list-row ui44-list-row-dashboard" key={event.id}>
         <Link className="dashboard-row-copy" href={`/studio/events/${event.id}`}>
           <span className="dashboard-row-title">{event.title}</span>
           <span className="dashboard-row-subtitle">{formatEventDate(event.starts_at, event.timezone)} · {formatLabel(event.format)}</span>
         </Link>
         <div className="dashboard-row-actions">
-          <span className={`dashboard-status-pill ${event.lifecycle_state === 'cancelled' ? 'studio-status-pill-draft' : ''}`}>{event.lifecycle_state}</span>
+          <span className={`dashboard-status-pill ui44-badge ${event.lifecycle_state === 'cancelled' ? 'studio-status-pill-draft' : ''}`}>{event.lifecycle_state}</span>
           <button className="os-button os-button-ghost os-button-compact" onClick={() => void changeState(event, event.lifecycle_state === 'cancelled' ? 'scheduled' : 'cancelled')}>{event.lifecycle_state === 'cancelled' ? 'Restore' : 'Cancel'}</button>
           <button className="os-button os-button-destructive os-button-compact" onClick={() => void changeState(event, 'removed')}>Remove</button>
         </div>

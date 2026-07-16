@@ -68,6 +68,15 @@ export async function saveItemReview(itemId: string, body: string) {
   if (result.error) throw result.error;
 }
 
+export async function deleteItemReview(reviewId: string) {
+  const result = await supabase
+    .from('content_entries')
+    .delete()
+    .eq('id', reviewId)
+    .eq('content_type', 'review');
+  if (result.error) throw result.error;
+}
+
 export async function listItemUpdates(itemId: string) {
   const result = await supabase
     .from('community_update_content')

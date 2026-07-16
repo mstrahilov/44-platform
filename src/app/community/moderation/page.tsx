@@ -50,17 +50,17 @@ export default function CommunityModerationPage() {
     }
   }
 
-  if (authLoading || loading) return <PageShell><div style={{ minHeight: '40vh' }} /></PageShell>;
+  if (authLoading || loading) return <PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>;
   if (!authorized) return <PageShell><EmptyMessage>Administrator access is required.</EmptyMessage></PageShell>;
 
   return (
     <PageShell>
       <main className="social-shell">
         <HubHero title="Moderation" copy="Review Community reports and apply visible moderation state." />
-        {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
-        <div className="dashboard-list-surface">
+        {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div>}
+        <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
           {reports.length === 0 ? <div className="dashboard-empty">No reports yet.</div> : reports.map(report => (
-            <div className="dashboard-list-row" key={report.id}>
+            <div className="dashboard-list-row ui44-list-row ui44-list-row-dashboard ui44-list-row-wide-actions" key={report.id}>
               <div className="dashboard-row-copy">
                 <div className="dashboard-row-title">{report.reason}</div>
                 <div className="dashboard-row-subtitle">

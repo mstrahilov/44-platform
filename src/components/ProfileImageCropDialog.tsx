@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useUi44DialogFocus } from '@/components/ui44/Dialog';
+import { Ui44RangeInput } from '@/components/ui44/Inputs';
 
 export function ProfileImageCropDialog({
   file,
@@ -18,6 +20,7 @@ export function ProfileImageCropDialog({
   const [offsetX, setOffsetX] = useState(0);
   const [offsetY, setOffsetY] = useState(0);
   const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
+  const dialogRef = useUi44DialogFocus<HTMLElement>({ active: true, onDismiss: onCancel });
 
   useEffect(() => {
     const reader = new FileReader();
@@ -93,12 +96,12 @@ export function ProfileImageCropDialog({
   }
 
   return (
-    <div className="profile-crop-overlay" role="presentation">
-      <button type="button" className="profile-crop-scrim" aria-label="Cancel image editing" onClick={onCancel} />
-      <section className="profile-crop-dialog" role="dialog" aria-modal="true" aria-labelledby="profile-crop-title">
+    <div className="profile-crop-overlay ui44-dialog-overlay" role="presentation">
+      <button type="button" className="profile-crop-scrim ui44-dialog-scrim" aria-label="Cancel image editing" onClick={onCancel} />
+      <section ref={dialogRef} className="profile-crop-dialog ui44-dialog-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip" role="dialog" aria-modal="true" aria-labelledby="profile-crop-title">
         <div className="profile-crop-header">
           <button type="button" className="profile-crop-text-button" onClick={onCancel} disabled={busy}>Cancel</button>
-          <h2 id="profile-crop-title">Adjust profile photo</h2>
+          <h2 id="profile-crop-title" className="ui44-type ui44-type-subsection-title">Adjust profile photo</h2>
           <button type="button" className="profile-crop-text-button profile-crop-confirm" onClick={() => void confirm()} disabled={busy}>
             {busy ? 'Uploading…' : 'Use photo'}
           </button>
@@ -119,7 +122,7 @@ export function ProfileImageCropDialog({
           <p className="profile-crop-instruction">Drag the photo to reposition it.</p>
           <label>
             <span>Zoom</span>
-            <input type="range" min="1" max="3" step="0.01" value={zoom} onChange={event => setZoom(Number(event.target.value))} />
+            <Ui44RangeInput min="1" max="3" step="0.01" value={zoom} onChange={event => setZoom(Number(event.target.value))} />
           </label>
         </div>
       </section>

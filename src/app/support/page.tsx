@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { PageShell, HubHero } from '@/components/Ui';
+import { Ui44TextInput } from '@/components/ui44/Inputs';
 
 type SupportArticle = {
   category: string;
@@ -131,7 +132,7 @@ export default function SupportPage() {
         </nav>
 
         <form className="support-search" role="search" onSubmit={event => event.preventDefault()}>
-          <input
+          <Ui44TextInput
             className="os-input-field"
             type="search"
             value={query}
@@ -148,21 +149,22 @@ export default function SupportPage() {
               if (!articles.length) return null;
               const open = openCategories.includes(category) || articles.some(article => article.question === selectedArticle.question);
               return (
-                <div key={category} className="support-sidebar-group">
+                <div key={category} className="ui44-disclosure support-sidebar-group">
                   <button
                     type="button"
-                    className="support-sidebar-heading"
+                    className="ui44-disclosure-trigger support-sidebar-heading"
                     onClick={() => setOpenCategories(current => (
                       current.includes(category)
                         ? current.filter(item => item !== category)
                         : [...current, category]
                     ))}
                     aria-expanded={open}
+                    aria-controls={`support-${category.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
                   >
                     <span>{category}</span>
                     <span aria-hidden="true">{open ? '⌃' : '⌄'}</span>
                   </button>
-                  {open && articles.map(article => (
+                  {open && <div id={`support-${category.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} className="ui44-disclosure-content">{articles.map(article => (
                       <button
                         key={article.question}
                         type="button"
@@ -171,7 +173,7 @@ export default function SupportPage() {
                       >
                         {article.question}
                       </button>
-                    ))}
+                    ))}</div>}
                 </div>
               );
             })}

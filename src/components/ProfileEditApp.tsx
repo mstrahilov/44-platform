@@ -13,6 +13,7 @@ import { ProfileImageCropDialog } from '@/components/ProfileImageCropDialog';
 import type { Database } from '@/lib/database.types';
 import { getOwnProfile, updateOwnProfile } from '@/lib/domain/profiles';
 import { ExternalLinksEditor } from '@/components/ExternalLinksEditor';
+import { Ui44FileInput, Ui44TextInput, Ui44Textarea } from '@/components/ui44/Inputs';
 import {
   listExternalLinkPlatforms,
   listOwnProfileExternalLinks,
@@ -129,7 +130,7 @@ export default function EditProfilePage() {
   }
 
   if (authLoading) {
-    return <PageShell><CenteredMessage>Loading profile...</CenteredMessage></PageShell>;
+    return <PageShell><CenteredMessage status>Loading profile...</CenteredMessage></PageShell>;
   }
 
   if (!user) {
@@ -137,14 +138,14 @@ export default function EditProfilePage() {
       <PageShell>
         <CenteredMessage>
           Sign in to edit your profile.{' '}
-          <Link href="/login" className="os-button os-button-primary os-button-compact" style={{ marginLeft: 8 }}>Sign In</Link>
+          <Link href="/login" className="os-button os-button-primary os-button-compact profile-edit-sign-in">Sign In</Link>
         </CenteredMessage>
       </PageShell>
     );
   }
 
   if (loading) {
-    return <PageShell><CenteredMessage>Loading profile...</CenteredMessage></PageShell>;
+    return <PageShell><CenteredMessage status>Loading profile...</CenteredMessage></PageShell>;
   }
 
   const previewProfile = {
@@ -167,9 +168,8 @@ export default function EditProfilePage() {
                 <span className="profile-image-edit-icon" aria-hidden="true" />
                 <span className="profile-edit-visually-hidden">Choose a new profile photo</span>
               </label>
-              <input
+              <Ui44FileInput
                 id={avatarInputId}
-                type="file"
                 accept="image/*"
                 onChange={selectImage}
                 disabled={Boolean(uploading)}
@@ -184,7 +184,7 @@ export default function EditProfilePage() {
               </div>
             </div>
 
-            <div className="social-profile-actions">
+            <div className="social-profile-actions profile-edit-actions">
               <Link href={authorHandle(profile) ? `/profile/${authorHandle(profile)}` : '/profile'} className="os-button os-button-secondary">
                 Cancel
               </Link>
@@ -199,25 +199,26 @@ export default function EditProfilePage() {
             </div>
           </div>
 
-          {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
+          {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div>}
 
-          <div className="profile-edit-fields">
+          <div className="profile-edit-fields ui44-form-grid">
             <label className="profile-edit-field dashboard-field">
               <span className="profile-edit-label">Display name</span>
-              <input
+              <Ui44TextInput
                 type="text"
                 value={displayName}
                 onChange={event => setDisplayName(event.target.value)}
                 className="profile-edit-input os-input-field"
-                placeholder="Your public name"
+                placeholder="Enter public name"
               />
             </label>
 
             <label className="profile-edit-field dashboard-field">
               <span className="profile-edit-label">Username</span>
-              <span className="profile-edit-username-control">
+              <span className="profile-edit-username-control ui44-composed-field">
                 <span className="profile-edit-username-prefix" aria-hidden="true">@</span>
-                <input
+                <Ui44TextInput
+                  surface="bare"
                   type="text"
                   value={username}
                   onChange={event => setUsername(event.target.value.replace(/\s+/g, '').toLowerCase())}
@@ -232,7 +233,7 @@ export default function EditProfilePage() {
 
             <label className="profile-edit-field profile-edit-field-full dashboard-field">
               <span className="profile-edit-label">Bio</span>
-              <textarea
+              <Ui44Textarea
                 value={bio}
                 onChange={event => setBio(event.target.value)}
                 className="profile-edit-input profile-edit-textarea os-input-field"

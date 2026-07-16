@@ -41,10 +41,10 @@ export default function CartPage() {
       <PageShell>
         <main className="dashboard-page">
           <HubHero title="Cart" copy="Items you have added while browsing." />
-          <div className="dashboard-list-surface">
+          <div className="dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
             <div className="dashboard-empty">
               Your cart is empty. Browse merch or creator items to add something.
-              <div style={{ marginTop: 'var(--os-space-4)' }}>
+              <div className="ui44-section-gap-before">
                 <Link className="os-button os-button-primary os-button-compact" href="/store">Open Store</Link>
               </div>
             </div>
@@ -62,9 +62,9 @@ export default function CartPage() {
           copy={`${count} item${count === 1 ? '' : 's'} ready to check out.`}
         />
 
-        <div className="dashboard-list-surface">
+        <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
           {items.map(item => (
-            <div key={item.item_id} className="dashboard-list-row cart-row">
+            <div key={item.item_id} className="dashboard-list-row cart-row ui44-list-row ui44-list-row-cart">
               <div className="cart-row-item">
                 <div className="cart-row-art">
                   {item.cover_url && (
@@ -76,7 +76,7 @@ export default function CartPage() {
                   <div className="dashboard-row-title">
                     <Link
                       href={item.href || '/'}
-                      style={{ color: 'inherit', textDecoration: 'none' }}
+                      className="cart-item-link"
                     >
                       {item.title}
                     </Link>
@@ -108,7 +108,7 @@ export default function CartPage() {
             <span className="os-type-field-title">{formatMoney(subtotalCents, currency)}</span>
           </div>
           <div className="cart-summary-row cart-summary-note">
-            <span className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>
+            <span className="os-type-body-small ui44-text-secondary">
               Taxes and any local fees are calculated at checkout.
             </span>
           </div>

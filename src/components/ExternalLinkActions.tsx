@@ -8,15 +8,26 @@ export function ExternalLinkActions({ links, context, label, variant = context =
 }) {
   if (links.length === 0) return null;
   const iconOnly = variant === 'icons';
+  const orderedLinks = context === 'item'
+    ? [...links].sort((a, b) => itemPlatformOrder(a.platform) - itemPlatformOrder(b.platform))
+    : links;
   return (
     <nav className={`external-link-actions-list external-link-actions-list-${context}${iconOnly ? ' external-link-actions-list-icons' : ''}${context === 'profile' ? ' social-profile-external-links' : ''}`} aria-label={label}>
-      {links.map(link => {
+      {orderedLinks.map(link => {
         const platformLabel = link.label || link.platform;
         const accessibleLabel = context === 'item'
           ? `Open this release on ${platformLabel}`
           : link.platform === 'website' ? 'Visit creator website' : `Visit creator on ${platformLabel}`;
         return (
-          <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" title={platformLabel} className={`${iconOnly ? 'external-profile-icon-link' : 'os-pill os-type-pill'} external-link-action`} aria-label={`${accessibleLabel} (opens in a new tab)`}>
+          <a
+            key={link.id}
+            href={link.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={platformLabel}
+            className={`${iconOnly ? 'external-profile-icon-link' : context === 'item' ? 'external-item-flat-link' : 'os-pill os-type-pill ui44-pill'} external-link-action ui44-external-link`}
+            aria-label={`${accessibleLabel} (opens in a new tab)`}
+          >
             {iconOnly ? <PlatformIcon platform={link.platform} /> : <>
               <span>{platformLabel}</span>
               <span className="external-link-action-icon" aria-hidden="true">↗</span>
@@ -26,6 +37,12 @@ export function ExternalLinkActions({ links, context, label, variant = context =
       })}
     </nav>
   );
+}
+
+function itemPlatformOrder(platform: string) {
+  const order = ['spotify', 'apple_music', 'youtube', 'bandcamp'];
+  const index = order.indexOf(platform.toLowerCase());
+  return index === -1 ? order.length : index;
 }
 
 function PlatformIcon({ platform }: { platform: string }) {

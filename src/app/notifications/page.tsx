@@ -97,7 +97,7 @@ export default function NotificationsPage() {
   const enabledNotifications = notifications.filter(item => item.kind !== 'message' && notificationIsEnabled(item) && !hiddenIds.has(item.id));
 
   if (loading || !user) {
-    return <PageShell><CenteredMessage>Loading…</CenteredMessage></PageShell>;
+    return <PageShell><CenteredMessage status>Loading…</CenteredMessage></PageShell>;
   }
 
   const visibleNotifications = enabledNotifications.filter(item => {
@@ -128,7 +128,7 @@ export default function NotificationsPage() {
     <PageShell>
       <main className="dashboard-page">
         <HubHero title="Notifications" copy="Mentions, replies, achievements, and other account activity." />
-        <div ref={navigationRef} className="social-profile-tabs notification-navigation" role="tablist" aria-label="Notification sections">
+        <div ref={navigationRef} className="ui44-segmented-tabs social-profile-tabs notification-navigation" role="tablist" aria-label="Notification sections">
           {TABS.map(tab => (
             <button
               key={tab.id}
@@ -143,14 +143,22 @@ export default function NotificationsPage() {
         </div>
         <section className="dashboard-section">
           {visibleNotifications.length > 0 ? (
-            <div className="dashboard-list-surface">
+            <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
               {visibleNotifications.map(item => (
                 <article
                   key={item.id}
-                  className="dashboard-list-row notification-page-row"
-                  style={{ cursor: item.href ? 'pointer' : 'default' }}
+                  className={item.href
+                    ? 'dashboard-list-row notification-page-row ui44-list-row ui44-list-row-notification ui44-list-row-interactive'
+                    : 'dashboard-list-row notification-page-row ui44-list-row ui44-list-row-notification'}
+                  role={item.href ? 'link' : undefined}
+                  tabIndex={item.href ? 0 : undefined}
                   onClick={() => {
                     if (item.href) router.push(item.href);
+                  }}
+                  onKeyDown={event => {
+                    if (!item.href || (event.key !== 'Enter' && event.key !== ' ')) return;
+                    event.preventDefault();
+                    router.push(item.href);
                   }}
                 >
                   <NotificationArt item={item} />
@@ -188,7 +196,9 @@ function NotificationArt({ item }: { item: AchievementNotification }) {
   const fallback = item.kind === 'achievement' ? '★' : item.title.charAt(0).toUpperCase();
 
   return (
-    <div className={item.kind === 'achievement' ? 'notification-art notification-art-achievement' : 'notification-art notification-art-user'} aria-hidden="true">
+    <div className={item.kind === 'achievement'
+      ? 'notification-art notification-art-achievement'
+      : 'notification-art notification-art-user ui44-identity-avatar ui44-identity-avatar-inline'} aria-hidden="true">
       {item.kind === 'achievement' ? (
         <AchievementIconGlyph code={item.achievementCode} label={item.title} />
       ) : image ? (

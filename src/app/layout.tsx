@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import '@/styles/44-ui/canonical-system.css';
 import Sidebar from '@/components/Sidebar';
 import { Topbar } from '@/components/Topbar';
 import { TopbarProvider } from '@/components/TopbarContext';

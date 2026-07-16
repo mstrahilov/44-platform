@@ -58,6 +58,7 @@ export function ContextMenuProvider({ children }: { children: ReactNode }) {
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [copiedToast, setCopiedToast] = useState('');
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   const pathname = usePathname();
 
   const closeContextMenu = useCallback(() => setMenu(null), []);
@@ -69,6 +70,7 @@ export function ContextMenuProvider({ children }: { children: ReactNode }) {
     event.preventDefault();
     event.stopPropagation();
     if (entries.length === 0) return;
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setMenu({ x: event.clientX, y: event.clientY, entries });
   }, []);
 
@@ -112,6 +114,13 @@ export function ContextMenuProvider({ children }: { children: ReactNode }) {
     if (x + rect.width > window.innerWidth - margin) x = Math.max(margin, window.innerWidth - rect.width - margin);
     if (y + rect.height > window.innerHeight - margin) y = Math.max(margin, window.innerHeight - rect.height - margin);
     if (x !== menu.x || y !== menu.y) setMenu(current => (current ? { ...current, x, y } : current));
+    menuRef.current.querySelector<HTMLElement>('[role="menuitem"]:not([aria-disabled="true"]):not(:disabled)')?.focus();
+  }, [menu]);
+
+  useEffect(() => {
+    if (menu || !previousFocusRef.current) return;
+    previousFocusRef.current.focus();
+    previousFocusRef.current = null;
   }, [menu]);
 
   useEffect(() => {
@@ -135,7 +144,7 @@ export function ContextMenuProvider({ children }: { children: ReactNode }) {
       {menu && (
         <div
           ref={menuRef}
-          className="os-popover os-context-menu"
+          className="ui44-paper-menu os-popover os-context-menu"
           style={{ left: menu.x, top: menu.y }}
           role="menu"
           onContextMenu={event => event.preventDefault()}
@@ -148,7 +157,7 @@ export function ContextMenuProvider({ children }: { children: ReactNode }) {
                 key={entry.id}
                 href={entry.href}
                 role="menuitem"
-                className={entry.danger ? 'os-popover-item os-popover-item-danger' : 'os-popover-item'}
+                className={entry.danger ? 'ui44-paper-menu-item ui44-paper-menu-item-danger os-popover-item os-popover-item-danger' : 'ui44-paper-menu-item os-popover-item'}
                 onClick={() => { entry.onSelect?.(); setMenu(null); }}
               >
                 {entry.label}
@@ -158,7 +167,7 @@ export function ContextMenuProvider({ children }: { children: ReactNode }) {
                 key={entry.id}
                 type="button"
                 role="menuitem"
-                className={entry.danger ? 'os-popover-item os-popover-item-danger' : 'os-popover-item'}
+                className={entry.danger ? 'ui44-paper-menu-item ui44-paper-menu-item-danger os-popover-item os-popover-item-danger' : 'ui44-paper-menu-item os-popover-item'}
                 disabled={entry.disabled}
                 onClick={() => { entry.onSelect?.(); setMenu(null); }}
               >
@@ -169,7 +178,7 @@ export function ContextMenuProvider({ children }: { children: ReactNode }) {
         </div>
       )}
       {copiedToast && (
-        <div className="os-popover os-copy-toast" role="status" aria-live="polite">
+        <div className="ui44-floating-toast os-popover os-copy-toast" role="status" aria-live="polite">
           {copiedToast}
         </div>
       )}

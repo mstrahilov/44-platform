@@ -12,6 +12,18 @@ This is an operational companion referenced by the three active handoff document
 6. After deployment, run `SMOKE_BASE_URL=https://44os.com npm run test:smoke` and manually verify anonymous, fan, creator, and admin journeys at required widths.
 7. Reviewed-but-hidden surfaces are tested only in a review environment with `NEXT_PUBLIC_ENABLE_M13_REVIEWED_SURFACES=true` and `SMOKE_REVIEWED_SURFACES=1`; never enable that flag in tester/production deployment before UI approval.
 
+Known replay exception (July 15, 2026): the strict empty `npm run
+test:schema-replay` currently stops at the already-deployed
+`20260714010000_grant_olsten_admin_role.sql` bootstrap migration because it
+asserts that the real ØLSTEN profile exists. Do not weaken or rewrite that
+deployed migration during an unrelated release. Until the historical baseline
+is safely reconsolidated, an application-only release with no migration changes
+must record the failed strict replay, prove local/remote migration alignment and
+linked lint/dry-run, apply the remaining migrations to a disposable database
+with an explicit local-only profile fixture, and run the full pgTAP suite. This
+exception is evidence of a replay/runbook debt; it is not permission to skip
+schema verification for a release that changes migrations.
+
 ## Health and triage
 
 - `/api/health` checks application configuration and a bounded Supabase read. HTTP 200 means ready; HTTP 503 means configuration or Supabase is unavailable.

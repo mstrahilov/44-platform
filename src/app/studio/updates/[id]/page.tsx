@@ -6,6 +6,7 @@ import { HubHero, PageShell } from '@/components/Ui';
 import { useAuth } from '@/lib/useAuth';
 import { deleteItemUpdate, updateItemUpdate, type ItemUpdate } from '@/lib/domain/itemCommunity';
 import { supabase } from '@/lib/supabase';
+import { Ui44TextInput, Ui44Textarea } from '@/components/ui44/Inputs';
 
 export default function EditUpdatePage({ params }: { params: Promise<{ id: string }> }) {
   const { user, loading } = useAuth();
@@ -49,11 +50,11 @@ export default function EditUpdatePage({ params }: { params: Promise<{ id: strin
   if (loading || !user || !update) return <PageShell><div className="dashboard-page"><HubHero title="Edit Update" copy={error || 'Loading update…'} />{error && <Link href="/studio" className="os-button os-button-secondary">Back to Studio</Link>}</div></PageShell>;
 
   return <PageShell><div className="dashboard-page"><HubHero title="Edit Update" copy="Update this creator announcement." />
-    <form className="dashboard-form" onSubmit={save}><section className="dashboard-form-section"><div className="dashboard-form-step">
-      <label className="dashboard-field"><span className="dashboard-field-label">Title</span><input className="os-input-field" value={title} onChange={event => setTitle(event.target.value)} maxLength={160} /></label>
-      <label className="dashboard-field"><span className="dashboard-field-label">Update</span><textarea className="os-input-textarea" value={body} onChange={event => setBody(event.target.value)} maxLength={10000} /></label>
+    <form className="dashboard-form" onSubmit={save}><section className="dashboard-form-section"><div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible">
+      <label className="dashboard-field"><span className="dashboard-field-label">Title</span><Ui44TextInput className="os-input-field" value={title} onChange={event => setTitle(event.target.value)} maxLength={160} placeholder="Enter update title" /></label>
+      <label className="dashboard-field"><span className="dashboard-field-label">Update</span><Ui44Textarea className="os-input-textarea" value={body} onChange={event => setBody(event.target.value)} maxLength={10000} placeholder="Write update" /></label>
     </div></section>
-    {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
+    {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div>}
     <div className="dashboard-form-actions"><div className="dashboard-form-actions-left"><button className="os-button os-button-danger" type="button" onClick={remove} disabled={deleting}>{deleting ? 'Deleting…' : 'Delete Update'}</button></div><div className="dashboard-form-actions-right"><Link className="os-button os-button-secondary" href="/studio">Cancel</Link><button className="os-button os-button-primary" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button></div></div>
     </form></div></PageShell>;
 }

@@ -111,21 +111,26 @@ export async function getCatalogItem(identifier: string) {
 }
 
 export async function listRelatedCatalogItems(item: Product, limit = 4) {
+  const experience = getProductExperience(item);
+  const categoryId = item.item_category_id ?? null;
   const query = supabase
     .from('catalog_items')
     .select('*, creators:profiles!author_id(*)')
     .eq('status', 'published')
     .neq('id', item.id)
-    .limit(getProductExperience(item) === 'physical' ? 12 : limit);
+    .limit(Math.max(12, limit * 4));
   const result = await (item.author_id
     ? query.eq('author_id', item.author_id)
     : query.eq('creator', item.creator));
 
   if (result.error) throw result.error;
   const rows = (result.data ?? []) as Product[];
-  return getProductExperience(item) === 'physical'
-    ? rows.filter(candidate => getProductExperience(candidate) === 'physical').slice(0, limit)
-    : rows.slice(0, limit);
+  return rows
+    .filter(candidate => (
+      getProductExperience(candidate) === experience
+      && (!categoryId || candidate.item_category_id === categoryId)
+    ))
+    .slice(0, limit);
 }
 
 export async function getItemLibraryOwnership(userId: string, itemId: string) {

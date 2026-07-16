@@ -11,6 +11,8 @@ import { listVisibleLibraryItemIds } from '@/lib/domain/library';
 import { itemMatchesStoreType } from '@/lib/storeTaxonomy';
 import { listFollowedProfileIds } from '@/lib/domain/community';
 import { FilterPopover } from '@/components/FilterPopover';
+import { Ui44SectionArrow } from '@/components/ui44/Controls';
+import { Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
 
 const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
   music: 'music',
@@ -241,66 +243,65 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   ) : null;
   const storeTools = (
     <div className="page-header-tools">
-      {!frontDoor && <label className="page-search-control">
+      {!frontDoor && <label className="page-search-control ui44-composed-field ui44-composed-field-search">
         <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
-        <input value={query} onChange={event => setQuery(event.target.value)} placeholder={`Search ${surfaceName}`} aria-label={`Search ${surfaceName}`} />
+        <Ui44TextInput surface="bare" value={query} onChange={event => setQuery(event.target.value)} placeholder={`Search ${surfaceName}`} aria-label={`Search ${surfaceName}`} />
       </label>}
-      {renderActiveFilters('store-active-filters-header')}
-      <FilterPopover label={`Filter ${surfaceName}`}>
+      <FilterPopover label={`Filter ${surfaceName}`} active={hasActiveFilters}>
         {() => <>
           <label className="store-filter-group">
             <span className="store-filter-label">Category</span>
-            <select className="os-input-field" value={effectiveFilter} onChange={event => {
+            <Ui44SelectInput value={effectiveFilter} onChange={event => {
               setActiveFilter(event.target.value as StoreFilter);
               setTypeFilter('all');
               setTagFilter('all');
               setCreatorFilter('all');
             }}>
               {availableStoreFilters.map(filter => <option key={filter} value={filter}>{STORE_FILTER_LABELS[filter]}</option>)}
-            </select>
+            </Ui44SelectInput>
           </label>
           {selectedExperience && <label className="store-filter-group">
             <span className="store-filter-label">Type</span>
-            <select className="os-input-field" value={effectiveTypeFilter} onChange={event => {
+            <Ui44SelectInput value={effectiveTypeFilter} onChange={event => {
               setTypeFilter(event.target.value);
               setTagFilter('all');
               setCreatorFilter('all');
             }}>
               <option value="all">Any type</option>
               {availableTypes.map(type => <option key={type} value={type}>{type}</option>)}
-            </select>
+            </Ui44SelectInput>
           </label>}
           {availableTags.length > 0 && <label className="store-filter-group">
             <span className="store-filter-label">Tags</span>
-            <select className="os-input-field" value={effectiveTagFilter} onChange={event => { setTagFilter(event.target.value); setCreatorFilter('all'); }}>
+            <Ui44SelectInput value={effectiveTagFilter} onChange={event => { setTagFilter(event.target.value); setCreatorFilter('all'); }}>
               <option value="all">Any tag</option>
               {availableTags.map(tag => <option key={tag} value={tag}>{tag}</option>)}
-            </select>
+            </Ui44SelectInput>
           </label>}
           <label className="store-filter-group">
             <span className="store-filter-label">Creator</span>
-            <select className="os-input-field" value={effectiveCreatorFilter} onChange={event => setCreatorFilter(event.target.value)}>
+            <Ui44SelectInput value={effectiveCreatorFilter} onChange={event => setCreatorFilter(event.target.value)}>
               <option value="all">Any creator</option>
               {availableCreators.map(creator => <option key={creator.id} value={creator.id}>{creator.label}</option>)}
-            </select>
+            </Ui44SelectInput>
           </label>
           <label className="store-filter-group">
             <span className="store-filter-label">Features</span>
-            <select className="os-input-field" value={capabilityFilter} onChange={event => setCapabilityFilter(event.target.value as 'all' | 'achievements')}>
+            <Ui44SelectInput value={capabilityFilter} onChange={event => setCapabilityFilter(event.target.value as 'all' | 'achievements')}>
               <option value="all">Any feature</option>
               <option value="achievements">Achievements</option>
-            </select>
+            </Ui44SelectInput>
           </label>
           <label className="store-filter-group">
             <span className="store-filter-label">Price</span>
-            <select className="os-input-field" value={priceFilter} onChange={event => setPriceFilter(event.target.value as PriceFilter)}>
+            <Ui44SelectInput value={priceFilter} onChange={event => setPriceFilter(event.target.value as PriceFilter)}>
               <option value="all">Any price</option>
               <option value="free">Free</option>
               <option value="paid">Paid</option>
-            </select>
+            </Ui44SelectInput>
           </label>
           {hasActiveFilters && (
-            <button type="button" className="page-filter-option" onClick={() => {
+            <button type="button" className="ui44-paper-menu-item page-filter-option" onClick={() => {
               setActiveFilter('all');
               setPriceFilter('all');
               setTypeFilter('all');
@@ -319,8 +320,8 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   const pageTitle = category === 'all' && hasActiveFilters ? 'Browse' : copy.title;
   const storeHeader = (
     <div className="store-browse-header">
-      <HubHero title={pageTitle} copy={copy.copy} actions={storeTools} />
-      {renderActiveFilters('store-active-filters-mobile')}
+      <HubHero title={pageTitle} actions={storeTools} />
+      {renderActiveFilters('store-active-filters-below-header')}
     </div>
   );
 
@@ -366,7 +367,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
         <main className="app-page store-app-page">
           {storeHeader}
           {loading ? (
-            <EmptyMessage>Loading...</EmptyMessage>
+            <EmptyMessage status>Loading...</EmptyMessage>
           ) : error ? (
             <EmptyMessage>{error}</EmptyMessage>
           ) : visibleProducts.length === 0 ? (
@@ -393,7 +394,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
               <HubSection
                 key={shelf.filter}
                 title={shelf.title}
-                action={<button type="button" className="os-button os-button-primary store-shelf-action" aria-label={`View all ${shelf.title}`} onClick={() => browseCategory(shelf.filter)}><span className="store-shelf-action-label">View All</span><span className="store-shelf-action-chevron" aria-hidden="true" /></button>}
+                action={<Ui44SectionArrow label={`View all ${shelf.title}`} onClick={() => browseCategory(shelf.filter)} />}
               >
                   <ProductGrid>
                     {shelf.products.map(product => (
@@ -403,7 +404,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
               </HubSection>
                 ))}
                 {followingProducts.length > 0 && (
-                <HubSection title="Creators You Follow" action={<button type="button" className="os-button os-button-primary store-shelf-action" aria-label="View all from creators you follow" onClick={browseFollowedCreators}><span className="store-shelf-action-label">View All</span><span className="store-shelf-action-chevron" aria-hidden="true" /></button>}>
+                <HubSection title="Creators You Follow" action={<Ui44SectionArrow label="View all from creators you follow" onClick={browseFollowedCreators} />}>
                   <ProductGrid>
                     {followingProducts.map(product => (
                       <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />
@@ -424,7 +425,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
       <main className="app-page store-app-page">
         {storeHeader}
         {loading ? (
-          <EmptyMessage>Loading...</EmptyMessage>
+          <EmptyMessage status>Loading...</EmptyMessage>
         ) : error ? (
           <EmptyMessage>{error}</EmptyMessage>
         ) : visibleProducts.length === 0 ? (

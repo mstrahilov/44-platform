@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { PageShell, GlassPanel, HubSection, EmptyMessage } from '@/components/Ui';
+import { PageShell, HubSection, EmptyMessage } from '@/components/Ui';
+import { Ui44Panel } from '@/components/ui44/Spacing';
 import { useMusicPlayer, type MusicQueueTrack } from '@/components/MusicPlayer';
 import {
   getSyncedRadioPlayback,
@@ -80,12 +81,12 @@ export default function RadioPage() {
     <PageShell>
       <main className="radio-page">
         {loading ? (
-          <div className="radio-loading-state" aria-live="polite">
-            <EmptyMessage>Loading Radio…</EmptyMessage>
+          <div className="radio-loading-state" role="status" aria-live="polite">
+            <EmptyMessage status>Loading Radio…</EmptyMessage>
           </div>
         ) : bundle?.requiresSetup ? (
           <HubSection title="Radio Setup">
-            <GlassPanel className="radio-setup-card">
+            <Ui44Panel overflow="visible" className="radio-setup-card">
               <div className="radio-setup-copy">
                 <h2 className="os-type-panel-title">Radio needs its playlist table first.</h2>
                 <p className="os-type-body">
@@ -96,12 +97,12 @@ export default function RadioPage() {
               <div className="radio-setup-actions">
                 <Link href="/studio/radio" className="os-button os-button-primary">Open Radio Studio</Link>
               </div>
-            </GlassPanel>
+            </Ui44Panel>
           </HubSection>
         ) : (
           <>
             {bundle?.status ? (
-              <div className="dashboard-status dashboard-status-error" style={{ marginBottom: 'var(--os-space-5)' }}>
+              <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error ui44-status-block" role="alert">
                 {bundle.status}
               </div>
             ) : null}
@@ -146,7 +147,7 @@ export default function RadioPage() {
                     onClick={handleRadioAction}
                     disabled={!queue.length || playback.index < 0}
                   >
-                    {isSyncedTrackLive ? 'Stop' : 'Stream'}
+                    {isSyncedTrackLive ? 'Stop Radio' : 'Play Radio'}
                   </button>
                 </div>
               </div>

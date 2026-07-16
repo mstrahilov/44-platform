@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { PageShell } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
 import { OnboardingTip } from '@/components/OnboardingTip';
+import { Ui44TextInput, Ui44Textarea } from '@/components/ui44/Inputs';
 import { SocialAvatar, SocialProfileRow } from '@/components/Social';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { useAuth } from '@/lib/useAuth';
@@ -60,7 +61,7 @@ function setConversationReadAt(conversationId: string, value: string) {
 
 export default function MessagesPage() {
   return (
-    <Suspense fallback={<PageShell><div style={{ minHeight: '40vh' }} /></PageShell>}>
+    <Suspense fallback={<PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>}>
       <MessagesContent />
     </Suspense>
   );
@@ -304,7 +305,7 @@ function MessagesContent() {
     return (
       <PageShell>
         <main className="social-shell">
-          <div className="app-empty-text">Loading messages...</div>
+          <div className="app-empty-text ui44-state ui44-state-loading" role="status" aria-live="polite">Loading messages...</div>
         </main>
       </PageShell>
     );
@@ -315,7 +316,7 @@ function MessagesContent() {
         <main className="social-shell">
           <div className="app-empty-text">
             Sign in to read and send direct messages.
-            <div style={{ marginTop: 18 }}>
+            <div className="social-inbox-results-offset">
               <Link href="/login" className="os-button os-button-primary os-button-compact">Sign In</Link>
             </div>
           </div>
@@ -330,7 +331,7 @@ function MessagesContent() {
         <header className="social-header">
           <div className="social-title-row">
             <div>
-              <h1 className="os-type-display">Inbox</h1>
+              <h1 className="os-type-display ui44-type ui44-type-page-title">Inbox</h1>
             </div>
             <button type="button" className="os-button os-button-primary social-new-message-button" aria-label="New Message" onClick={() => {
               setComposing(true);
@@ -345,19 +346,18 @@ function MessagesContent() {
         </header>
 
         {!canInteract && <div className="app-empty-text">{communityIdentityMessage()}</div>}
-        {inboxError && <div className="dashboard-status dashboard-status-error" role="alert">{inboxError}</div>}
+        {inboxError && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{inboxError}</div>}
 
           <section className={mobileListOpen ? 'social-inbox social-inbox-mobile-list' : 'social-inbox social-inbox-mobile-thread'} aria-label="Inbox">
-            <aside className="social-inbox-list">
+            <aside className="social-inbox-list ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
               <OnboardingTip id="messages-refresh">
                 Inbox refreshes when you return to this window. Open a profile to start a new conversation.
               </OnboardingTip>
               {composing && (
                 <button
                   type="button"
-                  className="social-action social-inbox-draft"
+                  className="social-action social-inbox-draft ui44-list-row ui44-list-row-inbox ui44-list-row-interactive"
                   onClick={() => setComposing(true)}
-                  style={{ display: 'block', width: '100%', textAlign: 'left', color: 'inherit' }}
                 >
                   <SocialProfileRow
                     profile={selectedRecipient ?? { display_name: 'New Message' }}
@@ -372,7 +372,9 @@ function MessagesContent() {
                   <button
                     key={conversation.id}
                     type="button"
-                    className={unread ? 'social-action social-inbox-unread' : 'social-action'}
+                    className={unread
+                      ? 'social-action social-inbox-unread ui44-list-row ui44-list-row-inbox ui44-list-row-interactive ui44-list-row-selected'
+                      : 'social-action ui44-list-row ui44-list-row-inbox ui44-list-row-interactive'}
                     onClick={() => {
                       setActiveId(conversation.id);
                       setMobileListOpen(false);
@@ -382,7 +384,6 @@ function MessagesContent() {
                         setReadMap(getReadMap());
                       }
                     }}
-                    style={{ display: 'block', width: '100%', textAlign: 'left', color: 'inherit' }}
                   >
                     <SocialProfileRow
                       profile={other ?? { display_name: '44 Member' }}
@@ -405,18 +406,19 @@ function MessagesContent() {
                   <div className="social-compose-mobile-header">
                     <h2>New Message</h2>
                   </div>
-                  <div className="social-compose-to-row">
+                  <div className="social-compose-to-row ui44-composed-field ui44-composed-field-search">
                     <span className="social-compose-to-label">To:</span>
                     {selectedRecipient ? (
                       <button type="button" className="social-compose-recipient" onClick={() => setSelectedRecipient(null)}>
                         {authorDisplayName(selectedRecipient)} ×
                       </button>
                     ) : (
-                      <input
+                      <Ui44TextInput
+                        surface="bare"
                         className="social-compose-to-input"
                         value={recipientQuery}
                         onChange={event => setRecipientQuery(event.target.value)}
-                        placeholder="Name or username"
+                        placeholder="Search by name or username"
                         autoFocus
                       />
                     )}
@@ -430,7 +432,7 @@ function MessagesContent() {
                         <button
                           key={result.id}
                           type="button"
-                          className="social-compose-result"
+                          className="social-compose-result ui44-list-row ui44-list-row-inbox ui44-list-row-interactive"
                           onClick={() => {
                             setSelectedRecipient(result);
                             setRecipientQuery('');
@@ -447,14 +449,13 @@ function MessagesContent() {
                     </div>
                   )}
                   <form className="social-message-form social-message-form-compose" onSubmit={sendMessage}>
-                    <textarea
-                      className="os-input-textarea"
+                    <Ui44Textarea
+                      className="os-input-textarea ui44-composer-input"
                       rows={2}
                       value={body}
                       onChange={event => setBody(event.target.value)}
-                      placeholder={selectedRecipient ? 'Write a message...' : 'Choose someone to message.'}
+                      placeholder={selectedRecipient ? 'Write message' : 'Choose someone to message'}
                       disabled={sending || !selectedRecipient}
-                      style={{ minHeight: 54, flex: 1 }}
                     />
                     <button className="os-button os-button-primary os-button-compact" type="submit" disabled={!body.trim() || sending || !selectedRecipient}>
                       Send
@@ -463,7 +464,7 @@ function MessagesContent() {
                 </div>
               ) : activeConversation ? (
                 <>
-                  <div className="social-row social-message-thread-header">
+                  <div className="social-row social-message-thread-header ui44-list-row ui44-list-row-profile">
                     <SocialAvatar profile={otherMember} />
                     <div className="social-row-main">
                       <div className="social-author-name">{authorDisplayName(otherMember)}</div>
@@ -471,28 +472,27 @@ function MessagesContent() {
                     </div>
                   </div>
 
-                  <div className="social-message-list">
+                  <div className="social-message-list ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
                     {activeMessages.length === 0 ? (
                       <div className="app-empty-text">Start the conversation.</div>
                     ) : (
                       activeMessages.map(message => (
                         <div key={message.id} className={message.sender_id === user.id ? 'social-message social-message-own' : 'social-message'}>
                           <div>{message.body}</div>
-                          <div className="os-type-meta" style={{ opacity: 0.7, marginTop: 6 }}>{compactDate(message.created_at)}</div>
+                          <div className="os-type-meta social-message-time">{compactDate(message.created_at)}</div>
                         </div>
                       ))
                     )}
                   </div>
 
                   <form className="social-message-form" onSubmit={sendMessage}>
-                    <textarea
-                      className="os-input-textarea"
+                    <Ui44Textarea
+                      className="os-input-textarea ui44-composer-input"
                       rows={2}
                       value={body}
                       onChange={event => setBody(event.target.value)}
-                      placeholder={canInteract ? 'Write a message...' : 'Finish your profile to message.'}
+                      placeholder={canInteract ? 'Write message' : 'Finish your profile to message'}
                       disabled={sending}
-                      style={{ minHeight: 54, flex: 1 }}
                     />
                     <button className="os-button os-button-primary os-button-compact" type="submit" disabled={!body.trim() || sending}>
                       Send

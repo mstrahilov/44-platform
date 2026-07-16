@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
-import { PageShell, GlassPanel, HubHero, EmptyMessage, SectionHeader } from '@/components/Ui';
+import { PageShell, HubHero, EmptyMessage, SectionHeader } from '@/components/Ui';
+import { Ui44Panel } from '@/components/ui44/Spacing';
 import { useAuth } from '@/lib/useAuth';
 import { comparePublicCatalogItems, type Product } from '@/lib/products';
 import { getProductExperience } from '@/lib/experience';
@@ -110,7 +111,7 @@ export default function StudioPage() {
   }, [user]);
 
   if (loading) {
-    return <PageShell><div style={{ minHeight: '40vh' }} /></PageShell>;
+    return <PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>;
   }
 
   if (!user) {
@@ -122,7 +123,7 @@ export default function StudioPage() {
             copy="Creator tools, catalog health, and earnings live here once you sign in."
           />
           <EmptyMessage>Log in to use your creator Studio.</EmptyMessage>
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--os-space-4)' }}>
+          <div className="ui44-centered-action">
             <Link href="/login" className="os-button os-button-primary">Log In</Link>
           </div>
         </div>
@@ -134,16 +135,16 @@ export default function StudioPage() {
     return (
       <PageShell>
         <div className="dashboard-page">
-          <GlassPanel style={{ padding: 40 }}>
-            <h1 className="os-type-panel-title" style={{ marginBottom: 8 }}>Creator Access Required</h1>
-            <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)', marginBottom: 18 }}>
+          <Ui44Panel overflow="visible" className="ui44-creator-gate">
+            <h1 className="os-type-panel-title ui44-creator-gate-title">Creator Access Required</h1>
+            <p className="os-type-body ui44-creator-gate-copy">
               Studio publishing is available to approved creator accounts. Your fan account, Library, and Community access remain available while approval is pending.
             </p>
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <div className="ui44-creator-gate-actions">
               <Link href="/profile" className="os-button os-button-primary">Open Public Profile</Link>
               <Link href="/store" className="os-button os-button-ghost">Back to Store</Link>
             </div>
-          </GlassPanel>
+          </Ui44Panel>
         </div>
       </PageShell>
     );
@@ -193,23 +194,23 @@ export default function StudioPage() {
         </div>
 
         {studioStatus === 'submitted' && (
-          <div className="dashboard-status dashboard-status-warning studio-submission-banner">
+          <div className="dashboard-status dashboard-status-warning ui44-status ui44-status-warning studio-submission-banner" role="status">
             Submitted for review. Your release will remain in its current published state until an administrator approves the update.
           </div>
         )}
         {studioStatus === 'published' && (
-          <div className="dashboard-status dashboard-status-success studio-submission-banner">
+          <div className="dashboard-status dashboard-status-success ui44-status ui44-status-success studio-submission-banner" role="status">
             Published successfully. Your release is now live in the catalog.
           </div>
         )}
         {studioStatus === 'update-published' && (
-          <div className="dashboard-status dashboard-status-success studio-submission-banner">
+          <div className="dashboard-status dashboard-status-success ui44-status ui44-status-success studio-submission-banner" role="status">
             Update published successfully.
           </div>
         )}
 
         {overview.metricsError && (
-          <div className="dashboard-status dashboard-status-error">
+          <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">
             Some analytics could not be loaded: {overview.metricsError}
           </div>
         )}
@@ -217,15 +218,15 @@ export default function StudioPage() {
         <div className="studio-catalog-sections">
           {overview.events.length > 0 && <section className="dashboard-section" id="events">
             <SectionHeader title="Events" />
-            <div className="dashboard-list-surface">
+            <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
               {overview.events.map(event => (
-                <Link key={event.id} href={`/studio/events/${event.id}`} className="dashboard-list-row studio-item-row">
+                <Link key={event.id} href={`/studio/events/${event.id}`} className="dashboard-list-row studio-event-overview-row ui44-list-row ui44-list-row-dashboard ui44-list-row-wide-actions ui44-list-row-interactive">
                   <div className="dashboard-row-copy">
                     <div className="dashboard-row-title">{event.title}</div>
                     <div className="dashboard-row-subtitle">{formatEventDate(event.starts_at, event.timezone)} · {formatEventFormat(event.format)}</div>
                   </div>
                   <div className="dashboard-row-actions">
-                    {event.lifecycle_state === 'cancelled' && <span className="dashboard-status-pill studio-status-pill-draft">Cancelled</span>}
+                    {event.lifecycle_state === 'cancelled' && <span className="dashboard-status-pill studio-status-pill-draft ui44-badge">Cancelled</span>}
                   </div>
                 </Link>
               ))}
@@ -253,8 +254,8 @@ export default function StudioPage() {
 function StudioUpdatesSection({ updates }: { updates: CreatorUpdate[] }) {
   return <section className="dashboard-section" id="updates">
     <SectionHeader title="Updates" />
-    <div className="dashboard-list-surface">
-      {updates.map(update => <Link key={update.id} href={`/studio/updates/${update.id}`} className="dashboard-list-row studio-update-row">
+    <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
+      {updates.map(update => <Link key={update.id} href={`/studio/updates/${update.id}`} className="dashboard-list-row studio-update-row ui44-list-row ui44-list-row-studio ui44-list-row-interactive">
         <div className="dashboard-row-copy">
           <div className="dashboard-row-title">{update.title}</div>
           <div className="dashboard-row-subtitle">{new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(update.created_at))}</div>
@@ -267,12 +268,12 @@ function StudioUpdatesSection({ updates }: { updates: CreatorUpdate[] }) {
 
 function OverviewStatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <GlassPanel className="dashboard-metric-card">
+    <Ui44Panel overflow="visible" className="dashboard-metric-card">
       <div className="dashboard-overview-card-inner">
         <div className="os-type-meta">{label}</div>
         <div className="os-type-page-title">{value}</div>
       </div>
-    </GlassPanel>
+    </Ui44Panel>
   );
 }
 
@@ -280,7 +281,6 @@ const STUDIO_CREATE_ACTIONS = [
   { label: 'Add Music', href: '/studio/products/new?section=music' },
   { label: 'Add Book', href: '/studio/products/new?section=books' },
   { label: 'Add Event', href: '/studio/events/new' },
-  { label: 'Add Merch', href: '/studio/products/new?section=merch' },
   { label: 'Add Sample Pack', href: '/studio/products/new?section=sample-packs' },
   { label: 'Add Update', href: '/studio/updates/new' },
 ];
@@ -314,7 +314,7 @@ function StudioCreateMenu() {
       <div ref={rootRef} className={open ? 'page-filter-menu page-filter-menu-open' : 'page-filter-menu'}>
         <button
           type="button"
-          className="page-filter-button studio-create-button"
+          className="ui44-symbol-button ui44-symbol-button-add page-filter-button studio-create-button"
           aria-label="Add Studio content"
           title="Add Studio content"
           aria-haspopup="menu"
@@ -323,9 +323,9 @@ function StudioCreateMenu() {
         >
           <span aria-hidden="true">+</span>
         </button>
-        {open && <div className="page-filter-popover studio-create-popover" role="menu" aria-label="Add Studio content">
+        {open && <div className="ui44-paper-menu page-filter-popover studio-create-popover" role="menu" aria-label="Add Studio content">
           {STUDIO_CREATE_ACTIONS.map(action => (
-            <Link key={action.href} href={action.href} className="page-filter-option" role="menuitem" onClick={() => setOpen(false)}>
+            <Link key={action.href} href={action.href} className="ui44-paper-menu-item page-filter-option" role="menuitem" onClick={() => setOpen(false)}>
               {action.label}
             </Link>
           ))}
@@ -353,7 +353,7 @@ function StudioProductSection({
   return (
     <section className="dashboard-section" id={id}>
       <SectionHeader title={title} />
-      <div className="dashboard-list-surface">
+      <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
         {items.length === 0 ? (
           <div className="dashboard-empty">No {itemLabel}s yet.</div>
         ) : (
@@ -368,7 +368,7 @@ function StudioProductSection({
                 ? 'dashboard-status-pill dashboard-status-pill-success studio-publication-status'
                 : 'dashboard-status-pill studio-status-pill-draft studio-publication-status';
             return (
-            <Link key={product.id} href={`/studio/products/${product.id}`} className="dashboard-list-row studio-item-row">
+            <Link key={product.id} href={`/studio/products/${product.id}`} className="dashboard-list-row studio-item-row ui44-list-row ui44-list-row-studio ui44-list-row-interactive">
               {product.cover_url || product.hero_url ? <Image className="studio-item-artwork" src={product.cover_url || product.hero_url || ''} alt="" width={56} height={56} unoptimized /> : <div className="studio-item-artwork studio-item-artwork-empty" aria-hidden="true" />}
               <div className="dashboard-row-copy">
                 <div className="dashboard-row-title">{product.title}</div>
@@ -379,7 +379,7 @@ function StudioProductSection({
               </div>
               <div className="dashboard-row-actions">
                 {issueCount > 0 ? (
-                  <span title={health?.issue_messages.join(' ')} className="dashboard-status-pill studio-status-pill-draft">
+                  <span title={health?.issue_messages.join(' ')} className="dashboard-status-pill studio-status-pill-draft ui44-badge">
                     {issueCount} {issueCount === 1 ? 'issue' : 'issues'}
                   </span>
                 ) : null}

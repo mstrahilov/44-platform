@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { PageShell, GlassPanel, HubHero, EmptyMessage } from '@/components/Ui';
+import { PageShell, HubHero, EmptyMessage } from '@/components/Ui';
+import { Ui44Panel } from '@/components/ui44/Spacing';
 import { loadRadioBundle, type RadioPlayableTrack } from '@/lib/radio';
 import { useAuth } from '@/lib/useAuth';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
@@ -32,7 +33,7 @@ export default function StudioRadioPage() {
   }, [user]);
 
   if (loading) {
-    return <PageShell><div style={{ minHeight: '40vh' }} /></PageShell>;
+    return <PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>;
   }
 
   if (!user) {
@@ -50,12 +51,12 @@ export default function StudioRadioPage() {
     return (
       <PageShell>
         <div className="dashboard-page">
-          <GlassPanel style={{ padding: 28 }}>
-            <h1 className="os-type-panel-title" style={{ marginBottom: 8 }}>Creator Access Required</h1>
-            <p className="os-type-body" style={{ color: 'var(--os-color-ink-secondary)' }}>
+          <Ui44Panel overflow="visible" className="ui44-creator-gate ui44-creator-gate-compact">
+            <h1 className="os-type-panel-title ui44-creator-gate-title">Creator Access Required</h1>
+            <p className="os-type-body ui44-text-secondary">
               Radio lives in Studio for creator and admin accounts.
             </p>
-          </GlassPanel>
+          </Ui44Panel>
         </div>
       </PageShell>
     );
@@ -71,17 +72,20 @@ export default function StudioRadioPage() {
         />
 
         {status ? (
-          <div className={requiresSetup ? 'dashboard-status dashboard-status-error' : 'dashboard-status dashboard-status-success'} style={{ marginBottom: 'var(--os-space-5)' }}>
+          <div
+            className={`${requiresSetup ? 'dashboard-status dashboard-status-error ui44-status ui44-status-error' : 'dashboard-status dashboard-status-success ui44-status ui44-status-success'} ui44-status-block`}
+            role={requiresSetup ? 'alert' : 'status'}
+          >
             {status}
           </div>
         ) : null}
 
         {fetching ? (
-          <EmptyMessage>Loading Radio playlist…</EmptyMessage>
+          <EmptyMessage status>Loading Radio playlist…</EmptyMessage>
         ) : tracks.length ? (
-          <div className="dashboard-list-surface">
+          <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
             {tracks.map((track, index) => (
-              <div key={track.playlistEntryId} className="dashboard-list-row" style={{ gridTemplateColumns: '56px minmax(0, 1fr) auto' }}>
+              <div key={track.playlistEntryId} className="dashboard-list-row ui44-list-row ui44-list-row-dashboard ui44-list-row-radio">
                 <div className="radio-playlist-index">{index + 1}</div>
                 <div className="dashboard-row-copy">
                   <div className="dashboard-row-title">{track.title}</div>

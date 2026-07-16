@@ -6,6 +6,7 @@ import type { StudioCatalogSectionId } from '@/lib/studioCatalog';
 import { getAchievementIconPath } from '@/lib/achievementIcons';
 import { replaceStudioReleaseFeatures } from '@/lib/domain/studioPublishing';
 import { replaceStudioReleaseVideoEmbeds, type ReleaseVideoEmbed } from '@/lib/domain/releaseFeatures';
+import { Ui44CheckboxInput, Ui44TextInput } from '@/components/ui44/Inputs';
 
 export type DraftAchievement = {
   code: string;
@@ -214,18 +215,6 @@ export function buildAchievementRows(productId: string, state: ReleaseFeatureSta
     });
 }
 
-export function buildFeatureAssetRows(productId: string, state: ReleaseFeatureState) {
-  return enabledBonusItems(state).map((item, index) => ({
-    item_id: productId,
-    asset_type: 'bonus_content',
-    title: item.title,
-    file_url: null,
-    storage_path: item.fileUrl,
-    is_downloadable: true,
-    sort_order: index,
-  }));
-}
-
 export function featureAssetTypes() {
   return ['bonus_content', 'commentary_audio', 'behind_the_scenes', 'bonus_free', 'bonus_achievement'];
 }
@@ -381,7 +370,7 @@ export function StudioReleaseFeatures({
             type="button"
             role="switch"
             aria-checked={achievementsOn}
-            className={achievementsOn ? 'settings-toggle settings-toggle-on' : 'settings-toggle'}
+            className={achievementsOn ? 'settings-toggle settings-toggle-on ui44-switch ui44-switch-on' : 'settings-toggle ui44-switch'}
             onClick={toggleAchievements}
           />
         ) : undefined}
@@ -391,19 +380,18 @@ export function StudioReleaseFeatures({
         <p className="library-empty-text">Achievements are limited to music releases in v1.0.</p>
       ) : achievementsOn ? (
         <div className="studio-achievements-content">
-          <div className="dashboard-achievement-picker dashboard-list-surface library-achievement-list">
+          <div className="dashboard-achievement-picker dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip library-achievement-list ui44-achievement-list ui44-achievement-list-studio">
             {state.achievements.map(achievement => (
-              <label key={achievement.code} className="dashboard-achievement-choice-row dashboard-list-row library-achievement-row">
-                <span className="library-achievement-icon studio-achievement-icon" aria-hidden="true">
+              <label key={achievement.code} className={`dashboard-achievement-choice-row dashboard-list-row library-achievement-row ui44-achievement-row ui44-achievement-row-choice${achievement.enabled || achievement.code === OVERACHIEVER_CODE ? ' ui44-achievement-row-unlocked' : ' ui44-achievement-row-locked'}`}>
+                <span className="library-achievement-icon studio-achievement-icon ui44-achievement-icon" aria-hidden="true">
                   <AchievementIconGlyph code={achievement.code} label={achievement.title} />
                 </span>
-                <span className="dashboard-achievement-copy">
-                  <span className="os-type-card-title">{achievement.title}</span>
-                  <span className="os-type-body-small">{achievement.description}</span>
+                <span className="dashboard-achievement-copy ui44-achievement-copy">
+                  <span className="os-type-card-title ui44-achievement-title">{achievement.title}</span>
+                  <span className="os-type-body-small ui44-achievement-secondary">{achievement.description}</span>
                 </span>
-                <span className="dashboard-achievement-toggle">
-                  <input
-                    type="checkbox"
+                <span className="dashboard-achievement-toggle ui44-achievement-control">
+                  <Ui44CheckboxInput
                     checked={achievement.enabled || achievement.code === OVERACHIEVER_CODE}
                     disabled={achievement.code === OVERACHIEVER_CODE}
                     onChange={() => toggleAchievement(achievement.code)}
@@ -421,19 +409,19 @@ export function StudioReleaseFeatures({
           <SectionHeader
             title="Video Embed"
             description="Embed a video with this release."
-            action={<button type="button" role="switch" aria-checked={state.videoEmbedsEnabled} className={state.videoEmbedsEnabled ? 'settings-toggle settings-toggle-on' : 'settings-toggle'} onClick={toggleVideoEmbeds} />}
+            action={<button type="button" role="switch" aria-checked={state.videoEmbedsEnabled} className={state.videoEmbedsEnabled ? 'settings-toggle settings-toggle-on ui44-switch ui44-switch-on' : 'settings-toggle ui44-switch'} onClick={toggleVideoEmbeds} />}
           />
           {state.videoEmbedsEnabled && (
-            <div className="dashboard-list-surface studio-feature-panel"><div className="studio-video-embed-fields">
+            <div className="dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-visible studio-feature-panel"><div className="studio-video-embed-fields">
               {normalizeVideoEmbeds(state.videoEmbeds).map((embed, index) => (
                 <div className="studio-video-embed-row" key={`video-embed-${index}`}>
                   <label className="dashboard-field">
                     <span className="dashboard-field-label">Title</span>
-                    <input className="os-input-field" value={embed.title} maxLength={120} placeholder="Music video" onChange={event => updateVideoEmbed(index, { title: event.target.value })} />
+                    <Ui44TextInput className="os-input-field" value={embed.title} maxLength={120} placeholder="Enter video title" onChange={event => updateVideoEmbed(index, { title: event.target.value })} />
                   </label>
                   <label className="dashboard-field">
                     <span className="dashboard-field-label">YouTube Video URL</span>
-                    <input className="os-input-field" type="url" value={embed.url} placeholder="https://youtu.be/..." onChange={event => updateVideoEmbed(index, { url: event.target.value })} />
+                    <Ui44TextInput className="os-input-field" type="url" value={embed.url} placeholder="Enter YouTube video URL" onChange={event => updateVideoEmbed(index, { url: event.target.value })} />
                   </label>
                   {state.videoEmbeds.length > 1 && <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => removeVideoEmbed(index)}>Remove</button>}
                 </div>

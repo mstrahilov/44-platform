@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { EmptyMessage, GlassPanel, HubHero, PageShell, SectionHeader } from '@/components/Ui';
+import { EmptyMessage, HubHero, PageShell, SectionHeader } from '@/components/Ui';
+import { Ui44Panel } from '@/components/ui44/Spacing';
 import { useAuth } from '@/lib/useAuth';
 import { loadStudioProfile } from '@/lib/studioProfiles';
 import {
@@ -76,7 +77,7 @@ export default function AdminPage() {
   }
 
   if (authLoading || loading) {
-    return <PageShell><div className="admin-page-loading" aria-label="Loading administrator workspace" />;</PageShell>;
+    return <PageShell><div className="admin-page-loading ui44-state ui44-state-loading" role="status" aria-label="Loading administrator workspace" />;</PageShell>;
   }
 
   if (!authorized) {
@@ -97,10 +98,10 @@ export default function AdminPage() {
             <strong>Trusted testing is active</strong>
             <p>Creator review, notification delivery, and payments remain safely disabled while this workspace is reviewed.</p>
           </div>
-          <span className="admin-status-pill">Review gate off</span>
+          <span className="admin-status-pill ui44-badge">Review gate off</span>
         </div>
 
-        {error && <div className="dashboard-status dashboard-status-error" role="alert">{error}</div>}
+        {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div>}
 
         <div className="admin-stat-grid" aria-label="Administrator status summary">
           <AdminStat label="Pending submissions" value={queue.length} detail="Awaiting review" tone={queue.length > 0 ? 'attention' : 'quiet'} />
@@ -111,11 +112,11 @@ export default function AdminPage() {
 
         <div className="admin-workspace-grid">
           <div className="admin-primary-column">
-            <GlassPanel className="admin-section-panel">
+            <Ui44Panel overflow="visible" className="admin-section-panel">
               <SectionHeader
                 title="Publishing review"
                 description="Review creator submissions without changing the currently approved public Item."
-                action={<span className="admin-section-badge">Coming after approval</span>}
+                action={<span className="admin-section-badge ui44-badge">Coming after approval</span>}
               />
               <div className="admin-section-toolbar">
                 <div>
@@ -148,13 +149,13 @@ export default function AdminPage() {
                   ))}
                 </div>
               )}
-            </GlassPanel>
+            </Ui44Panel>
 
-            <GlassPanel className="admin-section-panel">
+            <Ui44Panel overflow="visible" className="admin-section-panel">
               <SectionHeader
                 title="Operational errors"
                 description="Sanitized request-error events captured from the application and Vercel fallback logs."
-                action={<span className="admin-section-badge">Admin only</span>}
+                action={<span className="admin-section-badge ui44-badge">Admin only</span>}
               />
               {errors.length === 0 ? (
                 <div className="admin-empty-state admin-empty-state-compact">
@@ -166,28 +167,28 @@ export default function AdminPage() {
                   {errors.map(event => <ErrorRow key={event.id} event={event} />)}
                 </div>
               )}
-            </GlassPanel>
+            </Ui44Panel>
           </div>
 
           <aside className="admin-secondary-column" aria-label="Administrator details">
-            <GlassPanel className="admin-section-panel admin-controls-panel">
+            <Ui44Panel overflow="visible" className="admin-section-panel admin-controls-panel">
               <SectionHeader title="Runtime controls" description="Activation switches remain fail-closed until the corresponding workflow is approved." />
               <RuntimeControl label="Creator review" value="Disabled" detail="Trusted testing" />
               <RuntimeControl label="Notification delivery" value="Disabled" detail="Transactional outbox only" />
               <RuntimeControl label="Stripe checkout" value="Disabled" detail="Provider setup pending" />
               <RuntimeControl label="PayPal payouts" value="Disabled" detail="Provider setup pending" />
-            </GlassPanel>
+            </Ui44Panel>
 
-            <GlassPanel className="admin-section-panel admin-detail-panel">
+            <Ui44Panel overflow="visible" className="admin-section-panel admin-detail-panel">
               <SectionHeader title="Submission detail" description="Select a queue item to inspect its proposed release and audit history." />
               {!selectedSubmission ? (
                 <div className="admin-detail-empty">Select a submission from the queue to inspect it here.</div>
               ) : detailLoading ? (
-                <div className="admin-detail-empty">Loading submission history…</div>
+                <div className="admin-detail-empty ui44-state ui44-state-loading" role="status" aria-live="polite">Loading submission history…</div>
               ) : (
                 <SubmissionDetail submission={selectedSubmission} detail={detail} />
               )}
-            </GlassPanel>
+            </Ui44Panel>
           </aside>
         </div>
       </main>
@@ -197,11 +198,11 @@ export default function AdminPage() {
 
 function AdminStat({ label, value, detail, tone }: { label: string; value: string | number; detail: string; tone: 'attention' | 'quiet' | 'locked' }) {
   return (
-    <GlassPanel className={`admin-stat-card admin-stat-card-${tone}`}>
+    <Ui44Panel overflow="visible" className={`admin-stat-card admin-stat-card-${tone}`}>
       <span className="admin-stat-label">{label}</span>
       <strong>{value}</strong>
       <span className="admin-stat-detail">{detail}</span>
-    </GlassPanel>
+    </Ui44Panel>
   );
 }
 
@@ -243,7 +244,7 @@ function SubmissionDetail({ submission, detail }: { submission: AdminSubmissionQ
           <span className="admin-detail-eyebrow">{submission.submission_kind === 'revision' ? 'Revision' : 'New release'}</span>
           <h3>{item?.title || submission.item_title}</h3>
         </div>
-        <span className="admin-status-pill">Pending</span>
+        <span className="admin-status-pill ui44-badge">Pending</span>
       </div>
       <dl className="admin-detail-facts">
         <div><dt>Creator</dt><dd>{submission.creator_name || 'Unknown'}</dd></div>

@@ -12,6 +12,7 @@ import { creatorHref } from '@/lib/platform';
 import { useAuth } from '@/lib/useAuth';
 import { hideLibraryItem, listVisibleLibraryItems } from '@/lib/domain/library';
 import { FilterPopover } from '@/components/FilterPopover';
+import { Ui44TextInput } from '@/components/ui44/Inputs';
 
 const CATEGORY_EXPERIENCE: Partial<Record<LibraryCategory, ProductExperience>> = {
   music: 'music',
@@ -111,16 +112,16 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
   }, [activeFilter, visibleRows]);
 
   if (authLoading) {
-    return <PageShell><CenteredMessage>Loading...</CenteredMessage></PageShell>;
+    return <PageShell><CenteredMessage status>Loading...</CenteredMessage></PageShell>;
   }
 
   if (!user) {
     return (
       <PageShell>
         <main className="app-page">
-          <HubHero title="Library" copy="Saved music, books, sample packs, and purchases live here once you sign in." />
+          <HubHero title="Library" />
           <EmptyMessage>Log in to save items to your Library.</EmptyMessage>
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--os-space-4)' }}>
+          <div className="ui44-centered-action">
             <Link className="os-button os-button-primary" href="/login">Log In</Link>
           </div>
         </main>
@@ -129,7 +130,7 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
   }
 
   if (loading) {
-    return <PageShell><CenteredMessage>Loading...</CenteredMessage></PageShell>;
+    return <PageShell><CenteredMessage status>Loading...</CenteredMessage></PageShell>;
   }
 
   async function removeLibraryRow(row: LibraryRow) {
@@ -148,17 +149,16 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
       <main className="app-page">
         <HubHero
           title="Library"
-          copy="Everything you have saved, added, or purchased."
           actions={(
             <div className="page-header-tools">
-              <label className="page-search-control library-filter-control">
+              <label className="page-search-control library-filter-control ui44-composed-field ui44-composed-field-search">
                 <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
-                <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Filter Library" aria-label="Filter Library" />
+                <Ui44TextInput surface="bare" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search Library" aria-label="Search Library" />
               </label>
-              <FilterPopover label="Filter Library">
+              <FilterPopover label="Filter Library" active={activeFilter !== 'all'}>
                 {({ close }) => <>
                   {(['all', ...availableFilters] as LibraryFilter[]).map(filter => (
-                    <button key={filter} type="button" className={activeFilter === filter ? 'page-filter-option page-filter-option-active' : 'page-filter-option'} onClick={event => {
+                    <button key={filter} type="button" className={activeFilter === filter ? 'ui44-paper-menu-item ui44-paper-menu-item-selected page-filter-option page-filter-option-active' : 'ui44-paper-menu-item page-filter-option'} onClick={event => {
                       setActiveFilter(filter);
                       event.currentTarget.blur();
                       close();
@@ -178,7 +178,7 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
         ) : (
           <div className="library-item-groups">
             {visibleRowGroups.map((group, index) => (
-              <div className="app-grid" key={`${getProductExperience(group[0].products!)}-${index}`}>
+              <div className="app-grid ui44-catalog-grid" key={`${getProductExperience(group[0].products!)}-${index}`}>
                 {group.map(row => (
                   <LibraryCard key={row.id} row={row} onRemove={removeLibraryRow} />
                 ))}
@@ -225,16 +225,16 @@ function LibraryCard({ row, onRemove }: { row: LibraryRow; onRemove: (row: Libra
   ];
 
   return (
-    <Link className="product-tile" href={href} onContextMenu={event => openContextMenu(event, entries)}>
-      <span className={`product-tile-art product-tile-art-${experience === 'book' ? 'book' : 'square'}`}>
+    <Link className="product-tile ui44-catalog-card" href={href} onContextMenu={event => openContextMenu(event, entries)}>
+      <span className={`product-tile-art product-tile-art-${experience === 'book' ? 'book' : 'square'} ui44-catalog-art`}>
         {image && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={image} alt="" loading="lazy" decoding="async" />
         )}
       </span>
-      <span className="product-tile-info">
-        <span className="product-tile-title">{product.title}</span>
-        <span className="product-tile-subtitle">{creatorName}</span>
+      <span className="product-tile-info ui44-catalog-copy">
+        <span className="product-tile-title ui44-catalog-title">{product.title}</span>
+        <span className="product-tile-subtitle ui44-catalog-subheadline">{creatorName}</span>
       </span>
     </Link>
   );

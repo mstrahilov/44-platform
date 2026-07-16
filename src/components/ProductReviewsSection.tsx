@@ -7,7 +7,9 @@ import { creatorHref } from '@/lib/platform';
 import { trackProductAchievementTrigger } from '@/lib/achievementTracking';
 import Link from 'next/link';
 import { SectionHeader } from '@/components/Ui';
-import { listItemReviews, saveItemReview, type ItemReview } from '@/lib/domain/itemCommunity';
+import { SocialTrashIcon } from '@/components/Social';
+import { deleteItemReview, listItemReviews, saveItemReview, type ItemReview } from '@/lib/domain/itemCommunity';
+import { Ui44Textarea } from '@/components/ui44/Inputs';
 
 type ProductReview = ItemReview;
 
@@ -28,6 +30,7 @@ export function ProductReviewsSection({
   const [composerOpen, setComposerOpen] = useState(false);
   const [body, setBody] = useState('');
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState('');
   const [error, setError] = useState('');
 
   async function loadReviews() {
@@ -50,9 +53,12 @@ export function ProductReviewsSection({
   );
 
   useEffect(() => {
-    if (!ownReview || composerOpen) return;
-    Promise.resolve().then(() => setBody(ownReview.body ?? ''));
-  }, [composerOpen, ownReview]);
+    if (!ownReview) return;
+    Promise.resolve().then(() => {
+      setComposerOpen(false);
+      setBody('');
+    });
+  }, [ownReview]);
 
   async function submitReview(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -84,14 +90,33 @@ export function ProductReviewsSection({
     await loadReviews();
   }
 
+  async function removeReview(review: ProductReview) {
+    if (!user || review.user_id !== user.id || deletingId) return;
+    if (!window.confirm('Delete this review? This cannot be undone.')) return;
+    setDeletingId(review.id);
+    setError('');
+    try {
+      await deleteItemReview(review.id);
+      setReviews(current => current.filter(item => item.id !== review.id));
+      setBody('');
+      setComposerOpen(false);
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Could not delete your review.');
+    } finally {
+      setDeletingId('');
+    }
+  }
+
   return (
     <div className="view-section">
       <SectionHeader
         title="Reviews"
-        action={
+        action={!ownReview ? (
           <button
             type="button"
-            className="os-button os-button-secondary os-button-compact"
+            className="ui44-symbol-button ui44-symbol-button-add page-filter-button product-review-add"
+            aria-label="Leave a review"
+            title="Leave a review"
             onClick={() => {
               if (!user) {
                 router.push('/login');
@@ -101,15 +126,16 @@ export function ProductReviewsSection({
             }}
             disabled={!canPost}
           >
-            {composerOpen ? 'Cancel' : ownReview ? 'Edit Review' : 'Post Review'}
+            <span aria-hidden="true">+</span>
           </button>
-        }
+        ) : undefined}
       />
 
       {composerOpen && canPost && (
-        <div className="dashboard-list-surface item-community-surface" style={{ marginBottom: 16 }}>
-          <form className="item-community-composer item-community-composer-surface" onSubmit={submitReview}>
-            <textarea
+        <div className="dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip item-community-surface ui44-section-gap-after-small">
+          <form className="item-community-composer item-community-composer-surface ui44-composed-field ui44-composed-field-editor" onSubmit={submitReview}>
+            <Ui44Textarea
+              surface="bare"
               value={body}
               onChange={event => setBody(event.target.value)}
               placeholder="What should someone know before they get this?"
@@ -118,7 +144,7 @@ export function ProductReviewsSection({
               disabled={saving}
             />
             <div className="item-community-composer-actions">
-              <div className="os-type-meta" style={{ color: 'var(--os-color-ink-muted)' }}>
+              <div className="os-type-meta ui44-text-muted">
                 Reviews help people decide if this item is right for them.
               </div>
               <button className="os-button os-button-primary os-button-compact" type="submit" disabled={saving || !body.trim()}>
@@ -129,20 +155,20 @@ export function ProductReviewsSection({
         </div>
       )}
 
-      {error && <div className="dashboard-status dashboard-status-error" style={{ marginBottom: 16 }}>{error}</div>}
+      {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error ui44-section-gap-after-small" role="alert">{error}</div>}
 
       {reviews.length === 0 ? (
         <p className="app-empty-text view-content-empty">No reviews yet.</p>
       ) : (
-        <div className="dashboard-list-surface item-community-surface product-review-list-surface">
+        <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip item-community-surface product-review-list-surface">
           {reviews.map(review => {
             const reviewer = resolveReviewer(review);
             return (
-            <article key={review.id} className="product-review-row">
+            <article key={review.id} className="product-review-row ui44-list-row ui44-list-row-review">
               <div className="product-domain-head">
                 <div className="product-review-copy">
                   <Link href={creatorHref(reviewer ?? null)} className="product-review-author">
-                    <span className="product-review-avatar">
+                    <span className="product-review-avatar ui44-identity-avatar ui44-identity-avatar-inline">
                       {reviewer?.avatar_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={reviewer.avatar_url} alt="" />
@@ -153,6 +179,17 @@ export function ProductReviewsSection({
                     <span>{reviewer?.display_name || reviewer?.username || '44 Member'}</span>
                   </Link>
                 </div>
+                {review.user_id === user?.id ? (
+                  <button
+                    type="button"
+                    className="social-action social-action-danger product-review-delete"
+                    onClick={() => { void removeReview(review); }}
+                    aria-label="Delete review"
+                    disabled={deletingId === review.id}
+                  >
+                    <SocialTrashIcon />
+                  </button>
+                ) : null}
               </div>
               <p className="os-type-body product-domain-body">{review.body}</p>
             </article>

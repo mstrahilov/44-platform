@@ -10,6 +10,7 @@ import { normalizeTaxonomyValue } from '@/lib/taxonomy';
 import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { createDiscussion } from '@/lib/domain/community';
+import { Ui44Textarea } from '@/components/ui44/Inputs';
 
 function buildPostTitle(body: string) {
   const cleanBody = body.trim().replace(/\s+/g, ' ');
@@ -23,7 +24,7 @@ function buildSlug(body: string) {
 
 export default function NewCommunityThreadPage() {
   return (
-    <Suspense fallback={<PageShell><div style={{ minHeight: '40vh' }} /></PageShell>}>
+    <Suspense fallback={<PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>}>
       <NewCommunityThreadContent />
     </Suspense>
   );
@@ -80,43 +81,42 @@ function NewCommunityThreadContent() {
   }
 
   if (loading || !user) {
-    return <PageShell><div style={{ minHeight: '40vh' }} /></PageShell>;
+    return <PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>;
   }
 
   return (
     <PageShell>
-      <div style={{ maxWidth: 720, margin: '0 auto', display: 'grid', gap: 24 }}>
-        <div className="dashboard-header">
-          <div className="dashboard-header-copy">
-            <h1 className="os-type-display">New Post</h1>
+      <div className="community-new-layout">
+        <div className="dashboard-header ui44-page-header">
+          <div className="dashboard-header-copy ui44-page-header-copy">
+            <h1 className="os-type-display ui44-type ui44-type-page-title">New Post</h1>
           </div>
           <Link href="/community" className="os-button os-button-secondary os-button-compact">Back</Link>
         </div>
 
-        <div className="dashboard-list-surface" style={{ padding: 'var(--os-space-6, 28px)' }}>
-          <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 20 }}>
+        <div className="dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip community-new-surface">
+          <form className="ui44-form-stack" onSubmit={handleSubmit}>
             <label>
-              <div className="os-type-card-title" style={{ marginBottom: 8 }}>Message</div>
-              <textarea
-                className="os-input-textarea"
+              <div className="os-type-card-title ui44-form-label">Message</div>
+              <Ui44Textarea
+                className="os-input-textarea ui44-form-textarea-tall"
                 rows={10}
                 value={body}
                 onChange={event => setBody(event.target.value)}
-                placeholder="Share the thought, question, or idea."
-                style={{ minHeight: 200 }}
+                placeholder="Write your post"
               />
             </label>
-            <div className="os-type-body-small" style={{ color: 'var(--os-color-ink-secondary)' }}>
+            <div className="os-type-body-small ui44-form-help">
               {bodyHint}
             </div>
 
             {error && (
-              <div className="dashboard-status dashboard-status-error">
+              <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">
                 {error}
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: 12, justifySelf: 'start' }}>
+            <div className="ui44-form-actions">
               <button className="os-button os-button-primary" type="submit" disabled={saving}>
                 {saving ? 'Posting…' : 'Publish Post'}
               </button>

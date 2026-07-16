@@ -25,6 +25,7 @@ import { ExternalLinksEditor } from '@/components/ExternalLinksEditor';
 import { activeExternalLinkDrafts, listExternalLinkPlatforms, materializeExternalLinkDrafts, replaceOwnedItemExternalLinks, validateExternalLinkDrafts, type ExternalLinkDraft, type ExternalLinkPlatform } from '@/lib/domain/externalLinks';
 import { saveStudioBookContent, replaceStudioSampleFiles } from '@/lib/domain/nativeContent';
 import { StudioBookFields, StudioSamplePreviewFields, type DraftSamplePreview } from '@/components/StudioNativeContentFields';
+import { Ui44CheckboxInput, Ui44SelectInput, Ui44TextInput, Ui44Textarea } from '@/components/ui44/Inputs';
 import { clearStudioFormRecovery, readStudioFormRecovery, writeStudioFormRecovery } from '@/lib/studioFormRecovery';
 
 function buildSlug(title: string) {
@@ -95,7 +96,7 @@ function productAssetTypeForSection(sectionId: StudioCatalogSectionId) {
 
 export default function NewProductPage() {
   return (
-    <Suspense fallback={<PageShell><CenteredMessage>Loading...</CenteredMessage></PageShell>}>
+    <Suspense fallback={<PageShell><CenteredMessage status>Loading...</CenteredMessage></PageShell>}>
       <NewProductContent />
     </Suspense>
   );
@@ -124,7 +125,7 @@ function NewProductContent() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  const [productType, setProductType] = useState(defaultProductType);
+  const [productType, setProductType] = useState('');
   const [storeTypeId, setStoreTypeId] = useState('');
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [taxonomyTypes, setTaxonomyTypes] = useState<Database['public']['Tables']['item_types']['Row'][]>([]);
@@ -145,8 +146,8 @@ function NewProductContent() {
   const [samplePreviews, setSamplePreviews] = useState<DraftSamplePreview[]>([]);
   const [year, setYear] = useState('');
   const [releaseDate, setReleaseDate] = useState('');
-  const [trackCount, setTrackCount] = useState('1');
-  const [tracks, setTracks] = useState<DraftTrack[]>([createDraftTrack()]);
+  const [trackCount, setTrackCount] = useState('');
+  const [tracks, setTracks] = useState<DraftTrack[]>([]);
   const [featureState, setFeatureState] = useState(() => createReleaseFeatureState(section.id));
   const [externalLinks, setExternalLinks] = useState<ExternalLinkDraft[]>([]);
   const [externalLinksEnabled, setExternalLinksEnabled] = useState(false);
@@ -256,14 +257,18 @@ function NewProductContent() {
       setError('Please fill out the title and choose an Item Type.');
       return;
     }
+    if (isMusicProduct && (!releaseDate || !trackCount)) {
+      setError('Choose a release date and total track count.');
+      return;
+    }
     if (!rightsConfirmed) {
       setError('Confirm that you own this work or have permission to publish it.');
       return;
     }
 
-    const visibleTracks = tracks.slice(0, Number(trackCount || '0')).map((track, index, list) => ({
+    const visibleTracks = tracks.slice(0, Number(trackCount || '0')).map(track => ({
       ...track,
-      title: track.title.trim() || (list.length === 1 ? cleanTitle : ''),
+      title: track.title.trim(),
     }));
     if (isMusicProduct) {
       const hasInvalidTrack = visibleTracks.some(track => !track.title.trim() || !track.audioUrl.trim());
@@ -461,7 +466,7 @@ function NewProductContent() {
   }
 
   if (loading || !user) {
-    return <PageShell><div style={{ minHeight: '40vh' }} /></PageShell>;
+    return <PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>;
   }
 
   return (
@@ -477,46 +482,91 @@ function NewProductContent() {
             <section className="dashboard-form-section">
               <SectionHeader title="Details" description="Set the core title, type, pricing, artwork, and main details for this item." />
 
-              <div className="dashboard-form-step">
+              <div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible">
 
               <label className="dashboard-field">
                 <div className="dashboard-field-label">{isMerchProduct ? 'Product Name' : 'Title'}</div>
-                <input className="os-input-field" value={title} onChange={event => setTitle(event.target.value)} placeholder={isMerchProduct ? 'Example: 44 Studio Hoodie' : 'Example: Here Comes The Feeling'} />
+                <Ui44TextInput
+                  className="os-input-field"
+                  value={title}
+                  onChange={event => setTitle(event.target.value)}
+                  placeholder={isMerchProduct ? 'Enter product name' : section.id === 'books' ? 'Enter book title' : section.id === 'assets' ? 'Enter sample pack title' : 'Enter release title'}
+                />
               </label>
 
-              {(section.id === 'books' || section.id === 'assets') ? (
-                <label className="dashboard-field">
-                  <div className="dashboard-field-label">Description</div>
-                  <textarea className="os-input-field dashboard-textarea" value={description} onChange={event => setDescription(event.target.value)} />
-                </label>
-              ) : null}
-
-              <div className="dashboard-form-grid dashboard-form-grid-3">
-                <label className="dashboard-field">
-                  <div className="dashboard-field-label">{isMerchProduct ? 'Drop Year' : 'Release Date'}</div>
-                  {isMerchProduct ? <input className="os-input-field" value={year} onChange={event => setYear(event.target.value.replace(/[^0-9]/g, '').slice(0, 4))} placeholder="2026" /> : <input className="os-input-field" type="date" value={releaseDate} onChange={event => { setReleaseDate(event.target.value); setYear(event.target.value.slice(0, 4)); }} />}
-                </label>
-                {!merchUsesLocalOnlyPricing ? (
+              {isMusicProduct ? (
+                <div className="dashboard-form-grid dashboard-form-grid-3 release-core-grid ui44-form-grid">
                   <label className="dashboard-field">
-                    <div className="dashboard-field-label">{isMerchProduct ? 'Global Price' : 'Price'}</div>
-                    <span className="dashboard-price-input">
-                      <span>{currencySymbol('USD')}</span>
-                      <input className="os-input-field" value={price} onChange={event => setPrice(formatPriceInput(event.target.value))} />
-                    </span>
+                    <div className="dashboard-field-label">Item Type</div>
+                    <Ui44SelectInput value={storeTypeId} onChange={event => {
+                      setStoreTypeId(event.target.value);
+                      setProductType(taxonomyTypes.find(type => type.id === event.target.value)?.label ?? '');
+                      setSelectedTagIds([]);
+                    }}>
+                      <option value="">Select item type</option>
+                      {taxonomyTypes.filter(type => type.category_id === categoryId).map(type => <option key={type.id} value={type.id}>{type.label}</option>)}
+                    </Ui44SelectInput>
                   </label>
-                ) : null}
-                <label className="dashboard-field">
-                  <div className="dashboard-field-label">Item Type</div>
-                  <select className="os-input-field" value={storeTypeId} onChange={event => {
-                    setStoreTypeId(event.target.value);
-                    setProductType(taxonomyTypes.find(type => type.id === event.target.value)?.label ?? '');
-                    setSelectedTagIds([]);
-                  }}>
-                    <option value="">Select item type</option>
-                    {taxonomyTypes.filter(type => type.category_id === categoryId).map(type => <option key={type.id} value={type.id}>{type.label}</option>)}
-                  </select>
-                </label>
-              </div>
+                  <label className="dashboard-field">
+                    <div className="dashboard-field-label">Release Date</div>
+                    <Ui44TextInput className="os-input-field" type="date" value={releaseDate} onChange={event => { setReleaseDate(event.target.value); setYear(event.target.value.slice(0, 4)); }} />
+                  </label>
+                  <label className="dashboard-field">
+                    <div className="dashboard-field-label">Track Count</div>
+                    <Ui44SelectInput value={trackCount} onChange={event => setTrackCount(event.target.value)}>
+                      <option value="">Select total tracks</option>
+                      {Array.from({ length: 30 }, (_, index) => index + 1).map(count => (
+                        <option key={count} value={count}>{count}</option>
+                      ))}
+                    </Ui44SelectInput>
+                  </label>
+                </div>
+              ) : !isMerchProduct ? (
+                <div className="dashboard-form-grid dashboard-form-grid-2 release-core-grid ui44-form-grid">
+                  <label className="dashboard-field">
+                    <div className="dashboard-field-label">Item Type</div>
+                    <Ui44SelectInput value={storeTypeId} onChange={event => {
+                      setStoreTypeId(event.target.value);
+                      setProductType(taxonomyTypes.find(type => type.id === event.target.value)?.label ?? '');
+                      setSelectedTagIds([]);
+                    }}>
+                      <option value="">Select item type</option>
+                      {taxonomyTypes.filter(type => type.category_id === categoryId).map(type => <option key={type.id} value={type.id}>{type.label}</option>)}
+                    </Ui44SelectInput>
+                  </label>
+                  <label className="dashboard-field">
+                    <div className="dashboard-field-label">Release Date</div>
+                    <Ui44TextInput className="os-input-field" type="date" value={releaseDate} onChange={event => { setReleaseDate(event.target.value); setYear(event.target.value.slice(0, 4)); }} />
+                  </label>
+                </div>
+              ) : (
+                <div className="dashboard-form-grid dashboard-form-grid-3 ui44-form-grid">
+                  <label className="dashboard-field">
+                    <div className="dashboard-field-label">Drop Year</div>
+                    <Ui44TextInput className="os-input-field" value={year} onChange={event => setYear(event.target.value.replace(/[^0-9]/g, '').slice(0, 4))} placeholder="Enter release year" />
+                  </label>
+                  {!merchUsesLocalOnlyPricing ? (
+                    <label className="dashboard-field">
+                      <div className="dashboard-field-label">Global Price</div>
+                      <span className="dashboard-price-input">
+                        <span>{currencySymbol('USD')}</span>
+                        <Ui44TextInput className="os-input-field" value={price} onChange={event => setPrice(formatPriceInput(event.target.value))} />
+                      </span>
+                    </label>
+                  ) : null}
+                  <label className="dashboard-field">
+                    <div className="dashboard-field-label">Item Type</div>
+                    <Ui44SelectInput value={storeTypeId} onChange={event => {
+                      setStoreTypeId(event.target.value);
+                      setProductType(taxonomyTypes.find(type => type.id === event.target.value)?.label ?? '');
+                      setSelectedTagIds([]);
+                    }}>
+                      <option value="">Select item type</option>
+                      {taxonomyTypes.filter(type => type.category_id === categoryId).map(type => <option key={type.id} value={type.id}>{type.label}</option>)}
+                    </Ui44SelectInput>
+                  </label>
+                </div>
+              )}
 
               <div className="dashboard-field">
                 <div className="dashboard-field-label">Item Tags</div>
@@ -524,34 +574,27 @@ function NewProductContent() {
                 <span className="dashboard-form-note">Optional. Select any approved genre, style, or format tags that apply.</span>
               </div>
 
-              {isMusicProduct ? (
-                <label className="dashboard-field">
-                  <div className="dashboard-field-label">Track Count</div>
-                  <select className="os-input-field" value={trackCount} onChange={event => setTrackCount(event.target.value)}>
-                    {Array.from({ length: 30 }, (_, index) => index + 1).map(count => (
-                      <option key={count} value={count}>{count}</option>
-                    ))}
-                  </select>
-                </label>
-              ) : null}
-
               {isMerchProduct ? (
                 <div className="settings-field">
                   <div className="settings-field-head">
                     <div className="os-type-card-title">Fulfillment</div>
                     <p className="os-type-body-small">Choose whether you ship the item or deliver it to the customer yourself.</p>
                   </div>
-                  <div className="settings-segment" role="group" aria-label="Merch fulfillment">
+                  <div className="ui44-segmented settings-segment" role="radiogroup" aria-label="Merch fulfillment">
                     <button
                       type="button"
-                      className={merchFulfillmentMode === 'ship' ? 'settings-segment-item settings-segment-item-active' : 'settings-segment-item'}
+                      className={merchFulfillmentMode === 'ship' ? 'ui44-segmented-item ui44-segmented-item-active settings-segment-item settings-segment-item-active' : 'ui44-segmented-item settings-segment-item'}
+                      role="radio"
+                      aria-checked={merchFulfillmentMode === 'ship'}
                       onClick={() => setMerchFulfillmentMode('ship')}
                     >
                       Ship to Customer
                     </button>
                     <button
                       type="button"
-                      className={merchFulfillmentMode === 'deliver' ? 'settings-segment-item settings-segment-item-active' : 'settings-segment-item'}
+                      className={merchFulfillmentMode === 'deliver' ? 'ui44-segmented-item ui44-segmented-item-active settings-segment-item settings-segment-item-active' : 'ui44-segmented-item settings-segment-item'}
+                      role="radio"
+                      aria-checked={merchFulfillmentMode === 'deliver'}
                       onClick={() => setMerchFulfillmentMode('deliver')}
                     >
                       Deliver to Customer (Local Only)
@@ -571,17 +614,21 @@ function NewProductContent() {
                     <div className="os-type-card-title">Shipping Area</div>
                     <p className="os-type-body-small">Choose whether you ship only within your home country or ship globally.</p>
                   </div>
-                  <div className="settings-segment" role="group" aria-label="Merch shipping area">
+                  <div className="ui44-segmented settings-segment" role="radiogroup" aria-label="Merch shipping area">
                     <button
                       type="button"
-                      className={merchShippingScope === 'global' ? 'settings-segment-item settings-segment-item-active' : 'settings-segment-item'}
+                      className={merchShippingScope === 'global' ? 'ui44-segmented-item ui44-segmented-item-active settings-segment-item settings-segment-item-active' : 'ui44-segmented-item settings-segment-item'}
+                      role="radio"
+                      aria-checked={merchShippingScope === 'global'}
                       onClick={() => setMerchShippingScope('global')}
                     >
                       Global Shipping
                     </button>
                     <button
                       type="button"
-                      className={merchShippingScope === 'local' ? 'settings-segment-item settings-segment-item-active' : 'settings-segment-item'}
+                      className={merchShippingScope === 'local' ? 'ui44-segmented-item ui44-segmented-item-active settings-segment-item settings-segment-item-active' : 'ui44-segmented-item settings-segment-item'}
+                      role="radio"
+                      aria-checked={merchShippingScope === 'local'}
                       onClick={() => setMerchShippingScope('local')}
                     >
                       Local Shipping Only
@@ -590,42 +637,51 @@ function NewProductContent() {
                 </div>
               ) : null}
 
-              <div className="dashboard-form-grid dashboard-form-grid-3">
-              {(isMerchProduct ? merchUsesLocalOnlyPricing : marketMode !== 'global') && (
-                <label className="dashboard-field">
-                  <div className="dashboard-field-label">{merchUsesLocalOnlyPricing ? `Price (${localCurrency})` : `Local Price (${localCurrency})`}</div>
-                  <span className="dashboard-price-input">
-                    <span>{currencySymbol(localCurrency)}</span>
-                    <input className="os-input-field" value={localPrice} onChange={event => setLocalPrice(formatPriceInput(event.target.value))} />
-                  </span>
-                </label>
+              {!isMerchProduct ? (
+                <div className={`dashboard-form-grid release-market-grid ${marketMode === 'global_plus_local' ? 'dashboard-form-grid-3' : 'dashboard-form-grid-2'}`}>
+                  <label className="dashboard-field">
+                    <div className="dashboard-field-label">Market</div>
+                    <Ui44SelectInput value={marketMode} onChange={event => setMarketMode(event.target.value as MarketMode)}>
+                      <option value="global">Global</option>
+                      <option value="global_plus_local">Global + Local</option>
+                    </Ui44SelectInput>
+                  </label>
+                  <label className="dashboard-field">
+                    <div className="dashboard-field-label">Price</div>
+                    <span className="dashboard-price-input">
+                      <span>{currencySymbol('USD')}</span>
+                      <Ui44TextInput className="os-input-field" value={price} onChange={event => setPrice(formatPriceInput(event.target.value))} />
+                    </span>
+                  </label>
+                  {marketMode === 'global_plus_local' ? (
+                    <label className="dashboard-field">
+                      <div className="dashboard-field-label">Local Price ({localCurrency})</div>
+                      <span className="dashboard-price-input">
+                        <span>{currencySymbol(localCurrency)}</span>
+                        <Ui44TextInput className="os-input-field" value={localPrice} onChange={event => setLocalPrice(formatPriceInput(event.target.value))} />
+                      </span>
+                    </label>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="dashboard-form-grid dashboard-form-grid-3 ui44-form-grid">
+                  {merchUsesLocalOnlyPricing ? (
+                      <label className="dashboard-field">
+                        <div className="dashboard-field-label">Price ({localCurrency})</div>
+                        <span className="dashboard-price-input">
+                          <span>{currencySymbol(localCurrency)}</span>
+                          <Ui44TextInput className="os-input-field" value={localPrice} onChange={event => setLocalPrice(formatPriceInput(event.target.value))} />
+                        </span>
+                      </label>
+                  ) : null}
+                </div>
               )}
 
-              </div>
-
-              {!isMerchProduct ? (
-              <div className="settings-field">
-              <div className="settings-field-head">
-                <div className="os-type-card-title">Market</div>
-                <p className="os-type-body-small">Choose one global price, or add a price for your local market. Your local market comes from Settings &gt; Region.</p>
-              </div>
-              <div className="settings-segment" role="group" aria-label={`${section.label} market`}>
-                {[
-                  { id: 'global', label: 'Global' },
-                  { id: 'global_plus_local', label: 'Global + Local' },
-                ].map(option => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    className={option.id === marketMode ? 'settings-segment-item settings-segment-item-active' : 'settings-segment-item'}
-                    onClick={() => setMarketMode(option.id as MarketMode)}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-              <p className="dashboard-form-note">{isMerchProduct ? 'Merch is creator-fulfilled locally. Use local pricing when needed.' : 'Leave Local Price blank to use the global price everywhere.'}</p>
-              </div>
+              {(section.id === 'books' || section.id === 'assets') ? (
+                <label className="dashboard-field">
+                  <div className="dashboard-field-label">Description</div>
+                  <Ui44Textarea className="os-input-field dashboard-textarea" value={description} onChange={event => setDescription(event.target.value)} placeholder="Enter description" />
+                </label>
               ) : null}
 
               <UploadField
@@ -636,6 +692,7 @@ function NewProductContent() {
               accept="image/*"
               previewKind="image"
               buttonLabel={isMerchProduct ? 'Upload product image' : 'Upload artwork'}
+              hideActionsWhenPreviewed={!isMerchProduct}
               onChange={setCoverUrl}
               />
 
@@ -718,18 +775,18 @@ function NewProductContent() {
                   description="Add the audio and title for each track in this release."
                 />
 
-                <div className="dashboard-list-surface studio-track-panel">
+                <div className="dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip studio-track-panel">
                 <div className="dashboard-track-editor-list">
                     {tracks.slice(0, Number(trackCount || '0')).map((track, index) => (
                       <div key={`track-${index}`} className="dashboard-track-editor-row">
                         <div className="dashboard-track-editor-copy">
                           <label className="dashboard-field studio-track-title-field">
                             <span className="dashboard-field-label">{index + 1}. Track Title</span>
-                            <input
+                            <Ui44TextInput
                               className="os-input-field"
                               value={track.title}
                               onChange={event => updateTrack(index, { title: event.target.value })}
-                              placeholder={`Track ${index + 1} title`}
+                              placeholder="Enter track title"
                             />
                           </label>
 
@@ -757,9 +814,9 @@ function NewProductContent() {
             {isMusicProduct ? (
               <section className="dashboard-form-section">
                 <SectionHeader title="External Links" description="Add links to this release elsewhere." action={(
-                  <button type="button" role="switch" aria-checked={externalLinksEnabled} className={externalLinksEnabled ? 'settings-toggle settings-toggle-on' : 'settings-toggle'} onClick={() => setExternalLinksEnabled(enabled => !enabled)} />
+                  <button type="button" role="switch" aria-checked={externalLinksEnabled} className={externalLinksEnabled ? 'settings-toggle settings-toggle-on ui44-switch ui44-switch-on' : 'settings-toggle ui44-switch'} onClick={() => setExternalLinksEnabled(enabled => !enabled)} />
                 )} />
-                {externalLinksEnabled && <div className="dashboard-list-surface studio-feature-panel"><ExternalLinksEditor links={externalLinks} platforms={externalLinkPlatforms} onChange={setExternalLinks} /></div>}
+                {externalLinksEnabled && <div className="dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-visible studio-feature-panel"><ExternalLinksEditor links={externalLinks} platforms={externalLinkPlatforms} onChange={setExternalLinks} /></div>}
               </section>
             ) : null}
 
@@ -771,11 +828,11 @@ function NewProductContent() {
               />
             ) : null}
 
-            {error && <div className="dashboard-status dashboard-status-error">{error}</div>}
+            {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div>}
 
             <label className="dashboard-field">
               <span className="settings-checkbox-row studio-rights-checkbox">
-                <input type="checkbox" checked={rightsConfirmed} onChange={event => setRightsConfirmed(event.target.checked)} />
+                <Ui44CheckboxInput checked={rightsConfirmed} onChange={event => setRightsConfirmed(event.target.checked)} />
                 <span>I confirm that I own this work or have the necessary rights and permission to publish and distribute it through 44OS.</span>
               </span>
               <span className="dashboard-form-note">This records your confirmation; it does not mean 44 has independently verified ownership.</span>

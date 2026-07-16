@@ -35,17 +35,6 @@ export function useTopbar(): TopbarContextValue {
   return useContext(TopbarContext);
 }
 
-export function useTopbarTabs(tabs: TopbarTab[] | undefined) {
-  const { setTabs } = useContext(TopbarContext);
-  const key = useMemo(() => JSON.stringify(tabs?.map(tab => [tab.id, tab.label, tab.href, tab.active])), [tabs]);
-  const stableSet = useCallback((nextTabs: TopbarTab[] | undefined) => setTabs(nextTabs), [setTabs]);
-  useEffect(() => {
-    stableSet(tabs);
-    return () => stableSet(undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, stableSet]);
-}
-
 /**
  * Register a back link that appears in the topbar's left area.
  */

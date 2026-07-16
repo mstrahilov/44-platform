@@ -2,6 +2,7 @@
 
 import { useId, useState, type ChangeEvent } from 'react';
 import { getUploadErrorMessage, uploadPrivateItemFile, uploadPublicFile } from '@/lib/uploads';
+import { Ui44FileInput } from '@/components/ui44/Inputs';
 
 type UploadFieldProps = {
   label: string;
@@ -16,6 +17,7 @@ type UploadFieldProps = {
   onAudioAnalysis?: (analysis: { durationSeconds: number | null; waveformPeaks: number[]; mimeType: string; fileSizeBytes: number }) => void;
   hideLabel?: boolean;
   hideSuccessMessage?: boolean;
+  hideActionsWhenPreviewed?: boolean;
   storage?: 'public' | 'private-item';
 };
 
@@ -32,6 +34,7 @@ export function UploadField({
   onAudioAnalysis,
   hideLabel = false,
   hideSuccessMessage = false,
+  hideActionsWhenPreviewed = false,
   storage = 'public',
 }: UploadFieldProps) {
   const inputId = useId();
@@ -69,7 +72,7 @@ export function UploadField({
     <div className="dashboard-field">
       {!hideLabel && <div className="dashboard-field-label">{label}</div>}
       {value && previewKind !== 'none' && (previewKind === 'image' || accept?.includes('image')) ? (
-        <div className="upload-preview upload-preview-image">
+        <div className="upload-preview upload-preview-image ui44-media-preview ui44-media-preview-image">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={value} alt="" />
           <button type="button" className="upload-preview-remove" aria-label={`Remove ${label}`} onClick={() => onChange('')}>
@@ -77,31 +80,31 @@ export function UploadField({
           </button>
         </div>
       ) : value && previewKind !== 'none' ? (
-        <div className="upload-preview upload-preview-file">
+        <div className="upload-preview upload-preview-file ui44-media-preview ui44-media-preview-file">
           <span>{value.split('/').pop() || 'Uploaded file'}</span>
           <button type="button" className="upload-preview-remove" aria-label={`Remove ${label}`} onClick={() => onChange('')}>
             ×
           </button>
         </div>
       ) : null}
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-        <label htmlFor={inputId} className="os-button os-button-secondary os-button-compact" style={{ cursor: uploading ? 'progress' : 'pointer' }}>
+      {!(hideActionsWhenPreviewed && value) ? <div className="ui44-upload-actions">
+        <label htmlFor={inputId} className={`os-button os-button-secondary os-button-compact${uploading ? ' ui44-upload-button-busy' : ''}`}>
           {uploading ? 'Uploading…' : buttonLabel}
         </label>
-        <input
+        <Ui44FileInput
           id={inputId}
-          type="file"
           accept={accept}
           onChange={handleFileChange}
           disabled={uploading}
-          style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 1, height: 1 }}
+          className="ui44-file-input-hidden"
         />
-        <span className={value ? 'upload-state upload-state-complete' : 'upload-state'}>
-          {value ? 'Uploaded' : 'No file selected yet'}
-        </span>
-      </div>
+        {value ? <span className="upload-state upload-state-complete">Uploaded</span> : null}
+      </div> : null}
       {message && !(hideSuccessMessage && message === 'Upload complete.') ? (
-        <div className={message === 'Upload complete.' ? 'dashboard-status dashboard-status-success' : 'dashboard-status dashboard-status-error'}>
+        <div
+          className={message === 'Upload complete.' ? 'dashboard-status dashboard-status-success ui44-status ui44-status-success' : 'dashboard-status dashboard-status-error ui44-status ui44-status-error'}
+          role={message === 'Upload complete.' ? 'status' : 'alert'}
+        >
           {message}
         </div>
       ) : null}
