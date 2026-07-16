@@ -383,7 +383,7 @@ Current concept-to-table map:
 
 Known Supabase state from the launch cleanup:
 
-- Local migration history and the disposable replay are verified through `20260716010000_m13_admin_control_center.sql`. Linked production history was last independently confirmed through `20260712052700`; refresh linked history and dry-run evidence before releasing the later migrations.
+- Local replay and linked production migration history are aligned through `20260716010000_m13_admin_control_center.sql`. The July 16 release backup, linked lint, migration apply, history check, and empty follow-up dry-run completed before live Admin verification.
 - The typed Community spine is applied in `20260712020000_typed_community_content_spine.sql`; application queries no longer target the legacy Community content tables.
 - `20260712025000_add_missing_tracks_to_radio.sql` brings Radio to one active entry for every existing track: 248 tracks, 248 entries, zero missing, zero duplicates.
 - `20260712030000_m5_provider_neutral_commerce.sql` separates public access, offers, orders, payment processing, entitlements, and Library presentation. Current free Library behavior is active; download and physical offers remain drafts until the operating model and verified provider are approved.
@@ -419,7 +419,7 @@ Known Supabase state from the launch cleanup:
 - Initial Types are Music—Album, EP, Single, Mixtape, Live Set; Books—Novel, Artbook, Zine; Merch—Apparel, Accessories, Physical Music, Goods & Collectibles; Sample Packs—Sample Packs. The former Remix Packs and Game Assets rows are retained but inactive. Tags are the guarded third level for genre/style/use, such as Electronic or Hoodies, and creators cannot enter arbitrary public Tags.
 - Music and Sample Packs use square catalog artwork, Books use 2:3 covers, and physical Merch uses 3:4 product artwork. Library keeps separate Music, Books, and Sample Packs grid bands so portrait Books begin below square Music.
 - Anonymous access to the dormant `services` table returns zero rows; its data remains available only through admin/service-role access.
-- The July 12 linked dry-run reported the remote database up to date for that release. It is historical evidence only; the newer repository migrations require a fresh linked dry-run, backup, review, and explicit deployment.
+- The July 16 post-deploy linked dry-run reports the remote database is up to date through the Beat foundation and Admin Control Center migrations.
 
 Auth redirect target:
 

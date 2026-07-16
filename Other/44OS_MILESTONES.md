@@ -14,7 +14,7 @@ Status vocabulary: `Not started`, `In discussion`, `Approved`, `In progress`, `B
 
 ## Current System Check — July 16, 2026
 
-The application is already live at `https://44os.com`. At audit time, production served the exact repository `main` commit `c45b1df4801e9a2dd1b3d7e8600d3662ad500445`; `/api/health` returned healthy in `iad1` with Supabase HTTP 200.
+The application is live at `https://44os.com`. The July 16 Admin release serves repository `main` commit `02d65f24b1a7850a7409ed852b71688b500281cf`; `/api/health` returned healthy after deployment.
 
 Current passing evidence:
 
@@ -30,11 +30,11 @@ Current passing evidence:
 - Local data restoration rehearsal: 14 profiles, 51 Items, and 401 storage objects restored into a disposable database.
 - Disposable M13 rollback and two-session concurrency rehearsals.
 - Local migration history and disposable replay include every repository migration through `20260716010000_m13_admin_control_center.sql`.
-- Linked schema lint returns zero errors.
+- Linked production history is aligned through `20260716010000_m13_admin_control_center.sql`, linked schema lint returns zero errors, and the post-deploy dry-run reports the remote database is up to date.
+- Live Admin probes return 27 accounts, 5 creators, 51 Items, bounded eight-row People/Content pages, and working person/content detail documents. Anonymous Admin RPC calls remain denied with SQL `42501`; payments and Beat Store remain off.
 
 Current verification debt:
 
-- Linked `migration list` and `db push --linked --dry-run` could not be refreshed during this audit because the configured database password was rejected/missing. Refresh `SUPABASE_DB_PASSWORD`, then rerun both before a migration release.
 - Strict empty schema replay still stops at `20260714010000_grant_olsten_admin_role.sql`, which asserts a real production profile exists. The approved temporary evidence path is a disposable local profile fixture followed by the remaining migrations and full security suite. The permanent fix is a reviewed baseline reconsolidation, not editing the deployed migration.
 
 Readiness conclusion:
