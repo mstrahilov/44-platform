@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { PageShell, HubHero } from '@/components/Ui';
 import { Ui44TextInput } from '@/components/ui44/Inputs';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/useAuth';
 
 type SupportArticle = {
   category: string;
@@ -21,7 +23,7 @@ const ARTICLES: SupportArticle[] = [
       'Use the newest reset email if you requested more than one. Reset links can expire, so request a fresh one if the link fails.',
       'If the link opens in a different browser than the one you normally use, sign in again there or copy the link into your main browser.',
     ],
-    actions: [{ label: 'Open Account Settings', href: '/settings#account' }],
+    actions: [{ label: 'Reset Password', href: '/account/recovery' }],
   },
   {
     category: 'Account & Login',
@@ -35,18 +37,18 @@ const ARTICLES: SupportArticle[] = [
     category: 'Orders',
     question: 'Find merch and item orders',
     answer: [
-      'Digital items appear in your Library after purchase or save.',
-      'Merch orders are fulfilled by the creator. Creators manage paid local-fulfillment orders from Studio orders.',
-      'If an order looks wrong, include the item name, buyer email, creator name, and checkout time when contacting support.',
+      '44OS is launching without customer payments, so no new paid orders can be placed yet.',
+      'When purchasing opens, 44-owned merch will be fulfilled by Printful and digital purchases will appear in the buyer Library after verified payment.',
+      'Creator merch selling and creator payouts are planned for a future version.',
     ],
-    actions: [{ label: 'Open Orders', href: '/studio/orders' }],
+    actions: [{ label: 'Open Store', href: '/store' }],
   },
   {
     category: 'Library',
     question: 'What belongs in your Library',
     answer: [
       'Your Library contains music, books, sample packs, and items you saved or purchased.',
-      'Free saves unlock streaming or reading where supported. Paid purchases unlock downloads only when the creator enabled downloadable files.',
+      'Free saves unlock streaming or reading where supported. Protected full downloads remain unavailable until purchasing opens.',
       'Removing an item hides it from your Library. Re-adding it should restore the existing Library item.',
     ],
     actions: [{ label: 'Open Library', href: '/library' }],
@@ -63,10 +65,11 @@ const ARTICLES: SupportArticle[] = [
   },
   {
     category: 'Creator Uploads',
-    question: 'Publish music, books, sample packs, or merch',
+    question: 'Publish music, books, or sample packs',
     answer: [
-      'Creators publish and manage work from Studio. Use the profile shortcut buttons for fast access to new releases, books, sample packs, and merch.',
-      'Music releases can include v1.0 achievements and Overachiever bonus content. Books, sample packs, and merch use their dedicated publishing flows.',
+      'Approved creators publish and manage music, books, and sample packs from Studio.',
+      'Music releases can include v1.0 achievements and Overachiever bonus content. Books and sample packs use their dedicated publishing flows.',
+      'Merch is 44-exclusive for this version; creators cannot add or sell merch yet.',
       'Future formats will be added to the same catalog model after the launch foundation is stable.',
     ],
     actions: [{ label: 'Open Studio', href: '/studio' }],
@@ -91,6 +94,19 @@ const ARTICLES: SupportArticle[] = [
     ],
   },
   {
+    category: 'Policies',
+    question: 'Read 44OS policies',
+    answer: [
+      'Review the Terms of Use, Privacy Policy, and Copyright and Takedowns process before using or publishing through 44OS.',
+      'Paid checkout remains unavailable until the payment, fulfillment, tax, and policy gates are approved.',
+    ],
+    actions: [
+      { label: 'Terms', href: '/legal/terms' },
+      { label: 'Privacy', href: '/legal/privacy' },
+      { label: 'Copyright', href: '/legal/copyright' },
+    ],
+  },
+  {
     category: 'Contact',
     question: 'Escalate to support',
     answer: [
@@ -104,9 +120,15 @@ const ARTICLES: SupportArticle[] = [
 const CATEGORIES = Array.from(new Set(ARTICLES.map(article => article.category)));
 
 export default function SupportPage() {
+  const { user, loading: authLoading } = useAuth();
   const [query, setQuery] = useState('');
   const [selectedQuestion, setSelectedQuestion] = useState(ARTICLES[0].question);
   const [openCategories, setOpenCategories] = useState<string[]>(['Account & Login']);
+  const [caseSubject, setCaseSubject] = useState('');
+  const [caseMessage, setCaseMessage] = useState('');
+  const [caseSubmitting, setCaseSubmitting] = useState(false);
+  const [caseStatus, setCaseStatus] = useState('');
+  const [caseError, setCaseError] = useState('');
 
   const visibleArticles = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -117,6 +139,33 @@ export default function SupportPage() {
   }, [query]);
 
   const selectedArticle = visibleArticles.find(article => article.question === selectedQuestion) ?? visibleArticles[0] ?? ARTICLES[0];
+  const showCaseForm = selectedArticle.question === 'Escalate to support';
+
+  async function submitSupportCase(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setCaseSubmitting(true);
+    setCaseStatus('');
+    setCaseError('');
+    try {
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Sign in before opening a support case.');
+      const response = await fetch('/api/email/support', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject: caseSubject, message: caseMessage }),
+      });
+      const payload = await response.json() as { created?: boolean; error?: string };
+      if (!response.ok || !payload.created) throw new Error(payload.error || 'The support case could not be recorded.');
+      setCaseSubject('');
+      setCaseMessage('');
+      setCaseStatus('Your support case is recorded. Acknowledgement will be sent when application email delivery is active.');
+    } catch (error) {
+      setCaseError(error instanceof Error ? error.message : 'The support case could not be recorded.');
+    } finally {
+      setCaseSubmitting(false);
+    }
+  }
 
   return (
     <PageShell>
@@ -195,6 +244,47 @@ export default function SupportPage() {
                   </Link>
                 ))}
               </div>
+            ) : null}
+            {showCaseForm ? (
+              <section className="support-case-intake" aria-labelledby="support-case-title">
+                <h3 id="support-case-title">Open a support case</h3>
+                {authLoading ? (
+                  <p className="os-type-body" role="status">Checking your account…</p>
+                ) : user ? (
+                  <form className="support-case-form" onSubmit={submitSupportCase}>
+                    <label htmlFor="support-case-subject">Subject</label>
+                    <Ui44TextInput
+                      id="support-case-subject"
+                      className="os-input-field"
+                      value={caseSubject}
+                      onChange={event => setCaseSubject(event.target.value)}
+                      minLength={3}
+                      maxLength={160}
+                      required
+                    />
+                    <label htmlFor="support-case-message">What happened?</label>
+                    <textarea
+                      id="support-case-message"
+                      value={caseMessage}
+                      onChange={event => setCaseMessage(event.target.value)}
+                      minLength={1}
+                      maxLength={10000}
+                      required
+                    />
+                    <p className="os-type-caption">Include the page, approximate time, and what you expected. Do not include passwords or payment-card details.</p>
+                    {caseError ? <p className="ui44-status ui44-status-error" role="alert">{caseError}</p> : null}
+                    {caseStatus ? <p className="ui44-status" role="status">{caseStatus}</p> : null}
+                    <button type="submit" className="os-button os-button-primary" disabled={caseSubmitting}>
+                      {caseSubmitting ? 'Recording…' : 'Open case'}
+                    </button>
+                  </form>
+                ) : (
+                  <div className="support-reader-copy">
+                    <p className="os-type-body">Sign in to create a durable support case, or email <a href="mailto:support@44os.com">support@44os.com</a> directly.</p>
+                    <div className="support-reader-actions"><Link href="/login" className="os-button os-button-primary">Log In</Link></div>
+                  </div>
+                )}
+              </section>
             ) : null}
           </article>
         </section>

@@ -9,6 +9,10 @@ export type CartItem = {
   line_id?: string;
   item_id: string;
   offer_id?: string | null;
+  merch_variant_id?: string | null;
+  merch_variant_preview_code?: string | null;
+  merch_variant_name?: string | null;
+  merch_option_values?: Record<string, string>;
   title: string;
   creator: string;
   item_type?: string | null;
@@ -45,7 +49,13 @@ function readCart(): CartItem[] {
           const current = { ...entry };
           delete current.product_id;
           delete current.quantity;
-          return [{ ...current, item_id: itemId, line_id: current.line_id || (current.offer_id ? `offer:${current.offer_id}` : `item:${itemId}`) }];
+          return [{
+            ...current,
+            item_id: itemId,
+            line_id: current.line_id || (current.merch_variant_id || current.merch_variant_preview_code
+              ? `variant:${current.merch_variant_id || current.merch_variant_preview_code}`
+              : current.offer_id ? `offer:${current.offer_id}` : `item:${itemId}`),
+          }];
         })
       : [];
   } catch {
@@ -66,8 +76,12 @@ export function getCart(): CartItem[] {
 
 export function addToCart(item: CartItem) {
   let items = readCart();
-  const lineId = item.line_id || (item.offer_id ? `offer:${item.offer_id}` : `item:${item.item_id}`);
-  if (item.offer_id) items = items.filter(entry => entry.item_id !== item.item_id);
+  const lineId = item.line_id || (item.merch_variant_id || item.merch_variant_preview_code
+    ? `variant:${item.merch_variant_id || item.merch_variant_preview_code}`
+    : item.offer_id ? `offer:${item.offer_id}` : `item:${item.item_id}`);
+  if (item.offer_id || item.merch_variant_id || item.merch_variant_preview_code) {
+    items = items.filter(entry => entry.item_id !== item.item_id);
+  }
   const existing = items.find(entry => (entry.line_id || `item:${entry.item_id}`) === lineId);
   if (!existing) items.push({ ...item, line_id: lineId });
   writeCart(items);

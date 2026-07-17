@@ -112,6 +112,10 @@ export async function ensureProfileForUser(user: Pick<User, 'id' | 'email' | 'us
   const slugSeed = slugify(existingProfile?.slug?.trim() || displayName || usernameSeed) || usernameSeed.replace(/_/g, '-');
   const username = await resolveUniqueField('username', usernameSeed, user.id);
   const slug = await resolveUniqueField('slug', slugSeed, user.id);
+  const metadataCountry = typeof user.user_metadata?.country_code === 'string'
+    && /^[A-Z]{2}$/.test(user.user_metadata.country_code.toUpperCase())
+    ? user.user_metadata.country_code.toUpperCase()
+    : null;
 
   const payload: Database['public']['Tables']['profiles']['Insert'] = {
     id: user.id,
@@ -122,9 +126,9 @@ export async function ensureProfileForUser(user: Pick<User, 'id' | 'email' | 'us
     avatar_url: existingProfile?.avatar_url ?? null,
     bio: existingProfile?.bio ?? null,
     creator_type: existingProfile?.creator_type ?? null,
-    country_code: existingProfile?.country_code ?? null,
+    country_code: existingProfile?.country_code ?? metadataCountry,
     display_currency: existingProfile?.display_currency ?? null,
-    home_country_code: existingProfile?.home_country_code ?? null,
+    home_country_code: existingProfile?.home_country_code ?? metadataCountry,
     home_currency: existingProfile?.home_currency ?? null,
     item_market_mode: existingProfile?.item_market_mode ?? DEFAULT_MARKET_MODE,
     service_market_mode: existingProfile?.service_market_mode ?? DEFAULT_MARKET_MODE,

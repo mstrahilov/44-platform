@@ -14,6 +14,7 @@ const authListeners = new Set<() => void>();
 let authSnapshot: AuthSnapshot = INITIAL_AUTH_SNAPSHOT;
 let authStarted = false;
 let ensuredUserId: string | null = null;
+let welcomeQueuedUserId: string | null = null;
 
 function publishAuth(next: AuthSnapshot) {
   if (authSnapshot.user === next.user && authSnapshot.loading === next.loading) return;
@@ -29,16 +30,28 @@ function markSession(signedIn: boolean) {
   }
 }
 
-function acceptUser(user: User | null) {
+async function queueWelcome(userId: string, accessToken: string) {
+  if (welcomeQueuedUserId === userId) return;
+  welcomeQueuedUserId = userId;
+  const response = await fetch('/api/email/welcome', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } });
+  if (!response.ok) welcomeQueuedUserId = null;
+}
+
+function acceptUser(user: User | null, accessToken?: string) {
   markSession(Boolean(user));
   publishAuth({ user, loading: false });
-  if (!user) ensuredUserId = null;
+  if (!user) {
+    ensuredUserId = null;
+    welcomeQueuedUserId = null;
+  }
   if (user && ensuredUserId !== user.id) {
     ensuredUserId = user.id;
-    void ensureProfileForUser(user).catch(() => {
-      ensuredUserId = null;
-    // Profile repair is best effort and must never turn a valid session into a logout.
-    });
+    void ensureProfileForUser(user)
+      .then(() => accessToken ? queueWelcome(user.id, accessToken) : undefined)
+      .catch(() => {
+        ensuredUserId = null;
+      // Profile repair and welcome enqueue are best effort and must never turn a valid session into a logout.
+      });
   }
 }
 
@@ -53,7 +66,7 @@ function startAuth() {
   void supabase.auth.getSession()
     .then(({ data }) => {
       window.clearTimeout(fallback);
-      acceptUser(data.session?.user ?? null);
+      acceptUser(data.session?.user ?? null, data.session?.access_token);
     })
     .catch(() => {
       window.clearTimeout(fallback);
@@ -62,7 +75,7 @@ function startAuth() {
 
   supabase.auth.onAuthStateChange((_event, session) => {
     window.clearTimeout(fallback);
-    acceptUser(session?.user ?? null);
+    acceptUser(session?.user ?? null, session?.access_token);
   });
 }
 

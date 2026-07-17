@@ -1,6 +1,6 @@
 'use client';
 
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
 import { AchievementIconGlyph } from '@/components/AchievementIconGlyph';
 import { SectionHeader } from '@/components/Ui';
@@ -9,11 +9,6 @@ import type { Product } from '@/lib/products';
 import { ExternalLinkActions } from '@/components/ExternalLinkActions';
 import type { ReleaseVideoEmbed } from '@/lib/domain/releaseFeatures';
 
-type ProductDetailTrack = {
-  id?: string | null;
-  duration_seconds?: number | null;
-};
-
 export type ProductDetailAction = {
   label: string;
   href?: string;
@@ -21,6 +16,7 @@ export type ProductDetailAction = {
   onClick?: () => void;
   secondary?: boolean;
   active?: boolean;
+  disabled?: boolean;
 };
 
 export type LibraryBonusAsset = {
@@ -44,6 +40,12 @@ export function ProductDetailHeader({
   externalLinks = [],
   coverClassName = '',
   showCreatorAvatar = true,
+  showCreatorIdentity = true,
+  imageUrlOverride,
+  className = '',
+  beforeActions,
+  afterActions,
+  mediaFooter,
 }: {
   product: Product;
   creatorName: string;
@@ -53,24 +55,33 @@ export function ProductDetailHeader({
   externalLinks?: Product['external_links'];
   coverClassName?: string;
   showCreatorAvatar?: boolean;
+  showCreatorIdentity?: boolean;
+  imageUrlOverride?: string | null;
+  className?: string;
+  beforeActions?: ReactNode;
+  afterActions?: ReactNode;
+  mediaFooter?: ReactNode;
 }) {
-  const heroImage = product.hero_url || product.cover_url;
+  const heroImage = imageUrlOverride || product.hero_url || product.cover_url;
   const coverClasses = ['view-album-cover', coverClassName].filter(Boolean).join(' ');
 
   return (
     <div
-      className={heroImage ? 'view-album-header' : 'view-album-header view-album-header-fallback'}
+      className={`${heroImage ? 'view-album-header' : 'view-album-header view-album-header-fallback'}${className ? ` ${className}` : ''}`}
       style={heroImage ? { '--release-artwork': `url(${heroImage})` } as CSSProperties : undefined}
     >
-      <div className={coverClasses}>
-        {heroImage && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={heroImage} alt={product.title} />
-        )}
+      <div className="view-album-media">
+        <div className={coverClasses}>
+          {heroImage && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={heroImage} alt={product.title} />
+          )}
+        </div>
+        {mediaFooter}
       </div>
       <div className="view-album-copy">
         <h1 className="view-album-title">{product.title}</h1>
-        <Link className="library-creator-chip" href={creatorHrefValue} aria-label={`View ${creatorName}`}>
+        {showCreatorIdentity ? <Link className="library-creator-chip" href={creatorHrefValue} aria-label={`View ${creatorName}`}>
           {showCreatorAvatar ? <span className="library-creator-avatar ui44-identity-avatar ui44-identity-avatar-inline">
             {product.creators?.avatar_url ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -80,7 +91,7 @@ export function ProductDetailHeader({
             )}
           </span> : null}
           <span>{creatorName}</span>
-        </Link>
+        </Link> : null}
         {meta.length > 0 && (
           <div className="view-album-eyebrow view-product-meta-line">
             {meta.map((item, index) => (
@@ -92,6 +103,7 @@ export function ProductDetailHeader({
           </div>
         )}
         <ExternalLinkActions links={externalLinks ?? []} context="item" variant="icons" label={`Open ${product.title} on other platforms`} />
+        {beforeActions}
         <div className="view-album-actions">
           {actions.map(action =>
             action.href ? (
@@ -106,12 +118,13 @@ export function ProductDetailHeader({
                 {action.label}
               </Link>
             ) : (
-              <button key={action.label} className={`${action.secondary ? 'os-button os-button-secondary' : 'os-button os-button-primary'}${action.active && action.label !== 'Shuffle' ? ' os-button-active' : ''}`} type="button" onClick={action.onClick} aria-pressed={action.label === 'Shuffle' ? action.active : undefined}>
+              <button key={action.label} className={`${action.secondary ? 'os-button os-button-secondary' : 'os-button os-button-primary'}${action.active && action.label !== 'Shuffle' ? ' os-button-active' : ''}`} type="button" onClick={action.onClick} disabled={action.disabled} aria-pressed={action.label === 'Shuffle' ? action.active : undefined}>
                 {action.label}
               </button>
             ),
           )}
         </div>
+        {afterActions}
       </div>
     </div>
   );
@@ -264,88 +277,6 @@ export function LibraryFilesSection({ assets }: { assets: LibraryFileAsset[] }) 
       </div>
     </div>
   );
-}
-
-export function LibraryProductDetailsSection({
-  product,
-  tracks = [],
-  inferredTrackDurations = {},
-}: {
-  product: Product;
-  tracks?: ProductDetailTrack[];
-  inferredTrackDurations?: Record<string, number>;
-}) {
-  const details = buildLibraryProductDetails(product, tracks, inferredTrackDurations);
-  if (details.length === 0) return null;
-
-  return (
-    <div className="view-section">
-      <h2 className="view-section-title">Product Details</h2>
-      <div className="ui44-panel ui44-panel-glass ui44-panel-overflow-clip ui44-detail-list">
-        {details.map(detail => (
-          <div className="view-row ui44-list-row ui44-list-row-detail" key={detail.label}>
-            <span className="view-row-label">{detail.label}</span>
-            <span className="view-row-value">{detail.value}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function buildLibraryProductDetails(product: Product, tracks: ProductDetailTrack[], inferredTrackDurations: Record<string, number>) {
-  const creator = product.creators?.display_name || product.creator || '44 Creator';
-  const uploadDate = product.created_at
-    ? new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(product.created_at))
-    : 'N/A';
-  const type = product.experience_type || product.item_type || '';
-  const normalizedType = type.toLowerCase();
-  const taxonomy = [
-    { label: 'Category', value: product.browse_category?.label || 'Unassigned' },
-    { label: 'Type', value: product.browse_type?.label || product.item_type || 'Unassigned' },
-  ];
-
-  if (normalizedType.includes('music') || ['album', 'ep', 'single'].some(value => product.item_type?.toLowerCase().includes(value))) {
-    const totalLength = tracks.reduce((sum, track) => sum + getTrackDurationSeconds(track, inferredTrackDurations), 0);
-    return [
-      { label: 'Creator', value: creator },
-      ...taxonomy,
-      { label: 'Release Date', value: product.release_date
-        ? new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(`${product.release_date}T00:00:00`))
-        : String(product.year ?? 'N/A') },
-      { label: 'Total Tracks', value: String(tracks.length) },
-      { label: 'Total Length', value: formatDuration(totalLength) },
-      { label: 'Upload Date', value: uploadDate },
-    ];
-  }
-
-  if (normalizedType.includes('book') || product.item_type?.toLowerCase().includes('book')) {
-    return [
-      { label: 'Creator', value: creator },
-      ...taxonomy,
-      { label: 'Publication Year', value: String(product.year ?? 'N/A') },
-      { label: 'Upload Date', value: uploadDate },
-    ];
-  }
-
-  return [
-    { label: 'Creator', value: creator },
-    ...taxonomy,
-    { label: 'Year', value: String(product.year ?? 'N/A') },
-    { label: 'Upload Date', value: uploadDate },
-  ];
-}
-
-function formatDuration(seconds: number) {
-  if (!seconds || seconds <= 0) return '-:--';
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = Math.floor(seconds % 60).toString().padStart(2, '0');
-  return `${minutes}:${remainingSeconds}`;
-}
-
-function getTrackDurationSeconds(track: ProductDetailTrack, inferredTrackDurations: Record<string, number>) {
-  if (track.duration_seconds && track.duration_seconds > 0) return track.duration_seconds;
-  return track.id ? inferredTrackDurations[track.id] ?? 0 : 0;
 }
 
 function initials(name: string) {

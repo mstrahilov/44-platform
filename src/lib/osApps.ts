@@ -233,7 +233,6 @@ export const OS_APPS: OSApp[] = [
       { id: 'music', label: 'Music', href: '/studio#music', iconClass: 'os-icon-music' },
       { id: 'books', label: 'Books', href: '/studio#books', iconClass: 'os-icon-books' },
       { id: 'assets', label: 'Sample Packs', href: '/studio#sample-packs', iconClass: 'os-icon-assets' },
-      { id: 'merch', label: 'Merch', href: '/studio#merch', iconClass: 'os-icon-merch' },
     ],
   },
   {

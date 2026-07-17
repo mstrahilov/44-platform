@@ -75,6 +75,33 @@ export type AdminPersonDetail = {
     created_at: string;
     changed_by: string;
   }>;
+  commerce: CreatorPaidSalesState;
+};
+
+export type CreatorPaidSalesState = {
+  creator_id: string;
+  can_sell_paid: boolean;
+  state: 'enabled' | 'not_reviewed' | 'disabled' | 'onboarding_required' | 'pending_tax' | 'pending_provider' | 'restricted' | 'country_unavailable' | 'entity_waitlisted';
+  is_platform_seller: boolean;
+  admin_status: 'not_reviewed' | 'approved' | 'disabled';
+  decision_reason: string | null;
+  approved_at: string | null;
+  approved_by: string | null;
+  provider: 'wise_manual' | 'stripe_connect' | 'stripe_global_payouts' | 'paypal' | null;
+  provider_status: 'unverified' | 'pending' | 'verified' | 'restricted' | 'country_unavailable' | 'disabled' | null;
+  country_code: string | null;
+  currency: string | null;
+  status_reason_code: string | null;
+  requirements_due: string[];
+  last_provider_sync_at: string | null;
+  history: Array<{
+    id: string;
+    previous_status: string | null;
+    new_status: string;
+    reason: string;
+    created_at: string;
+    changed_by: string;
+  }>;
 };
 
 export type AdminContentRow = {
@@ -193,9 +220,16 @@ export async function listAdminPeople(input: { query?: string | null; role?: str
 }
 
 export async function getAdminPersonDetail(profileId: string) {
-  const result = await supabase.rpc('get_admin_person_detail', { target_profile_id: profileId });
-  if (result.error) throw result.error;
-  return result.data as unknown as AdminPersonDetail;
+  const [personResult, commerceResult] = await Promise.all([
+    supabase.rpc('get_admin_person_detail', { target_profile_id: profileId }),
+    supabase.rpc('get_creator_paid_sales_state' as never, { target_creator_id: profileId } as never),
+  ]);
+  if (personResult.error) throw personResult.error;
+  if (commerceResult.error) throw commerceResult.error;
+  return {
+    ...(personResult.data as unknown as Omit<AdminPersonDetail, 'commerce'>),
+    commerce: commerceResult.data as unknown as CreatorPaidSalesState,
+  };
 }
 
 export async function setAdminCreatorAccess(profileId: string, role: 'member' | 'creator', reason: string) {
@@ -205,6 +239,20 @@ export async function setAdminCreatorAccess(profileId: string, role: 'member' | 
     target_reason: reason,
   });
   if (result.error) throw result.error;
+}
+
+export async function setAdminCreatorPaidSales(
+  profileId: string,
+  status: 'approved' | 'disabled',
+  reason: string,
+) {
+  const result = await supabase.rpc('set_admin_creator_paid_sales' as never, {
+    target_creator_id: profileId,
+    target_status: status,
+    target_reason: reason,
+  } as never);
+  if (result.error) throw result.error;
+  return result.data as unknown as CreatorPaidSalesState;
 }
 
 export async function listAdminContent(input: { query?: string | null; status?: string | null; type?: string | null; page?: number } = {}) {

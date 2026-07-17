@@ -15,6 +15,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useTopbar } from './TopbarContext';
 import { useCart } from '@/lib/cart';
 import { Ui44TextInput } from '@/components/ui44/Inputs';
+import { PUBLIC_PURCHASES_AVAILABLE } from '@/lib/commerceAvailability';
 import {
   loadNotificationReadState,
   NOTIFICATION_STATE_UPDATED,
@@ -42,6 +43,12 @@ const IconProfile = () => (
 );
 
 const IconStudio = () => <span className="os-icon os-icon-dashboard os-icon-sm" aria-hidden="true" />;
+const IconOrders = () => (
+  <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M6 3.5h10v15H6z" />
+    <path d="M8.5 7h5M8.5 10.5h5M8.5 14h3" />
+  </svg>
+);
 const IconAdmin = () => (
   <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M11 3.2 17.5 5.5v4.8c0 4.1-2.5 6.7-6.5 8.5-4-1.8-6.5-4.4-6.5-8.5V5.5L11 3.2Z" />
@@ -82,6 +89,7 @@ function labelForPath(path: string | null | undefined) {
   if (path.startsWith('/library')) return 'Library';
   if (path.startsWith('/browse') || path.startsWith('/store') || path.startsWith('/product') || path.startsWith('/cart')) return 'Browse';
   if (path.startsWith('/community')) return 'Community';
+  if (path.startsWith('/orders')) return 'Orders';
   if (path.startsWith('/studio') || path.startsWith('/dashboard')) return 'Studio';
   if (path.startsWith('/profile')) return 'Profile';
   if (path.startsWith('/music')) return 'Music';
@@ -355,7 +363,7 @@ export function Topbar() {
       </div>
 
       <div className="os-topbar-right">
-        {cartCount > 0 && (
+        {PUBLIC_PURCHASES_AVAILABLE && cartCount > 0 && (
           <Link href="/cart" className="ui44-symbol-button ui44-symbol-button-cart os-topbar-icon-button os-topbar-cart-button" aria-label={`Cart · ${cartCount} item${cartCount === 1 ? '' : 's'}`}>
             <IconCart />
             <span className="os-topbar-cart-count">{cartCount}</span>
@@ -467,6 +475,9 @@ export function Topbar() {
                 </Link>
                 <Link href="/inbox" className="ui44-paper-menu-item os-popover-item" role="menuitem">
                   <IconMessages /> Inbox
+                </Link>
+                <Link href="/orders" className="ui44-paper-menu-item os-popover-item" role="menuitem">
+                  <IconOrders /> Orders
                 </Link>
                 <Link href="/studio" className="ui44-paper-menu-item os-popover-item" role="menuitem">
                   <IconStudio /> Studio

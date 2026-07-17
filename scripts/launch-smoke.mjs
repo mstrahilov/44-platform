@@ -1,7 +1,6 @@
 const baseUrl = (process.env.SMOKE_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
 const reviewedSurfacesEnabled = process.env.SMOKE_REVIEWED_SURFACES === '1';
-const routes = ['/', '/store/sample-packs', '/login', '/support', '/api/health'];
-if (reviewedSurfacesEnabled) routes.push('/account/recovery', '/legal/terms', '/legal/privacy', '/legal/copyright');
+const routes = ['/', '/store/sample-packs', '/login', '/account/recovery', '/support', '/legal/terms', '/legal/privacy', '/legal/copyright', '/api/health'];
 const failures = [];
 const maxResponseMs = Number(process.env.SMOKE_MAX_RESPONSE_MS || 5000);
 const maxHtmlBytes = Number(process.env.SMOKE_MAX_HTML_BYTES || 2_000_000);
@@ -64,7 +63,7 @@ for (const [source, destination] of compatibilityRoutes) {
 }
 
 if (!reviewedSurfacesEnabled) {
-  for (const route of ['/account/recovery', '/legal/terms', '/legal/privacy', '/legal/copyright', '/community/moderation']) {
+  for (const route of ['/community/moderation']) {
     const response = await fetch(`${baseUrl}${route}`, { redirect: 'manual' });
     const expected = response.status === 404;
     if (!expected) fail(`${route}: expected hidden surface to return 404, received ${response.status}`);

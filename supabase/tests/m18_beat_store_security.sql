@@ -33,8 +33,12 @@ select '83000000-0000-0000-0000-000000000001',id from public.beat_license_templa
 insert into public.beat_offer_files(offer_id,beat_file_id) values('83000000-0000-0000-0000-000000000001','82000000-0000-0000-0000-000000000001');
 insert into public.commerce_orders(id,buyer_id,status,currency,subtotal_cents,total_cents,idempotency_key)
 values('84000000-0000-0000-0000-000000000001','51000000-0000-0000-0000-000000000001','paid','USD',2500,2500,'m18-order');
+-- This is preserved historical license evidence, not a new launch Checkout
+-- operation. The final commerce trigger correctly rejects new Beat orders.
+set local session_replication_role=replica;
 insert into public.commerce_order_items(id,order_id,offer_id,item_id,seller_id,item_title,offer_title,offer_type,unit_price_cents,line_total_cents,currency)
 values('85000000-0000-0000-0000-000000000001','84000000-0000-0000-0000-000000000001','83000000-0000-0000-0000-000000000001','61000000-0000-0000-0000-000000000001','51000000-0000-0000-0000-000000000002','M18 Beat','Basic','beat_license',2500,2500,'USD');
+set local session_replication_role=origin;
 insert into public.beat_license_grants(id,license_number,order_item_id,buyer_id,item_id,offer_id,template_id,tier_code,is_exclusive,terms_text,terms_sha256,price_cents,currency,seller_id,seller_snapshot,collaborator_snapshot,file_manifest)
 select '86000000-0000-0000-0000-000000000001','44B-M18TEST','85000000-0000-0000-0000-000000000001','51000000-0000-0000-0000-000000000001','61000000-0000-0000-0000-000000000001','83000000-0000-0000-0000-000000000001',template.id,'basic',false,template.terms_text,template.terms_sha256,2500,'USD','51000000-0000-0000-0000-000000000002','{}','[]','[{"beatFileId":"82000000-0000-0000-0000-000000000001","assetId":"81000000-0000-0000-0000-000000000001","kind":"untagged_mp3"}]'
 from public.beat_license_templates template where template.tier_code='basic' and template.version=1;

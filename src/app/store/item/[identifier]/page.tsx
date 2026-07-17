@@ -31,6 +31,9 @@ import { SamplePackExperience } from '@/components/SamplePackExperience';
 import { Ui44OverflowTrackTitle } from '@/components/ui44/OverflowTrackTitle';
 import { Ui44SectionArrow } from '@/components/ui44/Controls';
 import { beatReviewSurfacesEnabled, loadBeatCatalogSummaries } from '@/lib/domain/beats';
+import { COMMERCE_TEST_MODE, PUBLIC_PURCHASES_AVAILABLE, PURCHASING_COMING_SOON_TITLE, paidSalesUiAvailable } from '@/lib/commerceAvailability';
+import { listActiveMerchVariants, type MerchVariant } from '@/lib/domain/merchVariants';
+import { listPublicMerchImages, type MerchProductImage } from '@/lib/domain/merchImages';
 
 type ProductTrack = {
   id: string;
@@ -74,11 +77,17 @@ export function ProductStoreDetail({
   const [owned, setOwned] = useState(false);
   const [ownedLibraryItemId, setOwnedLibraryItemId] = useState<string | null>(null);
   const [ownedAcquisitionType, setOwnedAcquisitionType] = useState<string | null>(null);
+  const [hasActiveDownload, setHasActiveDownload] = useState(false);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(() => searchParams.get('track'));
   const [inferredTrackDurations, setInferredTrackDurations] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [bookContent, setBookContent] = useState<BookContent | null>(null);
   const [sampleFiles, setSampleFiles] = useState<SamplePackFile[]>([]);
+  const [merchVariants, setMerchVariants] = useState<MerchVariant[]>([]);
+  const [merchImages, setMerchImages] = useState<MerchProductImage[]>([]);
+  const [selectedMerchVariantId, setSelectedMerchVariantId] = useState<string | null>(null);
+  const [selectedMerchColor, setSelectedMerchColor] = useState<string | null>(null);
+  const [selectedMerchImageIndex, setSelectedMerchImageIndex] = useState(0);
   const cameFromRadio = searchParams.get('source') === 'radio';
 
   useTopbarBack(cameFromRadio
@@ -91,6 +100,11 @@ export function ProductStoreDetail({
       setTracks([]);
       setBookContent(null);
       setSampleFiles([]);
+      setMerchVariants([]);
+      setMerchImages([]);
+      setSelectedMerchVariantId(null);
+      setSelectedMerchColor(null);
+      setSelectedMerchImageIndex(0);
       const data = await getCatalogItem(identifier);
 
       setProduct(data);
@@ -108,6 +122,17 @@ export function ProductStoreDetail({
       }
 
       if (data) {
+        if (getProductExperience(data) === 'physical') {
+          const [variants, images] = await Promise.all([
+            listActiveMerchVariants(data.id, data.title).catch(() => []),
+            listPublicMerchImages(data.id).catch(() => []),
+          ]);
+          setMerchVariants(variants);
+          setMerchImages(images);
+          const firstSelectable = variants.find(variant => variant.selectable) ?? null;
+          setSelectedMerchColor(firstSelectable?.option_values.color ?? null);
+          setSelectedMerchVariantId(variants.some(variant => variant.option_values.size) ? null : firstSelectable?.id ?? null);
+        }
         if (beatReviewSurfacesEnabled) {
           const beatSummaries = await loadBeatCatalogSummaries([data.id]);
           data.beat = beatSummaries.get(data.id);
@@ -136,12 +161,14 @@ export function ProductStoreDetail({
       setOwned(Boolean(data));
       setOwnedLibraryItemId(data?.id ?? null);
       setOwnedAcquisitionType(data?.acquisition_type ?? null);
+      setHasActiveDownload(data?.has_active_download ?? false);
     }
     if (user) fetchOwnership(user.id);
     else Promise.resolve().then(() => {
       setOwned(false);
       setOwnedLibraryItemId(null);
       setOwnedAcquisitionType(null);
+      setHasActiveDownload(false);
     });
   }, [product, user]);
 
@@ -173,6 +200,7 @@ export function ProductStoreDetail({
       setOwned(true);
       setOwnedAcquisitionType(data?.acquisition_type ?? 'free');
       setOwnedLibraryItemId(data?.id ?? null);
+      setHasActiveDownload(data?.has_active_download ?? false);
     } catch (saveError) {
       alert(saveError instanceof Error ? saveError.message : 'Could not add this Item to your Library.');
     }
@@ -180,13 +208,22 @@ export function ProductStoreDetail({
 
   function addProductToCart() {
     if (!product) return;
-    const price = resolvePrice(product);
+    if (getProductExperience(product) === 'physical' && !selectedMerchVariant) {
+      alert(merchVariants.length ? 'Choose an available size before adding this Item to your Cart.' : 'Product options are not available yet.');
+      return;
+    }
+    const productPrice = resolvePrice(product);
+    const price = { ...productPrice, cents: selectedMerchVariant?.price_cents ?? productPrice.cents };
     addToCart({
       item_id: product.id,
+      merch_variant_id: selectedMerchVariant?.source === 'canonical' ? selectedMerchVariant.id : null,
+      merch_variant_preview_code: selectedMerchVariant?.source === 'provider_preview' ? selectedMerchVariant.code : null,
+      merch_variant_name: selectedMerchVariant?.display_name ?? null,
+      merch_option_values: selectedMerchVariant?.option_values,
       title: product.title,
       creator: product.creators?.display_name || product.creator || '44 Creator',
       item_type: product.item_type ?? null,
-      cover_url: product.cover_url,
+      cover_url: selectedMerchVariant?.image_url || product.cover_url,
       price_cents: price.cents,
       currency: price.currency,
       slug: product.slug ?? null,
@@ -198,6 +235,12 @@ export function ProductStoreDetail({
     () => new Map(tracks.map((track, index) => [track.id, trackOrder(track) || index + 1])),
     [tracks],
   );
+  const selectedMerchVariant = merchVariants.find(variant => variant.id === selectedMerchVariantId) ?? null;
+  const merchOptionKeys = [...new Set(merchVariants.flatMap(variant => Object.keys(variant.option_values)))];
+  const merchColorValues = [...new Set(merchVariants.map(variant => variant.option_values.color).filter(Boolean))];
+  const colorVariants = selectedMerchColor
+    ? merchVariants.filter(variant => variant.option_values.color === selectedMerchColor)
+    : merchVariants;
 
   useEffect(() => {
     const missingDurationTracks = tracks.filter(track => track.audio_url && (!track.duration_seconds || track.duration_seconds <= 0));
@@ -234,11 +277,27 @@ export function ProductStoreDetail({
   const isBeat = beatReviewSurfacesEnabled && Boolean(product.beat);
   const isReleasePage = releasePage || productExperience === 'music';
   const canClaimToLibrary = canSaveProductToLibrary(product);
-  const hasDownloadUnlock = ownedAcquisitionType === 'purchase';
+  const hasDownloadUnlock = ownedAcquisitionType === 'purchase' && hasActiveDownload;
+  const isMerch = productExperience === 'physical';
   const creatorLink = creatorHref(product.creators ?? product.creator);
   const creatorTabLink = `${creatorLink}${creatorLink.includes('?') ? '&' : '?'}tab=${isBeat ? 'beats' : creatorProfileTab(productExperience)}${product.id ? `&fromProduct=${encodeURIComponent(product.id)}` : ''}`;
-  const creatorMoreLink = `${creatorLink}${creatorLink.includes('?') ? '&' : '?'}tab=${isBeat ? 'beats' : creatorProfileTab(productExperience)}`;
+  const creatorMoreLink = isMerch ? '/store/merch' : `${creatorLink}${creatorLink.includes('?') ? '&' : '?'}tab=${isBeat ? 'beats' : creatorProfileTab(productExperience)}`;
   const libraryHref = ownedLibraryItemId ? productLibraryHref(product, ownedLibraryItemId) : browseIndexHref(product).replace('/store', '/library');
+  const merchGallery = [
+    ...merchImages,
+    ...(!merchImages.some(image => image.file_url === product.cover_url) && product.cover_url
+      ? [{ id: 'catalog-cover', item_id: product.id, role: 'main' as const, color_value: null, title: `${product.title} main image`, file_url: product.cover_url, sort_order: -1 }]
+      : []),
+    ...(!merchImages.some(image => image.file_url === product.hero_url) && product.hero_url && product.hero_url !== product.cover_url
+      ? [{ id: 'catalog-hero', item_id: product.id, role: 'bonus' as const, color_value: null, title: `${product.title} gallery image`, file_url: product.hero_url, sort_order: Number.MAX_SAFE_INTEGER }]
+      : []),
+  ].filter((image, index, images) => images.findIndex(candidate => candidate.file_url === image.file_url) === index);
+  const merchGalleryImages = merchGallery.map(image => image.file_url);
+  const displayedMerchImage = merchGalleryImages[selectedMerchImageIndex] ?? product.cover_url;
+  const selectedVariantInCart = selectedMerchVariant
+    ? cart.items.some(entry => entry.merch_variant_id === selectedMerchVariant.id
+      || entry.merch_variant_preview_code === selectedMerchVariant.code)
+    : false;
 
   const playableTracks: MusicQueueTrack[] = (
     tracks
@@ -291,19 +350,25 @@ export function ProductStoreDetail({
     canClaimToLibrary,
     hasDownloadUnlock,
     libraryHref,
-    cartHasItem: cart.has(product.id),
+    cartHasItem: isMerch ? selectedVariantInCart : cart.has(product.id),
     onAddToLibrary: addToLibrary,
     onAddToCart: addProductToCart,
     bookSampleAvailable: Boolean(bookContent?.preview_url),
+    merchOptionState: isMerch ? !merchVariants.length ? 'unavailable' : selectedMerchVariant ? 'ready' : 'choose' : undefined,
   });
   const contentHeading = getContentHeading(product);
-  const productDetails = buildProductDetails(product, tracks, inferredTrackDurations, bookContent, sampleFiles);
   const creatorDisplayName = product.creators?.display_name || product.creator || '44 Creator';
   const productDescription = product.long_description?.trim() || product.short_description?.trim();
-  const releaseMeta = [
-    (product.item_type || productMeta(product)).toUpperCase(),
-    ...(product.year ? [String(product.year)] : []),
-  ];
+  const merchTag = product.browse_tags?.[0]?.label || product.browse_type?.label || product.item_type || 'Merch';
+  const baseMerchPrice = resolvePrice(product);
+  const merchPrice = { ...baseMerchPrice, cents: selectedMerchVariant?.price_cents ?? baseMerchPrice.cents };
+  const merchPriceLabel = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: merchPrice.currency,
+  }).format(merchPrice.cents / 100);
+  const releaseMeta = isMerch
+    ? [merchTag.toUpperCase(), merchPriceLabel]
+    : [(product.item_type || productMeta(product)).toUpperCase(), ...(product.year ? [String(product.year)] : [])];
 
   return (
     <div className="view-detail-single">
@@ -317,18 +382,48 @@ export function ProductStoreDetail({
         externalLinks={product.external_links ?? []}
         coverClassName={`view-album-cover-${productExperience}`}
         showCreatorAvatar={false}
+        showCreatorIdentity={!isMerch}
+        imageUrlOverride={isMerch ? displayedMerchImage : undefined}
+        className={isMerch ? 'view-merch-purchase-header' : undefined}
+        beforeActions={isMerch ? <MerchPurchaseControls
+          variants={merchVariants}
+          selectedVariant={selectedMerchVariant}
+          selectedColor={selectedMerchColor}
+          colorValues={merchColorValues}
+          colorVariants={colorVariants}
+          optionKeys={merchOptionKeys}
+          priceLabel={merchPriceLabel}
+          onSelectColor={(color, variantId) => {
+            setSelectedMerchColor(color);
+            setSelectedMerchVariantId(variantId);
+            const colorImageIndex = merchGallery.findIndex(image => image.role === 'color'
+              && image.color_value?.trim().toLowerCase() === color.trim().toLowerCase());
+            setSelectedMerchImageIndex(colorImageIndex >= 0 ? colorImageIndex : 0);
+          }}
+          onSelectVariant={setSelectedMerchVariantId}
+        /> : undefined}
+        mediaFooter={isMerch && merchGalleryImages.length ? <div className="merch-gallery-dots" aria-label="Product gallery">
+          {merchGalleryImages.map((imageUrl, index) => <button
+            type="button"
+            key={imageUrl}
+            className={selectedMerchImageIndex === index ? 'merch-gallery-dot merch-gallery-dot-active' : 'merch-gallery-dot'}
+            aria-label={`View product image ${index + 1}`}
+            aria-pressed={selectedMerchImageIndex === index}
+            onClick={() => setSelectedMerchImageIndex(index)}
+          />)}
+        </div> : undefined}
       />
 
       {isBeat && product.beat ? <BeatLicenseReviewPanel product={product} /> : null}
 
-      {(['book', 'asset'].includes(productExperience) || isBeat) && productDescription ? (
+      {(((['book', 'asset'].includes(productExperience) || isBeat) && productDescription) || isMerch) ? (
         <div className="view-section item-description-section">
           <h2 className="view-section-title">Description</h2>
-          <p className="os-type-body view-description">{productDescription}</p>
+          <p className="os-type-body view-description">{productDescription || 'Description coming soon.'}</p>
         </div>
       ) : null}
 
-      <div className="view-section view-tracklist-section">
+      {!isMerch ? <div className="view-section view-tracklist-section">
         {productExperience !== 'asset' ? <div className="item-community-header item-community-section-header">
           <h2 className="view-section-title item-community-section-title">{contentHeading}</h2>
         </div> : null}
@@ -402,24 +497,8 @@ export function ProductStoreDetail({
             <p className="os-type-body view-description">{bookContent?.preview_url ? 'Read the creator-selected PDF sample in the 44OS reader.' : 'This creator has not added a public sample yet.'}</p>
             {bookContent?.preview_url ? <Link className="os-button os-button-secondary" href={`/reader/${product.id}?mode=sample`}>Read Sample</Link> : null}
           </div>
-        ) : (
-          <p className="os-type-body view-description view-content-empty">
-            Product gallery support is not available for this Item yet.
-          </p>
-        )}
-      </div>
-
-      <div className="view-section">
-        <h2 className="view-section-title">Product Details</h2>
-        <div className="ui44-panel ui44-panel-glass ui44-panel-overflow-clip ui44-detail-list">
-          {productDetails.map(detail => (
-            <div className="view-row ui44-list-row ui44-list-row-detail" key={detail.label}>
-              <span className="view-row-label">{detail.label}</span>
-              <span className="view-row-value">{detail.value}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+        ) : null}
+      </div> : null}
 
       {related.length > 0 && (
         <div className="view-section">
@@ -438,6 +517,86 @@ export function ProductStoreDetail({
       <AchievementToast toast={toast} onDone={() => setToast(null)} />
     </div>
   );
+}
+
+function MerchPurchaseControls({
+  variants,
+  selectedVariant,
+  selectedColor,
+  colorValues,
+  colorVariants,
+  optionKeys,
+  priceLabel,
+  onSelectColor,
+  onSelectVariant,
+}: {
+  variants: MerchVariant[];
+  selectedVariant: MerchVariant | null;
+  selectedColor: string | null;
+  colorValues: string[];
+  colorVariants: MerchVariant[];
+  optionKeys: string[];
+  priceLabel: string;
+  onSelectColor: (color: string, variantId: string | null) => void;
+  onSelectVariant: (variantId: string | null) => void;
+}) {
+  if (!variants.length) return <p className="merch-options-unavailable">This product does not have selectable Printful options yet.</p>;
+  return <div className="merch-variant-picker">
+    {colorValues.length ? <fieldset className="merch-option-group">
+      <legend>Color <strong>{selectedColor || 'Choose a color'}</strong></legend>
+      <div className="merch-option-buttons merch-color-options">
+        {colorValues.map(color => {
+          const variantsForColor = variants.filter(variant => variant.option_values.color === color);
+          const colorAvailable = variantsForColor.some(variant => variant.selectable);
+          return <button
+            type="button"
+            className={selectedColor === color ? 'merch-option-button merch-color-button merch-option-button-selected' : 'merch-option-button merch-color-button'}
+            aria-pressed={selectedColor === color}
+            disabled={!colorAvailable}
+            key={color}
+            onClick={() => {
+              const currentSize = selectedVariant?.option_values.size;
+              const sameSize = variantsForColor.find(variant => variant.selectable && variant.option_values.size === currentSize);
+              const firstAvailable = variantsForColor.find(variant => variant.selectable) ?? null;
+              onSelectColor(color, variantsForColor.some(variant => variant.option_values.size)
+                ? sameSize?.id ?? null
+                : firstAvailable?.id ?? null);
+            }}
+          ><span className="merch-color-dot" aria-hidden="true" />{color}</button>;
+        })}
+      </div>
+    </fieldset> : null}
+
+    {colorVariants.some(variant => variant.option_values.size) ? <fieldset className="merch-option-group">
+      <legend>Size <strong>{selectedVariant?.option_values.size || 'Choose a size'}</strong></legend>
+      <div className="merch-option-buttons merch-size-options">
+        {[...new Set(colorVariants.map(variant => variant.option_values.size).filter(Boolean))].map(size => {
+          const variant = colorVariants.find(candidate => candidate.option_values.size === size);
+          return <button
+            type="button"
+            className={selectedVariant?.id === variant?.id ? 'merch-option-button merch-size-button merch-option-button-selected' : 'merch-option-button merch-size-button'}
+            aria-pressed={selectedVariant?.id === variant?.id}
+            disabled={!variant?.selectable}
+            title={variant?.selectable ? `Choose size ${size}` : `Size ${size} is out of stock`}
+            key={size}
+            onClick={() => onSelectVariant(variant?.id ?? null)}
+          >{size}{!variant?.selectable ? <span className="sr-only"> — out of stock</span> : null}</button>;
+        })}
+      </div>
+    </fieldset> : null}
+
+    {!colorValues.length && !optionKeys.length ? <fieldset className="merch-option-group">
+      <legend>Variant</legend>
+      <div className="merch-option-buttons">
+        {variants.map(variant => <button type="button" className={selectedVariant?.id === variant.id ? 'merch-option-button merch-option-button-selected' : 'merch-option-button'} disabled={!variant.selectable} onClick={() => onSelectVariant(variant.id)} key={variant.id}>{variant.display_name}</button>)}
+      </div>
+    </fieldset> : null}
+
+    <div className="merch-variant-selection">
+      <strong>{selectedVariant ? selectedVariant.display_name : 'Select an available option'}</strong>
+      <span>{priceLabel}</span>
+    </div>
+  </div>;
 }
 
 function trackOrder(track: ProductTrack) {
@@ -476,6 +635,7 @@ function resolveStoreActions({
   onAddToLibrary,
   onAddToCart,
   bookSampleAvailable,
+  merchOptionState,
 }: {
   product: Product;
   userSignedIn: boolean;
@@ -487,9 +647,16 @@ function resolveStoreActions({
   onAddToLibrary: () => void;
   onAddToCart: () => void;
   bookSampleAvailable: boolean;
+  merchOptionState?: 'ready' | 'choose' | 'unavailable';
 }) {
   const experience = getProductExperience(product);
   const free = isFreeLibraryClaim(product);
+  const paidSalesAvailable = paidSalesUiAvailable(product);
+  const unavailablePurchaseAction: ProductDetailAction = {
+    label: PURCHASING_COMING_SOON_TITLE,
+    secondary: true,
+    disabled: true,
+  };
   if (experience === 'music') {
     return [
       owned
@@ -497,11 +664,13 @@ function resolveStoreActions({
         : userSignedIn
           ? { label: 'Add to Library', onClick: onAddToLibrary, secondary: true }
           : { label: 'Sign In to Save', href: '/login', secondary: true },
-      ...(product.download_purchase_enabled && product.price_cents > 0 && !hasDownloadUnlock
+      ...(PUBLIC_PURCHASES_AVAILABLE && paidSalesAvailable && product.download_purchase_enabled && product.price_cents > 0 && !hasDownloadUnlock
         ? [cartHasItem
           ? { label: 'View Download Cart', href: '/cart', secondary: true }
           : { label: 'Buy Download', onClick: onAddToCart, secondary: true }]
-        : []),
+        : !hasDownloadUnlock && product.download_purchase_enabled && product.price_cents > 0
+          ? [{ ...unavailablePurchaseAction, label: PUBLIC_PURCHASES_AVAILABLE ? 'Paid sales unavailable' : unavailablePurchaseAction.label }]
+          : []),
     ];
   }
 
@@ -514,7 +683,9 @@ function resolveStoreActions({
           : userSignedIn
             ? { label: 'Add to Library', onClick: onAddToLibrary, secondary: true }
             : { label: 'Sign In to Save', href: '/login', secondary: true }
-        : cartHasItem
+        : !PUBLIC_PURCHASES_AVAILABLE || !paidSalesAvailable
+          ? unavailablePurchaseAction
+          : cartHasItem
           ? { label: 'View Purchase Cart', href: '/cart', secondary: true }
           : { label: 'Buy Book', onClick: onAddToCart, secondary: true },
     ];
@@ -529,9 +700,15 @@ function resolveStoreActions({
   }
 
   return [
-    cartHasItem
+    !PUBLIC_PURCHASES_AVAILABLE || !paidSalesAvailable
+      ? unavailablePurchaseAction
+      : experience === 'physical' && merchOptionState === 'unavailable'
+      ? { label: 'Options unavailable', disabled: true }
+      : experience === 'physical' && merchOptionState === 'choose'
+      ? { label: 'Choose an option', disabled: true }
+      : cartHasItem
       ? { label: 'View Purchase Cart', href: '/cart' }
-      : { label: experience === 'physical' ? 'Buy Physical' : 'Buy Download', onClick: onAddToCart },
+      : { label: experience === 'physical' ? 'Add to Cart' : 'Buy Download', onClick: onAddToCart },
   ];
 }
 
@@ -541,71 +718,7 @@ function getContentHeading(product: Product) {
   if (experience === 'music') return 'Tracklist';
   if (experience === 'book') return 'Book Sample';
   if (experience === 'asset') return product.item_type?.toLowerCase().includes('stem') ? 'Original Track' : 'Preview Samples';
-  return 'Product Gallery';
-}
-
-function buildProductDetails(product: Product, tracks: ProductTrack[], inferredDurations: Record<string, number> = {}, bookContent: BookContent | null = null, sampleFiles: SamplePackFile[] = []) {
-  const experience = getProductExperience(product);
-  const creator = product.creators?.display_name || product.creator || '44 Creator';
-  const uploadDate = new Date(product.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  const taxonomy = [
-    { label: 'Category', value: product.browse_category?.label || 'Unassigned' },
-    { label: 'Type', value: product.browse_type?.label || 'Unassigned' },
-  ];
-  if (experience === 'music') {
-    if (product.beat) {
-      const beat = product.beat;
-      return [
-        { label: 'Producer', value: creator },
-        ...taxonomy,
-        { label: 'BPM', value: String(beat.bpm) },
-        { label: 'Key', value: beat.keyNotApplicable ? 'Atonal / N/A' : `${beat.keyRoot} ${beat.keyMode}` },
-        { label: 'Time Signature', value: beat.timeSignature },
-        { label: 'Mood', value: beat.moods.join(', ') || 'Not provided' },
-        { label: 'Instruments', value: beat.instruments.join(', ') || 'Not provided' },
-        { label: 'Samples', value: beat.sampleStatus === 'none' ? 'None declared' : beat.sampleStatus.replaceAll('_', ' ') },
-        { label: 'Upload Date', value: uploadDate },
-      ];
-    }
-    const totalLengthSeconds = tracks.reduce((sum, track) => sum + (getTrackDurationSeconds(track, inferredDurations) ?? 0), 0);
-    return [
-      { label: 'Creator', value: creator },
-      ...taxonomy,
-      { label: 'Release Year', value: String(product.year ?? 'N/A') },
-      { label: 'Total Tracks', value: String(tracks.length) },
-      { label: 'Total Length', value: formatTrackDuration(totalLengthSeconds) },
-      { label: 'Upload Date', value: uploadDate },
-    ];
-  }
-  if (experience === 'book') {
-    return [
-      { label: 'Creator', value: creator },
-      ...taxonomy,
-      { label: 'Publication Year', value: String(product.year ?? 'N/A') },
-      { label: 'Total Pages', value: bookContent?.total_pages ? String(bookContent.total_pages) : 'Not provided' },
-      { label: 'Language', value: bookContent?.language_code || 'Not provided' },
-      { label: 'Upload Date', value: uploadDate },
-    ];
-  }
-  if (experience === 'asset') {
-    return [
-      { label: 'Creator', value: creator },
-      ...taxonomy,
-      { label: 'Year', value: String(product.year ?? 'N/A') },
-      { label: 'Previewed Samples', value: String(sampleFiles.length) },
-      { label: 'Preview Format', value: [...new Set(sampleFiles.map(sample => sample.mime_type).filter(Boolean))].join(', ') || 'Not provided' },
-      { label: 'Upload Date', value: uploadDate },
-    ];
-  }
-  return [
-    { label: 'Creator', value: creator },
-    ...taxonomy,
-    { label: 'Release Year', value: String(product.year ?? 'N/A') },
-    { label: 'Color', value: 'Coming soon' },
-    { label: 'Available Sizes', value: 'Coming soon' },
-    { label: 'Materials', value: 'Coming soon' },
-    { label: 'Upload Date', value: uploadDate },
-  ];
+  return 'Content';
 }
 
 function BeatLicenseReviewPanel({ product }: { product: Product }) {
@@ -622,12 +735,14 @@ function BeatLicenseReviewPanel({ product }: { product: Product }) {
       {beat.licenseOffers.map(offer => <details className="beat-license-offer" key={offer.id}>
         <summary className="dashboard-list-row">
           <span className="dashboard-row-copy"><strong className="dashboard-row-title">{offer.title}</strong><span className="dashboard-row-subtitle">{offer.summary} · {offer.includedFileKinds.map(kind => kind.replaceAll('_', ' ')).join(', ')}</span></span>
-          <span className="dashboard-row-actions"><strong>{new Intl.NumberFormat('en-US', { style: 'currency', currency: offer.currency }).format(offer.priceCents / 100)}</strong>{offer.status === 'active' ? <button type="button" className="os-button os-button-primary os-button-compact" onClick={event => { event.preventDefault(); addToCart({ item_id: product.id, offer_id: offer.id, title: product.title, creator: product.creators?.display_name || product.creator, item_type: 'Beat', cover_url: product.cover_url, price_cents: offer.priceCents, currency: offer.currency, slug: product.slug, href: productBrowseHref(product), offer_title: offer.title, tier_code: offer.tierCode, included_files: offer.includedFileKinds, terms_sha256: offer.termsSha256 }); }}>{cart.hasOffer(offer.id) ? 'Selected' : 'Choose'}</button> : <span className="dashboard-status-pill studio-status-pill-draft ui44-badge">Review only</span>}</span>
+          <span className="dashboard-row-actions"><strong>{new Intl.NumberFormat('en-US', { style: 'currency', currency: offer.currency }).format(offer.priceCents / 100)}</strong>{offer.status === 'active' && paidSalesUiAvailable(product) ? <button type="button" className="os-button os-button-primary os-button-compact" onClick={event => { event.preventDefault(); addToCart({ item_id: product.id, offer_id: offer.id, title: product.title, creator: product.creators?.display_name || product.creator, item_type: 'Beat', cover_url: product.cover_url, price_cents: offer.priceCents, currency: offer.currency, slug: product.slug, href: productBrowseHref(product), offer_title: offer.title, tier_code: offer.tierCode, included_files: offer.includedFileKinds, terms_sha256: offer.termsSha256 }); }}>{cart.hasOffer(offer.id) ? 'Selected' : 'Choose'}</button> : <span className="dashboard-status-pill studio-status-pill-draft ui44-badge">Review only</span>}</span>
         </summary>
         <div className="beat-license-terms"><p className="os-type-body">{offer.termsText}</p><small>Terms digest: {offer.termsSha256 || 'Created when counsel-approved terms activate.'}</small></div>
       </details>)}
     </div> : <p className="os-type-body view-description">No license tiers are enabled for this Beat.</p>}
-    <p className="os-type-meta">Purchasing is unavailable while Beat commerce and approved legal templates are off.</p>
+    <p className="os-type-meta">{COMMERCE_TEST_MODE
+      ? 'Local test mode is on. Checkout still revalidates every offer and license on the server.'
+      : 'Purchasing is unavailable while Beat commerce and approved legal templates are off.'}</p>
   </div>;
 }
 

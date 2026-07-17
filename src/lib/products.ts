@@ -84,6 +84,8 @@ export interface Item {
   fulfillment_type?: string | null;
   streaming_enabled?: boolean | null;
   download_purchase_enabled?: boolean | null;
+  paid_sales_available?: boolean;
+  paid_sales_status?: string;
   launch_url?: string | null;
   read_url?: string | null;
   download_url?: string | null;
@@ -142,6 +144,22 @@ function publicCatalogArtistName(product: Item) {
  * Remaining fields only provide deterministic ordering within the same artist/year.
  */
 export function comparePublicCatalogItems(a: Item, b: Item) {
+  const aIsMerch = a.experience_type === 'merch' || a.fulfillment_type === 'physical';
+  const bIsMerch = b.experience_type === 'merch' || b.fulfillment_type === 'physical';
+  if (aIsMerch && bIsMerch) {
+    const merchOrderDifference = (a.sort_order ?? Number.MAX_SAFE_INTEGER) - (b.sort_order ?? Number.MAX_SAFE_INTEGER);
+    if (merchOrderDifference !== 0) return merchOrderDifference;
+
+    const merchTypePriority = (item: Item) => {
+      const type = (item.browse_type?.label || item.item_type || '').trim().toLowerCase();
+      if (type === 'apparel') return 0;
+      if (type === 'accessories') return 1;
+      return 2;
+    };
+    const typeDifference = merchTypePriority(a) - merchTypePriority(b);
+    if (typeDifference !== 0) return typeDifference;
+  }
+
   const releaseTime = (item: Item) => item.release_date
     ? new Date(`${item.release_date}T00:00:00`).getTime()
     : (item.year ? new Date(`${item.year}-01-01T00:00:00`).getTime() : Number.NEGATIVE_INFINITY);

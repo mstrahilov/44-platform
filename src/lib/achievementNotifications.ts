@@ -9,7 +9,7 @@ export interface AchievementNotification extends AchievementToastData {
   createdAt?: string;
   productId?: string | null;
   href?: string | null;
-  kind?: 'achievement' | 'reply' | 'mention' | 'like' | 'message';
+  kind?: 'achievement' | 'reply' | 'mention' | 'like' | 'message' | 'system';
   actorUserId?: string | null;
   actorAvatarUrl?: string | null;
   achievementCode?: string | null;
@@ -70,12 +70,20 @@ export async function requestAchievementEvaluation(
 // Supabase triggers. The client synthesizes notification rows from those events.
 
 export async function loadAchievementNotifications(userId: string): Promise<AchievementNotification[]> {
-  const { data, error } = await supabase
-    .from('achievement_events')
-    .select('id,user_id,item_id,achievement_id,event_type,metadata,created_at')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(24);
+  const [{ data, error }, sellerNotices] = await Promise.all([
+    supabase
+      .from('achievement_events')
+      .select('id,user_id,item_id,achievement_id,event_type,metadata,created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(24),
+    supabase
+      .from('creator_seller_notifications' as never)
+      .select('id,title,body,href,created_at')
+      .eq('creator_id' as never, userId)
+      .order('created_at' as never, { ascending: false })
+      .limit(10),
+  ]);
 
   if (error || !data) return [];
 
@@ -220,5 +228,21 @@ export async function loadAchievementNotifications(userId: string): Promise<Achi
     }
   }
 
-  return notifications;
+  if (!sellerNotices.error) {
+    const rows = sellerNotices.data as unknown as Array<{
+      id: string; title: string; body: string; href: string; created_at: string;
+    }>;
+    rows.forEach(notice => notifications.push({
+      id: notice.id,
+      title: notice.title,
+      description: notice.body,
+      createdAt: notice.created_at,
+      href: notice.href,
+      kind: 'system',
+    }));
+  }
+
+  return notifications.sort((left, right) => (
+    new Date(right.createdAt ?? 0).getTime() - new Date(left.createdAt ?? 0).getTime()
+  ));
 }

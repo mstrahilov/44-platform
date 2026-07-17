@@ -2,11 +2,13 @@
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { accountExistsForEmail, usernameIsTaken } from '@/lib/domain/accounts';
 import { useAuth } from '@/lib/useAuth';
 import { getSitePathUrl } from '@/lib/siteUrl';
-import { Ui44TextInput } from '@/components/ui44/Inputs';
+import { COUNTRIES } from '@/lib/marketPreferences';
+import { Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
 
 type AuthStep = 'email' | 'password';
 
@@ -34,6 +36,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
+  const [countryCode, setCountryCode] = useState('');
   const [accountExists, setAccountExists] = useState<boolean | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -95,6 +98,10 @@ export default function LoginPage() {
       setStatus('Use 3–32 lowercase letters, numbers, or underscores for your username.');
       return;
     }
+    if (!accountExists && !COUNTRIES.some(country => country.code === countryCode)) {
+      setStatus('Choose the country where you live.');
+      return;
+    }
 
     setSubmitting(true);
     setStatus(null);
@@ -136,6 +143,7 @@ export default function LoginPage() {
           display_name: cleanDisplayName,
           name: cleanDisplayName,
           username: cleanUsername,
+          country_code: countryCode,
         },
       },
     });
@@ -184,6 +192,7 @@ export default function LoginPage() {
     setPassword('');
     setDisplayName('');
     setUsername('');
+    setCountryCode('');
     setAccountExists(null);
     setSignupComplete(false);
     setStatus(null);
@@ -203,7 +212,7 @@ export default function LoginPage() {
               ? 'Enter your email to get started.'
               : isLogin
                 ? 'Enter your password to log in.'
-                : 'Add your public name and username, then choose a password. We’ll email you if verification is required.'}
+                : 'Add your public name, username, and country, then choose a password. We’ll email you if verification is required.'}
           </p>
         </div>
 
@@ -248,6 +257,25 @@ export default function LoginPage() {
                       setStatus(null);
                     }}
                   />
+                </label>
+              )}
+              {!isLogin && (
+                <label className="login-field">
+                  <span className="os-type-field-title">Country</span>
+                  <Ui44SelectInput
+                    value={countryCode}
+                    required
+                    autoComplete="country"
+                    onChange={event => {
+                      setCountryCode(event.target.value);
+                      setStatus(null);
+                    }}
+                  >
+                    <option value="">Choose your country</option>
+                    {COUNTRIES.map(country => (
+                      <option key={country.code} value={country.code}>{country.name}</option>
+                    ))}
+                  </Ui44SelectInput>
                 </label>
               )}
               {!isLogin && (
@@ -309,6 +337,11 @@ export default function LoginPage() {
             >
               {linkSubmitting ? 'Sending…' : 'Send login link'}
             </button>
+          )}
+          {step === 'password' && isLogin && (
+            <Link className="os-button os-button-ghost os-button-compact login-link-action" href="/account/recovery">
+              Forgot password?
+            </Link>
           )}
         </form>
 

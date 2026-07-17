@@ -3,13 +3,20 @@ create extension if not exists pgtap with schema extensions;
 select plan(40);
 
 insert into auth.users(id,email,raw_user_meta_data) values
- ('91000000-0000-0000-0000-000000000001','admin-member@example.test','{"username":"admin_member","display_name":"Admin Member"}'),
- ('91000000-0000-0000-0000-000000000002','admin-creator@example.test','{"username":"admin_creator","display_name":"Admin Creator"}'),
- ('91000000-0000-0000-0000-000000000003','admin-operator@example.test','{"username":"admin_operator","display_name":"Admin Operator"}'),
- ('91000000-0000-0000-0000-000000000004','admin-missing@example.test','{"username":"admin_missing","display_name":"Missing Profile"}');
+ ('91000000-0000-0000-0000-000000000001','admin-member@example.test','{"username":"admin_member","display_name":"Admin Member","country_code":"US"}'),
+ ('91000000-0000-0000-0000-000000000002','admin-creator@example.test','{"username":"admin_creator","display_name":"Admin Creator","country_code":"US"}'),
+ ('91000000-0000-0000-0000-000000000003','admin-operator@example.test','{"username":"admin_operator","display_name":"Admin Operator","country_code":"US"}'),
+ ('91000000-0000-0000-0000-000000000004','admin-missing@example.test','{"username":"admin_missing","display_name":"Missing Profile","country_code":"US"}');
 select set_config('request.jwt.claim.role','service_role',true);
 update public.profiles set role='creator' where id='91000000-0000-0000-0000-000000000002';
 update public.profiles set role='admin' where id='91000000-0000-0000-0000-000000000003';
+insert into public.creator_payout_country_routes(
+  country_code,target_currency,status,business_to_individual_confirmed,email_claim_confirmed,
+  evidence_reference,verified_at,verified_by,revalidate_after
+) values(
+  'US','USD','verified',true,true,'Synthetic Admin test Wise route',now(),
+  '91000000-0000-0000-0000-000000000003',now()+interval '90 days'
+);
 delete from public.profiles where id='91000000-0000-0000-0000-000000000004';
 insert into public.item_types(id,category_id,slug,label,sort_order,is_active)
 select '91500000-0000-0000-0000-000000000001',id,'admin-album','Album',10,true from public.item_categories where slug='music';

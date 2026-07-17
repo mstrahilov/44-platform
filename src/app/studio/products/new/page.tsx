@@ -27,6 +27,7 @@ import { saveStudioBookContent, replaceStudioSampleFiles } from '@/lib/domain/na
 import { StudioBookFields, StudioSamplePreviewFields, type DraftSamplePreview } from '@/components/StudioNativeContentFields';
 import { Ui44CheckboxInput, Ui44SelectInput, Ui44TextInput, Ui44Textarea } from '@/components/ui44/Inputs';
 import { clearStudioFormRecovery, readStudioFormRecovery, writeStudioFormRecovery } from '@/lib/studioFormRecovery';
+import { creatorPaidSalesMessage, loadCreatorPaidSalesState, type CreatorPaidSalesState } from '@/lib/domain/creatorCommerce';
 
 function buildSlug(title: string) {
   const base = normalizeTaxonomyValue(title) || 'item';
@@ -57,6 +58,7 @@ type DraftTrack = {
 type NewItemRecovery = {
   title: string; description: string; categoryId: string; productType: string; storeTypeId: string;
   selectedTagIds: string[]; price: string; marketMode: MarketMode; localPrice: string; localCurrency: string;
+  availability?: 'free' | 'paid';
   merchFulfillmentMode: 'ship' | 'deliver'; merchShippingScope: 'local' | 'global'; coverUrl: string;
   galleryUrls: string[]; itemFileUrl: string; bookPreviewUrl: string; bookTotalPages: string;
   bookSamplePages: string; bookLanguage: string; samplePreviews: DraftSamplePreview[]; year: string; releaseDate?: string;
@@ -131,6 +133,8 @@ function NewProductContent() {
   const [taxonomyTypes, setTaxonomyTypes] = useState<Database['public']['Tables']['item_types']['Row'][]>([]);
   const [taxonomyTags, setTaxonomyTags] = useState<Database['public']['Tables']['item_tags']['Row'][]>([]);
   const [price, setPrice] = useState('');
+  const [availability, setAvailability] = useState<'free' | 'paid'>('free');
+  const [paidSales, setPaidSales] = useState<CreatorPaidSalesState | null>(null);
   const [marketMode, setMarketMode] = useState<MarketMode>('global');
   const [localPrice, setLocalPrice] = useState('');
   const [localCurrency, setLocalCurrency] = useState('USD');
@@ -167,11 +171,12 @@ function NewProductContent() {
     async function loadFormData() {
       if (!userId) return;
 
-      const [categoryRows, profileResult, taxonomy, linkPlatforms] = await Promise.all([
+      const [categoryRows, profileResult, taxonomy, linkPlatforms, paidSalesResult] = await Promise.all([
         listItemCategories(),
         loadStudioProfile(userId),
         listCatalogTaxonomy(),
         listExternalLinkPlatforms('item'),
+        loadCreatorPaidSalesState(userId),
       ]);
 
       const resolvedCategories = categoryRows;
@@ -188,6 +193,7 @@ function NewProductContent() {
       setTaxonomyTypes(taxonomy.types);
       setTaxonomyTags(taxonomy.tags);
       setExternalLinkPlatforms(linkPlatforms);
+      setPaidSales(paidSalesResult);
       setExternalLinks(materializeExternalLinkDrafts(linkPlatforms, []));
       setStoreTypeId('');
       setProductType('');
@@ -196,7 +202,7 @@ function NewProductContent() {
       if (recovered) {
         setTitle(recovered.title); setDescription(recovered.description); setCategoryId(recovered.categoryId);
         setProductType(recovered.productType); setStoreTypeId(recovered.storeTypeId); setSelectedTagIds(recovered.selectedTagIds);
-        setPrice(recovered.price); setMarketMode(recovered.marketMode); setLocalPrice(recovered.localPrice);
+        setPrice(recovered.price); setAvailability(recovered.availability ?? 'free'); setMarketMode(recovered.marketMode); setLocalPrice(recovered.localPrice);
         setLocalCurrency(recovered.localCurrency); setMerchFulfillmentMode(recovered.merchFulfillmentMode);
         setMerchShippingScope(recovered.merchShippingScope); setCoverUrl(recovered.coverUrl);
         setGalleryUrls(recovered.galleryUrls); setItemFileUrl(recovered.itemFileUrl); setBookPreviewUrl(recovered.bookPreviewUrl);
@@ -214,20 +220,25 @@ function NewProductContent() {
   useEffect(() => {
     if (!formRecoveryReady || !recoveryKey) return;
     writeStudioFormRecovery(recoveryKey, {
-      title, description, categoryId, productType, storeTypeId, selectedTagIds, price, marketMode,
+      title, description, categoryId, productType, storeTypeId, selectedTagIds, price, availability, marketMode,
       localPrice, localCurrency, merchFulfillmentMode, merchShippingScope, coverUrl, galleryUrls,
       itemFileUrl, bookPreviewUrl, bookTotalPages, bookSamplePages, bookLanguage, samplePreviews,
       year, releaseDate, trackCount, tracks, featureState, externalLinks, externalLinksEnabled, rightsConfirmed,
     } satisfies NewItemRecovery);
   }, [bookLanguage, bookPreviewUrl, bookSamplePages, bookTotalPages, categoryId, coverUrl, description,
     externalLinks, externalLinksEnabled, featureState, formRecoveryReady, galleryUrls, itemFileUrl, localCurrency, localPrice,
-    marketMode, merchFulfillmentMode, merchShippingScope, price, productType, recoveryKey, rightsConfirmed,
+    marketMode, merchFulfillmentMode, merchShippingScope, price, availability, productType, recoveryKey, rightsConfirmed,
     samplePreviews, selectedTagIds, storeTypeId, title, trackCount, tracks, year, releaseDate]);
 
   const isMusicProduct = section.id === 'music';
   const isMerchProduct = section.id === 'merch';
   const needsDigitalFile = section.id === 'books' || section.id === 'assets';
   const merchUsesLocalOnlyPricing = isMerchProduct && (merchFulfillmentMode === 'deliver' || merchShippingScope === 'local');
+  const creatorCommerceUnavailable = !isMerchProduct && !paidSales?.can_sell_paid;
+
+  useEffect(() => {
+    if (profile && isMerchProduct && profile.role !== 'admin') router.replace('/studio');
+  }, [isMerchProduct, profile, router]);
 
   useEffect(() => {
     if (!isMusicProduct) return;
@@ -249,6 +260,10 @@ function NewProductContent() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!user) return;
+    if (isMerchProduct && profile?.role !== 'admin') {
+      setError('Merch publishing is currently limited to 44 administrators.');
+      return;
+    }
 
     const cleanTitle = title.trim();
     const cleanType = productType.trim();
@@ -296,8 +311,13 @@ function NewProductContent() {
     setSaving(true);
     setError('');
 
-    const priceNumber = Number(price || '0');
-    const isFree = !Number.isFinite(priceNumber) || priceNumber <= 0;
+    const priceNumber = creatorCommerceUnavailable || availability === 'free' ? 0 : Number(price || '0');
+    if (!creatorCommerceUnavailable && availability === 'paid' && (!Number.isFinite(priceNumber) || priceNumber <= 0)) {
+      setSaving(false);
+      setError('Enter a price greater than zero for a paid Item.');
+      return;
+    }
+    const isFree = creatorCommerceUnavailable || availability === 'free' || !Number.isFinite(priceNumber) || priceNumber <= 0;
     const priceCents = isFree ? 0 : Math.round(priceNumber * 100);
     const localPriceNumber = Number(localPrice || '0');
     const localPriceCents = localPrice.trim() && Number.isFinite(localPriceNumber) ? Math.max(0, Math.round(localPriceNumber * 100)) : null;
@@ -314,9 +334,9 @@ function NewProductContent() {
       short_description: null,
       long_description: description.trim(),
       price_cents: merchUsesLocalOnlyPricing ? 0 : priceCents,
-      market_mode: isMerchProduct ? (merchUsesLocalOnlyPricing ? 'global_plus_local' : marketMode) : marketMode,
-      local_price_cents: isMerchProduct ? (localPriceCents ?? priceCents) : (marketMode === 'global' ? null : localPriceCents),
-      local_currency: isMerchProduct ? localCurrency : (marketMode === 'global' ? null : localCurrency),
+      market_mode: isMerchProduct ? (merchUsesLocalOnlyPricing ? 'global_plus_local' : marketMode) : 'global',
+      local_price_cents: isMerchProduct ? (localPriceCents ?? priceCents) : null,
+      local_currency: isMerchProduct ? localCurrency : null,
       available_locally_only: isMerchProduct ? merchUsesLocalOnlyPricing : false,
       is_free: isFree,
       cover_url: coverUrl.trim() || null,
@@ -468,6 +488,13 @@ function NewProductContent() {
   if (loading || !user) {
     return <PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>;
   }
+  if (!isMerchProduct && paidSales && !paidSales.can_sell_paid) {
+    return <PageShell><div className="dashboard-page">
+      <HubHero title="Creator Setup Required" copy="Complete private seller onboarding before uploading an Item." />
+      <div className="dashboard-status ui44-status" role="status">{creatorPaidSalesMessage(paidSales)}</div>
+      <Link className="os-button os-button-primary" href="/studio/onboarding">Open Creator Setup</Link>
+    </div></PageShell>;
+  }
 
   return (
     <PageShell>
@@ -480,7 +507,7 @@ function NewProductContent() {
         <div className="dashboard-section">
           <form onSubmit={handleSubmit} className="dashboard-form">
             <section className="dashboard-form-section">
-              <SectionHeader title="Details" description="Set the core title, type, pricing, artwork, and main details for this item." />
+              <SectionHeader title="Details" description="Set the core title, type, availability, artwork, and main details for this item." />
 
               <div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible">
 
@@ -638,31 +665,27 @@ function NewProductContent() {
               ) : null}
 
               {!isMerchProduct ? (
-                <div className={`dashboard-form-grid release-market-grid ${marketMode === 'global_plus_local' ? 'dashboard-form-grid-3' : 'dashboard-form-grid-2'}`}>
-                  <label className="dashboard-field">
-                    <div className="dashboard-field-label">Market</div>
-                    <Ui44SelectInput value={marketMode} onChange={event => setMarketMode(event.target.value as MarketMode)}>
-                      <option value="global">Global</option>
-                      <option value="global_plus_local">Global + Local</option>
-                    </Ui44SelectInput>
-                  </label>
-                  <label className="dashboard-field">
-                    <div className="dashboard-field-label">Price</div>
-                    <span className="dashboard-price-input">
-                      <span>{currencySymbol('USD')}</span>
-                      <Ui44TextInput className="os-input-field" value={price} onChange={event => setPrice(formatPriceInput(event.target.value))} />
-                    </span>
-                  </label>
-                  {marketMode === 'global_plus_local' ? (
+                <>
+                  <div className="dashboard-form-grid release-market-grid dashboard-form-grid-2">
                     <label className="dashboard-field">
-                      <div className="dashboard-field-label">Local Price ({localCurrency})</div>
+                      <div className="dashboard-field-label">Availability</div>
+                      <Ui44SelectInput value={creatorCommerceUnavailable ? 'free' : availability} disabled={creatorCommerceUnavailable} onChange={event => setAvailability(event.target.value as 'free' | 'paid')} aria-describedby="creator-commerce-new-item-notice">
+                        <option value="free">Free</option>
+                        <option value="paid">Paid download</option>
+                      </Ui44SelectInput>
+                    </label>
+                    <label className="dashboard-field">
+                      <div className="dashboard-field-label">Price</div>
                       <span className="dashboard-price-input">
-                        <span>{currencySymbol(localCurrency)}</span>
-                        <Ui44TextInput className="os-input-field" value={localPrice} onChange={event => setLocalPrice(formatPriceInput(event.target.value))} />
+                        <span>{currencySymbol('USD')}</span>
+                        <Ui44TextInput className="os-input-field" value={creatorCommerceUnavailable || availability === 'free' ? '0.00' : price} disabled={creatorCommerceUnavailable || availability === 'free'} onChange={event => setPrice(formatPriceInput(event.target.value))} aria-describedby="creator-commerce-new-item-notice" />
                       </span>
                     </label>
-                  ) : null}
-                </div>
+                  </div>
+                  <div id="creator-commerce-new-item-notice" className="dashboard-status ui44-status" role="status">
+                    <strong>{paidSales?.can_sell_paid ? 'Creator payouts enabled.' : 'Creator payouts unavailable.'}</strong> {creatorPaidSalesMessage(paidSales)}
+                  </div>
+                </>
               ) : (
                 <div className="dashboard-form-grid dashboard-form-grid-3 ui44-form-grid">
                   {merchUsesLocalOnlyPricing ? (

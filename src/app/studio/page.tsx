@@ -169,7 +169,7 @@ export default function StudioPage() {
   );
   const productSections = [
     ...(beatReviewSurfacesEnabled ? [{ id: 'beats', label: 'Beats', itemLabel: 'Beat', href: '/studio#beats', typeOptions: ['Beat'] }] : []),
-    ...STUDIO_CATALOG_SECTIONS,
+    ...STUDIO_CATALOG_SECTIONS.filter(section => section.id !== 'merch' || profile?.role === 'admin'),
   ].map(section => ({
     ...section,
     items: overview.products.filter(item => {

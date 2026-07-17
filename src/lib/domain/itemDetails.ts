@@ -1,12 +1,13 @@
 import { isV1AchievementCode } from '@/lib/achievementCatalog';
 import type { Database } from '@/lib/database.types';
 import { getProductExperience } from '@/lib/experience';
-import type { Product } from '@/lib/products';
+import { comparePublicCatalogProducts, type Product } from '@/lib/products';
 import type { ProductAchievement, Track, UserAchievement } from '@/lib/platform';
 import { supabase } from '@/lib/supabase';
 import { getPublicNativeContent } from '@/lib/domain/nativeContent';
 import type { ReleaseVideoEmbed } from '@/lib/domain/releaseFeatures';
 import { beatReviewSurfacesEnabled, listBuyerBeatLicenses } from '@/lib/domain/beats';
+import { hydratePaidSalesStatus } from '@/lib/domain/paidSalesStatus';
 
 export type DetailedLibraryItemRow = {
   id: string;
@@ -102,8 +103,9 @@ export async function getCatalogItem(identifier: string) {
   const taxonomyError = categoryResult.error || typeAssignmentResult.error || tagAssignmentResult.error;
   if (taxonomyError) throw taxonomyError;
   const typeRow = typeAssignmentResult.data?.item_types;
+  const [hydratedItem] = await hydratePaidSalesStatus([item]);
   return {
-    ...item,
+    ...hydratedItem,
     browse_category: categoryResult.data ? { id: categoryResult.data.id, label: categoryResult.data.name, slug: categoryResult.data.slug } : null,
     browse_type: Array.isArray(typeRow) ? typeRow[0] ?? null : typeRow ?? null,
     browse_tags: (tagAssignmentResult.data ?? []).flatMap(row => {
@@ -127,26 +129,38 @@ export async function listRelatedCatalogItems(item: Product, limit = 4) {
     : query.eq('creator', item.creator));
 
   if (result.error) throw result.error;
-  const rows = (result.data ?? []) as Product[];
+  const rows = await hydratePaidSalesStatus((result.data ?? []) as Product[]);
   return rows
     .filter(candidate => (
       getProductExperience(candidate) === experience
       && (!categoryId || candidate.item_category_id === categoryId)
     ))
+    .sort(comparePublicCatalogProducts)
     .slice(0, limit);
 }
 
 export async function getItemLibraryOwnership(userId: string, itemId: string) {
-  const result = await supabase
-    .from('library_entries')
-    .select('id,item_id,acquisition_type')
-    .eq('user_id', userId)
-    .eq('item_id', itemId)
-    .neq('status', 'hidden')
-    .maybeSingle();
+  const [result, downloadEntitlement] = await Promise.all([
+    supabase
+      .from('library_entries')
+      .select('id,item_id,acquisition_type')
+      .eq('user_id', userId)
+      .eq('item_id', itemId)
+      .neq('status', 'hidden')
+      .maybeSingle(),
+    supabase
+      .from('entitlements')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('item_id', itemId)
+      .eq('entitlement_type', 'download')
+      .eq('status', 'active')
+      .maybeSingle(),
+  ]);
 
   if (result.error) throw result.error;
-  return result.data;
+  if (downloadEntitlement.error) throw downloadEntitlement.error;
+  return result.data ? { ...result.data, has_active_download: Boolean(downloadEntitlement.data) } : null;
 }
 
 export async function saveItemToLibrary(userId: string, itemId: string) {

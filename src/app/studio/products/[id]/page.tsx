@@ -44,6 +44,7 @@ import { activeExternalLinkDrafts, listExternalLinkPlatforms, materializeExterna
 import { replaceStudioSampleFiles, saveStudioBookContent } from '@/lib/domain/nativeContent';
 import { StudioBookFields, StudioSamplePreviewFields, type DraftSamplePreview } from '@/components/StudioNativeContentFields';
 import { clearStudioFormRecovery, readStudioFormRecovery, writeStudioFormRecovery } from '@/lib/studioFormRecovery';
+import { creatorPaidSalesMessage, loadCreatorPaidSalesState, type CreatorPaidSalesState } from '@/lib/domain/creatorCommerce';
 
 function formatPriceInput(value: string) {
   const normalized = value.replace(/[^\d.]/g, '');
@@ -115,6 +116,7 @@ export default function EditProductPage() {
   const recoveryKey = userId ? `edit:${userId}:${id}` : '';
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [creatorName, setCreatorName] = useState('');
+  const [profileRole, setProfileRole] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -124,6 +126,9 @@ export default function EditProductPage() {
   const [taxonomyTypes, setTaxonomyTypes] = useState<Database['public']['Tables']['item_types']['Row'][]>([]);
   const [taxonomyTags, setTaxonomyTags] = useState<Database['public']['Tables']['item_tags']['Row'][]>([]);
   const [price, setPrice] = useState('');
+  const [savedPriceCents, setSavedPriceCents] = useState(0);
+  const [savedIsFree, setSavedIsFree] = useState(true);
+  const [paidSales, setPaidSales] = useState<CreatorPaidSalesState | null>(null);
   const [marketMode, setMarketMode] = useState<MarketMode>('global');
   const [localPrice, setLocalPrice] = useState('');
   const [localCurrency, setLocalCurrency] = useState('USD');
@@ -163,11 +168,12 @@ export default function EditProductPage() {
     async function loadData() {
       if (!userId) return;
 
-      const [categoryRows, profileResult, taxonomy, linkPlatforms] = await Promise.all([
+      const [categoryRows, profileResult, taxonomy, linkPlatforms, paidSalesResult] = await Promise.all([
         listItemCategories(),
         loadStudioProfile(userId),
         listCatalogTaxonomy(),
         listExternalLinkPlatforms('item'),
+        loadCreatorPaidSalesState(userId),
       ]);
 
       setCategories(categoryRows);
@@ -175,6 +181,8 @@ export default function EditProductPage() {
       setTaxonomyTags(taxonomy.tags);
       setExternalLinkPlatforms(linkPlatforms);
       setCreatorName(getStudioDisplayName(profileResult.profile, userEmail));
+      setProfileRole(profileResult.profile?.role ?? null);
+      setPaidSales(paidSalesResult);
       const profileId = profileResult.profile?.id ?? userId;
       const fallbackLocalCurrency =
         profileResult.profile?.display_currency ||
@@ -211,6 +219,8 @@ export default function EditProductPage() {
       setExternalLinks(materializeExternalLinkDrafts(linkPlatforms, editor.externalLinks));
       setExternalLinksEnabled(editor.externalLinks.some(link => link.url.trim().length > 0));
       setPrice(product.price_cents ? (product.price_cents / 100).toFixed(2) : '');
+      setSavedPriceCents(product.price_cents ?? 0);
+      setSavedIsFree(product.is_free ?? true);
       setMarketMode(normalizeMarketMode(product.market_mode));
       setLocalPrice(product.local_price_cents ? (product.local_price_cents / 100).toFixed(2) : '');
       setLocalCurrency(product.local_currency || fallbackLocalCurrency);
@@ -317,6 +327,7 @@ export default function EditProductPage() {
   const isMerchProduct = section.id === 'merch';
   const needsDigitalFile = section.id === 'books' || section.id === 'assets';
   const merchUsesLocalOnlyPricing = isMerchProduct && (merchFulfillmentMode === 'deliver' || merchShippingScope === 'local');
+  const creatorCommerceUnavailable = !isMerchProduct && !paidSales?.can_sell_paid;
 
   useTopbarBack({ href: section.href, label: section.label });
 
@@ -340,6 +351,10 @@ export default function EditProductPage() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!user) return;
+    if (isMerchProduct && profileRole !== 'admin') {
+      setError('Merch management is currently limited to 44 administrators.');
+      return;
+    }
     const profileResult = ownerId ? null : await loadStudioProfile(user.id);
     const profileId = ownerId || profileResult?.profile?.id || user.id;
 
@@ -389,8 +404,8 @@ export default function EditProductPage() {
     setSuccess('');
 
     const priceNumber = Number(price || '0');
-    const isFree = !Number.isFinite(priceNumber) || priceNumber <= 0;
-    const priceCents = isFree ? 0 : Math.round(priceNumber * 100);
+    const isFree = creatorCommerceUnavailable ? savedIsFree : !Number.isFinite(priceNumber) || priceNumber <= 0;
+    const priceCents = creatorCommerceUnavailable ? savedPriceCents : (isFree ? 0 : Math.round(priceNumber * 100));
     const localPriceNumber = Number(localPrice || '0');
     const localPriceCents = localPrice.trim() && Number.isFinite(localPriceNumber) ? Math.max(0, Math.round(localPriceNumber * 100)) : null;
 
@@ -545,6 +560,17 @@ export default function EditProductPage() {
 
   if (loading || !user || fetching) return <PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>;
 
+  if (isMerchProduct && profileRole !== 'admin') {
+    return (
+      <PageShell>
+        <div className="dashboard-page">
+          <HubHero title="Merch management unavailable" copy="Creator merch selling is planned for a future version of 44OS." />
+          <div className="ui44-centered-action"><Link className="os-button os-button-primary" href="/studio">Return to Studio</Link></div>
+        </div>
+      </PageShell>
+    );
+  }
+
   async function handleDelete() {
     if (!user) return;
     setDeleting(true);
@@ -579,7 +605,7 @@ export default function EditProductPage() {
         <div className="dashboard-section">
           <form onSubmit={handleSubmit} className="dashboard-form">
             <section className="dashboard-form-section">
-              <SectionHeader title="Details" description="Set the core title, type, pricing, artwork, and main details for this item." />
+              <SectionHeader title="Details" description="Set the core title, type, availability, artwork, and main details for this item." />
               <div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible">
             <label className="dashboard-field"><div className="dashboard-field-label">{isMerchProduct ? 'Product Name' : 'Title'}</div><Ui44TextInput className="os-input-field" value={title} placeholder={isMerchProduct ? 'Enter product name' : section.id === 'books' ? 'Enter book title' : section.id === 'assets' ? 'Enter sample pack title' : 'Enter release title'} onChange={e => setTitle(e.target.value)} /></label>
 
@@ -623,7 +649,7 @@ export default function EditProductPage() {
                     <div className="dashboard-field-label">{isMerchProduct ? 'Global Price' : 'Price'}</div>
                     <span className="dashboard-price-input">
                       <span>{currencySymbol('USD')}</span>
-                      <Ui44TextInput className="os-input-field" value={price} onChange={e => setPrice(formatPriceInput(e.target.value))} />
+                      <Ui44TextInput className="os-input-field" value={price} onChange={e => setPrice(formatPriceInput(e.target.value))} disabled={!isMerchProduct && creatorCommerceUnavailable} aria-describedby={!isMerchProduct ? 'creator-commerce-existing-item-notice' : undefined} />
                     </span>
                   </label>
                 ) : null}
@@ -713,7 +739,7 @@ export default function EditProductPage() {
               <div className={`dashboard-form-grid release-market-grid ${marketMode === 'global_plus_local' ? 'dashboard-form-grid-3' : 'dashboard-form-grid-2'}`}>
                 <label className="dashboard-field">
                   <div className="dashboard-field-label">Market</div>
-                  <Ui44SelectInput value={marketMode} onChange={event => setMarketMode(event.target.value as MarketMode)}>
+                  <Ui44SelectInput value={marketMode} onChange={event => setMarketMode(event.target.value as MarketMode)} disabled={creatorCommerceUnavailable} aria-describedby="creator-commerce-existing-item-notice">
                     <option value="global">Global</option>
                     <option value="global_plus_local">Global + Local</option>
                   </Ui44SelectInput>
@@ -722,7 +748,7 @@ export default function EditProductPage() {
                   <div className="dashboard-field-label">Price</div>
                   <span className="dashboard-price-input">
                     <span>{currencySymbol('USD')}</span>
-                    <Ui44TextInput className="os-input-field" value={price} onChange={e => setPrice(formatPriceInput(e.target.value))} />
+                    <Ui44TextInput className="os-input-field" value={price} onChange={e => setPrice(formatPriceInput(e.target.value))} disabled={creatorCommerceUnavailable} aria-describedby="creator-commerce-existing-item-notice" />
                   </span>
                 </label>
                 {marketMode === 'global_plus_local' ? (
@@ -730,7 +756,7 @@ export default function EditProductPage() {
                     <div className="dashboard-field-label">Local Price ({localCurrency})</div>
                     <span className="dashboard-price-input">
                       <span>{currencySymbol(localCurrency)}</span>
-                      <Ui44TextInput className="os-input-field" value={localPrice} onChange={e => setLocalPrice(formatPriceInput(e.target.value))} />
+                      <Ui44TextInput className="os-input-field" value={localPrice} onChange={e => setLocalPrice(formatPriceInput(e.target.value))} disabled={creatorCommerceUnavailable} aria-describedby="creator-commerce-existing-item-notice" />
                     </span>
                   </label>
                 ) : null}
@@ -743,7 +769,7 @@ export default function EditProductPage() {
                       <div className="dashboard-field-label">{merchUsesLocalOnlyPricing ? `Price (${localCurrency})` : `Local Price (${localCurrency})`}</div>
                       <span className="dashboard-price-input">
                         <span>{currencySymbol(localCurrency)}</span>
-                        <Ui44TextInput className="os-input-field" value={localPrice} onChange={e => setLocalPrice(formatPriceInput(e.target.value))} />
+                        <Ui44TextInput className="os-input-field" value={localPrice} onChange={e => setLocalPrice(formatPriceInput(e.target.value))} disabled={!isMerchProduct && creatorCommerceUnavailable} aria-describedby={!isMerchProduct ? 'creator-commerce-existing-item-notice' : undefined} />
                       </span>
                     </label>
                   ) : null}
@@ -759,16 +785,22 @@ export default function EditProductPage() {
                         { id: 'global', label: 'Global' },
                         { id: 'global_plus_local', label: 'Global + Local' },
                       ].map(option => (
-                        <button key={option.id} type="button" className={option.id === marketMode ? 'ui44-segmented-item ui44-segmented-item-active settings-segment-item settings-segment-item-active' : 'ui44-segmented-item settings-segment-item'} role="radio" aria-checked={option.id === marketMode} onClick={() => setMarketMode(option.id as MarketMode)}>
+                        <button key={option.id} type="button" className={option.id === marketMode ? 'ui44-segmented-item ui44-segmented-item-active settings-segment-item settings-segment-item-active' : 'ui44-segmented-item settings-segment-item'} role="radio" aria-checked={option.id === marketMode} onClick={() => setMarketMode(option.id as MarketMode)} disabled={creatorCommerceUnavailable}>
                           {option.label}
                         </button>
                       ))}
                     </div>
-                    <p className="dashboard-form-note">Leave Local Price blank to use the global price everywhere.</p>
+                    <p className="dashboard-form-note">{creatorCommerceUnavailable ? 'Saved market settings remain unchanged until paid creator sales are available.' : 'Choose the markets where this paid download is offered.'}</p>
                   </div>
                 ) : null}
               </>
             )}
+
+            {!isMerchProduct ? (
+              <div id="creator-commerce-existing-item-notice" className="dashboard-status ui44-status" role="status">
+                <strong>{paidSales?.can_sell_paid ? 'Creator payouts enabled.' : 'Creator payouts unavailable.'}</strong> {creatorPaidSalesMessage(paidSales)}
+              </div>
+            ) : null}
 
             <UploadField
               label={isMerchProduct ? 'Product Image' : 'Artwork'}

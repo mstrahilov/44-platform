@@ -4,13 +4,11 @@ import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { getSitePathUrl } from '@/lib/siteUrl';
-import { notFound } from 'next/navigation';
 import { Ui44TextInput } from '@/components/ui44/Inputs';
 
 type RecoveryMode = 'request' | 'reset' | 'complete';
 
 export default function AccountRecoveryPage() {
-  if (process.env.NEXT_PUBLIC_ENABLE_M13_REVIEWED_SURFACES !== 'true') notFound();
   const [mode, setMode] = useState<RecoveryMode>('request');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -72,7 +70,7 @@ export default function AccountRecoveryPage() {
   }
 
   return (
-    <div className="login-page page-scroll">
+    <main className="login-page page-scroll">
       <section className="login-shell" aria-labelledby="recovery-title">
         <div className="login-copy">
           <h1 id="recovery-title" className="os-type-page-title ui44-type ui44-type-page-title">
@@ -108,6 +106,6 @@ export default function AccountRecoveryPage() {
         {status && <p className="login-status os-type-body-small" role="status" aria-live="polite">{status}</p>}
         {mode === 'request' && <Link className="os-button os-button-ghost os-button-compact login-link-action" href="/login">Back to Log In</Link>}
       </section>
-    </div>
+    </main>
   );
 }

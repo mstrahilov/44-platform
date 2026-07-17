@@ -5,16 +5,16 @@ import { useRouter } from 'next/navigation';
 import { PageShell, HubHero, HubSection } from '@/components/Ui';
 import { useAuth } from '@/lib/useAuth';
 import { loadStudioProfile } from '@/lib/studioProfiles';
-import { listLegacyCreatorPurchases, type StudioPurchaseRow } from '@/lib/domain/studioCommerce';
-
-type LibraryPurchaseRow = StudioPurchaseRow;
+import { listCreatorEarnings, type CreatorEarningsEntry } from '@/lib/domain/studioCommerce';
+import { creatorPaidSalesMessage, loadCreatorPaidSalesState, type CreatorPaidSalesState } from '@/lib/domain/creatorCommerce';
 
 export default function StudioEarningsPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const [rows, setRows] = useState<LibraryPurchaseRow[]>([]);
+  const [rows, setRows] = useState<CreatorEarningsEntry[]>([]);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState('');
+  const [paidSales, setPaidSales] = useState<CreatorPaidSalesState | null>(null);
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
@@ -27,7 +27,11 @@ export default function StudioEarningsPage() {
       const profileId = profileResult.profile?.id ?? user.id;
 
       try {
-        setRows(await listLegacyCreatorPurchases(profileId));
+        const [earnings, commerceState] = await Promise.all([
+          listCreatorEarnings(profileId), loadCreatorPaidSalesState(profileId),
+        ]);
+        setRows(earnings);
+        setPaidSales(commerceState);
       } catch (purchaseError) {
         setError(purchaseError instanceof Error ? purchaseError.message : 'Could not load earnings history.');
         setRows([]);
@@ -45,6 +49,10 @@ export default function StudioEarningsPage() {
       <main className="dashboard-page">
         <HubHero title="Earnings" copy="Revenue and sold items from your creator catalog." />
 
+        <div className="dashboard-status ui44-status" role="status">
+          <strong>{paidSales?.can_sell_paid ? 'Paid sales enabled.' : 'Creator earnings.'}</strong> {creatorPaidSalesMessage(paidSales)}
+        </div>
+
         <HubSection title="Sold Items">
           {fetching ? (
             <p className="library-empty-text ui44-state ui44-state-loading" role="status" aria-live="polite">Loading sold items...</p>
@@ -57,10 +65,10 @@ export default function StudioEarningsPage() {
               {rows.map(row => (
                 <div key={row.id} className="dashboard-list-row ui44-list-row ui44-list-row-dashboard">
                   <div className="dashboard-row-copy">
-                    <div className="dashboard-row-title">{getPurchasedProduct(row)?.title ?? 'Item'}</div>
-                    <div className="dashboard-row-subtitle">{row.acquired_at ? formatDate(row.acquired_at) : 'Purchase date unavailable'}</div>
+                    <div className="dashboard-row-title">{formatEntryType(row.entry_type)}</div>
+                    <div className="dashboard-row-subtitle">{formatDate(row.created_at)}{row.available_at ? ` · Available ${formatDate(row.available_at)}` : ''}</div>
                   </div>
-                  <div className="dashboard-row-meta">{formatCurrency(getPurchasedProduct(row)?.price_cents ?? 0)}</div>
+                  <div className="dashboard-row-meta">{formatCurrency(row.amount_cents, row.currency)}</div>
                 </div>
               ))}
             </div>
@@ -71,16 +79,15 @@ export default function StudioEarningsPage() {
   );
 }
 
-function getPurchasedProduct(row: LibraryPurchaseRow) {
-  return Array.isArray(row.products) ? row.products[0] : row.products;
-}
-
-function formatCurrency(cents: number) {
+function formatCurrency(cents: number, currency: string) {
   return new Intl.NumberFormat(undefined, {
     style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
+    currency,
   }).format(cents / 100);
+}
+
+function formatEntryType(value: CreatorEarningsEntry['entry_type']) {
+  return value.split('_').map(word => word[0].toUpperCase() + word.slice(1)).join(' ');
 }
 
 function formatDate(value: string) {

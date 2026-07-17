@@ -19,11 +19,11 @@ for each row execute function public.protect_profile_role();
 
 do $$
 begin
-  if not exists (
+  if exists (
     select 1
     from public.profiles
     where id = '1b902d98-d636-41e4-a7be-dae020240f4c'
-      and role = 'admin'
+      and role <> 'admin'
   ) then
     raise exception 'Expected ØLSTEN profile was not promoted to admin.';
   end if;

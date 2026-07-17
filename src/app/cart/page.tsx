@@ -9,6 +9,7 @@ import {
   removeFromCart,
   useCart,
 } from '@/lib/cart';
+import { PUBLIC_PURCHASES_AVAILABLE, PURCHASING_COMING_SOON_COPY, PURCHASING_COMING_SOON_TITLE } from '@/lib/commerceAvailability';
 
 function formatMoney(cents: number, currency: string) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100);
@@ -35,6 +36,24 @@ export default function CartPage() {
       });
     return () => { active = false; };
   }, [items]);
+
+  if (!PUBLIC_PURCHASES_AVAILABLE) {
+    return (
+      <PageShell>
+        <main className="dashboard-page">
+          <HubHero title={PURCHASING_COMING_SOON_TITLE} copy="44OS is launching without customer payments." />
+          <div className="dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
+            <div className="dashboard-empty">
+              {PURCHASING_COMING_SOON_COPY}
+              <div className="ui44-section-gap-before">
+                <Link className="os-button os-button-primary os-button-compact" href="/store">Keep Exploring</Link>
+              </div>
+            </div>
+          </div>
+        </main>
+      </PageShell>
+    );
+  }
 
   if (items.length === 0) {
     return (
@@ -82,6 +101,7 @@ export default function CartPage() {
                     </Link>
                   </div>
                   <div className="dashboard-row-subtitle">{item.offer_title || item.item_type || legacyItemTypes[item.item_id] || 'Item'}</div>
+                  {item.merch_variant_name ? <div className="os-type-meta">{formatMerchOptions(item.merch_option_values) || item.merch_variant_name}</div> : null}
                   {item.tier_code ? <div className="os-type-meta">{item.included_files?.map(file => file.replaceAll('_', ' ')).join(' · ')}</div> : null}
                 </div>
               </div>
@@ -110,7 +130,7 @@ export default function CartPage() {
           </div>
           <div className="cart-summary-row cart-summary-note">
             <span className="os-type-body-small ui44-text-secondary">
-              Taxes and any local fees are calculated at checkout.
+              Prices and availability are verified by 44OS. Stripe calculates approved tax and shipping at checkout.
             </span>
           </div>
           <div className="cart-summary-actions">
@@ -125,4 +145,8 @@ export default function CartPage() {
       </main>
     </PageShell>
   );
+}
+
+function formatMerchOptions(options?: Record<string, string>) {
+  return Object.entries(options ?? {}).map(([name, value]) => `${name.replaceAll('_', ' ')}: ${value}`).join(' · ');
 }

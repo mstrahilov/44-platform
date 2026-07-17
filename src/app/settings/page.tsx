@@ -442,7 +442,7 @@ function AccountSettings() {
             onChange={event => setNewPassword(event.target.value)}
             placeholder="Enter new password"
             autoComplete="new-password"
-            minLength={6}
+            minLength={8}
           />
           <button className="os-button os-button-secondary" type="submit" disabled={!newPassword || savingPassword}>
             {savingPassword ? 'Saving...' : 'Save'}
@@ -465,7 +465,76 @@ function NotificationSettings() {
         <ToggleRow preferenceKind={ACCOUNT_KEYS.replies} title="Replies" defaultOn />
         <ToggleRow preferenceKind={ACCOUNT_KEYS.likes} title="Likes" defaultOn />
         <ToggleRow preferenceKind={ACCOUNT_KEYS.achievements} title="Achievements" defaultOn />
+        <NewsletterConsentRow />
       </div>
+    </div>
+  );
+}
+
+function NewsletterConsentRow() {
+  const { user } = useAuth();
+  const [subscribed, setSubscribed] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState('');
+
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    void (async () => {
+      try {
+        const result = await supabase.from('newsletter_consents' as never).select('status').eq('user_id', user.id).maybeSingle();
+        if (!alive) return;
+        const row = result.data as unknown as { status?: string } | null;
+        setSubscribed(row?.status === 'subscribed');
+      } catch {
+        // Consent defaults off when the unapplied schema or network is unavailable.
+      }
+    })();
+    return () => { alive = false; };
+  }, [user]);
+
+  async function toggle() {
+    if (!user || saving) return;
+    setSaving(true);
+    setStatus('');
+    const next = !subscribed;
+    const session = await supabase.auth.getSession();
+    const token = session.data.session?.access_token;
+    if (!token) {
+      setSaving(false);
+      setStatus('Sign in again to change newsletter consent.');
+      return;
+    }
+    const response = await fetch('/api/email/newsletter', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscribed: next }),
+    });
+    setSaving(false);
+    if (!response.ok) {
+      setStatus('Newsletter preference could not be saved.');
+      return;
+    }
+    setSubscribed(next);
+    setStatus(next ? 'Subscribed to consent-based 44OS News.' : 'Unsubscribed from 44OS News.');
+  }
+
+  return (
+    <div className="settings-row ui44-list-row ui44-list-row-settings">
+      <div className="settings-row-copy">
+        <div className="os-type-card-title">44OS News</div>
+        <div className="os-type-body-small">Optional release and newsletter email. Account and purchase email do not opt you in.</div>
+        {status && <div className="os-type-body-small" role="status" aria-live="polite">{status}</div>}
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={subscribed}
+        aria-label="44OS News newsletter consent"
+        disabled={saving}
+        className={subscribed ? 'settings-toggle settings-toggle-on ui44-switch ui44-switch-on' : 'settings-toggle ui44-switch'}
+        onClick={() => void toggle()}
+      />
     </div>
   );
 }

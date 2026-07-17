@@ -14,6 +14,7 @@ import { isFreeLibraryClaim } from '@/lib/libraryContent';
 import { getItemLibraryOwnership, saveItemToLibrary } from '@/lib/domain/itemDetails';
 import { Ui44SectionArrow } from '@/components/ui44/Controls';
 import { Ui44Text } from '@/components/ui44/Typography';
+import { PUBLIC_PURCHASES_AVAILABLE, PURCHASING_COMING_SOON_TITLE, paidSalesUiAvailable } from '@/lib/commerceAvailability';
 
 export function PageShell({ children }: { children: ReactNode }) {
   return <div className="view-hub">{children}</div>;
@@ -87,7 +88,7 @@ export function ProductCard({ product, owned: ownedProp }: { product: Product; o
 
   const entries = [
     { id: 'open', label: 'View Item', href },
-    { id: 'creator', label: 'View Creator', href: creatorHref(product.creators ?? product.creator) },
+    ...(experience === 'physical' ? [] : [{ id: 'creator', label: 'View Creator', href: creatorHref(product.creators ?? product.creator) }]),
     ...resolveProductActionEntries({
       product,
       experience,
@@ -150,6 +151,7 @@ function resolveProductActionEntries({
   onAddToLibrary: () => Promise<void>;
   onToggleCart: () => void;
 }) {
+  const paidSalesAvailable = paidSalesUiAvailable(product);
   if (experience === 'music') {
     return [
       ...(!owned ? [{
@@ -161,7 +163,7 @@ function resolveProductActionEntries({
         },
         disabled: !userId,
       }] : []),
-      ...(product.download_purchase_enabled && product.price_cents > 0 ? [{
+      ...(PUBLIC_PURCHASES_AVAILABLE && paidSalesAvailable && product.download_purchase_enabled && product.price_cents > 0 ? [{
         id: 'download',
         label: inCart ? 'View Download Cart' : 'Buy Download',
         onSelect: onToggleCart,
@@ -170,10 +172,19 @@ function resolveProductActionEntries({
   }
 
   if (experience === 'physical' || (!product.is_free && !isFreeLibraryClaim(product))) {
+    if (!PUBLIC_PURCHASES_AVAILABLE) {
+      return [{ id: 'purchase-status', label: PURCHASING_COMING_SOON_TITLE, disabled: true }];
+    }
+    if (!paidSalesAvailable) {
+      return [{ id: 'purchase-status', label: 'Paid sales unavailable', disabled: true }];
+    }
+    if (experience === 'physical') {
+      return [{ id: 'options', label: inCart ? 'Review Selected Options' : 'Choose Options', href: productBrowseHref(product) }];
+    }
     return [
       {
         id: 'cart',
-        label: inCart ? 'Remove from Purchase Cart' : experience === 'physical' ? 'Buy Physical' : 'Buy Download',
+        label: inCart ? 'Remove from Purchase Cart' : 'Buy Download',
         onSelect: onToggleCart,
       },
     ];

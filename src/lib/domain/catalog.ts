@@ -2,6 +2,7 @@ import type { Database } from '@/lib/database.types';
 import type { Product } from '@/lib/products';
 import { supabase } from '@/lib/supabase';
 import { beatReviewSurfacesEnabled, hydrateBeatProducts } from '@/lib/domain/beats';
+import { hydratePaidSalesStatus } from '@/lib/domain/paidSalesStatus';
 
 export type PlayableTrack = Pick<
   Database['public']['Tables']['tracks']['Row'],
@@ -17,7 +18,7 @@ export async function listPublishedCatalogItems(limit = 120) {
     .limit(limit);
 
   if (result.error) throw result.error;
-  return (result.data ?? []) as Product[];
+  return hydratePaidSalesStatus((result.data ?? []) as Product[]);
 }
 
 export async function loadStoreDiscoveryCatalog(limit = 200, reviewOwnerId?: string | null) {
@@ -70,7 +71,7 @@ export async function loadStoreDiscoveryCatalog(limit = 200, reviewOwnerId?: str
     browse_type: typeByItem.get(item.id) ?? null,
     browse_tags: tagsByItem.get(item.id) ?? [],
   }));
-  return hydrateBeatProducts(products);
+  return hydrateBeatProducts(await hydratePaidSalesStatus(products));
 }
 
 export async function listPlayableItemTracks(itemId: string) {

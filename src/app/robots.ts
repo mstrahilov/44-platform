@@ -15,6 +15,7 @@ export default function robots(): MetadataRoute.Robots {
         '/inbox',
         '/library',
         '/notifications',
+        '/orders',
         '/profile/edit',
         '/settings',
         '/studio',

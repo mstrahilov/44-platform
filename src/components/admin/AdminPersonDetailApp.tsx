@@ -35,6 +35,7 @@ function PersonDetail({ profileId }: { profileId: string }) {
   const name = profile?.display_name || profile?.username || detail.account.email || 'Unnamed account';
   const role = profile?.role || 'member';
   const nextRole = role === 'creator' ? 'member' : 'creator';
+  const commerce = detail.commerce;
 
   async function changeRole(reason: string) {
     setSaving(true); setError(''); setMessage('');
@@ -63,6 +64,26 @@ function PersonDetail({ profileId }: { profileId: string }) {
       {role !== 'admin' ? <div className="admin-detail-actions"><button className={nextRole === 'member' ? 'os-button os-button-danger' : 'os-button os-button-primary'} type="button" onClick={() => setDialogOpen(true)}>{nextRole === 'creator' ? 'Grant Creator Access' : 'Return to Member'}</button></div> : <p className="admin-detail-note">Administrator access is visible here but cannot be changed from the web control center.</p>}
     </Ui44Panel>
 
+    {(role === 'creator' || role === 'admin') ? <section className="dashboard-section">
+      <SectionHeader title="Creator seller setup" description="Creator promotion plus private tax and Wise email-to-claim readiness" />
+      <Ui44Panel overflow="visible" className="admin-detail-card">
+        <div className="admin-person-hero">
+          <div><h2>{commerce.can_sell_paid ? 'Paid sales enabled' : 'Paid sales unavailable'}</h2><p>Effective state: {commerce.state.replaceAll('_', ' ')}</p></div>
+          <AdminStatusBadge tone={commerce.can_sell_paid ? 'success' : commerce.state === 'restricted' || commerce.state === 'country_unavailable' ? 'warning' : 'quiet'}>{commerce.state.replaceAll('_', ' ')}</AdminStatusBadge>
+        </div>
+        <dl className="admin-fact-grid">
+          <div><dt>Creator access</dt><dd>{commerce.admin_status.replaceAll('_', ' ')}</dd></div>
+          <div><dt>Payout provider</dt><dd>{commerce.provider?.replaceAll('_', ' ') || (commerce.is_platform_seller ? '44 platform seller' : 'Not connected')}</dd></div>
+          <div><dt>Provider status</dt><dd>{commerce.provider_status?.replaceAll('_', ' ') || 'Not started'}</dd></div>
+          <div><dt>Market</dt><dd>{[commerce.country_code, commerce.currency].filter(Boolean).join(' · ') || 'Not reported'}</dd></div>
+          <div><dt>Wise transfer mode</dt><dd>{commerce.is_platform_seller ? 'Not applicable' : 'Owner-operated email-to-claim'}</dd></div>
+          <div><dt>Decision reason</dt><dd>{commerce.decision_reason || 'No decision recorded'}</dd></div>
+        </dl>
+        {commerce.requirements_due.length ? <p className="admin-detail-note">Setup state: {commerce.requirements_due.join(', ')}</p> : null}
+        {!commerce.is_platform_seller ? <p className="admin-detail-note">Member-to-Creator promotion is the approval boundary. Tax review and payout operations remain in restricted server-authoritative workflows.</p> : <p className="admin-detail-note">44-owned catalog items use the platform Stripe account and do not require creator payout onboarding.</p>}
+      </Ui44Panel>
+    </section> : null}
+
     <section className="dashboard-section"><SectionHeader title="Authored content" description={`${detail.items.length} Item${detail.items.length === 1 ? '' : 's'}`} />
       {detail.items.length === 0 ? <EmptyMessage>No content is assigned to this account.</EmptyMessage> : <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
         {detail.items.map(item => <Link key={item.id} href={`/admin/content/${item.id}`} className="dashboard-list-row ui44-list-row ui44-list-row-dashboard ui44-list-row-interactive"><span className="dashboard-row-copy"><strong className="dashboard-row-title">{item.title}</strong><span className="dashboard-row-subtitle">{item.item_type} · {formatAdminDate(item.created_at)}</span></span><AdminStatusBadge tone={item.status === 'published' ? 'success' : item.status === 'archived' ? 'danger' : 'quiet'}>{item.status}</AdminStatusBadge></Link>)}
@@ -73,6 +94,6 @@ function PersonDetail({ profileId }: { profileId: string }) {
       {detail.role_history.length === 0 ? <EmptyMessage>No administrator role changes have been recorded.</EmptyMessage> : <div className="admin-history-list ui44-panel">{detail.role_history.map(event => <div className="admin-history-row" key={event.id}><div><strong>{event.previous_role} → {event.new_role}</strong><p>{event.reason}</p></div><span>{event.changed_by}<time dateTime={event.created_at}>{formatAdminDate(event.created_at, true)}</time></span></div>)}</div>}
     </section>
 
-    <AdminActionDialog open={dialogOpen} title={nextRole === 'creator' ? 'Grant creator access' : 'Return account to member'} description={nextRole === 'creator' ? 'This account will gain Studio publishing access.' : 'This account will lose Studio publishing access. Existing content and history remain.'} confirmLabel={nextRole === 'creator' ? 'Grant Access' : 'Change to Member'} danger={nextRole === 'member'} saving={saving} onClose={() => setDialogOpen(false)} onConfirm={changeRole} />
+    <AdminActionDialog open={dialogOpen} title={nextRole === 'creator' ? 'Promote to Creator' : 'Return account to member'} description={nextRole === 'creator' ? 'This records Creator approval and notifies the member to complete tax and Wise email setup before uploading Items. Promotion fails if their country route is not verified.' : 'This account will lose Studio publishing access. Existing content and history remain.'} confirmLabel={nextRole === 'creator' ? 'Promote to Creator' : 'Change to Member'} danger={nextRole === 'member'} saving={saving} onClose={() => setDialogOpen(false)} onConfirm={changeRole} />
   </main></PageShell>;
 }

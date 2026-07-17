@@ -42,6 +42,10 @@ function AdminDashboard() {
         <AdminNavRow href="/admin/people" title="People" description="Find every member, creator, or administrator and manage creator access." count={summary?.people_count} />
         <AdminNavRow href="/admin/content" title="Content" description="Inspect every Item, review submissions, and manage publication state." count={summary?.content_count} />
         <AdminNavRow href="/admin/errors" title="Operational errors" description="Read sanitized application error events and safe diagnostic references." count={summary?.recent_error_count} />
+        <AdminNavRow href="/admin/email" title="Email" description="Inspect provider readiness, fail-closed delivery controls, operational counts, and activation history." />
+        <AdminNavRow href="/admin/support" title="Support" description="Claim support cases, inspect durable history, and record replies sent from the monitored mailbox." />
+        <AdminNavRow href="/admin/payments" title="Payments" description="Inspect fail-closed configuration, pending orders, signed webhook failures, and reconciliation." />
+        <AdminNavRow href="/admin/fulfillment" title="Printful fulfillment" description="Verify the API store, import reviewed 44-owned Merch mappings, and inspect draft-only provider orders." />
       </div>
     </section>
 

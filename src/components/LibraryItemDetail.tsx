@@ -8,7 +8,7 @@ import { productLibraryHref } from '@/lib/experience';
 import { getProductLibraryContent, getProductLibraryPrimaryAction, getProductRuntimeKind } from '@/lib/libraryContent';
 import { creatorHref, type ProductAchievement, type Track } from '@/lib/platform';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
-import { LibraryAchievementsSection, LibraryBonusContentSection, LibraryFilesSection, LibraryProductDetailsSection, LibraryVideoEmbedsSection, ProductDetailHeader, withSourceProduct, type LibraryBonusAsset, type LibraryFileAsset, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
+import { LibraryAchievementsSection, LibraryBonusContentSection, LibraryFilesSection, LibraryVideoEmbedsSection, ProductDetailHeader, withSourceProduct, type LibraryBonusAsset, type LibraryFileAsset, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
 import { ProductUpdatesSection } from '@/components/ProductUpdatesSection';
 import { recordAchievementPlaybackSignal, trackProductAchievementTrigger } from '@/lib/achievementTracking';
 import { useTopbarBack } from '@/components/TopbarContext';
@@ -455,8 +455,6 @@ function ProductLibraryDetail({
       {isMusic && <LibraryVideoEmbedsSection embeds={videoEmbeds} />}
       {isMusic && <LibraryBonusContentSection bonusAssets={bonusAssets} unlocked={hasOverachieverUnlocked} />}
       {!isMusic && !isBook && !isAsset && <LibraryFilesSection assets={assets} />}
-      <LibraryProductDetailsSection product={product} tracks={tracks} inferredTrackDurations={inferredTrackDurations} />
-
       <ProductUpdatesSection productId={product.id} emptyMessage="No updates from this creator yet." />
 
       <AchievementToast toast={toast} onDone={() => setToast(null)} />

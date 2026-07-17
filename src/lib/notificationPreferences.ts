@@ -33,5 +33,6 @@ export function notificationIsEnabled(notification: Pick<AchievementNotification
   if (notification.kind === 'reply') return getNotificationPreference('replies');
   if (notification.kind === 'like') return getNotificationPreference('likes');
   if (notification.kind === 'achievement') return getNotificationPreference('achievements');
+  if (notification.kind === 'system') return true;
   return false;
 }
