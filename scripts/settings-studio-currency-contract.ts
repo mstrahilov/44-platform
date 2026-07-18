@@ -70,6 +70,10 @@ assert.match(pricingFields, /Local Price \(\{localCurrency\}\)/);
 assert.match(pricingFields, /Set this amount independently/);
 assert.match(canonicalCss, /\.product-details-section[\s\S]{0,180}\.ui44-list-row\.ui44-list-row-detail[\s\S]{0,120}grid-template-columns: minmax\(0, 1fr\)/,
   'Mobile product details must stack values below their labels.');
+assert.match(canonicalCss, /\.view-tracklist-section[\s\S]{0,120}> \.item-community-header[\s\S]{0,100}display: flex/,
+  'The Tracklist heading must remain visible as its own section.');
+assert.match(canonicalCss, /> \.view-tracklist-section\.view-section[\s\S]{0,100}padding-top: clamp\(36px, 4vw, 56px\)/,
+  'Tracklist must have responsive separation from the hero.');
 
 console.log('Settings, Studio controls, and currency contracts passed.');
 }

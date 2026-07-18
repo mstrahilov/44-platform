@@ -2927,11 +2927,37 @@ body:is(.theme-dark, .theme-light)
   -webkit-backdrop-filter: var(--44ui-glass-filter);
 }
 
+body:is(.theme-dark, .theme-light)
+  .view-detail-single
+  > .view-tracklist-section.view-section {
+  padding-top: clamp(36px, 4vw, 56px);
+}
+
+body:is(.theme-dark, .theme-light)
+  .view-tracklist-section
+  > .item-community-header {
+  display: flex;
+  margin-bottom: 20px;
+}
+
+body:is(.theme-dark, .theme-light)
+  .view-tracklist-section
+  > .item-community-header
+  .view-section-title {
+  margin: 0;
+}
+
 @media (max-width: 768px) {
   body:is(.theme-dark, .theme-light)
     .view-detail-single
     > .view-section {
     padding-inline: var(--os-content-inset);
+  }
+
+  body:is(.theme-dark, .theme-light)
+    .view-detail-single
+    > .view-tracklist-section.view-section {
+    padding-top: 32px;
   }
 
   body:is(.theme-dark, .theme-light)
