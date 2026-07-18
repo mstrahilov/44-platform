@@ -171,6 +171,7 @@ Acquisition is capability-based:
 - `Buy Download` is a separate paid offer and never changes whether public listening is allowed.
 - Physical Merch uses `Add to Cart` and is not placed in Library as though it were digital content.
 - Browser prices are display hints. Checkout recalculates active offers and eligibility on the server.
+- Account Country determines display currency. Global USD prices use cached daily exchange rates for display; an eligible creator-local offer uses its independently stored local amount and currency. Missing rates fall back to showing USD rather than relabeling an unconverted number.
 - Paid Download actions appear only while the current buyer has the matching visible Library entry and active file entitlement. Refund/revocation removes access without deleting history.
 
 Format behavior:

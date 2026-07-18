@@ -4839,6 +4839,24 @@ body:is(.theme-dark, .theme-light) .ui44-detail-list .view-row-value {
     align-items: flex-start;
   }
 
+  body:is(.theme-dark, .theme-light)
+    .product-details-section
+    .ui44-list-row.ui44-list-row-detail {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 6px;
+  }
+
+  body:is(.theme-dark, .theme-light)
+    .product-details-section
+    :is(.view-row-label, .view-row-value) {
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
   body:is(.theme-dark, .theme-light) .ui44-detail-list .view-row-label,
   body:is(.theme-dark, .theme-light) .ui44-detail-list .view-row-value {
     font-size: 15px;

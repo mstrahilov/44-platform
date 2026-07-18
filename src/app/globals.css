@@ -1609,20 +1609,6 @@ body.accent-sage,
   --theme-orb-c: rgba(40, 120, 80, 0.22);
 }
 
-body.accent-red,
-.theme-red {
-  --theme-orb-a: rgba(255, 78, 84, 0.38);
-  --theme-orb-b: rgba(255, 120, 98, 0.18);
-  --theme-orb-c: rgba(150, 35, 48, 0.3);
-}
-
-body.accent-cyan,
-.theme-cyan {
-  --theme-orb-a: rgba(34, 211, 238, 0.34);
-  --theme-orb-b: rgba(103, 232, 249, 0.16);
-  --theme-orb-c: rgba(8, 145, 178, 0.27);
-}
-
 /* ── scrollbar ── */
 * {
   scrollbar-width: none;
@@ -4297,7 +4283,7 @@ body.theme-dark .os-home-panel {
   display: block;
 }
 
-.dashboard-price-input > span {
+.dashboard-price-input > .dashboard-price-prefix {
   position: absolute;
   left: 14px;
   top: 50%;
@@ -4308,8 +4294,8 @@ body.theme-dark .os-home-panel {
   z-index: 1;
 }
 
-.dashboard-price-input .os-input-field {
-  padding-left: 34px;
+.dashboard-price-input > .dashboard-price-value {
+  padding-inline-start: 48px !important;
 }
 
 .dashboard-form-section {
@@ -7174,20 +7160,6 @@ body.accent-violet {
   --os-input-focus-shadow:
     var(--os-shadow-inset-recessed),
     0 0 0 3px rgba(181, 108, 255, 0.18);
-}
-
-body.accent-red {
-  --os-color-accent: #ff5a5f;
-  --os-input-focus-shadow:
-    var(--os-shadow-inset-recessed),
-    0 0 0 3px rgba(255, 90, 95, 0.18);
-}
-
-body.accent-cyan {
-  --os-color-accent: #22d3ee;
-  --os-input-focus-shadow:
-    var(--os-shadow-inset-recessed),
-    0 0 0 3px rgba(34, 211, 238, 0.18);
 }
 
 /* ─── Article reader (Resources) ──────────────────────────── */

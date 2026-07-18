@@ -8,7 +8,7 @@ import { useAuth } from '@/lib/useAuth';
 import { getThemePreference, saveThemePreference } from '@/lib/domain/preferences';
 import { getProfileMarketPreferences, saveProfileMarketPreferences } from '@/lib/domain/profiles';
 import { PageShell, HubHero, EmptyMessage, SectionHeader } from '@/components/Ui';
-import { Ui44TextInput } from '@/components/ui44/Inputs';
+import { Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
 import {
   ACCENTS,
   applyTheme,
@@ -22,17 +22,12 @@ import {
 } from '@/lib/theme';
 import {
   COUNTRIES,
-  CURRENCIES,
-  currencyForCountry,
   getStoredViewerCountry,
-  getStoredViewerCurrency,
   setStoredViewerPreferences,
 } from '@/lib/marketPreferences';
-import { getLandingPageId, LANDING_PAGES, setLandingPageId, type LandingPageId } from '@/lib/landingPage';
 import { isMissingColumnError } from '@/lib/schemaCompat';
 import { getSitePathUrl } from '@/lib/siteUrl';
 import { getNotificationPreference, setNotificationPreference, type NotificationPreferenceKind } from '@/lib/notificationPreferences';
-import { Ui44SelectInput } from '@/components/ui44/Inputs';
 
 type SettingsAnchorId = 'account' | 'notifications' | 'appearance' | 'dock';
 
@@ -45,7 +40,7 @@ const ACCOUNT_KEYS = {
 
 function normalizeSettingsAnchor(value: string | null | undefined): SettingsAnchorId | null {
   if (!value) return null;
-  if (value === 'dock') return 'dock';
+  if (value === 'dock') return 'appearance';
   if (value === 'system' || value === 'appearance' || value === 'clock' || value === 'accessibility' || value === 'advanced') return 'appearance';
   if (value === 'notifications') return 'notifications';
   if (value === 'region') return 'account';
@@ -157,9 +152,8 @@ function SettingsPageSection({
 
 function AppearanceSettings() {
   return (
-    <div className="settings-section settings-section-wide settings-two-column ui44-form-grid" id="dock">
+    <div className="settings-section settings-section-wide settings-two-column ui44-form-grid">
       <ThemeSettings />
-      <LandingAppSettings />
     </div>
   );
 }
@@ -202,20 +196,9 @@ function ThemeSettings() {
         <div className="settings-field-head">
           <div className="os-type-field-title">Theme</div>
         </div>
-        <div className="ui44-segmented settings-segment" role="radiogroup" aria-label="Theme mode">
-          {MODES.map(m => (
-            <button
-              key={m.id}
-              type="button"
-              className={m.id === mode ? 'ui44-segmented-item ui44-segmented-item-active settings-segment-item settings-segment-item-active' : 'ui44-segmented-item settings-segment-item'}
-              role="radio"
-              aria-checked={m.id === mode}
-              onClick={() => chooseMode(m.id)}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
+        <Ui44SelectInput value={mode} onChange={event => chooseMode(event.target.value as ThemeMode)} aria-label="Theme mode">
+          {MODES.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+        </Ui44SelectInput>
       </div>
 
       <div className="settings-field settings-accent-field">
@@ -244,13 +227,9 @@ function ThemeSettings() {
 function RegionSettingsFields({ onStatus }: { onStatus: (status: string) => void }) {
   const { user } = useAuth();
   const [countryCode, setCountryCode] = useState('US');
-  const [displayCurrency, setDisplayCurrency] = useState('USD');
 
   useEffect(() => {
-    Promise.resolve().then(() => {
-      setCountryCode(getStoredViewerCountry());
-      setDisplayCurrency(getStoredViewerCurrency());
-    });
+    Promise.resolve().then(() => setCountryCode(getStoredViewerCountry()));
   }, []);
 
   useEffect(() => {
@@ -263,21 +242,16 @@ function RegionSettingsFields({ onStatus }: { onStatus: (status: string) => void
       const nextCountry = !isMissingColumnError(error as { message?: string | null; code?: string | null }) && data?.country_code
         ? data.country_code
         : getStoredViewerCountry();
-      const nextCurrency = !isMissingColumnError(error as { message?: string | null; code?: string | null }) && data?.display_currency
-        ? data.display_currency
-        : getStoredViewerCurrency();
       setCountryCode(nextCountry);
-      setDisplayCurrency(nextCurrency);
-      setStoredViewerPreferences(nextCountry, nextCurrency);
+      setStoredViewerPreferences(nextCountry);
     }
 
     loadSystemPreferences();
   }, [user]);
 
-  async function saveMarketPreferences(nextCountry: string, nextCurrency: string) {
+  async function saveMarketPreferences(nextCountry: string) {
     setCountryCode(nextCountry);
-    setDisplayCurrency(nextCurrency);
-    setStoredViewerPreferences(nextCountry, nextCurrency);
+    setStoredViewerPreferences(nextCountry);
     onStatus('');
 
     if (!user) {
@@ -286,7 +260,7 @@ function RegionSettingsFields({ onStatus }: { onStatus: (status: string) => void
     }
 
     let error: unknown = null;
-    try { await saveProfileMarketPreferences(user.id, nextCountry, nextCurrency); } catch (saveError) { error = saveError; }
+    try { await saveProfileMarketPreferences(user.id, nextCountry); } catch (saveError) { error = saveError; }
 
     if (isMissingColumnError(error as { message?: string | null; code?: string | null })) {
       onStatus('Saved on this device.');
@@ -300,72 +274,21 @@ function RegionSettingsFields({ onStatus }: { onStatus: (status: string) => void
     <>
       <div className="settings-field settings-market-field">
         <div className="settings-field-head">
-          <div className="os-type-field-title">Region</div>
+          <div className="os-type-field-title">Country</div>
         </div>
         <Ui44SelectInput
           value={countryCode}
           onChange={event => {
-            const nextCountry = event.target.value;
-            void saveMarketPreferences(nextCountry, currencyForCountry(nextCountry));
+            void saveMarketPreferences(event.target.value);
           }}
         >
           {COUNTRIES.map(country => (
             <option key={country.code} value={country.code}>{country.name}</option>
           ))}
         </Ui44SelectInput>
-      </div>
-
-      <div className="settings-field settings-market-field">
-        <div className="settings-field-head">
-          <div className="os-type-field-title">Display Currency</div>
-        </div>
-        <Ui44SelectInput
-          value={displayCurrency}
-          onChange={event => void saveMarketPreferences(countryCode, event.target.value)}
-        >
-          {CURRENCIES.map(currency => (
-            <option key={currency.code} value={currency.code}>
-              {currency.code} - {currency.label}
-            </option>
-          ))}
-        </Ui44SelectInput>
+        <span className="dashboard-form-note">Your country automatically sets the currency used to display converted prices.</span>
       </div>
     </>
-  );
-}
-
-function LandingAppSettings() {
-  const [landingPage, setLandingPage] = useState<LandingPageId>('store');
-
-  useEffect(() => {
-    Promise.resolve().then(() => setLandingPage(getLandingPageId()));
-  }, []);
-
-  function chooseLandingPage(id: LandingPageId) {
-    setLandingPage(id);
-    setLandingPageId(id);
-  }
-
-  return (
-      <div className="settings-field settings-landing-field">
-        <div className="settings-field-head">
-          <div className="os-type-field-title">Landing App</div>
-        </div>
-        <div className="ui44-segmented settings-segment" role="radiogroup" aria-label="Landing app">
-          {LANDING_PAGES.map(app => (
-            <button
-              key={app.id}
-              type="button"
-              className={app.id === landingPage ? 'ui44-segmented-item ui44-segmented-item-active settings-segment-item settings-segment-item-active' : 'ui44-segmented-item settings-segment-item'}
-              role="radio"
-              aria-checked={app.id === landingPage}
-              onClick={() => chooseLandingPage(app.id as LandingPageId)}
-            >
-              {app.label}
-            </button>
-          ))}
-        </div>
-      </div>
   );
 }
 

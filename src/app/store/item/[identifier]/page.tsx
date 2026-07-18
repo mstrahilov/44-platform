@@ -17,6 +17,8 @@ import { AchievementToast, type AchievementToastData } from '@/components/Achiev
 import { useTopbarBack } from '@/components/TopbarContext';
 import { addToCart, useCart } from '@/lib/cart';
 import { resolvePrice } from '@/lib/pricing';
+import { useExchangeRates } from '@/lib/exchangeRates';
+import { useViewerMarket } from '@/components/MarketPreferenceSync';
 import { useMusicPlayer, type MusicQueueTrack } from '@/components/MusicPlayer';
 import { listPlayableItemTracks } from '@/lib/domain/catalog';
 import {
@@ -70,6 +72,8 @@ function ProductStoreDetail({
   const searchParams = useSearchParams();
   const cart = useCart();
   const { currentTrack, isPlaying, toggleTrack, queueNext } = useMusicPlayer();
+  const exchangeRates = useExchangeRates();
+  const viewerMarket = useViewerMarket();
   const { openContextMenu } = useContextMenu();
   const [product, setProduct] = useState<Product | null>(null);
   const [tracks, setTracks] = useState<ProductTrack[]>([]);
@@ -219,8 +223,13 @@ function ProductStoreDetail({
       alert(merchVariants.length ? 'Choose an available size before adding this Item to your Cart.' : 'Product options are not available yet.');
       return;
     }
-    const productPrice = resolvePrice(product);
-    const price = { ...productPrice, cents: selectedMerchVariant?.price_cents ?? productPrice.cents };
+    const variantPriceCents = selectedMerchVariant?.price_cents ?? null;
+    const productPrice = resolvePrice(
+      variantPriceCents === null
+        ? product
+        : { ...product, price_cents: variantPriceCents, market_mode: 'global', local_price_cents: null, local_currency: null },
+      { rates: exchangeRates, viewerCountry: viewerMarket.countryCode, viewerCurrency: viewerMarket.currency },
+    );
     addToCart({
       item_id: product.id,
       merch_variant_id: selectedMerchVariant?.source === 'canonical' ? selectedMerchVariant.id : null,
@@ -231,8 +240,8 @@ function ProductStoreDetail({
       creator: product.creators?.display_name || product.creator || '44 Creator',
       item_type: product.item_type ?? null,
       cover_url: selectedMerchVariant?.image_url || product.cover_url,
-      price_cents: price.cents,
-      currency: price.currency,
+      price_cents: productPrice.checkoutCents,
+      currency: productPrice.checkoutCurrency,
       slug: product.slug ?? null,
       href: productBrowseHref(product),
     });
@@ -367,12 +376,14 @@ function ProductStoreDetail({
   const creatorDisplayName = product.creators?.display_name || product.creator || '44 Creator';
   const productDescription = product.long_description?.trim() || product.short_description?.trim();
   const merchTag = product.browse_tags?.[0]?.label || product.browse_type?.label || product.item_type || 'Merch';
-  const baseMerchPrice = resolvePrice(product);
-  const merchPrice = { ...baseMerchPrice, cents: selectedMerchVariant?.price_cents ?? baseMerchPrice.cents };
-  const merchPriceLabel = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: merchPrice.currency,
-  }).format(merchPrice.cents / 100);
+  const selectedVariantPriceCents = selectedMerchVariant?.price_cents ?? null;
+  const merchPrice = resolvePrice(
+    selectedVariantPriceCents === null
+      ? product
+      : { ...product, price_cents: selectedVariantPriceCents, market_mode: 'global', local_price_cents: null, local_currency: null },
+    { rates: exchangeRates, viewerCountry: viewerMarket.countryCode, viewerCurrency: viewerMarket.currency },
+  );
+  const merchPriceLabel = merchPrice.label;
   const releaseMeta = isMerch
     ? [merchTag.toUpperCase(), merchPriceLabel]
     : [(product.item_type || productMeta(product)).toUpperCase(), ...(product.year ? [String(product.year)] : [])];
@@ -428,6 +439,11 @@ function ProductStoreDetail({
           />)}
         </div> : undefined}
       />
+      {isMerch && merchPrice.source === 'converted' ? (
+        <p className="dashboard-form-note exchange-rate-attribution">
+          Converted display price · <a href="https://www.exchangerate-api.com" target="_blank" rel="noreferrer">Rates by Exchange Rate API</a>
+        </p>
+      ) : null}
 
       {isBeat && product.beat ? <BeatLicenseReviewPanel product={product} /> : null}
 

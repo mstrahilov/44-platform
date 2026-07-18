@@ -13,6 +13,7 @@ import { Suspense } from 'react';
 import { absoluteMetadataUrl, getMetadataBaseUrl } from '@/lib/metadata';
 import AnalyticsConsentBoundary from '@/components/AnalyticsConsent';
 import { getAnalyticsMeasurementId } from '@/lib/analyticsConfig';
+import { MarketPreferenceSync } from '@/components/MarketPreferenceSync';
 
 // Applies the saved theme before first paint to avoid a flash of the wrong theme.
 const THEME_BOOTSTRAP = `(function(){try{
@@ -103,6 +104,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="theme-dark accent-ocean" suppressHydrationWarning>
         <ThemeSync />
+        <MarketPreferenceSync />
         <AnalyticsConsentBoundary measurementId={analyticsMeasurementId} />
 
         <div className="app-environment" aria-hidden="true">

@@ -226,7 +226,9 @@ Studio is a creator workspace, not a public discovery grid.
 Publishing forms:
 
 - Use shared labels, controls, helpers, recovery, validation, and action rows.
-- Release Type, Release Year, and Price share a desktop three-column field group.
+- New and Edit use the same pricing fields for Music, Books, and Sample Packs.
+- Availability, Market, fulfillment, and shipping choices use dropdowns; Studio does not use segmented choice controls.
+- A paid Item has one global USD price and may have a separately entered local price in the creator country currency. Neither amount is copied into the other.
 - Price accepts ordinary decimals such as `5.99`.
 - Track editors are flat recessed editable lists, not nested Glass cards.
 - New releases require a plain-language publishing-rights attestation.
@@ -273,6 +275,8 @@ Interactive Items:
 - Narrow/mobile devices stop before session issuance and show Desktop Required.
 
 Beat review surfaces remain completely absent unless the client review flag is enabled. When reviewed, they use the same Item composition, shared player, Glass/Paper system, device recovery, and responsive/accessibility rules. Draft legal terms and inactive commerce always look unavailable, never purchasable.
+
+Settings Appearance contains Theme and Accent on one two-column row. Theme is a dropdown; accents are Amber, Sage, Ocean, and Violet. Account Country is the only region/currency choice and automatically determines display and creator-local currency. There is no Landing App or standalone currency selector.
 
 ## Admin UI
 

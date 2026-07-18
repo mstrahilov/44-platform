@@ -65,7 +65,7 @@ export const SUPPORT_ARTICLES: SupportArticle[] = [
     sections: [
       { heading: 'Main destinations', bullets: ['Home highlights new and featured work.', 'Browse contains Music, Books, Sample Packs, and Merch.', 'Library contains work you saved, added, or purchased.', 'Radio plays the shared 44 Radio stream.', 'Community contains posts, questions, and collaboration.', 'Search finds Items, creators, posts, and help articles.'] },
       { heading: 'Account destinations', paragraphs: ['Open your avatar menu for Profile, Inbox, Orders, Settings, and—if your account is approved—Studio. On mobile, the fixed Dock keeps the most-used destinations within reach.'] },
-      { heading: 'Change the Dock', paragraphs: ['Signed-in Members can open Settings and use Appearance to choose Full or Compact Dock mode and select a landing app.'] },
+      { heading: 'Change appearance', paragraphs: ['Signed-in Members can open Settings and use Appearance to choose a theme and accent color.'] },
     ],
     actions: [{ label: 'Open Settings', href: '/settings' }],
   },

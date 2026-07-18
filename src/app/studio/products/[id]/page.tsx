@@ -46,21 +46,7 @@ import { StudioBookFields, StudioSamplePreviewFields, validateStudioBookMetadata
 import { clearStudioFormRecovery, readStudioFormRecovery, writeStudioFormRecovery } from '@/lib/studioFormRecovery';
 import { creatorPaidSalesMessage, loadCreatorPaidSalesState, type CreatorPaidSalesState } from '@/lib/domain/creatorCommerce';
 import { normalizeOptionalReleaseDate, releaseYear } from '@/lib/releaseDates';
-
-function formatPriceInput(value: string) {
-  const normalized = value.replace(/[^\d.]/g, '');
-  const [whole = '', ...decimalParts] = normalized.split('.');
-  const decimals = decimalParts.join('').slice(0, 2);
-  const safeWhole = whole.replace(/^0+(?=\d)/, '').slice(0, 7);
-  return decimalParts.length > 0 ? `${safeWhole || '0'}.${decimals}` : safeWhole;
-}
-
-function currencySymbol(currency: string) {
-  const symbol = new Intl.NumberFormat(undefined, { style: 'currency', currency, currencyDisplay: 'narrowSymbol' })
-    .formatToParts(0)
-    .find(part => part.type === 'currency')?.value;
-  return symbol ?? currency;
-}
+import { StudioDigitalPricingFields, StudioPriceInput, type StudioAvailability } from '@/components/StudioPricingFields';
 
 type DraftTrack = {
   id?: string;
@@ -71,7 +57,7 @@ type DraftTrack = {
 
 type EditItemRecovery = {
   title: string; description: string; categoryId: string; productType: string; storeTypeId: string;
-  selectedTagIds: string[]; price: string; marketMode: MarketMode; localPrice: string; localCurrency: string;
+  selectedTagIds: string[]; price: string; availability?: StudioAvailability; marketMode: MarketMode; localPrice: string; localCurrency: string;
   merchFulfillmentMode: 'ship' | 'deliver'; merchShippingScope: 'local' | 'global'; coverUrl: string;
   itemFileUrl: string; bookPreviewUrl: string; bookTotalPages: string; bookSamplePages: string;
   bookLanguage: string; samplePreviews: DraftSamplePreview[]; year: string; releaseDate?: string; trackCount: string;
@@ -127,12 +113,16 @@ export default function EditProductPage() {
   const [taxonomyTypes, setTaxonomyTypes] = useState<Database['public']['Tables']['item_types']['Row'][]>([]);
   const [taxonomyTags, setTaxonomyTags] = useState<Database['public']['Tables']['item_tags']['Row'][]>([]);
   const [price, setPrice] = useState('');
+  const [availability, setAvailability] = useState<StudioAvailability>('free');
   const [savedPriceCents, setSavedPriceCents] = useState(0);
   const [savedIsFree, setSavedIsFree] = useState(true);
   const [paidSales, setPaidSales] = useState<CreatorPaidSalesState | null>(null);
   const [marketMode, setMarketMode] = useState<MarketMode>('global');
+  const [savedMarketMode, setSavedMarketMode] = useState<MarketMode>('global');
   const [localPrice, setLocalPrice] = useState('');
   const [localCurrency, setLocalCurrency] = useState('USD');
+  const [savedLocalPriceCents, setSavedLocalPriceCents] = useState<number | null>(null);
+  const [savedLocalCurrency, setSavedLocalCurrency] = useState<string | null>(null);
   const [merchFulfillmentMode, setMerchFulfillmentMode] = useState<'ship' | 'deliver'>('deliver');
   const [merchShippingScope, setMerchShippingScope] = useState<'local' | 'global'>('local');
   const [coverUrl, setCoverUrl] = useState('');
@@ -186,11 +176,9 @@ export default function EditProductPage() {
       setProfileRole(profileResult.profile?.role ?? null);
       setPaidSales(paidSalesResult);
       const profileId = profileResult.profile?.id ?? userId;
-      const fallbackLocalCurrency =
-        profileResult.profile?.display_currency ||
-        currencyForCountry(profileResult.profile?.country_code) ||
-        profileResult.profile?.home_currency ||
-        currencyForCountry(profileResult.profile?.home_country_code);
+      const fallbackLocalCurrency = currencyForCountry(
+        profileResult.profile?.country_code || profileResult.profile?.home_country_code,
+      );
       setOwnerId(profileId);
 
       let editor;
@@ -221,11 +209,21 @@ export default function EditProductPage() {
       setExternalLinks(materializeExternalLinkDrafts(linkPlatforms, editor.externalLinks));
       setExternalLinksEnabled(editor.externalLinks.some(link => link.url.trim().length > 0));
       setPrice(product.price_cents ? (product.price_cents / 100).toFixed(2) : '');
+      setAvailability(product.is_free ? 'free' : 'paid');
       setSavedPriceCents(product.price_cents ?? 0);
       setSavedIsFree(product.is_free ?? true);
-      setMarketMode(normalizeMarketMode(product.market_mode));
-      setLocalPrice(product.local_price_cents ? (product.local_price_cents / 100).toFixed(2) : '');
-      setLocalCurrency(product.local_currency || fallbackLocalCurrency);
+      const productMarketMode = normalizeMarketMode(product.market_mode);
+      const editableLocalCurrency = paidSalesResult.can_sell_paid
+        ? fallbackLocalCurrency
+        : product.local_currency || fallbackLocalCurrency;
+      setMarketMode(productMarketMode);
+      setSavedMarketMode(productMarketMode);
+      setSavedLocalPriceCents(product.local_price_cents ?? null);
+      setSavedLocalCurrency(product.local_currency ?? null);
+      setLocalPrice(product.local_currency && product.local_currency !== editableLocalCurrency
+        ? ''
+        : product.local_price_cents ? (product.local_price_cents / 100).toFixed(2) : '');
+      setLocalCurrency(editableLocalCurrency);
       setMerchFulfillmentMode((product as Product & { merch_fulfillment_mode?: 'ship' | 'deliver' | null }).merch_fulfillment_mode || (product.available_locally_only ? 'deliver' : 'ship'));
       setMerchShippingScope((product as Product & { merch_shipping_scope?: 'local' | 'global' | null }).merch_shipping_scope || (product.available_locally_only ? 'local' : 'global'));
       setCoverUrl(product.cover_url ?? '');
@@ -283,8 +281,9 @@ export default function EditProductPage() {
       if (recovered) {
         setTitle(recovered.title); setDescription(recovered.description); setCategoryId(recovered.categoryId);
         setProductType(recovered.productType); setStoreTypeId(recovered.storeTypeId); setSelectedTagIds(recovered.selectedTagIds);
-        setPrice(recovered.price); setMarketMode(recovered.marketMode); setLocalPrice(recovered.localPrice);
-        setLocalCurrency(recovered.localCurrency); setMerchFulfillmentMode(recovered.merchFulfillmentMode);
+        setPrice(recovered.price); setAvailability(recovered.availability ?? (product.is_free ? 'free' : 'paid')); setMarketMode(recovered.marketMode);
+        setLocalPrice(recovered.localCurrency === editableLocalCurrency ? recovered.localPrice : '');
+        setMerchFulfillmentMode(recovered.merchFulfillmentMode);
         setMerchShippingScope(recovered.merchShippingScope); setCoverUrl(recovered.coverUrl);
         setItemFileUrl(recovered.itemFileUrl); setBookPreviewUrl(recovered.bookPreviewUrl);
         setBookTotalPages(recovered.bookTotalPages); setBookSamplePages(recovered.bookSamplePages);
@@ -302,14 +301,14 @@ export default function EditProductPage() {
   useEffect(() => {
     if (!formRecoveryReady || !recoveryKey) return;
     writeStudioFormRecovery(recoveryKey, {
-      title, description, categoryId, productType, storeTypeId, selectedTagIds, price, marketMode,
+      title, description, categoryId, productType, storeTypeId, selectedTagIds, price, availability, marketMode,
       localPrice, localCurrency, merchFulfillmentMode, merchShippingScope, coverUrl, itemFileUrl,
       bookPreviewUrl, bookTotalPages, bookSamplePages, bookLanguage, samplePreviews, year, releaseDate,
       trackCount, tracks, featureState, externalLinks, externalLinksEnabled,
     } satisfies EditItemRecovery);
   }, [bookLanguage, bookPreviewUrl, bookSamplePages, bookTotalPages, categoryId, coverUrl, description,
     externalLinks, externalLinksEnabled, featureState, formRecoveryReady, itemFileUrl, localCurrency, localPrice, marketMode,
-    merchFulfillmentMode, merchShippingScope, price, productType, recoveryKey, samplePreviews,
+    merchFulfillmentMode, merchShippingScope, price, availability, productType, recoveryKey, samplePreviews,
     selectedTagIds, storeTypeId, title, trackCount, tracks, year, releaseDate]);
 
   const selectedCategory = useMemo(
@@ -425,10 +424,29 @@ export default function EditProductPage() {
     setSuccess('');
 
     const priceNumber = Number(price || '0');
-    const isFree = creatorCommerceUnavailable ? savedIsFree : !Number.isFinite(priceNumber) || priceNumber <= 0;
-    const priceCents = creatorCommerceUnavailable ? savedPriceCents : (isFree ? 0 : Math.round(priceNumber * 100));
     const localPriceNumber = Number(localPrice || '0');
-    const localPriceCents = localPrice.trim() && Number.isFinite(localPriceNumber) ? Math.max(0, Math.round(localPriceNumber * 100)) : null;
+    const enteredLocalPriceCents = localPrice.trim() && Number.isFinite(localPriceNumber)
+      ? Math.max(0, Math.round(localPriceNumber * 100))
+      : null;
+    const requiresGlobalPrice = isMerchProduct ? !merchUsesLocalOnlyPricing : !creatorCommerceUnavailable && availability === 'paid';
+    const requiresLocalPrice = isMerchProduct
+      ? merchUsesLocalOnlyPricing || marketMode === 'global_plus_local'
+      : !creatorCommerceUnavailable && availability === 'paid' && marketMode === 'global_plus_local';
+    if (requiresGlobalPrice && (!Number.isFinite(priceNumber) || priceNumber <= 0)) {
+      setSaving(false);
+      setError('Enter a price greater than zero for a paid Item.');
+      return;
+    }
+    if (requiresLocalPrice && (!Number.isFinite(localPriceNumber) || localPriceNumber <= 0)) {
+      setSaving(false);
+      setError(`Enter a ${localCurrency} local price greater than zero.`);
+      return;
+    }
+    const isFree = isMerchProduct ? false : creatorCommerceUnavailable ? savedIsFree : availability === 'free';
+    const priceCents = creatorCommerceUnavailable
+      ? savedPriceCents
+      : isFree || merchUsesLocalOnlyPricing ? 0 : Math.round(priceNumber * 100);
+    const localPriceCents = enteredLocalPriceCents;
     const normalizedReleaseDate = normalizeOptionalReleaseDate(releaseDate);
 
     const updatePayload = {
@@ -437,9 +455,13 @@ export default function EditProductPage() {
       item_category_id: categoryId,
       item_type: productType.trim(),
       price_cents: merchUsesLocalOnlyPricing ? 0 : priceCents,
-      market_mode: isMerchProduct ? (merchUsesLocalOnlyPricing ? 'global_plus_local' : marketMode) : marketMode,
-      local_price_cents: isMerchProduct ? (localPriceCents ?? priceCents) : (marketMode === 'global' ? null : localPriceCents),
-      local_currency: isMerchProduct ? localCurrency : (marketMode === 'global' ? null : localCurrency),
+      market_mode: creatorCommerceUnavailable ? savedMarketMode : isFree ? 'global' : (merchUsesLocalOnlyPricing ? 'global_plus_local' : marketMode),
+      local_price_cents: creatorCommerceUnavailable
+        ? savedLocalPriceCents
+        : isFree || (marketMode === 'global' && !merchUsesLocalOnlyPricing) ? null : localPriceCents,
+      local_currency: creatorCommerceUnavailable
+        ? savedLocalCurrency
+        : isFree || (marketMode === 'global' && !merchUsesLocalOnlyPricing) ? null : localCurrency,
       available_locally_only: isMerchProduct ? merchUsesLocalOnlyPricing : false,
       is_free: isFree,
       cover_url: coverUrl.trim() || null,
@@ -666,15 +688,6 @@ export default function EditProductPage() {
             ) : (
               <div className="dashboard-form-grid dashboard-form-grid-3 ui44-form-grid">
                 <label className="dashboard-field"><div className="dashboard-field-label">{isMerchProduct ? 'Drop Year' : 'Release Date (Optional)'}</div>{isMerchProduct ? <Ui44TextInput className="os-input-field" value={year} onChange={e => setYear(e.target.value.replace(/\D/g, '').slice(0, 4))} /> : <Ui44TextInput className="os-input-field release-date-input" type="date" value={releaseDate} onChange={e => { setReleaseDate(e.target.value); setYear(e.target.value.slice(0, 4)); }} />}</label>
-                {!merchUsesLocalOnlyPricing ? (
-                  <label className="dashboard-field">
-                    <div className="dashboard-field-label">{isMerchProduct ? 'Global Price' : 'Price'}</div>
-                    <span className="dashboard-price-input">
-                      <span>{currencySymbol('USD')}</span>
-                      <Ui44TextInput className="os-input-field" value={price} onChange={e => setPrice(formatPriceInput(e.target.value))} disabled={!isMerchProduct && creatorCommerceUnavailable} aria-describedby={!isMerchProduct ? 'creator-commerce-existing-item-notice' : undefined} />
-                    </span>
-                  </label>
-                ) : null}
                 <label className="dashboard-field">
                   <div className="dashboard-field-label">Item Type</div>
                   <Ui44SelectInput value={storeTypeId} onChange={event => {
@@ -700,26 +713,10 @@ export default function EditProductPage() {
                   <div className="os-type-card-title">Fulfillment</div>
                   <p className="os-type-body-small">Choose whether you ship the item or deliver it to the customer yourself.</p>
                 </div>
-                <div className="ui44-segmented settings-segment" role="radiogroup" aria-label="Merch fulfillment">
-                  <button
-                    type="button"
-                    className={merchFulfillmentMode === 'ship' ? 'ui44-segmented-item ui44-segmented-item-active settings-segment-item settings-segment-item-active' : 'ui44-segmented-item settings-segment-item'}
-                    role="radio"
-                    aria-checked={merchFulfillmentMode === 'ship'}
-                    onClick={() => setMerchFulfillmentMode('ship')}
-                  >
-                    Ship to Customer
-                  </button>
-                  <button
-                    type="button"
-                    className={merchFulfillmentMode === 'deliver' ? 'ui44-segmented-item ui44-segmented-item-active settings-segment-item settings-segment-item-active' : 'ui44-segmented-item settings-segment-item'}
-                    role="radio"
-                    aria-checked={merchFulfillmentMode === 'deliver'}
-                    onClick={() => setMerchFulfillmentMode('deliver')}
-                  >
-                    Deliver to Customer (Local Only)
-                  </button>
-                </div>
+                <Ui44SelectInput value={merchFulfillmentMode} onChange={event => setMerchFulfillmentMode(event.target.value as 'ship' | 'deliver')} aria-label="Merch fulfillment">
+                  <option value="ship">Ship to Customer</option>
+                  <option value="deliver">Deliver to Customer (Local Only)</option>
+                </Ui44SelectInput>
                 <p className="dashboard-form-note">
                   {merchFulfillmentMode === 'ship'
                     ? 'After an order is placed, you will provide shipment details and a tracking number yourself.'
@@ -734,88 +731,51 @@ export default function EditProductPage() {
                   <div className="os-type-card-title">Shipping Area</div>
                   <p className="os-type-body-small">Choose whether you ship only within your home country or ship globally.</p>
                 </div>
-                <div className="ui44-segmented settings-segment" role="radiogroup" aria-label="Merch shipping area">
-                  <button
-                    type="button"
-                    className={merchShippingScope === 'global' ? 'ui44-segmented-item ui44-segmented-item-active settings-segment-item settings-segment-item-active' : 'ui44-segmented-item settings-segment-item'}
-                    role="radio"
-                    aria-checked={merchShippingScope === 'global'}
-                    onClick={() => setMerchShippingScope('global')}
-                  >
-                    Global Shipping
-                  </button>
-                  <button
-                    type="button"
-                    className={merchShippingScope === 'local' ? 'ui44-segmented-item ui44-segmented-item-active settings-segment-item settings-segment-item-active' : 'ui44-segmented-item settings-segment-item'}
-                    role="radio"
-                    aria-checked={merchShippingScope === 'local'}
-                    onClick={() => setMerchShippingScope('local')}
-                  >
-                    Local Shipping Only
-                  </button>
-                </div>
+                <Ui44SelectInput value={merchShippingScope} onChange={event => setMerchShippingScope(event.target.value as 'local' | 'global')} aria-label="Merch shipping area">
+                  <option value="global">Global Shipping</option>
+                  <option value="local">Local Shipping Only</option>
+                </Ui44SelectInput>
               </div>
             ) : null}
 
-            {isMusicProduct ? (
-              <div className={`dashboard-form-grid release-market-grid ${marketMode === 'global_plus_local' ? 'dashboard-form-grid-3' : 'dashboard-form-grid-2'}`}>
-                <label className="dashboard-field">
-                  <div className="dashboard-field-label">Market</div>
-                  <Ui44SelectInput value={marketMode} onChange={event => setMarketMode(event.target.value as MarketMode)} disabled={creatorCommerceUnavailable} aria-describedby="creator-commerce-existing-item-notice">
-                    <option value="global">Global</option>
-                    <option value="global_plus_local">Global + Local</option>
-                  </Ui44SelectInput>
-                </label>
-                <label className="dashboard-field">
-                  <div className="dashboard-field-label">Price</div>
-                  <span className="dashboard-price-input">
-                    <span>{currencySymbol('USD')}</span>
-                    <Ui44TextInput className="os-input-field" value={price} onChange={e => setPrice(formatPriceInput(e.target.value))} disabled={creatorCommerceUnavailable} aria-describedby="creator-commerce-existing-item-notice" />
-                  </span>
-                </label>
-                {marketMode === 'global_plus_local' ? (
+            {!isMerchProduct ? (
+              <StudioDigitalPricingFields
+                availability={availability}
+                marketMode={marketMode}
+                globalPrice={price}
+                localPrice={localPrice}
+                localCurrency={localCurrency}
+                disabled={creatorCommerceUnavailable}
+                noticeId="creator-commerce-existing-item-notice"
+                onAvailabilityChange={setAvailability}
+                onMarketModeChange={setMarketMode}
+                onGlobalPriceChange={setPrice}
+                onLocalPriceChange={setLocalPrice}
+              />
+            ) : (
+              <div className="dashboard-form-grid dashboard-form-grid-2 ui44-form-grid">
+                {!merchUsesLocalOnlyPricing ? (
                   <label className="dashboard-field">
-                    <div className="dashboard-field-label">Local Price ({localCurrency})</div>
-                    <span className="dashboard-price-input">
-                      <span>{currencySymbol(localCurrency)}</span>
-                      <Ui44TextInput className="os-input-field" value={localPrice} onChange={e => setLocalPrice(formatPriceInput(e.target.value))} disabled={creatorCommerceUnavailable} aria-describedby="creator-commerce-existing-item-notice" />
-                    </span>
+                    <div className="dashboard-field-label">Market</div>
+                    <Ui44SelectInput value={marketMode} onChange={event => setMarketMode(event.target.value as MarketMode)}>
+                      <option value="global">Global</option>
+                      <option value="global_plus_local">Global + Local</option>
+                    </Ui44SelectInput>
+                  </label>
+                ) : null}
+                {!merchUsesLocalOnlyPricing ? (
+                  <label className="dashboard-field">
+                    <div className="dashboard-field-label">Global Price (USD)</div>
+                    <StudioPriceInput currency="USD" value={price} onChange={setPrice} />
+                  </label>
+                ) : null}
+                {merchUsesLocalOnlyPricing || marketMode === 'global_plus_local' ? (
+                  <label className="dashboard-field">
+                    <div className="dashboard-field-label">{merchUsesLocalOnlyPricing ? 'Price' : 'Local Price'} ({localCurrency})</div>
+                    <StudioPriceInput currency={localCurrency} value={localPrice} onChange={setLocalPrice} />
                   </label>
                 ) : null}
               </div>
-            ) : (
-              <>
-                <div className="dashboard-form-grid dashboard-form-grid-3 ui44-form-grid">
-                  {(isMerchProduct ? merchUsesLocalOnlyPricing : marketMode !== 'global') ? (
-                    <label className="dashboard-field">
-                      <div className="dashboard-field-label">{merchUsesLocalOnlyPricing ? `Price (${localCurrency})` : `Local Price (${localCurrency})`}</div>
-                      <span className="dashboard-price-input">
-                        <span>{currencySymbol(localCurrency)}</span>
-                        <Ui44TextInput className="os-input-field" value={localPrice} onChange={e => setLocalPrice(formatPriceInput(e.target.value))} disabled={!isMerchProduct && creatorCommerceUnavailable} aria-describedby={!isMerchProduct ? 'creator-commerce-existing-item-notice' : undefined} />
-                      </span>
-                    </label>
-                  ) : null}
-                </div>
-                {!isMerchProduct ? (
-                  <div className="settings-field">
-                    <div className="settings-field-head">
-                      <div className="os-type-card-title">Market</div>
-                      <p className="os-type-body-small">Choose one global price, or add a price for your local market. Your local market comes from Settings &gt; Region.</p>
-                    </div>
-                    <div className="ui44-segmented settings-segment" role="radiogroup" aria-label={`${section.label} market`}>
-                      {[
-                        { id: 'global', label: 'Global' },
-                        { id: 'global_plus_local', label: 'Global + Local' },
-                      ].map(option => (
-                        <button key={option.id} type="button" className={option.id === marketMode ? 'ui44-segmented-item ui44-segmented-item-active settings-segment-item settings-segment-item-active' : 'ui44-segmented-item settings-segment-item'} role="radio" aria-checked={option.id === marketMode} onClick={() => setMarketMode(option.id as MarketMode)} disabled={creatorCommerceUnavailable}>
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="dashboard-form-note">{creatorCommerceUnavailable ? 'Saved market settings remain unchanged until paid creator sales are available.' : 'Choose the markets where this paid download is offered.'}</p>
-                  </div>
-                ) : null}
-              </>
             )}
 
             {!isMerchProduct ? (

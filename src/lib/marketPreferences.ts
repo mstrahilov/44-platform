@@ -6,11 +6,6 @@ export type CountryOption = {
   currency: string;
 };
 
-export type CurrencyOption = {
-  code: string;
-  label: string;
-};
-
 const REGION_CODES = [
   'AD', 'AE', 'AF', 'AG', 'AI', 'AL', 'AM', 'AO', 'AR', 'AS', 'AT', 'AU', 'AW', 'AX', 'AZ', 'BA', 'BB', 'BD',
   'BE', 'BF', 'BG', 'BH', 'BI', 'BJ', 'BM', 'BN', 'BO', 'BR', 'BS', 'BT', 'BW', 'BY', 'BZ', 'CA', 'CD', 'CF',
@@ -267,11 +262,6 @@ const regionNames =
     ? new Intl.DisplayNames(['en'], { type: 'region' })
     : null;
 
-const currencyNames =
-  typeof Intl !== 'undefined' && typeof Intl.DisplayNames === 'function'
-    ? new Intl.DisplayNames(['en'], { type: 'currency' })
-    : null;
-
 function buildCountries(): CountryOption[] {
   return [...REGION_CODES]
     .map(code => ({
@@ -282,21 +272,7 @@ function buildCountries(): CountryOption[] {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function buildCurrencies(): CurrencyOption[] {
-  const supported = typeof Intl !== 'undefined' && 'supportedValuesOf' in Intl
-    ? Intl.supportedValuesOf('currency')
-    : ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'BGN', 'BRL', 'INR', 'KES', 'NAD', 'NGN', 'ZAR'];
-
-  return [...supported]
-    .map(code => ({
-      code,
-      label: currencyNames?.of(code) || code,
-    }))
-    .sort((a, b) => a.code.localeCompare(b.code));
-}
-
 export const COUNTRIES: CountryOption[] = buildCountries();
-export const CURRENCIES: CurrencyOption[] = buildCurrencies();
 
 export const DEFAULT_VIEWER_COUNTRY = 'US';
 export const DEFAULT_VIEWER_CURRENCY = 'USD';
@@ -306,6 +282,7 @@ export const DEFAULT_MARKET_MODE: MarketMode = 'global';
 
 export const VIEWER_COUNTRY_STORAGE_KEY = '44-setting-country';
 export const VIEWER_CURRENCY_STORAGE_KEY = '44-setting-display-currency';
+export const VIEWER_MARKET_CHANGE_EVENT = '44-market-preferences-changed';
 export const CREATOR_PREFERENCES_STORAGE_KEY = '44-studio-market-preferences';
 const LEGACY_CREATOR_PREFERENCES_STORAGE_KEY = '44-dashboard-market-preferences';
 
@@ -338,18 +315,24 @@ export function normalizeMarketMode(value?: string | null): MarketMode {
 
 export function getStoredViewerCountry() {
   if (typeof window === 'undefined') return DEFAULT_VIEWER_COUNTRY;
-  return window.localStorage.getItem(VIEWER_COUNTRY_STORAGE_KEY) || getDetectedViewerCountry();
+  const stored = window.localStorage.getItem(VIEWER_COUNTRY_STORAGE_KEY)?.toUpperCase();
+  return stored && COUNTRIES.some(country => country.code === stored) ? stored : getDetectedViewerCountry();
 }
 
 export function getStoredViewerCurrency() {
-  if (typeof window === 'undefined') return DEFAULT_VIEWER_CURRENCY;
-  return window.localStorage.getItem(VIEWER_CURRENCY_STORAGE_KEY) || currencyForCountry(getStoredViewerCountry());
+  return currencyForCountry(getStoredViewerCountry());
 }
 
-export function setStoredViewerPreferences(countryCode: string, currency: string) {
+export function setStoredViewerPreferences(countryCode: string) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem(VIEWER_COUNTRY_STORAGE_KEY, countryCode);
+  const normalizedCountry = countryCode.toUpperCase();
+  if (!COUNTRIES.some(country => country.code === normalizedCountry)) return;
+  const currency = currencyForCountry(normalizedCountry);
+  window.localStorage.setItem(VIEWER_COUNTRY_STORAGE_KEY, normalizedCountry);
   window.localStorage.setItem(VIEWER_CURRENCY_STORAGE_KEY, currency);
+  window.dispatchEvent(new CustomEvent(VIEWER_MARKET_CHANGE_EVENT, {
+    detail: { countryCode: normalizedCountry, currency },
+  }));
 }
 
 export type StoredCreatorPreferences = {

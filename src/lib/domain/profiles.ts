@@ -6,6 +6,7 @@ import { getOwnershipKeys } from '@/lib/studioProfiles';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/lib/database.types';
 import { usernameKey } from '@/lib/usernames';
+import { currencyForCountry } from '@/lib/marketPreferences';
 
 export async function getPublicProfile(identifier: string) {
   const usernameResult = await supabase
@@ -42,8 +43,14 @@ export async function getProfileMarketPreferences(userId: string) {
   return result.data;
 }
 
-export async function saveProfileMarketPreferences(userId: string, countryCode: string, displayCurrency: string) {
-  const result = await supabase.from('profiles').update({ country_code: countryCode, display_currency: displayCurrency }).eq('id', userId);
+export async function saveProfileMarketPreferences(userId: string, countryCode: string) {
+  const currency = currencyForCountry(countryCode);
+  const result = await supabase.from('profiles').update({
+    country_code: countryCode,
+    display_currency: currency,
+    home_country_code: countryCode,
+    home_currency: currency,
+  }).eq('id', userId);
   if (result.error) throw result.error;
 }
 

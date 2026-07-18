@@ -30,15 +30,6 @@ export type PriceSource = {
 
 const DEFAULT_RATES: Record<string, number> = {
   USD: 1,
-  NAD: 18,
-  ZAR: 18,
-  EUR: 0.92,
-  GBP: 0.78,
-  BGN: 1.8,
-  KES: 129,
-  NGN: 1500,
-  BRL: 5.45,
-  INR: 83,
 };
 
 function centsForItem(item: PriceSource) {
@@ -53,8 +44,9 @@ function formatCurrency(cents: number, currency: string) {
 }
 
 function convertUsdCents(cents: number, currency: string, rates: Record<string, number>) {
-  const rate = rates[currency] ?? DEFAULT_RATES[currency];
-  if (!rate || currency === 'USD') return cents;
+  const rate = rates[currency];
+  if (currency === 'USD') return cents;
+  if (!rate) return null;
   return Math.round(cents * rate);
 }
 
@@ -65,13 +57,15 @@ export function resolvePrice(item: PriceSource, context: PriceContext = {}) {
       label: 'Free',
       currency: 'USD',
       cents: 0,
+      checkoutCurrency: 'USD',
+      checkoutCents: 0,
       source: 'free' as const,
     };
   }
 
   const viewerCountry = context.viewerCountry || getStoredViewerCountry() || DEFAULT_VIEWER_COUNTRY;
   const viewerCurrency = context.viewerCurrency || getStoredViewerCurrency() || DEFAULT_VIEWER_CURRENCY;
-  const creatorCountry = item.creators?.home_country_code || item.creators?.country_code;
+  const creatorCountry = item.creators?.country_code || item.creators?.home_country_code;
   const marketMode = normalizeMarketMode(item.market_mode);
   const localCurrency = item.local_currency || item.creators?.home_currency || item.creators?.display_currency || 'USD';
   const localCents = item.local_price_cents ?? 0;
@@ -86,16 +80,30 @@ export function resolvePrice(item: PriceSource, context: PriceContext = {}) {
       label: formatCurrency(localCents, localCurrency),
       currency: localCurrency,
       cents: localCents,
+      checkoutCurrency: localCurrency,
+      checkoutCents: localCents,
       source: 'local' as const,
     };
   }
 
   const rates = context.rates ?? DEFAULT_RATES;
   const convertedCents = convertUsdCents(baseCents, viewerCurrency, rates);
+  if (convertedCents === null) {
+    return {
+      label: formatCurrency(baseCents, 'USD'),
+      currency: 'USD',
+      cents: baseCents,
+      checkoutCurrency: 'USD',
+      checkoutCents: baseCents,
+      source: 'global' as const,
+    };
+  }
   return {
     label: formatCurrency(convertedCents, viewerCurrency),
     currency: viewerCurrency,
     cents: convertedCents,
+    checkoutCurrency: 'USD',
+    checkoutCents: baseCents,
     source: viewerCurrency === 'USD' ? ('global' as const) : ('converted' as const),
   };
 }

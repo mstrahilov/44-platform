@@ -5,15 +5,13 @@
 //   body.accent-* -> --os-color-accent (+ ambient glow)
 
 export type ThemeMode = 'system' | 'light' | 'dark';
-export type ThemeAccent = 'amber' | 'sage' | 'ocean' | 'violet' | 'red' | 'cyan';
+export type ThemeAccent = 'amber' | 'sage' | 'ocean' | 'violet';
 
 export const ACCENTS: { id: ThemeAccent; label: string; swatch: string }[] = [
   { id: 'amber', label: 'Amber', swatch: '#f59e0b' },
   { id: 'sage', label: 'Sage', swatch: '#7cff4f' },
   { id: 'ocean', label: 'Ocean', swatch: '#60a5fa' },
   { id: 'violet', label: 'Violet', swatch: '#b56cff' },
-  { id: 'red', label: 'Magma', swatch: '#ff5a5f' },
-  { id: 'cyan', label: 'Polar', swatch: '#22d3ee' },
 ];
 
 export const MODES: { id: ThemeMode; label: string }[] = [
@@ -50,6 +48,6 @@ export function applyTheme(mode: ThemeMode, accent: ThemeAccent) {
   body.classList.remove('theme-light', 'theme-dark');
   body.classList.add(`theme-${resolved}`);
 
-  for (const a of ACCENTS) body.classList.remove(`accent-${a.id}`);
+  body.classList.remove('accent-amber', 'accent-sage', 'accent-ocean', 'accent-violet', 'accent-red', 'accent-cyan');
   body.classList.add(`accent-${accent}`);
 }
