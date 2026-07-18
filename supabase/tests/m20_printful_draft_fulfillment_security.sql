@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(23);
+select plan(28);
 
 select has_table('public','printful_runtime_controls','Printful runtime controls exist');
 select has_table('public','merch_variants','canonical Merch variants exist');
@@ -8,8 +8,11 @@ select has_table('public','printful_product_mappings','Printful product mappings
 select has_table('public','printful_variant_mappings','Printful variant mappings exist');
 select has_table('public','printful_shipping_quotes','Printful quote evidence exists');
 select has_table('public','printful_fulfillment_orders','Printful draft-order evidence exists');
+select has_table('public','printful_catalog_sync_runs','Printful catalog-sync leases exist');
 select has_column('public','merch_variants','price_cents','canonical variants can own customer retail prices');
 select has_column('public','commerce_order_items','merch_variant_snapshot','order lines preserve the selected local variant snapshot');
+select has_column('public','printful_product_mappings','last_catalog_sync_id','product mappings retain their complete-snapshot identity');
+select has_column('public','printful_variant_mappings','last_catalog_sync_id','variant mappings retain their complete-snapshot identity');
 
 insert into auth.users(id,email,raw_user_meta_data) values
   ('a3200000-0000-4000-8000-000000000001','printful-member@example.test','{"username":"printful_member"}'),
@@ -18,6 +21,15 @@ insert into auth.users(id,email,raw_user_meta_data) values
 set local role service_role;
 select set_config('request.jwt.claim.role','service_role',true);
 update public.profiles set role='admin' where id in ('a3200000-0000-4000-8000-000000000002','a3200000-0000-4000-8000-000000000003');
+select lives_ok(
+  $$select public.begin_printful_catalog_sync(440044,'a3200000-0000-4000-8000-000000000002')$$,
+  'the service can start one Printful complete-snapshot lease'
+);
+select throws_ok(
+  $$select public.begin_printful_catalog_sync(440044,'a3200000-0000-4000-8000-000000000003')$$,
+  '55P03','A complete Printful catalog sync is already running.',
+  'concurrent Printful catalog syncs fail closed rather than race reconciliation'
+);
 update public.commerce_runtime_controls set platform_seller_id='a3200000-0000-4000-8000-000000000002' where singleton;
 
 insert into public.catalog_items(

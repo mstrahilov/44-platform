@@ -209,7 +209,7 @@ function AdminEmailOperations() {
 
     <section className="dashboard-section">
       <SectionHeader title="Delivery controls" description="All controls begin off. Enable only after the matching deployment and acceptance gate has passed." />
-      <div className="settings-section settings-section-wide ui44-form-grid">
+      <div className="settings-section settings-section-wide ui44-form-grid email-delivery-control-grid">
         {data ? (Object.keys(CONTROL_COPY) as EmailControlName[]).map(control => {
           const enabled = data.controls[control];
           const nextEnabled = !enabled;

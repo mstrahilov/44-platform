@@ -1,12 +1,16 @@
 import type { ReactNode } from 'react';
 import { buildPageMetadata } from '@/lib/metadata';
+import { TopbarSectionBack } from '@/components/TopbarSectionBack';
 
 export const metadata = buildPageMetadata({
   title: 'Support',
-  description: 'Find help for account access, orders, Library, Dock settings, Radio, creator tools, and troubleshooting.',
+  description: 'Search 44OS help for accounts, Library, purchases, Merch, Community, creator tools, safety, and policies.',
   path: '/support',
 });
 
 export default function SupportLayout({ children }: { children: ReactNode }) {
-  return children;
+  return <>
+    <TopbarSectionBack rootHref="/support" rootLabel="Support" />
+    {children}
+  </>;
 }

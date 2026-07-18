@@ -13,7 +13,7 @@ export default function TermsPage() {
     title="Terms of Service"
     summary="The terms governing accounts, purchases, publishing, and use of 44OS."
   >
-    <p className="os-type-meta">Effective and last updated July 17, 2026</p>
+    <p className="os-type-meta">Effective July 17, 2026 · Last updated July 18, 2026</p>
 
     <LegalSection title="Agreement and operator">
       <p>
@@ -77,16 +77,20 @@ export default function TermsPage() {
     <LegalSection title="Physical merchandise and shipping">
       <p>
         Launch merchandise is sold by forty four and fulfilled by Printful. Physical checkout is
-        limited to supported United States delivery addresses. Product appearance can vary
-        slightly from on-screen images, and availability, production, delivery estimates, and
-        tracking can change. An order entering fulfillment is not a guarantee of a particular
-        delivery date. You are responsible for providing a complete and accurate deliverable
-        address.
+        limited to supported United States delivery addresses. The current launch shipping method
+        is Standard Shipping for $14.99 USD, with an estimated 5–10 business-day delivery window,
+        as also disclosed at checkout. Product appearance can vary slightly from on-screen images,
+        and availability, production, delivery estimates, and tracking can change. An order entering
+        fulfillment is not a guarantee of a particular delivery date. You are responsible for
+        providing a complete and accurate deliverable address.
       </p>
       <p>
-        If an Item becomes unavailable or fulfillment cannot proceed, we may hold the order for
-        review, offer a reasonable alternative, or cancel and refund the affected amount. Risk and
-        title transfer only to the extent provided by applicable law.
+        If we cannot ship within the time represented for your order, we will notify you and offer
+        the choice required by applicable law: consent to the delay or cancel the unshipped order
+        for a prompt full refund. If an Item becomes unavailable or fulfillment cannot proceed, we
+        may hold the order for review, offer a reasonable alternative that you may accept, or cancel
+        and refund the affected amount. Risk and title transfer only to the extent provided by
+        applicable law.
       </p>
     </LegalSection>
 

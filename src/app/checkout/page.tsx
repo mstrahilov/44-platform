@@ -289,7 +289,7 @@ export default function CheckoutPage() {
             {canStartPaidCheckout && checkoutConfig?.terms ? (
               <label className="settings-checkbox-row">
                 <input type="checkbox" checked={termsAccepted} onChange={event => setTermsAccepted(event.target.checked)} />
-                <span>I agree to {checkoutConfig.terms.title} (version {checkoutConfig.terms.version}). The exact accepted policy is preserved with the order.</span>
+                <span>I agree to the <Link href="/legal/terms">Terms &amp; Conditions</Link>.</span>
               </label>
             ) : null}
 

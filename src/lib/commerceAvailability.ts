@@ -11,8 +11,10 @@ export const PUBLIC_PURCHASES_AVAILABLE = process.env.NEXT_PUBLIC_PUBLIC_PURCHAS
 export const COMMERCE_TEST_MODE = process.env.NODE_ENV !== 'production'
   && process.env.NEXT_PUBLIC_COMMERCE_TEST_MODE === 'true';
 
-export function paidSalesUiAvailable(item: { paid_sales_available?: boolean }) {
-  return PUBLIC_PURCHASES_AVAILABLE && (item.paid_sales_available === true || COMMERCE_TEST_MODE);
+export function paidSalesUiAvailable(item: { paid_sales_available?: boolean; paid_offer_available?: boolean }) {
+  return PUBLIC_PURCHASES_AVAILABLE
+    && item.paid_offer_available === true
+    && (item.paid_sales_available === true || COMMERCE_TEST_MODE);
 }
 
 export const PURCHASING_COMING_SOON_TITLE = 'Purchasing coming soon';

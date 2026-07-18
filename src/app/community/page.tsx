@@ -324,7 +324,7 @@ function CommunityPageContent() {
           aria-expanded={false}
           onClick={() => requireCommunityAction(() => setPostComposerOpen(true))}
         >
-          <span aria-hidden="true">+</span>
+          <span className="ui44-symbol-plus" aria-hidden="true">+</span>
         </button>
       )}
       {activeCommunityTab === 'feed' && !requestedTopic ? (

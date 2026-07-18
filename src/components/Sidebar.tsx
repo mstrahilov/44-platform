@@ -224,7 +224,7 @@ export default function Sidebar() {
     .filter((app): app is OSApp => Boolean(app));
 
   const time = now
-    ? now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    ? now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
     : '';
 
   function openApp(app: OSApp) {

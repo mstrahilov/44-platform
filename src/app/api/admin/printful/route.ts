@@ -1,12 +1,11 @@
 import { authenticateCommerceRequest, commerceAdminClient } from '@/lib/server/commerce';
 import {
-  createPendingPrintfulProduct,
-  importPrintfulProduct,
   listPrintfulCatalogProducts,
   publishPrintfulProduct,
   printfulConfigurationPresence,
   printfulErrorResponse,
   reviewPrintfulProduct,
+  syncPrintfulCatalog,
   verifyPrintfulConnection,
 } from '@/lib/server/printful';
 
@@ -30,7 +29,7 @@ export async function GET(request: Request) {
       access.admin.from('printful_product_mappings' as never).select('id,item_id,store_id,sync_product_id,provider_name,status,last_synced_at,reviewed_at').order('created_at'),
       access.admin.from('printful_variant_mappings' as never).select('id,product_mapping_id,merch_variant_id,sync_variant_id,catalog_variant_id,provider_name,size_value,color_value,availability_status,provider_cost_cents,provider_currency,status,last_synced_at').order('created_at'),
       access.admin.from('merch_product_images' as never)
-        .select('id,item_id,role,color_value,title,file_url,sort_order,created_at')
+        .select('id,item_id,role,color_value,title,file_url,sort_order,is_featured,content_sha256,content_type,byte_size,original_filename,created_at')
         .order('sort_order').order('created_at'),
       access.admin.from('printful_fulfillment_orders' as never)
         .select('id,commerce_order_id,provider_order_id,provider_status,provider_dashboard_url,charged_cents,created_at,updated_at')
@@ -53,10 +52,11 @@ export async function GET(request: Request) {
     if (merchItems.error) throw merchItems.error;
     const productRows = (products.data ?? []) as unknown as Array<{ id: string; item_id: string } & Record<string, unknown>>;
     const itemPricing = productRows.length
-      ? await access.admin.from('catalog_items').select('id,price_cents').in('id', productRows.map(product => product.item_id))
+      ? await access.admin.from('catalog_items').select('id,price_cents,status').in('id', productRows.map(product => product.item_id))
       : { data: [], error: null };
     if (itemPricing.error) throw itemPricing.error;
     const retailByItem = new Map((itemPricing.data ?? []).map(item => [item.id, item.price_cents]));
+    const statusByItem = new Map((itemPricing.data ?? []).map(item => [item.id, item.status]));
     const variantRows = (variants.data ?? []) as unknown as Array<{ id: string; product_mapping_id: string; merch_variant_id: string; provider_cost_cents: number | null } & Record<string, unknown>>;
     const variantPricing = variantRows.length
       ? await access.admin.from('merch_variants' as never).select('id,price_cents').in('id', variantRows.map(variant => variant.merch_variant_id))
@@ -77,6 +77,7 @@ export async function GET(request: Request) {
     const productsWithPricing = productRows.map(product => ({
       ...product,
       retail_price_cents: retailByItem.get(product.item_id) ?? null,
+      item_status: statusByItem.get(product.item_id) ?? 'archived',
       maximum_provider_cost_cents: Math.max(
         0,
         ...variantRows.filter(variant => variant.product_mapping_id === product.id)
@@ -151,17 +152,8 @@ export async function POST(request: Request) {
       if (updated.error) throw updated.error;
       return Response.json({ connected: true, storeId: provider.storeId, confirmationEnabled: false });
     }
-    if (body.action === 'import_product') {
-      if (!body.itemId || !Number.isSafeInteger(body.syncProductId) || (body.syncProductId ?? 0) <= 0) {
-        return Response.json({ error: 'Choose an exact 44 Item and Printful Sync Product.', code: 'invalid_request' }, { status: 400 });
-      }
-      return Response.json(await importPrintfulProduct(body.itemId, body.syncProductId!));
-    }
-    if (body.action === 'create_pending_product') {
-      if (!Number.isSafeInteger(body.syncProductId) || (body.syncProductId ?? 0) <= 0) {
-        return Response.json({ error: 'Choose an exact Printful product.', code: 'invalid_request' }, { status: 400 });
-      }
-      return Response.json(await createPendingPrintfulProduct(body.syncProductId!));
+    if (body.action === 'sync_catalog') {
+      return Response.json(await syncPrintfulCatalog(access.user.id));
     }
     if (body.action === 'review_product') {
       if (!body.itemId) return Response.json({ error: 'Choose an imported 44 Item.', code: 'invalid_request' }, { status: 400 });

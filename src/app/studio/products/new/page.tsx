@@ -5,7 +5,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageShell, HubHero, CenteredMessage, SectionHeader } from '@/components/Ui';
 import { useTopbarBack } from '@/components/TopbarContext';
-import { UploadField } from '@/components/UploadField';
+import { AUDIO_UPLOAD_ACCEPT, UploadField } from '@/components/UploadField';
 import { TagMultiSelect } from '@/components/TagMultiSelect';
 import {
   StudioReleaseFeatures,
@@ -24,10 +24,11 @@ import type { Database } from '@/lib/database.types';
 import { ExternalLinksEditor } from '@/components/ExternalLinksEditor';
 import { activeExternalLinkDrafts, listExternalLinkPlatforms, materializeExternalLinkDrafts, replaceOwnedItemExternalLinks, validateExternalLinkDrafts, type ExternalLinkDraft, type ExternalLinkPlatform } from '@/lib/domain/externalLinks';
 import { saveStudioBookContent, replaceStudioSampleFiles } from '@/lib/domain/nativeContent';
-import { StudioBookFields, StudioSamplePreviewFields, type DraftSamplePreview } from '@/components/StudioNativeContentFields';
+import { StudioBookFields, StudioSamplePreviewFields, validateStudioBookMetadata, type DraftSamplePreview } from '@/components/StudioNativeContentFields';
 import { Ui44CheckboxInput, Ui44SelectInput, Ui44TextInput, Ui44Textarea } from '@/components/ui44/Inputs';
 import { clearStudioFormRecovery, readStudioFormRecovery, writeStudioFormRecovery } from '@/lib/studioFormRecovery';
 import { creatorPaidSalesMessage, loadCreatorPaidSalesState, type CreatorPaidSalesState } from '@/lib/domain/creatorCommerce';
+import { normalizeOptionalReleaseDate, releaseYear } from '@/lib/releaseDates';
 
 function buildSlug(title: string) {
   const base = normalizeTaxonomyValue(title) || 'item';
@@ -157,6 +158,7 @@ function NewProductContent() {
   const [externalLinksEnabled, setExternalLinksEnabled] = useState(false);
   const [externalLinkPlatforms, setExternalLinkPlatforms] = useState<ExternalLinkPlatform[]>([]);
   const [saving, setSaving] = useState(false);
+  const [activeUploadCount, setActiveUploadCount] = useState(0);
   const [rightsConfirmed, setRightsConfirmed] = useState(false);
   const [error, setError] = useState('');
   const [formRecoveryReady, setFormRecoveryReady] = useState(false);
@@ -257,9 +259,17 @@ function NewProductContent() {
     setTracks(current => current.map((track, trackIndex) => (trackIndex === index ? { ...track, ...patch } : track)));
   }
 
+  function handleUploadActivity(uploading: boolean) {
+    setActiveUploadCount(current => Math.max(0, current + (uploading ? 1 : -1)));
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!user) return;
+    if (activeUploadCount > 0) {
+      setError('Wait for every file upload to finish before publishing.');
+      return;
+    }
     if (isMerchProduct && profile?.role !== 'admin') {
       setError('Merch publishing is currently limited to 44 administrators.');
       return;
@@ -272,8 +282,12 @@ function NewProductContent() {
       setError('Please fill out the title and choose an Item Type.');
       return;
     }
-    if (isMusicProduct && (!releaseDate || !trackCount)) {
-      setError('Choose a release date and total track count.');
+    if (!coverUrl.trim()) {
+      setError(`Upload ${isMerchProduct ? 'a product image' : 'artwork'} before publishing.`);
+      return;
+    }
+    if (isMusicProduct && !trackCount) {
+      setError('Choose a total track count.');
       return;
     }
     if (!rightsConfirmed) {
@@ -300,6 +314,13 @@ function NewProductContent() {
       setError('Each sample preview needs a name and uploaded audio.');
       return;
     }
+    if (section.id === 'books') {
+      const bookError = validateStudioBookMetadata(bookTotalPages, bookSamplePages, bookLanguage);
+      if (bookError) {
+        setError(bookError);
+        return;
+      }
+    }
     if (isMusicProduct) {
       const linkError = externalLinksEnabled ? validateExternalLinkDrafts(externalLinks, externalLinkPlatforms) : '';
       if (linkError) {
@@ -323,6 +344,7 @@ function NewProductContent() {
     const localPriceCents = localPrice.trim() && Number.isFinite(localPriceNumber) ? Math.max(0, Math.round(localPriceNumber * 100)) : null;
     const slug = buildSlug(cleanTitle);
     const sortOrder = Date.now();
+    const normalizedReleaseDate = normalizeOptionalReleaseDate(releaseDate);
 
     const insertPayload = {
       author_id: profile?.id ?? user.id,
@@ -349,8 +371,8 @@ function NewProductContent() {
       download_url: null,
       featured: false,
       status: 'draft' as const,
-      year: releaseDate ? Number(releaseDate.slice(0, 4)) : (year ? Number(year) : null),
-      release_date: releaseDate || null,
+      year: releaseYear(normalizedReleaseDate, year),
+      release_date: normalizedReleaseDate,
       sort_order: sortOrder,
     };
 
@@ -488,14 +510,6 @@ function NewProductContent() {
   if (loading || !user) {
     return <PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>;
   }
-  if (!isMerchProduct && paidSales && !paidSales.can_sell_paid) {
-    return <PageShell><div className="dashboard-page">
-      <HubHero title="Creator Setup Required" copy="Complete private seller onboarding before uploading an Item." />
-      <div className="dashboard-status ui44-status" role="status">{creatorPaidSalesMessage(paidSales)}</div>
-      <Link className="os-button os-button-primary" href="/studio/onboarding">Open Creator Setup</Link>
-    </div></PageShell>;
-  }
-
   return (
     <PageShell>
       <div className="dashboard-editor">
@@ -535,8 +549,8 @@ function NewProductContent() {
                     </Ui44SelectInput>
                   </label>
                   <label className="dashboard-field">
-                    <div className="dashboard-field-label">Release Date</div>
-                    <Ui44TextInput className="os-input-field" type="date" value={releaseDate} onChange={event => { setReleaseDate(event.target.value); setYear(event.target.value.slice(0, 4)); }} />
+                    <div className="dashboard-field-label">Release Date (Optional)</div>
+                    <Ui44TextInput className="os-input-field release-date-input" type="date" value={releaseDate} onChange={event => { setReleaseDate(event.target.value); setYear(event.target.value.slice(0, 4)); }} />
                   </label>
                   <label className="dashboard-field">
                     <div className="dashboard-field-label">Track Count</div>
@@ -562,8 +576,8 @@ function NewProductContent() {
                     </Ui44SelectInput>
                   </label>
                   <label className="dashboard-field">
-                    <div className="dashboard-field-label">Release Date</div>
-                    <Ui44TextInput className="os-input-field" type="date" value={releaseDate} onChange={event => { setReleaseDate(event.target.value); setYear(event.target.value.slice(0, 4)); }} />
+                    <div className="dashboard-field-label">Release Date (Optional)</div>
+                    <Ui44TextInput className="os-input-field release-date-input" type="date" value={releaseDate} onChange={event => { setReleaseDate(event.target.value); setYear(event.target.value.slice(0, 4)); }} />
                   </label>
                 </div>
               ) : (
@@ -717,6 +731,7 @@ function NewProductContent() {
               buttonLabel={isMerchProduct ? 'Upload product image' : 'Upload artwork'}
               hideActionsWhenPreviewed={!isMerchProduct}
               onChange={setCoverUrl}
+              onUploadingChange={handleUploadActivity}
               />
 
               {isMerchProduct ? (
@@ -733,6 +748,7 @@ function NewProductContent() {
                     onChange={nextValue => {
                       if (nextValue) setGalleryUrls(current => [...current, nextValue]);
                     }}
+                    onUploadingChange={handleUploadActivity}
                   />
                   {galleryUrls.length > 0 && (
                     <div className="upload-gallery">
@@ -770,6 +786,7 @@ function NewProductContent() {
                 accept={section.id === 'books' ? 'application/pdf,.pdf' : 'application/zip,.zip'}
                 buttonLabel={section.id === 'books' ? 'Upload full PDF' : 'Upload full pack ZIP'}
                 onChange={setItemFileUrl}
+                onUploadingChange={handleUploadActivity}
                 />
               ) : null}
               </div>
@@ -786,10 +803,11 @@ function NewProductContent() {
                 onSamplePagesChange={setBookSamplePages}
                 languageCode={bookLanguage}
                 onLanguageCodeChange={setBookLanguage}
+                onUploadingChange={handleUploadActivity}
               />
             ) : null}
 
-            {section.id === 'assets' ? <StudioSamplePreviewFields userId={user.id} samples={samplePreviews} onChange={setSamplePreviews} /> : null}
+            {section.id === 'assets' ? <StudioSamplePreviewFields userId={user.id} samples={samplePreviews} onChange={setSamplePreviews} onUploadingChange={handleUploadActivity} /> : null}
 
             {isMusicProduct ? (
               <section className="dashboard-form-section studio-tracks-section">
@@ -818,13 +836,14 @@ function NewProductContent() {
                             folder="tracks/audio"
                             userId={user.id}
                             value={track.audioUrl}
-                            accept="audio/*"
+                            accept={AUDIO_UPLOAD_ACCEPT}
                             buttonLabel="Upload audio"
                             previewKind="none"
                             hideLabel
                             hideSuccessMessage
                             onChange={nextValue => updateTrack(index, { audioUrl: nextValue })}
                             onAudioMetadata={durationSeconds => updateTrack(index, { durationSeconds: String(durationSeconds) })}
+                            onUploadingChange={handleUploadActivity}
                           />
                         </div>
                       </div>
@@ -872,8 +891,8 @@ function NewProductContent() {
                 <Link className="os-button os-button-secondary" href={section.href} onClick={() => clearStudioFormRecovery(recoveryKey)}>
                   Cancel
                 </Link>
-                <button className="os-button os-button-primary" type="submit" disabled={saving}>
-                  {saving ? 'Publishing…' : 'Publish'}
+                <button className="os-button os-button-primary" type="submit" disabled={saving || activeUploadCount > 0}>
+                  {activeUploadCount > 0 ? 'Uploading files…' : saving ? 'Publishing…' : 'Publish'}
                 </button>
               </div>
             </div>

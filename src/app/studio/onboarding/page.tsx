@@ -147,7 +147,7 @@ export default function CreatorOnboardingPage() {
 
   return <PageShell>
     <div className="dashboard-page">
-      <HubHero title="Creator Setup" copy="Complete this private setup before uploading Items for sale." />
+      <HubHero title="Creator Setup" copy="Complete this private setup before selling paid Items. Free publishing remains available." />
       {message ? <div className="dashboard-status ui44-status" role="status">{message}</div> : null}
       {state?.can_create_items ? <Ui44Panel overflow="visible">
         <h2 className="os-type-panel-title">Creator setup complete</h2>

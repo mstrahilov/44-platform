@@ -126,7 +126,7 @@ export function ProductReviewsSection({
             }}
             disabled={!canPost}
           >
-            <span aria-hidden="true">+</span>
+            <span className="ui44-symbol-plus" aria-hidden="true">+</span>
           </button>
         ) : undefined}
       />

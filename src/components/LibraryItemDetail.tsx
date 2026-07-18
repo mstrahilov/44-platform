@@ -49,6 +49,7 @@ export function LibraryItemDetail({
   const [assets, setAssets] = useState<LibraryFileAsset[]>([]);
   const [bookContent, setBookContent] = useState<BookContent | null>(null);
   const [sampleFiles, setSampleFiles] = useState<SamplePackFile[]>([]);
+  const [hasActiveDownload, setHasActiveDownload] = useState(false);
   const [videoEmbeds, setVideoEmbeds] = useState<ReleaseVideoEmbed[]>([]);
   const [beatLicenses, setBeatLicenses] = useState<BeatLicenseGrant[]>([]);
   const [unlockedAchievementIds, setUnlockedAchievementIds] = useState<Set<string>>(new Set());
@@ -101,6 +102,7 @@ export function LibraryItemDetail({
         setSampleFiles(bundle.nativeContent.samples);
         setVideoEmbeds(bundle.videoEmbeds);
         setBeatLicenses(bundle.beatLicenses);
+        setHasActiveDownload(bundle.hasActiveDownload);
         setUnlockedAchievementIds(new Set(bundle.unlockedAchievements.map(item => item.achievement_id)));
       }
 
@@ -115,7 +117,7 @@ export function LibraryItemDetail({
   if (!user) return <div className="ui44-route-state">Sign in to view this library item.</div>;
 
   if (kind === 'product' && productRow?.products) {
-    return <ProductLibraryDetail userId={user.id} row={productRow} tracks={tracks} achievements={achievements} assets={assets} bonusAssets={bonusAssets} videoEmbeds={videoEmbeds} beatLicenses={beatLicenses} unlockedAchievementIds={unlockedAchievementIds} bookContent={bookContent} sampleFiles={sampleFiles} />;
+    return <ProductLibraryDetail userId={user.id} row={productRow} tracks={tracks} achievements={achievements} assets={assets} bonusAssets={bonusAssets} videoEmbeds={videoEmbeds} beatLicenses={beatLicenses} unlockedAchievementIds={unlockedAchievementIds} bookContent={bookContent} sampleFiles={sampleFiles} hasActiveDownload={hasActiveDownload} />;
   }
 
   return <div className="ui44-route-state">Library item not found.</div>;
@@ -133,6 +135,7 @@ function ProductLibraryDetail({
   unlockedAchievementIds,
   bookContent,
   sampleFiles,
+  hasActiveDownload,
 }: {
   userId: string;
   row: LibraryItemRow;
@@ -145,6 +148,7 @@ function ProductLibraryDetail({
   unlockedAchievementIds: Set<string>;
   bookContent: BookContent | null;
   sampleFiles: SamplePackFile[];
+  hasActiveDownload: boolean;
 }) {
   const product = row.products!;
   const baseAction = getProductLibraryPrimaryAction(product);
@@ -168,6 +172,7 @@ function ProductLibraryDetail({
   const [noSkipsEligible, setNoSkipsEligible] = useState(false);
   const [fullReleaseHandled, setFullReleaseHandled] = useState(false);
   const playbackSessionIdRef = useRef('');
+  const [downloadingTrackId, setDownloadingTrackId] = useState<string | null>(null);
 
   function currentPlaybackSessionId() {
     if (!playbackSessionIdRef.current) playbackSessionIdRef.current = crypto.randomUUID();
@@ -264,6 +269,40 @@ function ProductLibraryDetail({
     setFullReleaseHandled(false);
   }
 
+  function openDownloads() {
+    document.getElementById('downloads')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async function downloadTrack(track: Track) {
+    if (!hasActiveDownload || !track.audio_url) return;
+    setDownloadingTrackId(track.id);
+    try {
+      const source = new URL(track.audio_url);
+      const supabaseOrigin = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').origin;
+      const prefix = '/storage/v1/object/public/uploads/';
+      if (source.origin !== supabaseOrigin || !source.pathname.startsWith(prefix)) {
+        throw new Error('This track does not have a supported downloadable file.');
+      }
+      const storagePath = decodeURIComponent(source.pathname.slice(prefix.length));
+      const result = await supabase.storage.from('uploads').download(storagePath);
+      if (result.error) throw result.error;
+      const extension = storagePath.split('/').pop()?.split('.').pop()?.replace(/[^a-z0-9]/gi, '') || 'mp3';
+      const fileName = `${track.title.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || '44os-track'}.${extension}`;
+      const objectUrl = URL.createObjectURL(result.data);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (downloadError) {
+      alert(downloadError instanceof Error ? downloadError.message : 'This download could not be started.');
+    } finally {
+      setDownloadingTrackId(null);
+    }
+  }
+
   useEffect(() => {
     function handleTrackCompleted(event: Event) {
       const detail = (event as CustomEvent<MusicTrackPlaybackEventDetail>).detail;
@@ -358,6 +397,13 @@ function ProductLibraryDetail({
       opensInNewWindow: runtimeKind === 'interactive',
       onClick: isMusic ? playRelease : (isBook && bookContent) || runtimeKind === 'interactive' ? undefined : () => runProductAction(action),
     },
+    ...(hasActiveDownload && ((isMusic && tracks.some(track => Boolean(track.audio_url))) || includedFile?.file_url) ? [{
+      label: 'Download',
+      href: !isMusic ? includedFile?.file_url ?? undefined : undefined,
+      opensInNewWindow: !isMusic,
+      onClick: isMusic ? openDownloads : undefined,
+      secondary: true,
+    } satisfies ProductDetailAction] : []),
     ...(!isMusic && !isBook && !isAsset ? [{ label: 'View Creator', href: creatorLink, secondary: true } satisfies ProductDetailAction] : []),
   ];
 
@@ -419,6 +465,25 @@ function ProductLibraryDetail({
                 </div>
                 <Ui44OverflowTrackTitle title={track.title} active={currentTrack?.id === track.id && isPlaying} className="ui44-track-title" />
                 <span className="view-track-duration ui44-track-duration">{formatDuration(getTrackDurationSeconds(track, inferredTrackDurations))}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {isMusic && hasActiveDownload && tracks.some(track => Boolean(track.audio_url)) && (
+        <div className="view-section" id="downloads">
+          <h2 className="view-section-title">Downloads</h2>
+          <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
+            {tracks.filter(track => Boolean(track.audio_url)).map(track => (
+              <div className="dashboard-list-row ui44-list-row ui44-list-row-dashboard" key={`download-${track.id}`}>
+                <span className="dashboard-row-copy">
+                  <span className="dashboard-row-title">{track.title}</span>
+                  <span className="dashboard-row-subtitle">Included with your purchase.</span>
+                </span>
+                <button className="os-button os-button-secondary os-button-compact" type="button" disabled={downloadingTrackId === track.id} onClick={() => void downloadTrack(track)}>
+                  {downloadingTrackId === track.id ? 'Preparing…' : 'Download'}
+                </button>
               </div>
             ))}
           </div>

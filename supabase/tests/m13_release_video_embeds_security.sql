@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(12);
+select plan(14);
 
 insert into auth.users(id,email,raw_user_meta_data) values
  ('e3000000-0000-0000-0000-000000000001','m13-video-creator@example.test','{"username":"m13_video_creator"}'),
@@ -25,9 +25,11 @@ select throws_ok($$insert into public.item_video_embeds(item_id,title,youtube_vi
 set local role authenticated;
 select set_config('request.jwt.claim.role','authenticated',true);
 select set_config('request.jwt.claim.sub','e3000000-0000-0000-0000-000000000001',true);
-select lives_ok($$select public.replace_owned_item_video_embeds('e4000000-0000-0000-0000-000000000001','[{"title":"Documentary","url":"https://www.youtube.com/watch?v=dQw4w9WgXcQ"},{"title":"Music video","url":"https://youtu.be/9bZkp7q19f0"}]'::jsonb)$$,'creator can replace owned release embeds');
-select is((select count(*) from public.item_video_embeds where item_id='e4000000-0000-0000-0000-000000000001'),2::bigint,'two named embeds are stored');
-select is((select title from public.item_video_embeds where item_id='e4000000-0000-0000-0000-000000000001' order by sort_order limit 1),'Documentary','embed title is preserved');
+select lives_ok($$select public.replace_owned_item_video_embeds('e4000000-0000-0000-0000-000000000001','[{"url":"https://www.youtube.com/watch?v=dQw4w9WgXcQ"},{"url":"https://youtu.be/9bZkp7q19f0"}]'::jsonb)$$,'creator can replace owned release embeds using URLs only');
+select is((select count(*) from public.item_video_embeds where item_id='e4000000-0000-0000-0000-000000000001'),2::bigint,'two URL-only embeds are stored');
+select is((select title from public.item_video_embeds where item_id='e4000000-0000-0000-0000-000000000001' order by sort_order limit 1),'YouTube video 1','URL-only embeds receive a stable internal title');
+select lives_ok($$select public.replace_owned_item_video_embeds('e4000000-0000-0000-0000-000000000001','[{"url":"https://youtu.be/AAAAAAAAAA1"},{"url":"https://youtu.be/AAAAAAAAAA2"},{"url":"https://youtu.be/AAAAAAAAAA3"},{"url":"https://youtu.be/AAAAAAAAAA4"},{"url":"https://youtu.be/AAAAAAAAAA5"},{"url":"https://youtu.be/AAAAAAAAAA6"},{"url":"https://youtu.be/AAAAAAAAAA7"},{"url":"https://youtu.be/AAAAAAAAAA8"},{"url":"https://youtu.be/AAAAAAAAAA9"},{"url":"https://youtu.be/AAAAAAAAAA0"}]'::jsonb)$$,'creator can configure ten release videos');
+select throws_ok($$select public.replace_owned_item_video_embeds('e4000000-0000-0000-0000-000000000001','[{"url":"https://youtu.be/AAAAAAAAAA1"},{"url":"https://youtu.be/AAAAAAAAAA2"},{"url":"https://youtu.be/AAAAAAAAAA3"},{"url":"https://youtu.be/AAAAAAAAAA4"},{"url":"https://youtu.be/AAAAAAAAAA5"},{"url":"https://youtu.be/AAAAAAAAAA6"},{"url":"https://youtu.be/AAAAAAAAAA7"},{"url":"https://youtu.be/AAAAAAAAAA8"},{"url":"https://youtu.be/AAAAAAAAAA9"},{"url":"https://youtu.be/AAAAAAAAAA0"},{"url":"https://youtu.be/BBBBBBBBBB1"}]'::jsonb)$$,'22023',null,'an eleventh release video is rejected');
 select throws_ok($$select public.replace_owned_item_video_embeds('e4000000-0000-0000-0000-000000000001','[{"title":"Bad","url":"https://evil.example/video"}]'::jsonb)$$,'22023',null,'non-YouTube URLs are rejected');
 select throws_ok($$select public.replace_owned_item_video_embeds('e4000000-0000-0000-0000-000000000002','[{"title":"Bad","url":"https://youtu.be/dQw4w9WgXcQ"}]'::jsonb)$$,'22023',null,'unsupported Item experiences cannot receive embeds');
 

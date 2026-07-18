@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -25,7 +25,7 @@ import {
 import { hasCommunityIdentity, communityIdentityMessage } from '@/lib/communityProfile';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { isMissingRelationError } from '@/lib/schemaCompat';
-import { authorDisplayName, compactDate } from '@/lib/social';
+import { authorDisplayName, authorHref, compactDate } from '@/lib/social';
 
 type Conversation = InboxConversation;
 type ConversationMember = InboxConversationMember;
@@ -59,15 +59,23 @@ function setConversationReadAt(conversationId: string, value: string) {
   }));
 }
 
-export default function MessagesPage() {
+function MessageSendGlyph() {
+  return (
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M8 12V4.5M4.75 7.5 8 4.25l3.25 3.25" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export default function MessagesPage({ conversationId }: { conversationId?: string }) {
   return (
     <Suspense fallback={<PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>}>
-      <MessagesContent />
+      <MessagesContent conversationId={conversationId} />
     </Suspense>
   );
 }
 
-function MessagesContent() {
+function MessagesContent({ conversationId: routeConversationId }: { conversationId?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading } = useAuth();
@@ -82,23 +90,36 @@ function MessagesContent() {
   const [sending, setSending] = useState(false);
   const [setupGateOpen, setSetupGateOpen] = useState(false);
   const [readMap, setReadMap] = useState<Record<string, string>>(() => getReadMap());
-  const [composing, setComposing] = useState(false);
+  const composeRoute = routeConversationId === 'new';
+  const [composing, setComposing] = useState(composeRoute);
   const [recipientQuery, setRecipientQuery] = useState('');
   const [recipientProfiles, setRecipientProfiles] = useState<MessageProfile[]>([]);
   const [selectedRecipient, setSelectedRecipient] = useState<MessageProfile | null>(null);
   const [inboxError, setInboxError] = useState('');
-  const [mobileListOpen, setMobileListOpen] = useState(true);
+  const [mobileListOpen, setMobileListOpen] = useState(!routeConversationId);
+  const messageListRef = useRef<HTMLDivElement>(null);
+  const standaloneConversation = Boolean(routeConversationId);
 
-  useTopbarBack(mobileListOpen ? undefined : { href: '/inbox', label: 'Inbox' });
+  useTopbarBack(standaloneConversation || !mobileListOpen ? { href: '/inbox', label: 'Inbox' } : undefined);
 
   useEffect(() => {
     const conversation = searchParams.get('conversation');
     const withProfile = searchParams.get('with');
     const compose = searchParams.get('compose');
     Promise.resolve().then(() => {
-      if (compose === 'new') {
-        setComposing(true);
+      if (routeConversationId) {
+        setComposing(composeRoute);
         setMobileListOpen(false);
+        return;
+      }
+
+      if (conversation) {
+        router.replace(`/conversation/${conversation}`);
+        return;
+      }
+
+      if (compose === 'new') {
+        router.replace('/conversation/new');
         return;
       }
 
@@ -107,7 +128,7 @@ function MessagesContent() {
         setMobileListOpen(true);
       }
     });
-  }, [searchParams]);
+  }, [composeRoute, routeConversationId, router, searchParams]);
 
   useEffect(() => {
     if (!userId) return;
@@ -138,14 +159,14 @@ function MessagesContent() {
     setSchemaReady(true);
     setInboxError('');
 
-    const requested = searchParams.get('conversation');
+    const requested = routeConversationId ?? searchParams.get('conversation');
     if (requested && rows.some(row => row.id === requested)) {
       setActiveId(requested);
       setMobileListOpen(false);
     } else if (!activeId || !rows.some(row => row.id === activeId)) {
       setActiveId(rows[0]?.id ?? '');
     }
-  }, [activeId, searchParams, user]);
+  }, [activeId, routeConversationId, searchParams, user]);
 
   useEffect(() => {
     if (!user) return;
@@ -208,7 +229,9 @@ function MessagesContent() {
   const profile = profileState && profileState.userId === userId ? profileState.profile : null;
   const visibleRecipientProfiles = user && composing && recipientQuery.trim() ? recipientProfiles : [];
   const canInteract = hasCommunityIdentity(profile);
-  const activeConversation = conversations.find(row => row.id === activeId) ?? conversations[0] ?? null;
+  const activeConversation = routeConversationId
+    ? conversations.find(row => row.id === routeConversationId) ?? null
+    : conversations.find(row => row.id === activeId) ?? conversations[0] ?? null;
   const activeMessages = activeConversation ? messages.filter(message => message.conversation_id === activeConversation.id) : [];
   const activeConversationId = activeConversation?.id ?? '';
   const latestActiveMessageAt = activeMessages.at(-1)?.created_at ?? '';
@@ -236,6 +259,15 @@ function MessagesContent() {
     Promise.resolve().then(() => setReadMap(getReadMap()));
   }, [activeConversationId, latestActiveMessageAt]);
 
+  useEffect(() => {
+    if (!standaloneConversation || !messageListRef.current) return;
+    const messageList = messageListRef.current;
+    const frame = window.requestAnimationFrame(() => {
+      messageList.scrollTop = messageList.scrollHeight;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [latestActiveMessageAt, standaloneConversation]);
+
   async function sendMessage(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (composing && selectedRecipient && user && body.trim() && !sending) {
@@ -252,7 +284,7 @@ function MessagesContent() {
         setSending(false);
         return;
       }
-      const conversationId = new URL(result.href, window.location.origin).searchParams.get('conversation');
+      const conversationId = result.conversationId;
       if (conversationId) {
         const { error: insertError } = await sendDirectMessage(conversationId, body);
         if (insertError) {
@@ -327,28 +359,30 @@ function MessagesContent() {
 
   return (
     <PageShell>
-      <main className={`social-shell social-shell-wide social-messages-shell${composing ? ' social-messages-composing' : ''}${mobileListOpen ? '' : ' social-messages-thread-open'}`}>
-        <header className="social-header">
+      <main className={`social-shell social-shell-wide social-messages-shell${standaloneConversation ? ' social-conversation-page' : ''}${composing ? ' social-messages-composing' : ''}${mobileListOpen ? '' : ' social-messages-thread-open'}`}>
+        {!standaloneConversation && <header className="social-header">
           <div className="social-title-row">
             <div>
               <h1 className="os-type-display ui44-type ui44-type-page-title">Inbox</h1>
             </div>
-            <button type="button" className="os-button os-button-primary social-new-message-button" aria-label="New Message" onClick={() => {
-              setComposing(true);
-              setMobileListOpen(false);
+            <button type="button" className="ui44-symbol-button ui44-symbol-button-add page-compose-button" aria-label="New Message" onClick={() => {
               setInboxError('');
-              router.push('/inbox?compose=new');
+              router.push('/conversation/new');
             }}>
-              <span className="social-new-message-label">New Message</span>
-              <span className="social-new-message-icon" aria-hidden="true">＋</span>
+              <span className="ui44-symbol-plus" aria-hidden="true">+</span>
             </button>
           </div>
-        </header>
+        </header>}
 
         {!canInteract && <div className="app-empty-text">{communityIdentityMessage()}</div>}
         {inboxError && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{inboxError}</div>}
 
-          <section className={mobileListOpen ? 'social-inbox social-inbox-mobile-list' : 'social-inbox social-inbox-mobile-thread'} aria-label="Inbox">
+          <section className={standaloneConversation
+            ? 'social-inbox social-inbox-conversation-route'
+            : composing
+              ? 'social-inbox social-inbox-mobile-thread'
+              : 'social-inbox social-inbox-mobile-list social-inbox-index'} aria-label={standaloneConversation ? 'Conversation' : 'Inbox'}>
+            {!standaloneConversation && (
             <aside className="social-inbox-list ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
               <OnboardingTip id="messages-refresh">
                 Inbox refreshes when you return to this window. Open a profile to start a new conversation.
@@ -378,7 +412,7 @@ function MessagesContent() {
                     onClick={() => {
                       setActiveId(conversation.id);
                       setMobileListOpen(false);
-                      router.push(`/inbox?conversation=${conversation.id}`);
+                      router.push(`/conversation/${conversation.id}`);
                       if (last?.created_at) {
                         setConversationReadAt(conversation.id, last.created_at);
                         setReadMap(getReadMap());
@@ -399,8 +433,9 @@ function MessagesContent() {
                 ))
               )}
             </aside>
+            )}
 
-            <div className="social-inbox-thread">
+            {(standaloneConversation || composing) && <div className="social-inbox-thread">
               {composing ? (
                 <div className="social-compose-panel">
                   <div className="social-compose-mobile-header">
@@ -439,10 +474,7 @@ function MessagesContent() {
                           }}
                           disabled={false}
                         >
-                          <SocialProfileRow
-                            profile={result}
-                            subtitle={result.creator_type || result.role || '44 member'}
-                          />
+                          <SocialProfileRow profile={result} />
                         </button>
                       ))
                     )}
@@ -451,28 +483,31 @@ function MessagesContent() {
                   <form className="social-message-form social-message-form-compose" onSubmit={sendMessage}>
                     <Ui44Textarea
                       className="os-input-textarea ui44-composer-input"
-                      rows={2}
+                      rows={1}
                       value={body}
                       onChange={event => setBody(event.target.value)}
-                      placeholder={selectedRecipient ? 'Write message' : 'Choose someone to message'}
+                      placeholder="Type message"
                       disabled={sending || !selectedRecipient}
                     />
-                    <button className="os-button os-button-primary os-button-compact" type="submit" disabled={!body.trim() || sending || !selectedRecipient}>
-                      Send
+                    <button className="social-message-send" type="submit" aria-label="Send message" disabled={!body.trim() || sending || !selectedRecipient}>
+                      <MessageSendGlyph />
                     </button>
                   </form>
                 </div>
               ) : activeConversation ? (
                 <>
                   <div className="social-row social-message-thread-header ui44-list-row ui44-list-row-profile">
-                    <SocialAvatar profile={otherMember} />
-                    <div className="social-row-main">
-                      <div className="social-author-name">{authorDisplayName(otherMember)}</div>
-                      <div className="social-handle">{otherMember?.username ? `@${otherMember.username}` : 'Direct message'}</div>
-                    </div>
+                    <Link
+                      href={authorHref(otherMember)}
+                      className="social-message-profile-link"
+                      aria-label={`View ${authorDisplayName(otherMember)} profile`}
+                    >
+                      <SocialAvatar profile={otherMember} />
+                      <span className="social-author-name">{authorDisplayName(otherMember)}</span>
+                    </Link>
                   </div>
 
-                  <div className="social-message-list ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
+                  <div className="social-message-list" ref={messageListRef}>
                     {activeMessages.length === 0 ? (
                       <div className="app-empty-text">Start the conversation.</div>
                     ) : (
@@ -488,21 +523,21 @@ function MessagesContent() {
                   <form className="social-message-form" onSubmit={sendMessage}>
                     <Ui44Textarea
                       className="os-input-textarea ui44-composer-input"
-                      rows={2}
+                      rows={1}
                       value={body}
                       onChange={event => setBody(event.target.value)}
-                      placeholder={canInteract ? 'Write message' : 'Finish your profile to message'}
+                      placeholder="Type message"
                       disabled={sending}
                     />
-                    <button className="os-button os-button-primary os-button-compact" type="submit" disabled={!body.trim() || sending}>
-                      Send
+                    <button className="social-message-send" type="submit" aria-label="Send message" disabled={!body.trim() || sending}>
+                      <MessageSendGlyph />
                     </button>
                   </form>
                 </>
               ) : (
-                <div className="app-empty-text">{schemaReady ? 'Select a conversation.' : 'Messages are not available yet.'}</div>
+                <div className="app-empty-text">{schemaReady ? 'Conversation unavailable.' : 'Messages are not available yet.'}</div>
               )}
-            </div>
+            </div>}
           </section>
       </main>
       <CommunitySetupGate open={setupGateOpen} onClose={() => setSetupGateOpen(false)} />

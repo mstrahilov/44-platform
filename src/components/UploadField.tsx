@@ -4,6 +4,8 @@ import { useId, useState, type ChangeEvent } from 'react';
 import { getUploadErrorMessage, uploadPrivateItemFile, uploadPublicFile } from '@/lib/uploads';
 import { Ui44FileInput } from '@/components/ui44/Inputs';
 
+export const AUDIO_UPLOAD_ACCEPT = 'audio/mpeg,audio/mp3,audio/mp4,audio/x-m4a,audio/aac,audio/wav,audio/x-wav,audio/flac,.mp3,.m4a,.aac,.wav,.flac';
+
 type UploadFieldProps = {
   label: string;
   folder: string;
@@ -19,6 +21,7 @@ type UploadFieldProps = {
   hideSuccessMessage?: boolean;
   hideActionsWhenPreviewed?: boolean;
   storage?: 'public' | 'private-item';
+  onUploadingChange?: (uploading: boolean) => void;
 };
 
 export function UploadField({
@@ -36,6 +39,7 @@ export function UploadField({
   hideSuccessMessage = false,
   hideActionsWhenPreviewed = false,
   storage = 'public',
+  onUploadingChange,
 }: UploadFieldProps) {
   const inputId = useId();
   const [uploading, setUploading] = useState(false);
@@ -46,24 +50,33 @@ export function UploadField({
     if (!file) return;
 
     setUploading(true);
+    onUploadingChange?.(true);
     setMessage('');
 
     try {
-      const analysisPromise = accept?.includes('audio') ? analyzeAudioFile(file) : Promise.resolve(null);
       const uploadedValue = storage === 'private-item'
         ? (await uploadPrivateItemFile({ file, folder, userId })).path
         : (await uploadPublicFile({ file, folder, userId })).publicUrl;
-      // Commit the durable upload as soon as storage accepts it. Audio analysis can
-      // take several seconds on mobile and must never leave the form looking empty.
+      // Commit the durable upload before optional metadata work. Release-track
+      // uploads use lightweight media metadata instead of decoding the entire file
+      // in memory, which keeps phone uploads from competing with audio analysis.
       onChange(uploadedValue);
-      const analysis = await analysisPromise;
-      if (analysis?.durationSeconds && onAudioMetadata) onAudioMetadata(Math.ceil(analysis.durationSeconds));
-      if (analysis && onAudioAnalysis) onAudioAnalysis(analysis);
       setMessage('Upload complete.');
+      if (accept?.includes('audio') && onAudioAnalysis) {
+        void analyzeAudioFile(file).then(analysis => {
+          if (analysis.durationSeconds && onAudioMetadata) onAudioMetadata(Math.ceil(analysis.durationSeconds));
+          onAudioAnalysis(analysis);
+        }).catch(() => undefined);
+      } else if (accept?.includes('audio') && onAudioMetadata) {
+        void readAudioDuration(file).then(duration => {
+          if (duration) onAudioMetadata(Math.ceil(duration));
+        });
+      }
     } catch (error) {
       setMessage(getUploadErrorMessage(error));
     } finally {
       setUploading(false);
+      onUploadingChange?.(false);
       event.target.value = '';
     }
   }

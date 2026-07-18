@@ -5,7 +5,6 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { creatorHref } from '@/lib/platform';
 import { useContextMenu } from '@/components/ContextMenu';
 import type { Product } from '@/lib/products';
-import { formatProductPrice } from '@/lib/products';
 import { getProductExperience, productBrowseHref } from '@/lib/experience';
 import { useAuth } from '@/lib/useAuth';
 import { COPY_TO_CLIPBOARD_TOAST_EVENT } from '@/components/ContextMenu';
@@ -44,7 +43,7 @@ export function ProductCard({ product, owned: ownedProp }: { product: Product; o
   const cart = useCart();
   const href = productBrowseHref(product);
   const image = product.cover_url || product.hero_url;
-  const subtitle = getProductTileSubtitle(product);
+  const creatorLabel = product.creators?.display_name || product.creator || '44 Creator';
   const experience = getProductExperience(product);
   const shape = experience === 'physical' ? 'portrait' : experience === 'book' ? 'book' : 'square';
   const [owned, setOwned] = useState(Boolean(ownedProp));
@@ -128,7 +127,7 @@ export function ProductCard({ product, owned: ownedProp }: { product: Product; o
       </div>
       <div className="product-tile-info ui44-catalog-copy">
         <div className="product-tile-title ui44-catalog-title">{product.title}</div>
-        <div className="product-tile-subtitle ui44-catalog-subheadline">{subtitle}</div>
+        <div className="product-tile-subtitle product-tile-creator ui44-catalog-subheadline">{creatorLabel}</div>
       </div>
     </Link>
   );
@@ -203,15 +202,6 @@ function resolveProductActionEntries({
       disabled: !userId,
     },
   ];
-}
-
-// Merch, apparel, assets → price. Music, games, books → creator/author.
-function getProductTileSubtitle(product: Product): string {
-  const experience = getProductExperience(product);
-  if (experience === 'physical' || experience === 'asset') {
-    return formatProductPrice(product);
-  }
-  return product.creator || 'Creator';
 }
 
 export function HubHero({

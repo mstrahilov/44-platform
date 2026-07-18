@@ -410,8 +410,9 @@ body.theme-dark {
 }
 
 .ui44-symbol-plus {
-  font-size: 25px;
-  font-weight: 350;
+  display: block;
+  font-size: 27px;
+  font-weight: 360;
   line-height: 1;
   transform: translateY(-1px);
 }
@@ -1732,6 +1733,15 @@ body {
   grid-column: span 4;
 }
 
+.release-core-grid .release-date-input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  inline-size: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
 :where(.dashboard-form-grid, .profile-edit-fields, .settings-two-column)
   > :is(.dashboard-field-full, .profile-edit-field-full) {
   grid-column: 1 / -1;
@@ -2840,7 +2850,7 @@ body:is(.theme-dark, .theme-light) .ui44-catalog-card:focus-visible .ui44-catalo
   }
 
   body:is(.theme-dark, .theme-light) .ui44-catalog-title {
-    font: 600 17px/22px var(--44ui-font-app);
+    font: 600 13px/16px var(--44ui-font-app);
   }
 
   body:is(.theme-dark, .theme-light) .ui44-catalog-subheadline {
@@ -3403,6 +3413,13 @@ body:is(.theme-dark, .theme-light) .ui44-range-input {
 
 .product-tile-subtitle {
   font: 400 11px/14px var(--44ui-font-app);
+  letter-spacing: 0;
+}
+
+/* Product cards use a dedicated creator byline. It stays compact without
+   changing subtitles used elsewhere in the operating system. */
+body:is(.theme-dark, .theme-light) .product-tile-creator.ui44-catalog-subheadline {
+  font: 400 12px/16px var(--44ui-font-app);
   letter-spacing: 0;
 }
 
@@ -3971,46 +3988,46 @@ body:is(.theme-dark, .theme-light) .music-player-sheet {
     --44ui-menu-item-radius: 12px;
     --44ui-radius-glass: 16px;
     --44ui-radius-input: 12px;
-    --44ui-type-page-title-size: 34px;
-    --44ui-type-page-title-line: 41px;
-    --44ui-type-section-title-size: 28px;
-    --44ui-type-section-title-line: 34px;
-    --44ui-type-subsection-title-size: 22px;
-    --44ui-type-subsection-title-line: 28px;
-    --44ui-type-headline-size: 17px;
-    --44ui-type-headline-line: 22px;
-    --44ui-type-body-size: 17px;
-    --44ui-type-body-line: 24px;
-    --44ui-type-callout-size: 16px;
-    --44ui-type-callout-line: 21px;
-    --44ui-type-subheadline-size: 15px;
-    --44ui-type-subheadline-line: 20px;
-    --44ui-type-meta-size: 13px;
-    --44ui-type-meta-line: 18px;
-    --44ui-type-caption-size: 12px;
-    --44ui-type-caption-line: 16px;
-    --44ui-type-field-label-size: 15px;
-    --44ui-type-field-label-line: 20px;
-    --44ui-type-control-size: 17px;
-    --44ui-type-control-line: 22px;
+    --44ui-type-page-title-size: 26px;
+    --44ui-type-page-title-line: 32px;
+    --44ui-type-section-title-size: 22px;
+    --44ui-type-section-title-line: 26px;
+    --44ui-type-subsection-title-size: 17px;
+    --44ui-type-subsection-title-line: 22px;
+    --44ui-type-headline-size: 13px;
+    --44ui-type-headline-line: 16px;
+    --44ui-type-body-size: 13px;
+    --44ui-type-body-line: 18px;
+    --44ui-type-callout-size: 12px;
+    --44ui-type-callout-line: 15px;
+    --44ui-type-subheadline-size: 11px;
+    --44ui-type-subheadline-line: 14px;
+    --44ui-type-meta-size: 10px;
+    --44ui-type-meta-line: 13px;
+    --44ui-type-caption-size: 10px;
+    --44ui-type-caption-line: 13px;
+    --44ui-type-field-label-size: 12px;
+    --44ui-type-field-label-line: 15px;
+    --44ui-type-control-size: 13px;
+    --44ui-type-control-line: 16px;
     --os-app-header-pad-top: 20px;
     --os-app-header-pad-bottom: 20px;
-    --os-type-display-size: 34px;
-    --os-type-display-line: 41px;
-    --os-type-page-title-size: 34px;
-    --os-type-page-title-line: 41px;
-    --os-type-panel-title-size: 28px;
-    --os-type-panel-title-line: 34px;
-    --os-type-card-title-size: 17px;
-    --os-type-card-title-line: 22px;
-    --os-type-body-size: 17px;
-    --os-type-body-line: 24px;
-    --os-type-body-small-size: 16px;
-    --os-type-body-small-line: 21px;
-    --os-type-meta-size: 13px;
-    --os-type-meta-line: 18px;
-    --os-type-button-size: 17px;
-    --os-type-button-line: 22px;
+    --os-type-display-size: 26px;
+    --os-type-display-line: 32px;
+    --os-type-page-title-size: 26px;
+    --os-type-page-title-line: 32px;
+    --os-type-panel-title-size: 22px;
+    --os-type-panel-title-line: 26px;
+    --os-type-card-title-size: 13px;
+    --os-type-card-title-line: 16px;
+    --os-type-body-size: 13px;
+    --os-type-body-line: 18px;
+    --os-type-body-small-size: 12px;
+    --os-type-body-small-line: 15px;
+    --os-type-meta-size: 10px;
+    --os-type-meta-line: 13px;
+    --os-type-button-size: 13px;
+    --os-type-button-line: 16px;
   }
 
   .ui44-page-header {
@@ -7016,5 +7033,259 @@ body:is(.theme-dark, .theme-light)
     .social-profile-page
     .social-profile-posts.ui44-panel {
     border-radius: 16px;
+  }
+}
+
+/* Social-feed body copy is compact by design. The shared post row carries
+   this class in Community, thread pages, profiles, and search results. */
+@media (max-width: 768px) {
+  body:is(.theme-dark, .theme-light)
+    .social-post-row.ui44-list-row-community
+    .social-row-body {
+    font: 400 15px/21px var(--44ui-font-app);
+  }
+}
+
+/* A conversation is a dedicated messaging canvas, not a Glass panel. These
+   route-scoped rules intentionally outrank canonical panel and textarea
+   defaults without changing composers elsewhere. */
+body:is(.theme-dark, .theme-light)
+  .social-inbox-conversation-route
+  .social-message-list {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+body:is(.theme-dark, .theme-light)
+  .social-inbox-conversation-route
+  .social-message-form {
+  background: var(--os-color-bg);
+}
+
+body:is(.theme-dark, .theme-light)
+  .social-inbox-conversation-route
+  .social-message-form
+  textarea.ui44-textarea.os-input-textarea.ui44-composer-input {
+  height: 44px;
+  min-height: 44px;
+  max-height: 116px;
+  padding: 10px 14px;
+  border-radius: 22px;
+  resize: none;
+}
+
+body:is(.theme-dark, .theme-light)
+  .social-inbox-conversation-route
+  .social-message-thread-header.ui44-list-row-profile {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 12px 12px;
+  border-bottom: 1px solid var(--44ui-panel-border);
+  text-align: center;
+}
+
+body:is(.theme-dark, .theme-light)
+  .social-inbox-conversation-route
+  .social-message-thread-header
+  .social-message-profile-link {
+  grid-column: 1;
+  display: grid;
+  width: 100%;
+  justify-items: center;
+  gap: 6px;
+  text-align: center;
+  color: inherit;
+  text-decoration: none;
+}
+
+body:is(.theme-dark, .theme-light)
+  .social-inbox-conversation-route
+  .social-message-thread-header {
+  position: relative;
+  z-index: 3;
+  background: var(--os-color-bg);
+}
+
+body:is(.theme-dark, .theme-light)
+  .social-inbox-conversation-route
+  .social-message-form {
+  display: block;
+  position: relative;
+}
+
+body:is(.theme-dark, .theme-light)
+  .social-inbox-conversation-route
+  .social-message-form
+  textarea.ui44-textarea.os-input-textarea.ui44-composer-input {
+  width: 100%;
+  padding-right: 52px;
+}
+
+body:is(.theme-dark, .theme-light)
+  .social-inbox-conversation-route
+  .social-message-form
+  .social-message-send {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  display: grid;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--os-color-accent);
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+body:is(.theme-dark, .theme-light)
+  .social-inbox-conversation-route
+  .social-message-form
+  .social-message-send
+  svg {
+  display: block;
+}
+
+body:is(.theme-dark, .theme-light)
+  .social-inbox-conversation-route
+  .social-message-form
+  .social-message-send:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+body:is(.theme-dark, .theme-light)
+  .social-inbox-conversation-route
+  .social-compose-panel {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  gap: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+body:is(.theme-dark, .theme-light)
+  .social-inbox-conversation-route
+  .social-compose-to-row {
+  box-sizing: border-box;
+  width: calc(100% - 24px);
+  margin: 12px;
+}
+
+body:is(.theme-dark, .theme-light)
+  .social-inbox-conversation-route
+  .social-compose-results {
+  min-height: 0;
+  align-content: start;
+  grid-auto-rows: max-content;
+  overflow-y: auto;
+  padding: 8px 12px 12px;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+body:is(.theme-dark, .theme-light)
+  .social-inbox-conversation-route
+  .social-compose-result {
+  align-self: start;
+  width: 100%;
+  min-height: 0;
+  padding: 12px 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  body:is(.theme-dark, .theme-light)
+    .social-inbox-conversation-route
+    .social-compose-result:hover {
+    background: transparent;
+  }
+}
+
+body:is(.theme-dark, .theme-light)
+  .social-inbox-conversation-route
+  .social-message-form-compose {
+  grid-row: 4;
+  align-self: end;
+}
+
+/* Mobile header tools share the same geometry and trailing columns as the
+   topbar controls. A single plus glyph is reused by Community, Studio, Inbox,
+   and Reviews so route context cannot change its visual weight. */
+@media (max-width: 768px) {
+  :root {
+    --os-topbar-control-size: var(--44ui-target);
+  }
+
+  body:is(.theme-dark, .theme-light)
+    :is(.os-topbar-icon-button, .os-topbar-back, .os-topbar-avatar) {
+    width: var(--44ui-target);
+    min-width: var(--44ui-target);
+    height: var(--44ui-target);
+    min-height: var(--44ui-target);
+    flex: 0 0 var(--44ui-target);
+  }
+
+  body:is(.theme-dark, .theme-light) .os-topbar-right,
+  body:is(.theme-dark, .theme-light) .page-header-tools {
+    gap: 10px;
+  }
+
+  body:is(.theme-dark, .theme-light) .app-header .page-header-tools {
+    margin-right: calc(var(--os-topbar-edge-inset) - var(--os-content-inset));
+  }
+
+  body:is(.theme-dark, .theme-light)
+    .social-title-row
+    > .page-compose-button {
+    margin-right: calc(var(--os-topbar-edge-inset) - var(--os-content-inset));
+  }
+
+  body:is(.theme-dark, .theme-light)
+    .social-inbox-index
+    .ui44-list-row-inbox
+    > .ui44-profile-row {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-conversation-page {
+    position: fixed;
+    z-index: 10;
+    top: var(--os-topbar-height);
+    right: var(--os-content-inset);
+    bottom: var(--os-mobile-dock-height);
+    left: var(--os-content-inset);
+    width: auto;
+    height: auto;
+    min-height: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
   }
 }

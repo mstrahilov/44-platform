@@ -401,6 +401,10 @@ function AccountSettings() {
   async function changePassword(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!user || !newPassword || savingPassword) return;
+    if (newPassword.length < 8) {
+      setStatus('Use at least 8 characters for your new password.');
+      return;
+    }
     setSavingPassword(true);
     setStatus('');
     const { error } = await supabase.auth.updateUser({ password: newPassword });

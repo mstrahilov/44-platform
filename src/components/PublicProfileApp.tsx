@@ -361,7 +361,9 @@ export default function PublicProfilePage() {
                 <h1 className="social-profile-name">{displayName}</h1>
                 {handle && <div className="social-handle">@{handle}</div>}
                 <p className="social-profile-bio">
-                  {profile.bio || 'This member has not added a bio yet.'}
+                  {profile.bio || (isOwn
+                    ? 'Add a bio or update your profile with the button below.'
+                    : 'This member has not added a bio yet.')}
                 </p>
                 <div className="social-profile-link-row">
                   <ExternalLinkActions links={externalLinks} context="profile" label={`${displayName} around the web`} />
@@ -451,7 +453,7 @@ export default function PublicProfilePage() {
                 key={product.id}
                 href={productBrowseHref(product)}
                 title={product.title}
-                meta={profileProductMeta(product, 'Release')}
+                meta={profileProductYear(product)}
                 image={product.cover_url}
               />
             ))}
@@ -461,7 +463,7 @@ export default function PublicProfilePage() {
         {tab === 'beats' && (
           <ArtifactGrid empty="No beats published yet.">
             {beatProducts.map(product => (
-              <SocialArtifactCard key={product.id} href={productBrowseHref(product)} title={product.title} meta={`${product.beat?.bpm ?? ''} BPM · ${product.beat?.keyNotApplicable ? 'Atonal' : `${product.beat?.keyRoot ?? ''} ${product.beat?.keyMode ?? ''}`}`.trim()} image={product.cover_url} />
+              <SocialArtifactCard key={product.id} href={productBrowseHref(product)} title={product.title} meta={profileProductYear(product)} image={product.cover_url} />
             ))}
           </ArtifactGrid>
         )}
@@ -473,7 +475,7 @@ export default function PublicProfilePage() {
                 key={product.id}
                 href={productBrowseHref(product)}
                 title={product.title}
-                meta={profileProductMeta(product, 'Book')}
+                meta={profileProductYear(product)}
                 image={product.cover_url}
               />
             ))}
@@ -487,7 +489,7 @@ export default function PublicProfilePage() {
                 key={product.id}
                 href={productBrowseHref(product)}
                 title={product.title}
-                meta={profileProductMeta(product, 'Sample Pack')}
+                meta={profileProductYear(product)}
                 image={product.cover_url}
               />
             ))}
@@ -501,7 +503,7 @@ export default function PublicProfilePage() {
                 key={product.id}
                 href={productBrowseHref(product)}
                 title={product.title}
-                meta={profileProductMeta(product, 'Merch')}
+                meta={profileProductYear(product)}
                 image={product.cover_url}
                 shape="portrait"
               />
@@ -530,10 +532,11 @@ function ProfileEvents({ events }: { events: CreatorEvent[] }) {
   return <section className="profile-events" aria-label="Events">{groups.map(group => group.rows.length ? <section key={group.label}><h2>{group.label}</h2><div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">{group.rows.map(event => <article key={event.id} className={`profile-event-row ui44-list-row ui44-list-row-event ${event.lifecycle_state === 'cancelled' ? 'calendar-entry-cancelled' : ''}`}><div><strong>{event.title}</strong><time dateTime={event.starts_at}>{formatEventDate(event.starts_at,event.timezone)}</time><p>{event.short_description}</p>{event.venue_name && <span>{[event.venue_name,event.locality,event.region].filter(Boolean).join(' · ')}</span>}</div><div className="calendar-entry-actions">{event.online_url&&<a href={event.online_url} target="_blank" rel="noopener noreferrer">Online Destination</a>}{event.info_url&&<a href={event.info_url} target="_blank" rel="noopener noreferrer">Tickets / Information</a>}</div></article>)}</div></section>:null)}</section>;
 }
 
-function profileProductMeta(product: Product, fallbackType: string) {
-  const type = product.item_type || product.experience_type || fallbackType;
-  const year = product.year || (product.created_at ? new Date(product.created_at).getFullYear() : null);
-  return year ? `${type} · ${year}` : type;
+function profileProductYear(product: Product) {
+  const year = product.year
+    || (product.release_date ? new Date(product.release_date).getFullYear() : null)
+    || (product.created_at ? new Date(product.created_at).getFullYear() : null);
+  return year ? String(year) : '';
 }
 
 function ArtifactGrid({ children, empty }: { children: ReactNode; empty: string }) {

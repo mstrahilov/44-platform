@@ -18,7 +18,7 @@ export async function listReleaseVideoEmbeds(itemId: string) {
   return (result.data as ReleaseVideoEmbed[] | null) ?? [];
 }
 
-export async function replaceStudioReleaseVideoEmbeds(itemId: string, embeds: Array<{ title: string; url: string }>) {
+export async function replaceStudioReleaseVideoEmbeds(itemId: string, embeds: Array<{ url: string }>) {
   const result = await supabase.rpc('replace_owned_item_video_embeds' as never, {
     target_item_id: itemId,
     target_embeds: embeds,

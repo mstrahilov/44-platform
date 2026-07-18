@@ -1,6 +1,6 @@
 const baseUrl = (process.env.SMOKE_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
 const reviewedSurfacesEnabled = process.env.SMOKE_REVIEWED_SURFACES === '1';
-const routes = ['/', '/store/sample-packs', '/login', '/account/recovery', '/support', '/legal/terms', '/legal/privacy', '/legal/copyright', '/api/health'];
+const routes = ['/', '/store/sample-packs', '/login', '/account/recovery', '/support', '/support/what-is-44os', '/legal/terms', '/legal/privacy', '/legal/copyright', '/api/health'];
 const failures = [];
 const maxResponseMs = Number(process.env.SMOKE_MAX_RESPONSE_MS || 5000);
 const maxHtmlBytes = Number(process.env.SMOKE_MAX_HTML_BYTES || 2_000_000);
@@ -48,6 +48,12 @@ for (const route of routes) {
     const body = await response.text();
     const bytes = Buffer.byteLength(body);
     if (bytes > maxHtmlBytes) fail(`${route}: ${bytes} bytes exceeds ${maxHtmlBytes} byte HTML budget`);
+    if (route === '/' && !/<title>44OS<\/title>/i.test(body)) fail('/: root document identity must be 44OS');
+    if (route === '/support') {
+      if (!/How can we help\?/i.test(body)) fail('/support: missing Help Center search identity');
+      if (/launching without customer payments|Paid checkout remains unavailable|protected full downloads remain unavailable/i.test(body)) fail('/support: stale closed-commerce guidance is still rendered');
+    }
+    if (route === '/support/what-is-44os' && !/A home for independent creative work/i.test(body)) fail('/support/what-is-44os: missing article content');
     assertDocument(route, response, body);
   }
   process.stdout.write(`${expected ? 'PASS' : 'FAIL'} ${route} ${response.status} ${durationMs}ms\n`);

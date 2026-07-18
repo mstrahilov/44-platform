@@ -1,10 +1,12 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(19);
+select plan(24);
 
 select has_table('public','merch_product_images','44OS-owned Merch image assignments exist');
-select has_column('public','merch_product_images','role','Merch images distinguish main, color, and bonus use');
+select has_column('public','merch_product_images','is_featured','Merch images record one featured selection without a main-image role');
 select has_column('public','merch_product_images','color_value','Merch images can target one canonical color');
+select has_column('public','merch_product_images','content_sha256','Merch images retain a durable content hash');
+select has_table('public','merch_storage_cleanup_queue','replaced and deleted storage objects use a durable cleanup queue');
 
 insert into auth.users(id,email,raw_user_meta_data) values
   ('a4200000-0000-4000-8000-000000000001','merch-images-admin@example.test','{"username":"merch_images_admin"}'),
@@ -40,7 +42,7 @@ select lives_ok($$
     'https://example.test/main.jpg','merch/a4210000-0000-4000-8000-000000000001/main.jpg',
     'a4200000-0000-4000-8000-000000000001'
   )
-$$,'service-only assignment saves a main product image');
+$$,'service-only compatibility assignment saves a featured product image');
 select is((select cover_url from public.catalog_items where id='a4210000-0000-4000-8000-000000000001'),
   'https://example.test/main.jpg','the main assignment becomes the canonical Store card image');
 
@@ -50,9 +52,9 @@ select lives_ok($$
     'https://example.test/main-two.jpg','merch/a4210000-0000-4000-8000-000000000001/main-two.jpg',
     'a4200000-0000-4000-8000-000000000001'
   )
-$$,'replacing a main image is atomic');
-select is((select count(*)::integer from public.merch_product_images where item_id='a4210000-0000-4000-8000-000000000001' and role='main'),
-  1,'each product retains exactly one main image');
+$$,'replacing a featured image is atomic');
+select is((select count(*)::integer from public.merch_product_images where item_id='a4210000-0000-4000-8000-000000000001' and is_featured),
+  1,'each product retains exactly one featured image');
 
 select lives_ok($$
   select public.set_merch_product_image(
@@ -85,7 +87,7 @@ select lives_ok($$
     'a4200000-0000-4000-8000-000000000001'
   )
 $$,'products can retain multiple ordered bonus images');
-select is((select count(*)::integer from public.merch_product_images where item_id='a4210000-0000-4000-8000-000000000001' and role='bonus'),
+select is((select count(*)::integer from public.merch_product_images where item_id='a4210000-0000-4000-8000-000000000001' and role='bonus' and not is_featured),
   2,'bonus images do not replace each other');
 
 select public.set_merch_product_image(
@@ -130,6 +132,13 @@ select lives_ok($$
 $$,'service-only deletion removes one exact color assignment');
 select is((select count(*)::integer from public.merch_variants where item_id='a4210000-0000-4000-8000-000000000001' and image_url is not null),
   0,'deleting a color assignment clears its variant image references');
+select throws_ok($$
+  select public.delete_merch_product_image(
+    (select id from public.merch_product_images where item_id='a4210000-0000-4000-8000-000000000001' and is_featured)
+  )
+$$,'55000','A published Merch Item needs a replacement featured image first.','published featured imagery cannot be deleted without replacement');
+select is((select count(*)::integer from public.merch_storage_cleanup_queue where reason='replaced'),1,'replaced bytes enter delayed cleanup only after the database swap');
+select is((select count(*)::integer from public.merch_storage_cleanup_queue where storage_path !~ '^merch/[0-9a-f-]{36}/[A-Za-z0-9._-]+$'),0,'cleanup queue accepts only the dedicated safe Merch prefix');
 
 select * from finish();
 rollback;

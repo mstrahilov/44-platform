@@ -1,7 +1,7 @@
 'use client';
 
 import type { Dispatch, SetStateAction } from 'react';
-import { UploadField } from '@/components/UploadField';
+import { AUDIO_UPLOAD_ACCEPT, UploadField } from '@/components/UploadField';
 import { SectionHeader } from '@/components/Ui';
 import { Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
 
@@ -24,7 +24,23 @@ export function ensureSamplePreviewCount(current: DraftSamplePreview[], count: n
   return [...current, ...Array.from({ length: nextCount - current.length }, createDraftSamplePreview)];
 }
 
-export function StudioBookFields({ userId, previewUrl, onPreviewUrlChange, totalPages, onTotalPagesChange, samplePages, onSamplePagesChange, languageCode, onLanguageCodeChange }: {
+export function validateStudioBookMetadata(totalPages: string, samplePages: string, languageCode: string) {
+  const total = totalPages ? Number(totalPages) : null;
+  const sample = samplePages ? Number(samplePages) : null;
+  if ((total !== null && (!Number.isInteger(total) || total <= 0))
+    || (sample !== null && (!Number.isInteger(sample) || sample <= 0))) {
+    return 'Book page counts must be positive whole numbers.';
+  }
+  if (total !== null && sample !== null && sample > total) {
+    return 'Sample pages cannot exceed the total book pages.';
+  }
+  if (languageCode.trim() && !/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(languageCode.trim())) {
+    return 'Use a language code such as en or en-US.';
+  }
+  return '';
+}
+
+export function StudioBookFields({ userId, previewUrl, onPreviewUrlChange, totalPages, onTotalPagesChange, samplePages, onSamplePagesChange, languageCode, onLanguageCodeChange, onUploadingChange }: {
   userId: string;
   previewUrl: string;
   onPreviewUrlChange: (value: string) => void;
@@ -34,12 +50,13 @@ export function StudioBookFields({ userId, previewUrl, onPreviewUrlChange, total
   onSamplePagesChange: (value: string) => void;
   languageCode: string;
   onLanguageCodeChange: (value: string) => void;
+  onUploadingChange?: (uploading: boolean) => void;
 }) {
   return (
     <section className="dashboard-form-section">
       <SectionHeader title="Native Reader" description="44OS currently supports PDF books. Upload a separate, page-limited PDF when you want Store visitors to read a sample." />
       <div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible">
-        <UploadField label="Sample PDF (Optional)" folder="products/book-previews" userId={userId} value={previewUrl} accept="application/pdf,.pdf" buttonLabel="Upload sample PDF" onChange={onPreviewUrlChange} />
+        <UploadField label="Sample PDF (Optional)" folder="products/book-previews" userId={userId} value={previewUrl} accept="application/pdf,.pdf" buttonLabel="Upload sample PDF" onChange={onPreviewUrlChange} onUploadingChange={onUploadingChange} />
         <div className="dashboard-form-grid dashboard-form-grid-3 ui44-form-grid">
           <label className="dashboard-field">
             <span className="dashboard-field-label">Total Pages</span>
@@ -59,7 +76,7 @@ export function StudioBookFields({ userId, previewUrl, onPreviewUrlChange, total
   );
 }
 
-export function StudioSamplePreviewFields({ userId, samples, onChange }: { userId: string; samples: DraftSamplePreview[]; onChange: Dispatch<SetStateAction<DraftSamplePreview[]>> }) {
+export function StudioSamplePreviewFields({ userId, samples, onChange, onUploadingChange }: { userId: string; samples: DraftSamplePreview[]; onChange: Dispatch<SetStateAction<DraftSamplePreview[]>>; onUploadingChange?: (uploading: boolean) => void }) {
   function update(index: number, patch: Partial<DraftSamplePreview>) {
     onChange(current => current.map((sample, sampleIndex) => sampleIndex === index ? { ...sample, ...patch } : sample));
   }
@@ -93,12 +110,13 @@ export function StudioSamplePreviewFields({ userId, samples, onChange }: { userI
                 folder="products/sample-previews"
                 userId={userId}
                 value={sample.previewUrl}
-                accept="audio/mpeg,audio/mp4,audio/wav,audio/x-wav,audio/flac"
+                accept={AUDIO_UPLOAD_ACCEPT}
                 buttonLabel="Upload preview"
                 previewKind="none"
                 hideLabel
                 hideSuccessMessage
                 onChange={previewUrl => update(index, { previewUrl })}
+                onUploadingChange={onUploadingChange}
                 onAudioAnalysis={analysis => update(index, {
                   durationSeconds: analysis.durationSeconds,
                   waveformPeaks: analysis.waveformPeaks,

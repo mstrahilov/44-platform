@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(53);
+select plan(55);
 
 insert into auth.users(id,email,raw_user_meta_data) values
   ('d1000000-0000-4000-8000-000000000001','stripe-buyer@example.test','{"username":"stripe_buyer"}'),
@@ -79,6 +79,19 @@ select is((select count(*)::integer from public.creator_earnings_entries where o
 select is((select count(*)::integer from public.creator_earnings_entries where order_item_id=(select id from public.commerce_order_items where order_id=(select order_id from stripe_test_orders where name='paid')) and entry_type='processor_fee'),1,'duplicate webhook cannot double-debit the Stripe processing fee');
 select lives_ok($$select public.process_stripe_webhook_event('evt_paid_expired_late','checkout.session.expired',jsonb_build_object('order_id',(select order_id from stripe_test_orders where name='paid'),'checkout_session_id','cs_test_paid_m12','currency','usd'))$$,'delayed expired event is safely accepted after payment');
 select is((select status from public.commerce_orders where id=(select order_id from stripe_test_orders where name='paid')),'paid','out-of-order expiration cannot undo paid state');
+select is(
+  public.process_stripe_webhook_event(
+    'evt_unsupported_m12','customer.created',
+    jsonb_build_object('order_id',(select order_id from stripe_test_orders where name='paid'),'currency','usd')
+  )->>'order_id',
+  (select order_id::text from stripe_test_orders where name='paid'),
+  'unsupported Stripe events return the resolved durable order identity'
+);
+select is(
+  (select processing_status from public.provider_webhook_events where provider_event_id='evt_unsupported_m12'),
+  'ignored',
+  'unsupported Stripe events remain visible as ignored evidence'
+);
 
 insert into stripe_test_orders
 select 'abandoned',(result->>'order_id')::uuid,'cs_test_abandoned_m12'
@@ -147,6 +160,12 @@ from public.item_categories category where category.slug='music';
 insert into public.catalog_offers(id,item_id,code,offer_type,title,price_cents,currency,status,fulfillment_type)
 values('d1200000-0000-4000-8000-000000000002','d1100000-0000-4000-8000-000000000002','stripe-download','digital_download','Download',1800,'USD','active','entitlement');
 insert into public.offer_entitlements(offer_id,entitlement_type) values('d1200000-0000-4000-8000-000000000002','download');
+insert into public.creator_paid_sales_access(
+  creator_id,admin_status,decision_reason,approved_by,approved_at,paperwork_due_at
+) values(
+  'd1000000-0000-4000-8000-000000000002','approved','Fixture Creator is in the manual paperwork grace window.',
+  'd1000000-0000-4000-8000-000000000004',now(),now()+interval '30 days'
+);
 update public.commerce_runtime_controls set launch_scope='marketplace' where singleton;
 insert into stripe_test_orders
 select 'digital',(result->>'order_id')::uuid,'cs_test_digital_m12'

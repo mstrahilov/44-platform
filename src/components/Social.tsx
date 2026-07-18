@@ -239,8 +239,8 @@ export function SocialPostRow({
   return (
     <article
       className={rowClickable
-        ? 'social-row social-row-interactive ui44-list-row ui44-list-row-community ui44-list-row-interactive'
-        : 'social-row ui44-list-row ui44-list-row-community'}
+        ? 'social-row social-post-row social-row-interactive ui44-list-row ui44-list-row-community ui44-list-row-interactive'
+        : 'social-row social-post-row ui44-list-row ui44-list-row-community'}
       role={rowClickable ? 'link' : undefined}
       tabIndex={rowClickable ? 0 : undefined}
       onClick={rowClickable ? openThread : undefined}

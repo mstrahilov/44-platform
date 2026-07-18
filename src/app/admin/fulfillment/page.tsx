@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { AdminAccessBoundary } from '@/components/admin/AdminPrimitives';
 import { HubHero, PageShell, SectionHeader } from '@/components/Ui';
 import { supabase } from '@/lib/supabase';
@@ -22,12 +23,13 @@ type FulfillmentData = {
     sync_product_id: number;
     provider_name: string;
     status: string;
+    item_status: string;
     last_synced_at: string;
     retail_price_cents: number | null;
     maximum_provider_cost_cents: number;
   }>;
   variants: Array<{ id: string; product_mapping_id: string; provider_name: string; size_value: string | null; color_value: string | null; availability_status: string; provider_cost_cents: number | null; provider_currency: string | null; retail_price_cents: number | null; margin_cents: number | null; status: string }>;
-  images: Array<{ id: string; item_id: string; role: 'main' | 'color' | 'bonus'; color_value: string | null; title: string; file_url: string; sort_order: number; created_at: string }>;
+  images: Array<{ id: string; item_id: string; role: 'color' | 'bonus'; color_value: string | null; title: string; file_url: string; sort_order: number; created_at: string; is_featured: boolean }>;
   drafts: Array<{ id: string; commerce_order_id: string; provider_order_id: number | null; provider_status: string; provider_dashboard_url: string | null; charged_cents: number; created_at: string }>;
   paidOrders: Array<{
     id: string;
@@ -61,8 +63,9 @@ function AdminFulfillment() {
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
   const [working, setWorking] = useState(false);
-  const [selectedTargets, setSelectedTargets] = useState<Record<number, string>>({});
-  const [imageRoles, setImageRoles] = useState<Record<string, 'main' | 'color' | 'bonus'>>({});
+  const [productFilter, setProductFilter] = useState<'active' | 'archived'>('active');
+  const [imageRoles, setImageRoles] = useState<Record<string, 'color' | 'bonus'>>({});
+  const [imageFeatured, setImageFeatured] = useState<Record<string, boolean>>({});
   const [imageColors, setImageColors] = useState<Record<string, string>>({});
   const [imageTitles, setImageTitles] = useState<Record<string, string>>({});
   const [imageFiles, setImageFiles] = useState<Record<string, File | null>>({});
@@ -99,8 +102,14 @@ function AdminFulfillment() {
     setError('');
     setStatus('');
     try {
-      await request('POST', body);
-      setStatus(success);
+      const result = await request('POST', body) as FulfillmentData & Partial<{
+        created: number; updated: number; staged: number; blocked: number; archived: number;
+      }>;
+      if (body.action === 'sync_catalog' && typeof result.created === 'number') {
+        setStatus(`Printful sync complete: ${result.created} created, ${result.updated ?? 0} updated, ${result.staged ?? 0} staged, ${result.blocked ?? 0} blocked, ${result.archived ?? 0} archived.`);
+      } else {
+        setStatus(success);
+      }
       await load();
     } catch (actionError) {
       setError(actionError instanceof Error ? actionError.message : 'Printful operation failed.');
@@ -124,7 +133,7 @@ function AdminFulfillment() {
 
   async function uploadMerchImage(itemId: string) {
     const file = imageFiles[itemId];
-    const role = imageRoles[itemId] ?? 'main';
+    const role = imageRoles[itemId] ?? 'bonus';
     const colorValue = imageColors[itemId] ?? '';
     if (!file || (role === 'color' && !colorValue)) return;
     setWorking(true);
@@ -139,6 +148,7 @@ function AdminFulfillment() {
       form.set('role', role);
       form.set('colorValue', colorValue);
       form.set('title', imageTitles[itemId] ?? '');
+      form.set('featured', String(imageFeatured[itemId] ?? false));
       form.set('file', file);
       const response = await fetch('/api/admin/merch-images', {
         method: 'POST',
@@ -151,11 +161,9 @@ function AdminFulfillment() {
       setImageFiles(current => ({ ...current, [itemId]: null }));
       setImageTitles(current => ({ ...current, [itemId]: '' }));
       setImageInputVersions(current => ({ ...current, [itemId]: (current[itemId] ?? 0) + 1 }));
-      setStatus(role === 'main'
-        ? 'Main product image saved to 44OS.'
-        : role === 'color'
+      setStatus(role === 'color'
           ? `${colorValue} image assigned to every size in that color.`
-          : 'Bonus gallery image added.');
+          : imageFeatured[itemId] ? 'Featured image selected from the 44OS gallery.' : 'Bonus gallery image added.');
       await load();
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : 'Merch image upload failed.');
@@ -220,14 +228,13 @@ function AdminFulfillment() {
   }
 
   const missingEnvironment = data ? Object.entries(data.environment).filter(([, ready]) => !ready).map(([name]) => name) : [];
-  const connectionMissing = missingEnvironment.filter(name => name !== 'webhookSecret');
   return <PageShell><main className="admin-page" aria-label="Printful fulfillment operations">
     <HubHero title="Printful Fulfillment" copy="44-owned Merch mappings, live provider estimates, and non-charging draft orders." />
     {error ? <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div> : null}
     {status ? <div className="dashboard-status ui44-status" role="status">{status}</div> : null}
 
     <section className="dashboard-section">
-      <SectionHeader title="Connection guard" description="The server verifies the exact API store. Order confirmation and charging are structurally unavailable in this phase." action={<button type="button" className="os-button os-button-secondary os-button-compact" disabled={working || connectionMissing.length > 0} onClick={() => { void act({ action: 'verify_connection' }, 'Printful API store verified. Draft-only controls are ready.'); }}>Verify safe connection</button>} />
+      <SectionHeader title="Connection guard" description="The server verifies the exact API store. Order confirmation and charging are structurally unavailable in this phase." action={<button type="button" className="os-button os-button-secondary os-button-compact" disabled={working} onClick={() => { void act({ action: 'verify_connection' }, 'Printful API store verified. Draft-only controls are ready.'); }}>Verify safe connection</button>} />
       <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
         <StatusRow label="Server configuration" value={data ? (missingEnvironment.length ? `Missing: ${missingEnvironment.join(', ')}` : 'Present') : 'Loading…'} />
         <StatusRow label="API store" value={data?.controls.provider_connected ? `Verified · ${data.controls.store_id}` : 'Not verified'} />
@@ -240,60 +247,29 @@ function AdminFulfillment() {
 
     <section className="dashboard-section">
       <SectionHeader
-        title="Pull products from Printful"
-        description="Printful owns the product name and retail prices. Choose an existing 44OS Item once to preserve its permanent ID, or create a new pending Item. Nothing publishes automatically."
-        action={<button type="button" className="os-button os-button-secondary os-button-compact" disabled={working || !data?.controls.catalog_import_enabled} onClick={() => { void load().then(() => setStatus('Printful catalog refreshed.')); }}>Refresh catalog</button>}
+        title="Sync with Printful"
+        description="Reconcile the complete verified store. New products become permanent drafts; provider names, retail prices, variants, costs, SKUs, and availability update automatically. Nothing publishes automatically."
+        action={<button type="button" className="os-button os-button-primary os-button-compact" disabled={working || !data?.controls.catalog_import_enabled} onClick={() => { void act({ action: 'sync_catalog' }, 'Printful catalog sync completed. Review staged colors and draft products before publication.'); }}>Sync with Printful</button>}
       />
       {data?.providerCatalogError ? <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{data.providerCatalogError}</div> : null}
       <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
         {data?.providerCatalog.length ? data.providerCatalog.map(providerProduct => {
           const mapping = data.products.find(product => product.sync_product_id === providerProduct.syncProductId);
-          const availableTargets = data.merchItems.filter(item => !data.products.some(product => product.item_id === item.id));
           return <div className="dashboard-list-row ui44-list-row ui44-list-row-dashboard" key={providerProduct.syncProductId}>
             <span className="dashboard-row-copy">
               <strong className="dashboard-row-title">{providerProduct.name}</strong>
               <span className="dashboard-row-subtitle">{providerProduct.syncedVariantCount}/{providerProduct.variantCount} variants synced{providerProduct.ignored ? ' · ignored in Printful' : ''}</span>
             </span>
-            {mapping ? <>
-              <span className="dashboard-row-meta">Mapped to permanent 44OS Item {mapping.item_id}</span>
-              <button type="button" className="os-button os-button-primary os-button-compact" disabled={working || providerProduct.ignored} onClick={() => { void act({ action: 'review_product', itemId: mapping.item_id }, 'Printful name, retail prices, costs, availability, and variants pulled and reviewed.'); }}>
-                Pull latest changes
-              </button>
-            </> : <>
-              <label className="admin-dialog-field">
-                <span>First-time 44OS destination</span>
-                <select value={selectedTargets[providerProduct.syncProductId] ?? ''} onChange={event => setSelectedTargets(current => ({ ...current, [providerProduct.syncProductId]: event.target.value }))}>
-                  <option value="">Choose destination</option>
-                  {availableTargets.map(item => <option value={item.id} key={item.id}>{item.title} · {item.status}</option>)}
-                  <option value="__new__">Create new pending product</option>
-                </select>
-              </label>
-              <button
-                type="button"
-                className="os-button os-button-secondary os-button-compact"
-                disabled={working || providerProduct.ignored || !selectedTargets[providerProduct.syncProductId]}
-                onClick={() => {
-                  const target = selectedTargets[providerProduct.syncProductId];
-                  void act(target === '__new__'
-                    ? { action: 'create_pending_product', syncProductId: providerProduct.syncProductId }
-                    : { action: 'import_product', itemId: target, syncProductId: providerProduct.syncProductId },
-                  target === '__new__'
-                    ? 'Printful product created as a pending 44OS Item. Add images and review before publication.'
-                    : 'Printful product mapped to the existing permanent 44OS Item as a draft.');
-                }}
-              >
-                Import as pending
-              </button>
-            </>}
+            <span className="dashboard-row-meta">{mapping ? `44OS Item ${mapping.item_id} · ${mapping.status}` : 'Awaiting complete-store sync'}</span>
           </div>;
         }) : <div className="dashboard-empty">{data?.controls.provider_connected ? 'No Printful products are available in this API store.' : 'Verify the Printful API store to pull its products.'}</div>}
       </div>
     </section>
 
     <section className="dashboard-section">
-      <SectionHeader title="Product mappings" />
+      <SectionHeader title="Provider products" description="Provider facts are read-only in 44OS. Review and publish remain separate owner actions." action={<div className="admin-dialog-actions"><button type="button" className="os-button os-button-secondary os-button-compact" aria-pressed={productFilter === 'active'} onClick={() => setProductFilter('active')}>Active</button><button type="button" className="os-button os-button-secondary os-button-compact" aria-pressed={productFilter === 'archived'} onClick={() => setProductFilter('archived')}>Archived</button></div>} />
       <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
-        {data?.products.length ? data.products.map(product => <div className="dashboard-list-row ui44-list-row ui44-list-row-dashboard" key={product.id}>
+        {data?.products.filter(product => productFilter === 'archived' ? product.item_status === 'archived' : product.item_status !== 'archived').length ? data.products.filter(product => productFilter === 'archived' ? product.item_status === 'archived' : product.item_status !== 'archived').map(product => <div className="dashboard-list-row ui44-list-row ui44-list-row-dashboard" key={product.id}>
           <span className="dashboard-row-copy"><strong className="dashboard-row-title">{product.provider_name}</strong><span className="dashboard-row-subtitle">44 Item {product.item_id} · Sync Product {product.sync_product_id}</span></span>
           <span className="dashboard-row-meta">
             Printful retail from {product.retail_price_cents === null ? 'unset' : formatMoney(product.retail_price_cents, 'USD')} · production-cost ceiling {formatMoney(product.maximum_provider_cost_cents, 'USD')} · {product.status}
@@ -304,18 +280,19 @@ function AdminFulfillment() {
           <button type="button" className="os-button os-button-primary os-button-compact" disabled={working || product.status !== 'reviewed'} onClick={() => { void act({ action: 'publish_product', itemId: product.item_id }, 'Product published with reviewed Printful variants and 44OS-owned images.'); }}>
             Publish to 44OS
           </button>
-        </div>) : <div className="dashboard-empty">No Printful product mapping has been imported.</div>}
+          <Link className="os-button os-button-secondary os-button-compact" href={`/admin/fulfillment/${product.item_id}`}>Open product</Link>
+        </div>) : <div className="dashboard-empty">No {productFilter} Printful product mapping has been imported.</div>}
       </div>
     </section>
 
     <section className="dashboard-section">
       <SectionHeader
         title="44OS product images"
-        description="Printful imagery is ignored. Add one main image, one image for each imported color, and any number of bonus gallery images. Sizes reuse their color image."
+        description="Printful imagery is ignored. Add one image for each imported color and any number of bonus gallery images; select any of them as the featured image. Sizes reuse their color image."
       />
       <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
         {data?.products.length ? data.products.map(product => {
-          const role = imageRoles[product.item_id] ?? 'main';
+          const role = imageRoles[product.item_id] ?? 'bonus';
           const productColors = [...new Set(data.variants
             .filter(variant => variant.product_mapping_id === product.id && variant.color_value)
             .map(variant => variant.color_value as string))];
@@ -328,19 +305,19 @@ function AdminFulfillment() {
             <div className="merch-image-admin-existing" aria-label={`${product.provider_name} images`}>
               {productImages.length ? productImages.map(image => <div className="merch-image-admin-card" key={image.id}>
                 <span className="merch-image-admin-preview" style={{ backgroundImage: `url(${image.file_url})` }} role="img" aria-label={image.title} />
-                <span><strong>{image.role === 'color' ? image.color_value : image.role}</strong><small>{image.title}</small></span>
+                <span><strong>{image.is_featured ? 'featured · ' : ''}{image.role === 'color' ? image.color_value : image.role}</strong><small>{image.title}</small></span>
                 <button type="button" className="os-button os-button-secondary os-button-compact" disabled={working} onClick={() => { void deleteMerchImage(image.id); }}>Remove</button>
               </div>) : <span className="dashboard-row-meta">No 44OS images uploaded yet.</span>}
             </div>
             <div className="merch-image-admin-form">
               <label className="admin-dialog-field">
                 <span>Image use</span>
-                <select value={role} onChange={event => setImageRoles(current => ({ ...current, [product.item_id]: event.target.value as 'main' | 'color' | 'bonus' }))}>
-                  <option value="main">Main product image</option>
+                  <select value={role} onChange={event => setImageRoles(current => ({ ...current, [product.item_id]: event.target.value as 'color' | 'bonus' }))}>
                   <option value="color" disabled={!productColors.length}>Color image</option>
                   <option value="bonus">Bonus gallery image</option>
                 </select>
               </label>
+              <label className="admin-dialog-field"><span>Featured image</span><input type="checkbox" checked={imageFeatured[product.item_id] ?? false} onChange={event => setImageFeatured(current => ({ ...current, [product.item_id]: event.target.checked }))} /></label>
               {role === 'color' ? <label className="admin-dialog-field">
                 <span>Imported color</span>
                 <select value={imageColors[product.item_id] ?? ''} onChange={event => setImageColors(current => ({ ...current, [product.item_id]: event.target.value }))}>
@@ -367,7 +344,7 @@ function AdminFulfillment() {
                 disabled={working || !imageFiles[product.item_id] || (role === 'color' && !imageColors[product.item_id])}
                 onClick={() => { void uploadMerchImage(product.item_id); }}
               >
-                {role === 'main' ? 'Save main image' : role === 'color' ? 'Assign color image' : 'Add bonus image'}
+                {role === 'color' ? 'Assign color image' : 'Add bonus image'}
               </button>
             </div>
           </div>;

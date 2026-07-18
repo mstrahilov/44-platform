@@ -45,6 +45,12 @@ export function authorizeEmailWorker(request: Request) {
   if (!supplied || supplied !== expected) throw new EmailConfigurationError('Email worker authorization failed.');
 }
 
+export function authorizeScheduledEmailWorker(request: Request) {
+  const expected = process.env.CRON_SECRET?.trim();
+  const supplied = request.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1];
+  if (!expected || !supplied || supplied !== expected) throw new EmailConfigurationError('Scheduled email worker authorization failed.');
+}
+
 export async function authenticateEmailRequest(request: Request): Promise<User> {
   const token = request.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token) throw new EmailConfigurationError('Authentication is required.');

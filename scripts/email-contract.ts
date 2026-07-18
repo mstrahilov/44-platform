@@ -95,6 +95,9 @@ async function main() {
     stripeWebhook.indexOf('webhooks.constructEvent') < stripeWebhook.indexOf("rpc('process_stripe_webhook_event'"),
     'Stripe signature verification precedes the authoritative payment-state transition',
   );
+  assert.match(stripeWebhook, /if \(outcome\.processed\) await processEmailOutbox\(5\)\.catch\(\(\) => undefined\)/, 'a successfully persisted Stripe event immediately gives the durable outbox a best-effort delivery pass');
+  const printfulWebhook = await readFile(path.join(process.cwd(), 'src', 'app', 'api', 'printful', 'webhook', 'route.ts'), 'utf8');
+  assert.match(printfulWebhook, /verifyPrintfulWebhook[\s\S]*await processEmailOutbox\(5\)\.catch\(\(\) => undefined\)/, 'only a verified Printful webhook can trigger its best-effort fulfillment delivery pass');
   const checkoutPage = await readFile(path.join(process.cwd(), 'src', 'app', 'checkout', 'page.tsx'), 'utf8');
   assert.doesNotMatch(checkoutPage, /\/api\/email|queue_(?:application|verified_commerce)_email/, 'browser checkout and success UI cannot enqueue receipts');
 
@@ -103,6 +106,11 @@ async function main() {
   assert.match(emailWebhook, /new Webhook\(resendWebhookSecret\(\)\)\.verify/, 'Resend events require raw-body signature verification');
   const emailWorkerRoute = await readFile(path.join(process.cwd(), 'src', 'app', 'api', 'email', 'process', 'route.ts'), 'utf8');
   assert.match(emailWorkerRoute, /newsletterError/, 'worker response exposes a sanitized newsletter-sync failure signal');
+  assert.match(emailWorkerRoute, /safeWorkerError[\s\S]*\[email\][\s\S]*\[secret\]/, 'worker diagnostics redact recipient and provider-secret patterns before logging');
+  assert.match(emailWorkerRoute, /export async function GET\(request: Request\)[\s\S]*authorizeScheduledEmailWorker/, 'the scheduled recovery worker has a separate cron authorization boundary');
+  const vercelConfig = await readFile(path.join(process.cwd(), 'vercel.json'), 'utf8');
+  assert.match(vercelConfig, /"path": "\/api\/email\/process"/, 'Vercel invokes the durable email recovery endpoint');
+  assert.match(vercelConfig, /"schedule": "17 5 \* \* \*"/, 'Hobby-compatible daily recovery schedule is explicit');
   assert.match(serverAdapter, /stale_sync_claim_recovered/, 'interrupted newsletter synchronization claims are recoverable');
   assert.ok(
     serverAdapter.indexOf('processNewsletterContactRetirements(admin, topicId, limit)')
@@ -120,8 +128,8 @@ async function main() {
   assert.match(newsletterRoute, /target_source: 'settings'/, 'self-service consent records its explicit source');
 
   const supportPage = await readFile(path.join(process.cwd(), 'src', 'app', 'support', 'page.tsx'), 'utf8');
-  assert.match(supportPage, /fetch\('\/api\/email\/support'/, 'signed-in Support intake reaches the durable support-case API');
-  assert.match(supportPage, /mailto:support@44os\.com/, 'signed-out Support retains the monitored mailbox fallback');
+  assert.doesNotMatch(supportPage, /fetch\('\/api\/email\/support'/, 'disabled web intake is not presented as an active Support path');
+  assert.match(supportPage, /mailto:support@44os\.com/, 'Support uses the monitored mailbox while web intake remains disabled');
 
   const emailOperationsRoute = await readFile(path.join(process.cwd(), 'src', 'app', 'api', 'admin', 'email', 'operations', 'route.ts'), 'utf8');
   assert.match(emailOperationsRoute, /set_email_delivery_control/, 'owner-facing activation uses the audited database control function');

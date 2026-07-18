@@ -8,5 +8,5 @@ export const metadata = buildPageMetadata({
 });
 
 export default function StorePage() {
-  return <StoreApp category="all" frontDoor />;
+  return <StoreApp category="all" />;
 }

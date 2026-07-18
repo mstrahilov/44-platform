@@ -5,6 +5,7 @@ const moderation = await readFile('supabase/migrations/20260712055000_m9_moderat
 const review = await readFile('supabase/migrations/20260713030000_m13_creator_submission_review_foundation.sql', 'utf8');
 const observability = await readFile('src/instrumentation.ts', 'utf8');
 const domain = await readFile('src/lib/domain/studioPublishing.ts', 'utf8');
+const communityDomain = await readFile('src/lib/domain/community.ts', 'utf8');
 
 const requirements = [
   ['private item-files bucket', /insert into storage\.buckets[\s\S]*?public\s*=\s*false/, migration],
@@ -19,6 +20,7 @@ const requirements = [
   ['review mutation fence', /create or replace function public\.reject_live_item_mutation_during_review/, review],
   ['sanitized request-error contract', /request_error[\s\S]*?headers[\s\S]*?query/, observability],
   ['dormant submission domain boundary', /listStudioItemSubmissions[\s\S]*?submitStudioItemForReview[\s\S]*?proposeStudioChildRemoval/, domain],
+  ['stale community slugs fail as not found', /if \(!UUID_IDENTIFIER\.test\(identifier\)\) return null;[\s\S]*?\.eq\('id', identifier\)/, communityDomain],
 ];
 
 const failures = requirements.filter(([, pattern, source]) => !pattern.test(source)).map(([label]) => label);

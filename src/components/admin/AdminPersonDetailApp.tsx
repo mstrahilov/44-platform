@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { EmptyMessage, HubHero, PageShell, SectionHeader } from '@/components/Ui';
 import { Ui44Panel } from '@/components/ui44/Spacing';
 import { AdminAccessBoundary, AdminActionDialog, AdminAvatar, AdminStatusBadge, formatAdminDate } from '@/components/admin/AdminPrimitives';
-import { getAdminPersonDetail, setAdminCreatorAccess, type AdminPersonDetail } from '@/lib/domain/adminOperations';
+import { getAdminPersonDetail, setAdminCreatorAccess, setAdminCreatorPaidSales, type AdminPersonDetail } from '@/lib/domain/adminOperations';
 
 export default function AdminPersonDetailApp({ profileId }: { profileId: string }) {
   return <AdminAccessBoundary><PersonDetail profileId={profileId} /></AdminAccessBoundary>;
@@ -17,6 +17,7 @@ function PersonDetail({ profileId }: { profileId: string }) {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [paidSalesDialog, setPaidSalesDialog] = useState<'approved' | 'disabled' | 'rebase' | null>(null);
   const [saving, setSaving] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -47,6 +48,16 @@ function PersonDetail({ profileId }: { profileId: string }) {
     } finally { setSaving(false); }
   }
 
+  async function changePaidSales(status: 'approved' | 'disabled' | 'rebase', reason: string) {
+    setSaving(true); setError(''); setMessage('');
+    try {
+      await setAdminCreatorPaidSales(profileId, status === 'rebase' ? 'approved' : status, reason);
+      setPaidSalesDialog(null);
+      setMessage(status === 'disabled' ? 'Paid digital sales paused. Purchase and entitlement history is preserved.' : status === 'rebase' ? 'The 30-day manual paperwork follow-up was re-based and recorded.' : 'Paid digital sales restored with a new 30-day paperwork follow-up.');
+      setReloadKey(value => value + 1);
+    } finally { setSaving(false); }
+  }
+
   return <PageShell><main className="admin-page">
     <div className="admin-back-row"><Link href="/admin/people">‹ All people</Link></div>
     <HubHero title={name} copy="Account details, creator access, authored content, and administrator history." />
@@ -73,6 +84,7 @@ function PersonDetail({ profileId }: { profileId: string }) {
         </div>
         <dl className="admin-fact-grid">
           <div><dt>Creator access</dt><dd>{commerce.admin_status.replaceAll('_', ' ')}</dd></div>
+          <div><dt>Paperwork follow-up</dt><dd>{commerce.paperwork_due_at ? formatAdminDate(commerce.paperwork_due_at, true) : 'Not scheduled'}</dd></div>
           <div><dt>Payout provider</dt><dd>{commerce.provider?.replaceAll('_', ' ') || (commerce.is_platform_seller ? '44 platform seller' : 'Not connected')}</dd></div>
           <div><dt>Provider status</dt><dd>{commerce.provider_status?.replaceAll('_', ' ') || 'Not started'}</dd></div>
           <div><dt>Market</dt><dd>{[commerce.country_code, commerce.currency].filter(Boolean).join(' · ') || 'Not reported'}</dd></div>
@@ -80,8 +92,21 @@ function PersonDetail({ profileId }: { profileId: string }) {
           <div><dt>Decision reason</dt><dd>{commerce.decision_reason || 'No decision recorded'}</dd></div>
         </dl>
         {commerce.requirements_due.length ? <p className="admin-detail-note">Setup state: {commerce.requirements_due.join(', ')}</p> : null}
-        {!commerce.is_platform_seller ? <p className="admin-detail-note">Member-to-Creator promotion is the approval boundary. Tax review and payout operations remain in restricted server-authoritative workflows.</p> : <p className="admin-detail-note">44-owned catalog items use the platform Stripe account and do not require creator payout onboarding.</p>}
+        {!commerce.is_platform_seller ? <>
+          <div className="admin-detail-actions">
+            <button className={commerce.admin_status === 'disabled' ? 'os-button os-button-primary' : 'os-button os-button-danger'} type="button" onClick={() => setPaidSalesDialog(commerce.admin_status === 'disabled' ? 'approved' : 'disabled')}>
+              {commerce.admin_status === 'disabled' ? 'Restore Paid Digital Sales' : 'Pause Paid Digital Sales'}
+            </button>
+            {commerce.admin_status === 'approved' ? <button className="os-button os-button-secondary" type="button" onClick={() => setPaidSalesDialog('rebase')}>Restart 30-Day Paperwork Window</button> : null}
+          </div>
+          <p className="admin-detail-note">The follow-up date is an Admin-only reminder, never an automatic sales switch. Pausing or restoring paid digital sales requires a recorded reason and does not change purchase, entitlement, earnings, tax, or payout history.</p>
+        </> : <p className="admin-detail-note">44-owned catalog items use the platform Stripe account and do not require creator payout onboarding.</p>}
       </Ui44Panel>
+    </section> : null}
+
+    {(role === 'creator' || role === 'admin') && !commerce.is_platform_seller ? <section className="dashboard-section">
+      <SectionHeader title="Paid-sales history" description="Immutable Admin paperwork decisions" />
+      {commerce.history.length === 0 ? <EmptyMessage>No paid-sales decision has been recorded.</EmptyMessage> : <div className="admin-history-list ui44-panel">{commerce.history.map(event => <div className="admin-history-row" key={event.id}><div><strong>{event.previous_status || 'not reviewed'} → {event.new_status}</strong><p>{event.reason}</p></div><span>{event.changed_by}<time dateTime={event.created_at}>{formatAdminDate(event.created_at, true)}</time></span></div>)}</div>}
     </section> : null}
 
     <section className="dashboard-section"><SectionHeader title="Authored content" description={`${detail.items.length} Item${detail.items.length === 1 ? '' : 's'}`} />
@@ -94,6 +119,7 @@ function PersonDetail({ profileId }: { profileId: string }) {
       {detail.role_history.length === 0 ? <EmptyMessage>No administrator role changes have been recorded.</EmptyMessage> : <div className="admin-history-list ui44-panel">{detail.role_history.map(event => <div className="admin-history-row" key={event.id}><div><strong>{event.previous_role} → {event.new_role}</strong><p>{event.reason}</p></div><span>{event.changed_by}<time dateTime={event.created_at}>{formatAdminDate(event.created_at, true)}</time></span></div>)}</div>}
     </section>
 
-    <AdminActionDialog open={dialogOpen} title={nextRole === 'creator' ? 'Promote to Creator' : 'Return account to member'} description={nextRole === 'creator' ? 'This records Creator approval and notifies the member to complete tax and Wise email setup before uploading Items. Promotion fails if their country route is not verified.' : 'This account will lose Studio publishing access. Existing content and history remain.'} confirmLabel={nextRole === 'creator' ? 'Promote to Creator' : 'Change to Member'} danger={nextRole === 'member'} saving={saving} onClose={() => setDialogOpen(false)} onConfirm={changeRole} />
+    <AdminActionDialog open={dialogOpen} title={nextRole === 'creator' ? 'Promote to Creator' : 'Return account to member'} description={nextRole === 'creator' ? 'This records Creator approval and starts the documented manual paperwork follow-up. Tax and Wise onboarding remain separate from digital publication and paid-sale eligibility.' : 'This account will lose Studio publishing access. Existing content and history remain.'} confirmLabel={nextRole === 'creator' ? 'Promote to Creator' : 'Change to Member'} danger={nextRole === 'member'} saving={saving} onClose={() => setDialogOpen(false)} onConfirm={changeRole} />
+    <AdminActionDialog open={paidSalesDialog !== null} title={paidSalesDialog === 'disabled' ? 'Pause Paid Digital Sales' : paidSalesDialog === 'rebase' ? 'Restart 30-Day Paperwork Window' : 'Restore Paid Digital Sales'} description={paidSalesDialog === 'disabled' ? 'This removes the Creator’s paid digital offers from sale. Existing purchases, Library access, entitlements, earnings, and audit history are preserved.' : paidSalesDialog === 'rebase' ? 'Use only at the documented launch point. This records a new 30-day Admin paperwork follow-up without changing paid-sale availability, payouts, tax review, Wise readiness, purchases, or entitlements.' : 'This restores the Creator’s paid digital offers and records a new 30-day Admin paperwork follow-up. It does not make payouts, tax review, or Wise readiness eligible.'} confirmLabel={paidSalesDialog === 'disabled' ? 'Pause Paid Sales' : paidSalesDialog === 'rebase' ? 'Restart Paperwork Window' : 'Restore Paid Sales'} danger={paidSalesDialog === 'disabled'} saving={saving} onClose={() => setPaidSalesDialog(null)} onConfirm={reason => changePaidSales(paidSalesDialog!, reason)} />
   </main></PageShell>;
 }

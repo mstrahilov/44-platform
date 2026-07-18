@@ -1,602 +1,319 @@
-# 44OS UI Principles
+# 44OS UI
 
-Payment infrastructure must not change the established Store or Studio UI while public purchasing remains hidden. Prices may be retained as offer configuration, but no enabled-looking purchase, available-earnings, or completed-payout state may render until its server-authoritative runtime control, public-presentation gate, and reconciled provider state are true. Missing provider configuration fails closed with the existing unavailable state.
+This document is the visual, interaction, responsive, and accessibility source of truth for 44OS. It describes the current system, not the history of how it was built.
 
-44OS has Member and Creator accounts only. Country is required at Member signup. Admin promotion to Creator creates a notification and sends the person to mandatory Creator Setup; until that setup is ready, the new-Item route shows no upload controls and the database rejects Item creation. Studio Earnings and Payouts distinguish accrued/pending earnings from payout-ready money, never request Stripe or PayPal onboarding, and never display full tax documents or payout emails.
+Architecture and provider rules live in `44OS_FOUNDATION.md`. Current work lives in `44OS_MILESTONES.md`. Do not create additional UI audit, proposal, or handoff documents.
 
-Creator Setup is available only after Admin promotion and a verified country route. Entity sellers receive a clear waitlist state. The flow first asks the individual to self-certify U.S.-person status, then links the current official W-9 or W-8BEN and accepts an encrypted signed PDF for restricted review. The last step explains Wise email-to-claim in plain language: Wise sends the secure claim link, the creator does not need a Wise account, Wise collects bank details, and 44OS stores no bank information. Only a masked payout email returns to the UI. `Accrued`, `Pending tax`, `Pending destination`, `Eligible`, `Approved`, `Processing`, `Failed/Returned`, and `Paid` remain distinct; only independent reconciliation may produce `Paid`.
+## Experience standard
 
-This is one of the three active handoff documents for 44OS. Read it before changing layout, styling, app chrome, component primitives, or visual behavior. Architecture and sequencing live in `44OS_FOUNDATION.md` and `44OS_MILESTONES.md`; this document remains the visual and interaction contract.
+44OS should feel like a premium creative operating system: calm, tactile, spatially consistent, legible, and fast. It is not a marketing landing page, generic dashboard, theme demo, or collection of unrelated pages.
 
-## Production UI handoff — July 17, 2026
+Every shipped screen must provide:
 
-- The current production application is deployment `dpl_9ppAmGu9NsvbGeoSoLHRpCNniRfN` at `https://44os.com`; health and public Privacy/Terms routes pass.
-- Mobile safe-area geometry is implemented: the native top inset is part of total Topbar height, not painted behind controls. Search, account/notification menus, player/route overlays, and scroll offsets share that total. `html[data-safe-area-test="notch"]` supplies a deterministic 47px test inset. Owner acceptance remains required at 320, 360, 375, 390, 412, and 430px, phone landscape, installed iPhone/PWA, and Android Chrome.
-- Admin → Printful fulfillment is the product operating surface. Its next approved shape begins with one complete **Sync with Printful**, then an Active-by-default row list with an Archived filter. Each row opens a product detail page. Printful-controlled name, price, variants, availability, and cost are read-only; Admin assigns color/bonus images, selects one featured image, and publishes staged colors or new products. There is no manual destination mapping or separate main-image upload.
-- Production currently exposes only 44 Hoodie and 44 Windbreaker as published/active physical products. The other current provider products remain hidden until their image/publication gate passes. Mapped 44 Satchel is the eighth launch Item; hidden unmapped 44 Tote is a temporary legacy row and must never appear beside Satchel as active inventory.
-- Checkout UI must continue to fail closed when the public presentation switch, database controls, Item/offer status, seller eligibility, variant mapping, shipping boundary, tax configuration, or provider evidence is missing. Database controls are enabled, but public presentation and controlled live acceptance remain separate launch gates.
-- The route contract remains `/` = `44OS` and `/store` = `Store`. Production currently violates the root hero identity by rendering `Store`; Milestones P0 owns that implementation repair.
+- One clear page identity and useful primary heading where appropriate.
+- No unintended horizontal scrolling, overlap, clipped controls, or unstable layout.
+- Intentional loading, empty, error, signed-out, disabled, pending, and success states.
+- Visible keyboard focus and accessible names for icon-only controls.
+- Practical 44px touch targets.
+- Legible theme-aware contrast without making disabled controls look active.
+- Stable image ratios, control sizes, and content rhythm while data loads.
+- The same action, material, and component behavior everywhere it appears.
+- Full support for light/dark signed-in themes; signed-out presentation remains dark with Ocean accent.
 
-> **UI system lock (July 15, 2026):** the owner completed the page-by-page
-> desktop and mobile review, approved the canonical implementation, and closed
-> the migration. The relevant source census and retirement results are retained
-> below; this document is the only active visual contract.
+Technology should be explained through user outcomes. A creator should know what to do next without understanding the schema, entitlement engine, provider APIs, or achievement evaluator. A fan should understand what an Item is, what is free, what is purchased, and what remains in Library history.
 
-44OS should feel like a premium operating system: calm, spatially consistent, tactile, legible, and fast. It is not a marketing site and should not look like a stack of unrelated pages.
+## Visual system
 
-The local screenshot reference folder is `UI Elements/`. Treat those images as reference material, not production assets.
+The production cascade is limited to:
 
-Current implementation snapshot, July 17, 2026:
+- `src/app/globals.css`
+- `src/styles/44-ui/canonical-system.css`
 
-- July 15 local cleanup update: production now imports only `globals.css` and
-  `canonical-system.css`; the single responsive `/44OS_UI` reference route
-  owns `system-reference.css`. The former `/desktop_UI` and `/mobile_UI`
-  routes are retired. `/44OS_UI` is the living visual/component/CSS registry
-  for designers, developers, and future implementation reviews; it reads its
-  component, token, and class indexes from current source rather than a copied
-  hand-maintained list.
-  Five proposal stylesheets, eight unreachable component files, 17 dead
-  component exports, the old Glass wrapper, 672 unreferenced CSS rules, 240
-  unused custom-property definitions, and 266 exact-shadowed declarations were
-  retired. The final source audit reports zero unreachable components, zero
-  dead exports, zero all-source unused CSS rules/selectors, and zero
-  exact-shadowed declarations.
+`/44OS_UI` is the responsive living registry for current components, tokens, and classes. Do not restore retired proposal stylesheets, page-specific visual systems, legacy Glass wrappers, or copied desktop/mobile reference routes.
 
-- July 15 material simplification: the former transparent content-panel
-  variant was retired. Glass is now the single ordinary panel surface across
-  Tracklists, Product/Release Details, forms, lists, dialogs, Community, and
-  Studio; Paper remains the transient menu/dropdown surface. The component API,
-  canonical tokens, production emitters, and `/44OS_UI` reference expose only
-  Glass and Paper panel variants.
+Base spacing is 4px. Preferred spacing tokens are 4, 8, 12, 16, 20, 24, 32, 40, 48, and 64px. Use shared containers and tokens before local margins or inline styles.
 
-- July 15 elevation simplification: canonical content elevation now has only
-  `Flat` and `Raised`. Every Glass surface is Flat with no shadow. Paper menus,
-  dropdowns, context menus, and catalog/media cards use the former Floating
-  shadow as the single Raised value. The specialized App Shell window shadow
-  remains independent and unchanged.
-
-- July 15 final material lock: ordinary Glass panels use the same semantic
-  tint as the desktop Dock/Sidebar, with no panel-level blur, saturation, or
-  shadow. The App Shell remains the sole owner of environmental blur. Expanded
-  Now Playing is transparent over the App Shell; its artwork is shadowless.
-  Paper is reserved for transient menus, dropdowns, context menus, and
-  selection surfaces.
-
-- July 15 interaction lock: Community and profile post rows share one action,
-  hover, divider, identity, and routing contract. Thread branches use a
-  profile-to-profile connector only for replies to replies; every row can open
-  its focused thread while identity and action controls retain their own
-  destinations. Profiles use flat, hairline-separated, horizontally scrollable
-  tabs; action pairs are equal-width on mobile and identity/actions/platform
-  links share one stable desktop hierarchy.
-
-- Store, Community, Library, Radio, Search, Profiles, Studio, Notifications, Settings, and Inbox have been through the desktop and mobile system-UI consolidation pass.
-- Verified after the pass: `npm run lint`, `npm run typecheck`, `npm run audit:ui-cleanup`, `npm run build`, and route smoke checks for `/store`, `/community`, `/library`, `/radio`, `/search`, `/profile/[username]`, `/studio`, and `/notifications`.
-- Mobile rendered checks confirmed the root and Store title/filter rows, hidden local mobile search, visible Search page title with no placeholder, and the current mobile Dock order: Home (`/`), Library, Radio, Community, Search.
-- Radio and Notifications also have source-level implementation aligned with this document; their live visual state may depend on signed-in/session data or Radio playlist setup.
-- The root URL is the branded 44OS discovery front door. It may reuse Store catalog sections, but the page title, metadata, search label, and shared-link identity say 44OS rather than Store.
-- Desktop content now follows one shared material, radius, border, spacing, elevation, input-focus, button, tab-navigation, and post-row authority. Page-specific visual overrides are not a supported extension point.
-- M16 Events and Calendar are active: Studio event add/edit work recovers locally across refresh/app switching, profiles expose Upcoming/Cancelled/Past event states, and `/calendar` uses the normal titled full-width surface with a desktop month grid and mobile agenda at 390px and 430px. External event links are descriptive new-tab actions and the UI states that 44OS does not sell or fulfill tickets.
-- M17 Interactive infrastructure adds `/launch/[itemId]` as the only Library launch surface. The Library action opens it in a separate desktop browser window/tab so Unity/WebGL cannot replace or destabilize the main 44OS app, navigation, or player. In that launch window the route suppresses Sidebar, Topbar, ordinary page heading/divider, and the global player so the dark runtime fills the complete rounded surface. A floating 44px close/return action remains available. Loading, unavailable, unsupported-device, load failure, expired-session, and clean-exit states share the same full-window surface with visible keyboard focus, polite announcements, and reduced-motion handling.
-- Interactive launches are desktop/laptop only for this phase. Mobile, touch-first narrow devices, and layouts at or below 768px do not fetch a build or issue a launch session; they receive a full-viewport `Desktop Required` state explaining that a keyboard and mouse are required. Runtime canvas geometry and controls remain export-dependent and must be accepted with a real Unity build before M17 is complete.
-- The current production release is `dpl_9ppAmGu9NsvbGeoSoLHRpCNniRfN`, aliased to `https://44os.com`. Earlier component and immersive-shell acceptance remains preserved; commerce/mobile owner acceptance is still outstanding as listed above.
-
----
-
-## 1. Quality Bar
-
-Every shipped screen must pass these checks:
-
-- No horizontal scroll at normal desktop or mobile widths.
-- Mobile system chrome is part of shell geometry, not an overlay allowance. With `viewport-fit=cover`, the shared Topbar adds `env(safe-area-inset-top)` above its fixed 56px control row; search, menus, player overlays, and content offsets use the same total height. Account, notification, cart, and search targets must remain reachable at 320, 360, 375, 390, 412, and 430px and in phone landscape. A painted notch strip without moving controls is invalid.
-- No overlapping text, buttons, media, menus, or shell chrome.
-- Interactive targets are at least 44px in both dimensions where practical.
-- Type remains legible; do not scale fonts directly with viewport width.
-- Cards, rows, buttons, and controls keep stable dimensions when content loads or hover states appear.
-- Empty, loading, error, signed-out, and success states look intentional.
-- Keyboard focus is visible.
-- Images keep their aspect ratio and never stretch.
-- The same action uses the same visual control across the app.
-- The app looks like one system in light and dark themes.
-
----
-
-## 2. System Personality
-
-44OS is:
-
-- Premium, quiet, and focused.
-- Editorial enough for creative work, but operational enough for repeated use.
-- Environmentally blurred only in the unified app shell; content Glass uses a
-  stable tint over that already-blurred shell.
-- Spatially consistent.
-- Minimal without feeling empty.
-
-44OS is not:
-
-- A landing page.
-- A purple/blue gradient admin panel.
-- A pile of nested cards.
-- A theme demo.
-- A set of separate mobile pages.
-- A decorative orb/bokeh composition.
-
----
-
-## 3. Creator And Fan Experience
-
-The UI should make advanced creative technology feel approachable. A creator should feel, "I know what to do next." A fan should feel, "This work belongs somewhere, and my relationship to it is remembered."
-
-Creator-facing rules:
-
-- Publishing should feel straightforward, not technical.
-- Advanced systems should be explained through creator outcomes, not implementation language.
-- Local/global pricing should read as fairness and reach, not as a finance tool.
-- Achievement setup should describe what fans can unlock or experience, not how event tracking works.
-- The launch release-feature set is limited to Achievements, a named YouTube video embed, and an Item unlock through Overachiever. Art books, generic Bonus Content, Commentary, and interactive experiences remain deferred until their product behavior is defined.
-- Studio screens should prioritize clarity, previews, validation, and confidence.
-
-Fan-facing rules:
-
-- Store should invite discovery without feeling algorithmic or manipulative.
-- Library should feel personal and durable, like a shelf, archive, and activity record.
-- Profiles should make a creator's work, posts, and identity feel connected.
-- Community should feel useful and human.
-- V1 achievements are music-only and should feel earned and legible, not gamified clutter.
-- Interactive/flagship experiences should always return to the Library with clear evidence of what changed.
-
----
-
-## 4. Materials And Surface Families
-
-Use four material roles:
-
-- **Environment**: the fixed background behind the OS window.
-- **Shell glass**: the single unified `.app-shell` surface behind Dock, Topbar, and workspace.
-- **Glass**: the shared Dock/Sidebar tint used by ordinary panels, controls,
-  inputs, overview cards, achievements, Community, reviews, dialogs, creator
-  forms, and comparable workspace content. Glass has no blur, saturation, or
-  shadow of its own.
-- **Paper**: the opaque transient surface for dropdowns, filters, account and
-  notification menus, context menus, and selection lists.
-
-Use three content surface families:
-
-- **Elevated clickable cards**: Store cards, Library cards, radio cards, and product search results.
-- **Recessed interactive lists**: tracklists, social rows, replies, notifications, editable Studio rows, and selectable rows.
-- **Flat information lists**: metadata/details/settings summaries that do not need hover or card treatment.
-
-Rules:
-
-- The app environment and shell glass are not changed when tuning content components.
-- Menus, popovers, filters, context menus, and selection lists use Paper.
-- Panels and controls use canonical Glass; do not introduce page-specific gray
-  fills, panel blur/saturation, or legacy Glass overrides.
-- Desktop and mobile use the same Glass recipe. The App Shell supplies the
-  environmental blur beneath it, and Glass panels never overlap one another.
-- Expanded Now Playing is a transparent workspace composition rather than a
-  Paper panel. Dialog content uses Glass unless it is a transient selection
-  menu.
-- Dense content uses Glass-with-rows and hairline dividers rather than an
-  alternate opaque panel material.
-- Do not place cards inside cards.
-- Page sections are layout regions, not floating cards.
-- Individual repeated items may be cards when that helps scanning.
-- Avoid decorative orbs, bokeh blobs, and heavy ambient gradients.
-
----
-
-## 5. Layout, Typography, And Rhythm
-
-Base unit: 4px.
-
-Preferred spacing tokens:
-
-- `--os-space-1`: 4px
-- `--os-space-2`: 8px
-- `--os-space-3`: 12px
-- `--os-space-4`: 16px
-- `--os-space-5`: 20px
-- `--os-space-6`: 24px
-- `--os-space-7`: 32px
-- `--os-space-8`: 40px
-- `--os-space-9`: 48px
-- `--os-space-10`: 64px
-
-Preferred font stack:
+Font stack:
 
 ```css
 -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", sans-serif
 ```
 
-Rules:
-
-- Use shared containers before local margins.
-- Do not hardcode left offsets for one page.
-- Do not tune spacing with random inline `style` props.
-- Use the shared type classes and tokens.
-- Field labels use primary ink for reliable contrast on Glass in both themes.
-  Secondary ink is reserved for descriptions and metadata; tertiary/placeholder
-  ink is reserved for placeholder text inside inputs and textareas.
-- Generic detail rows use primary ink for the left-hand label and secondary
-  ink for the right-hand value. Store and Library Item pages do not render a
-  generic Product Details section.
-- Do not use negative letter spacing.
-- Do not scale body text with viewport width.
-- Reserve hero-scale type for app front doors and true hero/detail moments.
-- Dense panels, cards, settings, and Studio controls use compact type.
-
-Mobile geometry contract:
-
-- QA at both 390px and 430px. No page may rely on one iPhone width.
-- `--os-content-inset` owns normal mobile page padding. Do not add a second page-specific inset around an already inset container.
-- Hub headers and forms stay inside the content inset. Repeated list rows may bleed to the workspace edges when that surface is intentionally full width.
-- Full-width mobile lists place dividers on the list/row boundary, spanning the available workspace width. Text and controls remain inset inside the row; do not shorten the divider to the text column.
-- Reply indentation is applied once. A nested reply may indent its row content, but its composer must use the full remaining row width and must never combine parent padding with an additional inline margin.
-- Textareas, composers, segmented controls, search fields, and action rows use `width: 100%` with `min-width: 0`; controls may not force horizontal scrolling.
-- Mobile hub titles flex while their action group remains auto-width and right-aligned inside the same content inset and divider boundary. Never give the header action group `width: 100%`; doing so pushes filters beyond the viewport or behind long titles.
-- Active Store filter pills live below the header divider, wrap onto additional rows, and constrain long labels with ellipsis rather than expanding the page width.
-- Mobile page content clears the fixed Dock, the optional music player, and `env(safe-area-inset-bottom)` through shared shell spacing.
-
----
-
-## 6. Dock And Topbar
-
-The Dock is the OS taskbar and app launcher. It renders from `src/lib/osApps.ts`.
-
-Current Dock order:
-
-- Signed in desktop: Library, divider, Home (`/`), Radio, Community, optional pinned-item divider and pinned items, spacer, Support, divider, Settings.
-- Signed out desktop: Home (`/`), Radio, Community, spacer, Support, Log In.
-- Mobile fixed Dock: Home (`/`), Library, Radio, Community, Search.
-
-Rules:
-
-- Store is the visible catalog app.
-- Library and Settings are signed-in desktop Dock destinations. Studio opens from the creator's own profile/account menu and is not a Dock app.
-- Search is immediately left of Notifications on desktop and remains a page destination in the mobile Dock.
-- Notifications stay in the Topbar.
-- Inbox and Profile are hidden from the v1 Dock.
-- Resources and the old Services/Projects flows are removed from the v1 app.
-- Full Dock rows keep a 56px rhythm; child routes use substantial 40px rows.
-- Expanded Dock child routes are text-only and align child labels under the parent row label axis.
-- Compact Dock targets are slightly landscape-shaped at 56 by 52px.
-- There is currently no mobile Dock menu button. Mobile global destinations are the five fixed Dock items; account-only destinations live in the avatar menu.
-- Pinned items should use artwork/profile imagery when available.
-
-The Topbar owns:
-
-- Back label.
-- Cart when it has items.
-- Notifications.
-- Avatar/account menu.
-
-Theme rules:
-
-- Signed-out visitors always see dark mode with the Ocean accent on desktop and mobile.
-- Signed-in theme mode and accent are account preferences loaded from Supabase; they are never persisted in browser local storage.
-- Accent labels are Amber, Sage, Ocean, Violet, Magma, and Polar. The stable stored IDs remain `amber`, `sage`, `ocean`, `violet`, `red`, and `cyan` for backward compatibility.
-
-Topbar rules:
-
-- Do not use Topbar tabs for primary app sections. Prefer in-page sections and filters.
-- Do not show tab-like local filters and back label in the same slot.
-- Desktop Search expands in place without a halo or rectangular highlight and must remain left of Notifications.
-- Mobile top-left shows the 44 logo linking to `/`; contextual detail pages show a circular back button immediately to the right of the logo.
-- Signed-out mobile shows a default profile icon linking to `/login`.
-- Account menu labels are Profile, Inbox, Studio; mobile also exposes Settings and hides Log Out.
-- Any local filters must be visually discoverable with clear contrast and active state.
-- The Dock answers "Where am I going?" In-page sections answer "What part of this app am I viewing?"
-
----
-
-## 7. Page Copy And Information Architecture
-
-Every primary page uses concise orientation:
-
-- **Dock/app label**: Home, Radio, Library, Community.
-- **Page hero**: title only. Do not render descriptive copy beneath primary page titles.
-- **Section context**: title and optional description only when the section itself needs guidance.
-- **Root identity**: `/` uses `44OS` as its hero/document identity while retaining discovery sections. `/store` uses `Store`.
-
-Page hero rules:
-
-- Titles are nouns or clear destinations: Store, Library, Questions, Collaboration, Studio, Settings.
-- Primary title descriptions are archived below for possible future reuse and are not rendered in the current UI.
-- On mobile hub pages with a local filter, the header collapses to title plus the circular filter button on one row. Do not show Store/Community/Library local search inputs on mobile; use the fixed mobile Search Dock item for global search.
-- Store, Library, and Community use the same filter-popover containment: the circular trigger stays inside the header safe margin, the popover stays inside both viewport insets, and outside interaction closes it.
-- Mobile primary page titles use a smaller iOS-like large-title scale, currently 42px, so controls can sit beside them without overlap.
-- Radio is the intentional exception: the fixed Now Playing panel is the entire page and does not repeat a Radio page title or permit workspace scrolling.
-
-Catalog and Library presentation rules:
-
-- Browse artwork follows Item presentation: Music and Sample Packs are square, Books use their 2:3 portrait cover ratio, and physical Merch uses a 3:4 portrait product ratio. Store detail artwork uses the same Category-specific ratio. Mobile shelf actions collapse from the desktop `View All` pill to a compact trailing arrow without changing their behavior or accessible label.
-- Library remains one filterable destination but renders separate grid bands in the stable order Music, Books, Sample Packs. Existing catalog order remains intact within each band, and Books always begin on a fresh row so 2:3 covers never mix into a square Music row.
-- Every Merch collection uses `catalog_items.sort_order` ascending as its shared order: Store browsing and shelves, related Items, and creator profiles. The intended eight-provider launch sequence is 44 T-Shirt, 44 Sweatshirt, 44 Hoodie, 44 Windbreaker, 44 Beanie, 44 Hat, 44 Bag, then 44 Satchel. Hidden legacy `44 Tote` must not be rendered beside `44 Satchel` and leaves the catalog only after the zero-dependency cleanup in Milestones P3. Administrators can change sort values in Supabase to update order consistently; Apparel/Accessories and title are deterministic fallbacks only for missing or tied values.
-- Merch detail is platform-catalog presentation: show the Printful-controlled product title and the controlled product Tag, never the 44OS owner as a creator-profile link. The primary purchase action says `Add to Cart`. The media area begins with the selected featured image, then shows the remaining current-color and bonus images in explicit order without duplicating the featured assignment. Selecting a color advances to its assigned image; sizes do not duplicate imagery. Archived-color images and Printful thumbnails/mockups never render publicly.
-- Beats use the existing square Item card and permanent `/store/item/[slug]` detail route. They remain Music Items, but Store gives them a separate `New in Beats` shelf whose arrow opens `/store/music?type=beat`; Beat Items are excluded from generic `New in Music` to avoid duplicate front-door placement.
-- The Beat catalog keeps Type in the URL and adds BPM range, key, genre/style Tag, mood, instrument, creator, price, and available-license-tier filters. Individual cards remain the launch browsing pattern; a dense playlist/audition view is deferred until catalog volume and user testing justify it.
-- A Beat detail uses the normal Item composition: square artwork and producer identity, BPM/key/time-signature metadata, one prominent tagged preview through the shared global player, description/sample disclosure, standardized license rows with exact included files and terms, then reviews, updates, similar Beats, and sharing. Draft legal terms and inactive commerce always render as review-only/unavailable, never as enabled purchase controls.
-- Studio adds a separate recoverable Add/Edit Beat form rather than branching the ordinary release editor. It collects artwork, tagged preview, BPM/key/time signature, approved genre/style Tags, controlled moods/instruments, sample disclosure, YouTube link, private MP3/WAV/stems, and tier prices. Beats never expose music achievement configuration.
-- Creator profiles add a Beats tab only when populated. Cart identity is offer-based so selecting another license for the same Beat replaces that Beat line while different Beats coexist. Cart rows name the exact tier and files. Library keeps one Beat Item and lists every immutable license, status, terms digest, and only its authorized downloads.
-- Every Beat surface is absent unless `NEXT_PUBLIC_ENABLE_BEAT_REVIEW_SURFACES=true`; creator saves additionally require the database review gate. Review UI follows the same Glass/Paper, spacing, focus, 44px target, 390/430/1280/1440, shared-player, and installed-iOS rules as the rest of 44OS.
-
-Admin Control Center rules:
-
-- Admin appears in the Dock and account navigation only for authenticated admin profiles. The database remains authoritative for every read and mutation even when a route is opened directly.
-- `/admin` is a single-column hub on desktop and mobile: total-user, creator, pending-review, and recent-error cards lead into People, Content, Errors, and Payments navigation rows. System status uses plain language for creator publishing, email, payments, and Beat Store state; switches are read-only.
-- People and Content lists use eight records per page, newest first, with URL-backed page, search, and role/status/type filters. Desktop uses labeled columns; mobile collapses the same facts into stacked cards. Every row opens its canonical detail page.
-- People detail exposes only safe identity, account, authored-Item, access, and role-history facts. Passwords, hashes, tokens, phone numbers, raw auth metadata, and provider credentials never render. Admins may change only Member to Creator or Creator to Member, with a required reason and confirmation.
-- Content keeps publication (`Draft`, `Published`, `Archived`) separate from review (`None`, `Pending`, `Approved`, `Rejected`, `Withdrawn`). Detail is read-only for metadata, taxonomy, tracks, asset-presence summaries, offers, health findings, review history, and lifecycle history. Pending submissions expose Approve and Reject; existing Items expose only the server-authorized publish, unpublish, or archive actions.
-- Every mutation uses a confirmation dialog, required reason, pending state, success feedback, and authoritative refetch. Archive additionally requires exact title confirmation and is described as permanent public removal that preserves buyer and historical records.
-- Errors render as a chronological sanitized text log with timestamp, route, method, runtime, release, safe message, code, and copyable digest. Headers, query values, request bodies, user content, and credentials never appear.
-- Payments renders server configuration readiness, database activation prerequisites, orders requiring attention, signed-webhook failures, and recent reconciliation runs. Missing service/provider configuration is an intentional `Unavailable` state rather than an endless loader. The 24-hour reconciliation action is disabled until every prerequisite is ready; this surface never exposes secrets or mutates runtime activation controls.
-- Email renders secret-presence readiness without values, sanitized operational counts—including unresolved old newsletter Contacts after an account-email change—fail-closed delivery/support/newsletter controls, and append-only activation history. Each control requires a reason plus an exact typed phrase. Expired ambiguous sends and definite provider rejections stay frozen in one delivery-failure queue; the former can use provider-confirmed delivery, explicit retry, or suppression, while the latter permits only retry after correction or suppression. Each outcome has a separate typed phrase and append-only reconciliation history.
-- The email implementation goal closed July 17 with this Admin surface and all branded templates complete locally. Until the separately approved migration/deployment and release rehearsal occur, the deployed application must continue to show fail-closed/unavailable email controls; closure does not authorize an enabled-looking delivery state.
-- Support renders the durable case queue and requester-visible/internal history. Signed-in web intake is capped at five cases per account per rolling hour; the direct monitored mailbox remains the fallback. A human reply is sent from the iCloud mailbox, while Admin Support enforces assignment and exclusive reply ownership and records the exact sent reply afterward. It never claims to read the iCloud inbox or expose mailbox credentials.
-
-Archived primary-page descriptions (saved July 10, 2026):
-
-- Store: Find releases, books, sample packs, and merch from independent creators.
-- Library: Everything you have saved, added, or purchased.
-- Music: Explore albums, EPs, singles, and releases built to grow over time.
-- Books: Explore art books, poetry, and stories from independent creators.
-- Merch: Explore apparel, accessories, and physical goods from creators.
-- Sample Packs: Explore downloadable sample packs from independent creators.
-- Community: General posts from creators and fans.
-- Community feed filter: All Posts and Following.
-- Questions: Ask something specific and get an answer from someone who has solved it.
-- Collaboration: Find collaborators or make yourself available to creative work.
-- Radio: Tune in to 44 Radio, a live 24/7 station playing around the world.
-- Search: Find items, creators, posts, questions, and collaborations.
-- Support: Find help for account access, orders, Library, Dock settings, Radio, creator tools, and troubleshooting.
-- Settings: Account, region, appearance, and Dock controls.
-- Studio: Creator tools, catalog health, and earnings.
-
-Keep this archive in documentation rather than rendering it under titles. Revive individual descriptions only after an explicit product decision.
-
-Section heading primitive:
-
-- Use `SectionHeader` / `HubSection` for title/action/description combinations.
-- **Simple sections** use title only when the content is obvious: Tracklist, Files, Orders.
-- **Guided sections** use title plus one short description when the concept is new or powerful: Achievements, Creator Updates, Bonus Content, Local Pricing, Questions, Collaboration, Library Unlocks, Launch.
-- Descriptions should be one sentence. If a section needs more than that, the UI likely needs a better structure.
-- Small metric/stat cards should not include wrapping helper text inside tight cards. Put explanations in the section intro, tooltip, or larger row surface.
-
-Community tab copy:
-
-- Posts: general conversation from creators and fans.
-- Following: a filter on the Community landing page, not a separate visible route.
-- Questions: ask practical creative questions and get answers.
-- Collaboration: find or offer help on creative work.
-
-Community state rules:
-
-- Posts, Questions, and Collaboration show loading states until their first Supabase request completes.
-- Never render an empty-state message while the initial request is still pending.
-- Read failures surface as errors; they must not silently look like an empty community.
-- Regular Community feed posts are links to `/community/thread/[id-or-slug]`; do not reintroduce inline reply drawers on the feed.
-- Inline reply forms live on the thread page only.
-- Every Community post or reply row is a focused-thread destination except its
-  profile identity, Like, Reply, and owner Delete controls, which retain their
-  own actions. Username hover/focus communicates profile navigation.
-- Thread roots and their direct replies use full-width rows separated by the
-  canonical hairline. A reply to a reply stays in the same width and is linked
-  to its parent by one centered profile-to-profile connector; connected rows do
-  not add a divider between them. Opening any reply promotes that reply to the
-  unconnected root of its own focused thread.
-- Thread post bodies and actions align beneath the username column. Reply
-  composers use the full safe content width and suppress branch connectors
-  until content has actually been posted.
-- Like, Reply, and Delete use one neutral theme-aware action color and one
-  consistent hover hit area. Only an activated Like fills its heart; no post
-  action uses red. Like count presence must not change the system spacing to
-  Reply.
-- The feed composer placeholder is `Start a new post...` for the general feed.
-- Signed-in users can report posts, replies, questions, answers, collaborations, responses, reviews, and Creator Updates they do not own. Reports enter an administrator-only moderation queue; hidden or removed content disappears from public views without deleting its audit record.
-- Store and Library Item hubs include Item-scoped Questions with explicit loading, empty, error, and signed-in Ask states. Studio Item editors include Creator Update publishing beneath the release editor.
-
-Search rules:
-
-- Desktop Search is a topbar control.
-- Mobile Search is the fixed Dock item and opens `/search`.
-- `/search` uses the same `.page-search-control` visual as Store/Community/Library search.
-- On mobile `/search`, show the compact page title, hide placeholder text, and keep the empty guidance to one quiet line: `Enter any term to start a search.`
-
-Notifications rules:
-
-- Notification rows show icon/image, title, description, and a one-off dismiss `x`.
-- Do not show the uppercase kind label such as Achievement Unlocked, Reply, Mention, or Like above the title on the notification center.
-- Do not show full timestamp/date columns in notification rows; they caused mobile overlap and are not needed for the current notification center.
-- The topbar notification popover may keep compact local dismissal behavior, but the full `/notifications` page should stay visually simple.
-
----
-
-## 8. Workspace Patterns
-
-Use existing/shared containers:
-
-- `.app-page` for Store, Library, Search, Support, and hub pages.
-- `.dashboard-page` for Studio and Settings.
-- `.social-shell` for Community, profiles, and inbox.
-- Detail layout classes for Store and Library item detail pages.
-- `.radio-page` plus `.radio-hero` for the Radio Now Playing surface.
-
-Rules:
-
-- Primary app front screens open with `HubHero`.
-- Public catalog grids use a predictable editorial order: release year newest-first, then artist/profile name alphabetically. This applies to `/store`, Store Music and Books, and creator-profile Music and Books tabs. Releases from the same artist and year use stable catalog/date tie-breakers.
-- Desktop Home and Community do not show local search fields; global Search remains in the topbar. Library keeps one compact text filter labeled `Filter Library` beside its category filter.
-- Radio is the exception: its live state uses a full-bleed item-detail-style hero rather than a standard HubHero.
-- Settings is a single sectioned page ordered Appearance, Account, then Notifications. Appearance and Account use two-column field grids; Region and Display Currency live under Account. Dock controls live inside Appearance.
-- Sections use `HubSection` or `SectionHeader`.
-- Empty states use shared message primitives.
-- Forms use shared field, label, helper, and action-row classes.
-- Inbox uses a two-column conversation list/thread layout on desktop and two distinct navigation states on mobile. Mobile threads use the global topbar back control, show the recipient avatar/name/username, anchor the composer above the Dock, and align outgoing bubbles right and incoming bubbles left.
-- New Message is a full-height state with recipient search at the top and the message composer at the bottom. Do not place a redundant Cancel control inside the recipient field.
-- Lists should prefer row surfaces with clear dividers over decorative cards.
-- Repeated cards must have consistent image ratio, title line behavior, metadata rhythm, and action placement.
-- Track titles do not marquee. They stay single-line with truncation before the duration column.
-- The desktop mini-player keeps its close control at the far-right edge and
-  uses canonical Glass. Expanded Now Playing hides the mini-player and renders
-  as a transparent, shadowless composition over the App Shell, with centered
-  shadowless artwork and controls. Opening Queue divides the desktop workspace
-  with one vertical hairline; on mobile Queue replaces the player at the same
-  sheet height, and its X returns to full Now Playing before the player itself
-  can be closed. Player, mini-player, Queue, and the mobile Paper Dock meet with
-  one persistent hairline and no gap. The expanded close action aligns beneath
-  the account avatar on desktop and mobile.
-- The mini-player artwork and metadata always open expanded Now Playing; they are not navigation links. Inside expanded Now Playing on mobile and desktop, artist opens the creator profile, artwork opens the release at its playback source (Library or Store), and track title opens that release with the current track selected/highlighted.
-
-Radio rules:
-
-- `/radio` uses the same blurred artwork language as Store/Library item detail pages.
-- On mobile, Radio is full-bleed between topbar and Dock: no standard app header, and the main live state should fit without meaningful scrolling.
-- Radio content is centered: artwork, Now Playing, title, text-only artist, then Stream/Stop.
-- Keep the radio title smaller than item-detail hero titles so long track names do not wrap awkwardly.
-- Use symmetrical vertical spacing around Now Playing, artist, and Play Radio; avoid a top-heavy card.
-- Desktop Radio uses the same centered composition inside the workspace: app-shell background, centered bounded artwork, then track, artist, and action. Do not add a separate opaque hero panel or blurred artwork backdrop.
-
-Studio publishing rules:
-
-- Studio release lists are creator-management views, not public discovery grids, and remain ordered by when the release was added (`created_at` newest-first).
-- Release Type, Release Year, and Price belong in the same 3-column field group.
-- Price inputs accept normal decimal entry such as `5.99`; editing an existing music release preserves achievement row IDs and earned Library history.
-- Track editors use the recessed editable list primitive, not nested glass cards.
-- Book achievements are hidden for v1.
-- Music release features start with the eight v1 achievement templates, a named YouTube video embed, and an optional Overachiever Item unlock.
-- Overachiever is an achievement outcome: the reward is a separately identified Item granted through the trusted achievement path. Existing protected bonus assets remain preserved for compatibility but are not a new launch feature editor.
-- Music create/edit forms do not collect a description. Book and Sample Pack forms expose one canonical Description field because that copy appears above the native Store preview; existing music descriptions remain preserved without being exposed.
-- Music Tracks are a flat section rather than a nested paper card. Desktop track rows use a wide title column and a narrower Audio File/upload column; mobile stacks those fields. Keep generous section spacing between Details, Tracks, and Achievements.
-- Achievements use a single master switch in the section header. Off hides the picker; on reveals flat rows with white editor icons and right-aligned checkboxes. There is no minimum selection count. Generic feature/component editors remain hidden until each feature has a defined product contract and UI review.
-- Checked achievement controls must keep a black checkmark on the light checked fill.
-- Creator Item removal uses the destructive action treatment and confirmation copy, but the operation is archival: it says `Remove`, explains that Store/active Studio visibility ends while Library history remains, and never promises permanent deletion.
-- Publication validation is server-authoritative. During trusted testing, approved creators publish and save changes directly; validation failures remain in the editor as backend-truth error states and must never imply that an invalid change succeeded.
-- Save Changes revalidates and automatically publishes a valid Item that was caught in the internal creation state; this recovery does not expose a lifecycle switch or let creators move public Items back to draft.
-- New releases require a plain-language publishing-rights checkbox. The UI says this records the creator's confirmation and does not imply independent verification by 44; the backend stores the policy version and blocks publication without a current attestation.
-- Backend completion does not authorize front-facing activation. New Questions, Report, Bonus Content, recovery/legal navigation, moderation, creator submission-review, payment, or comparable surfaces require an M13 UI Activation Review covering placement, copy, desktop/mobile behavior, empty/loading/error states, accessibility, and visual-system fit before they are linked or rendered. Hidden UI must preserve existing backend data. The Admin Control Center and fail-closed owned-Merch Checkout/Studio payment states are reviewed exceptions; their presence does not authorize live payment activation.
-- Creator submission controls, Pending Review labels, and review notifications remain intentionally invisible while trusted-testing direct publishing is active. The Admin Content queue may inspect and decide any existing pending submission without activating creator-facing submission UI.
-- Creators never see or control Draft/Published lifecycle toggles. The review workflow shows `Pending Review` after submission; only 44 admins see approval controls. When an existing live Item has proposed changes, its last approved public version remains visible until review succeeds.
-- Studio catalog rows show a compact issue count when server catalog-health checks find incomplete taxonomy, artwork, year, tracks, books, or downloadable assets. Trusted testers do not see Draft/Published controls; the future review workflow will show Pending Review only where applicable.
-- Studio overview is a consolidated landing page: four operational metric cards—Saves, Plays, Sold, and Earned—followed only by populated Events and Item-management sections. A Community-style circular plus in the title row is visible on desktop and mobile and opens a solid accessible menu with Add Music, Add Book, Add Event, Add Sample Pack, and Add Update. Merch creation remains hidden without deleting its preserved implementation. The menu reuses the canonical creation routes and is Studio's only creation affordance; section-level New buttons do not render. Empty content sections do not render, and Events list actual event records rather than a generic Manage Events row. Desktop uses four metric cards per row and mobile uses two. Item rows show title, Type, and catalog-health issues without Draft/Published pills. The bottom Earnings list is hidden on desktop and mobile until payment UI is reviewed.
-
-- Creator-profile content navigation uses a flat, horizontally scrollable tab
-  rail between full-width hairlines. The active tab uses primary text and a
-  two-pixel underline; inactive tabs use secondary text. Tabs render only
-  populated content in the stable order Posts, Music, Books, Sample Packs,
-  Merch, Events; empty Events are omitted, and the first visible tab starts at
-  the leading scroll edge. Do not restore the former pill-strip profile tabs.
-- Profile action pairs are ordered Follow then Message for other users and
-  Edit Profile then Open Studio for the owner. On mobile they occupy equal
-  columns across the safe content width. On desktop actions lead the shared
-  action/platform-link row and outbound platform icons align on the opposite
-  edge.
-- Studio Plays is sourced from the append-only `item_play_events` ledger. A validated playback start counts regardless of whether it came from Store, Library, Radio, the creator, or another user; playback analytics must never interrupt audio.
-- M14 Cross-Platform Reach places an `Around the Web` list directly beneath Bio in creator profile editing and a music-only `Listen Elsewhere` list in Studio release creation/editing. Every supported service is always visible in the approved fixed order as a platform heading with its empty URL field directly below—no URL placeholder, dropdown, Add Link, Clear, or reorder controls. Deleting a URL and saving removes that destination; blank fields remain off the public surface. Website stays last. Profile editing uses the same label, control, and spacing treatment for Display name, Username, Bio, and outbound links on desktop and mobile; Username has a permanent non-editable `@` prefix, Bio has no creator-specific placeholder, and all text inputs remain at least 16px to prevent iOS focus zoom. The mobile editor identity block matches the public-profile avatar/name/handle geometry. Creator profiles and Item heroes use compact monochrome icon rows with recognizable platform shapes, native hover titles, descriptive new-tab accessible names, visible keyboard focus, and `noopener noreferrer`. The approved editor UI passed linked-account review at 1280px and 362px and is authorized for deployment.
-- Creator and Item outbound icons never stack vertically: they remain one compact, non-wrapping row using the shared recognizable platform glyphs. Item icons live inside the hero after Type/year and before Add to Library, Buy, Read, or Download actions. Store and Library pages omit the generic Product/Release Details section; platform-managed Merch keeps its single product Tag in the hero in place of creator identity. Other taxonomy remains available to Browse/search without consuming the Item detail hierarchy.
-- On mobile, the populated Cart topbar control is one compact pill containing both the cart icon and count. The count must never escape into a separate overlapping circle between Cart and Notifications.
-- The Cart page has one checkout decision area, not a duplicate hero action. Cart membership is one-per-Item with no quantity controls. On mobile, each row uses smaller artwork with title/Item Type, then the unit price and a compact accessible `×` removal action; the summary ends with equal-width Keep Shopping and Checkout buttons in one two-column row.
-- Merch Item detail shows the current display price beside its controlled Tag. Cart copy explains that 44OS revalidates price and availability and that Stripe calculates approved tax and shipping. A browser-provided price never authorizes a charge.
-- Admin Printful fulfillment begins with one **Sync with Printful** action that reconciles the complete verified store. It never asks for a UUID or destination Item. The default Active view lists every product present in the latest complete snapshot; Archived lists removed/ignored history. A row opens `/admin/fulfillment/[itemId]`, where provider name, retail price, variants, availability, production cost, and calculated margin are read-only.
-- A Printful detail page lists one image field per current color, an Add Bonus Image action, replace/remove/reorder controls, and a single Featured Image choice available on any color or bonus image. Same-file retry must not create another visible image. The publish action appears for new draft products and staged new colors; new sizes under an already-imaged color do not require an image review. Existing reviewed variants remain public while a new color waits.
-- Sync result messaging reports created, updated, staged, blocked, and archived counts. A partial/failed provider read reports failure without making rows disappear. Publication is never an automatic effect of discovering a new product or new color, while ordinary name/price updates and safe new sizes apply automatically.
-- Signed-out Checkout asks the customer to sign in so the order can be tracked. Free non-physical saves retain the existing Library flow. Paid physical Checkout is available only when the authenticated configuration response confirms every server/database prerequisite and supplies the active terms version; otherwise one explicit `Paid Checkout Unavailable` state explains that no card or delivery information is collected.
-- Paid Checkout requires a visible exact-terms consent checkbox before redirecting to Stripe-hosted Checkout. The return page is not proof of payment: success returns as `Confirming Payment`, polls the authenticated order-status boundary, and clears the Cart only after signed-webhook confirmation. A delayed confirmation says the order remains pending. Cancellation, decline, expiry, configuration error, and provider failure preserve the Cart and never imply an entitlement or fulfillment event.
-- `/orders` is the signed-in customer's standalone purchase history and appears in the account dropdown on desktop and mobile. It uses the compact Studio-style row language: order/date/status and Item/fulfillment facts on the left, authoritative total on the right. It reads only the current buyer's RLS-scoped ledger rows and labels legacy client-authored records as unverified instead of presenting them as provider-backed purchases.
-- Confirmed physical orders route to fulfillment rather than claiming that Merch belongs in Library. `/studio/orders` remains the separate creator/seller fulfillment workspace: it reads canonical verified order lines and delivery addresses and exposes only authorized fulfillment transitions. Studio Earnings and Payouts read the append-only ledgers; legacy client-authored merch history never appears as verified revenue.
-
-Native content rules:
-
-- Book Store pages order creator-written Description, then reader Sample. A missing sample produces an intentional unavailable state; it does not expose the protected Library PDF.
-- On desktop, the PDF reader occupies the complete content pane to the right of the Sidebar inside the existing rounded app window. The normal Topbar, page title, and global music player are hidden; the reader's own 60px toolbar aligns with the shell header height, and the page stage uses all remaining pane height. Mobile portrait and compact landscape retain the full-viewport reader with Sidebar/Dock hidden. Their single 60px toolbar places close and page count on the left, then bookmark, bookmark list, previous, and next circular actions on the right. Title and creator are omitted on mobile because the reading context is already established; desktop keeps only the title on the left. Both sizes use the same circular bookmark, page-navigation, and minus/plus zoom actions with a read-only `current of total` count; there are no fit, appearance, or editable-page controls.
-- Reader pages support native browser pinch zoom and scrolling, keyboard page navigation on desktop, visible focus, screen-reader page text, synchronized last-page restoration, synchronized appearance, and entitlement-gated synchronized bookmarks. Store samples always start at page 1 and cannot pass the creator-set sample page limit.
-- Protected PDFs are not placed in an offline cache. If signed access expires or the device is offline, the reader presents a reconnect/refresh state without implying that an unavailable file is stored locally.
-- Studio add/edit forms retain their current device-local values when the window loses focus, the browser refreshes, or a creator briefly switches mobile apps. This recovery is invisible backend truth rather than a user-selectable Draft state, and it clears after Save, Cancel, or removal. Uploaded sample-preview audio shows as uploaded immediately; waveform analysis can finish afterward without clearing that file.
-- The reader uses the pinned Safari-compatible PDF.js 4.10 legacy client and worker, avoiding PDF.js 6 runtime APIs that are unavailable on deployed iOS/WebKit versions while keeping pinch zoom and the established reader controls unchanged.
-- Store Sample Pack pages order creator-written Description, then Preview Samples. Preview rows use the exact shared release track/equalizer interaction and persistent global music player; do not create a second waveform/audio player. Waveform metadata remains available for later visual refinement.
-- Sample Pack Library pages use the same preview rows and expose one full protected pack download through the single primary Download action. Optional protected individual samples may render compact download actions. Do not duplicate the full-pack action inside Pack Contents.
-- Library item detail pages use one primary format action: Music shows Play, Books show Read, and Sample Packs show Download. They do not render a generic Product Details section. Book and Sample Pack pages do not show View Creator as a second hero action, Library music pages do not show Shuffle, and closing the PDF reader must return to the originating Item detail without making the shell Back control reopen the reader.
-- Studio Books accept a protected full PDF and optional separate sample PDF, with total-page, sample-page, and language metadata. Studio Sample Packs accept a protected full ZIP plus up to 30 public audio previews. Both flows include the canonical Item Description field and keep upload status/failure truth visible.
-
-Events and Calendar rules:
-
-- Public event formats are `In Person`, `Online`, and `Hybrid`. Studio reveals only the location and destination fields relevant to the selected format while allowing a ticket/information URL for any format; 44OS does not sell or fulfill tickets.
-- Studio gains a dedicated Events management surface for creators to add, edit, cancel, and remove their own event listings. Controls must preserve timezone truth, distinguish start from optional end, validate required destinations, and retain entered work through the established device-local form recovery behavior.
-- Creator profiles expose an Events tab when that profile has event content. Upcoming events lead; past and cancelled events must be visually unambiguous without competing with the creator's Items and posts.
-- `/calendar` is a full-width community surface with the normal page title and divider followed by one rounded calendar region. Desktop provides a clear month view and mobile provides a legible responsive agenda/list representation; both expose the same event details and accessible chronological navigation.
-- Calendar entries identify their source—creator event or upcoming release—and link to the canonical profile, event destination, or Item. Calendar never presents an informational release date as proof that an Item is published or purchasable.
-- Radio programming and schedule controls remain hidden. The current Radio page and playback experience do not change during M16; a later reviewed milestone will design submission, 44 approval, programming blocks, and schedule presentation.
-
-M16 acceptance evidence (July 13, 2026): rendered `/calendar` checks at 390px, 430px, 1280px, and 1440px retained exact viewport width with no horizontal overflow, title/main landmarks, working chronological navigation, mobile agenda/desktop month switching, and intentional empty/error loading behavior. Native buttons and links preserve keyboard focus and accessible names; event times expose machine-readable instants while visible copy includes the source IANA timezone abbreviation. Studio uses 16px-safe shared form controls and the existing account/record-scoped recovery contract.
-
----
-
-## 9. Controls, Icons, And Imagery
-
-Dock icon sources are fixed to public assets where available:
-
-- Store: `public/icons/sidebar/STORE.svg`
-- Library: `public/icons/sidebar/COLLECTION.svg`
-- Community: `public/icons/sidebar/COMMUNITY.svg`
-- Radio: `public/icons/sidebar/RADIO.svg`
-- Store child routes use the established category icons for Music, Books, Sample Packs, and Merch.
-- Community child routes expose Questions and Collaboration only; Following is available through the Community feed filter.
-
-Use familiar controls:
-
-- Icon buttons for tool actions.
-- Segmented controls/tabs for modes and filters.
-- Toggles or checkboxes for binary settings.
-- Inputs for numeric/text values.
-- Menus for option sets.
-- Text buttons only for clear commands.
-
-Rules:
-
-- Buttons must not resize or jump on hover.
-- Card/tile hover states must not scale the layout; use material/shadow/color feedback instead.
-- Icon-only buttons need accessible labels.
-- Primary actions are visually rare.
-- Destructive actions require clear copy and confirmation when data loss is possible.
-- Disabled controls must communicate state without becoming unreadable.
-- Prefer the existing `os-icon` mask system for shell/app icons.
-- Do not scatter one-off inline SVG icons when a system icon exists.
-- Product, profile, and media imagery should show the real item/person/state whenever available.
-- Preserve image aspect ratio.
-
----
-
-## 10. Visual QA
-
-Visual QA target pages:
-
-- Store
-- Store item
-- Library
-- Library item
-- Studio overview
-- Studio release editor
-- Admin overview, People, Content, Content detail, and Errors
-- Community Posts/Questions/Collaboration
-- Search
-- Radio
-- Support
-- Settings
-- Login
-
-Viewport targets:
-
-- Desktop: 1440px and 1280px.
-- Mobile: 390px and 430px.
-
-Acceptance:
-
-- No visible overlap.
-- No unintended horizontal scroll.
-- 44px targets where practical.
-- Typography and material usage match this document.
-- Loading, empty, error, signed-out, and signed-in states are intentional.
-- Achievement icons render correctly from Supabase Storage.
-- Automated launch smoke verifies an English document language, a page title, a main landmark, and viewport metadata that does not disable user zoom. These are regression guards, not a substitute for the required keyboard, screen-reader, contrast, responsive, and installed-iOS review matrix.
-- M13 role/security automation and provider-neutral server telemetry remain private foundations outside the approved Admin Control Center. They do not authorize public navigation, report controls, recovery/legal links, or other visible surfaces before UI Activation Review.
-- The public M13 responsive matrix covers Home, Item detail, Community, Support, Login, and Radio at 390px, 430px, 1280px, and 1440px. Root metadata must say 44OS; only the explicit `/store` surface may use Store as its page identity.
+Typography rules:
+
+- Page titles are concise nouns or destinations. Do not render descriptive marketing copy beneath primary titles.
+- Mobile hub titles use the compact iOS-like large-title scale, currently 42px.
+- Hero-scale type is reserved for front doors and genuine detail/Now Playing moments.
+- Body text does not scale directly with viewport width and does not use negative letter spacing.
+- Labels use primary ink; descriptions and metadata use secondary ink; placeholder ink stays inside controls.
+- Detail rows use primary labels and secondary values.
+- Store Item pages render a plain-text Product Details section only for relevant facts: release date, category, type, tags, track count and total length, page count, or sample count. Library Item pages omit this section.
+
+## Materials and elevation
+
+Four material roles exist:
+
+- **Environment** — fixed background behind the OS window.
+- **Shell glass** — the unified `.app-shell` behind Dock, Topbar, and workspace.
+- **Glass** — the canonical ordinary panel/control/input/list surface. It uses the Dock/Sidebar semantic tint and owns no blur, saturation, or shadow.
+- **Paper** — opaque raised surface used only for menus, dropdowns, popovers, context menus, and selection lists.
+
+Content patterns:
+
+- Catalog/media cards are raised clickable surfaces.
+- Tracklists, social rows, notifications, editable rows, and selectable lists are recessed Glass lists with hairline dividers.
+- Metadata, settings summaries, and other noninteractive facts are flat information lists.
+- Expanded Now Playing is transparent over the shell rather than another panel.
+- Dialog content uses Glass unless the dialog is a transient option picker.
+
+Only Flat and Raised content elevation exist. Glass is Flat. Paper and clickable catalog/media cards use the one Raised shadow. The App Shell window shadow remains independent.
+
+Do not introduce decorative orbs, bokeh, heavy gradients, nested cards, page-specific gray fills, panel blur, or one-off shadows.
+
+## Shell and navigation
+
+44OS uses one persistent shell. Only the workspace content changes between apps.
+
+Desktop Dock:
+
+- Signed in: Library, divider, Home, Radio, Community, optional pinned Items, spacer, Support, divider, Settings.
+- Signed out: Home, Radio, Community, spacer, Support, Log In.
+- Studio is opened from the creator’s profile or account menu and is not a Dock app.
+- Notifications remain in the Topbar. Inbox and Profile remain account-menu destinations.
+- Dock rows use a 56px rhythm; expanded child rows use 40px and text-only labels.
+- The Dock clock uses the viewer’s timezone in two-digit 24-hour `HH:mm` format.
+
+Mobile Dock is fixed to Home, Library, Radio, Community, and Search. Settings is in the avatar menu. There is no mobile Dock menu button.
+
+Topbar:
+
+- Desktop Search expands immediately left of Notifications.
+- The populated mobile Cart control is one compact icon/count pill; the count never becomes a separate overlapping badge.
+- Mobile top-left shows the 44 logo linking home. Detail pages add a circular back button beside it.
+- Signed-out mobile top-right links the default profile icon to Login.
+- Signed-in account order is Profile, Inbox, conditional Orders, Studio, and role-gated Admin. Orders appears only when the member has at least one non-draft order. Mobile additionally exposes Support immediately above Settings; Log Out remains the final action.
+- The Dock answers “where am I going?”; in-page controls answer “what part am I viewing?”
+
+## Responsive geometry
+
+The shell—not individual pages—owns mobile safe areas, Topbar, player, and Dock spacing.
+
+- `viewport-fit=cover` is required.
+- Total mobile Topbar height includes `env(safe-area-inset-top)` plus the fixed 56px control row.
+- Search, menus, player sheets, route overlays, scroll offsets, and content placement use the same total Topbar height.
+- `html[data-safe-area-test="notch"]` provides a deterministic 47px test inset.
+- `--os-content-inset` owns ordinary mobile page padding. Do not double-inset a shared container.
+- Mobile content clears the Dock, optional player, and `env(safe-area-inset-bottom)` through shared shell spacing.
+- Controls use `width: 100%` and `min-width: 0` where necessary; long content must not force viewport expansion.
+- Hub titles flex while action groups remain auto-width and right-aligned.
+- Mobile filter popovers stay inside both viewport insets and close on outside interaction.
+- Repeated list dividers may span the workspace while row content remains inset.
+- Test normal portrait widths at 390px and 430px. Shell work also guards 320, 360, 375, and 412px plus phone landscape.
+
+## Page identity and information architecture
+
+- `/` is `44OS`, not Store, even though it reuses discovery data and sections.
+- `/store` is `Store`.
+- Primary page titles do not include archived explanatory taglines.
+- Mobile Store, Library, and Community hubs use title plus a circular local-filter action. They do not render local search inputs; global Search is in the mobile Dock.
+- Desktop Home and Community use global Topbar Search. Library may keep its compact `Filter Library` control.
+- Radio is the intentional exception: the Now Playing composition is the page and does not repeat a page title.
+- Use `HubHero`, `HubSection`, and `SectionHeader` rather than page-specific title systems.
+- Simple sections use a title only. Guided sections may add one concise sentence when the concept is unfamiliar.
+
+Shared page containers:
+
+- `.app-page` — Store, Library, Search, Support, and hubs.
+- `.dashboard-page` — Studio and Settings.
+- `.social-shell` — Community, profiles, Inbox.
+- Canonical detail layouts — Store and Library Item details.
+- `.radio-page` and `.radio-hero` — Radio.
+
+## Catalog, Item, Cart, and Library UI
+
+Artwork ratios are format-specific:
+
+- Music and Sample Packs: square.
+- Books: 2:3 portrait.
+- Merch: 3:4 portrait.
+
+Public Music/Books ordering is release year newest-first, then creator alphabetically, with stable catalog/date tie-breakers. Studio management lists remain creation-date newest-first. Merch always uses `catalog_items.sort_order` with deterministic fallbacks.
+
+Item cards share stable artwork, title, metadata, and action placement. Hover does not scale layout.
+
+Merch detail:
+
+- Show the Printful-controlled product name and product Tag, not a creator link.
+- Show the current price and `Add to Cart`.
+- Begin with the featured image, followed by remaining current-color and bonus images without duplication.
+- Selecting a color advances to its assigned image; size selection does not duplicate imagery.
+- Never show archived-color imagery or Printful thumbnails/mockups.
+
+Cart:
+
+- One line per Item; no quantity controls.
+- One checkout decision area; no duplicate hero Checkout action.
+- Cart rows name the exact selected option/offer.
+- Mobile rows use compact artwork, title/type, price, and accessible remove action.
+- The summary ends with equal-width Keep Shopping and Checkout actions.
+- Copy states that price/availability are revalidated and Stripe calculates approved tax/shipping.
+
+Checkout:
+
+- Signed-out users are asked to sign in.
+- Missing runtime, terms, seller, offer, tax, shipping, or provider readiness shows one explicit unavailable state and collects no card/delivery data.
+- Exact terms consent is required before Stripe-hosted Checkout.
+- A return from Stripe displays Confirming Payment until signed webhook authority resolves the order.
+- Decline, cancellation, expiry, configuration error, or provider failure preserves the Cart and never implies access or fulfillment.
+
+Library detail uses one primary format action:
+
+- Music: Play.
+- Book: Read.
+- Sample Pack: Download.
+
+An active downloadable entitlement may add Download beside Play or Read. Music then exposes per-track downloads; Books and Sample Packs use short-lived authorized asset links. Refund/revocation removes current access without deleting historical presentation. Book/Sample Pack pages do not add a redundant View Creator action; Music does not add Shuffle.
+
+## Player and Radio
+
+The shared music player is the only audio engine for Music, Store/Library previews, Sample Packs, and Radio.
+
+- Track titles truncate and never marquee.
+- Mini-player artwork and metadata open expanded Now Playing; they are not release-navigation links.
+- In expanded Now Playing, artist opens the profile, artwork opens the source release, and title opens the release with the current track selected.
+- Expanded Now Playing is transparent and shadowless over the shell.
+- Desktop Queue divides the workspace with one hairline. Mobile Queue replaces the player sheet at the same height; its close action returns to Now Playing first.
+- Player, Queue, and mobile Dock meet without a gap.
+
+Radio is a centered full-bleed composition between shell controls: artwork, Now Playing, track, text-only artist, and Stream/Stop. It uses no separate opaque hero panel or scroll-heavy layout.
+
+## Community, profiles, Inbox, and notifications
+
+Community and profile post rows share one identity, hover, action, divider, and routing contract.
+
+- Initial requests show loading, not premature empty states. Read failures show errors.
+- Feed posts open canonical thread pages; feed pages do not reintroduce inline reply drawers.
+- Profile identity, Like, Reply, Report, and owner Delete controls keep independent actions inside the clickable row.
+- Thread roots and direct replies use full-width rows. Reply-to-reply relationships use one centered profile connector without adding nested cards.
+- Like/Reply/Delete use neutral theme-aware action color; only an activated Like fills its heart.
+- Reporting is available for signed-in non-owners and enters the Admin moderation boundary without deleting evidence.
+- Item pages include Item Questions and reviews with explicit loading/empty/error/signed-in states.
+
+Profiles:
+
+- Populated tabs appear in the stable order Posts, Music, Books, Sample Packs, Merch, Events.
+- Tabs are flat, horizontally scrollable, separated by hairlines, and use an underline for the active state.
+- Other-user actions are Follow then Message. Owner actions are Edit Profile then Open Studio.
+- Mobile action pairs occupy equal columns.
+- External destinations appear as compact non-wrapping monochrome icon rows with recognizable glyphs, descriptive accessible names, and visible focus.
+
+Inbox uses a two-column list/thread desktop layout and distinct mobile list/thread states. Mobile thread navigation uses the global Topbar back control. Incoming and outgoing bubbles remain visually distinct; the composer clears the Dock. New Message places recipient search at the top and the composer at the bottom without a redundant Cancel control.
+
+Notifications show image/icon, title, description, and dismissal. They do not add uppercase event-kind labels or full date columns that compete with mobile width.
+
+## Studio UI
+
+Studio is a creator workspace, not a public discovery grid.
+
+- The overview shows four operational metrics: Saves, Plays, Sold, Earned.
+- Only populated Events and Item-management sections render.
+- One circular plus menu in the title row is the creation affordance for Music, Book, Event, Sample Pack, and Update.
+- Merch creation stays hidden because Merch is 44-owned.
+- Rows show title, Type, and catalog-health issues without exposing Draft/Published switches.
+- Earnings remain distinct from payout-ready money; no UI implies that pending money is available or paid.
+
+Publishing forms:
+
+- Use shared labels, controls, helpers, recovery, validation, and action rows.
+- Release Type, Release Year, and Price share a desktop three-column field group.
+- Price accepts ordinary decimals such as `5.99`.
+- Track editors are flat recessed editable lists, not nested Glass cards.
+- New releases require a plain-language publishing-rights attestation.
+- Server validation owns publication truth. Failures remain visible in the editor and never imply success.
+- Removal is labeled Remove and clearly describes archival/preserved Library history.
+
+Music configuration includes the eight v1 achievements, up to ten URL-only YouTube videos, and optional Overachiever Item unlock. Saved videos appear in both Store and Library Item detail. Book achievements, generic Bonus Content, commentary, and speculative feature pickers remain hidden. Music forms do not collect Description; Book and Sample Pack forms do.
+
+External-link editors show every approved platform in fixed order with a URL field below its label. There is no Add Link, Clear, reorder, or arbitrary-platform control. Blank URLs remain off the public surface.
+
+Release date is optional, accepts valid past dates, and must remain contained on mobile. Mobile audio uploads use resumable transfer for larger files and persist the uploaded value before non-blocking duration analysis. Form behavior must survive app switching, focus changes, refresh, iOS file picking, upload completion, and delayed waveform analysis without losing other unsaved fields. Owner device acceptance is tracked in Milestones.
+
+## Native content, Events, and interactive UI
+
+Books:
+
+- Store order is Description then Sample.
+- Protected full PDFs never become public samples.
+- Desktop reader occupies the content pane beside the Sidebar and replaces normal Topbar/player content with its own 60px toolbar.
+- Mobile/compact landscape reader is full viewport with close, page count, bookmark, bookmark list, previous, and next controls.
+- Pinch zoom, scrolling, keyboard page navigation, readable page text, last-page restoration, appearance, and entitled bookmarks are supported.
+- Protected PDFs are not placed in offline caches.
+
+Sample Packs:
+
+- Store order is Description then Preview Samples.
+- Preview rows use the shared player.
+- Library exposes one primary protected pack Download; optional individual samples use compact actions.
+- Do not duplicate the full-pack action inside Pack Contents.
+
+Events:
+
+- Formats are In Person, Online, and Hybrid.
+- Studio reveals only relevant venue/destination fields and preserves timezone truth.
+- Profiles distinguish Upcoming, Past, and Cancelled.
+- Calendar uses a desktop month view and mobile chronological agenda over the same source data.
+- External actions are descriptive and open safely; 44OS does not claim to sell or fulfill tickets.
+
+Interactive Items:
+
+- `/launch/[itemId]` opens separately from the main app/player.
+- The launch window suppresses ordinary Sidebar, Topbar, page heading, and player and provides one persistent return action.
+- Loading, unavailable, unsupported, failure, expiry, and exit states share the immersive surface with announcements and visible focus.
+- Narrow/mobile devices stop before session issuance and show Desktop Required.
+
+Beat review surfaces remain completely absent unless the client review flag is enabled. When reviewed, they use the same Item composition, shared player, Glass/Paper system, device recovery, and responsive/accessibility rules. Draft legal terms and inactive commerce always look unavailable, never purchasable.
+
+## Admin UI
+
+Admin navigation is visible only to administrators, but server authorization remains authoritative for direct route access.
+
+- `/admin` is a single-column hub linking People, Content, Errors, Payments, Email, and Fulfillment.
+- Lists use URL-backed search/filter/pagination with desktop columns and mobile stacked cards.
+- People exposes safe identity/account/role facts only; passwords, tokens, raw Auth metadata, phone numbers, and provider credentials never render.
+- Content keeps publication and review status separate and preserves immutable lifecycle/review history.
+- Every mutation requires confirmation, a reason, pending state, success feedback, and authoritative refetch. Archival also requires exact-title confirmation.
+- Errors is a chronological sanitized log of bounded fields only.
+- Payments shows configuration readiness, attention orders, webhook failures, and reconciliation history without secrets.
+- Email shows configuration presence, controls, failures, and append-only activation/reconciliation history. Disabled support/newsletter controls must not appear active.
+- Fulfillment begins with Sync with Printful, then Active/Archived products. Product detail shows provider facts read-only, per-color/bonus imagery, featured-image selection, margin, and publication controls.
+
+Admin offer pause/restore, Creator paperwork follow-up, role changes, content lifecycle, delivery reconciliation, and fulfillment operations remain reasoned and auditable. Browser UI never fabricates provider evidence or silently changes runtime controls.
+
+## Accessibility and visual acceptance
+
+Target pages include Home/Store, Store Item, Library, Library Item, Studio overview/editor, Admin hub and operational details, Community, Search, Radio, Support, Settings, Login, Cart/Checkout/Orders, reader, Calendar, and any changed surface.
+
+Standard rendered widths are 390, 430, 1280, and 1440px. Safe-area shell changes additionally cover 320, 360, 375, 412px, phone landscape, installed iOS/PWA, and Android Chrome.
+
+Acceptance for affected work:
+
+- One useful main landmark and heading structure.
+- Logical Tab/Shift-Tab order and always-visible focus.
+- Correct names and reading order with VoiceOver/screen reader.
+- Menus, dialogs, errors, pending states, and announcements operate without a pointer.
+- Touch/file-picker/app-switch behavior works on mobile Safari and installed PWA where relevant.
+- No ordinary-text contrast failure, overlap, clipping, or unintended horizontal overflow.
+- Images preserve ratio and meaningful alternatives.
+- User zoom remains enabled.
+
+Automated smoke, computed contrast, route contracts, and safe-area checks are regression guards, not substitutes for the manual role/device journeys explicitly listed in Milestones.
+
+## Maintenance rules
+
+- Add or improve shared primitives before page-specific CSS.
+- Keep app registration and route ownership in `osApps.ts`.
+- Keep ordinary surfaces on canonical Glass and transient selections on Paper.
+- Avoid one-off inline styles unless a value is genuinely dynamic.
+- Do not revive archived descriptions, legacy routes, unused component exports, shadowed declarations, or redundant mobile/desktop implementations.
+- Run `npm run audit:ui-cleanup` for visual-system work and keep unreachable components, dead exports, unused CSS, and exact-shadowed declarations at zero.
+- Update Foundation when a UI decision changes authorization, data, routing, providers, or operational behavior. Update Milestones when it changes current work or acceptance.

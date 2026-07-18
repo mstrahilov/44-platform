@@ -29,6 +29,7 @@ const requirements = [
   ['idempotent provider event inbox', /on conflict\(provider,provider_event_id\)/, migration],
   ['failed event retry path', /processing_status='failed'[\s\S]*retryable/, migration],
   ['webhook-authoritative paid return', /\/api\/checkout\/status[\s\S]*Confirming Payment/, checkout],
+  ['concise linked checkout acceptance', /I agree to the <Link href="\/legal\/terms">Terms &amp; Conditions<\/Link>\./, checkout],
   ['refund and dispute lifecycle', /charge\.refunded[\s\S]*charge\.dispute\.created[\s\S]*charge\.dispute\.closed/, webhook],
   ['entitlement revocation evidence', /commerce_entitlement_grants[\s\S]*revoked_reason='Stripe dispute'/, migration],
   ['creator earnings exact allocator', /record_creator_earnings_adjustment[\s\S]*target_amount_cents-sum\(base_amount\)/, migration],

@@ -65,14 +65,14 @@ export default function StudioPayoutsPage() {
       <div className="dashboard-page">
         <HubHero
           title="Payouts"
-          copy="Track verified creator payouts when paid sales come online."
+          copy="Track verified creator payouts and review your current payout readiness."
         />
         <div className="dashboard-status ui44-status" role="status">
           <strong>{paidSales?.can_sell_paid ? 'Paid sales enabled.' : 'Payout setup.'}</strong> {creatorPaidSalesMessage(paidSales)}
         </div>
         {paidSales && !paidSales.is_platform_seller && paidSales.admin_status === 'approved' && !paidSales.can_sell_paid ? <Ui44Panel overflow="visible">
           <h2 className="os-type-panel-title">Creator setup required</h2>
-          <p className="os-type-body">Complete your individual tax form and Wise email-to-claim destination before uploading Items.</p>
+          <p className="os-type-body">Complete your individual tax form and Wise email-to-claim destination before selling paid Items. Free publishing remains available.</p>
           {paidSales.requirements_due.length ? <p className="os-type-meta">Information needed: {paidSales.requirements_due.join(', ')}</p> : null}
           <div className="ui44-section-gap-before"><Link className="os-button os-button-primary" href="/studio/onboarding">Open Creator Setup</Link></div>
         </Ui44Panel> : null}

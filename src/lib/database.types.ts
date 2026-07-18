@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -267,6 +272,64 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_offer_lifecycle_events: {
+        Row: {
+          action: string
+          changed_by: string
+          created_at: string
+          id: string
+          item_id: string
+          new_status: string
+          offer_id: string
+          previous_status: string
+          reason: string
+        }
+        Insert: {
+          action: string
+          changed_by: string
+          created_at?: string
+          id?: string
+          item_id: string
+          new_status: string
+          offer_id: string
+          previous_status: string
+          reason: string
+        }
+        Update: {
+          action?: string
+          changed_by?: string
+          created_at?: string
+          id?: string
+          item_id?: string
+          new_status?: string
+          offer_id?: string
+          previous_status?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_offer_lifecycle_events_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_offer_lifecycle_events_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_offer_lifecycle_events_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_offers"
             referencedColumns: ["id"]
           },
         ]
@@ -2927,6 +2990,7 @@ export type Database = {
           creator_id: string
           decision_reason: string | null
           disabled_at: string | null
+          paperwork_due_at: string | null
           updated_at: string
         }
         Insert: {
@@ -2937,6 +3001,7 @@ export type Database = {
           creator_id: string
           decision_reason?: string | null
           disabled_at?: string | null
+          paperwork_due_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -2947,6 +3012,7 @@ export type Database = {
           creator_id?: string
           decision_reason?: string | null
           disabled_at?: string | null
+          paperwork_due_at?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -3075,48 +3141,99 @@ export type Database = {
       }
       creator_payout_batches: {
         Row: {
+          approval_digest: string | null
+          approved_at: string | null
+          approved_by: string | null
           completed_at: string | null
           created_at: string
           currency: string
+          cutoff_at: string | null
+          gross_total_cents: number
           id: string
           idempotency_key: string
           item_count: number
+          membership_locked_at: string | null
+          policy_version: number | null
           provider: string
           provider_batch_id: string | null
+          reconciled_at: string | null
+          reconciled_by: string | null
+          reconciliation_digest: string | null
+          source_currency: string | null
           status: string
           submitted_at: string | null
           total_cents: number
           updated_at: string
+          withheld_tax_total_cents: number
         }
         Insert: {
+          approval_digest?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           completed_at?: string | null
           created_at?: string
           currency: string
+          cutoff_at?: string | null
+          gross_total_cents?: number
           id?: string
           idempotency_key: string
           item_count?: number
+          membership_locked_at?: string | null
+          policy_version?: number | null
           provider: string
           provider_batch_id?: string | null
+          reconciled_at?: string | null
+          reconciled_by?: string | null
+          reconciliation_digest?: string | null
+          source_currency?: string | null
           status?: string
           submitted_at?: string | null
           total_cents?: number
           updated_at?: string
+          withheld_tax_total_cents?: number
         }
         Update: {
+          approval_digest?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           completed_at?: string | null
           created_at?: string
           currency?: string
+          cutoff_at?: string | null
+          gross_total_cents?: number
           id?: string
           idempotency_key?: string
           item_count?: number
+          membership_locked_at?: string | null
+          policy_version?: number | null
           provider?: string
           provider_batch_id?: string | null
+          reconciled_at?: string | null
+          reconciled_by?: string | null
+          reconciliation_digest?: string | null
+          source_currency?: string | null
           status?: string
           submitted_at?: string | null
           total_cents?: number
           updated_at?: string
+          withheld_tax_total_cents?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "creator_payout_batches_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creator_payout_batches_reconciled_by_fkey"
+            columns: ["reconciled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       creator_payout_capability_events: {
         Row: {
@@ -3162,6 +3279,218 @@ export type Database = {
           },
         ]
       }
+      creator_payout_country_routes: {
+        Row: {
+          business_to_individual_confirmed: boolean
+          country_code: string
+          created_at: string
+          email_claim_confirmed: boolean
+          evidence_reference: string | null
+          id: string
+          method: string
+          revalidate_after: string | null
+          status: string
+          suspended_at: string | null
+          target_currency: string
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          business_to_individual_confirmed?: boolean
+          country_code: string
+          created_at?: string
+          email_claim_confirmed?: boolean
+          evidence_reference?: string | null
+          id?: string
+          method?: string
+          revalidate_after?: string | null
+          status?: string
+          suspended_at?: string | null
+          target_currency: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          business_to_individual_confirmed?: boolean
+          country_code?: string
+          created_at?: string
+          email_claim_confirmed?: boolean
+          evidence_reference?: string | null
+          id?: string
+          method?: string
+          revalidate_after?: string | null
+          status?: string
+          suspended_at?: string | null
+          target_currency?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creator_payout_country_routes_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creator_payout_destination_access_events: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          destination_id: string
+          id: string
+          purpose: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          destination_id: string
+          id?: string
+          purpose: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          destination_id?: string
+          id?: string
+          purpose?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creator_payout_destination_access_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creator_payout_destination_access_events_destination_id_fkey"
+            columns: ["destination_id"]
+            isOneToOne: false
+            referencedRelation: "creator_payout_destinations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creator_payout_destinations: {
+        Row: {
+          auth_tag: string
+          ciphertext: string
+          country_code: string
+          created_at: string
+          creator_id: string
+          currency: string
+          destination_type: string
+          encryption_key_version: number
+          id: string
+          immutable_digest: string
+          initialization_vector: string
+          masked_display: string
+          replaced_at: string | null
+          route_id: string
+          status: string
+          verified_at: string | null
+          version: number
+        }
+        Insert: {
+          auth_tag: string
+          ciphertext: string
+          country_code: string
+          created_at?: string
+          creator_id: string
+          currency: string
+          destination_type?: string
+          encryption_key_version: number
+          id?: string
+          immutable_digest: string
+          initialization_vector: string
+          masked_display: string
+          replaced_at?: string | null
+          route_id: string
+          status?: string
+          verified_at?: string | null
+          version: number
+        }
+        Update: {
+          auth_tag?: string
+          ciphertext?: string
+          country_code?: string
+          created_at?: string
+          creator_id?: string
+          currency?: string
+          destination_type?: string
+          encryption_key_version?: number
+          id?: string
+          immutable_digest?: string
+          initialization_vector?: string
+          masked_display?: string
+          replaced_at?: string | null
+          route_id?: string
+          status?: string
+          verified_at?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creator_payout_destinations_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creator_payout_destinations_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "creator_payout_country_routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creator_payout_item_earnings: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          earnings_entry_id: string
+          payout_item_id: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          earnings_entry_id: string
+          payout_item_id: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          earnings_entry_id?: string
+          payout_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creator_payout_item_earnings_earnings_entry_id_fkey"
+            columns: ["earnings_entry_id"]
+            isOneToOne: true
+            referencedRelation: "creator_earnings_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creator_payout_item_earnings_payout_item_id_fkey"
+            columns: ["payout_item_id"]
+            isOneToOne: false
+            referencedRelation: "creator_payout_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       creator_payout_items: {
         Row: {
           amount_cents: number
@@ -3170,14 +3499,31 @@ export type Database = {
           created_at: string
           creator_id: string
           currency: string
+          destination_snapshot: string | null
+          exchange_rate: number | null
           failure_code: string | null
           failure_message: string | null
+          gross_payable_cents: number | null
           id: string
+          operator_recorded_at: string | null
+          operator_recorded_by: string | null
           payout_account_id: string
+          payout_fee_cents: number
+          provider_evidence_digest: string | null
           provider_item_id: string | null
+          reconciled_at: string | null
+          reconciled_by: string | null
+          reconciliation_digest: string | null
           sender_item_id: string
+          source_amount_cents: number | null
+          source_currency: string | null
           status: string
+          target_amount_minor: number | null
+          target_currency: string | null
           updated_at: string
+          wise_transfer_reference: string | null
+          withheld_tax_cents: number
+          withholding_reason: string | null
         }
         Insert: {
           amount_cents: number
@@ -3186,14 +3532,31 @@ export type Database = {
           created_at?: string
           creator_id: string
           currency: string
+          destination_snapshot?: string | null
+          exchange_rate?: number | null
           failure_code?: string | null
           failure_message?: string | null
+          gross_payable_cents?: number | null
           id?: string
+          operator_recorded_at?: string | null
+          operator_recorded_by?: string | null
           payout_account_id: string
+          payout_fee_cents?: number
+          provider_evidence_digest?: string | null
           provider_item_id?: string | null
+          reconciled_at?: string | null
+          reconciled_by?: string | null
+          reconciliation_digest?: string | null
           sender_item_id: string
+          source_amount_cents?: number | null
+          source_currency?: string | null
           status?: string
+          target_amount_minor?: number | null
+          target_currency?: string | null
           updated_at?: string
+          wise_transfer_reference?: string | null
+          withheld_tax_cents?: number
+          withholding_reason?: string | null
         }
         Update: {
           amount_cents?: number
@@ -3202,14 +3565,31 @@ export type Database = {
           created_at?: string
           creator_id?: string
           currency?: string
+          destination_snapshot?: string | null
+          exchange_rate?: number | null
           failure_code?: string | null
           failure_message?: string | null
+          gross_payable_cents?: number | null
           id?: string
+          operator_recorded_at?: string | null
+          operator_recorded_by?: string | null
           payout_account_id?: string
+          payout_fee_cents?: number
+          provider_evidence_digest?: string | null
           provider_item_id?: string | null
+          reconciled_at?: string | null
+          reconciled_by?: string | null
+          reconciliation_digest?: string | null
           sender_item_id?: string
+          source_amount_cents?: number | null
+          source_currency?: string | null
           status?: string
+          target_amount_minor?: number | null
+          target_currency?: string | null
           updated_at?: string
+          wise_transfer_reference?: string | null
+          withheld_tax_cents?: number
+          withholding_reason?: string | null
         }
         Relationships: [
           {
@@ -3227,10 +3607,723 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "creator_payout_items_operator_recorded_by_fkey"
+            columns: ["operator_recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "creator_payout_items_payout_account_id_fkey"
             columns: ["payout_account_id"]
             isOneToOne: false
             referencedRelation: "creator_payout_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creator_payout_items_reconciled_by_fkey"
+            columns: ["reconciled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creator_payout_manual_evidence: {
+        Row: {
+          evidence_digest: string
+          evidence_type: string
+          id: string
+          metadata: Json
+          payout_item_id: string
+          provider_reference: string | null
+          recorded_at: string
+          recorded_by: string
+        }
+        Insert: {
+          evidence_digest: string
+          evidence_type: string
+          id?: string
+          metadata?: Json
+          payout_item_id: string
+          provider_reference?: string | null
+          recorded_at?: string
+          recorded_by: string
+        }
+        Update: {
+          evidence_digest?: string
+          evidence_type?: string
+          id?: string
+          metadata?: Json
+          payout_item_id?: string
+          provider_reference?: string | null
+          recorded_at?: string
+          recorded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creator_payout_manual_evidence_payout_item_id_fkey"
+            columns: ["payout_item_id"]
+            isOneToOne: false
+            referencedRelation: "creator_payout_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creator_payout_manual_evidence_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creator_payout_runtime_controls: {
+        Row: {
+          approved_by: string | null
+          batching_enabled: boolean
+          emergency_stop: boolean
+          minimum_payout_cents: number
+          operator_recording_enabled: boolean
+          policy_approved_at: string | null
+          policy_version: number
+          reconciliation_enabled: boolean
+          selected_provider: string
+          singleton: boolean
+          updated_at: string
+        }
+        Insert: {
+          approved_by?: string | null
+          batching_enabled?: boolean
+          emergency_stop?: boolean
+          minimum_payout_cents?: number
+          operator_recording_enabled?: boolean
+          policy_approved_at?: string | null
+          policy_version?: number
+          reconciliation_enabled?: boolean
+          selected_provider?: string
+          singleton?: boolean
+          updated_at?: string
+        }
+        Update: {
+          approved_by?: string | null
+          batching_enabled?: boolean
+          emergency_stop?: boolean
+          minimum_payout_cents?: number
+          operator_recording_enabled?: boolean
+          policy_approved_at?: string | null
+          policy_version?: number
+          reconciliation_enabled?: boolean
+          selected_provider?: string
+          singleton?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creator_payout_runtime_controls_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creator_seller_notifications: {
+        Row: {
+          body: string
+          created_at: string
+          creator_id: string
+          event_key: string
+          href: string
+          id: string
+          title: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          creator_id: string
+          event_key: string
+          href?: string
+          id?: string
+          title: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          creator_id?: string
+          event_key?: string
+          href?: string
+          id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creator_seller_notifications_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creator_seller_onboarding: {
+        Row: {
+          creator_id: string
+          policy_version: number | null
+          promoted_at: string
+          ready_at: string | null
+          seller_type: string
+          special_case: string
+          started_at: string | null
+          status: string
+          suspended_at: string | null
+          updated_at: string
+          us_person_status: string
+        }
+        Insert: {
+          creator_id: string
+          policy_version?: number | null
+          promoted_at?: string
+          ready_at?: string | null
+          seller_type?: string
+          special_case?: string
+          started_at?: string | null
+          status?: string
+          suspended_at?: string | null
+          updated_at?: string
+          us_person_status?: string
+        }
+        Update: {
+          creator_id?: string
+          policy_version?: number | null
+          promoted_at?: string
+          ready_at?: string | null
+          seller_type?: string
+          special_case?: string
+          started_at?: string | null
+          status?: string
+          suspended_at?: string | null
+          updated_at?: string
+          us_person_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creator_seller_onboarding_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creator_tax_access_events: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          document_id: string
+          id: string
+          purpose: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          document_id: string
+          id?: string
+          purpose: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          document_id?: string
+          id?: string
+          purpose?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creator_tax_access_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creator_tax_access_events_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "creator_tax_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creator_tax_document_payloads: {
+        Row: {
+          auth_tag: string
+          byte_length: number
+          ciphertext: string
+          content_type: string
+          created_at: string
+          document_id: string
+          encryption_key_version: number
+          initialization_vector: string
+        }
+        Insert: {
+          auth_tag: string
+          byte_length: number
+          ciphertext: string
+          content_type?: string
+          created_at?: string
+          document_id: string
+          encryption_key_version: number
+          initialization_vector: string
+        }
+        Update: {
+          auth_tag?: string
+          byte_length?: number
+          ciphertext?: string
+          content_type?: string
+          created_at?: string
+          document_id?: string
+          encryption_key_version?: number
+          initialization_vector?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creator_tax_document_payloads_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: true
+            referencedRelation: "creator_tax_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creator_tax_documents: {
+        Row: {
+          change_in_circumstances_at: string | null
+          creator_id: string
+          expires_at: string | null
+          form_revision: string
+          form_type: string
+          id: string
+          immutable_digest: string
+          review_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          signature_captured: boolean
+          signed_at: string
+          status: string
+          submitted_at: string
+          supersedes_id: string | null
+        }
+        Insert: {
+          change_in_circumstances_at?: string | null
+          creator_id: string
+          expires_at?: string | null
+          form_revision: string
+          form_type: string
+          id?: string
+          immutable_digest: string
+          review_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          signature_captured: boolean
+          signed_at: string
+          status?: string
+          submitted_at?: string
+          supersedes_id?: string | null
+        }
+        Update: {
+          change_in_circumstances_at?: string | null
+          creator_id?: string
+          expires_at?: string | null
+          form_revision?: string
+          form_type?: string
+          id?: string
+          immutable_digest?: string
+          review_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          signature_captured?: boolean
+          signed_at?: string
+          status?: string
+          submitted_at?: string
+          supersedes_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creator_tax_documents_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creator_tax_documents_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creator_tax_documents_supersedes_id_fkey"
+            columns: ["supersedes_id"]
+            isOneToOne: false
+            referencedRelation: "creator_tax_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creator_tax_policy: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          foreign_w8ben_required_before_selling: boolean
+          income_classification: string | null
+          professional_reference: string | null
+          singleton: boolean
+          updated_at: string
+          us_w9_required_before_selling: boolean
+          version: number
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          foreign_w8ben_required_before_selling?: boolean
+          income_classification?: string | null
+          professional_reference?: string | null
+          singleton?: boolean
+          updated_at?: string
+          us_w9_required_before_selling?: boolean
+          version?: number
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          foreign_w8ben_required_before_selling?: boolean
+          income_classification?: string | null
+          professional_reference?: string | null
+          singleton?: boolean
+          updated_at?: string
+          us_w9_required_before_selling?: boolean
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creator_tax_policy_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creator_tax_reviewers: {
+        Row: {
+          approved_at: string
+          approved_by: string
+          disabled_at: string | null
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string
+          approved_by: string
+          disabled_at?: string | null
+          user_id: string
+        }
+        Update: {
+          approved_at?: string
+          approved_by?: string
+          disabled_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creator_tax_reviewers_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creator_tax_reviewers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_control_events: {
+        Row: {
+          changed_by: string
+          control_name: string
+          created_at: string
+          id: string
+          new_enabled: boolean
+          previous_enabled: boolean
+          reason: string
+        }
+        Insert: {
+          changed_by: string
+          control_name: string
+          created_at?: string
+          id?: string
+          new_enabled: boolean
+          previous_enabled: boolean
+          reason: string
+        }
+        Update: {
+          changed_by?: string
+          control_name?: string
+          created_at?: string
+          id?: string
+          new_enabled?: boolean
+          previous_enabled?: boolean
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_control_events_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_delivery_controls: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          delivery_enabled: boolean
+          newsletter_sync_enabled: boolean
+          singleton: boolean
+          support_intake_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          delivery_enabled?: boolean
+          newsletter_sync_enabled?: boolean
+          singleton?: boolean
+          support_intake_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          delivery_enabled?: boolean
+          newsletter_sync_enabled?: boolean
+          singleton?: boolean
+          support_intake_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_delivery_controls_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_outbox_events: {
+        Row: {
+          attempt_count: number
+          claim_token: string | null
+          claimed_at: string | null
+          created_at: string
+          event_key: string
+          id: string
+          last_error_at: string | null
+          last_error_code: string | null
+          next_attempt_at: string
+          payload: Json
+          provider_message_id: string | null
+          recipient_email: string
+          recipient_user_id: string | null
+          sent_at: string | null
+          source_id: string | null
+          source_kind: string
+          status: string
+          template_key: string
+          template_version: number
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          claim_token?: string | null
+          claimed_at?: string | null
+          created_at?: string
+          event_key: string
+          id?: string
+          last_error_at?: string | null
+          last_error_code?: string | null
+          next_attempt_at?: string
+          payload: Json
+          provider_message_id?: string | null
+          recipient_email: string
+          recipient_user_id?: string | null
+          sent_at?: string | null
+          source_id?: string | null
+          source_kind: string
+          status?: string
+          template_key: string
+          template_version: number
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          claim_token?: string | null
+          claimed_at?: string | null
+          created_at?: string
+          event_key?: string
+          id?: string
+          last_error_at?: string | null
+          last_error_code?: string | null
+          next_attempt_at?: string
+          payload?: Json
+          provider_message_id?: string | null
+          recipient_email?: string
+          recipient_user_id?: string | null
+          sent_at?: string | null
+          source_id?: string | null
+          source_kind?: string
+          status?: string
+          template_key?: string
+          template_version?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      email_provider_events: {
+        Row: {
+          event_type: string
+          failure_class: string | null
+          id: string
+          metadata: Json
+          occurred_at: string | null
+          provider: string
+          provider_event_id: string
+          provider_message_id: string | null
+          received_at: string
+        }
+        Insert: {
+          event_type: string
+          failure_class?: string | null
+          id?: string
+          metadata?: Json
+          occurred_at?: string | null
+          provider: string
+          provider_event_id: string
+          provider_message_id?: string | null
+          received_at?: string
+        }
+        Update: {
+          event_type?: string
+          failure_class?: string | null
+          id?: string
+          metadata?: Json
+          occurred_at?: string | null
+          provider?: string
+          provider_event_id?: string
+          provider_message_id?: string | null
+          received_at?: string
+        }
+        Relationships: []
+      }
+      email_reconciliation_events: {
+        Row: {
+          created_at: string
+          id: string
+          outbox_event_id: string
+          previous_error_code: string
+          provider_message_id: string | null
+          reason: string
+          reconciled_by: string
+          resolution: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          outbox_event_id: string
+          previous_error_code: string
+          provider_message_id?: string | null
+          reason: string
+          reconciled_by: string
+          resolution: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          outbox_event_id?: string
+          previous_error_code?: string
+          provider_message_id?: string | null
+          reason?: string
+          reconciled_by?: string
+          resolution?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_reconciliation_events_outbox_event_id_fkey"
+            columns: ["outbox_event_id"]
+            isOneToOne: false
+            referencedRelation: "email_outbox_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_reconciliation_events_reconciled_by_fkey"
+            columns: ["reconciled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_suppressions: {
+        Row: {
+          email_normalized: string
+          reason: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source_provider_event_id: string | null
+          suppressed_at: string
+        }
+        Insert: {
+          email_normalized: string
+          reason: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_provider_event_id?: string | null
+          suppressed_at?: string
+        }
+        Update: {
+          email_normalized?: string
+          reason?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source_provider_event_id?: string | null
+          suppressed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_suppressions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_suppressions_source_provider_event_id_fkey"
+            columns: ["source_provider_event_id"]
+            isOneToOne: false
+            referencedRelation: "email_provider_events"
             referencedColumns: ["id"]
           },
         ]
@@ -5572,12 +6665,17 @@ export type Database = {
       }
       merch_product_images: {
         Row: {
+          byte_size: number | null
           color_value: string | null
+          content_sha256: string | null
+          content_type: string | null
           created_at: string
           created_by: string
           file_url: string
           id: string
+          is_featured: boolean
           item_id: string
+          original_filename: string | null
           role: string
           sort_order: number
           storage_path: string
@@ -5585,12 +6683,17 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          byte_size?: number | null
           color_value?: string | null
+          content_sha256?: string | null
+          content_type?: string | null
           created_at?: string
           created_by: string
           file_url: string
           id?: string
+          is_featured?: boolean
           item_id: string
+          original_filename?: string | null
           role: string
           sort_order?: number
           storage_path: string
@@ -5598,12 +6701,17 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          byte_size?: number | null
           color_value?: string | null
+          content_sha256?: string | null
+          content_type?: string | null
           created_at?: string
           created_by?: string
           file_url?: string
           id?: string
+          is_featured?: boolean
           item_id?: string
+          original_filename?: string | null
           role?: string
           sort_order?: number
           storage_path?: string
@@ -5626,6 +6734,75 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      merch_storage_cleanup_queue: {
+        Row: {
+          attempts: number
+          completed_at: string | null
+          created_at: string
+          id: string
+          last_error: string | null
+          not_before: string
+          reason: string
+          storage_path: string
+        }
+        Insert: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          not_before?: string
+          reason: string
+          storage_path: string
+        }
+        Update: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          not_before?: string
+          reason?: string
+          storage_path?: string
+        }
+        Relationships: []
+      }
+      merch_storage_reconciliation_runs: {
+        Row: {
+          completed_at: string | null
+          failed_count: number
+          id: string
+          notes: string | null
+          queued_count: number
+          removed_count: number
+          retained_count: number
+          scanned_count: number
+          started_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          failed_count?: number
+          id?: string
+          notes?: string | null
+          queued_count?: number
+          removed_count?: number
+          retained_count?: number
+          scanned_count?: number
+          started_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          failed_count?: number
+          id?: string
+          notes?: string | null
+          queued_count?: number
+          removed_count?: number
+          retained_count?: number
+          scanned_count?: number
+          started_at?: string
+        }
+        Relationships: []
       }
       merch_variants: {
         Row: {
@@ -5724,6 +6901,129 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      newsletter_consent_events: {
+        Row: {
+          action: string
+          id: string
+          occurred_at: string
+          policy_version: string
+          source: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          id?: string
+          occurred_at?: string
+          policy_version: string
+          source: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          id?: string
+          occurred_at?: string
+          policy_version?: string
+          source?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      newsletter_consents: {
+        Row: {
+          consent_source: string
+          consented_at: string | null
+          email_normalized: string
+          last_sync_error: string | null
+          policy_version: string
+          provider_contact_id: string | null
+          provider_topic_id: string | null
+          revoked_at: string | null
+          status: string
+          sync_attempts: number
+          sync_claimed_at: string | null
+          sync_status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          consent_source: string
+          consented_at?: string | null
+          email_normalized: string
+          last_sync_error?: string | null
+          policy_version: string
+          provider_contact_id?: string | null
+          provider_topic_id?: string | null
+          revoked_at?: string | null
+          status: string
+          sync_attempts?: number
+          sync_claimed_at?: string | null
+          sync_status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          consent_source?: string
+          consented_at?: string | null
+          email_normalized?: string
+          last_sync_error?: string | null
+          policy_version?: string
+          provider_contact_id?: string | null
+          provider_topic_id?: string | null
+          revoked_at?: string | null
+          status?: string
+          sync_attempts?: number
+          sync_claimed_at?: string | null
+          sync_status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      newsletter_contact_retirements: {
+        Row: {
+          claim_token: string | null
+          claimed_at: string | null
+          created_at: string
+          email_normalized: string
+          id: string
+          last_sync_error: string | null
+          provider_contact_id: string | null
+          provider_topic_id: string | null
+          sync_attempts: number
+          sync_status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          claim_token?: string | null
+          claimed_at?: string | null
+          created_at?: string
+          email_normalized: string
+          id?: string
+          last_sync_error?: string | null
+          provider_contact_id?: string | null
+          provider_topic_id?: string | null
+          sync_attempts?: number
+          sync_status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          claim_token?: string | null
+          claimed_at?: string | null
+          created_at?: string
+          email_normalized?: string
+          id?: string
+          last_sync_error?: string | null
+          provider_contact_id?: string | null
+          provider_topic_id?: string | null
+          sync_attempts?: number
+          sync_status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       notification_delivery_controls: {
         Row: {
@@ -6082,6 +7382,50 @@ export type Database = {
           },
         ]
       }
+      printful_catalog_sync_runs: {
+        Row: {
+          completed_at: string | null
+          error_message: string | null
+          id: string
+          provider_product_count: number | null
+          started_at: string
+          started_by: string
+          status: string
+          store_id: number
+          summary: Json
+        }
+        Insert: {
+          completed_at?: string | null
+          error_message?: string | null
+          id?: string
+          provider_product_count?: number | null
+          started_at?: string
+          started_by: string
+          status?: string
+          store_id: number
+          summary?: Json
+        }
+        Update: {
+          completed_at?: string | null
+          error_message?: string | null
+          id?: string
+          provider_product_count?: number | null
+          started_at?: string
+          started_by?: string
+          status?: string
+          store_id?: number
+          summary?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "printful_catalog_sync_runs_started_by_fkey"
+            columns: ["started_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       printful_fulfillment_order_items: {
         Row: {
           commerce_order_item_id: string
@@ -6139,12 +7483,15 @@ export type Database = {
           charged_cents: number
           commerce_order_id: string
           confirmation_requested_at: string | null
+          confirmed_externally_at: string | null
           created_at: string
           external_id: string
           failure_code: string | null
           failure_message: string | null
           id: string
+          last_provider_event_at: string | null
           provider_currency: string | null
+          provider_dashboard_url: string | null
           provider_order_id: number | null
           provider_shipping_cents: number | null
           provider_status: string
@@ -6161,12 +7508,15 @@ export type Database = {
           charged_cents?: number
           commerce_order_id: string
           confirmation_requested_at?: string | null
+          confirmed_externally_at?: string | null
           created_at?: string
           external_id: string
           failure_code?: string | null
           failure_message?: string | null
           id?: string
+          last_provider_event_at?: string | null
           provider_currency?: string | null
+          provider_dashboard_url?: string | null
           provider_order_id?: number | null
           provider_shipping_cents?: number | null
           provider_status?: string
@@ -6183,12 +7533,15 @@ export type Database = {
           charged_cents?: number
           commerce_order_id?: string
           confirmation_requested_at?: string | null
+          confirmed_externally_at?: string | null
           created_at?: string
           external_id?: string
           failure_code?: string | null
           failure_message?: string | null
           id?: string
+          last_provider_event_at?: string | null
           provider_currency?: string | null
+          provider_dashboard_url?: string | null
           provider_order_id?: number | null
           provider_shipping_cents?: number | null
           provider_status?: string
@@ -6218,12 +7571,120 @@ export type Database = {
           },
         ]
       }
+      printful_fulfillment_shipments: {
+        Row: {
+          created_at: string
+          delivered_at: string | null
+          fulfillment_order_id: string
+          id: string
+          last_provider_event_at: string
+          provider_shipment_id: number
+          provider_snapshot: Json
+          returned_at: string | null
+          shipped_at: string | null
+          status: string
+          tracking_number: string | null
+          tracking_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          delivered_at?: string | null
+          fulfillment_order_id: string
+          id?: string
+          last_provider_event_at: string
+          provider_shipment_id: number
+          provider_snapshot?: Json
+          returned_at?: string | null
+          shipped_at?: string | null
+          status: string
+          tracking_number?: string | null
+          tracking_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          delivered_at?: string | null
+          fulfillment_order_id?: string
+          id?: string
+          last_provider_event_at?: string
+          provider_shipment_id?: number
+          provider_snapshot?: Json
+          returned_at?: string | null
+          shipped_at?: string | null
+          status?: string
+          tracking_number?: string | null
+          tracking_url?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "printful_fulfillment_shipments_fulfillment_order_id_fkey"
+            columns: ["fulfillment_order_id"]
+            isOneToOne: false
+            referencedRelation: "printful_fulfillment_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      printful_pricing_approvals: {
+        Row: {
+          approved_at: string
+          approved_by: string
+          blocked_variant_count: number
+          eligible_variant_count: number
+          id: string
+          item_id: string
+          maximum_provider_cost_cents: number
+          minimum_margin_cents: number
+          retail_price_cents: number
+        }
+        Insert: {
+          approved_at?: string
+          approved_by: string
+          blocked_variant_count: number
+          eligible_variant_count: number
+          id?: string
+          item_id: string
+          maximum_provider_cost_cents: number
+          minimum_margin_cents: number
+          retail_price_cents: number
+        }
+        Update: {
+          approved_at?: string
+          approved_by?: string
+          blocked_variant_count?: number
+          eligible_variant_count?: number
+          id?: string
+          item_id?: string
+          maximum_provider_cost_cents?: number
+          minimum_margin_cents?: number
+          retail_price_cents?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "printful_pricing_approvals_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "printful_pricing_approvals_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       printful_product_mappings: {
         Row: {
           created_at: string
           external_id: string | null
           id: string
           item_id: string
+          last_catalog_sync_id: string | null
           last_synced_at: string
           provider_name: string
           provider_snapshot: Json
@@ -6240,6 +7701,7 @@ export type Database = {
           external_id?: string | null
           id?: string
           item_id: string
+          last_catalog_sync_id?: string | null
           last_synced_at?: string
           provider_name: string
           provider_snapshot?: Json
@@ -6256,6 +7718,7 @@ export type Database = {
           external_id?: string | null
           id?: string
           item_id?: string
+          last_catalog_sync_id?: string | null
           last_synced_at?: string
           provider_name?: string
           provider_snapshot?: Json
@@ -6280,6 +7743,13 @@ export type Database = {
             columns: ["reviewed_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "printful_product_mappings_sync_run_fkey"
+            columns: ["last_catalog_sync_id"]
+            isOneToOne: false
+            referencedRelation: "printful_catalog_sync_runs"
             referencedColumns: ["id"]
           },
         ]
@@ -6398,6 +7868,7 @@ export type Database = {
           color_value: string | null
           created_at: string
           id: string
+          last_catalog_sync_id: string | null
           last_synced_at: string
           merch_variant_id: string
           product_mapping_id: string
@@ -6419,6 +7890,7 @@ export type Database = {
           color_value?: string | null
           created_at?: string
           id?: string
+          last_catalog_sync_id?: string | null
           last_synced_at?: string
           merch_variant_id: string
           product_mapping_id: string
@@ -6440,6 +7912,7 @@ export type Database = {
           color_value?: string | null
           created_at?: string
           id?: string
+          last_catalog_sync_id?: string | null
           last_synced_at?: string
           merch_variant_id?: string
           product_mapping_id?: string
@@ -6475,6 +7948,13 @@ export type Database = {
             columns: ["reviewed_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "printful_variant_mappings_sync_run_fkey"
+            columns: ["last_catalog_sync_id"]
+            isOneToOne: false
+            referencedRelation: "printful_catalog_sync_runs"
             referencedColumns: ["id"]
           },
         ]
@@ -7135,6 +8615,114 @@ export type Database = {
             columns: ["service_category_id"]
             isOneToOne: false
             referencedRelation: "service_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_case_events: {
+        Row: {
+          actor_id: string | null
+          body: string | null
+          case_id: string
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json
+          visibility: string
+        }
+        Insert: {
+          actor_id?: string | null
+          body?: string | null
+          case_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json
+          visibility: string
+        }
+        Update: {
+          actor_id?: string | null
+          body?: string | null
+          case_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_case_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_case_events_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "support_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_cases: {
+        Row: {
+          assigned_to: string | null
+          case_number: number
+          created_at: string
+          id: string
+          priority: string
+          reply_owner: string | null
+          requester_email: string
+          requester_id: string | null
+          resolved_at: string | null
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          case_number?: never
+          created_at?: string
+          id?: string
+          priority?: string
+          reply_owner?: string | null
+          requester_email: string
+          requester_id?: string | null
+          resolved_at?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          case_number?: never
+          created_at?: string
+          id?: string
+          priority?: string
+          reply_owner?: string | null
+          requester_email?: string
+          requester_id?: string | null
+          resolved_at?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_cases_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_cases_reply_owner_fkey"
+            columns: ["reply_owner"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -7928,6 +9516,22 @@ export type Database = {
         }
         Returns: undefined
       }
+      apply_newsletter_provider_unsubscribe: {
+        Args: { target_email: string; target_provider_contact_id: string }
+        Returns: undefined
+      }
+      approve_creator_payout_batch: {
+        Args: { target_approval_digest: string; target_batch_id: string }
+        Returns: undefined
+      }
+      approve_creator_tax_policy: {
+        Args: {
+          target_income_classification: string
+          target_professional_reference: string
+          target_version: number
+        }
+        Returns: undefined
+      }
       archive_owned_item: { Args: { target_item_id: string }; Returns: string }
       attest_owned_item_rights: {
         Args: {
@@ -7946,6 +9550,14 @@ export type Database = {
         }[]
       }
       beat_review_surfaces_enabled: { Args: never; Returns: boolean }
+      begin_creator_seller_onboarding: {
+        Args: {
+          target_seller_type: string
+          target_special_case?: string
+          target_us_person_status: string
+        }
+        Returns: Json
+      }
       begin_interactive_launch: {
         Args: { client_context?: Json; target_item_id: string }
         Returns: {
@@ -7955,6 +9567,10 @@ export type Database = {
           session_id: string
           session_token: string
         }[]
+      }
+      begin_printful_catalog_sync: {
+        Args: { target_started_by: string; target_store_id: number }
+        Returns: string
       }
       bind_stripe_checkout_session: {
         Args: {
@@ -8003,6 +9619,17 @@ export type Database = {
           message: string
         }[]
       }
+      claim_application_email: {
+        Args: { target_claim_token: string; target_event_id: string }
+        Returns: {
+          event_key: string
+          id: string
+          payload: Json
+          recipient_email: string
+          template_key: string
+          template_version: number
+        }[]
+      }
       claim_item_submission_notification_events: {
         Args: { target_limit?: number }
         Returns: {
@@ -8013,6 +9640,14 @@ export type Database = {
           recipient_id: string
           submission_id: string
         }[]
+      }
+      complete_application_email: {
+        Args: {
+          target_claim_token: string
+          target_event_id: string
+          target_provider_message_id: string
+        }
+        Returns: undefined
       }
       complete_item_submission_notification_event: {
         Args: { target_error?: string; target_event_id: string }
@@ -8055,6 +9690,14 @@ export type Database = {
         }
         Returns: string
       }
+      create_creator_payout_batch: {
+        Args: {
+          target_currency: string
+          target_cutoff_at: string
+          target_idempotency_key: string
+        }
+        Returns: string
+      }
       create_or_open_direct_conversation: {
         Args: { other_profile_id: string }
         Returns: string
@@ -8078,7 +9721,24 @@ export type Database = {
         }
         Returns: Json
       }
+      create_support_case: {
+        Args: {
+          target_body: string
+          target_requester_email: string
+          target_requester_id: string
+          target_subject: string
+        }
+        Returns: string
+      }
+      creator_gross_earnings_cents: {
+        Args: { target_creator_id: string }
+        Returns: number
+      }
       creator_paid_sales_state_code: {
+        Args: { target_creator_id: string }
+        Returns: string
+      }
+      creator_seller_state_code: {
         Args: { target_creator_id: string }
         Returns: string
       }
@@ -8089,6 +9749,14 @@ export type Database = {
           target_submission_id: string
         }
         Returns: undefined
+      }
+      delete_merch_product_image: {
+        Args: { target_image_id: string }
+        Returns: Json
+      }
+      delete_merch_product_image_v2: {
+        Args: { target_image_id: string }
+        Returns: Json
       }
       end_interactive_launch: {
         Args: { target_session_id: string; target_session_token: string }
@@ -8120,9 +9788,29 @@ export type Database = {
         }
         Returns: boolean
       }
+      fail_application_email: {
+        Args: {
+          target_ambiguous?: boolean
+          target_claim_token: string
+          target_error_code: string
+          target_event_id: string
+          target_retryable?: boolean
+        }
+        Returns: undefined
+      }
       finalize_beat_license_purchase: {
         Args: { target_order_item_id: string; target_reservation_id?: string }
         Returns: string
+      }
+      finish_printful_catalog_sync: {
+        Args: {
+          target_error_message?: string
+          target_product_count: number
+          target_run_id: string
+          target_status: string
+          target_summary: Json
+        }
+        Returns: undefined
       }
       get_admin_commerce_diagnostics: { Args: never; Returns: Json }
       get_admin_content_detail: {
@@ -8138,6 +9826,10 @@ export type Database = {
         Args: { target_submission_id: string }
         Returns: Json
       }
+      get_creator_country_payout_route: {
+        Args: { target_creator_id?: string }
+        Returns: Json
+      }
       get_creator_paid_sales_public_status: {
         Args: { target_creator_ids: string[] }
         Returns: {
@@ -8147,6 +9839,10 @@ export type Database = {
         }[]
       }
       get_creator_paid_sales_state: {
+        Args: { target_creator_id?: string }
+        Returns: Json
+      }
+      get_creator_seller_onboarding_state: {
         Args: { target_creator_id?: string }
         Returns: Json
       }
@@ -8204,6 +9900,7 @@ export type Database = {
         Args: { target_creator_id: string }
         Returns: boolean
       }
+      is_creator_tax_reviewer: { Args: never; Returns: boolean }
       is_platform_admin: { Args: never; Returns: boolean }
       is_safe_public_https_url: { Args: { value: string }; Returns: boolean }
       is_valid_iana_timezone: { Args: { value: string }; Returns: boolean }
@@ -8370,6 +10067,79 @@ export type Database = {
         Returns: Json
       }
       publishing_review_is_required: { Args: never; Returns: boolean }
+      queue_application_email: {
+        Args: {
+          target_event_key: string
+          target_payload: Json
+          target_recipient_email: string
+          target_recipient_user_id: string
+          target_source_id: string
+          target_source_kind: string
+          target_template_key: string
+          target_template_version: number
+        }
+        Returns: string
+      }
+      queue_fulfillment_email: {
+        Args: {
+          target_detail: string
+          target_order_id: string
+          target_provider_event_id: string
+          target_status: string
+          target_tracking_number?: string
+          target_tracking_url?: string
+        }
+        Returns: string
+      }
+      queue_welcome_email: {
+        Args: { target_library_url: string; target_user_id: string }
+        Returns: string
+      }
+      reconcile_application_email: {
+        Args: {
+          target_event_id: string
+          target_provider_message_id: string
+          target_reason: string
+          target_resolution: string
+        }
+        Returns: {
+          attempt_count: number
+          claim_token: string | null
+          claimed_at: string | null
+          created_at: string
+          event_key: string
+          id: string
+          last_error_at: string | null
+          last_error_code: string | null
+          next_attempt_at: string
+          payload: Json
+          provider_message_id: string | null
+          recipient_email: string
+          recipient_user_id: string | null
+          sent_at: string | null
+          source_id: string | null
+          source_kind: string
+          status: string
+          template_key: string
+          template_version: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "email_outbox_events"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      reconcile_creator_wise_manual_payout: {
+        Args: {
+          target_evidence_digest: string
+          target_payout_item_id: string
+          target_reconciliation_digest: string
+          target_result: string
+        }
+        Returns: undefined
+      }
       record_achievement_playback_signal: {
         Args: {
           signal_metadata?: Json
@@ -8398,6 +10168,32 @@ export type Database = {
           target_sign: number
         }
         Returns: number
+      }
+      record_creator_wise_manual_transfer: {
+        Args: {
+          target_evidence_digest: string
+          target_exchange_rate: number
+          target_fee_cents: number
+          target_payout_item_id: string
+          target_provider_reference: string
+          target_source_amount_cents: number
+          target_source_currency: string
+          target_target_amount_minor: number
+          target_target_currency: string
+        }
+        Returns: undefined
+      }
+      record_email_provider_event: {
+        Args: {
+          target_event_type: string
+          target_failure_class: string
+          target_metadata?: Json
+          target_occurred_at: string
+          target_provider_event_id: string
+          target_provider_message_id: string
+          target_recipient_email: string
+        }
+        Returns: string
       }
       record_interactive_progress: {
         Args: {
@@ -8448,6 +10244,10 @@ export type Database = {
         }
         Returns: string
       }
+      record_support_reply: {
+        Args: { target_body: string; target_case_id: string }
+        Returns: string
+      }
       record_trusted_interactive_event: {
         Args: {
           event_payload: Json
@@ -8466,6 +10266,7 @@ export type Database = {
           event_id: string
         }[]
       }
+      recover_stale_application_email_claims: { Args: never; Returns: number }
       refresh_content_question_stats: {
         Args: { target_entry_id: string }
         Returns: undefined
@@ -8520,6 +10321,14 @@ export type Database = {
           target_report_id: string
           target_resolution_note?: string
           target_status: string
+        }
+        Returns: undefined
+      }
+      review_creator_tax_document: {
+        Args: {
+          target_decision: string
+          target_document_id: string
+          target_reason: string
         }
         Returns: undefined
       }
@@ -8644,10 +10453,32 @@ export type Database = {
         }
         Returns: Json
       }
+      set_admin_creator_payout_country_route: {
+        Args: {
+          requested_currency: string
+          target_country_code: string
+          target_evidence_reference: string
+          target_revalidate_after: string
+          target_status: string
+        }
+        Returns: string
+      }
+      set_admin_creator_tax_reviewer: {
+        Args: { target_enabled: boolean; target_user_id: string }
+        Returns: undefined
+      }
       set_admin_item_lifecycle: {
         Args: {
           target_action: string
           target_item_id: string
+          target_reason: string
+        }
+        Returns: string
+      }
+      set_admin_offer_lifecycle: {
+        Args: {
+          target_action: string
+          target_offer_id: string
           target_reason: string
         }
         Returns: string
@@ -8660,6 +10491,47 @@ export type Database = {
         Args: { target_event_id: string; target_state: string }
         Returns: undefined
       }
+      set_creator_payout_item_withholding: {
+        Args: {
+          target_payout_item_id: string
+          target_reason: string
+          target_withheld_tax_cents: number
+        }
+        Returns: undefined
+      }
+      set_creator_payout_runtime_controls: {
+        Args: {
+          target_batching_enabled: boolean
+          target_emergency_stop: boolean
+          target_minimum_payout_cents: number
+          target_operator_recording_enabled: boolean
+          target_policy_version: number
+          target_reconciliation_enabled: boolean
+        }
+        Returns: undefined
+      }
+      set_email_delivery_control: {
+        Args: {
+          target_control: string
+          target_enabled: boolean
+          target_reason: string
+        }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          delivery_enabled: boolean
+          newsletter_sync_enabled: boolean
+          singleton: boolean
+          support_intake_enabled: boolean
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "email_delivery_controls"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       set_item_upcoming_release: {
         Args: {
           release_at: string
@@ -8667,6 +10539,64 @@ export type Database = {
           target_item_id: string
         }
         Returns: undefined
+      }
+      set_merch_product_image: {
+        Args: {
+          target_color_value: string
+          target_created_by: string
+          target_file_url: string
+          target_item_id: string
+          target_role: string
+          target_storage_path: string
+          target_title: string
+        }
+        Returns: Json
+      }
+      set_merch_product_image_v2: {
+        Args: {
+          target_byte_size: number
+          target_color_value: string
+          target_content_sha256: string
+          target_content_type: string
+          target_created_by: string
+          target_featured?: boolean
+          target_file_url: string
+          target_item_id: string
+          target_original_filename: string
+          target_role: string
+          target_storage_path: string
+          target_title: string
+        }
+        Returns: Json
+      }
+      set_newsletter_consent: {
+        Args: {
+          target_policy_version: string
+          target_source?: string
+          target_subscribed: boolean
+        }
+        Returns: {
+          consent_source: string
+          consented_at: string | null
+          email_normalized: string
+          last_sync_error: string | null
+          policy_version: string
+          provider_contact_id: string | null
+          provider_topic_id: string | null
+          revoked_at: string | null
+          status: string
+          sync_attempts: number
+          sync_claimed_at: string | null
+          sync_status: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "newsletter_consents"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       set_owned_item_publication_status: {
         Args: { target_item_id: string; target_status: string }
@@ -8683,6 +10613,35 @@ export type Database = {
       snapshot_item_for_submission_core: {
         Args: { target_item_id: string; target_submission_id: string }
         Returns: undefined
+      }
+      store_creator_payout_destination: {
+        Args: {
+          target_auth_tag: string
+          target_ciphertext: string
+          target_creator_id: string
+          target_digest: string
+          target_iv: string
+          target_key_version: number
+          target_masked_display: string
+          target_route_id: string
+        }
+        Returns: string
+      }
+      store_creator_tax_document: {
+        Args: {
+          target_auth_tag: string
+          target_byte_length: number
+          target_ciphertext: string
+          target_creator_id: string
+          target_digest: string
+          target_expires_at: string
+          target_form_revision: string
+          target_form_type: string
+          target_iv: string
+          target_key_version: number
+          target_signed_at: string
+        }
+        Returns: string
       }
       submit_item_for_review: {
         Args: {
@@ -8718,8 +10677,26 @@ export type Database = {
         Args: { target_order_item_id: string; target_status: string }
         Returns: undefined
       }
+      update_merch_product_image_v2: {
+        Args: {
+          target_featured: boolean
+          target_image_id: string
+          target_sort_order: number
+        }
+        Returns: undefined
+      }
       update_owned_item: {
         Args: { patch: Json; target_item_id: string }
+        Returns: undefined
+      }
+      update_support_case: {
+        Args: {
+          target_assigned_to: string
+          target_case_id: string
+          target_note?: string
+          target_reply_owner: string
+          target_status: string
+        }
         Returns: undefined
       }
       upsert_content_review: {

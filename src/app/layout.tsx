@@ -11,6 +11,8 @@ import { ContextMenuProvider } from '@/components/ContextMenu';
 import { MobileMenuProvider } from '@/components/MobileMenuContext';
 import { Suspense } from 'react';
 import { absoluteMetadataUrl, getMetadataBaseUrl } from '@/lib/metadata';
+import AnalyticsConsentBoundary from '@/components/AnalyticsConsent';
+import { getAnalyticsMeasurementId } from '@/lib/analyticsConfig';
 
 // Applies the saved theme before first paint to avoid a flash of the wrong theme.
 const THEME_BOOTSTRAP = `(function(){try{
@@ -18,6 +20,18 @@ const THEME_BOOTSTRAP = `(function(){try{
   localStorage.removeItem('44-theme-accent');
   document.body.className = 'theme-dark accent-ocean';
 }catch(e){}})();`;
+
+const SITE_IDENTITY_JSON_LD = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: '44OS',
+  url: absoluteMetadataUrl('/'),
+  publisher: {
+    '@type': 'Organization',
+    name: '44OS',
+    url: absoluteMetadataUrl('/'),
+  },
+}).replace(/</g, '\\u003c');
 
 export const metadata: Metadata = {
   metadataBase: new URL(getMetadataBaseUrl()),
@@ -80,13 +94,16 @@ export const viewport = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const analyticsMeasurementId = getAnalyticsMeasurementId();
   return (
     <html lang="en">
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: SITE_IDENTITY_JSON_LD }} />
       </head>
       <body className="theme-dark accent-ocean" suppressHydrationWarning>
         <ThemeSync />
+        <AnalyticsConsentBoundary measurementId={analyticsMeasurementId} />
 
         <div className="app-environment" aria-hidden="true">
           <div className="app-environment-image" />

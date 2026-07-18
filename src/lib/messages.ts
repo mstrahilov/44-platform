@@ -47,8 +47,11 @@ export async function createOrOpenConversation(_currentUserId: string, otherProf
     other_profile_id: otherProfileId,
   });
 
+  const conversationId = data ? String(data) : null;
+
   return {
-    href: data ? `/inbox?conversation=${String(data)}` : '/inbox',
+    conversationId,
+    href: conversationId ? `/conversation/${conversationId}` : '/inbox',
     error,
   };
 }

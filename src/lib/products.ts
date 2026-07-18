@@ -86,6 +86,7 @@ export interface Item {
   download_purchase_enabled?: boolean | null;
   paid_sales_available?: boolean;
   paid_sales_status?: string;
+  paid_offer_available?: boolean;
   launch_url?: string | null;
   read_url?: string | null;
   download_url?: string | null;

@@ -81,11 +81,12 @@ export type AdminPersonDetail = {
 export type CreatorPaidSalesState = {
   creator_id: string;
   can_sell_paid: boolean;
-  state: 'enabled' | 'not_reviewed' | 'disabled' | 'onboarding_required' | 'pending_tax' | 'pending_provider' | 'restricted' | 'country_unavailable' | 'entity_waitlisted';
+  state: 'enabled' | 'grace' | 'not_reviewed' | 'disabled' | 'onboarding_required' | 'pending_tax' | 'pending_provider' | 'restricted' | 'country_unavailable' | 'entity_waitlisted';
   is_platform_seller: boolean;
   admin_status: 'not_reviewed' | 'approved' | 'disabled';
   decision_reason: string | null;
   approved_at: string | null;
+  paperwork_due_at: string | null;
   approved_by: string | null;
   provider: 'wise_manual' | 'stripe_connect' | 'stripe_global_payouts' | 'paypal' | null;
   provider_status: 'unverified' | 'pending' | 'verified' | 'restricted' | 'country_unavailable' | 'disabled' | null;
@@ -278,6 +279,16 @@ export async function getAdminContentDetail(itemId: string) {
 export async function setAdminItemLifecycle(itemId: string, action: 'publish' | 'unpublish' | 'archive', reason: string) {
   const result = await supabase.rpc('set_admin_item_lifecycle', {
     target_item_id: itemId,
+    target_action: action,
+    target_reason: reason,
+  });
+  if (result.error) throw result.error;
+  return result.data;
+}
+
+export async function setAdminOfferLifecycle(offerId: string, action: 'pause' | 'restore', reason: string) {
+  const result = await supabase.rpc('set_admin_offer_lifecycle', {
+    target_offer_id: offerId,
     target_action: action,
     target_reason: reason,
   });

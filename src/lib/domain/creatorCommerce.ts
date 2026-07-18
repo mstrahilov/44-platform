@@ -15,9 +15,9 @@ export function creatorPaidSalesMessage(state: CreatorPaidSalesState | null) {
   if (!state) return 'Creator setup status is loading.';
   if (state.can_sell_paid) return 'Paid sales are enabled for this creator account.';
   if (state.state === 'not_reviewed') return 'Member-to-Creator promotion must be approved by forty four.';
-  if (state.state === 'onboarding_required') return 'Complete individual tax and Wise email-to-claim setup before uploading Items.';
-  if (state.state === 'pending_tax') return 'Your tax form must be completed and accepted before uploading Items.';
-  if (state.state === 'pending_provider') return 'Complete your Wise email-to-claim destination before uploading Items.';
+  if (state.state === 'onboarding_required') return 'Complete individual tax and Wise email-to-claim setup before selling paid Items. Free publishing remains available.';
+  if (state.state === 'pending_tax') return 'Your tax form must be completed and accepted before selling paid Items. Free publishing remains available.';
+  if (state.state === 'pending_provider') return 'Complete your Wise email-to-claim destination before selling paid Items. Free publishing remains available.';
   if (state.state === 'country_unavailable') return 'Creator access is waitlisted until forty four verifies a Wise email payout route for your country.';
   if (state.state === 'entity_waitlisted') return 'Entity sellers are waitlisted for a later launch phase.';
   if (state.state === 'restricted') return 'This onboarding case requires professional review.';

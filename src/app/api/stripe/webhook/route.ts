@@ -1,6 +1,7 @@
 import type Stripe from 'stripe';
 import { persistSanitizedErrorEvent } from '@/lib/server/opsErrorSink';
 import { commerceAdminClient, stripeClient } from '@/lib/server/commerce';
+import { processEmailOutbox } from '@/lib/server/email';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -142,6 +143,10 @@ export async function POST(request: Request) {
     if (result.error) throw result.error;
     const outcome = result.data as unknown as { processed?: boolean; duplicate?: boolean; retryable?: boolean; error?: string };
     if (outcome.retryable) return Response.json({ received: true, processed: false }, { status: 500 });
+    // Provider processing is authoritative. Delivery is deliberately best-effort
+    // here: its durable outbox, claims, and daily recovery worker retain retries
+    // without asking Stripe to replay a successfully processed payment event.
+    if (outcome.processed) await processEmailOutbox(5).catch(() => undefined);
     return Response.json({ received: true, processed: Boolean(outcome.processed), duplicate: Boolean(outcome.duplicate) });
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {

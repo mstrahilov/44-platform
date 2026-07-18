@@ -8,7 +8,7 @@ The project has three active handoff documents:
 
 - [`Other/44OS_FOUNDATION.md`](Other/44OS_FOUNDATION.md) — product, architecture, data, operations, payments, and interactive contracts.
 - [`Other/44OS_UI.md`](Other/44OS_UI.md) — approved visual and interaction system.
-- [`Other/44OS_MILESTONES.md`](Other/44OS_MILESTONES.md) — current system check, completed work, open launch gates, and sequencing.
+- [`Other/44OS_MILESTONES.md`](Other/44OS_MILESTONES.md) — the single ordered list of current work and acceptance criteria.
 
 Other historical plans and audit ledgers are intentionally retired. Use Git history if implementation chronology is required.
 
@@ -33,4 +33,4 @@ npm run test:hardening-contract
 npm run build
 ```
 
-See Foundation section 9 for the complete release, migration, smoke-test, restoration, and deployment procedure.
+See Foundation’s **Security, release, and recovery** section for the complete release, migration, smoke-test, restoration, and deployment procedure.

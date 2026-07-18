@@ -36,13 +36,13 @@ where singleton;
 
 select is(
   public.creator_paid_sales_state_code('e1000000-0000-4000-8000-000000000002'),
-  'country_unavailable',
-  'final Wise seller gate defaults to country unavailable'
+  'not_reviewed',
+  'a Creator remains paid-sales inactive until an Admin records the manual grace decision'
 );
 select is(
   public.is_creator_paid_sales_enabled('e1000000-0000-4000-8000-000000000002'),
   false,
-  'a creator cannot sell before final individual onboarding'
+  'a Creator cannot sell before an Admin approval'
 );
 
 set local role authenticated;
@@ -56,17 +56,17 @@ select throws_ok(
 select set_config('request.jwt.claim.sub','e1000000-0000-4000-8000-000000000003',true);
 select lives_ok(
   $$select public.set_admin_creator_paid_sales('e1000000-0000-4000-8000-000000000002','approved','Historical approval retained for audit.')$$,
-  'an administrator can preserve a historical paid-sales decision'
+  'an administrator can begin a Creator manual paperwork grace window'
 );
 select is(
   (public.get_creator_paid_sales_state('e1000000-0000-4000-8000-000000000002')->>'state'),
-  'country_unavailable',
-  'historical approval cannot bypass the final Wise country gate'
+  'grace',
+  'Admin approval enables the manual paperwork grace state'
 );
 select is(
   (select status from public.catalog_offers where item_id='e1200000-0000-4000-8000-000000000001' and code='digital-download-usd'),
-  'draft',
-  'the paid offer remains draft without final seller onboarding'
+  'active',
+  'the published Creator digital offer activates during manual grace'
 );
 
 set local role service_role;
@@ -77,34 +77,34 @@ select is(
     'e1000000-0000-4000-8000-000000000002','stripe_connect','acct_eligibility_history','US','USD','pending',
     'requirements_due','{"transfers":"pending"}'::jsonb,array['individual.verification.document']
   )->>'state'),
-  'country_unavailable',
-  'pending Stripe Connect history cannot become the active payout gate'
+  'grace',
+  'historical Stripe Connect state does not determine Creator sales or payout readiness'
 );
 select is(
   (public.sync_creator_payout_capability(
     'e1000000-0000-4000-8000-000000000002','stripe_connect','acct_eligibility_history','US','USD','verified',
     null,'{"transfers":"active","payouts_enabled":true}'::jsonb,'{}'
   )->>'state'),
-  'country_unavailable',
-  'verified Stripe Connect history remains dormant under the Wise-only decision'
+  'grace',
+  'verified Stripe Connect history remains separate from Creator sales and payout readiness'
 );
 select is(
   (select status from public.catalog_offers where item_id='e1200000-0000-4000-8000-000000000001' and code='digital-download-usd'),
-  'draft',
-  'dormant Stripe Connect evidence cannot activate an offer'
+  'active',
+  'separate Stripe Connect history cannot turn off the Admin-approved grace offer'
 );
 select is(
   (select can_sell_paid from public.get_creator_paid_sales_public_status(array['e1000000-0000-4000-8000-000000000002'::uuid])),
-  false,
-  'public seller availability remains fail closed'
+  true,
+  'public seller availability reflects the Admin-approved manual grace state'
 );
-select throws_ok(
+select lives_ok(
   $$select public.create_stripe_pending_order(
     'e1000000-0000-4000-8000-000000000001',
     array[(select id from public.catalog_offers where item_id='e1200000-0000-4000-8000-000000000001' and code='digital-download-usd')],
     'eligibility-checkout-000001','eligibility-buyer@example.test'
   )$$,
-  '55000','One or more offers are unavailable.','a dormant creator offer cannot create an order'
+  'an Admin-approved Creator digital offer can create a durable checkout order'
 );
 select is(
   (select count(*)::integer from public.creator_payout_accounts

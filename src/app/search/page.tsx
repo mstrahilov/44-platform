@@ -13,6 +13,7 @@ import { loadPlatformSearchIndex, type SearchProfile } from '@/lib/domain/search
 import { setDiscussionLike } from '@/lib/domain/community';
 import { useAuth } from '@/lib/useAuth';
 import { Ui44TextInput } from '@/components/ui44/Inputs';
+import { searchSupportArticles, supportArticleHref } from '@/lib/supportArticles';
 
 type SearchIndex = {
   products: Product[];
@@ -107,7 +108,8 @@ function SearchContent() {
     () => profiles.filter(profile => profileMatchesQuery(profile, query)).slice(0, 8),
     [profiles, query],
   );
-  const hasResults = productMatches.length + postMatches.length + profileMatches.length > 0;
+  const supportMatches = useMemo(() => searchSupportArticles(query, 8), [query]);
+  const hasResults = productMatches.length + postMatches.length + profileMatches.length + supportMatches.length > 0;
   const replyCounts = useMemo(() => countById(replies, 'post_id'), [replies]);
   const likeCounts = useMemo(() => countById(likes, 'post_id'), [likes]);
   const likedIds = useMemo(() => new Set(
@@ -204,6 +206,26 @@ function SearchContent() {
                       onLike={() => { void toggleLike(post); }}
                       disabled={likingId === post.id}
                     />
+                  ))}
+                </div>
+              </HubSection>
+            )}
+
+            {supportMatches.length > 0 && (
+              <HubSection title="Help">
+                <div className="support-article-list ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
+                  {supportMatches.map(article => (
+                    <Link
+                      key={article.slug}
+                      href={supportArticleHref(article)}
+                      className="support-article-row ui44-list-row ui44-list-row-interactive"
+                    >
+                      <span className="support-article-row-copy">
+                        <span className="support-article-row-title">{article.title}</span>
+                        <span className="os-type-meta">{article.description}</span>
+                      </span>
+                      <span className="support-card-arrow" aria-hidden="true">›</span>
+                    </Link>
                   ))}
                 </div>
               </HubSection>

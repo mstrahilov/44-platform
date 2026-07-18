@@ -36,7 +36,7 @@ export async function getLibraryItemBundle(userId: string, libraryEntryId: strin
   const row = await getDetailedLibraryItem(userId, libraryEntryId);
   if (!row?.products) return null;
 
-  const [trackResult, achievementResult, unlockedResult, assetResult, videoResult, nativeContent, beatLicenses] = await Promise.all([
+  const [trackResult, achievementResult, unlockedResult, assetResult, downloadEntitlementResult, videoResult, nativeContent, beatLicenses] = await Promise.all([
     supabase
       .from('tracks')
       .select('id,item_id,number,title,duration_seconds,audio_url,download_url')
@@ -53,12 +53,20 @@ export async function getLibraryItemBundle(userId: string, libraryEntryId: strin
       .eq('user_id', userId)
       .eq('item_id', row.item_id),
     supabase.rpc('list_item_asset_manifest', { target_item_id: row.item_id }),
+    supabase
+      .from('entitlements')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('item_id', row.item_id)
+      .eq('entitlement_type', 'download')
+      .eq('status', 'active')
+      .maybeSingle(),
     supabase.from('item_video_embeds' as never).select('id,item_id,title,youtube_video_id,sort_order').eq('item_id', row.item_id).order('sort_order'),
     getPublicNativeContent(row.item_id),
     beatReviewSurfacesEnabled ? listBuyerBeatLicenses(row.item_id) : Promise.resolve([]),
   ]);
 
-  const error = trackResult.error || achievementResult.error || unlockedResult.error || assetResult.error;
+  const error = trackResult.error || achievementResult.error || unlockedResult.error || assetResult.error || downloadEntitlementResult.error;
   if (error) throw error;
 
   const authorizedAssets = await Promise.all(((assetResult.data ?? []) as ItemAssetManifestRow[]).map(async asset => {
@@ -80,6 +88,7 @@ export async function getLibraryItemBundle(userId: string, libraryEntryId: strin
     videoEmbeds: (videoResult.data as ReleaseVideoEmbed[] | null) ?? [],
     nativeContent,
     beatLicenses,
+    hasActiveDownload: Boolean(downloadEntitlementResult.data),
   };
 }
 

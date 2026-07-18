@@ -1,4 +1,5 @@
 import { commerceAdminClient } from '@/lib/server/commerce';
+import { processEmailOutbox } from '@/lib/server/email';
 import {
   printfulErrorResponse,
   printfulStoreId,
@@ -203,6 +204,10 @@ export async function POST(request: Request) {
         target_tracking_number: shipment && typeof shipment.tracking_number === 'string' ? shipment.tracking_number.slice(0, 200) : null,
       } as never);
       if (email.error) throw email.error;
+      // A verified fulfillment transition owns the durable queue. Sending is
+      // best-effort here so a mail-provider outage cannot make Printful replay
+      // an already-persisted fulfillment event; the recovery worker retries it.
+      await processEmailOutbox(5).catch(() => undefined);
     }
     return Response.json({ received: true });
   } catch (error) {

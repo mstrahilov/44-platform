@@ -57,8 +57,14 @@ export default function OrdersPage() {
                   <div className="dashboard-row-subtitle">{formatOrderDate(order)} · {orderStatusLabel(order.status)}</div>
                   {order.lines.map(line => (
                     <div className="dashboard-row-meta ui44-meta-offset" key={line.id}>
-                      {line.quantity > 1 ? `${line.quantity} × ` : ''}{line.item_title} · {line.offer_title}
-                      {line.fulfillment_status !== 'not_required' ? ` · ${fulfillmentLabel(line.fulfillment_status)}` : ''}
+                      <span>{line.quantity > 1 ? `${line.quantity} × ` : ''}{line.item_title} · {line.offer_title}
+                        {line.fulfillment_status !== 'not_required' ? ` · ${fulfillmentLabel(line.fulfillment_status)}` : ''}
+                      </span>
+                      {line.offer_type === 'digital_download' && line.has_active_download && line.library_entry_id ? (
+                        <span className="ui44-section-gap-before">
+                          <Link className="os-button os-button-secondary os-button-compact" href={`/library/item/${line.library_entry_id}#downloads`}>Download</Link>
+                        </span>
+                      ) : null}
                     </div>
                   ))}
                   {order.status === 'legacy_unverified' ? (

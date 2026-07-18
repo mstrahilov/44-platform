@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { PageShell, HubHero, SectionHeader } from '@/components/Ui';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useTopbarBack } from '@/components/TopbarContext';
-import { UploadField } from '@/components/UploadField';
+import { AUDIO_UPLOAD_ACCEPT, UploadField } from '@/components/UploadField';
 import { TagMultiSelect } from '@/components/TagMultiSelect';
 import { Ui44SelectInput, Ui44TextInput, Ui44Textarea } from '@/components/ui44/Inputs';
 import {
@@ -42,9 +42,10 @@ import type { Database } from '@/lib/database.types';
 import { ExternalLinksEditor } from '@/components/ExternalLinksEditor';
 import { activeExternalLinkDrafts, listExternalLinkPlatforms, materializeExternalLinkDrafts, replaceOwnedItemExternalLinks, validateExternalLinkDrafts, type ExternalLinkDraft, type ExternalLinkPlatform } from '@/lib/domain/externalLinks';
 import { replaceStudioSampleFiles, saveStudioBookContent } from '@/lib/domain/nativeContent';
-import { StudioBookFields, StudioSamplePreviewFields, type DraftSamplePreview } from '@/components/StudioNativeContentFields';
+import { StudioBookFields, StudioSamplePreviewFields, validateStudioBookMetadata, type DraftSamplePreview } from '@/components/StudioNativeContentFields';
 import { clearStudioFormRecovery, readStudioFormRecovery, writeStudioFormRecovery } from '@/lib/studioFormRecovery';
 import { creatorPaidSalesMessage, loadCreatorPaidSalesState, type CreatorPaidSalesState } from '@/lib/domain/creatorCommerce';
+import { normalizeOptionalReleaseDate, releaseYear } from '@/lib/releaseDates';
 
 function formatPriceInput(value: string) {
   const normalized = value.replace(/[^\d.]/g, '');
@@ -153,6 +154,7 @@ export default function EditProductPage() {
   const [ownerId, setOwnerId] = useState('');
   const [itemStatus, setItemStatus] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [activeUploadCount, setActiveUploadCount] = useState(0);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -348,9 +350,17 @@ export default function EditProductPage() {
     setTracks(current => current.map((track, trackIndex) => (trackIndex === index ? { ...track, ...patch } : track)));
   }
 
+  function handleUploadActivity(uploading: boolean) {
+    setActiveUploadCount(current => Math.max(0, current + (uploading ? 1 : -1)));
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!user) return;
+    if (activeUploadCount > 0) {
+      setError('Wait for every file upload to finish before saving.');
+      return;
+    }
     if (isMerchProduct && profileRole !== 'admin') {
       setError('Merch management is currently limited to 44 administrators.');
       return;
@@ -361,6 +371,10 @@ export default function EditProductPage() {
     const cleanTitle = title.trim();
     if (!cleanTitle || !categoryId || !storeTypeId) {
       setError('Please fill out the title and choose an Item Type.');
+      return;
+    }
+    if (!coverUrl.trim()) {
+      setError(`Upload ${isMerchProduct ? 'a product image' : 'artwork'} before saving.`);
       return;
     }
     const visibleTracks = tracks.slice(0, Number(trackCount || '0')).map((track, index, list) => ({
@@ -381,6 +395,13 @@ export default function EditProductPage() {
     if (section.id === 'assets' && samplePreviews.some(sample => !sample.title.trim() || !sample.previewUrl.trim())) {
       setError('Each sample preview needs a name and uploaded audio.');
       return;
+    }
+    if (section.id === 'books') {
+      const bookError = validateStudioBookMetadata(bookTotalPages, bookSamplePages, bookLanguage);
+      if (bookError) {
+        setError(bookError);
+        return;
+      }
     }
     const featureValidationError = validateReleaseFeatureState(featureState, section.id);
     if (featureValidationError) {
@@ -408,6 +429,7 @@ export default function EditProductPage() {
     const priceCents = creatorCommerceUnavailable ? savedPriceCents : (isFree ? 0 : Math.round(priceNumber * 100));
     const localPriceNumber = Number(localPrice || '0');
     const localPriceCents = localPrice.trim() && Number.isFinite(localPriceNumber) ? Math.max(0, Math.round(localPriceNumber * 100)) : null;
+    const normalizedReleaseDate = normalizeOptionalReleaseDate(releaseDate);
 
     const updatePayload = {
       title: title.trim(),
@@ -427,8 +449,8 @@ export default function EditProductPage() {
       merch_shipping_scope: isMerchProduct ? (merchFulfillmentMode === 'deliver' ? 'local' : merchShippingScope) : null,
       read_url: null,
       download_url: null,
-      year: releaseDate ? Number(releaseDate.slice(0, 4)) : (year ? Number(year) : null),
-      release_date: releaseDate || null,
+      year: releaseYear(normalizedReleaseDate, year),
+      release_date: normalizedReleaseDate,
       creator: creatorName,
     };
 
@@ -629,8 +651,8 @@ export default function EditProductPage() {
                   </Ui44SelectInput>
                 </label>
                 <label className="dashboard-field">
-                  <div className="dashboard-field-label">Release Date</div>
-                  <Ui44TextInput className="os-input-field" type="date" value={releaseDate} onChange={e => { setReleaseDate(e.target.value); setYear(e.target.value.slice(0, 4)); }} />
+                  <div className="dashboard-field-label">Release Date (Optional)</div>
+                  <Ui44TextInput className="os-input-field release-date-input" type="date" value={releaseDate} onChange={e => { setReleaseDate(e.target.value); setYear(e.target.value.slice(0, 4)); }} />
                 </label>
                 <label className="dashboard-field">
                   <div className="dashboard-field-label">Track Count</div>
@@ -643,7 +665,7 @@ export default function EditProductPage() {
               </div>
             ) : (
               <div className="dashboard-form-grid dashboard-form-grid-3 ui44-form-grid">
-                <label className="dashboard-field"><div className="dashboard-field-label">{isMerchProduct ? 'Drop Year' : 'Release Date'}</div>{isMerchProduct ? <Ui44TextInput className="os-input-field" value={year} onChange={e => setYear(e.target.value.replace(/\D/g, '').slice(0, 4))} /> : <Ui44TextInput className="os-input-field" type="date" value={releaseDate} onChange={e => { setReleaseDate(e.target.value); setYear(e.target.value.slice(0, 4)); }} />}</label>
+                <label className="dashboard-field"><div className="dashboard-field-label">{isMerchProduct ? 'Drop Year' : 'Release Date (Optional)'}</div>{isMerchProduct ? <Ui44TextInput className="os-input-field" value={year} onChange={e => setYear(e.target.value.replace(/\D/g, '').slice(0, 4))} /> : <Ui44TextInput className="os-input-field release-date-input" type="date" value={releaseDate} onChange={e => { setReleaseDate(e.target.value); setYear(e.target.value.slice(0, 4)); }} />}</label>
                 {!merchUsesLocalOnlyPricing ? (
                   <label className="dashboard-field">
                     <div className="dashboard-field-label">{isMerchProduct ? 'Global Price' : 'Price'}</div>
@@ -812,6 +834,7 @@ export default function EditProductPage() {
               buttonLabel={isMerchProduct ? 'Upload product image' : 'Upload artwork'}
               hideActionsWhenPreviewed={!isMerchProduct}
               onChange={setCoverUrl}
+              onUploadingChange={handleUploadActivity}
             />
 
             {needsDigitalFile ? (
@@ -824,6 +847,7 @@ export default function EditProductPage() {
                 accept={section.id === 'books' ? 'application/pdf,.pdf' : 'application/zip,.zip'}
                 buttonLabel={section.id === 'books' ? 'Upload full PDF' : 'Upload full pack ZIP'}
                 onChange={setItemFileUrl}
+                onUploadingChange={handleUploadActivity}
               />
             ) : null}
               </div>
@@ -840,10 +864,11 @@ export default function EditProductPage() {
                 onSamplePagesChange={setBookSamplePages}
                 languageCode={bookLanguage}
                 onLanguageCodeChange={setBookLanguage}
+                onUploadingChange={handleUploadActivity}
               />
             ) : null}
 
-            {section.id === 'assets' ? <StudioSamplePreviewFields userId={user.id} samples={samplePreviews} onChange={setSamplePreviews} /> : null}
+            {section.id === 'assets' ? <StudioSamplePreviewFields userId={user.id} samples={samplePreviews} onChange={setSamplePreviews} onUploadingChange={handleUploadActivity} /> : null}
 
             {isMusicProduct ? (
               <section className="dashboard-form-section studio-tracks-section">
@@ -872,12 +897,13 @@ export default function EditProductPage() {
                             folder="tracks/audio"
                             userId={user.id}
                             value={track.audioUrl}
-                            accept="audio/*"
+                            accept={AUDIO_UPLOAD_ACCEPT}
                             buttonLabel="Upload audio"
                             previewKind="none"
                             hideLabel
                             hideSuccessMessage
                             onChange={nextValue => updateTrack(index, { audioUrl: nextValue })}
+                            onUploadingChange={handleUploadActivity}
                             onAudioMetadata={durationSeconds => updateTrack(index, { durationSeconds: String(durationSeconds) })}
                           />
                         </div>
@@ -914,7 +940,9 @@ export default function EditProductPage() {
               </div>
               <div className="dashboard-form-actions-right">
                 <Link className="os-button os-button-secondary" href={section.href} onClick={() => clearStudioFormRecovery(recoveryKey)}>Cancel</Link>
-                <button className="os-button os-button-primary" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button>
+                <button className="os-button os-button-primary" type="submit" disabled={saving || activeUploadCount > 0}>
+                  {activeUploadCount > 0 ? 'Uploading files…' : saving ? 'Saving…' : 'Save Changes'}
+                </button>
               </div>
             </div>
           </form>

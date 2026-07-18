@@ -12,7 +12,7 @@ import { browseIndexHref, getProductExperience, productBrowseHref, productLibrar
 import { creatorHref } from '@/lib/platform';
 import { ProductGrid, ProductCard } from '@/components/Ui';
 import { ProductReviewsSection } from '@/components/ProductReviewsSection';
-import { ProductDetailHeader, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
+import { LibraryVideoEmbedsSection, ProductDetailHeader, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { addToCart, useCart } from '@/lib/cart';
@@ -34,6 +34,7 @@ import { beatReviewSurfacesEnabled, loadBeatCatalogSummaries } from '@/lib/domai
 import { COMMERCE_TEST_MODE, PUBLIC_PURCHASES_AVAILABLE, PURCHASING_COMING_SOON_TITLE, paidSalesUiAvailable } from '@/lib/commerceAvailability';
 import { listActiveMerchVariants, type MerchVariant } from '@/lib/domain/merchVariants';
 import { listPublicMerchImages, type MerchProductImage } from '@/lib/domain/merchImages';
+import { listReleaseVideoEmbeds, type ReleaseVideoEmbed } from '@/lib/domain/releaseFeatures';
 
 type ProductTrack = {
   id: string;
@@ -49,7 +50,7 @@ export default function ProductPage() {
   return <ProductStoreDetail identifier={identifier} />;
 }
 
-export function ProductStoreDetail({
+function ProductStoreDetail({
   identifier,
   backHref,
   backLabel,
@@ -83,6 +84,7 @@ export function ProductStoreDetail({
   const [loading, setLoading] = useState(true);
   const [bookContent, setBookContent] = useState<BookContent | null>(null);
   const [sampleFiles, setSampleFiles] = useState<SamplePackFile[]>([]);
+  const [videoEmbeds, setVideoEmbeds] = useState<ReleaseVideoEmbed[]>([]);
   const [merchVariants, setMerchVariants] = useState<MerchVariant[]>([]);
   const [merchImages, setMerchImages] = useState<MerchProductImage[]>([]);
   const [selectedMerchVariantId, setSelectedMerchVariantId] = useState<string | null>(null);
@@ -100,6 +102,7 @@ export function ProductStoreDetail({
       setTracks([]);
       setBookContent(null);
       setSampleFiles([]);
+      setVideoEmbeds([]);
       setMerchVariants([]);
       setMerchImages([]);
       setSelectedMerchVariantId(null);
@@ -139,8 +142,12 @@ export function ProductStoreDetail({
           setProduct({ ...data });
         }
         if (releasePage || getProductExperience(data) === 'music') {
-          const trackRows = await listPlayableItemTracks(data.id);
+          const [trackRows, embeds] = await Promise.all([
+            listPlayableItemTracks(data.id),
+            listReleaseVideoEmbeds(data.id),
+          ]);
           setTracks(trackRows.sort((a, b) => trackOrder(a) - trackOrder(b)));
+          setVideoEmbeds(embeds);
         }
 
         setRelated(await listRelatedCatalogItems(data));
@@ -369,6 +376,14 @@ export function ProductStoreDetail({
   const releaseMeta = isMerch
     ? [merchTag.toUpperCase(), merchPriceLabel]
     : [(product.item_type || productMeta(product)).toUpperCase(), ...(product.year ? [String(product.year)] : [])];
+  const productDetails = buildProductDetails({
+    product,
+    experience: productExperience,
+    tracks,
+    inferredTrackDurations,
+    bookContent,
+    sampleFiles,
+  });
 
   return (
     <div className="view-detail-single">
@@ -499,6 +514,10 @@ export function ProductStoreDetail({
           </div>
         ) : null}
       </div> : null}
+
+      {isReleasePage ? <LibraryVideoEmbedsSection embeds={videoEmbeds} /> : null}
+
+      <ProductDetailsSection details={productDetails} />
 
       {related.length > 0 && (
         <div className="view-section">
@@ -719,6 +738,68 @@ function getContentHeading(product: Product) {
   if (experience === 'book') return 'Book Sample';
   if (experience === 'asset') return product.item_type?.toLowerCase().includes('stem') ? 'Original Track' : 'Preview Samples';
   return 'Content';
+}
+
+type ProductDetail = { label: string; value: string };
+
+function buildProductDetails({
+  product,
+  experience,
+  tracks,
+  inferredTrackDurations,
+  bookContent,
+  sampleFiles,
+}: {
+  product: Product;
+  experience: ReturnType<typeof getProductExperience>;
+  tracks: ProductTrack[];
+  inferredTrackDurations: Record<string, number>;
+  bookContent: BookContent | null;
+  sampleFiles: SamplePackFile[];
+}) {
+  const releaseDate = formatProductReleaseDate(product.release_date, product.year);
+  const totalTrackSeconds = tracks.reduce((total, track) => total + (getTrackDurationSeconds(track, inferredTrackDurations) ?? 0), 0);
+  const tags = (product.browse_tags ?? []).map(tag => tag.label).filter(Boolean).join(', ');
+  return [
+    releaseDate ? { label: 'Release date', value: releaseDate } : null,
+    product.browse_category?.label ? { label: 'Category', value: product.browse_category.label } : null,
+    { label: 'Type', value: product.browse_type?.label || product.item_type || productMeta(product) },
+    tags ? { label: 'Tags', value: tags } : null,
+    experience === 'music' ? { label: 'Tracks', value: String(tracks.length) } : null,
+    experience === 'music' && totalTrackSeconds > 0 ? { label: 'Total length', value: formatTotalDuration(totalTrackSeconds) } : null,
+    experience === 'book' && bookContent?.total_pages ? { label: 'Pages', value: String(bookContent.total_pages) } : null,
+    experience === 'asset' ? { label: 'Samples', value: String(sampleFiles.length) } : null,
+  ].filter((detail): detail is ProductDetail => Boolean(detail?.value));
+}
+
+function ProductDetailsSection({ details }: { details: ProductDetail[] }) {
+  if (!details.length) return null;
+  return <section className="view-section product-details-section" aria-labelledby="product-details-title">
+    <h2 className="view-section-title" id="product-details-title">Product Details</h2>
+    <dl className="ui44-detail-list ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
+      {details.map(detail => <div className="view-row ui44-list-row ui44-list-row-detail" key={detail.label}>
+        <dt className="view-row-label ui44-detail-label">{detail.label}</dt>
+        <dd className="view-row-value ui44-detail-value">{detail.value}</dd>
+      </div>)}
+    </dl>
+  </section>;
+}
+
+function formatProductReleaseDate(releaseDate: string | null | undefined, year: number | null | undefined) {
+  if (!releaseDate) return year ? String(year) : '';
+  const parsed = new Date(`${releaseDate}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return year ? String(year) : '';
+  return parsed.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function formatTotalDuration(seconds: number) {
+  const totalSeconds = Math.max(0, Math.round(seconds));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const remainingSeconds = totalSeconds % 60;
+  if (hours > 0) return `${hours} hr ${minutes} min`;
+  if (minutes > 0) return `${minutes} min${remainingSeconds ? ` ${remainingSeconds} sec` : ''}`;
+  return `${remainingSeconds} sec`;
 }
 
 function BeatLicenseReviewPanel({ product }: { product: Product }) {

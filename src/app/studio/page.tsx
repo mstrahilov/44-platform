@@ -112,13 +112,13 @@ export default function StudioPage() {
   }, [user]);
 
   if (loading) {
-    return <PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>;
+    return <PageShell><main className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>;
   }
 
   if (!user) {
     return (
       <PageShell>
-        <div className="dashboard-page">
+        <main className="dashboard-page">
           <HubHero
             title="Studio"
             copy="Creator tools, catalog health, and earnings live here once you sign in."
@@ -127,7 +127,7 @@ export default function StudioPage() {
           <div className="ui44-centered-action">
             <Link href="/login" className="os-button os-button-primary">Log In</Link>
           </div>
-        </div>
+        </main>
       </PageShell>
     );
   }
@@ -135,7 +135,7 @@ export default function StudioPage() {
   if (profile && !isCreatorProfile(profile)) {
     return (
       <PageShell>
-        <div className="dashboard-page">
+        <main className="dashboard-page">
           <Ui44Panel overflow="visible" className="ui44-creator-gate">
             <h1 className="os-type-panel-title ui44-creator-gate-title">Creator Access Required</h1>
             <p className="os-type-body ui44-creator-gate-copy">
@@ -146,7 +146,7 @@ export default function StudioPage() {
               <Link href="/store" className="os-button os-button-ghost">Back to Store</Link>
             </div>
           </Ui44Panel>
-        </div>
+        </main>
       </PageShell>
     );
   }
@@ -184,7 +184,7 @@ export default function StudioPage() {
 
   return (
     <PageShell>
-      <div className="dashboard-page">
+      <main className="dashboard-page">
         <HubHero
           title="Studio"
           copy="Your creator workspace for catalog health, sales signals, and what should go live next."
@@ -251,7 +251,7 @@ export default function StudioPage() {
           {overview.updates.length > 0 && <StudioUpdatesSection updates={overview.updates} />}
         </div>
 
-      </div>
+      </main>
     </PageShell>
   );
 }
@@ -327,7 +327,7 @@ function StudioCreateMenu() {
           aria-expanded={open}
           onClick={() => setOpen(current => !current)}
         >
-          <span aria-hidden="true">+</span>
+          <span className="ui44-symbol-plus" aria-hidden="true">+</span>
         </button>
         {open && <div className="ui44-paper-menu page-filter-popover studio-create-popover" role="menu" aria-label="Add Studio content">
           {STUDIO_CREATE_ACTIONS.map(action => (
@@ -374,22 +374,22 @@ function StudioProductSection({
                 ? 'dashboard-status-pill dashboard-status-pill-success studio-publication-status'
                 : 'dashboard-status-pill studio-status-pill-draft studio-publication-status';
             return (
-            <Link key={product.id} href={id === 'beats' ? `/studio/beats/${product.id}` : `/studio/products/${product.id}`} className="dashboard-list-row studio-item-row ui44-list-row ui44-list-row-studio ui44-list-row-interactive">
+            <Link key={product.id} href={id === 'beats' ? `/studio/beats/${product.id}` : `/studio/products/${product.id}`} className={`dashboard-list-row studio-item-row ${issueCount > 0 ? 'studio-item-row-with-actions' : 'studio-item-row-no-actions'} ui44-list-row ui44-list-row-studio ui44-list-row-interactive`}>
               {product.cover_url || product.hero_url ? <Image className="studio-item-artwork" src={product.cover_url || product.hero_url || ''} alt="" width={56} height={56} unoptimized /> : <div className="studio-item-artwork studio-item-artwork-empty" aria-hidden="true" />}
-              <div className="dashboard-row-copy">
+              <div className="dashboard-row-copy studio-item-copy">
                 <div className="dashboard-row-title">{product.title}</div>
                 <div className="dashboard-row-subtitle">
                   {product.browse_type?.label || product.item_type || itemLabel}
                 </div>
                 <div className={publicationClass}>{publicationLabel}</div>
               </div>
-              <div className="dashboard-row-actions">
-                {issueCount > 0 ? (
+              {issueCount > 0 ? (
+                <div className="dashboard-row-actions">
                   <span title={health?.issue_messages.join(' ')} className="dashboard-status-pill studio-status-pill-draft ui44-badge">
                     {issueCount} {issueCount === 1 ? 'issue' : 'issues'}
                   </span>
-                ) : null}
-              </div>
+                </div>
+              ) : null}
             </Link>
             );
           })

@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * The 44OS context menu — the shared right-click primitive (44OS_UI.md §14).
+ * The 44OS context menu — the shared right-click primitive defined by 44OS_UI.md.
  * Right-click is reserved shell-wide by SystemShell; surfaces opt in by
  * calling `openContextMenu(event, entries)` from an onContextMenu handler.
  * One menu is open at a time; it closes on outside press, Escape, scroll,

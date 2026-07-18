@@ -1,626 +1,332 @@
 # 44OS Foundation
 
-This is one of the three active handoff documents for 44OS. Read it before changing architecture, routes, authentication, Supabase, mobile/PWA behavior, desktop packaging, or deployment behavior.
+This document is the architectural and operational source of truth for 44OS. It describes how the live system works now. It is not a project diary.
 
-The active handoff set is:
+The complete handoff is intentionally limited to three files:
 
-- `Other/44OS_FOUNDATION.md` - architecture, routes, data, auth, deployment, desktop stance.
-- `Other/44OS_UI.md` - visual system, interaction principles, and quality bar.
-- `Other/44OS_MILESTONES.md` - approved sequencing, current status, dependencies, and completion criteria.
+- `44OS_FOUNDATION.md` — product, architecture, data, security, providers, and operations.
+- `44OS_UI.md` — visual, interaction, responsive, and accessibility rules.
+- `44OS_MILESTONES.md` — only current work and its completion criteria.
 
-Do not revive deleted proposal documents or old SQL notes as active references. If a decision changes, update the relevant active docs in the same change.
+Read Foundation, then UI, then Milestones before making production-facing changes. When a decision changes, update every affected handoff file in the same change. Do not recreate retired proposal, research, setup, or runbook documents.
 
-Current launch-readiness source of truth: July 17, 2026. Foundation changes must be evaluated as one system across browser, iOS home-screen installation, authentication, streaming audio, Supabase, metadata, commerce providers, and route ownership.
+## Current production baseline
 
-## Production handoff — July 17, 2026
+Recorded July 18, 2026:
 
-This section supersedes older “local only,” “unapplied,” and July 15–16 deployment statements elsewhere in this document.
+- `https://44os.com` and `https://www.44os.com` serve the live Vercel application. The latest recorded Ready deployment is `dpl_6kUHQaE67eVAfsLXaLWxEQoGtjQ2`; `/api/health` passed against Supabase.
+- The app is Next.js App Router with React 19 and strict TypeScript. Supabase owns authentication and application data; Vercel hosts the app.
+- Linked Supabase history contains the reviewed forward migration chain through `20260718011000_m15_paid_book_download_access.sql`. Never rewrite an applied migration; add a reviewed forward migration.
+- The latest recorded full database gate passed clean replay, linked lint, and 22 pgTAP files with 543 assertions. Lint, strict typecheck, production build, launch smoke, mobile safe-area checks, analytics contract, commerce contract, hardening contract, and `git diff --check` also passed for the recorded release.
+- Public Member signup and eligible purchase presentation are enabled. Creator promotion, paid-sale eligibility, fulfillment confirmation, and payout eligibility remain server-authoritative.
+- Two controlled low-value digital orders completed the live payment/refund path. The latest Admin reconciliation checked both orders with zero mismatches. Refunded access was revoked without deleting order or Library history.
+- All eight launch Merch Items are synchronized, imaged, reviewed, and published: 44 T-Shirt, Sweatshirt, Hoodie, Windbreaker, Beanie, Hat, Bag, and Satchel. Legacy 44 Tote was removed after dependency checks.
+- Printful catalog import, quotes, and non-charging draft creation are enabled. Signed webhooks are configured. 44OS has no provider-confirmation action; the owner confirms manufacturing only inside Printful.
+- Hosted Supabase Auth mail and application transactional mail are live through Resend. `support@44os.com` is the monitored iCloud mailbox. Support web intake, newsletter synchronization, and newsletter delivery remain off.
+- Consent-gated analytics code is deployed but inert because no production Google measurement ID is configured.
+- The internal sanitized operational-error sink and Admin Errors view are active. Proven external alert delivery and distinct primary/backup responders are not yet assigned.
+- Wise payout infrastructure exists but batching, operator recording, reconciliation, and payout execution remain disabled; the payout emergency stop remains on.
+- Licensed Beats, creator Merch, international physical shipping, automated Printful confirmation, newsletters, and interactive runtime Items remain disabled or deferred.
+- The working tree intentionally contains the current multi-phase release as uncommitted changes on `main` after checkpoint `da0f2cbf`. Do not reset, clean, discard, broadly reformat, stage, commit, or rewrite this work without explicit owner direction.
 
-- Vercel production deployment `dpl_9ppAmGu9NsvbGeoSoLHRpCNniRfN` is `Ready`, serves `https://44os.com` and `https://www.44os.com`, and was created July 17, 2026 at 04:39 CDT. `/api/health` returns healthy with Supabase HTTP 200 from `iad1`. Privacy and Terms are live at `/legal/privacy` and `/legal/terms`.
-- Linked Supabase migration history is aligned through `20260717022000_m12_launch_commerce_activation.sql`. The earlier strict-replay exception was resolved for the current chain; clean replay, all 19 pgTAP files/494 assertions, typecheck, zero-warning lint, production build, and `git diff --check` passed before deployment.
-- Production `commerce_runtime_controls` has Stripe payments and Checkout enabled, immutable launch terms selected, `US` as the only physical shipping country, and `marketplace` launch scope. The client presentation emergency switch remains configured separately and should stay off until controlled live acceptance is complete.
-- Production Stripe server configuration includes the live secret, signed webhook secret, one active USD shipping rate, automatic tax, and separate Books, Music, Sample Pack, clothing, hat, and bag tax codes. The read-only live preflight passed charges, settlement payouts, Tax head-office/registration evidence, shipping rate, and webhook event coverage. No controlled live purchase/refund has yet been recorded in 44OS; production `commerce_orders` currently has zero rows.
-- Production Printful is connected with catalog import, shipping quotes, and non-charging draft creation enabled. Confirmation is disabled and 44OS contains no provider confirmation action. There are eight provider mappings: five reviewed, two draft, and one blocked. Only `44 Hoodie` and `44 Windbreaker` are published with active physical offers. The next catalog contract replaces manual Item mapping with a complete provider-store sync: Printful is authoritative for product presence, name, retail price, SKU, colors, sizes, availability, and cost; 44OS remains authoritative for imagery, publication, orders, and history. Mapped `44 Satchel` is the eighth launch product. Hidden unmapped `44 Tote` is removed only after a zero-dependency check.
-- Production application email tables/routes are deployed, but `delivery_enabled`, support web intake, and newsletter synchronization are all off. Hosted Supabase Auth already sends branded mail through Resend as `44OS <accounts@44os.com>`. `support@44os.com` is the monitored iCloud route. Production Resend webhook/worker acceptance remains outstanding.
-- Wise manual payout schema is deployed, selected provider is `wise_manual`, and all operational controls remain safely off: batching, operator recording, and reconciliation are disabled; emergency stop is on; there are no routes, tax documents, destinations, batches, or payouts. Historical Stripe Connect code/evidence stays dormant.
-- Licensed Beats, creator Merch, international physical shipping, automated Printful confirmation, newsletters, and Wise payout execution remain off.
+Open launch work belongs only in `44OS_MILESTONES.md`. Do not repeat an accepted production journey unless relevant code, configuration, provider state, or evidence changed.
 
-The strict release audit found one linked database-lint defect in the unsupported Stripe-event branch, stale generated database types, a nested PostCSS advisory, a root page that currently says `Store` instead of `44OS`, and a duplicated Printful Admin connection guard. These are implementation defects, not contract changes; Milestones P0 is the mandatory resume point.
+## Product model
 
-The working tree intentionally contains the complete multi-milestone release as uncommitted changes. Do not reset, clean, or discard it. A new chat must review `git status`, preserve all existing changes, and create a deliberate release checkpoint only after the owner approves that history operation.
+44 is the parent creative company. `forty four` is the recorded operator name; `44OS` is the platform brand. Final public legal copy still requires the exact registered entity spelling/type and public business address.
 
----
+44OS is a web-first creative operating system for fans, creators, collaborators, and clients. It should feel like a durable creative library and operating environment rather than an ad-driven social network.
 
-## 1. Product Definition
+Primary applications:
 
-44 is the parent creative company. 44OS is a web-first creative operating system for fans, creators, collaborators, and clients. It ships first as a Next.js app on Vercel and will later be wrapped for macOS and Windows.
+- **44OS/Home** — the branded discovery front door at `/`.
+- **Store** — public discovery and acquisition at `/store`.
+- **Library** — the signed-in user’s saved, owned, purchased, and unlocked Items.
+- **Community** — posts, questions, collaboration, replies, follows, and creator/fan connection.
+- **Radio** — public live listening through the shared player.
+- **Studio** — creator publishing and catalog management under `/studio`.
+- **Calendar** — creator Events and upcoming published releases.
+- **Admin** — server-authoritative People, Content, Errors, Payments, Email, and Fulfillment operations.
+- **Settings, Search, Support, Inbox, Orders, and profiles** — account and platform utilities.
 
-44OS exists to give underground creatives and their fans a home outside ad-driven, algorithm-driven platforms. The product should feel closer to a creator operating system than a social app: a place where people publish, collect, listen, read, explore, ask questions, follow each other, collaborate, sell work, and build cultural memory around releases.
+Product language:
 
-The launch mental model is:
+- `Item` is the permanent domain noun. The canonical table is `catalog_items`, the application type is `Item`, and the universal key is `item_id`.
+- User-facing copy says Browse, Library, Item, release, Music, Book, Sample Pack, Merch, Creator Update, earnings, and orders.
+- Do not present “Collection” as the Library model.
+- Resources and the old Services/Projects workflow are not part of the active application.
+- Store is discovery; Library is the durable record of a person’s relationship with an Item.
 
-- **Store**: the user-facing discovery and acquisition app.
-- **Library**: the signed-in user's owned, saved, purchased, or added items.
-- **Community**: public posts, questions, collaboration, follows, and creator/fan connection.
-- **Radio**: public listening surface with a live Now Playing hero.
-- **Studio**: signed-in creator workspace for publishing and catalog health; canonical routes live under `/studio`.
-- **Settings**: signed-in system, Dock, region, and account controls. On mobile, Settings is reached from the avatar/account menu rather than the Dock.
-- **Support**: public help surface.
-- **Search**: desktop topbar control and mobile Dock destination for global search.
+Core principles:
 
-Resources and the old Services/Projects workflow are removed. Inbox and standalone Profile remain account-level surfaces rather than v1 Dock destinations.
+- Creator-first and fan-respecting: no ad-first design, dark patterns, or algorithmic addiction loops.
+- Technology stays hidden while useful capability remains visible.
+- Catalog, identity, access, payments, and history use permanent internal IDs.
+- Provider state never becomes platform identity or silently overwrites 44OS history.
+- Advanced or unaccepted features fail closed and remain hidden.
 
-Language rules:
+## Stack and code ownership
 
-- User-facing copy says Browse, Library, Community, release, item, music, book, sample pack, apparel, merch, review, creator update, bonus content, earnings, and orders. Browse is the public discovery label; `/store` and the Store domain remain the internal route and architecture names.
-- UI copy should not use "Collection" as the visible Library model.
-- **Item** is the permanent domain noun. The canonical destination table is `catalog_items`, its application type is `Item`, and its universal foreign key is `item_id`. The current `products` name is migrated without changing UUIDs. User-facing copy should use "items" or format-specific nouns.
-- Services are excluded from the v1 polished Browse surface.
-
----
-
-## 2. North Star
-
-The closest strategic reference is Steam/Valve, adapted for music, books, art, services, games, interactive releases, and local creative economies:
-
-- 44 first uses 44OS to publish its own flagship work.
-- The platform then opens outward so friends, collaborators, and other creatives can publish their own work.
-- Over time, platform capabilities become creator tools, the way Steam grew from distribution into Workshop, achievements, communities, modding, and hardware/engine showcases.
-- Flagship 44 releases should demonstrate what the system can do, then those capabilities should become simple tools other creators can use without needing to code.
-
-Core doctrine:
-
-- **Creator-first, fan-respecting**: no dark patterns, no algorithmic addiction loops, no ad-first design.
-- **Technology hidden, power exposed**: creators should not need to understand achievement tracking, local/global pricing, Supabase events, file unlocks, or interactive-experience APIs.
-- **Library as memory**: when a fan adds a release, unlocks an achievement, receives bonus content, or joins an experience, the Library becomes the durable record of that relationship.
-- **Community as infrastructure**: posts, follows, questions, collaboration, profiles, and later messages exist so people can learn, find each other, support each other, and build creative scenes.
-- **Global reach, local fairness**: creators can sell globally at a fair global price while optionally offering local pricing that respects their home community and currency.
-- **Flagship experiences lead the system**: 44 should use major releases to prove new capabilities, then productize those capabilities for other creators.
-
-Version 1.0 should establish the correct foundation: Store, Library, profiles, Community, Studio publishing, global/local pricing groundwork, music achievements, Overachiever Bonus Content, and a visual/technical system that can grow into future interactive releases.
-
----
-
-## 3. Launch Journeys
-
-Important launch journeys:
-
-- **Fan journey**: discover work in Store, add it to Library, follow the creator, read creator updates, unlock achievements, discuss it in Community, and come back as the release evolves.
-- **Early creator journey**: join Community, ask practical questions, learn how publishing works, find collaborators, build confidence, publish a first release, then use updates and Library features to keep improving it.
-- **Working creator journey**: publish music/books/sample packs/merch, configure fair global/local pricing, add music achievements/bonus content where supported, post updates, interact with fans, and track catalog health in Studio.
-- **Collaborator journey**: find people through Community questions/collaboration, profiles, posts, and eventually Services/Projects.
-- **Flagship release journey**: experience a 44 release that demonstrates achievements, bonus content, behind-the-scenes material, Library memory, and eventually interactive 3D/Unity/WebGL unlocks.
-
-Creator-fan distance should be low:
-
-- Creator profiles connect posts, releases, Library items, updates, and future services.
-- Creator profiles and Item pages should act as cross-platform hubs. Creators may link their Spotify, Apple Music, Bandcamp, YouTube, Instagram, X, website, and other approved destinations; releases may link directly to their corresponding listening pages. These links extend creator reach and must use the existing structured external-link tables.
-- Store item pages explain the release and acquisition.
-- Library item pages show the deeper relationship: owned status, play/read/download, achievements, updates, bonus content, and future Launch actions.
-- Creator Updates are the 44OS version of patch notes, release notes, dev logs, and album/project updates.
-- Community is where fans and creators talk, ask, answer, collaborate, and build scenes without algorithmic pressure.
-
----
-
-## 4. Achievement Foundation
-
-V1.0 ships music achievements only.
-
-The v1 music achievement set is:
-
-- Front to Back
-- No Skips
-- Nightbird
-- Heavy Rotation
-- Joined the Orbit
-- Left Your Mark
-- Signal Boost
-- Overachiever
-
-Rules:
-
-- `First Wave` is removed from v1 because time-limited achievements can permanently block Overachiever for late listeners.
-- Book achievements are removed/hidden until the reader experience and trigger model are real.
-- Creators do not hand-edit achievement text or artwork during v1.
-- Launch release features are intentionally limited to Achievements, a named YouTube video embed, and an Item unlock granted through Overachiever. Art books, generic bonus content, commentary mode, behind-the-scenes media, and interactive/WebGL experiences are deferred product decisions rather than launch requirements.
-- Existing user unlocks must be preserved during any migration.
-
-Current code state:
-
-- `src/lib/achievementCatalog.ts` filters Library display/tracking to the eight v1 music codes.
-- `src/components/StudioReleaseFeatures.tsx` exposes the current music Achievements configuration. The launch feature set is being narrowed to Achievements, a named YouTube video embed, and an Overachiever Item unlock; speculative feature pickers remain hidden until separately defined.
-- Overachiever unlocks are treated as part of the Achievements feature, not as a separate generic Bonus Content feature.
-- Studio create/edit pages show release achievements only for music.
-- Studio music create/edit pages do not collect release descriptions. M15 Books and Sample Packs use the canonical Item `long_description` field for creator-written Store context; no parallel description storage exists.
-- The reviewed achievement and launch-foundation schema is captured in the canonical `supabase/migrations/20260712010000_44os_item_baseline.sql`.
-
-The linked Supabase project backing the live tester deployment is aligned with the repository through migration `20260717022000_m12_launch_commerce_activation.sql`. The earlier M13 release foundation remains deployed: profile headers are retired, existing music achievements are enabled without requiring a generic bonus-content editor, `item_play_events` is the append-only creator analytics source for validated playback starts across Store, Library, and Radio, creator Item removal is server-authoritative archival rather than hard deletion, protected downloads use entitlement-authorized private storage with short-lived signed URLs, creator/Item external links use validated owner-managed RPCs, and named YouTube release embeds are validated and review-snapshotted. The pre-M13 linked data backup is `supabase/backups/20260713_before_m13_ops_and_video_data.sql`; future migrations still require reviewed repository SQL, a linked dry-run, local replay/security gates, and post-apply history verification. Never make untracked dashboard-only schema changes.
-
-M14 Cross-Platform Reach is deployed in migration `20260712057200_m14_cross_platform_reach.sql`. It extends the existing `profile_external_links` and `item_external_links` tables with a reviewed platform registry, official-host/HTTPS validation, one-link-per-platform uniqueness, ordered atomic owner sync RPCs, creator approval for profile management, and Item ownership for release management. The registry is migration/service extensible; creators can save only active approved destinations. Remote migration history and an anonymous live RPC probe confirm the migration is present and unauthenticated mutation is denied.
-
-M15 Native Content Experiences is deployed in migrations `20260712058000_m15_native_books_and_sample_packs.sql`, `20260712059000_m15_reader_bookmarks.sql`, and `20260712060000_m15_native_description_edits.sql`. Books are PDF-only for this release: a protected full PDF asset powers the entitled Library reader and an optional separate public sample PDF powers Store preview. Reading page, progress percentage, appearance, and bookmarks synchronize server-side; read access, bookmark mutation, and protected retrieval require an active `read` entitlement or Item-management authority. Sample Packs retain a protected ZIP as the durable Library download and may expose ordered public audio previews with waveform metadata plus optional protected individual sample assets. Preview playback uses the one shared 44OS music player rather than a second audio engine. Free Library acquisition grants the required `read` or `download` entitlement while preserving existing Library rows, Item IDs, assets, and entitlement audit history. EPUB, protected offline caching, and archive extraction are not active formats.
-
-M15 Studio reliability follow-up keeps in-progress add/edit form values in versioned, account-and-Item-scoped browser storage and restores them after a refresh or mobile app switch. This is device-local form recovery, not a catalog Draft/publication state; successful save, intentional Cancel, or Item removal clears it. Auth token refreshes are keyed by stable user ID so window focus cannot rehydrate stale server values over unsaved edits. Public sample audio paths commit immediately after storage succeeds, with later waveform analysis merged through functional state updates. The PDF reader pins the mature PDF.js 4.10 compatibility line and loads its legacy-compatible client and worker; PDF.js 6 is intentionally excluded because its newer runtime assumptions fail on current deployed Safari/iOS devices.
-
-M15 closes with migration `20260712061000_m15_sample_pack_category_language.sql`. The former public Assets category is renamed in place to Sample Packs with canonical Store/Library URLs `/store/sample-packs` and `/library/sample-packs`; old Assets URLs are permanent compatibility redirects. Stable internal `experience_type = 'asset'`, generic `item_assets`, storage paths, Item/category UUIDs, Library rows, entitlements, and history remain unchanged. The reader toolbar uses the active 44OS opaque paper/ink theme, a read-only `current of total` count, circular bookmark/navigation/zoom controls, title-only desktop identity, and an explicit return path to the exact Library Item page that opened it. On desktop the reader now replaces only the main content pane: the left Sidebar and rounded outer app window remain visible, while the normal Topbar, page heading, and music player yield to the reader's 60px toolbar and full-height page stage. Mobile and compact-landscape readers retain their full-viewport treatment.
-
-M15 post-deployment item-detail polish keeps each Library detail page to one primary format action: Music uses Play, Books use Read, and Sample Packs use Download. Duplicate creator/navigation actions are removed from Book and Sample Pack Library pages, music Shuffle is removed from Library release pages, and closing the PDF reader returns to the originating Item detail without creating a back-button loop. Store Sample Pack details lead with creator-written Description, then Preview Samples; preview playback continues to use the shared global music player. Store and Library Item pages do not render a generic Product Details section.
-
-M16 separates creator Events and the Community Calendar from later Radio programming. Creator events are source-owned records with a creator owner, title, short description, `in_person`/`online`/`hybrid` format, timezone-aware start and optional end, optional venue/address, optional online destination, optional ticket/information URL, and explicit cancellation state. Required fields vary by format and URLs are validated server-side. Creators manage only their own events; 44 admins retain moderation authority. Times are stored as UTC instants plus an IANA timezone so Calendar and profile displays survive daylight-saving and cross-region use.
-
-Calendar is an aggregate read model, never an independently writable content source. Its first launch feed combines creator events with optional upcoming Item release dates while preserving each source record as the authority; adding a calendar date must not silently change Item publication state. Future approved Radio schedule entries may join the same read contract, but Radio submissions, review, media, programming blocks, and scheduling remain a separate later milestone. Do not create a writable polymorphic `calendar_entries` table or couple the current Radio player to an unfinished schedule workflow. The v1 Radio experience remains unchanged until that milestone is approved.
-
-M16 is deployed in `20260713010000_m16_creator_events_calendar.sql`. `creator_events` is the authoritative creator-owned source with owner/admin RPC boundaries, public visibility RLS, explicit lifecycle and moderation state, validated HTTPS destinations, UTC instants, and required IANA timezone names. `catalog_items.upcoming_release_at` plus `upcoming_release_timezone` remain optional informational source fields, but are intentionally not exposed in Studio Item editors; Event timing and timezone are event-only. Publication state and validation remain independent. `calendar_feed` is a bounded server-authoritative read function over visible events and published future Item releases. No generic Calendar table, Radio programming table, player change, or `radio_playlist_entries` change was introduced.
-
-Studio discovery remains content-led: one header plus menu on desktop and mobile is the sole creation affordance and links to the existing Music, Book, Event, Merch, and Sample Pack creation routes, while the overview renders only populated creator-content sections. This is presentation over the same owner-scoped records and permissions; it does not introduce a new role, content state, or write path. The unfinished bottom Earnings list stays hidden until payment presentation is explicitly reviewed.
-
-M17 Interactive Platform infrastructure uses the canonical Item spine. Existing `webgl` Item capability/asset types and legacy `launch_url` remain compatible, while reviewed runtime configuration now lives in one `interactive_builds` manifest per Item. An interactive build must use an approved isolated HTTPS origin and 44 admin review before becoming launchable. Entitled Library launches use expiring sessions with hashed opaque tokens; client progress is bounded and explicitly untrusted, while signed server progress and achievements pass through a separate service-only append path with nonce and external-event replay protection. The browser/Unity export never receives a signing secret and cannot grant achievements directly. Section 10 of this document owns the bridge, signature, sandbox, hosting, resource, compatibility, and future desktop-wrapper contract. Library launch actions open `/launch/[itemId]` in a separate desktop browser window/tab, isolating the Unity/WebGL runtime from the main 44OS app and player; the launch window uses its own immersive surface, while mobile and narrow layouts never request a launch session and instead show a full-viewport desktop/keyboard requirement. Runtime acceptance remains pending the real Unity export; Radio and `radio_playlist_entries` remain unchanged.
-
-Trusted-testing Studio saves re-run the server publication validator after all Item children are synchronized. A valid Item caught in the internal creation state becomes public automatically; creators still never receive a Draft/Published control.
-
----
-
-## 5. Stack And Workflow
-
-- App: Next.js App Router, React 19, TypeScript strict mode.
-- Styling: custom CSS in `src/app/globals.css` with `--os-*` tokens.
+- Framework: Next.js App Router, React 19, strict TypeScript.
+- Styling: `src/app/globals.css` plus `src/styles/44-ui/canonical-system.css`, using `--os-*` tokens.
 - Backend: Supabase via `@supabase/supabase-js`.
-- Deployment: Vercel, canonical domain `https://44os.com`.
-- Local scripts: `npm run dev`, `npm run lint`, `npm run build`, `npm run start`.
-- Shell entry: `src/app/layout.tsx`.
-- App registry: `src/lib/osApps.ts`.
-- Store/category route helpers: `src/lib/experience.ts` and category helpers in `src/lib/storeRoutes.ts`.
+- Deployment: Vercel, canonical origin `https://44os.com`.
+- Root shell: `src/app/layout.tsx`.
+- App/navigation registry: `src/lib/osApps.ts`.
+- Store routes: `src/lib/experience.ts` and `src/lib/storeRoutes.ts`.
 - Library routes: `src/lib/libraryRoutes.ts`.
+- Platform data access: typed services in `src/lib/domain` or narrowly scoped server/infrastructure modules. Pages, cards, and forms should not introduce direct table/RPC access.
+- Public catalog ordering: `comparePublicCatalogItems`.
 
-Quality gates for production-facing work:
+The production layout imports only the two canonical stylesheets above. `/44OS_UI` is the living component/token/class reference. Do not restore retired proposal stylesheets, legacy component trees, or a second visual system.
 
-- `npm run lint` must pass with zero errors and zero warnings.
-- `npm run build` must pass.
-- `npm run audit:ui-cleanup` must report zero unreachable components, dead
-  component exports, all-source CSS orphans, and exact-shadowed declarations
-  for any UI-system release.
-- `npm run dev` should start without Turbopack root warnings.
-- Route and auth changes require manual browser QA at desktop and mobile widths.
-- Mobile launch QA targets 390px and 430px widths and must include normal Safari plus an iOS home-screen installation.
-- Performance work must remove request fan-out before adding caches. Shared session state is subscribed once per app runtime; repeated cards must not independently call `getSession()` or query ownership one row at a time.
-- Section 9 of this document owns deployment, health, incident, restoration, and secret-rotation runbooks. `npm run test:smoke` is the executable anonymous launch check and `/api/health` is the bounded application/Supabase readiness endpoint.
-- `npm run test:schema-replay` rebuilds a disposable local Supabase database from repository migrations without seed data. It is the required migration-chain replay gate and must never target linked staging or production. The launch smoke also enforces one-hop canonical redirects, hidden reviewed-surface isolation, health response semantics, core security headers, English/title/main/zoom-safe document basics, a 5-second response ceiling, and a 2 MB HTML ceiling; thresholds may be tightened through environment variables as measured budgets mature.
-- `npm run test:security` executes transactional pgTAP role and publishing journeys against local Supabase. Its anonymous, member, creator, and admin fixtures always roll back; linked execution is prohibited. `src/instrumentation.ts` is the provider-neutral server error contract: it records release/runtime/route context and sanitized error identity while excluding headers, query values, user content, and tokens.
+## Shell, navigation, and playback
 
-UI implementation authority (locked July 15, 2026): the root layout imports
-only `src/app/globals.css` and `src/styles/44-ui/canonical-system.css` for the
-production cascade. The responsive `/44OS_UI` route owns
-`system-reference.css` and generates its component/token/class registries from
-current source. `Other/44OS_UI.md` is the active visual contract and contains
-the relevant completion evidence from the retired audit ledger. Ordinary panels use canonical Glass,
-Paper is transient-menu/selection only, and App Shell/Dock/Radio/reader/launch
-remain explicitly owned specialized compositions.
+44OS is one persistent operating-system shell. Navigation changes the workspace; it does not rebuild the surrounding environment.
 
----
+Shell ownership:
 
-## 6. Shell Architecture
-
-44OS is a persistent operating-system shell. Only the workspace content changes between apps.
-
-Core shell files:
-
-- `src/app/layout.tsx`: providers, theme bootstrap, shell, Dock, Topbar, workspace, and music player.
-- `src/components/Sidebar.tsx`: Dock rendering and app launch behavior.
-- `src/components/Topbar.tsx` and `src/components/TopbarContext.tsx`: topbar tabs, back labels, cart, notifications, and account menu.
-- `src/components/MusicPlayer.tsx`: persistent music player provider and bar.
-- `src/components/SystemShell.tsx`: global shell behavior.
-- `src/components/ContextMenu.tsx`: shared right-click menu primitive.
-
-Playback reliability rules:
-
-- The shared DOM audio element is the only playback engine. A user action must not start competing `load()`/`play()` paths.
-- Media source comparisons normalize URLs before deciding to reload; WebKit-normalized public URLs must not create false source changes.
-- Standard queues persist locally and restore only after storage hydration. Live Radio queues do not persist because they must be reloaded from the canonical playlist and resynchronized to the current live offset.
-- Returning from a long background suspension, BFCache restore, or offline transition marks the source for a one-time refresh on the next play action. Recovery preserves the standard-track position where possible.
-- Radio reloads its bundle when the app becomes visible and when the page is restored. Missing legacy track durations are inferred from audio metadata; new Studio audio uploads capture duration at upload time.
-- iOS/PWA QA must cover first play, pause/resume, background/foreground, reopen after a terminated session, offline/reconnect, queue advance, last-track behavior, Radio stop/resume, and Media Session controls.
-
-Mobile/PWA runtime rules:
-
-- `/` is the branded 44OS public front door and PWA start URL. It renders the discovery catalog directly without redirecting or showing `Store` as the page identity.
-- `/store` remains the explicit catalog route and may retain Store-specific title and metadata.
-- The manifest uses standalone display, portrait orientation, maskable artwork, dark launch colors, and scope `/`.
-- Audio and Supabase API responses must never be blindly cached by a service worker. Any offline/runtime cache must be allow-listed to app-shell static assets and versioned so a new deployment cannot strand an installed iOS app on stale code.
-- Returning through `pageshow`, BFCache, visibility changes, or reconnect must revalidate time-sensitive state without duplicating listeners or requests.
-- Safe areas, the mobile Topbar, player, and Dock are structural layout inputs; pages must not hardcode viewport offsets independently.
+- `SystemShell` owns global shell behavior.
+- `Sidebar` renders the desktop Dock from `osApps.ts`.
+- `Topbar` and `TopbarContext` own back navigation, Search, Cart, Notifications, and account menus.
+- `MusicPlayer` owns the only audio element and persistent queue/player UI.
+- `ContextMenu` is the shared right-click primitive.
 
 Navigation rules:
 
-- `src/lib/osApps.ts` is the single source of truth for Dock apps.
-- The Dock, Dock settings, route ownership, app labels, archived app descriptions, and app visibility derive from the registry.
-- Dock child routes may define `iconClass`, but desktop and mobile dropdowns render text-only child rows aligned under the parent label axis.
-- `getActiveOSAppId(pathname)` must map every route to exactly one owning app.
-- Desktop Search is a topbar control immediately left of Notifications. Mobile Search is a fixed bottom-Dock destination and is the preferred mobile search entry point.
-- Notifications are a topbar control, not a Dock app.
-- Signed-out users see public destinations only.
-
-Current Dock order:
-
-- Signed in desktop: Library, divider, Home (`/`), Radio, Community, spacer, Support, divider, Settings.
-- Signed out desktop: Home (`/`), Radio, Community, spacer, Support, Log In.
-- Mobile: Home (`/`), Library, Radio, Community, Search.
-
-Library and Settings are signed-in desktop Dock destinations. Library sits alone at the top of the signed-in desktop Dock. Studio does not appear in the Dock; creators enter through `Open Studio` on their own profile or the account menu. Inbox and Profile remain account-level surfaces. Support sits directly above the Settings divider on desktop. On mobile, Search replaces Settings in the Dock, and Settings is available from the avatar/account menu.
-
-Current topbar/account behavior:
-
-- Mobile top-left shows the 44 logo linking to `/`; contextual detail pages show a circular back button immediately beside it.
-- Signed-out mobile top-right shows a default profile icon linking to `/login`.
-- Signed-in account menu order is Profile, Inbox, Studio; mobile additionally shows Settings and hides Log Out.
-- The user-facing account label is Inbox, not Messages.
+- Desktop signed in: Library, Home, Radio, Community, Support, Settings, plus approved pinned Items.
+- Desktop signed out: Home, Radio, Community, Support, Log In.
+- Mobile: Home, Library, Radio, Community, Search.
+- Studio opens from the owner profile or account menu and is not a Dock app.
+- Notifications are a Topbar control. Inbox and Profile are account-menu surfaces.
+- Settings is in the mobile account menu rather than the mobile Dock.
+- Every route maps to exactly one owning app through `getActiveOSAppId`.
 
----
+Playback rules:
 
-## 7. Canonical Routes
+- The shared DOM audio element is the only playback engine. Never introduce a second player for previews or Radio.
+- Normalize media URLs before deciding to reload; avoid competing `load()`/`play()` paths.
+- Standard queues persist after storage hydration. Live Radio queues do not persist and resynchronize from the canonical playlist.
+- Visibility, BFCache restore, and reconnect may trigger one bounded refresh without duplicating listeners or requests.
+- Repeated cards must not independently fetch the same session or ownership state.
+- Audio and Supabase responses must never be blindly cached by a service worker.
 
-Canonical public routes:
+## Canonical routes
 
-- `/` - branded 44OS discovery front door. It shares the catalog data and sections used by Store but presents 44OS—not Store—as the document/page identity.
-- `/store` - Store front door.
-- `/store/[category]` - Store category: music, books, sample-packs, merch.
-- `/store/item/[identifier]` - Store item detail. Resolve by slug first where available; id fallback is supported.
-- `/cart` and `/checkout` - acquisition flow.
-- `/community` - Community front door.
-- `/community` - Community posts with an All Posts / Following filter.
-- `/community/questions` and `/community/collaboration` - dedicated Community views.
-- `/radio` - Radio.
-- `/support` - Support.
-- `/search` - Search.
-- `/login` - authentication.
-- `/notifications` - signed-in notification center launched from the topbar.
+Public:
 
-Canonical signed-in routes:
+- `/` — branded `44OS` discovery front door; it does not redirect.
+- `/store` and `/store/[category]` — Store and Music, Books, Sample Packs, or Merch categories.
+- `/store/item/[identifier]` — public Item detail, resolving slug first with ID fallback.
+- `/cart`, `/checkout` — acquisition flow.
+- `/community`, `/community/questions`, `/community/collaboration`, `/community/thread/[id]` — Community.
+- `/radio`, `/calendar`, `/support`, `/support/[slug]`, `/search`, `/login`.
 
-- `/library` - Library front door.
-- `/library/[category]` - Library category.
-- `/library/item/[id]` - owned Library item detail using `library_entries.id`.
-- `/profile` and `/profile/[username]` - profile surfaces.
-- `/inbox` - signed-in direct-message inbox, surfaced through the account menu.
-- `/studio` and Studio subroutes - creator workspace.
-- `/settings` - Settings entry. The page is sectioned into Account, Notifications, Region, and Appearance; legacy `?tab=` links are compatibility anchors only.
+Signed in:
 
-Compatibility and legacy policy:
+- `/library`, `/library/[category]`, `/library/item/[id]`.
+- `/profile`, `/profile/[username]`, `/profile/edit`.
+- `/inbox`, `/conversation/[id]`, `/notifications`, `/orders`, `/settings`.
+- `/studio` and its Music, Book, Sample Pack, Beat, Event, Update, earnings, payout, and order routes.
+- `/reader/[itemId]` for entitled Books.
+- `/launch/[itemId]` for an enabled interactive build.
+- `/admin` and its bounded operational routes for administrators.
 
-- `/` does not redirect. Links shared from the root stay at `https://44os.com/` and use branded 44OS metadata.
-- `/browse`, `/browse/[category]`, and `/browse/item/[identifier]` redirect to Store equivalents.
-- `/product/[id]` resolves as a compatibility hop to `/store/item/[identifier]`.
-- `/collection` redirects to `/library`; `/collection/item/[kind]/[id]` redirects to `/library/item/[id]`.
-- `/music`, `/books`, `/assets`, `/merch`, `/shop`, and old typed `/discover` paths redirect to Store categories.
-- `/studio` is the canonical creator-management route tree. `/dashboard` and every nested Dashboard URL are permanent compatibility redirects to the corresponding Studio path; no Dashboard page implementation may be reintroduced.
-- Application pages and UI components consume typed domain services for platform data. Direct Supabase table/RPC calls belong in `src/lib/domain` or a narrowly scoped infrastructure module, not in routes, cards, or forms.
-- `/library/item/[kind]/[id]` remains as a legacy compatibility route and redirects to `/library/item/[id]`.
-- `/dashboard` and dashboard subroutes redirect to Studio equivalents.
-- `/community/following` redirects to `/community?filter=following`.
-- `/community/thread/[id-or-slug]` is the canonical regular post detail page. Community feed rows and reply-count affordances should navigate there instead of expanding inline reply drawers on `/community`.
-- Removed Resources and Services/Projects URLs intentionally return not found; they are not compatibility surfaces.
-- Compatibility redirects are centralized in `next.config.ts` and resolve directly to one canonical destination. Obsolete React implementations under legacy Music, Books, Assets, Merch, Browse, Collection, Product, Community-profile, Home, and Studio-prototype trees were removed in M13. `/studio` is the only catalog list and post-save return surface; the two `/studio/products` editor routes remain canonical.
-- Do not add vanity redirects unless there is a real public link to preserve.
+Compatibility redirects are centralized in `next.config.ts` and must go directly to one canonical destination. Current compatibility includes Browse to Store, Collection to Library, Product to Store Item, Dashboard to Studio, Assets to Sample Packs, and old category routes to their Store equivalents. Removed Resources and Services/Projects routes intentionally return not found.
 
----
+Private routes, previews, Admin, Studio, Library, Checkout, Orders, launch sessions, and protected asset URLs must not become search results.
 
-## 8. Supabase Contract
+## Data and authorization model
 
-Supabase is the staging source of auth, user, catalog, community, messaging, and commerce state until public launch. Treat it carefully, but optimize for settling the correct foundation before testers return.
+Permanent Item identity is shared across Store, Library, Community, Studio, commerce, and future interactive experiences.
 
-The approved destination treats `catalog_items.id` as the permanent Item identity shared by Store, Library, and Community. Existing `products.id` values are preserved during the migration. The additive migration path, typed content spine, capability registry, entitlement separation, and retirement sequence are owned by `44OS_MILESTONES.md`. Current tables remain valid until their milestone cutover is verified; documentation of the destination does not authorize skipping preservation or rollback steps.
+Item lifecycle is `draft` → `published` → `archived`:
 
-Item lifecycle is `draft` → `published` → `archived`. A creator may move an active Item between draft and published, but removal calls the authenticated `archive_owned_item` operation. Archival hides the Item and all offers from Store and active Studio views while retaining its permanent ID, Library relationships, entitlements, `entitlement_events`, tracks, achievements, protected assets, and creator updates for authorized Library users. Direct anonymous/authenticated deletion is revoked, and archived Items cannot be republished through normal creator updates. Service-role hard deletion is emergency maintenance only and must never be used as a creator workflow.
+- Creator removal is archival, not hard deletion.
+- Archival hides active Store/Studio presentation while preserving IDs, assets, Library relationships, entitlements, achievements, orders, and audit history.
+- Direct anonymous/authenticated Item deletion is revoked.
+- Service-role hard deletion is emergency maintenance only.
+- During trusted testing, approved creators save directly; server validation decides whether a valid Item is published. Creators do not receive Draft/Published switches.
+- The submission-review schema exists but creator-facing review remains disabled until explicitly activated.
 
-Current access and commerce stance:
+Core data roles:
 
-- Public listening is a catalog capability, not a subscription entitlement. Music may remain fully streamable without being saved or purchased.
-- `Listen` is free and requires neither a purchase nor a Library relationship.
-- `Add to Library` is a free save for returning, organization, progress, achievements, and creator updates, backed by a zero-cost `library_access` offer and server-issued entitlement.
-- A downloadable copy is a separate `digital_download` offer; physical editions use `physical_purchase`. Their prices and activation do not change whether an Item can be streamed or saved.
-- `Buy Download` is an optional creator-supporting downloadable copy. Physical Items use `Add to Cart`; the active offer snapshot determines what is actually purchasable.
-- Music discovery pages are price-neutral. Price belongs to the optional purchase step, where the user can understand exactly what they are buying; it never implies that listening or saving requires payment.
-- The first paid boundary includes approved ordinary Books, Music downloads, Sample Packs, and 44-owned physical Merch through Stripe-hosted Checkout. Printful is the Merch fulfillment provider and Wise is used only for later creator payouts. Licensed Beats, creator Merch, multiple physical shipping countries, PayPal, Stripe Connect payouts, and Stripe Global Payouts remain disabled.
-- The business/operator name is `forty four`; `44OS` is its platform brand. Activation still requires the exact registered entity spelling/type/TIN to match Wise, Stripe, tax, and settlement documentation; tax registrations and policy text to be approved; shipping/inventory facts to be supplied; and provider acceptance to pass. No placeholder card form may create a paid order or entitlement.
-- Public Checkout presentation and creator payouts remain disabled until their controlled activation gates pass. Provider credentials alone must never activate commerce: production Checkout and Stripe database controls are active for the selected owned-Merch boundary, but the independent public-presentation switch remains off and all other payment/payout scopes stay fail-closed.
-- The July 17 operating decision changes the target from a free-only creator launch to creator earnings with a Wise payout path. Paid sales still activate creator-by-creator only after the ordered database/application release, approved creator terms, tax onboarding, Wise recipient readiness, and payment/payout acceptance. Before that, saved creator prices remain locked and no enabled purchase state may render.
-- Never collect PayPal email or begin Stripe connected-account onboarding. Launch creator payout setup stores an encrypted Wise email-to-claim address and masked display only; Wise collects the recipient's bank details through its secure claim flow. 44OS stores no bank numbers and creates no Wise API transfer at launch.
-- Creator earnings, immutable monthly payout batches/items, tax-withholding facts, operator Wise evidence, and independent reconciliation use private server-authoritative ledgers. Accrued or pending earnings are not `Available` or `Paid`; only independently reconciled Wise evidence may create the append-only payout debit and `Paid` state.
-- Paid launch sellers are natural persons only; entity sellers are blocked/waitlisted. A seller who certifies U.S.-person status follows W-9; a foreign individual follows W-8BEN. W-8BEN-E is intentionally absent because foreign entities are intentionally absent. Special individual cases that may require W-8ECI or Form 8233 stop for professional review. A qualified tax professional must approve income classification, source, treaty, withholding, Form 1042/1042-S, 1099, electronic certification, retention, and creator terms before payouts. An EIN and Illinois registration do not resolve those payee-level decisions. The consolidated contract is in section 11 below.
+- `catalog_items`, `item_categories`, capabilities, members, Tags, tracks, assets, external links, videos, and Events describe Items and creators.
+- `library_entries` owns Library visibility and organization.
+- `catalog_offers` describes acquisition options; `offer_entitlements` declares rights.
+- `entitlements` is access authority; `entitlement_events` is the immutable grant/revoke audit.
+- Commerce orders, items, addresses, attempts, events, terms, grants, adjustments, and earnings are server-authoritative ledgers.
+- `content_entries` and typed detail tables own Community posts, questions, collaboration, reviews, Creator Updates, replies, reactions, and moderation evidence.
+- `item_play_events` is the append-only creator analytics source for validated playback starts across Store, Library, and Radio.
+- Admin role, Item lifecycle, offer lifecycle, email, payout, and provider operations append immutable audit records.
+
+RLS and reviewed RPCs remain the browser boundary. Service-role credentials, provider credentials, private tax forms, payout destinations, raw Auth data, and signing secrets never enter browser code.
 
-Initial owned-Merch activation facts still required from operations:
-
-- Confirm `forty four`'s exact registered entity spelling/type/TIN, Stripe account ownership, Wise/settlement account ownership, statement descriptor, support contact, and public `44OS` business details.
-- Approve United States tax registrations, Stripe Tax configuration, invoices/receipts, remittance ownership, and separate reviewed tax codes for Merch, Books, Music downloads, and Sample Packs.
-- Approve the versioned Terms/Privacy/returns/refund/shipping text and its effective timestamp. Checkout must snapshot the exact content digest accepted by the customer.
-- Reconcile exact current Printful size/color, SKU, availability, and cost truth for all eight products. Existing reviewed variants may remain live, but every new product or newly introduced color stays draft/staged until its imagery, availability, and margin gates pass.
-- Create reviewed Stripe shipping rates and approve delivery regions, methods, prices, estimated windows, carrier/fulfillment owner, return address, cancellation/return workflow, and customer-support escalation.
-- Complete Stripe test-mode checkout, signed webhook, refund/dispute, delayed/reordered event, physical fulfillment, and 24-hour reconciliation acceptance. Wise creator-payout acceptance is separate from the owned-Merch boundary.
+## Store, Library, Community, and Studio behavior
 
-### Verified Stripe adapter
+Acquisition is capability-based:
 
-Migration `20260716022000_m12_stripe_verified_payments.sql` and its ordered follow-ups are the deployed Stripe adapter for the owned-Merch boundary. They preserve the provider-neutral ledger and add immutable/versioned commerce terms, exact order/offer/seller/entitlement snapshots, customer and provider evidence, adjustment and entitlement-grant audits, seller-scoped reads, fulfillment transitions, exact-cent earnings reversals, webhook retry evidence, and administrator diagnostics. Production Checkout and Stripe database controls are active for that boundary; the separate public-presentation switch remains off and controlled live acceptance is still required.
+- Public listening does not require a purchase or Library entry.
+- `Add to Library` is a free save backed by a zero-cost offer and server-issued entitlement.
+- `Buy Download` is a separate paid offer and never changes whether public listening is allowed.
+- Physical Merch uses `Add to Cart` and is not placed in Library as though it were digital content.
+- Browser prices are display hints. Checkout recalculates active offers and eligibility on the server.
+- Paid Download actions appear only while the current buyer has the matching visible Library entry and active file entitlement. Refund/revocation removes access without deleting history.
 
-The application creates the durable pending order and recalculates active offer prices on the server before asking Stripe to create a Checkout Session. Browser Cart prices are display hints only. Hosted Checkout collects payment and delivery details, applies category-specific approved Stripe Tax codes and exactly one approved U.S. physical shipping rate, and returns the customer to a pending confirmation screen. The signed Stripe webhook—not the success redirect—finalizes payment, Library/entitlement grants, refunds, disputes, and reversals. Printful fulfillment remains a separate signed boundary: 44OS creates a quote-bound draft, the owner confirms only in Printful, and signed provider events reconcile production and shipment state. Duplicate, delayed, and reordered provider events are idempotent; a failed event remains visible without changing authoritative payment facts.
-
-Buyer and seller reads remain distinct. `/orders` is an authenticated buyer history over existing buyer-scoped RLS policies and never exposes another customer's order. `/studio/orders` is the seller fulfillment view and receives delivery/contact facts only for lines sold by that creator or a platform administrator. Neither browser surface can author payment evidence; seller mutations are limited to the reviewed fulfillment transition RPC.
-
-Stripe Dashboard Products and Prices are not catalog authority and are not required for this launch: 44OS sends server-snapshotted `price_data` for each verified order line. Required server-only configuration is `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_SHIPPING_RATE_IDS`, `STRIPE_AUTOMATIC_TAX_ENABLED=true`, and `STRIPE_MERCH_TAX_CODE`, plus the existing public site/Supabase values. Secrets never use `NEXT_PUBLIC_` and never belong in documentation, logs, screenshots, or chat.
-
-Current publishing phase is `trusted_testing`: only the approved creator/admin role list may create or mutate Items, but those trusted testers publish and edit their own releases directly so testing can cover pricing, tracks, achievements, artwork, files, and removal without an unattended approval queue. Studio does not expose Draft/Published toggles. The later submission-review launch gate must use pending revisions, preserve the last approved public version, notify 44 admins, and be explicitly enabled through reviewed runtime controls only after that workflow is complete.
-
-The M13 submission-review foundation is captured in and deployed through `20260713030000_m13_creator_submission_review_foundation.sql`. It adds one typed `item_submissions` record per pending permanent Item, an append-only `item_submission_decisions` audit, a constrained Item snapshot, typed proposed child snapshots for tracks, assets, offers/entitlements, taxonomy, capabilities, members, external links, and achievements, typed child tombstones with immutable archival records, and a transactional notification outbox that does not deliver messages. Idempotent submit, creator withdrawal, child-removal proposal, and administrator decision RPCs are exposed through the Studio domain boundary in `src/lib/domain/studioPublishing.ts`. The migration adds immutable decision fields for submitter, reviewer, timestamps, policy version, status, and reason, and an active-review mutation fence for the live Item/child tables. It leaves `publishing_runtime_controls` in `trusted_testing` with review disabled, so creators still publish directly during trusted testing and cannot create review submissions from the UI.
-
-Migration `20260716010000_m13_admin_control_center.sql` adds the active, administrator-only operating surface for People, Content, Errors, and plain-language system status. Allow-listed `SECURITY DEFINER` RPCs are the only browser boundary for joining safe profile fields to `auth.users`; they never return passwords, password hashes, tokens, phone numbers, raw auth metadata, or provider credentials. Role changes are limited to Member and Creator, repair a missing profile deterministically when required, require a reason, and append an immutable `admin_profile_role_events` record. Admin roles cannot be assigned or removed through this UI.
-
-The same boundary lists every Item with publication and review status kept separate. Administrators can decide an existing pending submission through the atomic review function, publish a healthy draft, return an unpurchased published Item to draft, or permanently archive an Item and its active offers while preserving files, Library identity, entitlements, licenses, and history. Pending review blocks lifecycle changes; existing purchases or entitlements block unpublishing and require archival instead. Every lifecycle mutation requires a reason and appends `admin_item_lifecycle_events`. Public offer visibility additionally requires a published parent Item. Operational errors remain sanitized at ingestion and are exposed to admins only as bounded log fields. Runtime switches remain read-only and unchanged; the dashboard translates them into publishing, email, payments, and Beat Store states.
-
-The launch email boundary separates three authorities. Supabase Auth sends branded account mail through Resend SMTP as `accounts@44os.com`; the application uses a server-only Resend adapter and durable outbox as `support@44os.com`; and iCloud owns root inbound mail plus human support replies. Root `44os.com` is the one Resend Free sending domain, while `auth.44os.com` remains the Supabase authorization/link domain. Click/open tracking and Resend Receiving stay off. Application delivery, support intake, and newsletter synchronization default off in `email_delivery_controls`; credentials alone cannot activate them. Verified commerce/fulfillment state queues mail, never browser redirects. Explicit newsletter consent is independent of signup or purchase; after a secure account-email change, the old Resend Contact must be opted out before the existing consent can synchronize to the replacement address. Abandoned or ambiguous sends outside the provider idempotency window freeze until an Admin records an append-only provider-confirmed delivery, one explicit retry, or suppression. The application email schema/routes are deployed, but the signed Resend webhook, worker registration, real-message rehearsal, and narrow delivery activation remain release gates in Milestones P5-P6.
-
-### Managed Merch catalog contract
-
-Merch remains a canonical Item Category, but its catalog is Printful-owned inventory operated by forty four rather than creator-published inventory. **Sync with Printful** fetches the complete verified provider store and reconciles it without an Admin choosing destination Items. A previously unseen Sync Product creates one permanent draft 44OS Item automatically; the same provider identity preserves that Item ID and URL through later syncs. Existing names, retail prices, costs, SKUs, sizes, colors, and availability update from Printful automatically. Existing paid orders retain immutable title, option, and price snapshots.
-
-New sizes under an already-imaged color may become sellable automatically when current and margin-safe. A newly introduced color remains staged until its required image is assigned and Admin publishes that update; already-reviewed variants remain live. A product or variant absent from a complete successful provider snapshot is archived rather than deleted, preserving order and audit history. A partial or failed provider fetch may never archive local rows. Reappearing archived provider identities return as draft. The initial provider-owned launch set is 44 T-Shirt, 44 Sweatshirt, 44 Hoodie, 44 Windbreaker, 44 Beanie, 44 Hat, 44 Bag, and 44 Satchel; hidden unmapped 44 Tote is not retained after its zero-dependency cleanup.
-
-44OS owns all customer-facing Merch imagery. Each current color has one image shared across sizes; each Item may have ordered bonus images; and exactly one color or bonus image is the featured Store-card image. There is no separate main-image upload. Content hashes make repeated same-file uploads idempotent, a field replacement atomically swaps its database assignment before the superseded object is removed, and failed removals enter a bounded retry/orphan-cleanup path restricted to the dedicated Merch prefix. Printful thumbnails and mockups never populate public imagery, and sync must re-derive—not clear—the cover from the featured assignment.
-
-### Beat Store contract
-
-Migration `20260715010000_m18_beat_store_foundation.sql` adds a hidden Beat Store foundation without activating public catalog or commerce behavior. A Beat is a canonical Music Item with the assigned Music Type `beat` and `beat_licensing` capability. Detection must use that assignment/capability, never title text. Its one `beat_details` record identifies the tagged public preview and constrains BPM, controlled key/mode or atonal state, time signature, sample state, and required disclosure. Music Item Tags remain the genre/style vocabulary; `beat_attribute_terms` owns controlled mood and instrument filters.
-
-Protected sale files remain private `item_assets` rows mapped through `beat_files`. `beat_license_templates` owns versioned platform language for Basic, Premium, Trackout, and Exclusive tiers. The seeded v1 text is deliberately `draft` and cannot be activated without counsel approval. `catalog_offers` supplies price and availability, while `beat_license_offers` and `beat_offer_files` define the exact template and files. `catalog_items.price_cents`, a Library save, and a generic `download` entitlement are never authorities for Beat delivery.
-
-Every completed purchase must create one immutable `beat_license_grants` record tied to its paid order line. It snapshots license number, exact terms and SHA-256 digest, tier, price/currency, seller, collaborator allocations, and file manifest. Only an active grant can authorize its mapped files. Refund, dispute, revocation, and restoration change explicit status without deleting the contract, order, financial, or download evidence. Library may show one Item with multiple licenses and only the files authorized by each grant.
-
-`beat_collaborator_splits` models revenue and publishing basis points and seeds a 10,000/10,000 owner-only allocation. Both dimensions must total 10,000 before commerce; split activation remains off. Exclusive checkout uses a service-only expiring Beat reservation. Webhook-authoritative idempotent finalization creates the exclusive grant, marks the Beat sold, archives all offers and the public Item, and preserves earlier non-exclusive grants and downloads.
-
-Beat activation is independently fail-closed in `beat_runtime_controls`: `review_surfaces_enabled`, `catalog_enabled`, `publishing_enabled`, `checkout_enabled`, `nonexclusive_pilot_enabled`, `split_sales_enabled`, and `exclusive_sales_enabled` all default false and have dependency constraints. The application also requires `NEXT_PUBLIC_ENABLE_BEAT_REVIEW_SURFACES=true` before any Beat-specific Studio, Store, Item, profile, Cart, or Library UI is included. `save_owned_beat_draft` is the atomic creator database boundary after storage uploads; it refuses to run while the database review switch is off. Beat children are included in typed M13 submission snapshots and approved-application handling.
-
-Live Beat sales remain prohibited until counsel-approved template versions and M11/M12 provider, webhook, refund/dispute, reconciliation, earnings, and payout acceptance are complete. The first permitted pilot is approved non-exclusive, single-owner Beats. Splits and exclusivity require their separate runtime activation and acceptance evidence.
-
-Rules:
-
-- For schema and content inspection, the linked live Supabase project is the source of truth. Future chats should query it read-only with the Supabase CLI or public API before making claims about tables, columns, policies, storage objects, or catalog rows.
-- `supabase/migrations/20260712010000_44os_item_baseline.sql` is the canonical replayable starting point. Every later schema change must be a new timestamped migration; do not edit the baseline after it has been adopted.
-- Do not add ad-hoc SQL probes, exports, or schema snapshots to the repository. Temporary read-only queries belong in the CLI, and disposable backups remain outside tracked source.
-- Do not run Supabase schema or data changes without a current backup and a reviewed repo migration.
-- Prefer normal Supabase migrations, dry runs, then `supabase db push` from the linked project.
-- Never rename live tables casually.
-- UI language can change without database table renames.
-- Destructive migrations require backup, rollback notes, and explicit approval.
-
-Current concept-to-table map:
-
-- Canonical Items: `catalog_items`. `status` is the publication lifecycle and `experience_type` controls runtime behavior. The UI calls the acquisition surface Store; Library views point to the same canonical Item row.
-- Item category lookup: `item_categories`, referenced by `catalog_items.item_category_id`.
-- Creator profiles and public member profiles: `profiles`.
-- Music tracks: `tracks`, attached by `item_id`.
-- Files, galleries, and release feature unlocks: `item_assets`.
-- User Library relationship: `library_entries` with `item_id`. Entitlements are the authority for access/acquisition; the Library entry owns display state.
-- Offers and access: `catalog_offers` represents a free or paid option without changing Item identity; `offer_entitlements` declares the rights it grants. `entitlements` is the server-authoritative access record and `entitlement_events` is its immutable grant/revoke audit trail. `library_entries` owns only visibility and organization.
-- Commerce ledger: `commerce_orders`, `commerce_order_items`, `commerce_order_addresses`, `payment_attempts`, `payment_events`, `commerce_terms_versions`, `commerce_entitlement_grants`, and `commerce_adjustments`. Provider IDs are adapters around this ledger rather than platform identity. Pre-M5 client-authored merch history is explicitly `legacy_unverified`, never silently treated as verified payment.
-- Beat catalog/licensing: `beat_details`, controlled `beat_attribute_terms`/assignments, private `beat_files`, versioned `beat_license_templates`, offer/template/file mappings, collaborator splits, immutable buyer grants/download events, and exclusive reservations. `beat_runtime_controls` is the activation authority and defaults entirely off.
-- Admin operations: `admin_profile_role_events` and `admin_item_lifecycle_events` are immutable audit ledgers. Admin-only bounded RPCs own safe account reads, Member/Creator changes, all-Item inspection, publication lifecycle actions, sanitized error reads, and dashboard summaries; browser clients never receive a service key or query `auth.users` directly.
-- Reviews: canonical `content_entries` rows of type `review`, attached by `item_id`, with constrained payloads in `content_review_details`.
-- Creator updates: canonical `content_entries` rows of type `creator_update`, attached by `item_id`, with constrained payloads in `content_update_details`.
-- Achievements: `achievement_templates` 44-defined catalog plus `item_achievements`, `user_achievements`, `achievement_events`, `achievement_progress`, and validated `achievement_playback_signals`. Unlock evaluation and reward grants are server-authoritative; clients submit bounded evidence rather than writing achievement state.
-- Launch release video embeds: `item_video_embeds` stores up to three named HTTPS YouTube videos for music, book, and game Items; submission snapshots preserve them through the M13 approval path. This is a narrow launch feature, not a generic media/component registry.
-- Item capabilities and collaborators: `item_capabilities` and `item_members`; structured outbound links use `item_external_links` and `profile_external_links`.
-- Release features: the active launch contract is Achievements, named YouTube video embeds, and achievement-granted Item unlocks. Existing `item_assets` rows with `bonus_content`/`bonus_achievement` types are preserved only where they support the Overachiever reward path; no new generic bonus-content product is being designed.
-- Points foundation: `user_points_ledger`.
-- Community identity and lifecycle: `content_entries`, with shared `content_replies`, `content_entry_reactions`, and `content_reply_reactions`. Typed payloads use `content_question_details`, `content_collaboration_details`, `content_review_details`, and `content_update_details`. A nullable `content_entries.item_id` distinguishes platform-wide content from content attached to a canonical Item. UI-specific `community_*_content` views are stable read contracts over this spine. The former posts/questions/collaborations/reviews/updates tables are temporary compatibility sources during the post-cutover verification period, not foundations for new work.
-- Messaging: `conversations`, `conversation_members`, `messages`.
-- Direct conversation creation and message sending use authenticated security-definer RPCs so conversation rows, both memberships, the message, and thread timestamp are written atomically without an RLS ordering gap.
-- Future services placeholder: `services` and `service_categories` are private and dormant. When services return, migrate them into canonical Item rows with service fulfillment instead of restoring a parallel commerce system.
-- Resources were replaced by Community Questions. The old resource tables and app routes are removed.
-- Radio queue: `radio_playlist_entries` references canonical Item `tracks` directly.
-- Creator events: M16 adds creator-owned event records and exposes them through a server-authoritative aggregate Calendar read contract alongside optional Item release dates. Calendar is not a writable source table.
-- Creator submission review: `item_submissions` is the server-authoritative workflow record keyed to permanent `catalog_items.id`; typed `item_submission_*` tables hold proposed Item and child records, while live approved rows remain authoritative until an administrator decision succeeds atomically. The workflow is dormant until `publishing_runtime_controls.review_required` is deliberately enabled.
-- Future Radio programming: use a separate submission/review/schedule lifecycle for pre-recorded programs; only approved scheduled entries may later appear in the aggregate Calendar. It must not reuse creator-event ownership or alter the v1 Radio queue prematurely.
-- Theme mode and accent are stored only in the narrowly scoped `user_theme_preferences` table. Signed-out visitors always use dark mode with the Ocean accent; signed-in accounts load and save their theme through Supabase for cross-device consistency.
-- Notification content is synthesized from `achievement_events`; per-account seen and dismissed IDs persist in `user_notification_state` so the notification dot and dismissals survive sign-out, PWA/browser restarts, and device changes.
-- Removed speculative systems: generic categories, post categories, item/product components, product relations, generic unlockables, Library activity, unused Radio scheduling tables, and empty preference/icon registries.
-
-Known Supabase state from the launch cleanup:
-
-- Linked migration history is aligned through `20260717022000_m12_launch_commerce_activation.sql`, and clean disposable replay through that migration passes. Strict linked lint now reports one unsupported-event function error that requires a new forward migration; the CLI must be invoked with failure enforcement so reported errors cannot produce a successful release gate.
-- The typed Community spine is applied in `20260712020000_typed_community_content_spine.sql`; application queries no longer target the legacy Community content tables.
-- `20260712025000_add_missing_tracks_to_radio.sql` brings Radio to one active entry for every existing track: 248 tracks, 248 entries, zero missing, zero duplicates.
-- `20260712030000_m5_provider_neutral_commerce.sql` separates public access, offers, orders, payment processing, entitlements, and Library presentation. Current free Library behavior is active; only reviewed offers may activate, Hoodie and Windbreaker are the current active physical offers, and the public purchase presentation remains off pending controlled acceptance.
-- `20260712040000_m5_trusted_achievements_and_assets.sql` makes achievement evaluation and reward grants server-authoritative, protects asset locations behind entitlement-aware manifests, prohibits public download URLs, and disables legacy client-authored merchandise orders. M5 is complete; verified server Checkout now owns order creation, production database controls are active, and the independent public-presentation switch remains off pending controlled acceptance.
-- `20260716022000_m12_stripe_verified_payments.sql` and its ordered follow-ups are deployed. They add the fail-closed Stripe adapter, immutable terms/order snapshots, webhook-authoritative payment lifecycle, exact refund/dispute reversals, fulfillment, diagnostics, reconciliation, and seller access for the selected owned-Merch boundary. Production database controls are active; the independent public-presentation switch and controlled live acceptance remain off/open.
-- `20260712050000_m7_catalog_discovery_truth.sql` removes false inherited streaming capabilities from non-music Items and false download capabilities from physical merch without a downloadable asset or digital offer.
-- `20260712051000_m7_normalized_browse_taxonomy.sql` makes Browse Types/Tags Supabase-managed, adds normalized Item assignments, seeds launch Types, and preserves existing Item relationships through backfill.
-- `20260712052000_m7_category_type_tag_foundation.sql` establishes the permanent Category → Type → Tags model: immutable system Categories, admin-managed `item_types` and approved `item_tags`, one Type assignment per Item, and any number of approved Tag assignments. `20260712052100_m7_seed_asset_item_types.sql` completes the initial Assets Type seed after the legacy singular/plural vocabulary conversion.
-- `20260712052200_m7_retire_legacy_taxonomy.sql` corrects two ambiguous Single backfills and deletes the superseded combined taxonomy tables. Browse and Studio no longer read or write the deprecated free-form Item `tags` metadata.
-- `20260712052300_m7_seed_music_genre_tags.sql` seeds the controlled Music Tag vocabulary with 32 current Apple Music-aligned genre choices. These Tags apply across every Music Type and remain admin-editable.
-- `20260712052700_m10_permanent_item_lifecycle.sql` revokes creator hard deletion, adds the ownership-checked archival operation, archives Item offers atomically, blocks stale republishing, and preserves entitlement-aware read access to archived Library Items and their content.
-- `20260712053000_m10_curated_publishing_boundary.sql` makes profile roles approval-managed, limits Item creation and mutation to creator/admin accounts, moves publication to an ownership-checked validation RPC, exposes read-only catalog-health findings, and scopes upload mutation to the owning account. Fan registration, profile editing, and Community participation remain available as before.
-- `20260712053100_m10_catalog_health_reporting.sql` provides one bounded authenticated Studio health result set across the caller's active Items; Studio shows issue counts without row-by-row request fan-out.
-- `20260712053200_m10_studio_child_write_boundary.sql` makes approval revocation apply consistently to tracks, assets, taxonomy, capabilities, collaborators, offers, links, and achievement configuration. Achievement unlocks and entitlements remain server-issued.
-- `20260712053300_m10_rpc_execute_boundary.sql` removes Supabase's direct default anonymous execute grants from M10 health, publication, role, and approval functions.
-- `20260712054000_m8_private_item_files_foundation.sql` creates the private `item-files` bucket and binds object reads to the matching `item_assets` row plus server-issued download, bonus, Library, or manager authority.
-- `20260712054100_m8_private_book_asset_cutover.sql` moves the two existing book assets to verified private paths and preserves their existing Library access as explicit audited download entitlements.
-- `20260712054200_m8_trusted_achievement_edges.sql` removes direct execution of internal achievement grant helpers, makes Signal Boost require a distinct authenticated visitor, and rejects public locations for all future downloadable or bonus assets.
-- `20260712054300_m8_achievement_evaluator_cast.sql` removes the evaluator's unsafe implicit UUID-array cast; linked schema lint is clean.
-- `20260712054400_safe_studio_release_edits.sql` makes music feature edits preserve permanent achievement row IDs and every earned unlock; normal decimal price entry and existing-release price persistence are verified.
-- `20260712055000_m9_moderation_reporting_rate_limits.sql` adds report/audit records, administrator moderation resolution, author-immutable moderation state, and database-triggered entry/reply/reaction rate limits.
-- `20260712055100_m9_creator_updates.sql` adds atomic ownership-checked Creator Update publishing for active Items.
-- `20260712055200_m9_typed_content_integrity.sql` enforces typed detail rows, reply-type/parent integrity, bounded content lengths, and published-Item scope at transaction commit.
-- The prior incremental migration chain was consolidated into `20260712010000_44os_item_baseline.sql`. Its historical files remain available in Git history, but they are no longer active replay inputs.
-- The baseline includes the complete public schema, RLS, functions, triggers, auth profile hook, public storage buckets and policies, Item vocabulary, capabilities, membership, external links, and curated role mapping.
-- A clean local Supabase reset replays the baseline without a live snapshot, and a public-schema comparison against linked staging is empty.
-- `supabase/backups/` is ignored and should contain only a deliberately created, short-lived safety backup for an imminent database write.
-- The July 11 post-cutover probes verified 49 Items, 248 tracks, 32 Library entries, 14 profiles, 49 Item owners, 213 capability registrations, 5 Item categories, 24 posts, 248 Radio playlist entries, and 8 achievement templates.
-- The canonical track ordering column is `tracks.number`; `tracks.track_number` is absent in the live schema and should not be selected by app code.
-- Public Store discovery and creator-profile Music/Books tabs sort by release year descending, then creator profile name ascending. Studio release management is intentionally independent and sorts by `created_at` descending (order added).
-- Browse discovery uses Category, Type, Tags, Features, Price, and text filters over the complete published catalog. Selecting a Category reveals its used Types and approved Tags; Tags can be selected without narrowing to a Type. Empty Categories, Types, and Tags do not appear in the filter.
-- The system-owned Category rows in `item_categories` are Music, Books, Games, Merch, and Sample Packs; application migrations own them and administrators must not edit them. The Sample Packs row retains the former Assets category UUID while its canonical slug is `sample-packs`. `item_types` is the admin-managed list of Types scoped to a Category. `item_tags` is the admin-managed allow-list of Tags scoped to a Category and optionally a Type. `item_type_assignments` gives each Item one Type; `item_tag_assignments` gives it zero or more approved Tags. Studio and Browse both read this same model. The superseded `catalog_taxonomy_terms` and `item_taxonomy_terms` tables have been deleted.
-- Browse shelves are transparent and rule-based: `Featured` contains at most four explicitly featured Items; `Creators You Follow` appears only when it has results; each nonempty Category receives a `New Releases in …` shelf of at most eight Items ordered by the documented public catalog order. `View All` applies that Category in the existing Browse filter instead of creating another page. Engagement is never an undisclosed ranking input.
-- Initial Types are Music—Album, EP, Single, Mixtape, Live Set; Books—Novel, Artbook, Zine; Merch—Apparel, Accessories, Physical Music, Goods & Collectibles; Sample Packs—Sample Packs. The former Remix Packs and Game Assets rows are retained but inactive. Tags are the guarded third level for genre/style/use, such as Electronic or the controlled Merch product tags, and creators cannot enter arbitrary public Tags.
-- Music and Sample Packs use square catalog artwork, Books use 2:3 covers, and physical Merch uses 3:4 product artwork. Library keeps separate Music, Books, and Sample Packs grid bands so portrait Books begin below square Music.
-- Anonymous access to the dormant `services` table returns zero rows; its data remains available only through admin/service-role access.
-- The July 17 linked migration list reports the Beat/Admin/Merch and ordered Stripe migrations aligned through `20260717022000_m12_launch_commerce_activation.sql`. Production Stripe and Checkout database controls are active, public purchasing remains hidden, and the one strict linked-lint error plus stale generated types are mandatory P0 repairs.
-
-Auth redirect target:
-
-- Production Site URL: `https://44os.com`.
-- Local development: `http://localhost:3000` and `http://127.0.0.1:3000`.
-- Vercel previews: controlled preview allow-list or wildcard pattern.
-- Account creation collects display name, username, email, and password. The auth-user trigger persists the submitted public identity in `profiles`.
-- New accounts with an immediate session go directly to `/profile`. When email confirmation is required, the confirmation and resend links return to `/profile`.
-- Avatar and bio are optional profile enhancements; the retired profile-cover/header field is not part of the identity contract. Community identity requires only the display name and username collected at sign-up; incomplete legacy accounts redirect directly to `/profile` without an intermediate dialog.
-- Desktop deep links: plan later with a `44os://` scheme if the Tauri shell needs native auth return.
+Format behavior:
 
----
+- Music uses the shared player, tracks, optional downloads, eight v1 achievements, named YouTube embeds, and an optional Overachiever Item unlock.
+- Books are PDF-only for this release. A protected full PDF powers the Library reader; an optional separate public sample powers Store preview. Page, progress, appearance, and bookmarks synchronize server-side.
+- Sample Packs use a protected full ZIP plus optional public audio previews and protected individual samples. Preview audio uses the shared player.
+- Studio add/edit forms use versioned account-and-Item-scoped device-local recovery. Save, Cancel, or removal clears recovered data.
+- Forms expose one canonical Description for Books and Sample Packs. Music descriptions are preserved but not edited in the current Music form.
+- Community uses canonical thread pages, server-backed loading/error states, reporting/moderation audit, Item Questions, reviews, and Creator Updates.
+- Profiles connect identity, posts, Items, Events, follows, messaging, and approved external destinations.
 
-## 9. Deployment, Release, And Operations
+The v1 music achievements are Front to Back, No Skips, Nightbird, Heavy Rotation, Joined the Orbit, Left Your Mark, Signal Boost, and Overachiever. Clients submit bounded evidence; server evaluation grants achievements and reward Items. Book achievements and generic speculative bonus-feature editors remain hidden.
 
-Web excellence comes first. V1 remains a full Next.js application deployed on Vercel.
+## Events, external reach, and interactive content
 
-Production contract:
+Creator external links use validated platform registries and atomic owner sync RPCs. Only approved HTTPS destinations are accepted. Item and profile links remain ordered and owner-managed.
 
-- `https://44os.com` serves the app; `www` and HTTP redirect to the HTTPS apex.
-- Production route behavior must match the canonical route table above.
-- Root metadata identifies `44OS`; canonical and Open Graph URLs match the requested canonical route.
-- Public Item and profile pages use server-generated metadata and real artwork where available.
-- `robots.txt`, `sitemap.xml`, icons, manifest, and launch artwork are public app outputs. Private/account surfaces are not promoted as crawl targets.
-- Milestones M21 owns privacy-approved analytics, Search Console/secondary-engine verification, and Google Merchant Center/Shopping acceptance. Measurement may observe verified domain events but cannot author payment truth; Merchant feeds derive from published 44OS catalog presentation plus the successful Printful-owned snapshot and never become catalog, price, inventory, order, or fulfillment authority.
-- `/api/health` is the bounded readiness endpoint. HTTP 200 means the app configuration and Supabase dependency are ready; HTTP 503 means they are not.
+Creator Events are source-owned records with format, timezone-aware start/end, venue/destination fields, and cancellation state. Times are stored as UTC instants plus an IANA timezone. Calendar is a read model over visible creator Events and optional upcoming published releases; it is not a separately writable content source and does not control publication.
 
-Release gate:
+Interactive infrastructure uses one `interactive_builds` manifest per canonical Item:
 
-1. Confirm the intended commit and review `git status`; unrelated work must not be swept into a release.
-2. Run `npm run lint`, `npm run typecheck`, `npm run audit:ui-cleanup`, `npm run test:security`, `npm run test:observability`, `npm run test:hardening-contract`, and `npm run build`.
-3. Start the production build locally and run `npm run test:smoke`.
-4. Run `npm run test:schema-replay` against disposable local Supabase only. Run `supabase db push --linked --dry-run`, `supabase db lint --linked --level error`, and verify local/remote migration history.
-5. For migration releases, create a fresh linked-data backup, apply only reviewed repository migrations, and verify history plus preservation probes after apply.
-6. After Vercel deployment, run `SMOKE_BASE_URL=https://44os.com npm run test:smoke` and manually verify anonymous, fan, creator, and admin journeys at the required desktop/mobile widths.
-7. The Admin Control Center is an active admin-only M13 surface and is not governed by the public reviewed-surface flag. Other reviewed-but-hidden M13 surfaces are tested only in a review environment with `NEXT_PUBLIC_ENABLE_M13_REVIEWED_SURFACES=true` and `SMOKE_REVIEWED_SURFACES=1`; do not enable them in production before UI and policy approval.
+- Only an Admin-reviewed build on an approved exact HTTPS origin may launch.
+- Entitled launches use expiring opaque sessions whose tokens are stored only as hashes.
+- The isolated build runs in a sandboxed iframe and receives no 44OS credentials or signing secret.
+- Browser progress is bounded and untrusted. Only signed server events can issue achievements.
+- Replay protection uses signed event IDs, timestamps, nonces, and constant-time HMAC verification.
+- Mobile/narrow devices do not request a session in the current phase.
 
-Current migration evidence:
+Infrastructure is complete, but real Unity/WebGL runtime acceptance is still open. Interactive Items remain disabled until that acceptance passes.
 
-- Linked migration history is aligned through `20260717022000_m12_launch_commerce_activation.sql`.
-- The ØLSTEN bootstrap migration now remains safe for linked history while allowing clean disposable replay; the July 17 release passed strict schema replay and all 494 pgTAP assertions. Do not rewrite deployed history. Future changes still require clean replay, linked lint/dry-run/history, a fresh backup, and post-apply verification.
+## Authentication and email
 
-Incident and recovery rules:
+Supabase Auth sends branded account mail through Resend:
 
-- Record UTC time, role, route, Item/account identifier, browser/device, error reference, and reproduction steps. Never include credentials, session tokens, request headers, query values, or user content in telemetry.
-- Authentication incidents start with Supabase Auth health, redirect allow-list, rate limits, SMTP, and `/account/recovery`. Never request a password, OTP, recovery token, session token, or service-role key from a user.
-- Publishing/storage incidents verify creator approval, Item ownership, catalog-health findings, storage path, and entitlement. Never hard-delete an Item as a repair and never replace protected files with public URLs.
-- Community abuse response preserves the report and moderation audit. Use admin moderation operations; do not overwrite the original author/content evidence. Escalate credible threats, child-safety reports, and legal notices immediately.
-- Prefer reviewed forward repair after a deployed migration. Restoration rehearsals use a separate disposable project/database and compare permanent IDs, row counts, audit rows, and storage references before acceptance.
-- `npm run test:data-restore`, `npm run test:m13-rollback`, and `npm run test:m13-concurrency` are local evidence, not substitutes for a separate-project production-data restoration rehearsal.
+- Visible sender: `44OS <accounts@44os.com>`.
+- Authorization/link domain: `auth.44os.com`.
+- Canonical Site URL: `https://44os.com`.
+- Allowed redirects: localhost development, `https://44os.com/**`, and `https://www.44os.com/**`.
+- Email confirmation and secure two-address email change are enabled.
+- Custom SMTP uses `smtp.resend.com:465`; Auth is limited to 30 emails/hour.
+- OTPs are eight digits and expire after 3,600 seconds.
+- Repository-controlled templates cover confirmation, invitation, magic link, email change, recovery, reauthentication, password changed, and email changed.
+- Password-changed and email-address-changed notices are enabled; unrelated phone/sign-in/MFA notices are off.
+- Open/click tracking and Resend Receiving remain off.
 
-Secrets and external services:
-
-- Public Supabase URL/anon keys may be client-visible. Service-role, SMTP, Stripe, Wise, webhook, monitoring, and interactive signing credentials remain server-only. `.env.example` records names only; real values belong in the local secret store and the matching Vercel environment.
-- Rotate secrets after staff departure, exposure, suspected compromise, or provider recommendation.
-- Missing provider configuration fails closed. Payment credentials do not activate commerce; activation requires reviewed runtime controls and completed M11/M12 acceptance.
+The recorded production acceptance passed confirmation, explicit resend, magic link, recovery/password replacement, direct password change, secure email change, and the related security notices using an owner-controlled real inbox. Passwords, links, codes, and full headers are never recorded.
 
-Open operational gates are tracked in `44OS_MILESTONES.md`. They currently include controlled live Stripe digital purchase/refund and U.S. Merch purchase, Printful draft/owner-confirmation/shipment reconciliation, remaining Merch review/images/publication, public-purchase presentation activation, application-email webhook/worker acceptance, real-inbox Auth rehearsal, external error alerting/on-call ownership, separate-project production-data restoration, and the signed-in accessibility/installed-iOS matrix.
+Application email uses a separate durable outbox and Resend adapter as `support@44os.com`:
 
-Desktop strategy:
-
-- A future Tauri shell wraps the production web app rather than forcing a static export.
-- Validate login, password reset, magic links, audio, downloads, uploads, external links, deep links, and native sizing before distribution.
-- Do not pursue offline/static desktop behavior until the web release is stable.
-
----
-
-## 10. Interactive Runtime Contract
-
-M17 infrastructure is implemented, but runtime acceptance remains pending a real production Unity/WebGL export.
-
-Item and build model:
-
-- An interactive experience remains one canonical Item. `interactive_builds` is its executable manifest, not a second catalog record.
-- One current manifest is allowed per Item. Build replacement preserves the Item ID, Library relationship, entitlements, achievements, and event history.
-- Supported runtimes are `unity_webgl` and standards-based `webgl`. Existing Item capabilities/assets and legacy `launch_url` remain compatible; new launches use `/launch/[itemId]`.
-- Creators/editors may prepare owned manifests and event definitions. Only a 44 admin may mark a build `ready`.
-- A ready entry URL must use an active exact-match HTTPS origin in `interactive_origins`; the initial isolated host is `https://interactive.44os.com`.
-
-Launch lifecycle:
-
-1. An entitled signed-in user opens `/launch/[itemId]` from Library.
-2. 44OS checks the ready manifest, browser/device class, WebGL 2, WebAssembly, and memory metadata.
-3. `begin_interactive_launch` rechecks entitlement, Item visibility, review state, and exact origin, then issues an expiring opaque token whose SHA-256 digest is stored.
-4. The isolated build loads in a sandboxed iframe, sends `ready`, and receives `initialize`. The session token stays in the parent and is never posted to the build.
-5. Client progress is bounded, sequenced, idempotent, and explicitly untrusted. Exit, expiry, failure, and unsupported states always retain a route to the originating Library Item.
-
-The bridge protocol is `44os.interactive.v1`. Build-to-parent messages are `ready`, `progress`, `achievement-intent`, `error`, and `exit`. The parent accepts messages only from the active iframe window, exact manifest origin, active session, and current protocol. Payloads are JSON objects no larger than 16 KiB. `achievement-intent` is informational and cannot grant an achievement.
-
-Trusted events:
-
-- Achievements require server-signed events; the browser and Unity build never receive a signing secret.
-- `POST /api/interactive/events` requires `x-44-key-id`, `x-44-timestamp`, `x-44-nonce`, and a lowercase SHA-256 HMAC signature.
-- The HMAC covers protocol, key ID, timestamp, nonce, external event ID, session/user/Item/event IDs, occurrence time, and the SHA-256 of recursively key-sorted canonical JSON.
-- `INTERACTIVE_EVENT_SIGNING_KEYS` is a server-only JSON key map. The route fails closed without it or `SUPABASE_SERVICE_ROLE_KEY`.
-- Constant-time validation, unique external IDs, and unique key/nonce pairs reject replay. Signed progress may supersede client progress; client progress cannot overwrite signed progress. Achievement issuance uses the existing server-authoritative audit path.
-
-Hosting and sandboxing:
-
-- Unity files live on the isolated interactive origin, never inline in 44OS or on arbitrary creator hosts.
-- The iframe allows scripts, same-origin behavior inside the isolated host, pointer lock, downloads, fullscreen, and gamepad only as explicitly configured. It does not receive top navigation, popups, forms, camera, microphone, geolocation, or 44OS credentials.
-- Compressed builds require correct `Content-Encoding`; WASM requires the correct MIME type; immutable hashed assets receive long-lived caching.
-- Threaded builds declare cross-origin isolation and every dependency must supply compatible COOP/COEP/CORP or CORS headers. The build must report `crossOriginIsolated: true` or fail visibly.
-- Mobile support is opt-in. Current 44OS launch UI stops before session issuance at or below 768px and displays a desktop/keyboard requirement.
-
-Future desktop wrappers must isolate remote runtime content in an unprivileged window/webview and grant no filesystem, shell, updater, clipboard, process, or arbitrary command capability. Distribution additionally requires GPU/WebView minimums, cache/eviction rules, update rollback, crash recovery, safe storage, signing/notarization, deep-link validation, offline policy, and controller/fullscreen acceptance.
-
-Real-export acceptance must cover compression/WASM headers, bridge events, memory/download measurements, keyboard/touch/gamepad, fullscreen/pointer lock, Safari/Chrome/Firefox/Edge, supported mobile browsers if enabled, slow-network recovery, expiry, replay attempts, and a server-signed test achievement.
-
----
-
-## 11. Consolidated launch-provider contracts
-
-This section incorporates the former Auth email, application email, Printful, Wise research/payout, and tomorrow-commerce documents. Those files are retired; this is their continuing architectural and operating authority.
-
-### Authentication and application email
-
-- Supabase Auth is the authentication sender and Resend is its SMTP delivery provider. The single verified sending domain is root `44os.com`; `auth.44os.com` remains the authorization/link domain. Visible Auth sender is `44OS <accounts@44os.com>`. Tracking stays disabled and Resend Receiving must not replace root inbound MX.
-- Hosted Auth has email confirmation and secure email change enabled, custom SMTP at Resend, an 8-digit/3,600-second email OTP policy, 30 Auth emails/hour, and repository-controlled branded templates for confirmation, invite, magic link, email change, recovery, reauthentication, password changed, and email changed. Subjects begin with the 44OS identity. Templates link users to monitored `support@44os.com`; `accounts@44os.com` is not assumed to be a reply inbox.
-- Required owner acceptance still includes two real inbox providers: signup/confirmation, resend, magic link, recovery/password replacement, secure email change, security notifications, SPF/DKIM/DMARC, unmodified links, and Resend delivery/bounce/complaint visibility. Never record tokens, codes, passwords, or full headers.
-- Application mail uses a typed durable outbox with stable template version/event key and Resend idempotency. Welcome, verified purchase, refund/cancellation, verified fulfillment/tracking, and support acknowledgment are the only launch templates. Stripe/Printful signed evidence—not redirects—queues commerce mail. Signed Resend/Svix events are idempotent and out-of-order safe; hard bounce/complaint suppresses future operational sends. Newsletter consent is explicit, independently revocable, and remains disabled.
-- Production application delivery is currently off. Before activation, configure and verify the signed Resend webhook, scheduled outbox worker/cron secret, narrow delivery controls, support intake ownership, and real-inbox template results. Missing configuration fails closed.
-
-### Stripe buyer-payment boundary
-
-- Stripe receives all customer money. Checkout is hosted, authenticated-Member only, webhook-authoritative, and snapshots exact Item, offer, price, seller, terms, tax, shipping, entitlement, and fee facts before provider creation. Dynamic server `price_data` does not make Stripe the catalog authority.
-- Physical launch shipping is U.S.-only with the owner-approved `$14.99 USD` Standard Shipping rate and estimated 5–10 business days. Stripe Tax uses separately approved fail-closed category codes for Books, Music, Sample Packs, clothing, hats, and bags. Only registrations already held or professionally approved may collect tax.
-- Digital offers remain gated by the seller’s approved Creator/tax/Wise onboarding. Production currently has 16 draft creator digital-download offers and no paid production orders; do not bypass the seller gate merely to expose digital checkout. A forty four-owned or fully onboarded Creator digital Item is required for the controlled live digital test.
-- Signed Stripe events alone finalize payment, refunds, disputes, entitlements, exact processor-fee allocation, and ledger evidence. Success redirects remain pending. Reconciliation must show zero unexplained mismatches before public purchasing is left on.
-- Rollback order: disable the client public-purchase presentation switch, then database Checkout/payment controls. Preserve every order, provider event, entitlement, ledger row, refund/dispute fact, and terms snapshot.
-
-### Printful catalog and fulfillment boundary
-
-- Printful is both the physical fulfillment vendor and inventory authority. The owner manages product presence, name, per-variant retail price, SKU, colors, sizes, and availability in the verified Printful API store. 44OS owns customer imagery, publication, customer orders, support, fulfillment history, and immutable snapshots.
-- Admin exposes one complete **Sync with Printful** action. It must finish every provider page before reconciliation, run idempotently under concurrency protection, create unseen products as permanent drafts, update existing provider facts automatically, and archive products absent from a complete snapshot. There is no manual destination-Item mapping UI.
-- New sizes under an imaged color may activate automatically when current and margin-safe. New colors remain staged until their image exists and Admin publishes them; the product's existing reviewed variants stay live. Missing, stale, unavailable, currency-mismatched, or under-margin variants remain private. Reappearing archived provider identities return as draft.
-- Admin's default Active list includes every product present in the latest complete provider snapshot and links each row to a detail page. Archived shows removed provider products and history separately. Provider names/prices/variants are read-only in 44OS.
-- Printful thumbnails/mockups are never customer imagery. Admin uploads one image for each imported color shared across sizes and any number of ordered bonus images, then selects exactly one color or bonus image as featured. PNG/JPEG/WebP/AVIF up to 12 MB are accepted; SVG is excluded. Publication requires current eligible variants, every sellable color image, and one featured assignment.
-- Image content is hashed per product. Same-file retry is idempotent; replacement swaps the assignment before removing the old object; an object is deleted only after its final reference is gone. Failed removals enter an audited retry queue, and a bounded grace-period reconciler may delete only unreferenced paths under `uploads/merch/{itemId}/...`. Broader upload namespaces are out of scope until separately proven.
-- Stripe charges the flat launch shipping rate. After verified payment, Admin fetches the address/cart-specific Printful quote, creates or reuses one deterministic `confirm=false` draft, and links to Printful. The owner alone confirms manufacturing inside Printful. 44OS never confirms through the API. Printful Wallet/card must remain uncharged until that manual action.
-- Signed Printful events may record pending/in-review/failure/cancellation, partial fulfillment, cost, shipment/tracking, delivery, and return evidence without rewriting Stripe payment facts. Older events cannot regress fulfillment state. Failed quote/draft/availability/billing paths hold the order for Admin and retain a Stripe refund path.
-- Current production facts and the destructive five-image/Tote reset sequence are in Milestones. No current image or legacy Item is removed merely by documenting this contract.
-
-### Wise manual creator-payout boundary
-
-- Wise Business is the sole selected creator-payout provider. Launch uses owner-operated Wise email-to-claim; no Wise transfer API is used. Stripe Connect payouts, Stripe Global Payouts, and PayPal are prohibited. Historical Stripe Connect code and provider evidence remain preserved and dormant.
-- 44OS has Member and Creator accounts only. Country is collected at signup. Admin promotion to Creator is allowed only for an operator-verified, unexpired business-to-individual email-to-claim route. Promotion notifies the person to complete mandatory Creator Setup; Item creation remains blocked until onboarding is ready. Entity sellers are waitlisted.
-- A Creator provides a payout email, not bank information. Wise sends the claim link and collects bank details. 44OS stores an encrypted, versioned email plus masked facts and audit history; no bank/routing/IBAN/SWIFT fields exist. Replacement requires reauthentication and preserves history. If email claim fails, open a separately reviewed one-to-one direct-bank fallback; never collect bank details through support or ordinary Admin.
-- U.S. individuals submit current W-9; foreign individuals submit current W-8BEN. Entity forms are out of scope. W-8ECI, Form 8233, contradictory facts, and uncertain classification fail closed for professional review. Signed PDFs, TINs, addresses, signatures, and treaty claims remain encrypted/server-only and absent from browser tables, ordinary Admin lists, logs, email, analytics, and support history.
-- Tax-professional gates remain: income classification/source, treaty/withholding, deposits, 1099/1042/1042-S duties, electronic-form validity, change/expiration/retention rules, reviewer access, entity edge cases, and creator terms. No code promises zero withholding.
-- Monthly batches use immutable UTC cutoff, exact ledger membership, advisory locking, minimum/carry-forward, refund/dispute/fee adjustments, withholding, human approval, provider idempotency, manual Wise evidence, independent reconciliation, and a separate payout emergency stop. Only reconciled Wise evidence creates the paid ledger debit.
-- Wise account availability, balance holding, email claim, and direct-to-bank delivery are different facts. A country is never activated from a generic “Wise supported” list. Verify the exact route in the owner’s Wise Business interface, record country/currency, date, evidence reference and revalidation date, and keep synthetic data out of real payout operations. Namibia is the first named route to verify; Zimbabwe/Laos were examples, not launch blockers.
-- Official continuing references: [Wise email recipient flow](https://wise.com/help/articles/2448398/what-if-i-dont-know-my-recipient's-bank-details), [Wise send-to-email](https://wise.com/us/send-money/send-money-to-email), [Wise availability](https://wise.com/help/articles/2978049/where-can-i-use-wise), [Wise supported currencies](https://wise.com/help/articles/2571907/what-currencies-can-i-send-to-and-from), [IRS W-9](https://www.irs.gov/instructions/iw9), and [IRS W-8BEN](https://www.irs.gov/forms-pubs/about-form-w-8-ben).
-
-## 12. Maintenance Rules
-
-- Keep exactly three active `/Other` documents: this Foundation, `44OS_UI.md`, and `44OS_MILESTONES.md`.
-- Update all affected active documents in the same change when architecture, UI, or sequencing changes.
-- Keep Dock behavior centralized in `src/lib/osApps.ts`, Store behavior in route helpers, Library ownership in Library primitives/services, and platform data access behind typed domain services.
-- Keep public catalog ordering centralized in `comparePublicCatalogItems`; the old `comparePublicCatalogProducts` export is temporary compatibility only.
-- Add shared UI primitives before page-specific styling. Avoid one-off inline styles unless the value is genuinely dynamic.
-- Keep lint, typecheck, build, UI audit, and relevant security/operational tests green before work is considered complete.
-- Generated caches and local QA renders do not belong in Git. Preserve migrations, intentional backups, production assets, and source fixtures.
+- Templates are Welcome, verified purchase, refund/cancellation, verified fulfillment/tracking, and support acknowledgement.
+- Signed Stripe or Printful evidence—not browser redirects—queues commerce mail.
+- Stable event keys and provider idempotency prevent duplicate delivery.
+- Signed webhook events are idempotent and out-of-order safe; bounce/complaint suppression is durable.
+- Ambiguous delivery outside the provider idempotency window freezes for Admin reconciliation rather than blind retry.
+- Transactional delivery is enabled and accepted for the recorded purchase/refund messages.
+- `support@44os.com` is the human support channel. The in-app support intake remains disabled and must not be presented as active.
+- Newsletter consent is explicit, independently revocable, and locally authoritative. Newsletter synchronization and delivery remain disabled.
+
+## Buyer payments and physical fulfillment
+
+Stripe receives all customer money. Checkout is authenticated, Stripe-hosted, and webhook-authoritative:
+
+- Before provider creation, 44OS snapshots Item, offer, seller, price, terms, tax, shipping, customer, and expected entitlement facts.
+- Signed Stripe webhooks own payment, refund, dispute, entitlement, Library, fee, earnings, and reconciliation state.
+- Success redirects remain pending until signed evidence arrives.
+- Duplicate, delayed, and reordered events are idempotent.
+- Runtime database controls, active terms, seller eligibility, active offer, server configuration, and the client presentation switch all fail closed independently.
+- U.S. physical shipping uses the approved `$14.99 USD` Standard Shipping rate and estimated 5–10 business-day window.
+- Automatic tax uses separate configured product tax codes for Books, Music, Sample Packs, clothing, hats, and bags.
+- Digital refunds revoke current file access while retaining order, accounting, and Library history.
+
+Stripe Dashboard Products/Prices are not catalog authority. The server sends verified dynamic price data from the 44OS order snapshot.
+
+Printful is inventory and fulfillment authority for 44-owned Merch:
+
+- Printful controls product presence, name, retail price, SKU, size, color, availability, and production cost.
+- 44OS controls customer imagery, featured image, publication, orders, support, and immutable history.
+- One complete paginated Sync operation creates unseen products as permanent drafts, updates provider facts, stages new colors without imagery, safely activates new sizes under already-imaged colors, archives products absent from a complete snapshot, and restores reappearing provider IDs as drafts.
+- Partial or failed provider reads never archive local rows.
+- Customer imagery accepts PNG/JPEG/WebP/AVIF up to 12 MB; SVG is excluded. Each current color has one image, Items may have ordered bonus images, and exactly one current image is featured.
+- Content hashes prevent duplicate stored artwork. Replacement swaps the database assignment before deleting the final old reference. Failed deletions enter a bounded, audited, prefix-safe cleanup queue under `uploads/merch/{itemId}/...`.
+- Provider thumbnails and mockups never become customer imagery.
+- After verified payment, Admin obtains a current address/cart-specific quote and creates or reuses one deterministic `confirm=false` draft.
+- The owner alone confirms manufacturing inside Printful. 44OS contains no confirmation API operation.
+- Signed Printful events record production, charge/cost, shipment, tracking, delivery, cancellation, return, or failure without rewriting Stripe payment facts.
+
+The first real owner-funded physical lifecycle remains open in Milestones.
+
+## Creator eligibility and Wise payouts
+
+44OS has Member and Creator account roles. Country is collected at Member signup. Creator promotion is Admin-authoritative and does not itself prove tax, payout, or sale eligibility.
+
+The approved existing Creator cohort may sell ordinary digital Items during a manual 30-calendar-day paperwork grace period beginning only when the owner executes the final public-launch re-base. Closed testing does not consume the period. Admin records follow-up evidence and manually pauses or restores paid offers with a reason; no browser timer or automated suspension decides eligibility. Earnings remain pending until tax and payout requirements pass.
+
+Creator Merch and licensed Beat sales are excluded from this boundary.
+
+Wise Business is the only selected creator-payout provider:
+
+- Stripe Connect payouts, Stripe Global Payouts, PayPal, and Wise transfer APIs are not used.
+- Launch payout is owner-operated Wise email-to-claim. Wise collects bank details; 44OS stores an encrypted versioned email and masked display only.
+- 44OS has no bank account, routing, IBAN, SWIFT, or branch fields.
+- A creator country is not eligible from a static list. An operator must verify the exact business-to-individual country/currency/email-to-claim route in Wise, record dated evidence and revalidation, and fail closed when it expires or changes.
+- Natural-person sellers only. Entity sellers are waitlisted.
+- U.S. individuals use a current W-9; foreign individuals use a current W-8BEN. Entity and ambiguous forms stop for professional review.
+- Tax PDFs and payout addresses use AES-256-GCM with server-only versioned keys and never appear in ordinary tables, logs, email, analytics, support history, or browser persistence.
+- A qualified tax professional must approve classification, source, treaty/withholding, deposits, reporting, electronic certification, retention, reviewer access, and creator terms before payouts.
+- Earnings states remain distinct: accrued, pending tax, pending destination, eligible, approved, processing, failed/returned, and paid.
+- Monthly batches use immutable cutoffs and membership, advisory locks, human approval, provider evidence, independent reconciliation, and append-only payout debits. Only independently reconciled Wise evidence may produce `paid`.
+
+All payout execution controls remain off with emergency stop on.
+
+## Beat Store boundary
+
+Beats are canonical Music Items identified by assigned Type/capability, never title text. The dormant foundation includes tagged public preview, controlled musical metadata, private sale files, versioned Basic/Premium/Trackout/Exclusive templates, offer-to-file grants, immutable buyer licenses, collaborator splits, exclusive reservations, and server-authoritative archival after an exclusive sale.
+
+Every Beat surface requires both the client review flag and database review control. Publishing, catalog, Checkout, pilots, splits, and exclusivity default off. Draft legal templates cannot be sold. The first possible pilot is non-exclusive and single-owner only after legal, payment, refund/dispute, reconciliation, earnings, and payout gates pass. Splits and exclusivity require separate acceptance.
+
+## Security, release, and recovery
+
+Required code gates are proportional to the change:
+
+1. `npm run lint`
+2. `npm run typecheck`
+3. `npm run audit:ui-cleanup` for UI-system changes
+4. Relevant contracts: smoke, hardening, observability, analytics, commerce, Printful, email, and mobile safe-area
+5. `npm run test:security` against local Supabase only
+6. `npm run test:schema-replay` against disposable local Supabase only
+7. `npm run build`
+8. `git diff --check`
+
+Migration releases additionally require a fresh backup, linked dry run, strict linked lint, migration-history comparison, reviewed repository SQL, post-apply history verification, and preservation probes. Never paste untracked production SQL or repair migration history casually.
+
+`supabase/migrations/20260712010000_44os_item_baseline.sql` is the canonical replayable starting point and must not be edited after adoption. Every later database change is a timestamped forward migration. `supabase/seed.sql` intentionally contains no production accounts or content; local replay verifies structure and security without copying live user data.
+
+After deployment, run launch smoke against `https://44os.com` and manually verify only the journeys affected by the change. Do not repeat every historical journey for unrelated UI work.
+
+Operational rules:
+
+- `/api/health` is the bounded application/Supabase readiness endpoint.
+- `src/instrumentation.ts` and the service-only error sink record sanitized release/runtime/route/error identity. Never record headers, query values, request bodies, user content, credentials, or tokens.
+- Authentication incidents start with Supabase Auth health, redirects, rate limits, SMTP, and recovery. Never request passwords, OTPs, or session links.
+- Publishing/storage incidents preserve permanent Items and protected access. Never repair by hard-deleting an Item or making private files public.
+- Abuse response preserves reports and moderation audit. Credible threats, child-safety reports, and legal notices escalate immediately.
+- Recovery uses reviewed forward repair by default. A separate disposable project restore must compare permanent IDs, row counts, audit rows, and storage references before acceptance.
+- Secrets live only in approved local/Vercel/Supabase/provider secret storage. Missing provider configuration fails closed.
+- Presentation rollback never deletes orders, entitlements, audit, provider, terms, or ledger evidence.
+
+Generated caches and local QA renders do not belong in Git. Migrations, templates, source fixtures, and production assets are not caches. Database backups are short-lived: create one immediately before an authorized write, retain only a fixture explicitly used by a recovery test, and move or remove obsolete local dumps after the change is verified. `npm run test:data-restore` currently depends on the ignored fixture `supabase/backups/20260713_before_m17_interactive_foundation_data.sql`.
+
+## Maintenance rules
+
+- Keep exactly the three handoff documents named at the top of this file in `Other/`.
+- Foundation and UI state current behavior; Milestones states only current work.
+- Do not restore retired setup guides, research dumps, proposal documents, execution diaries, or completed milestone ledgers.
+- Record durable architectural or provider decisions here, not step-by-step dashboard history.
+- Record visual and interaction decisions in UI.
+- Record only open work, blockers, acceptance criteria, and the minimal accepted baseline in Milestones.
+- Preserve permanent IDs, immutable history, provider evidence, and fail-closed controls across every change.

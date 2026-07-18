@@ -21,6 +21,7 @@ import {
   NOTIFICATION_STATE_UPDATED,
   saveNotificationReadState,
 } from '@/lib/notificationState';
+import { hasCustomerOrders } from '@/lib/domain/customerCommerce';
 
 export type { TopbarTab } from './TopbarContext';
 
@@ -55,6 +56,7 @@ const IconAdmin = () => (
     <path d="m8.2 10.8 1.8 1.8 3.8-4" />
   </svg>
 );
+const IconSupport = () => <span className="os-icon os-icon-support os-icon-sm" aria-hidden="true" />;
 const IconSettings = () => <span className="os-icon os-icon-settings os-icon-sm" aria-hidden="true" />;
 
 const IconMessages = () => (
@@ -84,6 +86,11 @@ type NotificationState = {
   rows: AchievementNotification[];
 };
 
+type OrderVisibilityState = {
+  userId: string;
+  hasOrders: boolean;
+};
+
 function labelForPath(path: string | null | undefined) {
   if (!path) return null;
   if (path.startsWith('/library')) return 'Library';
@@ -109,6 +116,7 @@ export function Topbar() {
   const { count: cartCount } = useCart();
   const [profileState, setProfileState] = useState<ProfileState | null>(null);
   const [notificationState, setNotificationState] = useState<NotificationState | null>(null);
+  const [orderVisibilityState, setOrderVisibilityState] = useState<OrderVisibilityState | null>(null);
   const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
   const [hiddenNotificationIds, setHiddenNotificationIds] = useState<Set<string>>(new Set());
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -141,6 +149,23 @@ export function Topbar() {
     });
     return () => { alive = false; };
   }, [userId]);
+
+  useEffect(() => {
+    if (!userId) {
+      Promise.resolve().then(() => setOrderVisibilityState(null));
+      return;
+    }
+    let alive = true;
+    const activeUserId = userId;
+    void hasCustomerOrders(activeUserId)
+      .then(hasOrders => {
+        if (alive) setOrderVisibilityState({ userId: activeUserId, hasOrders });
+      })
+      .catch(() => {
+        if (alive) setOrderVisibilityState({ userId: activeUserId, hasOrders: false });
+      });
+    return () => { alive = false; };
+  }, [pathname, userId]);
 
   useEffect(() => {
     if (!userId) {
@@ -200,7 +225,6 @@ export function Topbar() {
       setUserMenuOpen(false);
       setNotifMenuOpen(false);
       setSearchOpen(false);
-      document.querySelector<HTMLElement>('.app-main-content')?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
     });
   }, [pathname]);
 
@@ -223,28 +247,71 @@ export function Topbar() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const pathWithQuery = searchKey ? `${pathname}?${searchKey}` : pathname;
-    const saved = window.sessionStorage.getItem(`${SCROLL_PREFIX}${pathWithQuery}`);
-    if (saved) {
-      const y = Number(saved);
-      if (Number.isFinite(y) && y > 0) {
-        window.requestAnimationFrame(() => window.scrollTo({ top: y, left: 0, behavior: 'auto' }));
+    const storageKey = `${SCROLL_PREFIX}${pathWithQuery}`;
+    const scrollerElement = document.querySelector<HTMLElement>('.app-main-content');
+    if (!scrollerElement) return;
+    const scroller: HTMLElement = scrollerElement;
+
+    const saved = window.sessionStorage.getItem(storageKey);
+    const target = saved === null ? 0 : Number(saved);
+    let restoreFrame = 0;
+    let saveFrame = 0;
+    let restoring = Number.isFinite(target) && target > 0;
+    const restoreDeadline = window.performance.now() + 3_000;
+
+    // Store lists load asynchronously. Retry until their content is tall enough
+    // to accept the saved offset, while yielding immediately if the user starts
+    // interacting with the returned page.
+    function restoreScroll() {
+      if (!restoring) return;
+      scroller.scrollTo({ top: target, left: 0, behavior: 'auto' });
+      if (Math.abs(scroller.scrollTop - target) <= 1 || window.performance.now() >= restoreDeadline) {
+        restoring = false;
+        return;
       }
+      restoreFrame = window.requestAnimationFrame(restoreScroll);
     }
 
-    let frame = 0;
-    function saveScroll() {
-      window.cancelAnimationFrame(frame);
-      frame = window.requestAnimationFrame(() => {
-        window.sessionStorage.setItem(`${SCROLL_PREFIX}${pathWithQuery}`, String(window.scrollY));
-      });
+    function cancelRestore() {
+      restoring = false;
+      window.cancelAnimationFrame(restoreFrame);
     }
-    window.addEventListener('scroll', saveScroll, { passive: true });
-    window.addEventListener('pagehide', saveScroll);
+
+    function persistScroll() {
+      window.sessionStorage.setItem(storageKey, String(scroller.scrollTop));
+    }
+
+    function schedulePersist() {
+      if (restoring) return;
+      window.cancelAnimationFrame(saveFrame);
+      saveFrame = window.requestAnimationFrame(persistScroll);
+    }
+
+    // Capture the position before a link/button can start a route transition.
+    // Next may reset the shared scroller before this effect's cleanup runs.
+    function handleInteraction() {
+      cancelRestore();
+      persistScroll();
+    }
+
+    if (restoring) restoreFrame = window.requestAnimationFrame(restoreScroll);
+    else scroller.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+
+    scroller.addEventListener('scroll', schedulePersist, { passive: true });
+    scroller.addEventListener('pointerdown', handleInteraction, { passive: true });
+    scroller.addEventListener('touchstart', handleInteraction, { passive: true });
+    scroller.addEventListener('wheel', handleInteraction, { passive: true });
+    window.addEventListener('keydown', handleInteraction);
+    window.addEventListener('pagehide', persistScroll);
     return () => {
-      saveScroll();
-      window.cancelAnimationFrame(frame);
-      window.removeEventListener('scroll', saveScroll);
-      window.removeEventListener('pagehide', saveScroll);
+      cancelRestore();
+      window.cancelAnimationFrame(saveFrame);
+      scroller.removeEventListener('scroll', schedulePersist);
+      scroller.removeEventListener('pointerdown', handleInteraction);
+      scroller.removeEventListener('touchstart', handleInteraction);
+      scroller.removeEventListener('wheel', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
+      window.removeEventListener('pagehide', persistScroll);
     };
   }, [pathname, searchKey]);
 
@@ -289,6 +356,7 @@ export function Topbar() {
 
   const profile = profileState && profileState.userId === userId ? profileState.profile : null;
   const notifications = notificationState && notificationState.userId === userId ? notificationState.rows : [];
+  const hasOrders = Boolean(orderVisibilityState?.userId === userId && orderVisibilityState.hasOrders);
   const displayName = profile?.display_name || profile?.username || user?.email?.split('@')[0] || 'You';
   const avatarUrl = profile?.avatar_url ?? null;
   const profileHref = profile?.username ? `/profile/${profile.username}` : '/profile';
@@ -476,9 +544,11 @@ export function Topbar() {
                 <Link href="/inbox" className="ui44-paper-menu-item os-popover-item" role="menuitem">
                   <IconMessages /> Inbox
                 </Link>
-                <Link href="/orders" className="ui44-paper-menu-item os-popover-item" role="menuitem">
-                  <IconOrders /> Orders
-                </Link>
+                {hasOrders && (
+                  <Link href="/orders" className="ui44-paper-menu-item os-popover-item" role="menuitem">
+                    <IconOrders /> Orders
+                  </Link>
+                )}
                 <Link href="/studio" className="ui44-paper-menu-item os-popover-item" role="menuitem">
                   <IconStudio /> Studio
                 </Link>
@@ -487,6 +557,9 @@ export function Topbar() {
                     <IconAdmin /> Admin
                   </Link>
                 )}
+                <Link href="/support" className="ui44-paper-menu-item os-popover-item os-popover-item-mobile-only" role="menuitem">
+                  <IconSupport /> Support
+                </Link>
                 <Link href="/settings" className="ui44-paper-menu-item os-popover-item os-popover-item-mobile-only" role="menuitem">
                   <IconSettings /> Settings
                 </Link>

@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { LegalPage, LegalSection } from '@/components/LegalPage';
 import { buildPageMetadata } from '@/lib/metadata';
+import { AnalyticsPrivacyControls } from '@/components/AnalyticsConsent';
+import { getAnalyticsMeasurementId } from '@/lib/analyticsConfig';
 
 export const metadata = buildPageMetadata({
   title: 'Privacy Policy',
@@ -9,11 +11,12 @@ export const metadata = buildPageMetadata({
 });
 
 export default function PrivacyPage() {
+  const analyticsMeasurementId = getAnalyticsMeasurementId();
   return <LegalPage
     title="Privacy Policy"
     summary="How forty four collects, uses, discloses, and safeguards information through 44OS."
   >
-    <p className="os-type-meta">Effective and last updated July 17, 2026</p>
+    <p className="os-type-meta">Effective July 17, 2026 · Last updated July 18, 2026</p>
 
     <LegalSection title="Who we are and what this policy covers">
       <p>
@@ -58,6 +61,26 @@ export default function PrivacyPage() {
       <p>We do not sell personal information or operate a behavioral advertising business.</p>
     </LegalSection>
 
+    <LegalSection title="Optional analytics and your choice" id="analytics">
+      <p>
+        44OS does not load optional Google Analytics measurement unless it is configured and you
+        choose &ldquo;Allow analytics.&rdquo; If you allow it, Google Analytics may process public page and
+        feature interactions, approximate location, browser and device information, and a random
+        client identifier to help us understand reliability and improve 44OS. We do not send your
+        email address, username, profile name, payment-card information, private messages, support
+        text, uploaded files, or Creator tax information to Google Analytics.
+      </p>
+      <p>
+        Advertising storage, advertising user data, ad personalization, Google signals, and ad
+        personalization signals remain denied. Analytics uses first-party cookies such as
+        <code>_ga</code> and <code>_ga_*</code> only after consent. Declining does not affect account,
+        security, Cart, Library, playback, or other necessary storage. You can change your choice
+        below; declining after previously allowing analytics disables further collection in this
+        browser and removes accessible 44OS analytics cookies.
+      </p>
+      <AnalyticsPrivacyControls measurementId={analyticsMeasurementId} />
+    </LegalSection>
+
     <LegalSection title="Who receives information and why">
       <p>We disclose only the information reasonably needed for the applicable purpose:</p>
       <ul>
@@ -66,6 +89,7 @@ export default function PrivacyPage() {
         <li><strong>Wise</strong> receives a Creator&apos;s payout-claim email address and the payment information needed when forty four manually initiates an approved Creator payout. Wise obtains any bank details required to claim that payment through its own process.</li>
         <li><strong>Supabase and Vercel</strong> process information to provide authentication, database, private file storage, application hosting, security, and delivery infrastructure.</li>
         <li><strong>Resend and our mailbox provider</strong> process email addresses, message contents, and delivery information to send account or transactional messages and handle Support correspondence.</li>
+        <li><strong>Google Analytics</strong> processes limited device and public usage information only when optional measurement is configured and you affirmatively allow it. Advertising features remain disabled.</li>
         <li><strong>Professional advisers and authorities</strong> may receive information when reasonably necessary for accounting, tax, legal, insurance, security, compliance, or a valid legal request.</li>
         <li><strong>A successor or transaction participant</strong> may receive relevant information as part of a proposed or completed financing, reorganization, sale, or transfer of all or part of the business, subject to appropriate confidentiality and legal requirements.</li>
       </ul>

@@ -11,6 +11,7 @@ type PrintfulAvailability = 'active' | 'discontinued' | 'out_of_stock' | 'tempor
 type PrintfulEnvelope<T> = {
   code?: number;
   result?: T;
+  paging?: { total?: number; offset?: number; limit?: number };
   error?: { reason?: string; message?: string };
 };
 
@@ -107,7 +108,7 @@ function printfulStoreCurrency() {
 function printfulWebhookSecret() {
   const value = process.env.PRINTFUL_WEBHOOK_SECRET?.trim();
   if (!value || value.length < 24) throw new PrintfulConfigurationError('Printful signed-webhook access is not configured.');
-  return /^[a-f0-9]{64}$/i.test(value) ? Buffer.from(value, 'hex') : Buffer.from(value, 'utf8');
+  return value.length % 2 === 0 && /^[a-f0-9]+$/i.test(value) ? Buffer.from(value, 'hex') : Buffer.from(value, 'utf8');
 }
 
 export function printfulConfigurationPresence() {
@@ -120,7 +121,7 @@ export function printfulConfigurationPresence() {
   };
 }
 
-async function printfulRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function printfulRequestEnvelope<T>(path: string, init: RequestInit = {}): Promise<PrintfulEnvelope<T>> {
   if (!path.startsWith('/')) throw new PrintfulBoundaryError('Printful API path is invalid.');
   const response = await fetch(`${PRINTFUL_API_ORIGIN}${path}`, {
     ...init,
@@ -139,7 +140,12 @@ async function printfulRequest<T>(path: string, init: RequestInit = {}): Promise
   if (!response.ok || payload?.result === undefined) {
     throw new PrintfulProviderError(payload?.error?.reason || `Printful request failed (${response.status}).`, response.status);
   }
-  return payload.result;
+  return payload;
+}
+
+async function printfulRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const payload = await printfulRequestEnvelope<T>(path, init);
+  return payload.result!;
 }
 
 export async function verifyPrintfulConnection() {
@@ -151,8 +157,37 @@ export async function verifyPrintfulConnection() {
 }
 
 export async function listPrintfulCatalogProducts() {
-  const products = await printfulRequest<SyncProductSummary[]>('/store/products?status=all&limit=100');
-  return products
+  const pageSize = 100;
+  const products = new Map<number, SyncProductSummary>();
+  let offset = 0;
+  let expectedTotal: number | null = null;
+
+  for (let page = 0; page < 500; page += 1) {
+    const envelope = await printfulRequestEnvelope<SyncProductSummary[]>(`/store/products?status=all&limit=${pageSize}&offset=${offset}`);
+    const pageProducts = envelope.result ?? [];
+    const providerTotal = envelope.paging?.total;
+    if (Number.isSafeInteger(providerTotal) && (providerTotal as number) >= 0) expectedTotal = providerTotal as number;
+    if (!Array.isArray(pageProducts)) throw new PrintfulBoundaryError('Printful returned an invalid product page.');
+    if (expectedTotal !== null && pageProducts.length === 0 && offset < expectedTotal) {
+      throw new PrintfulBoundaryError('Printful returned an incomplete product snapshot.');
+    }
+    for (const product of pageProducts) {
+      if (!Number.isSafeInteger(product.id) || product.id <= 0) {
+        throw new PrintfulBoundaryError('Printful returned an invalid Sync Product identity.');
+      }
+      if (products.has(product.id)) throw new PrintfulBoundaryError('Printful returned a duplicate Sync Product identity.');
+      products.set(product.id, product);
+    }
+    offset += pageProducts.length;
+    if (expectedTotal !== null && offset >= expectedTotal) break;
+    if (expectedTotal === null && pageProducts.length < pageSize) break;
+  }
+  if (expectedTotal !== null && products.size !== expectedTotal) {
+    throw new PrintfulBoundaryError('Printful product pagination did not produce a complete snapshot.');
+  }
+  if (products.size === 0 && expectedTotal !== 0) throw new PrintfulBoundaryError('Printful product snapshot is empty or incomplete.');
+
+  return [...products.values()]
     .filter(product => Number.isSafeInteger(product.id) && product.id > 0)
     .map(product => ({
       syncProductId: product.id,
@@ -266,17 +301,23 @@ async function assertCurrentProviderVariants(mappings: Array<{ catalog_variant_i
   }
 }
 
-export async function importPrintfulProduct(itemId: string, syncProductId: number) {
+export async function importPrintfulProduct(itemId: string, syncProductId: number, catalogSyncId?: string) {
   const admin = commerceAdminClient();
   const controlsResult = await admin.from('printful_runtime_controls' as never).select('*').eq('singleton', true).single();
   const controls = controlsResult.data as unknown as { provider_connected: boolean; catalog_import_enabled: boolean; store_id: number | null } | null;
   if (controlsResult.error || !controls?.provider_connected || !controls.catalog_import_enabled || controls.store_id !== printfulStoreId()) {
     throw new PrintfulBoundaryError('Printful catalog import is disabled.');
   }
-  const itemResult = await admin.from('catalog_items').select('id,title,price_cents,experience_type,fulfillment_type').eq('id', itemId).single();
+  const itemResult = await admin.from('catalog_items').select('id,title,price_cents,status,experience_type,fulfillment_type').eq('id', itemId).single();
   if (itemResult.error || itemResult.data?.experience_type !== 'merch' || !['physical', 'hybrid'].includes(itemResult.data.fulfillment_type)) {
     throw new PrintfulBoundaryError('Only a 44-owned physical Merch Item can be mapped.');
   }
+  const existingMappingResult = await admin.from('printful_product_mappings' as never)
+    .select('id,status,reviewed_at,reviewed_by').eq('store_id', printfulStoreId()).eq('sync_product_id', syncProductId).maybeSingle();
+  if (existingMappingResult.error) throw existingMappingResult.error;
+  const existingMapping = existingMappingResult.data as unknown as {
+    id: string; status: string; reviewed_at: string | null; reviewed_by: string | null;
+  } | null;
   const detail = await fetchPrintfulSyncProduct(syncProductId);
   const product = detail.sync_product!;
   const variants = detail.sync_variants ?? [];
@@ -288,11 +329,12 @@ export async function importPrintfulProduct(itemId: string, syncProductId: numbe
     external_id: product.external_id ?? null,
     provider_name: product.name || itemResult.data.title,
     thumbnail_url: null,
-    status: product.is_ignored ? 'blocked' : 'draft',
+    status: product.is_ignored ? 'archived' : existingMapping?.status === 'archived' ? 'draft' : existingMapping?.status ?? 'draft',
     provider_snapshot: { id: product.id, externalId: product.external_id ?? null, ignored: Boolean(product.is_ignored), variantCount: variants.length },
     last_synced_at: new Date().toISOString(),
-    reviewed_at: null,
-    reviewed_by: null,
+    reviewed_at: existingMapping?.status === 'reviewed' ? existingMapping.reviewed_at : null,
+    reviewed_by: existingMapping?.status === 'reviewed' ? existingMapping.reviewed_by : null,
+    ...(catalogSyncId ? { last_catalog_sync_id: catalogSyncId } : {}),
   } as never, { onConflict: 'item_id' }).select('id').single();
   if (productUpsert.error) throw productUpsert.error;
   const productMappingId = (productUpsert.data as unknown as { id: string }).id;
@@ -350,6 +392,7 @@ export async function importPrintfulProduct(itemId: string, syncProductId: numbe
       last_synced_at: new Date().toISOString(),
       reviewed_at: null,
       reviewed_by: null,
+      ...(catalogSyncId ? { last_catalog_sync_id: catalogSyncId } : {}),
     } as never, { onConflict: 'product_mapping_id,sync_variant_id' });
     if (mapping.error) throw mapping.error;
   }
@@ -359,15 +402,17 @@ export async function importPrintfulProduct(itemId: string, syncProductId: numbe
     admin.from('catalog_items').update({
       title: product.name?.trim() || itemResult.data.title,
       price_cents: baseRetailPrice,
-      status: 'draft',
-      cover_url: null,
+      status: existingMapping?.status === 'archived' ? 'draft' : itemResult.data.status,
     }).eq('id', itemId),
-    admin.from('catalog_offers').update({ price_cents: baseRetailPrice })
+    admin.from('catalog_offers').update({
+      price_cents: baseRetailPrice,
+      ...(existingMapping?.status === 'archived' ? { status: 'draft' } : {}),
+    })
       .eq('item_id', itemId).eq('offer_type', 'physical_purchase'),
   ]);
   if (itemSync.error) throw itemSync.error;
   if (offerSync.error) throw offerSync.error;
-  return { itemId, syncProductId, variantCount: variants.length, status: product.is_ignored ? 'blocked' : 'draft' };
+  return { itemId, syncProductId, variantCount: variants.length, status: product.is_ignored ? 'archived' : existingMapping?.status === 'archived' ? 'draft' : existingMapping?.status ?? 'draft' };
 }
 
 export async function createPendingPrintfulProduct(syncProductId: number) {
@@ -410,6 +455,201 @@ export async function createPendingPrintfulProduct(syncProductId: number) {
     return { itemId, syncProductId, status: 'pending' };
   } catch (error) {
     await admin.from('catalog_items').delete().eq('id', itemId).eq('status', 'draft');
+    throw error;
+  }
+}
+
+type PrintfulSyncSummary = {
+  runId: string;
+  providerProductCount: number;
+  created: number;
+  updated: number;
+  staged: number;
+  blocked: number;
+  archived: number;
+};
+
+/**
+ * Reconciles only after the complete paginated provider snapshot is available.
+ * A service-only database lease serializes concurrent operators; failed runs
+ * are recorded but are intentionally unable to archive any current history.
+ */
+export async function syncPrintfulCatalog(adminId: string): Promise<PrintfulSyncSummary> {
+  const admin = commerceAdminClient();
+  const controlsResult = await admin.from('printful_runtime_controls' as never)
+    .select('provider_connected,catalog_import_enabled,store_id,minimum_margin_cents').eq('singleton', true).single();
+  const controls = controlsResult.data as unknown as {
+    provider_connected: boolean; catalog_import_enabled: boolean; store_id: number | null; minimum_margin_cents: number;
+  } | null;
+  if (controlsResult.error || !controls?.provider_connected || !controls.catalog_import_enabled || controls.store_id !== printfulStoreId()) {
+    throw new PrintfulBoundaryError('Printful catalog synchronization is disabled.');
+  }
+  const started = await admin.rpc('begin_printful_catalog_sync' as never, {
+    target_store_id: printfulStoreId(), target_started_by: adminId,
+  } as never) as unknown as { data: string | null; error: Error | null };
+  if (started.error || typeof started.data !== 'string') throw started.error ?? new PrintfulBoundaryError('Printful catalog synchronization could not start.');
+  const runId: string = started.data;
+  const summary: PrintfulSyncSummary = { runId, providerProductCount: 0, created: 0, updated: 0, staged: 0, blocked: 0, archived: 0 };
+
+  try {
+    const providerProducts = await listPrintfulCatalogProducts();
+    summary.providerProductCount = providerProducts.length;
+    const existingResult = await admin.from('printful_product_mappings' as never)
+      .select('id,item_id,sync_product_id,status').eq('store_id', printfulStoreId());
+    if (existingResult.error) throw existingResult.error;
+    const existingBySyncId = new Map(((existingResult.data ?? []) as unknown as Array<{
+      id: string; item_id: string; sync_product_id: number; status: string;
+    }>).map(mapping => [mapping.sync_product_id, mapping]));
+
+    for (const providerProduct of providerProducts) {
+      const existing = existingBySyncId.get(providerProduct.syncProductId);
+      let itemId = existing?.item_id;
+      const priorVariantsResult = existing
+        ? await admin.from('printful_variant_mappings' as never)
+          .select('sync_variant_id,status,color_value').eq('product_mapping_id', existing.id)
+        : { data: [], error: null };
+      if (priorVariantsResult.error) throw priorVariantsResult.error;
+      const priorVariants = (priorVariantsResult.data ?? []) as unknown as Array<{
+        sync_variant_id: number; status: string; color_value: string | null;
+      }>;
+      const reviewedSyncVariantIds = new Set(priorVariants.filter(variant => variant.status === 'reviewed')
+        .map(variant => variant.sync_variant_id));
+      const reviewedColorsBeforeSync = new Set(priorVariants.filter(variant => variant.status === 'reviewed' && variant.color_value)
+        .map(variant => variant.color_value!.trim().toLowerCase()));
+      if (!itemId) {
+        const created = await createPendingPrintfulProduct(providerProduct.syncProductId);
+        itemId = created.itemId;
+        summary.created += 1;
+      } else {
+        summary.updated += 1;
+      }
+      await importPrintfulProduct(itemId, providerProduct.syncProductId, runId);
+
+      if (providerProduct.ignored) {
+        const [mappingArchive, itemArchive, offerArchive] = await Promise.all([
+          admin.from('printful_product_mappings' as never).update({ status: 'archived', reviewed_at: null, reviewed_by: null } as never)
+            .eq('item_id', itemId),
+          admin.from('catalog_items').update({ status: 'archived' }).eq('id', itemId),
+          admin.from('catalog_offers').update({ status: 'archived' }).eq('item_id', itemId).eq('offer_type', 'physical_purchase'),
+        ]);
+        if (mappingArchive.error || itemArchive.error || offerArchive.error) throw mappingArchive.error || itemArchive.error || offerArchive.error;
+        summary.archived += 1;
+        continue;
+      }
+
+      const mappingResult = await admin.from('printful_product_mappings' as never)
+        .select('id,status').eq('item_id', itemId).single();
+      if (mappingResult.error) throw mappingResult.error;
+      const mapping = mappingResult.data as unknown as { id: string; status: string };
+      const variantsResult = await admin.from('printful_variant_mappings' as never)
+        .select('id,merch_variant_id,sync_variant_id,status,availability_status,color_value,provider_cost_cents,last_catalog_sync_id')
+        .eq('product_mapping_id', mapping.id);
+      if (variantsResult.error) throw variantsResult.error;
+      const variants = (variantsResult.data ?? []) as unknown as Array<{
+        id: string; merch_variant_id: string; sync_variant_id: number; status: string; availability_status: string;
+        color_value: string | null; provider_cost_cents: number | null; last_catalog_sync_id: string | null;
+      }>;
+      const staleVariants = variants.filter(variant => variant.last_catalog_sync_id !== runId);
+      if (staleVariants.length) {
+        const [providerArchive, variantArchive] = await Promise.all([
+          admin.from('printful_variant_mappings' as never).update({ status: 'archived', reviewed_at: null, reviewed_by: null } as never)
+            .in('id', staleVariants.map(variant => variant.id)),
+          admin.from('merch_variants' as never).update({ status: 'archived', is_default: false } as never)
+            .in('id', staleVariants.map(variant => variant.merch_variant_id)),
+        ]);
+        if (providerArchive.error || variantArchive.error) throw providerArchive.error || variantArchive.error;
+        summary.archived += staleVariants.length;
+      }
+      const currentVariants = variants.filter(variant => variant.last_catalog_sync_id === runId);
+      const [merchVariantsResult, imagesResult] = await Promise.all([
+        admin.from('merch_variants' as never).select('id,price_cents,status').in('id', currentVariants.map(variant => variant.merch_variant_id)),
+        admin.from('merch_product_images' as never).select('color_value').eq('item_id', itemId).eq('role', 'color'),
+      ]);
+      if (merchVariantsResult.error || imagesResult.error) throw merchVariantsResult.error || imagesResult.error;
+      const priceByVariant = new Map(((merchVariantsResult.data ?? []) as unknown as Array<{ id: string; price_cents: number | null }>)
+        .map(variant => [variant.id, variant.price_cents]));
+      const imagedColors = new Set(((imagesResult.data ?? []) as Array<{ color_value: string | null }>)
+        .map(image => image.color_value?.trim().toLowerCase()).filter((color): color is string => Boolean(color)));
+      const activeIds: string[] = [];
+      const stagedIds: string[] = [];
+      const blockedIds: string[] = [];
+      for (const variant of currentVariants) {
+        const color = variant.color_value?.trim().toLowerCase() ?? null;
+        const marginSafe = variant.provider_cost_cents !== null
+          && (priceByVariant.get(variant.merch_variant_id) ?? 0) - variant.provider_cost_cents >= controls.minimum_margin_cents;
+        const canActivate = mapping.status !== 'archived' && variant.availability_status === 'active' && marginSafe
+          && (reviewedSyncVariantIds.has(variant.sync_variant_id)
+            || (!color ? false : imagedColors.has(color) && reviewedColorsBeforeSync.has(color)));
+        if (canActivate) activeIds.push(variant.id);
+        else if (variant.availability_status === 'active' && marginSafe) stagedIds.push(variant.id);
+        else blockedIds.push(variant.id);
+      }
+      if (activeIds.length) {
+        const activeVariantIds = currentVariants.filter(variant => activeIds.includes(variant.id)).map(variant => variant.merch_variant_id);
+        const [providerUpdate, variantUpdate] = await Promise.all([
+          admin.from('printful_variant_mappings' as never).update({ status: 'reviewed', reviewed_at: new Date().toISOString(), reviewed_by: adminId } as never).in('id', activeIds),
+          admin.from('merch_variants' as never).update({ status: 'active' } as never).in('id', activeVariantIds),
+        ]);
+        if (providerUpdate.error || variantUpdate.error) throw providerUpdate.error || variantUpdate.error;
+      }
+      if (stagedIds.length) {
+        const stagedVariantIds = currentVariants.filter(variant => stagedIds.includes(variant.id)).map(variant => variant.merch_variant_id);
+        const [providerUpdate, variantUpdate] = await Promise.all([
+          admin.from('printful_variant_mappings' as never).update({ status: 'draft', reviewed_at: null, reviewed_by: null } as never).in('id', stagedIds),
+          admin.from('merch_variants' as never).update({ status: 'draft' } as never).in('id', stagedVariantIds),
+        ]);
+        if (providerUpdate.error || variantUpdate.error) throw providerUpdate.error || variantUpdate.error;
+        summary.staged += stagedIds.length;
+      }
+      if (blockedIds.length) {
+        const blockedVariantIds = currentVariants.filter(variant => blockedIds.includes(variant.id)).map(variant => variant.merch_variant_id);
+        const [providerUpdate, variantUpdate] = await Promise.all([
+          admin.from('printful_variant_mappings' as never).update({ status: 'blocked', reviewed_at: null, reviewed_by: null } as never).in('id', blockedIds),
+          admin.from('merch_variants' as never).update({ status: 'unavailable' } as never).in('id', blockedVariantIds),
+        ]);
+        if (providerUpdate.error || variantUpdate.error) throw providerUpdate.error || variantUpdate.error;
+        summary.blocked += blockedIds.length;
+      }
+    }
+
+    const staleProductsResult = await admin.from('printful_product_mappings' as never)
+      .select('id,item_id,last_catalog_sync_id').eq('store_id', printfulStoreId());
+    if (staleProductsResult.error) throw staleProductsResult.error;
+    const staleProducts = ((staleProductsResult.data ?? []) as unknown as Array<{
+      id: string; item_id: string; last_catalog_sync_id: string | null;
+    }>).filter(product => product.last_catalog_sync_id !== runId);
+    for (const product of staleProducts) {
+      const staleVariantsResult = await admin.from('printful_variant_mappings' as never)
+        .select('merch_variant_id,last_catalog_sync_id').eq('product_mapping_id', product.id);
+      if (staleVariantsResult.error) throw staleVariantsResult.error;
+      const staleVariantIds = ((staleVariantsResult.data ?? []) as Array<{
+        merch_variant_id: string; last_catalog_sync_id: string | null;
+      }>).filter(variant => variant.last_catalog_sync_id !== runId).map(variant => variant.merch_variant_id);
+      const operations = [
+        admin.from('printful_product_mappings' as never).update({ status: 'archived', reviewed_at: null, reviewed_by: null } as never).eq('id', product.id),
+        admin.from('catalog_items').update({ status: 'archived' }).eq('id', product.item_id),
+        admin.from('catalog_offers').update({ status: 'archived' }).eq('item_id', product.item_id).eq('offer_type', 'physical_purchase'),
+      ];
+      if (staleVariantIds.length) operations.push(
+        admin.from('printful_variant_mappings' as never).update({ status: 'archived', reviewed_at: null, reviewed_by: null } as never).eq('product_mapping_id', product.id),
+        admin.from('merch_variants' as never).update({ status: 'archived', is_default: false } as never).in('id', staleVariantIds),
+      );
+      const results = await Promise.all(operations);
+      const failed = results.find(result => result.error);
+      if (failed?.error) throw failed.error;
+      summary.archived += 1;
+    }
+    const finished = await admin.rpc('finish_printful_catalog_sync' as never, {
+      target_run_id: runId, target_status: 'completed', target_product_count: summary.providerProductCount,
+      target_summary: summary, target_error_message: null,
+    } as never);
+    if (finished.error) throw finished.error;
+    return summary;
+  } catch (error) {
+    await admin.rpc('finish_printful_catalog_sync' as never, {
+      target_run_id: runId, target_status: 'failed', target_product_count: summary.providerProductCount,
+      target_summary: summary, target_error_message: error instanceof Error ? error.message : 'Catalog synchronization failed.',
+    } as never);
     throw error;
   }
 }
@@ -513,7 +753,7 @@ export async function publishPrintfulProduct(itemId: string, adminId: string) {
     admin.from('printful_variant_mappings' as never)
       .select('id,catalog_variant_id,provider_cost_cents,availability_status,status,color_value')
       .eq('product_mapping_id', mapping.id),
-    admin.from('merch_product_images' as never).select('role,color_value').eq('item_id', itemId),
+    admin.from('merch_product_images' as never).select('role,color_value,is_featured').eq('item_id', itemId),
   ]);
   if (itemResult.error || variantsResult.error || imagesResult.error) {
     throw new PrintfulBoundaryError('Printful publication evidence is incomplete.');
@@ -522,7 +762,7 @@ export async function publishPrintfulProduct(itemId: string, adminId: string) {
   const variants = variantsResult.data as unknown as Array<{
     id: string; catalog_variant_id: number; provider_cost_cents: number | null; availability_status: string; status: string; color_value: string | null;
   }>;
-  const images = imagesResult.data as unknown as Array<{ role: 'main' | 'color' | 'bonus'; color_value: string | null }>;
+  const images = imagesResult.data as unknown as Array<{ role: 'color' | 'bonus'; color_value: string | null; is_featured: boolean }>;
   const controlsResult = await admin.from('commerce_runtime_controls').select('platform_seller_id').eq('singleton', true).single();
   if (controlsResult.error || item.experience_type !== 'merch' || item.fulfillment_type !== 'physical'
     || item.author_id !== controlsResult.data?.platform_seller_id) {
@@ -532,8 +772,8 @@ export async function publishPrintfulProduct(itemId: string, adminId: string) {
   if (mapping.status !== 'reviewed' || !eligible.length) {
     throw new PrintfulBoundaryError('Review the current Printful product and at least one available variant before publishing.');
   }
-  if (!images.some(image => image.role === 'main')) {
-    throw new PrintfulBoundaryError('Upload one 44OS main product image before publishing.');
+  if (!images.some(image => image.is_featured)) {
+    throw new PrintfulBoundaryError('Choose one featured 44OS product image before publishing.');
   }
   const imageColors = new Set(images.filter(image => image.role === 'color' && image.color_value)
     .map(image => image.color_value!.trim().toLowerCase()));

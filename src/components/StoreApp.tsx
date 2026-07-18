@@ -257,7 +257,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     || (beatFiltersVisible && Boolean(beatBpmMin || beatBpmMax || beatKey !== 'all' || beatMood !== 'all' || beatInstrument !== 'all' || beatTier !== 'all'))
     || Boolean(query.trim());
 
-  const surfaceName = hasActiveFilters ? 'Browse' : 'Store';
+  const surfaceName = hasActiveFilters ? 'Browse' : (frontDoor ? '44OS' : 'Store');
   const activeFilterChips = [
     effectiveTagFilter !== 'all' ? { id: 'tag', label: effectiveTagFilter, clear: () => setTagFilter('all') } : null,
     effectiveTypeFilter !== 'all' ? { id: 'type', label: effectiveTypeFilter, clear: () => { setTypeFilter('all'); setTagFilter('all'); } } : null,
@@ -371,7 +371,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   );
 
   const copy = CATEGORY_COPY[category];
-  const pageTitle = category === 'all' && hasActiveFilters ? 'Browse' : copy.title;
+  const pageTitle = frontDoor ? '44OS' : (category === 'all' && hasActiveFilters ? 'Browse' : copy.title);
   const storeHeader = (
     <div className="store-browse-header">
       <HubHero title={pageTitle} actions={storeTools} />

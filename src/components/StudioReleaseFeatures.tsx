@@ -25,7 +25,6 @@ export type DraftBonusContent = {
 };
 
 export type DraftVideoEmbed = {
-  title: string;
   url: string;
 };
 
@@ -63,7 +62,8 @@ const EMPTY_BONUS_ITEM: DraftBonusContent = {
   visibility: 'achievement',
   achievementCode: OVERACHIEVER_CODE,
 };
-const EMPTY_VIDEO_EMBED: DraftVideoEmbed = { title: '', url: '' };
+const MAX_RELEASE_VIDEOS = 10;
+const EMPTY_VIDEO_EMBED: DraftVideoEmbed = { url: '' };
 
 export function createReleaseFeatureState(sectionId: StudioCatalogSectionId): ReleaseFeatureState {
   const achievements = achievementTemplates(sectionId);
@@ -136,14 +136,14 @@ function normalizeBonusItems(items: DraftBonusContent[]) {
 
 function normalizeVideoEmbeds(items: DraftVideoEmbed[] | undefined) {
   const normalized = items?.length ? items : [EMPTY_VIDEO_EMBED];
-  return normalized.slice(0, 3).map(item => ({ title: item.title ?? '', url: item.url ?? '' }));
+  return normalized.slice(0, MAX_RELEASE_VIDEOS).map(item => ({ url: item.url ?? '' }));
 }
 
 function enabledVideoEmbeds(state: ReleaseFeatureState) {
   return state.videoEmbedsEnabled
     ? normalizeVideoEmbeds(state.videoEmbeds)
-      .filter(embed => embed.title.trim() && embed.url.trim())
-      .map(embed => ({ title: embed.title.trim(), url: embed.url.trim() }))
+      .filter(embed => embed.url.trim())
+      .map(embed => ({ url: embed.url.trim() }))
     : [];
 }
 
@@ -161,10 +161,8 @@ function enabledBonusItems(state: ReleaseFeatureState) {
 export function validateReleaseFeatureState(state: ReleaseFeatureState, sectionId: StudioCatalogSectionId) {
   if (supportsAchievementsForSection(sectionId) && state.videoEmbedsEnabled) {
     for (const embed of normalizeVideoEmbeds(state.videoEmbeds)) {
-      const title = embed.title.trim();
       const url = embed.url.trim();
-      if (!title && !url) continue;
-      if (!title || !url) return 'Each YouTube embed needs both a title and a URL.';
+      if (!url) continue;
       if (!isSupportedYouTubeUrl(url)) return 'Use a valid HTTPS YouTube watch, short, or Shorts URL.';
     }
   }
@@ -249,7 +247,7 @@ export function hydrateReleaseFeatureState(
     behindTheScenesUrl: '',
     videoEmbedsEnabled: videoEmbeds.length > 0,
     videoEmbeds: videoEmbeds.length > 0
-      ? videoEmbeds.map(embed => ({ title: embed.title, url: `https://www.youtube.com/watch?v=${embed.youtube_video_id}` }))
+      ? videoEmbeds.map(embed => ({ url: `https://www.youtube.com/watch?v=${embed.youtube_video_id}` }))
       : [EMPTY_VIDEO_EMBED],
     achievements: base.achievements.map(template => {
       const saved = achievementByCode.get(template.code);
@@ -350,7 +348,7 @@ export function StudioReleaseFeatures({
   }
 
   function addVideoEmbed() {
-    if (state.videoEmbeds.length >= 3) return;
+    if (state.videoEmbeds.length >= MAX_RELEASE_VIDEOS) return;
     patch({ videoEmbeds: [...normalizeVideoEmbeds(state.videoEmbeds), { ...EMPTY_VIDEO_EMBED }] });
   }
 
@@ -407,8 +405,8 @@ export function StudioReleaseFeatures({
       {supportsAchievements && (
         <section className="dashboard-form-section studio-video-embeds-section">
           <SectionHeader
-            title="Video Embed"
-            description="Embed a video with this release."
+            title="Videos"
+            description="Add up to ten YouTube videos to this release."
             action={<button type="button" role="switch" aria-checked={state.videoEmbedsEnabled} className={state.videoEmbedsEnabled ? 'settings-toggle settings-toggle-on ui44-switch ui44-switch-on' : 'settings-toggle ui44-switch'} onClick={toggleVideoEmbeds} />}
           />
           {state.videoEmbedsEnabled && (
@@ -416,17 +414,13 @@ export function StudioReleaseFeatures({
               {normalizeVideoEmbeds(state.videoEmbeds).map((embed, index) => (
                 <div className="studio-video-embed-row" key={`video-embed-${index}`}>
                   <label className="dashboard-field">
-                    <span className="dashboard-field-label">Title</span>
-                    <Ui44TextInput className="os-input-field" value={embed.title} maxLength={120} placeholder="Enter video title" onChange={event => updateVideoEmbed(index, { title: event.target.value })} />
-                  </label>
-                  <label className="dashboard-field">
                     <span className="dashboard-field-label">YouTube Video URL</span>
                     <Ui44TextInput className="os-input-field" type="url" value={embed.url} placeholder="Enter YouTube video URL" onChange={event => updateVideoEmbed(index, { url: event.target.value })} />
                   </label>
                   {state.videoEmbeds.length > 1 && <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => removeVideoEmbed(index)}>Remove</button>}
                 </div>
               ))}
-              {state.videoEmbeds.length < 3 && <button type="button" className="os-button os-button-secondary os-button-compact" onClick={addVideoEmbed}>Add another video</button>}
+              {state.videoEmbeds.length < MAX_RELEASE_VIDEOS && <button type="button" className="os-button os-button-secondary os-button-compact" onClick={addVideoEmbed}>Add another video</button>}
             </div></div>
           )}
         </section>

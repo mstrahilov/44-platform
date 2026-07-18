@@ -41,7 +41,7 @@ export default function CartPage() {
     return (
       <PageShell>
         <main className="dashboard-page">
-          <HubHero title={PURCHASING_COMING_SOON_TITLE} copy="44OS is launching without customer payments." />
+          <HubHero title={PURCHASING_COMING_SOON_TITLE} copy="Purchasing is temporarily unavailable." />
           <div className="dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
             <div className="dashboard-empty">
               {PURCHASING_COMING_SOON_COPY}

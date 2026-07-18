@@ -42,23 +42,21 @@ select lives_ok(
   )$$,'an administrator can record reviewed route evidence'
 );
 select set_config('request.jwt.claim.sub','a7000000-0000-4000-8000-000000000005',true);
-select throws_ok(
+select lives_ok(
   $$insert into public.catalog_items(
     item_category_id,slug,title,creator,item_type,price_cents,is_free,status,author_id,
     experience_type,fulfillment_type
   ) select category.id,'blocked-before-onboarding','Blocked Before Onboarding','Blocked Creator',
     'Album',1000,false,'draft','a7000000-0000-4000-8000-000000000005','music','digital'
   from public.item_categories category where category.slug='music'$$,
-  '55000','Complete creator tax and Wise payout setup before uploading Items.',
-  'an authenticated creator cannot create an Item before onboarding'
+  'a Creator can create a digital Item before completing paperwork'
 );
 select set_config('request.jwt.claim.sub','a7000000-0000-4000-8000-000000000002',true);
-select throws_ok(
+select lives_ok(
   $$select public.set_admin_creator_access(
     'a7000000-0000-4000-8000-000000000004','creator','Unsupported-country promotion test.'
   )$$,
-  '55000','This member country does not have a verified Wise email payout route.',
-  'creator promotion fails closed when the country has no verified route'
+  'an Admin can promote a trusted Member without waiting for payout-route paperwork'
 );
 select lives_ok(
   $$select public.set_admin_creator_tax_reviewer('a7000000-0000-4000-8000-000000000003',true)$$,

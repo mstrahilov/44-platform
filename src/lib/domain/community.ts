@@ -2,6 +2,7 @@ import type { LikeRow, ReplyEngagerRow, SocialLiker, SocialPost, SocialReply } f
 import { supabase } from '@/lib/supabase';
 
 const DISCUSSION_SELECT = '*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type, country_code, home_country_code)';
+const UUID_IDENTIFIER = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export type CommunityMentionProfile = {
   id: string;
@@ -25,6 +26,10 @@ export async function getDiscussion(identifier: string) {
     .maybeSingle();
   if (bySlug.error) throw bySlug.error;
   if (bySlug.data) return bySlug.data as SocialPost;
+
+  // A removed or stale slug is a normal not-found request. Do not send it to
+  // Postgres as a UUID, which turns an ordinary missing thread into a 500.
+  if (!UUID_IDENTIFIER.test(identifier)) return null;
 
   const byId = await supabase
     .from('community_discussions')

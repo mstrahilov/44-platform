@@ -5,9 +5,10 @@ import { useEffect, useState } from 'react';
 import { EmptyMessage, HubHero, PageShell, SectionHeader } from '@/components/Ui';
 import { Ui44Panel } from '@/components/ui44/Spacing';
 import { AdminAccessBoundary, AdminActionDialog, AdminStatusBadge, formatAdminDate } from '@/components/admin/AdminPrimitives';
-import { decideAdminSubmission, getAdminContentDetail, setAdminItemLifecycle, type AdminContentDetail } from '@/lib/domain/adminOperations';
+import { decideAdminSubmission, getAdminContentDetail, setAdminItemLifecycle, setAdminOfferLifecycle, type AdminContentDetail } from '@/lib/domain/adminOperations';
 
 type AdminContentAction = 'approve' | 'reject' | 'publish' | 'unpublish' | 'archive';
+type AdminOfferAction = { action: 'pause' | 'restore'; offerId: string };
 
 export default function AdminContentDetailApp({ itemId }: { itemId: string }) {
   return <AdminAccessBoundary><ContentDetail itemId={itemId} /></AdminAccessBoundary>;
@@ -19,6 +20,7 @@ function ContentDetail({ itemId }: { itemId: string }) {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [action, setAction] = useState<AdminContentAction | null>(null);
+  const [offerAction, setOfferAction] = useState<AdminOfferAction | null>(null);
   const [saving, setSaving] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -48,6 +50,17 @@ function ContentDetail({ itemId }: { itemId: string }) {
       }
       setAction(null);
       setMessage(ACTION_COPY[action].success);
+      setReloadKey(value => value + 1);
+    } finally { setSaving(false); }
+  }
+
+  async function completeOfferAction(reason: string) {
+    if (!offerAction) return;
+    setSaving(true); setError(''); setMessage('');
+    try {
+      await setAdminOfferLifecycle(offerAction.offerId, offerAction.action, reason);
+      setOfferAction(null);
+      setMessage(OFFER_ACTION_COPY[offerAction.action].success);
       setReloadKey(value => value + 1);
     } finally { setSaving(false); }
   }
@@ -101,7 +114,7 @@ function ContentDetail({ itemId }: { itemId: string }) {
       <div className="admin-detail-groups">
         <DetailGroup title="Tracks" empty="No tracks" rows={detail.tracks.map(track => ({ id: track.id, title: `${track.number}. ${track.title}`, meta: track.has_audio ? 'Audio present' : 'Audio missing' }))} />
         <DetailGroup title="Assets" empty="No assets" rows={detail.assets.map(asset => ({ id: asset.id, title: asset.title || asset.asset_type, meta: `${asset.asset_type} · ${asset.has_file ? 'File present' : 'File missing'}` }))} />
-        <DetailGroup title="Offers" empty="No offers" rows={detail.offers.map(offer => ({ id: offer.id, title: offer.title, meta: `${offer.status} · ${formatCurrency(offer.price_cents, offer.currency)}` }))} />
+        <OfferDetailGroup offers={detail.offers} onAction={(offerId, offerActionName) => setOfferAction({ offerId, action: offerActionName })} />
       </div>
     </section>
 
@@ -114,6 +127,7 @@ function ContentDetail({ itemId }: { itemId: string }) {
     </section>
 
     <AdminActionDialog open={Boolean(action)} title={action ? ACTION_COPY[action].title : ''} description={action ? ACTION_COPY[action].description : ''} confirmLabel={action ? ACTION_COPY[action].confirm : ''} danger={action === 'reject' || action === 'archive' || action === 'unpublish'} requireTitle={action === 'archive' ? item.title : undefined} saving={saving} onClose={() => setAction(null)} onConfirm={completeAction} />
+    <AdminActionDialog open={Boolean(offerAction)} title={offerAction ? OFFER_ACTION_COPY[offerAction.action].title : ''} description={offerAction ? OFFER_ACTION_COPY[offerAction.action].description : ''} confirmLabel={offerAction ? OFFER_ACTION_COPY[offerAction.action].confirm : ''} danger={offerAction?.action === 'pause'} saving={saving} onClose={() => setOfferAction(null)} onConfirm={completeOfferAction} />
   </main></PageShell>;
 }
 
@@ -125,8 +139,28 @@ const ACTION_COPY: Record<AdminContentAction, { title: string; description: stri
   archive: { title: 'Archive Item', description: 'This is permanent. The public Item and offers will close while historical Library access remains preserved.', confirm: 'Archive', success: 'Item archived.' },
 };
 
+const OFFER_ACTION_COPY: Record<AdminOfferAction['action'], { title: string; description: string; confirm: string; success: string }> = {
+  pause: { title: 'Pause paid offer', description: 'Checkout for this paid digital offer will close. The published Item, prior orders, Library access, entitlements, earnings, and provider evidence remain unchanged.', confirm: 'Pause offer', success: 'Paid offer paused; historical records and buyer access were preserved.' },
+  restore: { title: 'Restore paid offer', description: 'Eligibility will be checked before checkout reopens on this same paid digital offer.', confirm: 'Restore offer', success: 'Paid offer restored.' },
+};
+
 function DetailGroup({ title, rows, empty }: { title: string; rows: Array<{ id: string; title: string; meta: string }>; empty: string }) {
   return <Ui44Panel overflow="visible" className="admin-detail-group"><h3>{title}</h3>{rows.length ? rows.map(row => <div className="admin-detail-group-row" key={row.id}><strong>{row.title}</strong><span>{row.meta}</span></div>) : <p>{empty}</p>}</Ui44Panel>;
+}
+
+function OfferDetailGroup({ offers, onAction }: {
+  offers: AdminContentDetail['offers'];
+  onAction: (offerId: string, action: AdminOfferAction['action']) => void;
+}) {
+  return <Ui44Panel overflow="visible" className="admin-detail-group"><h3>Offers</h3>{offers.length ? offers.map(offer => {
+    const canPause = offer.offer_type === 'digital_download' && offer.price_cents > 0 && offer.fulfillment_type === 'entitlement' && offer.status === 'active';
+    const canRestore = offer.offer_type === 'digital_download' && offer.price_cents > 0 && offer.fulfillment_type === 'entitlement' && offer.status === 'draft';
+    return <div className="admin-detail-group-row" key={offer.id}>
+      <div><strong>{offer.title}</strong><span>{offer.status} · {formatCurrency(offer.price_cents, offer.currency)}</span></div>
+      {canPause ? <button className="os-button os-button-danger os-button-compact" type="button" onClick={() => onAction(offer.id, 'pause')}>Pause</button> : null}
+      {canRestore ? <button className="os-button os-button-primary os-button-compact" type="button" onClick={() => onAction(offer.id, 'restore')}>Restore</button> : null}
+    </div>;
+  }) : <p>No offers</p>}</Ui44Panel>;
 }
 
 function formatCurrency(cents: number, currency: string) {

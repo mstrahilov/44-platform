@@ -1,11 +1,12 @@
 import { authenticateCommerceRequest, commerceAdminClient } from '@/lib/server/commerce';
+import { createHash } from 'node:crypto';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
-const IMAGE_ROLES = new Set(['main', 'color', 'bonus']);
+const IMAGE_ROLES = new Set(['color', 'bonus']);
 const UPLOAD_BUCKET = process.env.NEXT_PUBLIC_SUPABASE_UPLOAD_BUCKET?.trim() || 'uploads';
 
 async function requireAdmin(request: Request) {
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
     const role = String(form.get('role') ?? '').trim();
     const requestedColor = String(form.get('colorValue') ?? '').trim();
     const requestedTitle = String(form.get('title') ?? '').trim();
+    const featured = String(form.get('featured') ?? '') === 'true';
     if (!(file instanceof File) || !itemId || !IMAGE_ROLES.has(role)) {
       return Response.json({ error: 'Choose an exact product, image role, and file.' }, { status: 400 });
     }
@@ -71,22 +73,22 @@ export async function POST(request: Request) {
       colorValue = exactColor.trim();
     }
 
+    const bytes = Buffer.from(await file.arrayBuffer());
+    const contentSha256 = createHash('sha256').update(bytes).digest('hex');
     const extension = safeFileName(file.name).split('.').pop() || file.type.split('/')[1] || 'jpg';
     uploadedPath = `merch/${itemId}/${crypto.randomUUID()}.${extension}`;
-    const upload = await access.admin.storage.from(UPLOAD_BUCKET).upload(uploadedPath, file, {
+    const upload = await access.admin.storage.from(UPLOAD_BUCKET).upload(uploadedPath, bytes, {
       contentType: file.type,
       cacheControl: '31536000',
       upsert: false,
     });
     if (upload.error) throw upload.error;
     const fileUrl = access.admin.storage.from(UPLOAD_BUCKET).getPublicUrl(uploadedPath).data.publicUrl;
-    const title = (requestedTitle || (role === 'main'
-      ? `${item.data.title} main image`
-      : role === 'color'
+    const title = (requestedTitle || (role === 'color'
         ? `${item.data.title} — ${colorValue}`
         : `${item.data.title} gallery image`)).slice(0, 160);
 
-    const assigned = await access.admin.rpc('set_merch_product_image' as never, {
+    const assigned = await access.admin.rpc('set_merch_product_image_v2' as never, {
       target_item_id: itemId,
       target_role: role,
       target_color_value: colorValue,
@@ -94,12 +96,15 @@ export async function POST(request: Request) {
       target_file_url: fileUrl,
       target_storage_path: uploadedPath,
       target_created_by: access.user.id,
+      target_content_sha256: contentSha256,
+      target_content_type: file.type,
+      target_byte_size: file.size,
+      target_original_filename: safeFileName(file.name),
+      target_featured: featured,
     } as never);
     if (assigned.error) throw assigned.error;
-    const assignment = assigned.data as unknown as { id: string; replaced_storage_path: string | null };
-    if (assignment.replaced_storage_path && assignment.replaced_storage_path !== uploadedPath) {
-      await access.admin.storage.from(UPLOAD_BUCKET).remove([assignment.replaced_storage_path]);
-    }
+    const assignment = assigned.data as unknown as { id: string; idempotent: boolean };
+    if (assignment.idempotent) await access.admin.storage.from(UPLOAD_BUCKET).remove([uploadedPath]);
     uploadedPath = null;
     return Response.json({ id: assignment.id }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
@@ -116,14 +121,29 @@ export async function DELETE(request: Request) {
     if (!access) return Response.json({ error: 'Administrator access required.' }, { status: 403 });
     const body = await request.json() as { imageId?: string };
     if (!body.imageId) return Response.json({ error: 'Choose an exact Merch image.' }, { status: 400 });
-    const deletion = await access.admin.rpc('delete_merch_product_image' as never, {
+    const deletion = await access.admin.rpc('delete_merch_product_image_v2' as never, {
       target_image_id: body.imageId,
     } as never);
     if (deletion.error) throw deletion.error;
-    const result = deletion.data as unknown as { deleted: boolean; storage_path: string | null };
-    if (result.storage_path) await access.admin.storage.from(UPLOAD_BUCKET).remove([result.storage_path]);
     return Response.json({ deleted: true }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     return imageError(error);
   }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const access = await requireAdmin(request);
+    if (!access) return Response.json({ error: 'Administrator access required.' }, { status: 403 });
+    const body = await request.json() as { imageId?: string; featured?: boolean; sortOrder?: number };
+    if (!body.imageId || typeof body.featured !== 'boolean' || typeof body.sortOrder !== 'number' || !Number.isInteger(body.sortOrder) || body.sortOrder < 0) {
+      return Response.json({ error: 'Choose an exact image, featured selection, and display order.' }, { status: 400 });
+    }
+    const sortOrder = Number(body.sortOrder);
+    const updated = await access.admin.rpc('update_merch_product_image_v2' as never, {
+      target_image_id: body.imageId, target_featured: body.featured, target_sort_order: sortOrder,
+    } as never);
+    if (updated.error) throw updated.error;
+    return Response.json({ updated: true }, { headers: { 'Cache-Control': 'no-store' } });
+  } catch (error) { return imageError(error); }
 }

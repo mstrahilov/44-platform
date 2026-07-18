@@ -14,6 +14,16 @@ type Diagnostics = {
   reconciliation: Array<{ id: string; scope: string; status: string; checked_count: number; mismatch_count: number; started_at: string }>;
 };
 
+async function loadPaymentDiagnostics() {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) throw new Error('Administrator session is unavailable.');
+  const response = await fetch('/api/admin/commerce/diagnostics', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
+  const payload = await response.json() as Diagnostics & { error?: string };
+  if (!response.ok) throw new Error(payload.error || 'Could not load payment diagnostics.');
+  return payload;
+}
+
 export default function AdminPaymentsPage() {
   return <AdminAccessBoundary><AdminPayments /></AdminAccessBoundary>;
 }
@@ -25,12 +35,7 @@ function AdminPayments() {
   const [reconciliationStatus, setReconciliationStatus] = useState('');
   useEffect(() => {
     let active = true;
-    void supabase.auth.getSession().then(async ({ data: sessionData }) => {
-      const token = sessionData.session?.access_token;
-      if (!token) throw new Error('Administrator session is unavailable.');
-      const response = await fetch('/api/admin/commerce/diagnostics', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
-      const payload = await response.json() as Diagnostics & { error?: string };
-      if (!response.ok) throw new Error(payload.error || 'Could not load payment diagnostics.');
+    void loadPaymentDiagnostics().then(payload => {
       if (active) setData(payload);
     }).catch(loadError => { if (active) setError(loadError instanceof Error ? loadError.message : 'Could not load payment diagnostics.'); });
     return () => { active = false; };
@@ -49,6 +54,7 @@ function AdminPayments() {
       const payload = await response.json() as { checkedCount?: number; mismatchCount?: number; error?: string };
       if (!response.ok) throw new Error(payload.error || 'Reconciliation failed.');
       setReconciliationStatus(`${payload.checkedCount ?? 0} orders checked · ${payload.mismatchCount ?? 0} mismatches`);
+      setData(await loadPaymentDiagnostics());
     } catch (runError) {
       setReconciliationStatus(runError instanceof Error ? runError.message : 'Reconciliation failed.');
     } finally { setReconciling(false); }
