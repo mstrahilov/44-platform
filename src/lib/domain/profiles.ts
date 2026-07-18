@@ -5,15 +5,24 @@ import { isMissingRelationError } from '@/lib/schemaCompat';
 import { getOwnershipKeys } from '@/lib/studioProfiles';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/lib/database.types';
+import { usernameKey } from '@/lib/usernames';
 
 export async function getPublicProfile(identifier: string) {
-  const result = await supabase
+  const usernameResult = await supabase
     .from('profiles')
     .select('*')
-    .or(`username.eq.${identifier},slug.eq.${identifier}`)
+    .eq('username_normalized', usernameKey(identifier))
     .maybeSingle();
-  if (result.error) throw result.error;
-  return result.data as Profile | null;
+  if (usernameResult.error) throw usernameResult.error;
+  if (usernameResult.data) return usernameResult.data as Profile;
+
+  const slugResult = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('slug', identifier.trim().toLowerCase())
+    .maybeSingle();
+  if (slugResult.error) throw slugResult.error;
+  return slugResult.data as Profile | null;
 }
 
 export async function getOwnProfile(userId: string) {

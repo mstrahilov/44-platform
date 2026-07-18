@@ -9,10 +9,9 @@ import { useAuth } from '@/lib/useAuth';
 import { getSitePathUrl } from '@/lib/siteUrl';
 import { COUNTRIES } from '@/lib/marketPreferences';
 import { Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
+import { isValidUsername, sanitizeUsernameInput } from '@/lib/usernames';
 
 type AuthStep = 'email' | 'password';
-
-const USERNAME_PATTERN = /^[a-z0-9_]{3,32}$/;
 
 function authMessage(message?: string) {
   const normalized = message?.toLowerCase() ?? '';
@@ -87,15 +86,15 @@ export default function LoginPage() {
     }
 
     const cleanDisplayName = displayName.trim();
-    const cleanUsername = username.trim().toLowerCase();
+    const cleanUsername = username.trim();
 
     if (!accountExists && !cleanDisplayName) {
       setStatus('Enter your name to create your account.');
       return;
     }
 
-    if (!accountExists && !USERNAME_PATTERN.test(cleanUsername)) {
-      setStatus('Use 3–32 lowercase letters, numbers, or underscores for your username.');
+    if (!accountExists && !isValidUsername(cleanUsername)) {
+      setStatus('Use 3–32 letters, numbers, or underscores for your username.');
       return;
     }
     if (!accountExists && !COUNTRIES.some(country => country.code === countryCode)) {
@@ -290,10 +289,10 @@ export default function LoginPage() {
                     spellCheck={false}
                     minLength={3}
                     maxLength={32}
-                    pattern="[a-z0-9_]{3,32}"
+                    pattern="[A-Za-z0-9_]{3,32}"
                     required
                     onChange={event => {
-                      setUsername(event.target.value.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase());
+                      setUsername(sanitizeUsernameInput(event.target.value));
                       setStatus(null);
                     }}
                   />

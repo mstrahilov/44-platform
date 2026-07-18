@@ -201,6 +201,7 @@ Community and profile post rows share one identity, hover, action, divider, and 
 
 Profiles:
 
+- Registration and Edit Profile accept 3–32 uppercase or lowercase ASCII letters, numbers, and underscores. The chosen capitalization renders everywhere, while availability and routing remain case-insensitive.
 - Populated tabs appear in the stable order Posts, Music, Books, Sample Packs, Merch, Events.
 - Tabs are flat, horizontally scrollable, separated by hairlines, and use an underline for the active state.
 - Other-user actions are Follow then Message. Owner actions are Edit Profile then Open Studio.

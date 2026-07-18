@@ -4,6 +4,7 @@ import { DEFAULT_CREATOR_COUNTRY, DEFAULT_CREATOR_CURRENCY, DEFAULT_MARKET_MODE 
 import { isMissingColumnError } from '@/lib/schemaCompat';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/lib/database.types';
+import { isValidUsername, usernameKey } from '@/lib/usernames';
 
 export type StudioProfile = Pick<
   Profile,
@@ -78,10 +79,12 @@ async function resolveUniqueField(
 
   for (let attempt = 0; attempt < 20; attempt += 1) {
     const candidate = attempt === 0 ? seed : `${seed}${field === 'username' ? '_' : '-'}${attempt + 1}`;
+    const lookupField = field === 'username' ? 'username_normalized' : field;
+    const lookupValue = field === 'username' ? usernameKey(candidate) : candidate;
     const { data } = await supabase
       .from('profiles')
       .select('id')
-      .eq(field, candidate)
+      .eq(lookupField, lookupValue)
       .neq('id', userId)
       .maybeSingle();
 
@@ -108,7 +111,9 @@ export async function ensureProfileForUser(user: Pick<User, 'id' | 'email' | 'us
     user.email?.split('@')[0] ||
     user.id.slice(0, 8);
 
-  const usernameSeed = usernameify(usernameBase) || `member_${user.id.slice(0, 8)}`;
+  const usernameSeed = isValidUsername(usernameBase)
+    ? usernameBase
+    : usernameify(usernameBase) || `member_${user.id.slice(0, 8)}`;
   const slugSeed = slugify(existingProfile?.slug?.trim() || displayName || usernameSeed) || usernameSeed.replace(/_/g, '-');
   const username = await resolveUniqueField('username', usernameSeed, user.id);
   const slug = await resolveUniqueField('slug', slugSeed, user.id);

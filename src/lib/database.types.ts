@@ -8158,6 +8158,7 @@ export type Database = {
           slug: string | null
           updated_at: string
           username: string | null
+          username_normalized: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -8178,6 +8179,7 @@ export type Database = {
           slug?: string | null
           updated_at?: string
           username?: string | null
+          username_normalized?: never
         }
         Update: {
           avatar_url?: string | null
@@ -8198,6 +8200,7 @@ export type Database = {
           slug?: string | null
           updated_at?: string
           username?: string | null
+          username_normalized?: never
         }
         Relationships: []
       }

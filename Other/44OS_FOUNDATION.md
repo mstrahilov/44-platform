@@ -182,6 +182,7 @@ Format behavior:
 - Forms expose one canonical Description for Books and Sample Packs. Music descriptions are preserved but not edited in the current Music form.
 - Community uses canonical thread pages, server-backed loading/error states, reporting/moderation audit, Item Questions, reviews, and Creator Updates.
 - Profiles connect identity, posts, Items, Events, follows, messaging, and approved external destinations.
+- Usernames preserve the capitalization selected at registration or in Edit Profile. Identity, availability, mentions, and `/profile/[username]` resolution remain case-insensitive, so capitalization variants can never create separate accounts and existing links continue to resolve.
 
 The v1 music achievements are Front to Back, No Skips, Nightbird, Heavy Rotation, Joined the Orbit, Left Your Mark, Signal Boost, and Overachiever. Clients submit bounded evidence; server evaluation grants achievements and reward Items. Book achievements and generic speculative bonus-feature editors remain hidden.
 

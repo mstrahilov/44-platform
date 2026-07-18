@@ -12,6 +12,8 @@ import { getUploadErrorMessage, uploadPublicFile } from '@/lib/uploads';
 import { ProfileImageCropDialog } from '@/components/ProfileImageCropDialog';
 import type { Database } from '@/lib/database.types';
 import { getOwnProfile, updateOwnProfile } from '@/lib/domain/profiles';
+import { usernameIsTaken } from '@/lib/domain/accounts';
+import { isValidUsername, sanitizeUsernameInput, usernameErrorMessage } from '@/lib/usernames';
 import { ExternalLinksEditor } from '@/components/ExternalLinksEditor';
 import { Ui44FileInput, Ui44TextInput, Ui44Textarea } from '@/components/ui44/Inputs';
 import {
@@ -74,8 +76,14 @@ export default function EditProfilePage() {
   async function save() {
     if (!user || saving) return;
     const canManageExternalLinks = profile?.role === 'creator' || profile?.role === 'admin';
+    const cleanUsername = username.trim();
     setSaving(true);
     setError('');
+    if (cleanUsername && !isValidUsername(cleanUsername)) {
+      setSaving(false);
+      setError('Use 3–32 letters, numbers, or underscores for your username.');
+      return;
+    }
     const linkError = canManageExternalLinks ? validateExternalLinkDrafts(externalLinks, externalLinkPlatforms) : null;
     if (linkError) {
       setSaving(false);
@@ -84,9 +92,22 @@ export default function EditProfilePage() {
     }
     const activeLinks = activeExternalLinkDrafts(externalLinks);
     const linksChanged = JSON.stringify(activeLinks) !== JSON.stringify(initialExternalLinks);
+    if (cleanUsername) {
+      try {
+        if (await usernameIsTaken(cleanUsername, user.id)) {
+          setSaving(false);
+          setError('That username is already taken. Capitalization does not create a different username.');
+          return;
+        }
+      } catch {
+        setSaving(false);
+        setError('We could not check that username right now. Please try again.');
+        return;
+      }
+    }
     const payload: Database['public']['Tables']['profiles']['Update'] = {
       display_name: displayName.trim() || null,
-      username: username.trim() || null,
+      username: cleanUsername || null,
       bio: bio.trim() || null,
       avatar_url: avatarUrl.trim() || null,
     };
@@ -95,11 +116,11 @@ export default function EditProfilePage() {
       if (canManageExternalLinks && linksChanged) await replaceOwnProfileExternalLinks(activeLinks);
     } catch (updateError) {
       setSaving(false);
-      setError(updateError instanceof Error ? updateError.message : 'Could not update your profile.');
+      setError(usernameErrorMessage(updateError) ?? (updateError instanceof Error ? updateError.message : 'Could not update your profile.'));
       return;
     }
     setSaving(false);
-    const targetHandle = username.trim() || authorHandle(profile) || '';
+    const targetHandle = cleanUsername || authorHandle(profile) || '';
     router.push(targetHandle ? `/profile/${targetHandle}` : '/profile');
   }
 
@@ -221,7 +242,7 @@ export default function EditProfilePage() {
                   surface="bare"
                   type="text"
                   value={username}
-                  onChange={event => setUsername(event.target.value.replace(/\s+/g, '').toLowerCase())}
+                  onChange={event => setUsername(sanitizeUsernameInput(event.target.value))}
                   className="profile-edit-username-input"
                   aria-label="Username"
                   autoCapitalize="none"

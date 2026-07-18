@@ -18,6 +18,7 @@
     "test:hardening-contract": "node scripts/hardening-contract.mjs",
     "test:mobile-safe-area": "node scripts/mobile-safe-area-contract.mjs",
     "test:experience-polish": "node scripts/experience-polish-contract.mjs",
+    "test:username-casing": "node scripts/username-casing-contract.mjs && supabase test db --local supabase/tests/m1_case_preserving_usernames_security.sql",
     "test:commerce-contract": "node scripts/stripe-commerce-contract.mjs",
     "test:stripe-sandbox-preflight": "node scripts/stripe-sandbox-preflight.mjs",
     "test:stripe-sandbox-verify": "node scripts/stripe-sandbox-verify.mjs",
