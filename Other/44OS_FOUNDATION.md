@@ -39,14 +39,14 @@ Open launch work belongs only in `44OS_MILESTONES.md`. Do not repeat an accepted
 
 Primary applications:
 
-- **44OS/Home** — the branded discovery front door at `/`.
+- **Home** — the `Discover` front door at `/`; active catalog filtering changes its workspace identity to `Browse`.
 - **Store** — public discovery and acquisition at `/store`.
 - **Library** — the signed-in user’s saved, owned, purchased, and unlocked Items.
 - **Community** — posts, questions, collaboration, replies, follows, and creator/fan connection.
-- **Radio** — public live listening through the shared player.
+- **Radio** — public live listening through the shared player. Playable tracks automatically append to the canonical playlist when their Music Item becomes published; draft, non-Music, and streaming-disabled Items never enter rotation.
 - **Studio** — creator publishing and catalog management under `/studio`.
 - **Calendar** — creator Events and upcoming published releases.
-- **Admin** — server-authoritative People, Content, Errors, Payments, Email, and Fulfillment operations.
+- **Admin** — server-authoritative Home curation, People, Content, Errors, Payments, Email, and Fulfillment operations.
 - **Settings, Search, Support, Inbox, Orders, and profiles** — account and platform utilities.
 
 Product language:
@@ -115,7 +115,7 @@ Playback rules:
 
 Public:
 
-- `/` — branded `44OS` discovery front door; it does not redirect.
+- `/` — `Discover` front door; active catalog filtering uses the `Browse` workspace identity and the route does not redirect.
 - `/store` and `/store/[category]` — Store and Music, Books, Sample Packs, or Merch categories.
 - `/store/item/[identifier]` — public Item detail, resolving slug first with ID fallback.
 - `/cart`, `/checkout` — acquisition flow.
@@ -158,7 +158,8 @@ Core data roles:
 - Commerce orders, items, addresses, attempts, events, terms, grants, adjustments, and earnings are server-authoritative ledgers.
 - `content_entries` and typed detail tables own Community posts, questions, collaboration, reviews, Creator Updates, replies, reactions, and moderation evidence.
 - `item_play_events` is the append-only creator analytics source for validated playback starts across Store, Library, and Radio.
-- Admin role, Item lifecycle, offer lifecycle, email, payout, and provider operations append immutable audit records.
+- `home_shelf_entries` owns exact ordered editorial slots; its public RPC returns only eligible published Items. Admin Home replacement is atomic and appends immutable before/after snapshots to `admin_home_shelf_events`.
+- Admin role, Home shelf, Item lifecycle, offer lifecycle, email, payout, and provider operations append immutable audit records.
 
 RLS and reviewed RPCs remain the browser boundary. Service-role credentials, provider credentials, private tax forms, payout destinations, raw Auth data, and signing secrets never enter browser code.
 
@@ -177,8 +178,8 @@ Acquisition is capability-based:
 Format behavior:
 
 - Music uses the shared player, tracks, optional downloads, eight v1 achievements, named YouTube embeds, and an optional Overachiever Item unlock.
-- Books are PDF-only for this release. A protected full PDF powers the Library reader; an optional separate public sample powers Store preview. Page, progress, appearance, and bookmarks synchronize server-side.
-- Sample Packs use a protected full ZIP plus optional public audio previews and protected individual samples. Preview audio uses the shared player.
+- Books are PDF-only for this release. Reading and Library collection are always free; creators may optionally sell the protected PDF as a paid download. The protected full PDF powers the Library reader. Store does not expose a separate sample-reader surface. Page, progress, appearance, and bookmarks synchronize server-side.
+- Sample Packs are paid downloadable products with a required positive price. They use a protected full ZIP plus optional public audio previews and protected individual samples. Preview audio uses the shared player.
 - Studio add/edit forms use versioned account-and-Item-scoped device-local recovery. Save, Cancel, or removal clears recovered data.
 - Forms expose one canonical Description for Books and Sample Packs. Music descriptions are preserved but not edited in the current Music form.
 - Community uses canonical thread pages, server-backed loading/error states, reporting/moderation audit, Item Questions, reviews, and Creator Updates.

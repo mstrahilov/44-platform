@@ -2,9 +2,10 @@
 
 import { useId, useState, type ChangeEvent } from 'react';
 import { getUploadErrorMessage, uploadPrivateItemFile, uploadPublicFile } from '@/lib/uploads';
+import { uploadProcessedAudio } from '@/lib/audioUploads';
 import { Ui44FileInput } from '@/components/ui44/Inputs';
 
-export const AUDIO_UPLOAD_ACCEPT = 'audio/mpeg,audio/mp3,audio/mp4,audio/x-m4a,audio/aac,audio/wav,audio/x-wav,audio/flac,.mp3,.m4a,.aac,.wav,.flac';
+export const AUDIO_UPLOAD_ACCEPT = 'audio/mpeg,audio/mp3,audio/mp4,audio/x-m4a,audio/aac,audio/wav,audio/x-wav,audio/flac,audio/aiff,audio/x-aiff,audio/alac,.mp3,.m4a,.aac,.wav,.flac,.aif,.aiff';
 
 type UploadFieldProps = {
   label: string;
@@ -20,7 +21,9 @@ type UploadFieldProps = {
   hideLabel?: boolean;
   hideSuccessMessage?: boolean;
   hideActionsWhenPreviewed?: boolean;
-  storage?: 'public' | 'private-item';
+  storage?: 'public' | 'private-item' | 'audio-track';
+  audioAssetId?: string;
+  onAudioAssetChange?: (assetId: string) => void;
   onUploadingChange?: (uploading: boolean) => void;
 };
 
@@ -39,11 +42,13 @@ export function UploadField({
   hideSuccessMessage = false,
   hideActionsWhenPreviewed = false,
   storage = 'public',
+  onAudioAssetChange,
   onUploadingChange,
 }: UploadFieldProps) {
   const inputId = useId();
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
+  const [messageTone, setMessageTone] = useState<'status' | 'success' | 'error'>('status');
 
   async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -52,27 +57,37 @@ export function UploadField({
     setUploading(true);
     onUploadingChange?.(true);
     setMessage('');
+    setMessageTone('status');
 
     try {
-      const uploadedValue = storage === 'private-item'
+      const processed = storage === 'audio-track'
+        ? await uploadProcessedAudio(file, status => { setMessageTone('status'); setMessage(status); })
+        : null;
+      const uploadedValue = processed?.streamUrl ?? (storage === 'private-item'
         ? (await uploadPrivateItemFile({ file, folder, userId })).path
-        : (await uploadPublicFile({ file, folder, userId })).publicUrl;
+        : (await uploadPublicFile({ file, folder, userId })).publicUrl);
       // Commit the durable upload before optional metadata work. Release-track
       // uploads use lightweight media metadata instead of decoding the entire file
       // in memory, which keeps phone uploads from competing with audio analysis.
       onChange(uploadedValue);
+      if (processed) {
+        onAudioAssetChange?.(processed.assetId);
+        if (processed.durationSeconds && onAudioMetadata) onAudioMetadata(Math.ceil(processed.durationSeconds));
+      }
+      setMessageTone('success');
       setMessage('Upload complete.');
-      if (accept?.includes('audio') && onAudioAnalysis) {
+      if (!processed && accept?.includes('audio') && onAudioAnalysis) {
         void analyzeAudioFile(file).then(analysis => {
           if (analysis.durationSeconds && onAudioMetadata) onAudioMetadata(Math.ceil(analysis.durationSeconds));
           onAudioAnalysis(analysis);
         }).catch(() => undefined);
-      } else if (accept?.includes('audio') && onAudioMetadata) {
+      } else if (!processed && accept?.includes('audio') && onAudioMetadata) {
         void readAudioDuration(file).then(duration => {
           if (duration) onAudioMetadata(Math.ceil(duration));
         });
       }
     } catch (error) {
+      setMessageTone('error');
       setMessage(getUploadErrorMessage(error));
     } finally {
       setUploading(false);
@@ -88,21 +103,21 @@ export function UploadField({
         <div className="upload-preview upload-preview-image ui44-media-preview ui44-media-preview-image">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={value} alt="" />
-          <button type="button" className="upload-preview-remove" aria-label={`Remove ${label}`} onClick={() => onChange('')}>
+          <button type="button" className="upload-preview-remove" aria-label={`Remove ${label}`} onClick={() => { onChange(''); onAudioAssetChange?.(''); }}>
             ×
           </button>
         </div>
       ) : value && previewKind !== 'none' ? (
         <div className="upload-preview upload-preview-file ui44-media-preview ui44-media-preview-file">
           <span>{value.split('/').pop() || 'Uploaded file'}</span>
-          <button type="button" className="upload-preview-remove" aria-label={`Remove ${label}`} onClick={() => onChange('')}>
+          <button type="button" className="upload-preview-remove" aria-label={`Remove ${label}`} onClick={() => { onChange(''); onAudioAssetChange?.(''); }}>
             ×
           </button>
         </div>
       ) : null}
       {!(hideActionsWhenPreviewed && value) ? <div className="ui44-upload-actions">
         <label htmlFor={inputId} className={`os-button os-button-secondary os-button-compact${uploading ? ' ui44-upload-button-busy' : ''}`}>
-          {uploading ? 'Uploading…' : buttonLabel}
+          {uploading ? (storage === 'audio-track' ? 'Preparing…' : 'Uploading…') : buttonLabel}
         </label>
         <Ui44FileInput
           id={inputId}
@@ -115,8 +130,8 @@ export function UploadField({
       </div> : null}
       {message && !(hideSuccessMessage && message === 'Upload complete.') ? (
         <div
-          className={message === 'Upload complete.' ? 'dashboard-status dashboard-status-success ui44-status ui44-status-success' : 'dashboard-status dashboard-status-error ui44-status ui44-status-error'}
-          role={message === 'Upload complete.' ? 'status' : 'alert'}
+          className={messageTone === 'error' ? 'dashboard-status dashboard-status-error ui44-status ui44-status-error' : messageTone === 'success' ? 'dashboard-status dashboard-status-success ui44-status ui44-status-success' : 'dashboard-status ui44-status'}
+          role={messageTone === 'error' ? 'alert' : 'status'}
         >
           {message}
         </div>

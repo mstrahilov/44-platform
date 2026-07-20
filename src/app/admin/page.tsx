@@ -39,6 +39,7 @@ function AdminDashboard() {
     <section className="dashboard-section">
       <SectionHeader title="Administration" description="Open a section to inspect records and use its approved controls." />
       <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
+        <AdminNavRow href="/admin/home" title="Home" description="Choose and order the four Music releases shown in Featured on Discover." />
         <AdminNavRow href="/admin/people" title="People" description="Find every member, creator, or administrator and manage creator access." count={summary?.people_count} />
         <AdminNavRow href="/admin/content" title="Content" description="Inspect every Item, review submissions, and manage publication state." count={summary?.content_count} />
         <AdminNavRow href="/admin/errors" title="Operational errors" description="Read sanitized application error events and safe diagnostic references." count={summary?.recent_error_count} />

@@ -277,21 +277,19 @@ function ProductLibraryDetail({
     if (!hasActiveDownload || !track.audio_url) return;
     setDownloadingTrackId(track.id);
     try {
-      const source = new URL(track.audio_url);
-      const supabaseOrigin = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').origin;
-      const prefix = '/storage/v1/object/public/uploads/';
-      if (source.origin !== supabaseOrigin || !source.pathname.startsWith(prefix)) {
-        throw new Error('This track does not have a supported downloadable file.');
-      }
-      const storagePath = decodeURIComponent(source.pathname.slice(prefix.length));
-      const result = await supabase.storage.from('uploads').download(storagePath);
-      if (result.error) throw result.error;
-      const extension = storagePath.split('/').pop()?.split('.').pop()?.replace(/[^a-z0-9]/gi, '') || 'mp3';
-      const fileName = `${track.title.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || '44os-track'}.${extension}`;
-      const objectUrl = URL.createObjectURL(result.data);
+      const session = await supabase.auth.getSession();
+      if (session.error) throw session.error;
+      const token = session.data.session?.access_token;
+      if (!token) throw new Error('Sign in again before downloading this track.');
+      const response = await fetch(`/api/library/audio/${track.id}`, { headers: { authorization: `Bearer ${token}` } });
+      const payload = await response.json() as { url?: string; filename?: string; error?: string };
+      if (!response.ok || !payload.url) throw new Error(payload.error || 'This download could not be prepared.');
+      const downloadResponse = await fetch(payload.url);
+      if (!downloadResponse.ok) throw new Error('The authorized download expired. Please try again.');
+      const objectUrl = URL.createObjectURL(await downloadResponse.blob());
       const link = document.createElement('a');
       link.href = objectUrl;
-      link.download = fileName;
+      link.download = payload.filename || '44-track.mp3';
       document.body.appendChild(link);
       link.click();
       link.remove();

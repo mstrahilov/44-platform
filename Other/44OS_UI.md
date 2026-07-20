@@ -112,7 +112,7 @@ The shell—not individual pages—owns mobile safe areas, Topbar, player, and D
 
 ## Page identity and information architecture
 
-- `/` is `44OS`, not Store, even though it reuses discovery data and sections.
+- `/` is `Discover` at rest, not Store, even though it reuses catalog data and sections. Its page identity changes to `Browse` whenever a category or filter is active and returns to `Discover` when that state is cleared.
 - `/store` is `Store`.
 - Primary page titles do not include archived explanatory taglines.
 - Mobile Store, Library, and Community hubs use title plus a circular local-filter action. They do not render local search inputs; global Search is in the mobile Dock.
@@ -138,6 +138,12 @@ Artwork ratios are format-specific:
 - Merch: 3:4 portrait.
 
 Public Music/Books ordering is release year newest-first, then creator alphabetically, with stable catalog/date tie-breakers. Studio management lists remain creation-date newest-first. Merch always uses `catalog_items.sort_order` with deterministic fallbacks.
+
+Home discovery uses compact four-Item shelves. `New Releases` appears first and follows the exact four-slot order saved through the Admin Home Featured controls; only currently published Music releases render, so an unavailable selection fails closed instead of receiving an algorithmic substitute. `Recently Added` follows and orders creator groups by stable Item creation time. New Releases Items are excluded completely: each creator first contributes one available release, creators whose selected New Release occupies their newest position use their next release by release chronology, and any remaining shelf slots are filled round-robin from represented creators with additional non-selected releases. A creator with no other eligible release is omitted, so the shelf may show fewer than four only when the eligible catalog itself has fewer than four Items. `Creators You Follow` still shows no more than one Item per followed creator. Smaller catalogs use `Browse Books`, `Browse Sample Packs`, and `Browse Merch`; the Merch shelf retains its curated catalog order.
+
+Browse filters begin with `Sort by`. `Release date` uses public release chronology, while `Recently added` uses stable Item creation time and never bumps an edited Item. The New Releases arrow opens the complete Music catalog in release-date order; the Recently Added arrow opens the complete Music catalog in creation-time order. Admin curation and Home-only creator deduplication never remove Items from Browse. Shared section arrows are vertically centered on their title row, and the desktop Store/Home filter action aligns to the Topbar action column.
+
+Admin Home provides four numbered Featured slots. Published non-Beat Music releases are selectable, slot order is public order, duplicates are unavailable, and later slots require the previous slot. Saving is one confirmed mutation with a required audit reason, pending state, success state, authoritative refetch, and immutable before/after history. If a selected Item later becomes unavailable, Admin identifies it for replacement while public discovery simply omits it.
 
 Item cards share stable artwork, title, metadata, and action placement. Hover does not scale layout.
 
@@ -218,7 +224,7 @@ Studio is a creator workspace, not a public discovery grid.
 
 - The overview shows four operational metrics: Saves, Plays, Sold, Earned.
 - Only populated Events and Item-management sections render.
-- One circular plus menu in the title row is the creation affordance for Music, Book, Event, Sample Pack, and Update.
+- One circular plus menu in the title row contains only Add Music, Add Book, Add Pack, and Add Update, in that order. The shorter `Pack` label applies only to this menu; Event creation is omitted from this shortcut.
 - Merch creation stays hidden because Merch is 44-owned.
 - Rows show title, Type, and catalog-health issues without exposing Draft/Published switches.
 - Earnings remain distinct from payout-ready money; no UI implies that pending money is available or paid.
@@ -227,7 +233,11 @@ Publishing forms:
 
 - Use shared labels, controls, helpers, recovery, validation, and action rows.
 - New and Edit use the same pricing fields for Music, Books, and Sample Packs.
-- Availability, Market, fulfillment, and shipping choices use dropdowns; Studio does not use segmented choice controls.
+- Music is always streamable and may always be added to Library for free. Books may always be read and added to Library for free. Both formats present `Offer a paid download` as an optional checkbox; Market and price controls appear only when it is enabled.
+- Sample Packs are paid downloadable products. Studio always shows their Market and price controls, and publication requires an enabled download with a positive price. Studio does not use segmented choice controls.
+- New Music requires an Item Type, Release Date, Track Count, and complete Track files; Item Tags remain optional. Its standard Item Type chooser contains only Album, EP, Single, and Mixtape; Beat remains in its dedicated workflow and Live Set is not offered. New Sample Packs infer their single Item Type and hide Item Type, Release Date, and Item Tags from the creation screen.
+- New Books end with the protected full-PDF upload and do not expose Native Reader/sample configuration. Store Book pages omit sample-reader UI and offer free Library access plus an optional paid download.
+- Sample Preview Count sits on its own row directly below the Sample Previews description rather than competing with the section title.
 - A paid Item has one global USD price and may have a separately entered local price in the creator country currency. Neither amount is copied into the other.
 - Price accepts ordinary decimals such as `5.99`.
 - Track editors are flat recessed editable lists, not nested Glass cards.
@@ -239,7 +249,7 @@ Music configuration includes the eight v1 achievements, up to ten URL-only YouTu
 
 External-link editors show every approved platform in fixed order with a URL field below its label. There is no Add Link, Clear, reorder, or arbitrary-platform control. Blank URLs remain off the public surface.
 
-Release date is optional, accepts valid past dates, and must remain contained on mobile. Mobile audio uploads use resumable transfer for larger files and persist the uploaded value before non-blocking duration analysis. Form behavior must survive app switching, focus changes, refresh, iOS file picking, upload completion, and delayed waveform analysis without losing other unsaved fields. Owner device acceptance is tracked in Milestones.
+Release Date is required for Music creation and editing and must remain contained on mobile. The production Music catalog already has a date for every published release, so the shared rule does not introduce an empty required field for current creators. Admin content detail provides an audited Release Date correction that also synchronizes the display year. Release Date remains optional for other formats where the field is shown. Mobile audio uploads use resumable transfer for larger files and persist the uploaded value before non-blocking duration analysis. Form behavior must survive app switching, focus changes, refresh, iOS file picking, upload completion, and delayed waveform analysis without losing other unsaved fields. Owner device acceptance is tracked in Milestones.
 
 ## Native content, Events, and interactive UI
 

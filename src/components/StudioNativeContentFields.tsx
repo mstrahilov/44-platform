@@ -86,16 +86,14 @@ export function StudioSamplePreviewFields({ userId, samples, onChange, onUploadi
         <SectionHeader
           title="Sample Previews"
           description="Add short public previews so visitors can hear what is inside the protected full pack. The ZIP remains the owned download."
-          action={(
-            <label className="dashboard-field studio-native-short-field">
-              <span className="dashboard-field-label">Preview Count</span>
-              <Ui44SelectInput value={samples.length || ''} onChange={event => onChange(current => ensureSamplePreviewCount(current, Number(event.target.value)))}>
-                <option value="">Select preview count</option>
-                {Array.from({ length: 30 }, (_, index) => index + 1).map(count => <option key={count} value={count}>{count}</option>)}
-              </Ui44SelectInput>
-            </label>
-          )}
         />
+        <label className="dashboard-field studio-native-short-field studio-sample-preview-count-field">
+          <span className="dashboard-field-label">Preview Count</span>
+          <Ui44SelectInput value={samples.length || ''} onChange={event => onChange(current => ensureSamplePreviewCount(current, Number(event.target.value)))}>
+            <option value="">Select preview count</option>
+            {Array.from({ length: 30 }, (_, index) => index + 1).map(count => <option key={count} value={count}>{count}</option>)}
+          </Ui44SelectInput>
+        </label>
       </div>
       <div className="dashboard-track-editor-list">
         {samples.map((sample, index) => (

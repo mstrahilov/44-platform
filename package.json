@@ -35,7 +35,10 @@
     "test:m13-concurrency": "bash scripts/m13-concurrency-rehearsal.sh",
     "test:schema-replay": "supabase db reset --local --no-seed",
     "test:db-lint": "supabase db lint --linked --level error --fail-on error",
-    "test:security": "supabase test db --local supabase/tests"
+    "test:security": "supabase test db --local supabase/tests",
+    "audio:inventory": "node scripts/audio-migration.mjs",
+    "audio:register-legacy": "node scripts/audio-migration.mjs --apply-repairs --register --confirm-production-write",
+    "audio:quarantine-orphans": "node scripts/audio-migration.mjs --quarantine-orphans --confirm-production-write"
   },
   "dependencies": {
     "@react-email/render": "^2.1.0",

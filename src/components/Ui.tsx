@@ -170,6 +170,25 @@ function resolveProductActionEntries({
     ];
   }
 
+  if (experience === 'book') {
+    return [
+      ...(!owned ? [{
+        id: 'library',
+        label: 'Add to Library',
+        onSelect: () => {
+          if (!userId) return;
+          void onAddToLibrary();
+        },
+        disabled: !userId,
+      }] : []),
+      ...(PUBLIC_PURCHASES_AVAILABLE && paidSalesAvailable && product.download_purchase_enabled && product.price_cents > 0 ? [{
+        id: 'download',
+        label: inCart ? 'View Download Cart' : 'Buy Download',
+        onSelect: onToggleCart,
+      }] : []),
+    ];
+  }
+
   if (experience === 'physical' || (!product.is_free && !isFreeLibraryClaim(product))) {
     if (!PUBLIC_PURCHASES_AVAILABLE) {
       return [{ id: 'purchase-status', label: PURCHASING_COMING_SOON_TITLE, disabled: true }];

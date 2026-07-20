@@ -362,7 +362,7 @@ export const SUPPORT_ARTICLES: SupportArticle[] = [
     keywords: ['studio', 'publish', 'upload', 'music', 'book', 'sample pack', 'draft', 'archive', 'remove'],
     sections: [
       { heading: 'Supported creator formats', paragraphs: ['Approved Creators can manage Music, Books, Sample Packs, Events, and Creator Updates in Studio. Creator Merch and licensed Beats remain outside the active creator-selling scope unless separately approved.'] },
-      { heading: 'Prepare the Item', bullets: ['Use accurate title, creator, year, artwork, description where supported, and taxonomy.', 'Upload only files you own or have permission to distribute.', 'For Books, provide the protected full PDF and an optional separate public sample.', 'For Sample Packs, provide the protected ZIP and optional public audio previews.', 'Set only prices and availability you are authorized to offer.'] },
+      { heading: 'Prepare the Item', bullets: ['Use accurate title, creator, year, artwork, description where supported, and taxonomy.', 'Upload only files you own or have permission to distribute.', 'For Books, provide the protected full PDF.', 'For Sample Packs, provide the protected ZIP and optional public audio previews.', 'Set only prices and availability you are authorized to offer.'] },
       { heading: 'Save, publish, or remove', paragraphs: ['Publication makes an eligible Item public. Studio forms preserve in-progress values on the current device during common refresh or app-switch interruptions. Remove is archival rather than destructive deletion: Store visibility ends while permanent IDs, buyer history, entitlements, and audit records are preserved as required.'] },
     ],
     actions: [{ label: 'Open Studio', href: '/studio' }],

@@ -27,6 +27,7 @@ import { getStudioDisplayName, loadStudioProfile } from '@/lib/studioProfiles';
 import { getStudioCatalogSectionForProduct, type StudioCatalogSectionId } from '@/lib/studioCatalog';
 import {
   archiveStudioItem,
+  attachStudioAudioAssets,
   listCatalogTaxonomy,
   listItemCategories,
   loadStudioItemEditor,
@@ -38,13 +39,14 @@ import {
   syncStudioTracks,
   updateStudioItem,
 } from '@/lib/domain/studioPublishing';
+import { audioPipelineEnabled } from '@/lib/audioUploads';
 import type { Database } from '@/lib/database.types';
 import { ExternalLinksEditor } from '@/components/ExternalLinksEditor';
 import { activeExternalLinkDrafts, listExternalLinkPlatforms, materializeExternalLinkDrafts, replaceOwnedItemExternalLinks, validateExternalLinkDrafts, type ExternalLinkDraft, type ExternalLinkPlatform } from '@/lib/domain/externalLinks';
 import { replaceStudioSampleFiles, saveStudioBookContent } from '@/lib/domain/nativeContent';
 import { StudioBookFields, StudioSamplePreviewFields, validateStudioBookMetadata, type DraftSamplePreview } from '@/components/StudioNativeContentFields';
 import { clearStudioFormRecovery, readStudioFormRecovery, writeStudioFormRecovery } from '@/lib/studioFormRecovery';
-import { creatorPaidSalesMessage, loadCreatorPaidSalesState, type CreatorPaidSalesState } from '@/lib/domain/creatorCommerce';
+import { loadCreatorPaidSalesState, type CreatorPaidSalesState } from '@/lib/domain/creatorCommerce';
 import { normalizeOptionalReleaseDate, releaseYear } from '@/lib/releaseDates';
 import { StudioDigitalPricingFields, StudioPriceInput, type StudioAvailability } from '@/components/StudioPricingFields';
 
@@ -53,6 +55,8 @@ type DraftTrack = {
   title: string;
   durationSeconds: string;
   audioUrl: string;
+  audioAssetId?: string;
+  initialAudioUrl?: string;
 };
 
 type EditItemRecovery = {
@@ -69,6 +73,8 @@ function createDraftTrack(): DraftTrack {
     title: '',
     durationSeconds: '',
     audioUrl: '',
+    audioAssetId: '',
+    initialAudioUrl: '',
   };
 }
 
@@ -209,7 +215,9 @@ export default function EditProductPage() {
       setExternalLinks(materializeExternalLinkDrafts(linkPlatforms, editor.externalLinks));
       setExternalLinksEnabled(editor.externalLinks.some(link => link.url.trim().length > 0));
       setPrice(product.price_cents ? (product.price_cents / 100).toFixed(2) : '');
-      setAvailability(product.is_free ? 'free' : 'paid');
+      const paidDownloadEnabled = Boolean(product.download_purchase_enabled && !product.is_free && product.price_cents > 0);
+      const defaultAvailability = productSection.id === 'assets' ? 'paid' : paidDownloadEnabled ? 'paid' : 'free';
+      setAvailability(defaultAvailability);
       setSavedPriceCents(product.price_cents ?? 0);
       setSavedIsFree(product.is_free ?? true);
       const productMarketMode = normalizeMarketMode(product.market_mode);
@@ -268,11 +276,14 @@ export default function EditProductPage() {
       ));
       setHasSavedFeatures(Boolean(achievementRows.length || featureAssets.length));
 
+      const audioAssetByTrack = new Map(editor.audioAssets.map(asset => [asset.track_id, asset]));
       const resolvedTracks = trackRows.map(track => ({
         id: track.id,
         title: track.title ?? '',
         durationSeconds: track.duration_seconds ? String(track.duration_seconds) : '',
         audioUrl: track.audio_url ?? '',
+        initialAudioUrl: track.audio_url ?? '',
+        audioAssetId: audioAssetByTrack.get(track.id)?.id ?? '',
       }));
       const nextTracks = resolvedTracks.length ? resolvedTracks : [createDraftTrack()];
       setTracks(nextTracks);
@@ -281,7 +292,7 @@ export default function EditProductPage() {
       if (recovered) {
         setTitle(recovered.title); setDescription(recovered.description); setCategoryId(recovered.categoryId);
         setProductType(recovered.productType); setStoreTypeId(recovered.storeTypeId); setSelectedTagIds(recovered.selectedTagIds);
-        setPrice(recovered.price); setAvailability(recovered.availability ?? (product.is_free ? 'free' : 'paid')); setMarketMode(recovered.marketMode);
+        setPrice(recovered.price); setAvailability(productSection.id === 'assets' ? 'paid' : recovered.availability ?? defaultAvailability); setMarketMode(recovered.marketMode);
         setLocalPrice(recovered.localCurrency === editableLocalCurrency ? recovered.localPrice : '');
         setMerchFulfillmentMode(recovered.merchFulfillmentMode);
         setMerchShippingScope(recovered.merchShippingScope); setCoverUrl(recovered.coverUrl);
@@ -368,8 +379,13 @@ export default function EditProductPage() {
     const profileId = ownerId || profileResult?.profile?.id || user.id;
 
     const cleanTitle = title.trim();
+    const normalizedReleaseDate = normalizeOptionalReleaseDate(releaseDate);
     if (!cleanTitle || !categoryId || !storeTypeId) {
       setError('Please fill out the title and choose an Item Type.');
+      return;
+    }
+    if (isMusicProduct && !normalizedReleaseDate) {
+      setError('Choose a valid release date.');
       return;
     }
     if (!coverUrl.trim()) {
@@ -384,6 +400,10 @@ export default function EditProductPage() {
       const hasInvalidTrack = visibleTracks.some(track => !track.title.trim() || !track.audioUrl.trim());
       if (!visibleTracks.length || hasInvalidTrack) {
         setError('Music releases need track titles and uploaded audio for each track.');
+        return;
+      }
+      if (audioPipelineEnabled() && visibleTracks.some(track => !track.audioAssetId && (!track.id || track.audioUrl !== track.initialAudioUrl))) {
+        setError('Wait for every replacement track to finish preparing before saving.');
         return;
       }
     }
@@ -423,6 +443,12 @@ export default function EditProductPage() {
     setError('');
     setSuccess('');
 
+    if (section.id === 'assets' && creatorCommerceUnavailable) {
+      setSaving(false);
+      setError('Paid downloads are not available for this account, so this Sample Pack cannot be saved as publishable yet.');
+      return;
+    }
+
     const priceNumber = Number(price || '0');
     const localPriceNumber = Number(localPrice || '0');
     const enteredLocalPriceCents = localPrice.trim() && Number.isFinite(localPriceNumber)
@@ -447,8 +473,6 @@ export default function EditProductPage() {
       ? savedPriceCents
       : isFree || merchUsesLocalOnlyPricing ? 0 : Math.round(priceNumber * 100);
     const localPriceCents = enteredLocalPriceCents;
-    const normalizedReleaseDate = normalizeOptionalReleaseDate(releaseDate);
-
     const updatePayload = {
       title: title.trim(),
       long_description: description.trim(),
@@ -464,6 +488,10 @@ export default function EditProductPage() {
         : isFree || (marketMode === 'global' && !merchUsesLocalOnlyPricing) ? null : localCurrency,
       available_locally_only: isMerchProduct ? merchUsesLocalOnlyPricing : false,
       is_free: isFree,
+      ...(!isMerchProduct && !creatorCommerceUnavailable ? {
+        ...(isMusicProduct ? { streaming_enabled: true } : {}),
+        download_purchase_enabled: !isFree,
+      } : {}),
       cover_url: coverUrl.trim() || null,
       experience_type: experienceTypeForSection(section.id),
       fulfillment_type: isMerchProduct ? 'physical' : 'digital',
@@ -507,7 +535,12 @@ export default function EditProductPage() {
           download_url: null,
         }));
       try {
-        await syncStudioTracks(id, trackRows, idsToDelete);
+        const savedTracks = await syncStudioTracks(id, trackRows, idsToDelete);
+        const audioAttachments = visibleTracks.flatMap((track, index) => {
+          const savedTrack = savedTracks[index];
+          return track.audioAssetId && savedTrack ? [{ assetId: track.audioAssetId, trackId: savedTrack.id }] : [];
+        });
+        await attachStudioAudioAssets(audioAttachments);
       } catch (trackError) {
         setSaving(false);
         setError(trackError instanceof Error ? trackError.message : 'Could not save tracks.');
@@ -649,7 +682,7 @@ export default function EditProductPage() {
         <div className="dashboard-section">
           <form onSubmit={handleSubmit} className="dashboard-form">
             <section className="dashboard-form-section">
-              <SectionHeader title="Details" description="Set the core title, type, availability, artwork, and main details for this item." />
+              <SectionHeader title="Details" description="Set the core title, type, artwork, and main details for this item." />
               <div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible">
             <label className="dashboard-field"><div className="dashboard-field-label">{isMerchProduct ? 'Product Name' : 'Title'}</div><Ui44TextInput className="os-input-field" value={title} placeholder={isMerchProduct ? 'Enter product name' : section.id === 'books' ? 'Enter book title' : section.id === 'assets' ? 'Enter sample pack title' : 'Enter release title'} onChange={e => setTitle(e.target.value)} /></label>
 
@@ -664,7 +697,7 @@ export default function EditProductPage() {
               <div className="dashboard-form-grid dashboard-form-grid-3 release-core-grid ui44-form-grid">
                 <label className="dashboard-field">
                   <div className="dashboard-field-label">Item Type</div>
-                  <Ui44SelectInput value={storeTypeId} onChange={event => {
+                  <Ui44SelectInput required value={storeTypeId} onChange={event => {
                     setStoreTypeId(event.target.value);
                     setProductType(taxonomyTypes.find(type => type.id === event.target.value)?.label ?? '');
                     setSelectedTagIds([]);
@@ -673,12 +706,12 @@ export default function EditProductPage() {
                   </Ui44SelectInput>
                 </label>
                 <label className="dashboard-field">
-                  <div className="dashboard-field-label">Release Date (Optional)</div>
-                  <Ui44TextInput className="os-input-field release-date-input" type="date" value={releaseDate} onChange={e => { setReleaseDate(e.target.value); setYear(e.target.value.slice(0, 4)); }} />
+                  <div className="dashboard-field-label">Release Date</div>
+                  <Ui44TextInput required className="os-input-field release-date-input" type="date" value={releaseDate} onChange={e => { setReleaseDate(e.target.value); setYear(e.target.value.slice(0, 4)); }} />
                 </label>
                 <label className="dashboard-field">
                   <div className="dashboard-field-label">Track Count</div>
-                  <Ui44SelectInput value={trackCount} onChange={event => setTrackCount(event.target.value)}>
+                  <Ui44SelectInput required value={trackCount} onChange={event => setTrackCount(event.target.value)}>
                     {Array.from({ length: 30 }, (_, index) => index + 1).map(count => (
                       <option key={count} value={count}>{count}</option>
                     ))}
@@ -747,6 +780,12 @@ export default function EditProductPage() {
                 localCurrency={localCurrency}
                 disabled={creatorCommerceUnavailable}
                 noticeId="creator-commerce-existing-item-notice"
+                freeAccessDescription={isMusicProduct
+                  ? 'Everyone can listen and add this release to their Library for free. Enable this to let listeners purchase downloadable audio files.'
+                  : section.id === 'books'
+                    ? 'Everyone can read and add this book to their Library for free. Enable this to let readers purchase the downloadable PDF.'
+                    : undefined}
+                paidDownloadRequired={section.id === 'assets'}
                 onAvailabilityChange={setAvailability}
                 onMarketModeChange={setMarketMode}
                 onGlobalPriceChange={setPrice}
@@ -777,12 +816,6 @@ export default function EditProductPage() {
                 ) : null}
               </div>
             )}
-
-            {!isMerchProduct ? (
-              <div id="creator-commerce-existing-item-notice" className="dashboard-status ui44-status" role="status">
-                <strong>{paidSales?.can_sell_paid ? 'Creator payouts enabled.' : 'Creator payouts unavailable.'}</strong> {creatorPaidSalesMessage(paidSales)}
-              </div>
-            ) : null}
 
             <UploadField
               label={isMerchProduct ? 'Product Image' : 'Artwork'}
@@ -857,12 +890,15 @@ export default function EditProductPage() {
                             folder="tracks/audio"
                             userId={user.id}
                             value={track.audioUrl}
+                            storage={audioPipelineEnabled() ? 'audio-track' : 'public'}
+                            audioAssetId={track.audioAssetId}
                             accept={AUDIO_UPLOAD_ACCEPT}
                             buttonLabel="Upload audio"
                             previewKind="none"
                             hideLabel
                             hideSuccessMessage
                             onChange={nextValue => updateTrack(index, { audioUrl: nextValue })}
+                            onAudioAssetChange={audioAssetId => updateTrack(index, { audioAssetId })}
                             onUploadingChange={handleUploadActivity}
                             onAudioMetadata={durationSeconds => updateTrack(index, { durationSeconds: String(durationSeconds) })}
                           />

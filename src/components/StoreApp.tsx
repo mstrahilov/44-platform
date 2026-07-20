@@ -14,6 +14,7 @@ import { FilterPopover } from '@/components/FilterPopover';
 import { Ui44SectionArrow } from '@/components/ui44/Controls';
 import { Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
 import { beatReviewSurfacesEnabled } from '@/lib/domain/beats';
+import { listHomeFeaturedItemIds } from '@/lib/domain/homeDiscovery';
 
 const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
   music: 'music',
@@ -58,6 +59,7 @@ const CATEGORY_COPY: Record<StoreCategory, { title: string; copy: string; empty:
 
 type StoreFilter = 'all' | 'music' | 'book' | 'interactive' | 'asset' | 'physical';
 type PriceFilter = 'all' | 'free' | 'paid';
+type StoreSort = 'release-date' | 'recently-added';
 
 const STORE_FILTER_LABELS: Record<StoreFilter, string> = {
   all: 'All Categories',
@@ -69,6 +71,14 @@ const STORE_FILTER_LABELS: Record<StoreFilter, string> = {
 };
 
 const STORE_FILTER_ORDER: StoreFilter[] = ['all', 'music', 'physical', 'book', 'asset', 'interactive'];
+const HOME_BROWSE_SHELF_ORDER: Array<Exclude<StoreFilter, 'all' | 'music'>> = ['book', 'asset', 'physical', 'interactive'];
+
+const HOME_BROWSE_SHELF_TITLES: Record<Exclude<StoreFilter, 'all' | 'music'>, string> = {
+  book: 'Browse Books',
+  asset: 'Browse Sample Packs',
+  physical: 'Browse Merch',
+  interactive: 'Browse Games',
+};
 
 function creatorFilterKey(product: Product) {
   return product.author_id || product.creators?.id || product.creator;
@@ -78,15 +88,65 @@ function isBeatProduct(product: Product) {
   return product.browse_type?.slug === 'beat' || product.capability_keys?.includes('beat_licensing') || Boolean(product.beat);
 }
 
+function compareRecentlyAddedProducts(a: Product, b: Product) {
+  const createdAtDifference = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  return createdAtDifference || a.id.localeCompare(b.id);
+}
+
+function keepNewestProductPerCreator(products: Product[], avoidedProductIds = new Set<string>()) {
+  const productsByCreator = new Map<string, Product[]>();
+  products.forEach(product => {
+    const creatorId = creatorFilterKey(product);
+    productsByCreator.set(creatorId, [...(productsByCreator.get(creatorId) ?? []), product]);
+  });
+  return Array.from(productsByCreator.values()).map(creatorProducts => (
+    creatorProducts.find(product => !avoidedProductIds.has(product.id)) ?? creatorProducts[0]
+  ));
+}
+
+function buildRecentlyAddedProducts(products: Product[], featuredProductIds: Set<string>, limit: number) {
+  const productsByCreator = new Map<string, Product[]>();
+  products.forEach(product => {
+    const creatorId = creatorFilterKey(product);
+    productsByCreator.set(creatorId, [...(productsByCreator.get(creatorId) ?? []), product]);
+  });
+
+  const creatorQueues = Array.from(productsByCreator.values())
+    .map(creatorProducts => {
+      const availableProducts = creatorProducts.filter(product => !featuredProductIds.has(product.id));
+      if (!availableProducts.length) return [];
+      return creatorProducts.some(product => featuredProductIds.has(product.id))
+        ? availableProducts.sort(comparePublicCatalogProducts)
+        : availableProducts;
+    })
+    .filter(creatorProducts => creatorProducts.length > 0);
+
+  const selectedProducts: Product[] = [];
+  for (let queueIndex = 0; selectedProducts.length < limit; queueIndex += 1) {
+    let addedProduct = false;
+    creatorQueues.forEach(creatorProducts => {
+      const product = creatorProducts[queueIndex];
+      if (product && selectedProducts.length < limit) {
+        selectedProducts.push(product);
+        addedProduct = true;
+      }
+    });
+    if (!addedProduct) break;
+  }
+  return selectedProducts;
+}
+
 export default function StoreApp({ category, frontDoor = false }: { category: StoreCategory; frontDoor?: boolean }) {
   const { user, loading: authLoading } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
+  const [featuredItemIds, setFeaturedItemIds] = useState<string[] | null>(null);
   const [ownedProductIds, setOwnedProductIds] = useState<Set<string>>(new Set());
   const [followedProfileIds, setFollowedProfileIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<StoreFilter>('all');
+  const [sortBy, setSortBy] = useState<StoreSort>('release-date');
   const [priceFilter, setPriceFilter] = useState<PriceFilter>('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [urlFilterReady, setUrlFilterReady] = useState(false);
@@ -109,9 +169,13 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
 
       if (authLoading) return;
       try {
-        const items = await loadStoreDiscoveryCatalog(200, user?.id);
+        const [items, nextFeaturedItemIds] = await Promise.all([
+          loadStoreDiscoveryCatalog(200, user?.id),
+          listHomeFeaturedItemIds(),
+        ]);
         if (!alive) return;
         setProducts(items);
+        setFeaturedItemIds(nextFeaturedItemIds);
       } catch (loadError) {
         if (!alive) return;
         setError(loadError instanceof Error ? loadError.message : 'Could not load Browse.');
@@ -246,9 +310,10 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
       const creator = product.creators?.display_name || product.creator || '';
       const taxonomy = [product.browse_type?.label, ...(product.browse_tags ?? []).map(tag => tag.label)].filter(Boolean).join(' ');
       return `${product.title} ${creator} ${taxonomy}`.toLowerCase().includes(normalizedQuery);
-    }).sort(comparePublicCatalogProducts);
-  }, [beatBpmMax, beatBpmMin, beatFiltersVisible, beatInstrument, beatKey, beatMood, beatTier, capabilityFilter, category, effectiveCreatorFilter, effectiveFilter, effectiveTagFilter, effectiveTypeFilter, followedProfileIds, priceFilter, products, query]);
+    }).sort(sortBy === 'recently-added' ? compareRecentlyAddedProducts : comparePublicCatalogProducts);
+  }, [beatBpmMax, beatBpmMin, beatFiltersVisible, beatInstrument, beatKey, beatMood, beatTier, capabilityFilter, category, effectiveCreatorFilter, effectiveFilter, effectiveTagFilter, effectiveTypeFilter, followedProfileIds, priceFilter, products, query, sortBy]);
   const hasActiveFilters = (category === 'all' && effectiveFilter !== 'all')
+    || sortBy !== 'release-date'
     || priceFilter !== 'all'
     || effectiveTypeFilter !== 'all'
     || effectiveTagFilter !== 'all'
@@ -257,8 +322,9 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     || (beatFiltersVisible && Boolean(beatBpmMin || beatBpmMax || beatKey !== 'all' || beatMood !== 'all' || beatInstrument !== 'all' || beatTier !== 'all'))
     || Boolean(query.trim());
 
-  const surfaceName = hasActiveFilters ? 'Browse' : (frontDoor ? '44OS' : 'Store');
+  const surfaceName = hasActiveFilters ? 'Browse' : (frontDoor ? 'Discover' : 'Store');
   const activeFilterChips = [
+    sortBy === 'recently-added' ? { id: 'sort', label: 'Recently added', clear: () => setSortBy('release-date') } : null,
     effectiveTagFilter !== 'all' ? { id: 'tag', label: effectiveTagFilter, clear: () => setTagFilter('all') } : null,
     effectiveTypeFilter !== 'all' ? { id: 'type', label: effectiveTypeFilter, clear: () => { setTypeFilter('all'); setTagFilter('all'); } } : null,
     category === 'all' && effectiveFilter !== 'all' ? { id: 'category', label: STORE_FILTER_LABELS[effectiveFilter], clear: () => { setActiveFilter('all'); setTypeFilter('all'); setTagFilter('all'); } } : null,
@@ -289,6 +355,13 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
       </label>}
       <FilterPopover label={`Filter ${surfaceName}`} active={hasActiveFilters}>
         {() => <>
+          <label className="store-filter-group">
+            <span className="store-filter-label">Sort by</span>
+            <Ui44SelectInput value={sortBy} onChange={event => setSortBy(event.target.value as StoreSort)}>
+              <option value="release-date">Release date</option>
+              <option value="recently-added">Recently added</option>
+            </Ui44SelectInput>
+          </label>
           <label className="store-filter-group">
             <span className="store-filter-label">Category</span>
             <Ui44SelectInput value={effectiveFilter} onChange={event => {
@@ -356,6 +429,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
           {hasActiveFilters && (
             <button type="button" className="ui44-paper-menu-item page-filter-option" onClick={() => {
               setActiveFilter('all');
+              setSortBy('release-date');
               setPriceFilter('all');
               setTypeFilter('all');
               setTagFilter('all');
@@ -371,7 +445,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   );
 
   const copy = CATEGORY_COPY[category];
-  const pageTitle = frontDoor ? '44OS' : (category === 'all' && hasActiveFilters ? 'Browse' : copy.title);
+  const pageTitle = hasActiveFilters ? 'Browse' : (frontDoor ? 'Discover' : copy.title);
   const storeHeader = (
     <div className="store-browse-header">
       <HubHero title={pageTitle} actions={storeTools} />
@@ -379,8 +453,9 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     </div>
   );
 
-  function browseCategory(filter: StoreFilter) {
+  function browseCategory(filter: StoreFilter, nextSort: StoreSort = 'release-date') {
     setActiveFilter(filter);
+    setSortBy(nextSort);
     setTypeFilter('all');
     setTagFilter('all');
     setCapabilityFilter('all');
@@ -400,6 +475,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
 
   function browseFollowedCreators() {
     setActiveFilter('all');
+    setSortBy('release-date');
     setTypeFilter('all');
     setTagFilter('all');
     setCapabilityFilter('all');
@@ -410,20 +486,36 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   }
 
   if (category === 'all') {
-    const featuredProducts = products.filter(product => product.featured).sort(comparePublicCatalogProducts).slice(0, 4);
-    const followingProducts = products.filter(product => product.author_id && followedProfileIds.has(product.author_id)).sort(comparePublicCatalogProducts).slice(0, 8);
-    const categoryShelves = STORE_FILTER_ORDER
-      .filter((filter): filter is Exclude<StoreFilter, 'all'> => filter !== 'all')
+    const musicProducts = products.filter(product => getProductExperience(product) === 'music' && !isBeatProduct(product));
+    const musicProductsById = new Map(musicProducts.map(product => [product.id, product]));
+    const featuredProducts = featuredItemIds === null
+      ? musicProducts.filter(product => product.featured).sort(comparePublicCatalogProducts).slice(0, 4)
+      : featuredItemIds.flatMap(itemId => {
+        const product = musicProductsById.get(itemId);
+        return product ? [product] : [];
+      }).slice(0, 4);
+    const featuredProductIds = new Set(featuredProducts.map(product => product.id));
+    const recentlyAddedProducts = buildRecentlyAddedProducts(
+      [...musicProducts].sort(compareRecentlyAddedProducts),
+      featuredProductIds,
+      4,
+    );
+    const followingProducts = keepNewestProductPerCreator(
+      products
+        .filter(product => product.author_id && followedProfileIds.has(product.author_id))
+        .sort(comparePublicCatalogProducts),
+    ).slice(0, 4);
+    const categoryShelves = HOME_BROWSE_SHELF_ORDER
       .map(filter => ({
         filter,
-        title: `New in ${STORE_FILTER_LABELS[filter]}`,
+        title: HOME_BROWSE_SHELF_TITLES[filter],
         products: products
-          .filter(product => getProductExperience(product) === filter && (filter !== 'music' || !isBeatProduct(product)))
+          .filter(product => getProductExperience(product) === filter)
           .sort(comparePublicCatalogProducts)
-          .slice(0, 8),
+          .slice(0, 4),
       }))
       .filter(shelf => shelf.products.length > 0);
-    const beatShelf = beatReviewSurfacesEnabled ? products.filter(isBeatProduct).sort(comparePublicCatalogProducts).slice(0, 8) : [];
+    const beatShelf = beatReviewSurfacesEnabled ? products.filter(isBeatProduct).sort(comparePublicCatalogProducts).slice(0, 4) : [];
 
     return (
       <PageShell>
@@ -445,9 +537,18 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
                 </ProductGrid>
               ) : <>
                 {featuredProducts.length > 0 && (
-                <HubSection title="Featured">
+                <HubSection title="New Releases" action={<Ui44SectionArrow label="Browse all music by release date" onClick={() => browseCategory('music', 'release-date')} />}>
                   <ProductGrid>
                     {featuredProducts.map(product => (
+                      <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />
+                    ))}
+                  </ProductGrid>
+                </HubSection>
+                )}
+                {recentlyAddedProducts.length > 0 && (
+                <HubSection title="Recently Added" action={<Ui44SectionArrow label="Browse recently added music" onClick={() => browseCategory('music', 'recently-added')} />}>
+                  <ProductGrid>
+                    {recentlyAddedProducts.map(product => (
                       <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />
                     ))}
                   </ProductGrid>
@@ -457,7 +558,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
               <HubSection
                 key={shelf.filter}
                 title={shelf.title}
-                action={<Ui44SectionArrow label={`View all ${shelf.title}`} onClick={() => browseCategory(shelf.filter)} />}
+                action={<Ui44SectionArrow label={shelf.title.replace('Browse ', 'Browse all ')} onClick={() => browseCategory(shelf.filter)} />}
               >
                   <ProductGrid>
                     {shelf.products.map(product => (
@@ -467,8 +568,8 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
               </HubSection>
                 ))}
                 {beatShelf.length > 0 && <HubSection
-                  title="New in Beats"
-                  action={<Ui44SectionArrow label="View all New in Beats" onClick={() => { window.location.href = '/store/music?type=beat'; }} />}
+                  title="Browse Beats"
+                  action={<Ui44SectionArrow label="Browse all Beats" onClick={() => { window.location.href = '/store/music?type=beat'; }} />}
                 >
                   <ProductGrid>{beatShelf.map(product => <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />)}</ProductGrid>
                 </HubSection>}

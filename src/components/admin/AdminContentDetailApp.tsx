@@ -4,8 +4,9 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { EmptyMessage, HubHero, PageShell, SectionHeader } from '@/components/Ui';
 import { Ui44Panel } from '@/components/ui44/Spacing';
+import { Ui44TextInput } from '@/components/ui44/Inputs';
 import { AdminAccessBoundary, AdminActionDialog, AdminStatusBadge, formatAdminDate } from '@/components/admin/AdminPrimitives';
-import { decideAdminSubmission, getAdminContentDetail, setAdminItemLifecycle, setAdminOfferLifecycle, type AdminContentDetail } from '@/lib/domain/adminOperations';
+import { decideAdminSubmission, getAdminContentDetail, setAdminItemLifecycle, setAdminItemReleaseDate, setAdminOfferLifecycle, type AdminContentDetail } from '@/lib/domain/adminOperations';
 
 type AdminContentAction = 'approve' | 'reject' | 'publish' | 'unpublish' | 'archive';
 type AdminOfferAction = { action: 'pause' | 'restore'; offerId: string };
@@ -21,13 +22,15 @@ function ContentDetail({ itemId }: { itemId: string }) {
   const [message, setMessage] = useState('');
   const [action, setAction] = useState<AdminContentAction | null>(null);
   const [offerAction, setOfferAction] = useState<AdminOfferAction | null>(null);
+  const [releaseDateAction, setReleaseDateAction] = useState(false);
+  const [releaseDate, setReleaseDate] = useState('');
   const [saving, setSaving] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let alive = true;
     Promise.resolve().then(() => { if (alive) { setLoading(true); setError(''); } });
-    void getAdminContentDetail(itemId).then(data => { if (alive) { setDetail(data); setLoading(false); } }).catch(loadError => {
+    void getAdminContentDetail(itemId).then(data => { if (alive) { setDetail(data); setReleaseDate(data.item.release_date ?? ''); setLoading(false); } }).catch(loadError => {
       if (alive) { setError(loadError instanceof Error ? loadError.message : 'Could not load this Item.'); setLoading(false); }
     });
     return () => { alive = false; };
@@ -65,6 +68,17 @@ function ContentDetail({ itemId }: { itemId: string }) {
     } finally { setSaving(false); }
   }
 
+  async function completeReleaseDateAction(reason: string) {
+    if (!releaseDate) return;
+    setSaving(true); setError(''); setMessage('');
+    try {
+      await setAdminItemReleaseDate(item.id, releaseDate, reason);
+      setReleaseDateAction(false);
+      setMessage('Release Date updated.');
+      setReloadKey(value => value + 1);
+    } finally { setSaving(false); }
+  }
+
   return <PageShell><main className="admin-page">
     <div className="admin-back-row"><Link href="/admin/content">‹ All content</Link></div>
     <HubHero title={item.title} copy="Read-only release details, review history, and approved lifecycle controls." />
@@ -80,6 +94,7 @@ function ContentDetail({ itemId }: { itemId: string }) {
         <div><dt>Created</dt><dd>{formatAdminDate(item.created_at, true)}</dd></div>
         <div><dt>Updated</dt><dd>{formatAdminDate(item.updated_at, true)}</dd></div>
         <div><dt>Experience</dt><dd>{item.experience_type}</dd></div>
+        <div><dt>Release Date</dt><dd>{item.release_date || 'Not set'}</dd></div>
         <div><dt>Fulfillment</dt><dd>{item.fulfillment_type}</dd></div>
         <div><dt>Price</dt><dd>{item.is_free ? 'Free' : formatCurrency(item.price_cents, 'USD')}</dd></div>
         <div><dt>Public URL</dt><dd><Link href={`/store/item/${item.slug}`}>/store/item/{item.slug}</Link></dd></div>
@@ -89,6 +104,20 @@ function ContentDetail({ itemId }: { itemId: string }) {
         <button className="os-button os-button-danger" type="button" onClick={() => setAction('archive')}>Archive</button>
       </div> : pending ? <p className="admin-detail-note">Resolve the pending review before changing publication state.</p> : <p className="admin-detail-note">Archived content is permanent. Historical Library access and entitlements remain preserved.</p>}
     </Ui44Panel>
+
+    {item.experience_type === 'music' ? <section className="dashboard-section"><SectionHeader title="Release Date" description="Correct the public release chronology without changing the creator’s other release data." />
+      <Ui44Panel overflow="visible" className="admin-copy-card">
+        <div className="dashboard-form-grid dashboard-form-grid-2 ui44-form-grid">
+          <label className="dashboard-field">
+            <span className="dashboard-field-label">Release Date</span>
+            <Ui44TextInput className="os-input-field release-date-input" type="date" value={releaseDate} onChange={event => setReleaseDate(event.target.value)} />
+          </label>
+          <div className="admin-detail-actions">
+            <button className="os-button os-button-primary" type="button" disabled={!releaseDate || releaseDate === item.release_date} onClick={() => setReleaseDateAction(true)}>Save date</button>
+          </div>
+        </div>
+      </Ui44Panel>
+    </section> : null}
 
     {pending ? <section className="dashboard-section"><SectionHeader title="Pending review" description={pending.submission_kind === 'revision' ? 'Proposed revision' : 'New Item submission'} />
       <Ui44Panel overflow="visible" className="admin-review-card">
@@ -128,6 +157,7 @@ function ContentDetail({ itemId }: { itemId: string }) {
 
     <AdminActionDialog open={Boolean(action)} title={action ? ACTION_COPY[action].title : ''} description={action ? ACTION_COPY[action].description : ''} confirmLabel={action ? ACTION_COPY[action].confirm : ''} danger={action === 'reject' || action === 'archive' || action === 'unpublish'} requireTitle={action === 'archive' ? item.title : undefined} saving={saving} onClose={() => setAction(null)} onConfirm={completeAction} />
     <AdminActionDialog open={Boolean(offerAction)} title={offerAction ? OFFER_ACTION_COPY[offerAction.action].title : ''} description={offerAction ? OFFER_ACTION_COPY[offerAction.action].description : ''} confirmLabel={offerAction ? OFFER_ACTION_COPY[offerAction.action].confirm : ''} danger={offerAction?.action === 'pause'} saving={saving} onClose={() => setOfferAction(null)} onConfirm={completeOfferAction} />
+    <AdminActionDialog open={releaseDateAction} title="Save Release Date?" description="This changes public release-date sorting and records an immutable administrator audit entry." confirmLabel="Save date" saving={saving} onClose={() => setReleaseDateAction(false)} onConfirm={completeReleaseDateAction} />
   </main></PageShell>;
 }
 

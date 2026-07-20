@@ -29,7 +29,7 @@ export const STUDIO_CATALOG_SECTIONS: StudioCatalogSection[] = [
     createTitle: 'New Release',
     createCopy: 'Create an album, EP, single, or track release directly from inside the app.',
     typeLabel: 'Release Type',
-    typeOptions: ['Album', 'EP', 'Single'],
+    typeOptions: ['Album', 'EP', 'Single', 'Mixtape'],
   },
   {
     id: 'books',

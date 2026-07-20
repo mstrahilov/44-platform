@@ -28,6 +28,8 @@ export type RadioProductRow = {
   item_type?: string | null;
   experience_type?: string | null;
   fulfillment_type?: string | null;
+  status?: string | null;
+  streaming_enabled?: boolean | null;
   cover_url: string | null;
   hero_url?: string | null;
   author_id?: string | null;
@@ -113,7 +115,7 @@ export async function loadRadioBundle(): Promise<RadioBundle> {
   const productIds = Array.from(new Set(trackRows.map(track => track.item_id).filter(Boolean)));
   const productsResult = await supabase
     .from('catalog_items')
-    .select('id,title,creator,slug,item_type,experience_type,fulfillment_type,cover_url,hero_url,author_id,creators:profiles!author_id(display_name,username,slug,avatar_url)')
+    .select('id,title,creator,slug,item_type,experience_type,fulfillment_type,status,streaming_enabled,cover_url,hero_url,author_id,creators:profiles!author_id(display_name,username,slug,avatar_url)')
     .in('id', productIds);
 
   if (productsResult.error) {
@@ -129,7 +131,7 @@ export async function loadRadioBundle(): Promise<RadioBundle> {
     const track = trackRows.find(row => row.id === entry.track_id);
     if (!track?.audio_url || !track.duration_seconds || track.duration_seconds <= 0) return [];
     const product = products.get(track.item_id);
-    if (!product) return [];
+    if (!product || product.status !== 'published' || product.experience_type !== 'music' || product.streaming_enabled === false) return [];
     return [{
       playlistEntryId: entry.id,
       trackId: track.id,

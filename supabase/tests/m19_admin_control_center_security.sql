@@ -21,8 +21,8 @@ delete from public.profiles where id='91000000-0000-0000-0000-000000000004';
 insert into public.item_types(id,category_id,slug,label,sort_order,is_active)
 select '91500000-0000-0000-0000-000000000001',id,'admin-album','Album',10,true from public.item_categories where slug='music';
 
-insert into public.catalog_items(id,item_category_id,slug,title,creator,item_type,price_cents,is_free,featured,tags,cover_url,status,author_id,experience_type,fulfillment_type)
-select fixture.item_id,category.id,fixture.slug,fixture.title,'Admin Creator','album',fixture.price_cents,fixture.is_free,false,'{}',fixture.cover_url,fixture.status,'91000000-0000-0000-0000-000000000002','music','digital'
+insert into public.catalog_items(id,item_category_id,slug,title,creator,item_type,price_cents,is_free,featured,tags,cover_url,status,author_id,experience_type,fulfillment_type,year,release_date)
+select fixture.item_id,category.id,fixture.slug,fixture.title,'Admin Creator','album',fixture.price_cents,fixture.is_free,false,'{}',fixture.cover_url,fixture.status,'91000000-0000-0000-0000-000000000002','music','digital',2026,date '2026-07-19'
 from public.item_categories category cross join (values
  ('92000000-0000-0000-0000-000000000001'::uuid,'admin-valid-draft','Admin Valid Draft',0,true,'https://example.test/valid.jpg','draft'),
  ('92000000-0000-0000-0000-000000000002'::uuid,'admin-invalid-draft','Admin Invalid Draft',0,true,null,'draft'),

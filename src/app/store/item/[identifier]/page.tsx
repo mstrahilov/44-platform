@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 import { useContextMenu, COPY_TO_CLIPBOARD_TOAST_EVENT } from '@/components/ContextMenu';
 import { useAuth } from '@/lib/useAuth';
 import type { Product } from '@/lib/products';
@@ -369,7 +368,6 @@ function ProductStoreDetail({
     cartHasItem: isMerch ? selectedVariantInCart : cart.has(product.id),
     onAddToLibrary: addToLibrary,
     onAddToCart: addProductToCart,
-    bookSampleAvailable: Boolean(bookContent?.preview_url),
     merchOptionState: isMerch ? !merchVariants.length ? 'unavailable' : selectedMerchVariant ? 'ready' : 'choose' : undefined,
   });
   const contentHeading = getContentHeading(product);
@@ -454,7 +452,7 @@ function ProductStoreDetail({
         </div>
       ) : null}
 
-      {!isMerch ? <div className="view-section view-tracklist-section">
+      {!isMerch && productExperience !== 'book' ? <div className="view-section view-tracklist-section">
         {productExperience !== 'asset' ? <div className="item-community-header item-community-section-header">
           <h2 className="view-section-title item-community-section-title">{contentHeading}</h2>
         </div> : null}
@@ -523,11 +521,6 @@ function ProductStoreDetail({
             samples={sampleFiles}
             signedIn={Boolean(user)}
           />
-        ) : productExperience === 'book' ? (
-          <div className="book-sample-callout">
-            <p className="os-type-body view-description">{bookContent?.preview_url ? 'Read the creator-selected PDF sample in the 44OS reader.' : 'This creator has not added a public sample yet.'}</p>
-            {bookContent?.preview_url ? <Link className="os-button os-button-secondary" href={`/reader/${product.id}?mode=sample`}>Read Sample</Link> : null}
-          </div>
         ) : null}
       </div> : null}
 
@@ -642,7 +635,7 @@ function canSaveProductToLibrary(product: Product) {
   if (product.beat) return false;
   const experience = getProductExperience(product);
   if (experience === 'physical') return false;
-  if (experience === 'music') return true;
+  if (experience === 'music' || experience === 'book') return true;
   return isFreeLibraryClaim(product);
 }
 
@@ -669,7 +662,6 @@ function resolveStoreActions({
   cartHasItem,
   onAddToLibrary,
   onAddToCart,
-  bookSampleAvailable,
   merchOptionState,
 }: {
   product: Product;
@@ -681,7 +673,6 @@ function resolveStoreActions({
   cartHasItem: boolean;
   onAddToLibrary: () => void;
   onAddToCart: () => void;
-  bookSampleAvailable: boolean;
   merchOptionState?: 'ready' | 'choose' | 'unavailable';
 }) {
   const experience = getProductExperience(product);
@@ -711,19 +702,21 @@ function resolveStoreActions({
 
   if (experience === 'book') {
     return [
-      ...(bookSampleAvailable ? [{ label: 'Read Sample', href: `/reader/${product.id}?mode=sample` }] : []),
-      free && canClaimToLibrary
+      canClaimToLibrary
         ? owned
           ? { label: 'View in Library', href: libraryHref, secondary: true }
           : userSignedIn
             ? { label: 'Add to Library', onClick: onAddToLibrary, secondary: true }
             : { label: 'Sign In to Save', href: '/login', secondary: true }
-        : !PUBLIC_PURCHASES_AVAILABLE || !paidSalesAvailable
-          ? unavailablePurchaseAction
-          : cartHasItem
-          ? { label: 'View Purchase Cart', href: '/cart', secondary: true }
-          : { label: 'Buy Book', onClick: onAddToCart, secondary: true },
-    ];
+        : null,
+      ...(PUBLIC_PURCHASES_AVAILABLE && paidSalesAvailable && product.download_purchase_enabled && product.price_cents > 0 && !hasDownloadUnlock
+        ? [cartHasItem
+          ? { label: 'View Download Cart', href: '/cart', secondary: true }
+          : { label: 'Buy Download', onClick: onAddToCart, secondary: true }]
+        : !hasDownloadUnlock && product.download_purchase_enabled && product.price_cents > 0
+          ? [{ ...unavailablePurchaseAction, label: PUBLIC_PURCHASES_AVAILABLE ? 'Paid sales unavailable' : unavailablePurchaseAction.label }]
+          : []),
+    ].filter((action): action is ProductDetailAction => Boolean(action));
   }
 
   if (experience === 'asset' && free && canClaimToLibrary) {

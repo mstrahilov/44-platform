@@ -136,6 +136,7 @@ export type AdminContentDetail = {
     experience_type: string;
     item_type: string;
     year: number | null;
+    release_date: string | null;
     short_description: string | null;
     long_description: string | null;
     price_cents: number;
@@ -271,15 +272,30 @@ export async function listAdminContent(input: { query?: string | null; status?: 
 }
 
 export async function getAdminContentDetail(itemId: string) {
-  const result = await supabase.rpc('get_admin_content_detail', { target_item_id: itemId });
-  if (result.error) throw result.error;
-  return result.data as unknown as AdminContentDetail;
+  const [detailResult, releaseDateResult] = await Promise.all([
+    supabase.rpc('get_admin_content_detail', { target_item_id: itemId }),
+    supabase.rpc('get_admin_item_release_date', { target_item_id: itemId }),
+  ]);
+  if (detailResult.error) throw detailResult.error;
+  if (releaseDateResult.error) throw releaseDateResult.error;
+  const detail = detailResult.data as unknown as AdminContentDetail;
+  return { ...detail, item: { ...detail.item, release_date: releaseDateResult.data } };
 }
 
 export async function setAdminItemLifecycle(itemId: string, action: 'publish' | 'unpublish' | 'archive', reason: string) {
   const result = await supabase.rpc('set_admin_item_lifecycle', {
     target_item_id: itemId,
     target_action: action,
+    target_reason: reason,
+  });
+  if (result.error) throw result.error;
+  return result.data;
+}
+
+export async function setAdminItemReleaseDate(itemId: string, releaseDate: string, reason: string) {
+  const result = await supabase.rpc('set_admin_item_release_date', {
+    target_item_id: itemId,
+    target_release_date: releaseDate,
     target_reason: reason,
   });
   if (result.error) throw result.error;

@@ -1,6 +1,6 @@
 'use client';
 
-import { Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
+import { Ui44CheckboxInput, Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
 import type { MarketMode } from '@/lib/marketPreferences';
 
 export type StudioAvailability = 'free' | 'paid';
@@ -58,6 +58,8 @@ export function StudioDigitalPricingFields({
   localCurrency,
   disabled,
   noticeId,
+  freeAccessDescription,
+  paidDownloadRequired = false,
   onAvailabilityChange,
   onMarketModeChange,
   onGlobalPriceChange,
@@ -70,27 +72,58 @@ export function StudioDigitalPricingFields({
   localCurrency: string;
   disabled: boolean;
   noticeId: string;
+  freeAccessDescription?: string;
+  paidDownloadRequired?: boolean;
   onAvailabilityChange: (value: StudioAvailability) => void;
   onMarketModeChange: (value: MarketMode) => void;
   onGlobalPriceChange: (value: string) => void;
   onLocalPriceChange: (value: string) => void;
 }) {
-  const paid = availability === 'paid';
+  const paid = paidDownloadRequired || availability === 'paid';
 
   return (
     <div className="dashboard-form-grid dashboard-form-grid-2 release-market-grid ui44-form-grid">
-      <label className="dashboard-field">
-        <div className="dashboard-field-label">Availability</div>
-        <Ui44SelectInput
-          value={availability}
-          disabled={disabled}
-          aria-describedby={noticeId}
-          onChange={event => onAvailabilityChange(event.target.value as StudioAvailability)}
-        >
-          <option value="free">Free</option>
-          <option value="paid">Paid download</option>
-        </Ui44SelectInput>
-      </label>
+      {freeAccessDescription ? (
+        <div className="dashboard-field dashboard-field-full studio-paid-download-field">
+          <div className="dashboard-field-label">Download</div>
+          <label className="studio-paid-download-toggle">
+            <Ui44CheckboxInput
+              checked={paid}
+              disabled={disabled}
+              aria-describedby={disabled ? noticeId : undefined}
+              onChange={event => onAvailabilityChange(event.target.checked ? 'paid' : 'free')}
+            />
+            <span>
+              <strong>Offer a paid download</strong>
+              <small>{freeAccessDescription}</small>
+            </span>
+          </label>
+          {disabled ? <span id={noticeId} className="dashboard-form-note">Paid downloads are not available for this account.</span> : null}
+        </div>
+      ) : paidDownloadRequired ? (
+        <div className="dashboard-field dashboard-field-full studio-paid-download-field">
+          <div className="dashboard-field-label">Download price</div>
+          <div className="studio-paid-download-required">
+            <strong>Sample Packs are paid downloads</strong>
+            <small>Set the price listeners pay to download the complete pack. Public previews remain available before purchase.</small>
+          </div>
+          {disabled ? <span id={noticeId} className="dashboard-form-note">Paid downloads are not available for this account.</span> : null}
+        </div>
+      ) : (
+        <label className="dashboard-field">
+          <div className="dashboard-field-label">Availability</div>
+          <Ui44SelectInput
+            value={availability}
+            disabled={disabled}
+            aria-describedby={disabled ? noticeId : undefined}
+            onChange={event => onAvailabilityChange(event.target.value as StudioAvailability)}
+          >
+            <option value="free">Free</option>
+            <option value="paid">Paid download</option>
+          </Ui44SelectInput>
+          {disabled ? <span id={noticeId} className="dashboard-form-note">Paid downloads are not available for this account.</span> : null}
+        </label>
+      )}
 
       {paid ? (
         <label className="dashboard-field">
@@ -98,12 +131,12 @@ export function StudioDigitalPricingFields({
           <Ui44SelectInput
             value={marketMode}
             disabled={disabled}
-            aria-describedby={noticeId}
             onChange={event => onMarketModeChange(event.target.value as MarketMode)}
           >
-            <option value="global">Global</option>
-            <option value="global_plus_local">Global + Local</option>
+            <option value="global">Global price only</option>
+            <option value="global_plus_local">Global + local price</option>
           </Ui44SelectInput>
+          <span className="dashboard-form-note">Add a separate local price only when it helps listeners in your home market.</span>
         </label>
       ) : null}
 
@@ -114,7 +147,6 @@ export function StudioDigitalPricingFields({
             currency="USD"
             value={globalPrice}
             disabled={disabled}
-            describedBy={noticeId}
             onChange={onGlobalPriceChange}
           />
         </label>
@@ -127,7 +159,6 @@ export function StudioDigitalPricingFields({
             currency={localCurrency}
             value={localPrice}
             disabled={disabled}
-            describedBy={noticeId}
             onChange={onLocalPriceChange}
           />
           <span className="dashboard-form-note">Set this amount independently from the global USD price.</span>

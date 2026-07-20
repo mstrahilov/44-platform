@@ -228,6 +228,44 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_home_shelf_events: {
+        Row: {
+          changed_by: string
+          created_at: string
+          id: string
+          new_items: Json
+          previous_items: Json
+          reason: string
+          shelf_key: string
+        }
+        Insert: {
+          changed_by: string
+          created_at?: string
+          id?: string
+          new_items: Json
+          previous_items: Json
+          reason: string
+          shelf_key: string
+        }
+        Update: {
+          changed_by?: string
+          created_at?: string
+          id?: string
+          new_items?: Json
+          previous_items?: Json
+          reason?: string
+          shelf_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_home_shelf_events_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_item_lifecycle_events: {
         Row: {
           action: string
@@ -375,6 +413,45 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      home_shelf_entries: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          item_id: string
+          position: number
+          shelf_key: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          item_id: string
+          position: number
+          shelf_key: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          item_id?: string
+          position?: number
+          shelf_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "home_shelf_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "home_shelf_entries_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
             referencedColumns: ["id"]
           },
         ]
@@ -9821,6 +9898,7 @@ export type Database = {
         Returns: Json
       }
       get_admin_dashboard_summary: { Args: never; Returns: Json }
+      get_admin_home_featured_state: { Args: never; Returns: Json }
       get_admin_person_detail: {
         Args: { target_profile_id: string }
         Returns: Json
@@ -9986,6 +10064,13 @@ export type Database = {
           runtime: string
           safe_message: string
           total_count: number
+        }[]
+      }
+      list_home_featured_item_ids: {
+        Args: never
+        Returns: {
+          item_id: string
+          slot_position: number
         }[]
       }
       list_admin_people: {
@@ -10470,11 +10555,27 @@ export type Database = {
         Args: { target_enabled: boolean; target_user_id: string }
         Returns: undefined
       }
+      set_admin_home_featured_items: {
+        Args: { target_item_ids: string[]; target_reason: string }
+        Returns: Json
+      }
       set_admin_item_lifecycle: {
         Args: {
           target_action: string
           target_item_id: string
           target_reason: string
+        }
+        Returns: string
+      }
+      get_admin_item_release_date: {
+        Args: { target_item_id: string }
+        Returns: string | null
+      }
+      set_admin_item_release_date: {
+        Args: {
+          target_item_id: string
+          target_reason: string
+          target_release_date: string
         }
         Returns: string
       }

@@ -283,11 +283,9 @@ function OverviewStatCard({ label, value }: { label: string; value: string | num
 }
 
 const STUDIO_CREATE_ACTIONS = [
-  ...(beatReviewSurfacesEnabled ? [{ label: 'Add Beat', href: '/studio/beats/new' }] : []),
   { label: 'Add Music', href: '/studio/products/new?section=music' },
   { label: 'Add Book', href: '/studio/products/new?section=books' },
-  { label: 'Add Event', href: '/studio/events/new' },
-  { label: 'Add Sample Pack', href: '/studio/products/new?section=sample-packs' },
+  { label: 'Add Pack', href: '/studio/products/new?section=sample-packs' },
   { label: 'Add Update', href: '/studio/updates/new' },
 ];
 

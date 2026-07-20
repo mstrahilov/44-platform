@@ -81,9 +81,28 @@ export async function createStudioItem(payload: ItemInsert) {
 }
 
 export async function addStudioTracks(rows: TrackInsert[]) {
-  if (rows.length === 0) return;
-  const result = await supabase.from('tracks').insert(rows);
+  if (rows.length === 0) return [];
+  const result = await supabase.from('tracks').insert(rows).select('*');
   if (result.error) throw result.error;
+  return result.data ?? [];
+}
+
+export async function attachStudioAudioAsset(assetId: string, trackId: string) {
+  const result = await supabase.rpc('attach_ready_audio_asset' as never, {
+    target_asset_id: assetId,
+    target_track_id: trackId,
+  } as never);
+  if (result.error) throw result.error;
+  return result.data as unknown as 'retain' | 'cleanup_after_grace';
+}
+
+export async function attachStudioAudioAssets(pairs: Array<{ assetId: string; trackId: string }>) {
+  if (pairs.length === 0) return [];
+  const result = await supabase.rpc('attach_ready_audio_assets' as never, {
+    target_pairs: pairs.map(pair => ({ asset_id: pair.assetId, track_id: pair.trackId })),
+  } as never);
+  if (result.error) throw result.error;
+  return result.data as unknown as Array<{ asset_id: string; track_id: string; retention_mode: 'retain' | 'cleanup_after_grace' }>;
 }
 
 export async function addStudioAssets(rows: AssetInsert[]) {
@@ -104,7 +123,7 @@ export async function loadStudioItemEditor(itemId: string, ownerId: string) {
   if (itemResult.error) throw itemResult.error;
   if (!itemResult.data) return null;
 
-  const [trackResult, assetResult, achievementResult, typeResult, tagResult, linkResult, bookResult, samplesResult, videoResult] = await Promise.all([
+  const [trackResult, assetResult, achievementResult, typeResult, tagResult, linkResult, bookResult, samplesResult, videoResult, audioAssetResult] = await Promise.all([
     supabase.from('tracks').select('*').eq('item_id', itemId).order('number'),
     supabase.from('item_assets').select('asset_type,title,file_url,storage_path').eq('item_id', itemId).order('sort_order'),
     supabase
@@ -118,8 +137,10 @@ export async function loadStudioItemEditor(itemId: string, ownerId: string) {
     supabase.from('book_contents').select('*').eq('item_id', itemId).maybeSingle(),
     supabase.from('sample_pack_files').select('*').eq('item_id', itemId).order('sort_order'),
     supabase.from('item_video_embeds' as never).select('id,title,youtube_video_id,sort_order').eq('item_id', itemId).order('sort_order'),
+    supabase.from('audio_assets' as never).select('id,track_id,status,stream_public_url').in('track_id',
+      (await supabase.from('tracks').select('id').eq('item_id', itemId)).data?.map(track => track.id) ?? []),
   ]);
-  const error = trackResult.error || assetResult.error || achievementResult.error || typeResult.error || tagResult.error || linkResult.error || bookResult.error || samplesResult.error || videoResult.error;
+  const error = trackResult.error || assetResult.error || achievementResult.error || typeResult.error || tagResult.error || linkResult.error || bookResult.error || samplesResult.error || videoResult.error || audioAssetResult.error;
   if (error) throw error;
 
   return {
@@ -133,6 +154,7 @@ export async function loadStudioItemEditor(itemId: string, ownerId: string) {
     bookContent: bookResult.data,
     sampleFiles: samplesResult.data ?? [],
     videoEmbeds: (videoResult.data as StudioVideoEmbedSummary[] | null) ?? [],
+    audioAssets: (audioAssetResult.data ?? []) as unknown as Array<{ id: string; track_id: string; status: string; stream_public_url: string | null }>,
   };
 }
 
@@ -169,17 +191,20 @@ export async function attestStudioItemRights(itemId: string) {
 }
 
 export async function syncStudioTracks(itemId: string, rows: Array<TrackInsert & { id?: string }>, deletedIds: string[]) {
+  const saved = [] as Database['public']['Tables']['tracks']['Row'][];
   for (const row of rows) {
     const { id, ...payload } = row;
     const result = id
-      ? await supabase.from('tracks').update(payload).eq('id', id).eq('item_id', itemId)
-      : await supabase.from('tracks').insert(payload);
+      ? await supabase.from('tracks').update(payload).eq('id', id).eq('item_id', itemId).select('*').single()
+      : await supabase.from('tracks').insert(payload).select('*').single();
     if (result.error) throw result.error;
+    saved.push(result.data);
   }
   if (deletedIds.length > 0) {
     const result = await supabase.from('tracks').delete().in('id', deletedIds).eq('item_id', itemId);
     if (result.error) throw result.error;
   }
+  return saved;
 }
 
 export async function replaceStudioAsset(itemId: string, assetType: string, asset: AssetInsert) {
