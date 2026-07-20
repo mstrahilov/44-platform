@@ -3257,6 +3257,47 @@ body.theme-dark .os-home-panel {
   box-sizing: content-box;
 }
 
+.os-topbar-notification-count {
+  position: absolute;
+  top: -8px;
+  right: -10px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #ff3b30;
+  color: #fff;
+  border: 2px solid var(--os-shell-bg);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+.web-push-prompt {
+  position: fixed;
+  z-index: 1200;
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(92px, calc(env(safe-area-inset-bottom) + 74px));
+  width: min(390px, calc(100vw - 36px));
+  padding: 18px;
+  display: grid;
+  gap: 16px;
+  border: 1px solid color-mix(in srgb, var(--os-accent) 32%, var(--os-color-border));
+  box-shadow: 0 16px 48px rgba(0, 0, 0, .34);
+}
+
+.web-push-prompt-copy,
+.web-push-prompt-actions { display: grid; gap: 8px; }
+
+.web-push-prompt-actions { grid-template-columns: 1fr auto; }
+
+@media (max-width: 620px) {
+  .web-push-prompt-actions { grid-template-columns: 1fr; }
+}
+
 .os-topbar-cart-button {
   position: relative;
   width: auto;

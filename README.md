@@ -39,6 +39,8 @@ See Foundation’s **Security, release, and recovery** section for the complete 
 
 New release-track audio currently uses direct Supabase uploads. The private source and verified MP3 pipeline remains installed behind `NEXT_PUBLIC_AUDIO_PIPELINE_ENABLED`; keep it false until a signed production canary proves the complete path end to end.
 
+Installed 44OS web apps can opt into standards-based Web Push for Community replies, mentions, and inbox messages. Push delivery uses VAPID credentials, a private subscription table, immediate authenticated delivery passes, and a daily recovery job; in-app notification events remain the source of truth.
+
 ```bash
 # Read-only production inventory; writes the manifest to /tmp by default.
 npm run audio:inventory

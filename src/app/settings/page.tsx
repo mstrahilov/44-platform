@@ -28,6 +28,7 @@ import {
 import { isMissingColumnError } from '@/lib/schemaCompat';
 import { getSitePathUrl } from '@/lib/siteUrl';
 import { getNotificationPreference, setNotificationPreference, type NotificationPreferenceKind } from '@/lib/notificationPreferences';
+import { WebPushSettingsRow } from '@/components/WebPushNotifications';
 
 type SettingsAnchorId = 'account' | 'notifications' | 'appearance' | 'dock';
 
@@ -388,6 +389,7 @@ function NotificationSettings() {
   return (
     <div className="settings-section settings-section-wide">
       <div className="settings-list ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
+        <WebPushSettingsRow />
         <ToggleRow preferenceKind={ACCOUNT_KEYS.mentions} title="Mentions" defaultOn />
         <ToggleRow preferenceKind={ACCOUNT_KEYS.replies} title="Replies" defaultOn />
         <ToggleRow preferenceKind={ACCOUNT_KEYS.likes} title="Likes" defaultOn />

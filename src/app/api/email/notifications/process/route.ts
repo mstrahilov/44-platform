@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   try {
     await authenticateEmailRequest(request);
-    await processEmailOutbox(5);
+    await processEmailOutbox(20);
     return Response.json({ processed: true }, { headers: { 'Cache-Control': 'no-store' } });
   } catch {
     // Notification delivery is best effort. Authoritative signup/publication

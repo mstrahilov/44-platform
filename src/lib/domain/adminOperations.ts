@@ -251,6 +251,7 @@ export async function setAdminCreatorAccess(profileId: string, role: 'member' | 
     target_reason: reason,
   });
   if (result.error) throw result.error;
+  if (role === 'creator') void deliverCreatorPromotionNotifications();
 }
 
 export async function reviewAdminCreatorAccessRequest(
@@ -264,7 +265,18 @@ export async function reviewAdminCreatorAccessRequest(
     target_reason: reason,
   } as never);
   if (result.error) throw result.error;
+  if (decision === 'approved') void deliverCreatorPromotionNotifications();
   return result.data as unknown as 'approved' | 'rejected';
+}
+
+async function deliverCreatorPromotionNotifications() {
+  const session = await supabase.auth.getSession();
+  const token = session.data.session?.access_token;
+  if (!token) return;
+  await Promise.allSettled([
+    fetch('/api/email/notifications/process', { method: 'POST', headers: { Authorization: `Bearer ${token}` } }),
+    fetch('/api/push/process', { method: 'POST', headers: { Authorization: `Bearer ${token}` } }),
+  ]);
 }
 
 export async function setAdminCreatorPaidSales(

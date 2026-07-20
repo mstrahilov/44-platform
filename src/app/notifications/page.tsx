@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { PageShell, HubHero, CenteredMessage } from '@/components/Ui';
 import { AchievementIconGlyph } from '@/components/AchievementIconGlyph';
 import { useAuth } from '@/lib/useAuth';
+import { supabase } from '@/lib/supabase';
 import {
   ACHIEVEMENT_NOTIFICATIONS_UPDATED,
   loadAchievementNotifications,
@@ -17,12 +18,13 @@ import {
   saveNotificationReadState,
 } from '@/lib/notificationState';
 
-type TabId = 'all' | 'mentions' | 'replies' | 'likes' | 'achievements';
+type TabId = 'all' | 'mentions' | 'replies' | 'messages' | 'likes' | 'achievements';
 
 const TABS: Array<{ id: TabId; label: string }> = [
   { id: 'all', label: 'All' },
   { id: 'mentions', label: 'Mentions' },
   { id: 'replies', label: 'Replies' },
+  { id: 'messages', label: 'Messages' },
   { id: 'likes', label: 'Likes' },
   { id: 'achievements', label: 'Achievements' },
 ];
@@ -53,7 +55,7 @@ export default function NotificationsPage() {
       ]);
       const nextSeen = new Set(readState.seenIds);
       rows.forEach(item => {
-        if (item.kind !== 'message' && notificationIsEnabled(item) && !readState.hiddenIds.has(item.id)) nextSeen.add(item.id);
+        if (notificationIsEnabled(item) && !readState.hiddenIds.has(item.id)) nextSeen.add(item.id);
       });
       setNotifications(rows);
       setSeenIds(nextSeen);
@@ -91,10 +93,19 @@ export default function NotificationsPage() {
     }
 
     window.addEventListener(ACHIEVEMENT_NOTIFICATIONS_UPDATED, onAchievementUpdate);
-    return () => window.removeEventListener(ACHIEVEMENT_NOTIFICATIONS_UPDATED, onAchievementUpdate);
+    const channel = supabase
+      .channel(`notification-page:${userId}`)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'achievement_events', filter: `user_id=eq.${userId}`,
+      }, onAchievementUpdate)
+      .subscribe();
+    return () => {
+      window.removeEventListener(ACHIEVEMENT_NOTIFICATIONS_UPDATED, onAchievementUpdate);
+      void supabase.removeChannel(channel);
+    };
   }, [user]);
 
-  const enabledNotifications = notifications.filter(item => item.kind !== 'message' && notificationIsEnabled(item) && !hiddenIds.has(item.id));
+  const enabledNotifications = notifications.filter(item => notificationIsEnabled(item) && !hiddenIds.has(item.id));
 
   if (loading || !user) {
     return <PageShell><CenteredMessage status>Loading…</CenteredMessage></PageShell>;
@@ -105,6 +116,7 @@ export default function NotificationsPage() {
     if (activeTab === 'achievements') return item.kind === 'achievement';
     if (activeTab === 'replies') return item.kind === 'reply';
     if (activeTab === 'mentions') return item.kind === 'mention';
+    if (activeTab === 'messages') return item.kind === 'message';
     if (activeTab === 'likes') return item.kind === 'like';
     return false;
   });
@@ -113,6 +125,7 @@ export default function NotificationsPage() {
     achievements: 'Achievements you unlock across the platform will appear here.',
     mentions: 'Posts and replies that mention you will appear here.',
     replies: 'Replies to your posts and comments will appear here.',
+    messages: 'New inbox messages will appear here.',
     likes: 'Likes on your posts will appear here.',
   };
   function hideNotification(id: string) {

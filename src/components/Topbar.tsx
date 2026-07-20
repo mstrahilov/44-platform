@@ -198,7 +198,7 @@ export function Topbar() {
     let alive = true;
     const activeUserId = userId;
     loadAchievementNotifications(activeUserId).then(rows => {
-      if (alive) setNotificationState({ userId: activeUserId, rows: rows.slice(0, 10) });
+      if (alive) setNotificationState({ userId: activeUserId, rows: rows.slice(0, 24) });
     });
     return () => { alive = false; };
   }, [userId]);
@@ -209,7 +209,7 @@ export function Topbar() {
 
     async function refreshNotifications() {
       const rows = await loadAchievementNotifications(activeUserId);
-      setNotificationState({ userId: activeUserId, rows: rows.slice(0, 10) });
+      setNotificationState({ userId: activeUserId, rows: rows.slice(0, 24) });
     }
 
     function onAchievementUpdate() {
@@ -217,7 +217,16 @@ export function Topbar() {
     }
 
     window.addEventListener(ACHIEVEMENT_NOTIFICATIONS_UPDATED, onAchievementUpdate);
-    return () => window.removeEventListener(ACHIEVEMENT_NOTIFICATIONS_UPDATED, onAchievementUpdate);
+    const channel = supabase
+      .channel(`topbar-notifications:${activeUserId}`)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'achievement_events', filter: `user_id=eq.${activeUserId}`,
+      }, onAchievementUpdate)
+      .subscribe();
+    return () => {
+      window.removeEventListener(ACHIEVEMENT_NOTIFICATIONS_UPDATED, onAchievementUpdate);
+      void supabase.removeChannel(channel);
+    };
   }, [userId]);
 
   useEffect(() => {
@@ -361,11 +370,10 @@ export function Topbar() {
   const avatarUrl = profile?.avatar_url ?? null;
   const profileHref = profile?.username ? `/profile/${profile.username}` : '/profile';
   const visibleNotifications = notifications.filter(notification => (
-    notification.kind !== 'message' &&
     notificationIsEnabled(notification) &&
     !hiddenNotificationIds.has(notification.id)
   ));
-  const hasNewNotifications = visibleNotifications.some(n => !seenIds.has(n.id));
+  const unreadNotificationCount = visibleNotifications.filter(n => !seenIds.has(n.id)).length;
   const backLabel = labelForPath(previousPath?.split('?')[0]) ?? back?.label ?? 'Back';
 
   async function handleSignOut() {
@@ -469,13 +477,17 @@ export function Topbar() {
             <button
               type="button"
               className={notifMenuOpen ? 'ui44-symbol-button ui44-symbol-button-notifications os-topbar-icon-button os-topbar-icon-button-active' : 'ui44-symbol-button ui44-symbol-button-notifications os-topbar-icon-button'}
-              aria-label="Notifications"
+              aria-label={unreadNotificationCount > 0 ? `Notifications, ${unreadNotificationCount} unread` : 'Notifications'}
               aria-expanded={notifMenuOpen}
               onClick={openNotifMenu}
             >
               <span className="os-topbar-icon-wrapper">
                 <IconBell />
-                {hasNewNotifications && <span className="os-topbar-dot" />}
+                {unreadNotificationCount > 0 && (
+                  <span className="os-topbar-notification-count" aria-hidden="true">
+                    {unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}
+                  </span>
+                )}
               </span>
             </button>
             {notifMenuOpen && (

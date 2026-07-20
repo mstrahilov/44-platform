@@ -14,6 +14,7 @@ import { absoluteMetadataUrl, getMetadataBaseUrl } from '@/lib/metadata';
 import AnalyticsConsentBoundary from '@/components/AnalyticsConsent';
 import { getAnalyticsMeasurementId } from '@/lib/analyticsConfig';
 import { MarketPreferenceSync } from '@/components/MarketPreferenceSync';
+import { WebPushNotificationPrompt } from '@/components/WebPushNotifications';
 
 // Applies the saved theme before first paint to avoid a flash of the wrong theme.
 const THEME_BOOTSTRAP = `(function(){try{
@@ -106,6 +107,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeSync />
         <MarketPreferenceSync />
         <AnalyticsConsentBoundary measurementId={analyticsMeasurementId} />
+        <WebPushNotificationPrompt />
 
         <div className="app-environment" aria-hidden="true">
           <div className="app-environment-image" />

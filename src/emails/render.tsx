@@ -39,6 +39,16 @@ async function adminRelease(payload: EmailTemplatePayloads['admin_release_notifi
   };
 }
 
+async function creatorAccessGranted(payload: EmailTemplatePayloads['creator_access_granted']): Promise<RenderedEmail> {
+  const preview = 'Your 44OS Creator access is ready.';
+  return {
+    subject: 'You are now a Creator on 44OS',
+    preview,
+    html: await document(<EmailFrame preview={preview}><Heading>You are now a Creator, {payload.displayName}.</Heading><Paragraph subtle>Your account can now publish music, books, sample packs, and updates. Open Studio whenever you are ready to add your first release.</Paragraph><Button href={payload.studioUrl}>Open Studio</Button><Paragraph subtle>If you have questions about publishing, reply to this email and Support will help.</Paragraph></EmailFrame>),
+    text: `You are now a Creator, ${payload.displayName}.\n\nYour account can now publish music, books, sample packs, and updates. Open Studio whenever you are ready to add your first release.\n\nOpen Studio: ${payload.studioUrl}\n\nIf you have questions about publishing, reply to this email and Support will help.`,
+  };
+}
+
 async function purchase(payload: EmailTemplatePayloads['purchase_confirmation']): Promise<RenderedEmail> {
   const preview = `Payment confirmed for order ${payload.orderReference}.`;
   const itemRows = payload.lines.map(line => ({ label: `${line.quantity} × ${line.title}${line.detail ? ` — ${line.detail}` : ''}`, value: line.amount }));
@@ -92,6 +102,7 @@ export async function renderEmail<K extends EmailTemplateKey>(template: K, paylo
     case 'welcome': return welcome(payload as EmailTemplatePayloads['welcome']);
     case 'admin_signup_notification': return adminSignup(payload as EmailTemplatePayloads['admin_signup_notification']);
     case 'admin_release_notification': return adminRelease(payload as EmailTemplatePayloads['admin_release_notification']);
+    case 'creator_access_granted': return creatorAccessGranted(payload as EmailTemplatePayloads['creator_access_granted']);
     case 'purchase_confirmation': return purchase(payload as EmailTemplatePayloads['purchase_confirmation']);
     case 'refund_cancellation': return refund(payload as EmailTemplatePayloads['refund_cancellation']);
     case 'fulfillment_tracking': return fulfillment(payload as EmailTemplatePayloads['fulfillment_tracking']);

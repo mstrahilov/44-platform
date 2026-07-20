@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { SocialAuthor } from '@/lib/social';
+import { requestPushDelivery } from '@/lib/webPush';
 
 export type InboxConversation = { id: string; conversation_key: string; updated_at: string };
 export type InboxConversationMember = { conversation_id: string; profile_id: string; profiles?: SocialAuthor | null };
@@ -57,10 +58,12 @@ export async function createOrOpenConversation(_currentUserId: string, otherProf
 }
 
 export async function sendDirectMessage(conversationId: string, body: string) {
-  return supabase.rpc('send_direct_message', {
+  const result = await supabase.rpc('send_direct_message', {
     target_conversation_id: conversationId,
     message_body: body,
   });
+  if (!result.error) void requestPushDelivery();
+  return result;
 }
 
 export function directMessageError(error: { message?: string } | null | undefined) {

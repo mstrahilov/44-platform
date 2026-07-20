@@ -1,5 +1,6 @@
 import type { LikeRow, ReplyEngagerRow, SocialLiker, SocialPost, SocialReply } from '@/lib/social';
 import { supabase } from '@/lib/supabase';
+import { requestPushDelivery } from '@/lib/webPush';
 
 const DISCUSSION_SELECT = '*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type, country_code, home_country_code)';
 const UUID_IDENTIFIER = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -105,6 +106,7 @@ export async function createDiscussion(input: { title: string; body: string; slu
     .eq('id', created.data)
     .single();
   if (result.error) throw result.error;
+  void requestPushDelivery();
   return result.data as SocialPost;
 }
 
@@ -167,6 +169,7 @@ export async function createDiscussionReply(input: { postId: string; authorId: s
     .select('*, authors:profiles!author_id(id, slug, display_name, username, avatar_url)')
     .single();
   if (result.error) throw result.error;
+  void requestPushDelivery();
   return result.data as SocialReply;
 }
 

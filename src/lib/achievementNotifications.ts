@@ -225,6 +225,19 @@ export async function loadAchievementNotifications(userId: string): Promise<Achi
         actorUserId,
         actorAvatarUrl: actorUserId ? actorAvatarMap.get(actorUserId) ?? null : null,
       });
+      continue;
+    }
+
+    if (event.event_type === 'creator_access_granted') {
+      notifications.push({
+        id: event.id,
+        title: 'You are now a Creator',
+        description: 'Creator access is ready. Open Studio to add your first release.',
+        createdAt: event.created_at,
+        productId: null,
+        href: '/studio',
+        kind: 'system',
+      });
     }
   }
 
