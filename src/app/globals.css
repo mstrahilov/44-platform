@@ -6306,7 +6306,7 @@ body.theme-dark .dashboard-status-dot {
 }
 
 .notification-art-achievement {
-  border-radius: 14px;
+  border-radius: 50%;
   color: var(--os-color-ink);
 }
 
@@ -6314,6 +6314,20 @@ body.theme-dark .dashboard-status-dot {
   grid-template-columns: auto minmax(0, 1fr) 32px;
   align-items: center;
   gap: var(--os-space-4);
+}
+
+.notification-page-row-new {
+  background: color-mix(in srgb, var(--os-color-accent) 11%, transparent);
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--os-color-accent) 76%, var(--os-color-ink));
+}
+
+.notification-page-new-dot {
+  justify-self: center;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--os-color-accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--os-color-accent) 14%, transparent);
 }
 
 .notification-page-remove {

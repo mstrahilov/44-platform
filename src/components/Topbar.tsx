@@ -509,9 +509,6 @@ export function Topbar() {
                         <Link href={item.href || '/notifications'} className="os-notification-item">
                           <div className="os-notification-title">{item.title}</div>
                           {item.description && <div className="os-notification-body">{item.description}</div>}
-                          <div className="os-notification-time">
-                            {item.createdAt ? new Date(item.createdAt).toLocaleString() : 'Just now'}
-                          </div>
                         </Link>
                         <button
                           type="button"

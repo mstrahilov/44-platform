@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageShell, HubHero, CenteredMessage } from '@/components/Ui';
 import { AchievementIconGlyph } from '@/components/AchievementIconGlyph';
 import { useAuth } from '@/lib/useAuth';
 import { supabase } from '@/lib/supabase';
+import { FilterPopover } from '@/components/FilterPopover';
 import {
   ACHIEVEMENT_NOTIFICATIONS_UPDATED,
   loadAchievementNotifications,
@@ -14,7 +15,6 @@ import {
 import { notificationIsEnabled } from '@/lib/notificationPreferences';
 import {
   loadNotificationReadState,
-  NOTIFICATION_STATE_UPDATED,
   saveNotificationReadState,
 } from '@/lib/notificationState';
 
@@ -34,13 +34,7 @@ export default function NotificationsPage() {
   const { user, loading } = useAuth();
   const [notifications, setNotifications] = useState<AchievementNotification[]>([]);
   const [activeTab, setActiveTab] = useState<TabId>('all');
-  const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
-  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
-  const navigationRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (activeTab === 'all' && navigationRef.current) navigationRef.current.scrollLeft = 0;
-  }, [activeTab]);
+  const [newIds, setNewIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
@@ -50,16 +44,18 @@ export default function NotificationsPage() {
     async function load() {
       if (!user) return;
       const [rows, readState] = await Promise.all([
-        loadAchievementNotifications(user.id),
+        loadAchievementNotifications(user.id, 500),
         loadNotificationReadState(user.id),
       ]);
       const nextSeen = new Set(readState.seenIds);
+      const nextNew = new Set<string>();
       rows.forEach(item => {
-        if (notificationIsEnabled(item) && !readState.hiddenIds.has(item.id)) nextSeen.add(item.id);
+        if (!notificationIsEnabled(item)) return;
+        if (!readState.seenIds.has(item.id)) nextNew.add(item.id);
+        nextSeen.add(item.id);
       });
       setNotifications(rows);
-      setSeenIds(nextSeen);
-      setHiddenIds(readState.hiddenIds);
+      setNewIds(nextNew);
       if (nextSeen.size !== readState.seenIds.size) {
         await saveNotificationReadState(user.id, { seenIds: nextSeen, hiddenIds: readState.hiddenIds });
       }
@@ -70,22 +66,20 @@ export default function NotificationsPage() {
   useEffect(() => {
     if (!user) return;
     const userId = user.id;
-    async function refreshReadState() {
-      const state = await loadNotificationReadState(userId);
-      setSeenIds(state.seenIds);
-      setHiddenIds(state.hiddenIds);
-    }
-    window.addEventListener(NOTIFICATION_STATE_UPDATED, refreshReadState);
-    return () => window.removeEventListener(NOTIFICATION_STATE_UPDATED, refreshReadState);
-  }, [user]);
-
-  useEffect(() => {
-    if (!user) return;
-    const userId = user.id;
 
     async function refresh() {
-      const rows = await loadAchievementNotifications(userId);
+      const [rows, readState] = await Promise.all([
+        loadAchievementNotifications(userId, 500),
+        loadNotificationReadState(userId),
+      ]);
+      const nextSeen = new Set(readState.seenIds);
+      const incoming = rows.filter(item => notificationIsEnabled(item) && !readState.seenIds.has(item.id));
+      incoming.forEach(item => nextSeen.add(item.id));
       setNotifications(rows);
+      setNewIds(current => new Set([...current, ...incoming.map(item => item.id)]));
+      if (incoming.length > 0) {
+        await saveNotificationReadState(userId, { seenIds: nextSeen, hiddenIds: readState.hiddenIds });
+      }
     }
 
     function onAchievementUpdate() {
@@ -105,7 +99,7 @@ export default function NotificationsPage() {
     };
   }, [user]);
 
-  const enabledNotifications = notifications.filter(item => notificationIsEnabled(item) && !hiddenIds.has(item.id));
+  const enabledNotifications = notifications.filter(item => notificationIsEnabled(item));
 
   if (loading || !user) {
     return <PageShell><CenteredMessage status>Loading…</CenteredMessage></PageShell>;
@@ -128,50 +122,56 @@ export default function NotificationsPage() {
     messages: 'New inbox messages will appear here.',
     likes: 'Likes on your posts will appear here.',
   };
-  function hideNotification(id: string) {
-    setHiddenIds(current => {
+  const notificationTools = (
+    <div className="page-header-tools">
+      <FilterPopover label="Filter Notifications" active={activeTab !== 'all'}>
+        {({ close }) => <>
+          {TABS.map(tab => (
+            <button
+              key={tab.id}
+              type="button"
+              className={activeTab === tab.id ? 'ui44-paper-menu-item ui44-paper-menu-item-selected page-filter-option page-filter-option-active' : 'ui44-paper-menu-item page-filter-option'}
+              onClick={() => { setActiveTab(tab.id); close(); }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </>}
+      </FilterPopover>
+    </div>
+  );
+
+  function openNotification(item: AchievementNotification) {
+    setNewIds(current => {
       const next = new Set(current);
-      next.add(id);
-      if (user) void saveNotificationReadState(user.id, { seenIds, hiddenIds: next });
+      next.delete(item.id);
       return next;
     });
+    if (item.href) router.push(item.href);
   }
 
   return (
     <PageShell>
       <main className="dashboard-page">
-        <HubHero title="Notifications" copy="Mentions, replies, achievements, and other account activity." />
-        <div ref={navigationRef} className="ui44-segmented-tabs social-profile-tabs notification-navigation" role="tablist" aria-label="Notification sections">
-          {TABS.map(tab => (
-            <button
-              key={tab.id}
-              type="button"
-              role="tab"
-              aria-selected={tab.id === activeTab}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        <HubHero title="Notifications" copy="Mentions, replies, achievements, and other account activity." actions={notificationTools} />
         <section className="dashboard-section">
           {visibleNotifications.length > 0 ? (
             <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
               {visibleNotifications.map(item => (
                 <article
                   key={item.id}
-                  className={item.href
+                  className={`${item.href
                     ? 'dashboard-list-row notification-page-row ui44-list-row ui44-list-row-notification ui44-list-row-interactive'
-                    : 'dashboard-list-row notification-page-row ui44-list-row ui44-list-row-notification'}
+                    : 'dashboard-list-row notification-page-row ui44-list-row ui44-list-row-notification'}${newIds.has(item.id) ? ' notification-page-row-new' : ''}`}
                   role={item.href ? 'link' : undefined}
                   tabIndex={item.href ? 0 : undefined}
                   onClick={() => {
-                    if (item.href) router.push(item.href);
+                    openNotification(item);
                   }}
                   onKeyDown={event => {
                     if (!item.href || (event.key !== 'Enter' && event.key !== ' ')) return;
                     event.preventDefault();
-                    router.push(item.href);
+                    openNotification(item);
                   }}
                 >
                   <NotificationArt item={item} />
@@ -181,17 +181,7 @@ export default function NotificationsPage() {
                       <div className="dashboard-row-subtitle">{item.description}</div>
                     )}
                   </div>
-                  <button
-                    type="button"
-                    className="notification-page-remove"
-                    aria-label={`Dismiss ${item.title}`}
-                    onClick={event => {
-                      event.stopPropagation();
-                      hideNotification(item.id);
-                    }}
-                  >
-                    ×
-                  </button>
+                  {newIds.has(item.id) ? <span className="notification-page-new-dot" aria-label="New notification" /> : null}
                 </article>
               ))}
             </div>

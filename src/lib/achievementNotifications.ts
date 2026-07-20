@@ -69,14 +69,14 @@ export async function requestAchievementEvaluation(
 // Reply, mention, like, and message events are created by the reviewed live
 // Supabase triggers. The client synthesizes notification rows from those events.
 
-export async function loadAchievementNotifications(userId: string): Promise<AchievementNotification[]> {
+export async function loadAchievementNotifications(userId: string, limit = 24): Promise<AchievementNotification[]> {
   const [{ data, error }, sellerNotices] = await Promise.all([
     supabase
       .from('achievement_events')
       .select('id,user_id,item_id,achievement_id,event_type,metadata,created_at')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-      .limit(24),
+      .limit(Math.max(1, Math.min(limit, 500))),
     supabase
       .from('creator_seller_notifications' as never)
       .select('id,title,body,href,created_at')
@@ -139,6 +139,7 @@ export async function loadAchievementNotifications(userId: string): Promise<Achi
         description: achievement.description,
         createdAt: event.created_at,
         productId: event.item_id,
+        href: event.item_id ? `/library/item/${event.item_id}` : '/library',
         kind: 'achievement',
         achievementCode: achievement.code,
         achievementIcon: achievement.icon,
@@ -153,6 +154,8 @@ export async function loadAchievementNotifications(userId: string): Promise<Achi
       const replyBody = typeof event.metadata?.reply_body === 'string' ? event.metadata.reply_body : '';
       const postId = typeof event.metadata?.post_id === 'string' ? event.metadata.post_id : null;
       const postSlug = typeof event.metadata?.post_slug === 'string' ? event.metadata.post_slug : null;
+      const replyId = typeof event.metadata?.reply_id === 'string' ? event.metadata.reply_id : null;
+      const threadIdentifier = postSlug || postId;
 
       notifications.push({
         id: event.id,
@@ -160,7 +163,9 @@ export async function loadAchievementNotifications(userId: string): Promise<Achi
         description: replyBody || `New reply on ${postTitle}.`,
         createdAt: event.created_at,
         productId: null,
-        href: postSlug || postId ? `/community/thread/${postSlug || postId}` : '/notifications',
+        href: threadIdentifier
+          ? `/community/thread/${threadIdentifier}${replyId ? `/reply/${replyId}` : ''}`
+          : '/notifications',
         kind: 'reply',
         actorUserId,
         actorAvatarUrl: actorUserId ? actorAvatarMap.get(actorUserId) ?? null : null,
@@ -190,6 +195,7 @@ export async function loadAchievementNotifications(userId: string): Promise<Achi
     }
 
     if (event.event_type === 'message_received') {
+      const actorUserId = typeof event.metadata?.actor_user_id === 'string' ? event.metadata.actor_user_id : null;
       const actorName = typeof event.metadata?.actor_name === 'string' ? event.metadata.actor_name : 'Someone';
       const messageBody = typeof event.metadata?.message_body === 'string' ? event.metadata.message_body : '';
       const conversationId = typeof event.metadata?.conversation_id === 'string' ? event.metadata.conversation_id : null;
@@ -202,6 +208,8 @@ export async function loadAchievementNotifications(userId: string): Promise<Achi
         productId: null,
         href: conversationId ? `/inbox?conversation=${conversationId}` : '/inbox',
         kind: 'message',
+        actorUserId,
+        actorAvatarUrl: actorUserId ? actorAvatarMap.get(actorUserId) ?? null : null,
       });
       continue;
     }

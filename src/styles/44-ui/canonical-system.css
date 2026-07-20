@@ -6344,9 +6344,9 @@ body.theme-light
   }
 
   body:is(.theme-dark, .theme-light) .os-topbar-notification-menu .os-popover-wide {
-    width: 204px;
-    min-width: 204px;
-    max-width: 204px;
+    width: 340px;
+    min-width: 340px;
+    max-width: min(340px, calc(100vw - 32px));
   }
 
   body:is(.theme-dark, .theme-light)
