@@ -30,9 +30,9 @@ function useWebPushState() {
     return () => window.removeEventListener(WEB_PUSH_STATE_UPDATED, refresh);
   }, [refresh]);
 
-  async function enable() {
+  async function enable(onPermissionDecision?: (permission: NotificationPermission) => void) {
     setBusy(true);
-    try { setState(await enableWebPush()); }
+    try { setState(await enableWebPush(onPermissionDecision)); }
     catch { setState('error'); }
     finally { setBusy(false); }
   }
@@ -67,13 +67,13 @@ export function WebPushNotificationPrompt() {
   }
 
   return (
-    <aside className="web-push-prompt ui44-panel ui44-panel-glass" role="dialog" aria-label="Enable notifications">
+    <aside className="web-push-prompt ui44-paper-menu" role="dialog" aria-label="Enable notifications">
       <div className="web-push-prompt-copy">
         <div className="os-type-card-title">Stay connected</div>
         <div className="os-type-body-small">Get notified about Community replies, mentions, and new messages.</div>
       </div>
       <div className="web-push-prompt-actions">
-        <button type="button" className="os-button os-button-primary os-button-compact" disabled={busy} onClick={() => void enable()}>
+        <button type="button" className="os-button os-button-primary os-button-compact" disabled={busy} onClick={() => void enable(() => dismiss())}>
           {busy ? 'Enabling…' : 'Enable Notifications'}
         </button>
         <button type="button" className="os-button os-button-secondary os-button-compact" onClick={dismiss}>Not now</button>

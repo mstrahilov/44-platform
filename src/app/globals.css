@@ -3286,7 +3286,10 @@ body.theme-dark .os-home-panel {
   display: grid;
   gap: 16px;
   border: 1px solid color-mix(in srgb, var(--os-accent) 32%, var(--os-color-border));
+  background: var(--os-paper-bg);
   box-shadow: 0 16px 48px rgba(0, 0, 0, .34);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .web-push-prompt-copy,
@@ -7902,8 +7905,8 @@ body.accent-violet {
   }
 
   .notification-page-row .dashboard-row-title {
-    font-size: 18px;
-    line-height: 1.12;
+    font: 600 13px/16px var(--os-font-app);
+    letter-spacing: 0;
   }
 
 

@@ -6,6 +6,18 @@ export const WEB_PUSH_STATE_UPDATED = '44:web-push-state-updated';
 
 export type WebPushState = 'unsupported' | 'default' | 'enabled' | 'denied' | 'error';
 
+async function withTimeout<T>(operation: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  let timeoutId: number | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+  try {
+    return await Promise.race([operation, timeout]);
+  } finally {
+    if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+  }
+}
+
 function publicKeyBytes(value: string) {
   const padding = '='.repeat((4 - value.length % 4) % 4);
   const base64 = (value + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -41,11 +53,15 @@ async function bearerToken() {
 async function saveSubscription(subscription: PushSubscription) {
   const serialized = subscription.toJSON();
   const token = await bearerToken();
-  const response = await fetch('/api/push/subscriptions', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(serialized),
-  });
+  const response = await withTimeout(
+    fetch('/api/push/subscriptions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(serialized),
+    }),
+    12_000,
+    'The notification subscription took too long to save.',
+  );
   if (!response.ok) throw new Error('Push subscription could not be saved.');
 }
 
@@ -53,24 +69,41 @@ export async function getWebPushState(): Promise<WebPushState> {
   if (!webPushSupported()) return 'unsupported';
   if (Notification.permission === 'denied') return 'denied';
   if (Notification.permission !== 'granted') return 'default';
-  const registration = await navigator.serviceWorker.ready;
-  return await registration.pushManager.getSubscription() ? 'enabled' : 'default';
+  const registration = await withTimeout(
+    navigator.serviceWorker.ready,
+    10_000,
+    'The notification service took too long to start.',
+  );
+  return await withTimeout(
+    registration.pushManager.getSubscription(),
+    10_000,
+    'The notification subscription took too long to load.',
+  ) ? 'enabled' : 'default';
 }
 
-export async function enableWebPush() {
+export async function enableWebPush(onPermissionDecision?: (permission: NotificationPermission) => void) {
   if (!webPushSupported()) throw new Error('Push notifications are not supported on this device.');
   const permission = await Notification.requestPermission();
+  onPermissionDecision?.(permission);
   if (permission !== 'granted') {
     window.dispatchEvent(new Event(WEB_PUSH_STATE_UPDATED));
     return permission === 'denied' ? 'denied' : 'default';
   }
   const registration = await register44ServiceWorker();
   if (!registration) throw new Error('The notification service could not start.');
-  const existing = await registration.pushManager.getSubscription();
-  const subscription = existing ?? await registration.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: publicKeyBytes(process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY || ''),
-  });
+  const existing = await withTimeout(
+    registration.pushManager.getSubscription(),
+    10_000,
+    'The notification subscription took too long to load.',
+  );
+  const subscription = existing ?? await withTimeout(
+    registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: publicKeyBytes(process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY || ''),
+    }),
+    15_000,
+    'The notification subscription took too long to create.',
+  );
   await saveSubscription(subscription);
   window.dispatchEvent(new Event(WEB_PUSH_STATE_UPDATED));
   return 'enabled' as const;

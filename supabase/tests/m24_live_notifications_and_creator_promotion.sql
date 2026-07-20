@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(20);
+select plan(23);
 
 select has_table('public','web_push_subscriptions','Web Push subscriptions are durable');
 select has_table('public','web_push_deliveries','Web Push delivery has a durable outbox');
@@ -21,9 +21,11 @@ insert into public.web_push_subscriptions(id,user_id,endpoint,p256dh,auth) value
 
 insert into public.content_entries(id,content_type,author_id,title,body,slug)
 values('a2420000-0000-4000-8000-000000000001','discussion','a2400000-0000-4000-8000-000000000001',
-  'Notification test','Hello @NotifyMention','notification-test');
+  'Notification test','Hello (@NotifyMention)','notification-test');
 select is((select count(*)::integer from public.achievement_events where user_id='a2400000-0000-4000-8000-000000000003' and event_type='mention_received'),1,'canonical Community posts notify mentioned members');
 select is((select metadata->>'post_slug' from public.achievement_events where user_id='a2400000-0000-4000-8000-000000000003' and event_type='mention_received'),'notification-test','mention events retain the Community destination');
+update public.content_entries set body='Edited copy still mentions @NotifyMention' where id='a2420000-0000-4000-8000-000000000001';
+select is((select count(*)::integer from public.achievement_events where user_id='a2400000-0000-4000-8000-000000000003' and event_type='mention_received'),1,'editing a mentioned post does not duplicate its notification');
 
 insert into public.content_replies(id,entry_id,author_id,reply_type,body)
 values('a2430000-0000-4000-8000-000000000001','a2420000-0000-4000-8000-000000000001',
@@ -31,6 +33,9 @@ values('a2430000-0000-4000-8000-000000000001','a2420000-0000-4000-8000-000000000
 select is((select count(*)::integer from public.achievement_events where user_id='a2400000-0000-4000-8000-000000000001' and event_type='reply_received'),1,'canonical Community replies notify the post author');
 select is((select metadata->>'reply_id' from public.achievement_events where user_id='a2400000-0000-4000-8000-000000000001' and event_type='reply_received'),'a2430000-0000-4000-8000-000000000001','reply events retain the reply identity');
 select is((select count(*)::integer from public.achievement_events where user_id='a2400000-0000-4000-8000-000000000003' and event_type='mention_received'),2,'mentions inside canonical replies notify the mentioned member once');
+select is((select metadata->>'reply_id' from public.achievement_events where user_id='a2400000-0000-4000-8000-000000000003' and event_type='mention_received' and metadata->>'reply_id' is not null),'a2430000-0000-4000-8000-000000000001','reply mentions retain their exact reply destination');
+update public.content_replies set body='Edited reply still tags @NotifyMention' where id='a2430000-0000-4000-8000-000000000001';
+select is((select count(*)::integer from public.achievement_events where user_id='a2400000-0000-4000-8000-000000000003' and event_type='mention_received'),2,'editing a mentioned reply does not duplicate its notification');
 
 insert into public.content_entry_reactions(entry_id,profile_id,reaction_type)
 values('a2420000-0000-4000-8000-000000000001','a2400000-0000-4000-8000-000000000002','like');

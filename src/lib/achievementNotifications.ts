@@ -221,6 +221,8 @@ export async function loadAchievementNotifications(userId: string, limit = 24): 
       const postBody = typeof event.metadata?.post_body === 'string' ? event.metadata.post_body : '';
       const postId = typeof event.metadata?.post_id === 'string' ? event.metadata.post_id : null;
       const postSlug = typeof event.metadata?.post_slug === 'string' ? event.metadata.post_slug : null;
+      const replyId = typeof event.metadata?.reply_id === 'string' ? event.metadata.reply_id : null;
+      const threadIdentifier = postSlug || postId;
 
       notifications.push({
         id: event.id,
@@ -228,7 +230,9 @@ export async function loadAchievementNotifications(userId: string, limit = 24): 
         description: postBody || `You were mentioned in ${postTitle}.`,
         createdAt: event.created_at,
         productId: null,
-        href: postSlug || postId ? `/community/thread/${postSlug || postId}` : '/notifications',
+        href: threadIdentifier
+          ? `/community/thread/${threadIdentifier}${replyId ? `/reply/${replyId}` : ''}`
+          : '/notifications',
         kind: 'mention',
         actorUserId,
         actorAvatarUrl: actorUserId ? actorAvatarMap.get(actorUserId) ?? null : null,
