@@ -105,35 +105,9 @@ function keepNewestProductPerCreator(products: Product[], avoidedProductIds = ne
 }
 
 function buildRecentlyAddedProducts(products: Product[], featuredProductIds: Set<string>, limit: number) {
-  const productsByCreator = new Map<string, Product[]>();
-  products.forEach(product => {
-    const creatorId = creatorFilterKey(product);
-    productsByCreator.set(creatorId, [...(productsByCreator.get(creatorId) ?? []), product]);
-  });
-
-  const creatorQueues = Array.from(productsByCreator.values())
-    .map(creatorProducts => {
-      const availableProducts = creatorProducts.filter(product => !featuredProductIds.has(product.id));
-      if (!availableProducts.length) return [];
-      return creatorProducts.some(product => featuredProductIds.has(product.id))
-        ? availableProducts.sort(comparePublicCatalogProducts)
-        : availableProducts;
-    })
-    .filter(creatorProducts => creatorProducts.length > 0);
-
-  const selectedProducts: Product[] = [];
-  for (let queueIndex = 0; selectedProducts.length < limit; queueIndex += 1) {
-    let addedProduct = false;
-    creatorQueues.forEach(creatorProducts => {
-      const product = creatorProducts[queueIndex];
-      if (product && selectedProducts.length < limit) {
-        selectedProducts.push(product);
-        addedProduct = true;
-      }
-    });
-    if (!addedProduct) break;
-  }
-  return selectedProducts;
+  return products
+    .filter(product => !featuredProductIds.has(product.id))
+    .slice(0, limit);
 }
 
 export default function StoreApp({ category, frontDoor = false }: { category: StoreCategory; frontDoor?: boolean }) {
@@ -498,7 +472,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     const recentlyAddedProducts = buildRecentlyAddedProducts(
       [...musicProducts].sort(compareRecentlyAddedProducts),
       featuredProductIds,
-      4,
+      8,
     );
     const followingProducts = keepNewestProductPerCreator(
       products
