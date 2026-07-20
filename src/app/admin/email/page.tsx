@@ -23,6 +23,13 @@ type EmailOperationsData = {
     webhookSecret: boolean;
     newsletterTopic: boolean;
   };
+  webhook: {
+    providerReachable: boolean;
+    endpointConfigured: boolean;
+    endpointEnabled: boolean;
+    signingSecretMatches: boolean | null;
+    requiredEventsConfigured: boolean;
+  };
   counts: {
     pending: number;
     failed: number;
@@ -204,6 +211,10 @@ function AdminEmailOperations() {
         <Readiness label="Worker secret" ready={data.configuration.cronSecret} />
         <Readiness label="Webhook secret" ready={data.configuration.webhookSecret} />
         <Readiness label="Newsletter Topic" ready={data.configuration.newsletterTopic} />
+        <Readiness label="Resend webhook API" ready={data.webhook.providerReachable} />
+        <Readiness label="Webhook endpoint" ready={data.webhook.endpointConfigured && data.webhook.endpointEnabled} />
+        <Readiness label="Webhook events" ready={data.webhook.requiredEventsConfigured} />
+        <Readiness label="Webhook signing match" ready={data.webhook.signingSecretMatches === true} />
       </div> : <div className="ui44-loading-shell" role="status" aria-label="Loading email configuration" />}
     </section>
 

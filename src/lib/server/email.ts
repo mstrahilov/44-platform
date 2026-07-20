@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { User } from '@supabase/supabase-js';
 import { EMAIL_TEMPLATE_VERSIONS, type EmailTemplateKey, type EmailTemplatePayloads } from '@/emails/contracts';
 import { renderEmail } from '@/emails/render';
-import { commerceAdminClient } from './commerce';
+import { checkoutSiteUrl, commerceAdminClient } from './commerce';
 
 type OutboxRow = {
   id: string;
@@ -37,6 +37,70 @@ export function emailConfigurationPresence() {
     webhookSecret: Boolean(process.env.RESEND_WEBHOOK_SECRET?.trim()),
     newsletterTopic: Boolean(process.env.RESEND_NEWSLETTER_TOPIC_ID?.trim()),
   };
+}
+
+export type ResendWebhookDiagnostic = {
+  providerReachable: boolean;
+  endpointConfigured: boolean;
+  endpointEnabled: boolean;
+  signingSecretMatches: boolean | null;
+  requiredEventsConfigured: boolean;
+};
+
+const REQUIRED_RESEND_WEBHOOK_EVENTS = new Set([
+  'email.sent',
+  'email.delivered',
+  'email.delivery_delayed',
+  'email.bounced',
+  'email.complained',
+  'email.failed',
+  'email.suppressed',
+  'contact.updated',
+]);
+
+export async function inspectResendWebhookConfiguration(): Promise<ResendWebhookDiagnostic> {
+  const unavailable: ResendWebhookDiagnostic = {
+    providerReachable: false,
+    endpointConfigured: false,
+    endpointEnabled: false,
+    signingSecretMatches: null,
+    requiredEventsConfigured: false,
+  };
+  try {
+    const response = await fetch('https://api.resend.com/webhooks?limit=100', {
+      headers: {
+        Authorization: `Bearer ${requiredSecret('RESEND_API_KEY')}`,
+        'User-Agent': '44OS-email-operations/1.0',
+      },
+      signal: AbortSignal.timeout(10_000),
+      cache: 'no-store',
+    });
+    if (!response.ok) return unavailable;
+    const payload = await response.json() as {
+      data?: Array<{
+        endpoint?: string;
+        status?: string;
+        events?: string[];
+        signing_secret?: string;
+      }>;
+    };
+    const expectedEndpoint = `${checkoutSiteUrl()}/api/email/webhook`;
+    const endpoint = (payload.data ?? []).find(candidate => candidate.endpoint === expectedEndpoint);
+    if (!endpoint) return { ...unavailable, providerReachable: true };
+    const configuredSecret = requiredSecret('RESEND_WEBHOOK_SECRET');
+    return {
+      providerReachable: true,
+      endpointConfigured: true,
+      endpointEnabled: endpoint.status === 'enabled',
+      signingSecretMatches: typeof endpoint.signing_secret === 'string'
+        ? endpoint.signing_secret === configuredSecret
+        : null,
+      requiredEventsConfigured: [...REQUIRED_RESEND_WEBHOOK_EVENTS]
+        .every(event => endpoint.events?.includes(event)),
+    };
+  } catch {
+    return unavailable;
+  }
 }
 
 export function authorizeEmailWorker(request: Request) {

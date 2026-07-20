@@ -9,7 +9,7 @@ import {
   removeFromCart,
   useCart,
 } from '@/lib/cart';
-import { PUBLIC_PURCHASES_AVAILABLE, PURCHASING_COMING_SOON_COPY, PURCHASING_COMING_SOON_TITLE } from '@/lib/commerceAvailability';
+import { PUBLIC_PURCHASES_AVAILABLE } from '@/lib/commerceAvailability';
 
 function formatMoney(cents: number, currency: string) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100);
@@ -41,10 +41,10 @@ export default function CartPage() {
     return (
       <PageShell>
         <main className="dashboard-page">
-          <HubHero title={PURCHASING_COMING_SOON_TITLE} copy="Purchasing is temporarily unavailable." />
+          <HubHero title="Purchasing unavailable" copy="Checkout is temporarily unavailable." />
           <div className="dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
             <div className="dashboard-empty">
-              {PURCHASING_COMING_SOON_COPY}
+              Your cart is safe. Please return later to complete checkout.
               <div className="ui44-section-gap-before">
                 <Link className="os-button os-button-primary os-button-compact" href="/">Keep Exploring</Link>
               </div>

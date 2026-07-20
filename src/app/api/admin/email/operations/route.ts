@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
-import { authenticateEmailRequest, emailConfigurationPresence } from '@/lib/server/email';
+import { authenticateEmailRequest, emailConfigurationPresence, inspectResendWebhookConfiguration } from '@/lib/server/email';
 import { commerceAdminClient } from '@/lib/server/commerce';
 
 export const runtime = 'nodejs';
@@ -69,6 +69,7 @@ export async function GET(request: Request) {
       newsletterPending,
       newsletterRetirements,
       openSupport,
+      webhook,
     ] = await Promise.all([
       access.admin.from('email_delivery_controls' as never)
         .select('delivery_enabled,support_intake_enabled,newsletter_sync_enabled,approved_at,approved_by,updated_at')
@@ -92,6 +93,7 @@ export async function GET(request: Request) {
       exactCount(access.admin.from('newsletter_consents' as never).select('user_id', { head: true, count: 'exact' }).in('sync_status', ['pending', 'failed'])),
       exactCount(access.admin.from('newsletter_contact_retirements' as never).select('id', { head: true, count: 'exact' }).in('sync_status', ['pending', 'claimed', 'failed'])),
       exactCount(access.admin.from('support_cases' as never).select('id', { head: true, count: 'exact' }).in('status', ['open', 'waiting_on_support'])),
+      inspectResendWebhookConfiguration(),
     ]);
     if (controls.error) throw controls.error;
     if (history.error) throw history.error;
@@ -103,6 +105,7 @@ export async function GET(request: Request) {
       reconciliationRequired: reconciliationRequired.data ?? [],
       reconciliationHistory: reconciliationHistory.data ?? [],
       configuration: emailConfigurationPresence(),
+      webhook,
       counts: { pending, failed, sent, suppressed, providerFailures, newsletterPending, newsletterRetirements, openSupport },
     }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {

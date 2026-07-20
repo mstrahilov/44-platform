@@ -47,7 +47,7 @@ export default function EditUpdatePage({ params }: { params: Promise<{ id: strin
     catch (deleteError) { setError(deleteError instanceof Error ? deleteError.message : 'Could not delete this update.'); setDeleting(false); }
   }
 
-  if (loading || !user || !update) return <PageShell><div className="dashboard-page"><HubHero title="Edit Update" copy={error || 'Loading update…'} />{error && <Link href="/studio" className="os-button os-button-secondary">Back to Studio</Link>}</div></PageShell>;
+  if (loading || !user || !update) return <PageShell><div className="dashboard-page"><HubHero title="Edit Update" copy={error || undefined} />{error ? <Link href="/studio" className="os-button os-button-secondary">Back to Studio</Link> : <div className="ui44-loading-shell" role="status" aria-label="Loading update" />}</div></PageShell>;
 
   return <PageShell><div className="dashboard-page"><HubHero title="Edit Update" copy="Update this creator announcement." />
     <form className="dashboard-form" onSubmit={save}><section className="dashboard-form-section"><div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible">

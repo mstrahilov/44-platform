@@ -16,8 +16,3 @@ export function paidSalesUiAvailable(item: { paid_sales_available?: boolean; pai
     && item.paid_offer_available === true
     && (item.paid_sales_available === true || COMMERCE_TEST_MODE);
 }
-
-export const PURCHASING_COMING_SOON_TITLE = 'Purchasing coming soon';
-
-export const PURCHASING_COMING_SOON_COPY =
-  'This Item is available to explore now. 44OS purchasing will open after payment and fulfillment testing is complete.';

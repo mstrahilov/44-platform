@@ -8,7 +8,7 @@ import { useAuth } from '@/lib/useAuth';
 import { clearCart, useCart } from '@/lib/cart';
 import { getProductExperience } from '@/lib/experience';
 import type { Product } from '@/lib/products';
-import { PUBLIC_PURCHASES_AVAILABLE, PURCHASING_COMING_SOON_COPY, PURCHASING_COMING_SOON_TITLE } from '@/lib/commerceAvailability';
+import { PUBLIC_PURCHASES_AVAILABLE } from '@/lib/commerceAvailability';
 import { getCartCatalogItems, saveFreeCartToLibrary } from '@/lib/domain/acquisition';
 import { supabase } from '@/lib/supabase';
 
@@ -117,10 +117,10 @@ export default function CheckoutPage() {
     return (
       <PageShell>
         <main className="dashboard-page">
-          <HubHero title={PURCHASING_COMING_SOON_TITLE} copy="Checkout is intentionally disabled for the free launch." />
+          <HubHero title="Purchasing unavailable" copy="Checkout is temporarily unavailable." />
           <div className="dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
             <div className="dashboard-empty">
-              {PURCHASING_COMING_SOON_COPY}
+              Your cart is safe. Please return later to complete checkout.
               <div className="checkout-inline-actions">
                 <Link className="os-button os-button-primary os-button-compact" href="/">Open Home</Link>
               </div>

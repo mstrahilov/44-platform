@@ -127,6 +127,9 @@ async function main() {
   const emailWebhook = await readFile(path.join(process.cwd(), 'src', 'app', 'api', 'email', 'webhook', 'route.ts'), 'utf8');
   assert.doesNotMatch(emailWebhook, /email\.(?:opened|clicked|received)/, 'tracking and inbound-receiving events are not handled');
   assert.match(emailWebhook, /new Webhook\(resendWebhookSecret\(\)\)\.verify/, 'Resend events require raw-body signature verification');
+  assert.match(emailWebhook, /missing_signature_headers[\s\S]*invalid_signature/, 'rejected Resend requests expose sanitized failure classes without logging signatures');
+  assert.match(serverAdapter, /inspectResendWebhookConfiguration[\s\S]*https:\/\/api\.resend\.com\/webhooks\?limit=100/, 'Admin Email can compare the deployed endpoint with Resend configuration');
+  assert.match(serverAdapter, /endpoint\.signing_secret === configuredSecret/, 'Admin Email detects a mismatched webhook signing secret without returning either secret');
   const emailWorkerRoute = await readFile(path.join(process.cwd(), 'src', 'app', 'api', 'email', 'process', 'route.ts'), 'utf8');
   assert.match(emailWorkerRoute, /newsletterError/, 'worker response exposes a sanitized newsletter-sync failure signal');
   assert.match(emailWorkerRoute, /safeWorkerError[\s\S]*\[email\][\s\S]*\[secret\]/, 'worker diagnostics redact recipient and provider-secret patterns before logging');

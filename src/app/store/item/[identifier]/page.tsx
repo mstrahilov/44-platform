@@ -32,7 +32,7 @@ import { SamplePackExperience } from '@/components/SamplePackExperience';
 import { Ui44OverflowTrackTitle } from '@/components/ui44/OverflowTrackTitle';
 import { Ui44SectionArrow } from '@/components/ui44/Controls';
 import { beatReviewSurfacesEnabled, loadBeatCatalogSummaries } from '@/lib/domain/beats';
-import { COMMERCE_TEST_MODE, PUBLIC_PURCHASES_AVAILABLE, PURCHASING_COMING_SOON_TITLE, paidSalesUiAvailable } from '@/lib/commerceAvailability';
+import { COMMERCE_TEST_MODE, paidSalesUiAvailable } from '@/lib/commerceAvailability';
 import { listActiveMerchVariants, type MerchVariant } from '@/lib/domain/merchVariants';
 import { listPublicMerchImages, type MerchProductImage } from '@/lib/domain/merchImages';
 import { listReleaseVideoEmbeds, type ReleaseVideoEmbed } from '@/lib/domain/releaseFeatures';
@@ -114,7 +114,6 @@ function ProductStoreDetail({
       const data = await getCatalogItem(identifier);
 
       setProduct(data);
-      setLoading(false);
 
       if (data && merchPage && getProductExperience(data) !== 'physical') {
         router.replace(productBrowseHref(data));
@@ -160,8 +159,12 @@ function ProductStoreDetail({
           setSampleFiles(nativeContent.samples);
         }
       }
+      setLoading(false);
     }
-    fetchProduct();
+    void fetchProduct().catch(() => {
+      setProduct(null);
+      setLoading(false);
+    });
   }, [identifier, legacyRedirect, merchPage, releasePage, router]);
 
   useEffect(() => {
@@ -285,7 +288,7 @@ function ProductStoreDetail({
     };
   }, [tracks]);
 
-  if (loading) return <div className="ui44-route-state ui44-state ui44-state-loading" role="status" aria-live="polite">Loading…</div>;
+  if (loading) return <div className="ui44-loading-shell" role="status" aria-label="Loading Item" />;
   if (!product) return <div className="ui44-route-state">Item not found</div>;
 
   const productExperience = getProductExperience(product);
@@ -674,49 +677,43 @@ function resolveStoreActions({
   onAddToLibrary: () => void;
   onAddToCart: () => void;
   merchOptionState?: 'ready' | 'choose' | 'unavailable';
-}) {
+}): ProductDetailAction[] {
   const experience = getProductExperience(product);
   const free = isFreeLibraryClaim(product);
-  const paidSalesAvailable = paidSalesUiAvailable(product);
-  const unavailablePurchaseAction: ProductDetailAction = {
-    label: PURCHASING_COMING_SOON_TITLE,
-    secondary: true,
-    disabled: true,
-  };
+  const paidDownloadAvailable = product.download_purchase_enabled
+    && product.price_cents > 0
+    && product.paid_offer_available === true;
   if (experience === 'music') {
     return [
       owned
         ? { label: 'View in Library', href: libraryHref, secondary: true }
         : userSignedIn
           ? { label: 'Add to Library', onClick: onAddToLibrary, secondary: true }
-          : { label: 'Sign In to Save', href: '/login', secondary: true },
-      ...(PUBLIC_PURCHASES_AVAILABLE && paidSalesAvailable && product.download_purchase_enabled && product.price_cents > 0 && !hasDownloadUnlock
+          : { label: 'Add to Library', href: '/login', secondary: true },
+      ...(paidDownloadAvailable && !hasDownloadUnlock
         ? [cartHasItem
           ? { label: 'View Download Cart', href: '/cart', secondary: true }
           : { label: 'Buy Download', onClick: onAddToCart, secondary: true }]
-        : !hasDownloadUnlock && product.download_purchase_enabled && product.price_cents > 0
-          ? [{ ...unavailablePurchaseAction, label: PUBLIC_PURCHASES_AVAILABLE ? 'Paid sales unavailable' : unavailablePurchaseAction.label }]
-          : []),
+        : []),
     ];
   }
 
   if (experience === 'book') {
-    return [
+    const actions: Array<ProductDetailAction | null> = [
       canClaimToLibrary
         ? owned
           ? { label: 'View in Library', href: libraryHref, secondary: true }
           : userSignedIn
             ? { label: 'Add to Library', onClick: onAddToLibrary, secondary: true }
-            : { label: 'Sign In to Save', href: '/login', secondary: true }
+            : { label: 'Add to Library', href: '/login', secondary: true }
         : null,
-      ...(PUBLIC_PURCHASES_AVAILABLE && paidSalesAvailable && product.download_purchase_enabled && product.price_cents > 0 && !hasDownloadUnlock
+      ...(paidDownloadAvailable && !hasDownloadUnlock
         ? [cartHasItem
           ? { label: 'View Download Cart', href: '/cart', secondary: true }
           : { label: 'Buy Download', onClick: onAddToCart, secondary: true }]
-        : !hasDownloadUnlock && product.download_purchase_enabled && product.price_cents > 0
-          ? [{ ...unavailablePurchaseAction, label: PUBLIC_PURCHASES_AVAILABLE ? 'Paid sales unavailable' : unavailablePurchaseAction.label }]
-          : []),
-    ].filter((action): action is ProductDetailAction => Boolean(action));
+        : []),
+    ];
+    return actions.filter((action): action is ProductDetailAction => action !== null);
   }
 
   if (experience === 'asset' && free && canClaimToLibrary) {
@@ -724,13 +721,13 @@ function resolveStoreActions({
       ? { label: 'View in Library', href: libraryHref }
       : userSignedIn
         ? { label: 'Add to Library', onClick: onAddToLibrary }
-        : { label: 'Sign In to Save', href: '/login' }];
+        : { label: 'Add to Library', href: '/login' }];
   }
 
+  if (experience !== 'physical' && !paidDownloadAvailable) return [];
+  if (experience === 'physical' && product.paid_offer_available !== true) return [];
   return [
-    !PUBLIC_PURCHASES_AVAILABLE || !paidSalesAvailable
-      ? unavailablePurchaseAction
-      : experience === 'physical' && merchOptionState === 'unavailable'
+    experience === 'physical' && merchOptionState === 'unavailable'
       ? { label: 'Options unavailable', disabled: true }
       : experience === 'physical' && merchOptionState === 'choose'
       ? { label: 'Choose an option', disabled: true }

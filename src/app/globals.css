@@ -4811,7 +4811,7 @@ body.theme-dark .os-home-panel {
 }
 
 .view-album-cover-asset {
-  aspect-ratio: 3 / 2;
+  aspect-ratio: 1 / 1;
   height: auto;
 }
 

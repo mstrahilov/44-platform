@@ -2218,12 +2218,20 @@ body:is(.theme-dark, .theme-light) :is(.dashboard-empty, .calendar-state) {
   text-align: center;
 }
 
-body:is(.theme-dark, .theme-light) .ui44-loading-shell {
+body:is(.theme-dark, .theme-light)
+  :is(.ui44-loading-shell, .ui44-state-loading) {
   display: grid;
   place-items: center;
 }
 
-body:is(.theme-dark, .theme-light) .ui44-loading-shell::after {
+body:is(.theme-dark, .theme-light) .ui44-state-loading {
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
+}
+
+body:is(.theme-dark, .theme-light)
+  :is(.ui44-loading-shell, .ui44-state-loading)::after {
   content: '';
   width: 24px;
   height: 24px;
@@ -2235,6 +2243,14 @@ body:is(.theme-dark, .theme-light) .ui44-loading-shell::after {
 
 @keyframes ui44-state-spin {
   to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body:is(.theme-dark, .theme-light)
+    :is(.ui44-loading-shell, .ui44-state-loading)::after {
+    animation: none;
+    border-top-color: var(--44ui-panel-border);
+  }
 }
 
 body:is(.theme-dark, .theme-light)

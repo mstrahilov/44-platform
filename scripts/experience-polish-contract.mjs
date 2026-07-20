@@ -30,6 +30,7 @@ const [
   adminReleaseDateMigration,
   adminContentDetail,
   studioOverview,
+  legacyTrackRepairMigration,
 ] = await Promise.all([
   read('src/components/Topbar.tsx'),
   read('src/lib/domain/customerCommerce.ts'),
@@ -58,6 +59,7 @@ const [
   read('supabase/migrations/20260719023000_admin_release_date_corrections.sql'),
   read('src/components/admin/AdminContentDetailApp.tsx'),
   read('src/app/studio/page.tsx'),
+  read('supabase/migrations/20260720050000_repair_legacy_track_metadata.sql'),
 ]);
 
 assert.doesNotMatch(supportArticle, /Reviewed for (?:the )?.*launch/i, 'Support articles omit internal launch-review copy');
@@ -77,6 +79,9 @@ assert.ok(mobileSupportIndex > 0 && mobileSupportIndex < mobileSettingsIndex, 'm
 assert.match(topbar.slice(mobileSupportIndex, mobileSettingsIndex), /os-popover-item-mobile-only/, 'the added Support menu item remains mobile-only');
 
 assert.match(storeDetail, /<ProductDetailsSection details=\{productDetails\}/, 'Store renders relevant Product Details');
+assert.doesNotMatch(`${storeDetail}\n${storeDiscovery}`, /Sign In to Save|Purchasing coming soon|Paid sales unavailable/, 'Store actions never replace available actions with signed-out or coming-soon labels');
+assert.match(storeDetail, /userSignedIn[\s\S]*\{ label: 'Add to Library', href: '\/login'/, 'signed-out Store visitors see Add to Library and reach Login when they select it');
+assert.match(storeDetail, /paidDownloadAvailable[\s\S]*product\.download_purchase_enabled[\s\S]*product\.paid_offer_available === true[\s\S]*label: 'Buy Download'/, 'enabled paid downloads expose Buy Download without a disabled placeholder');
 assert.doesNotMatch(libraryDetail, /Product Details/, 'Product Details stays out of Library');
 assert.match(storeDetail, /listReleaseVideoEmbeds/, 'Store loads release videos');
 assert.match(storeDetail, /<LibraryVideoEmbedsSection embeds=\{videoEmbeds\}/, 'Store renders the same Videos section as Library');
@@ -129,9 +134,8 @@ assert.match(uploadField, /if \(processed\)[\s\S]*processed\.durationSeconds[\s\
 
 assert.ok(storeDiscovery.indexOf('title="New Releases"') < storeDiscovery.indexOf('title="Recently Added"'), 'New Releases is the first Home shelf');
 assert.match(storeDiscovery, /featuredItemIds\.flatMap\([\s\S]*musicProductsById\.get\(itemId\)/, 'Featured follows the exact ordered Item IDs from Admin');
-assert.match(storeDiscovery, /function buildRecentlyAddedProducts\(products: Product\[\], featuredProductIds: Set<string>, limit: number\)[\s\S]*filter\(product => !featuredProductIds\.has\(product\.id\)\)[\s\S]*availableProducts\.sort\(comparePublicCatalogProducts\)/, 'Recently Added excludes Featured Items and uses release chronology for a represented creator’s alternate');
-assert.match(storeDiscovery, /for \(let queueIndex = 0; selectedProducts\.length < limit; queueIndex \+= 1\)[\s\S]*creatorQueues\.forEach[\s\S]*selectedProducts\.push\(product\)/, 'Recently Added fills empty creator slots round-robin from creators with additional non-Featured releases');
-assert.match(storeDiscovery, /const recentlyAddedProducts = buildRecentlyAddedProducts\([\s\S]*sort\(compareRecentlyAddedProducts\)[\s\S]*featuredProductIds,[\s\S]*4,[\s\S]*\)/, 'Recently Added preserves recent creator order while filling four cards without repeating Featured Items');
+assert.match(storeDiscovery, /function buildRecentlyAddedProducts\(products: Product\[\], featuredProductIds: Set<string>, limit: number\)[\s\S]*filter\(product => !featuredProductIds\.has\(product\.id\)\)[\s\S]*slice\(0, limit\)/, 'Recently Added excludes New Releases and selects the newest remaining uploads directly');
+assert.match(storeDiscovery, /const recentlyAddedProducts = buildRecentlyAddedProducts\([\s\S]*sort\(compareRecentlyAddedProducts\)[\s\S]*featuredProductIds,[\s\S]*8,[\s\S]*\)/, 'Recently Added displays the eight newest non-featured uploads in creation order');
 assert.match(storeDiscovery, /const followingProducts = keepNewestProductPerCreator/, 'Creators You Follow keeps one Item per creator');
 assert.match(storeDiscovery, />Sort by<[\s\S]*value="release-date">Release date<[\s\S]*value="recently-added">Recently added</, 'Browse exposes release-date and recently-added sorting first in the filter');
 assert.match(storeDiscovery, /title="New Releases"[\s\S]*browseCategory\('music', 'release-date'\)/, 'New Releases opens release-date Browse');
@@ -147,5 +151,9 @@ assert.match(featuredShelfMigration, /char_length\(coalesce\(normalized_reason,'
 assert.match(featuredShelfMigration, /pg_advisory_xact_lock[\s\S]*for share/, 'Featured mutation serializes shelf saves and locks selected Item lifecycle state');
 assert.match(canonicalCss, /:is\(\.ui44-section-header, \.hub-section-head\) \{[\s\S]*align-items: center;/, 'shared section actions center on the title row');
 assert.match(canonicalCss, /\.store-app-page \.page-filter-menu \{\s*margin-right: 12px;/, 'desktop Store filters align with the Topbar action column');
+assert.match(legacyTrackRepairMigration, /62277a2a-f9cf-4e3b-9a29-09deb03bb512[\s\S]*1783191107348-01-touch-feat\.-kholor-\.mp3/, 'the legacy touch track repair targets the verified replacement object');
+assert.match(legacyTrackRepairMigration, /ad7f8882-b3e2-55ab-8359-d11fedb83f42[\s\S]*07\.%20Where%20You%20At'/, 'the legacy Where You At track repair removes the URL-breaking question mark');
+assert.match(legacyTrackRepairMigration, /0025cb74-5e4b-4f36-9dc6-fea8f09759ba[\s\S]*duration_seconds = 155/, 'GET OUT receives its measured source-file duration');
+assert.match(legacyTrackRepairMigration, /changed after inventory; refusing to overwrite it/, 'legacy repairs fail closed when production data has changed');
 
 console.log('Experience polish contract passed.');

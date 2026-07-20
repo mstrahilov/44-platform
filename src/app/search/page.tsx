@@ -42,7 +42,7 @@ function loadSearchIndex() {
 
 export default function SearchPage() {
   return (
-    <Suspense fallback={<PageShell><EmptyMessage>Searching...</EmptyMessage></PageShell>}>
+    <Suspense fallback={<PageShell><EmptyMessage status>Searching...</EmptyMessage></PageShell>}>
       <SearchContent />
     </Suspense>
   );
@@ -154,7 +154,7 @@ function SearchContent() {
         </form>
 
         {loading ? (
-          <EmptyMessage>Searching...</EmptyMessage>
+          <EmptyMessage status>Searching...</EmptyMessage>
         ) : !query ? (
           <EmptyMessage>Enter any term to start a search.</EmptyMessage>
         ) : !hasResults ? (

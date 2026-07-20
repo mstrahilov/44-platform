@@ -8,17 +8,25 @@ export const dynamic = 'force-dynamic';
 type ResendEvent = { type?: string; created_at?: string; data?: Record<string, unknown> };
 const HANDLED = new Set(['email.sent','email.delivered','email.delivery_delayed','email.bounced','email.complained','email.failed','email.suppressed','contact.updated']);
 
+function rejectSignature(reason: 'missing_signature_headers' | 'invalid_signature') {
+  console.warn(`[resend-webhook] ${reason}`);
+  return Response.json(
+    { error: reason === 'missing_signature_headers' ? 'Webhook signature is required.' : 'Invalid webhook signature.' },
+    { status: 400, headers: { 'Cache-Control': 'no-store' } },
+  );
+}
+
 export async function POST(request: Request) {
   const rawBody = await request.text();
   const id = request.headers.get('svix-id');
   const timestamp = request.headers.get('svix-timestamp');
   const signature = request.headers.get('svix-signature');
-  if (!id || !timestamp || !signature) return Response.json({ error: 'Webhook signature is required.' }, { status: 400 });
+  if (!id || !timestamp || !signature) return rejectSignature('missing_signature_headers');
   let event: ResendEvent;
   try {
     event = new Webhook(resendWebhookSecret()).verify(rawBody, { 'svix-id': id, 'svix-timestamp': timestamp, 'svix-signature': signature }) as ResendEvent;
   } catch {
-    return Response.json({ error: 'Invalid webhook signature.' }, { status: 400 });
+    return rejectSignature('invalid_signature');
   }
   if (!event.type || !HANDLED.has(event.type)) return Response.json({ received: true, ignored: true });
   const data = event.data ?? {};

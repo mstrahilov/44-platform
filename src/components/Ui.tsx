@@ -13,7 +13,6 @@ import { isFreeLibraryClaim } from '@/lib/libraryContent';
 import { getItemLibraryOwnership, saveItemToLibrary } from '@/lib/domain/itemDetails';
 import { Ui44SectionArrow } from '@/components/ui44/Controls';
 import { Ui44Text } from '@/components/ui44/Typography';
-import { PUBLIC_PURCHASES_AVAILABLE, PURCHASING_COMING_SOON_TITLE, paidSalesUiAvailable } from '@/lib/commerceAvailability';
 
 export function PageShell({ children }: { children: ReactNode }) {
   return <div className="view-hub">{children}</div>;
@@ -150,19 +149,19 @@ function resolveProductActionEntries({
   onAddToLibrary: () => Promise<void>;
   onToggleCart: () => void;
 }) {
-  const paidSalesAvailable = paidSalesUiAvailable(product);
+  const paidDownloadAvailable = product.download_purchase_enabled
+    && product.price_cents > 0
+    && product.paid_offer_available === true;
   if (experience === 'music') {
     return [
       ...(!owned ? [{
         id: 'library',
         label: 'Add to Library',
-        onSelect: () => {
-          if (!userId) return;
-          void onAddToLibrary();
-        },
-        disabled: !userId,
+        ...(userId
+          ? { onSelect: () => { void onAddToLibrary(); } }
+          : { href: '/login' }),
       }] : []),
-      ...(PUBLIC_PURCHASES_AVAILABLE && paidSalesAvailable && product.download_purchase_enabled && product.price_cents > 0 ? [{
+      ...(paidDownloadAvailable ? [{
         id: 'download',
         label: inCart ? 'View Download Cart' : 'Buy Download',
         onSelect: onToggleCart,
@@ -175,13 +174,11 @@ function resolveProductActionEntries({
       ...(!owned ? [{
         id: 'library',
         label: 'Add to Library',
-        onSelect: () => {
-          if (!userId) return;
-          void onAddToLibrary();
-        },
-        disabled: !userId,
+        ...(userId
+          ? { onSelect: () => { void onAddToLibrary(); } }
+          : { href: '/login' }),
       }] : []),
-      ...(PUBLIC_PURCHASES_AVAILABLE && paidSalesAvailable && product.download_purchase_enabled && product.price_cents > 0 ? [{
+      ...(paidDownloadAvailable ? [{
         id: 'download',
         label: inCart ? 'View Download Cart' : 'Buy Download',
         onSelect: onToggleCart,
@@ -190,12 +187,7 @@ function resolveProductActionEntries({
   }
 
   if (experience === 'physical' || (!product.is_free && !isFreeLibraryClaim(product))) {
-    if (!PUBLIC_PURCHASES_AVAILABLE) {
-      return [{ id: 'purchase-status', label: PURCHASING_COMING_SOON_TITLE, disabled: true }];
-    }
-    if (!paidSalesAvailable) {
-      return [{ id: 'purchase-status', label: 'Paid sales unavailable', disabled: true }];
-    }
+    if (product.paid_offer_available !== true) return [];
     if (experience === 'physical') {
       return [{ id: 'options', label: inCart ? 'Review Selected Options' : 'Choose Options', href: productBrowseHref(product) }];
     }
@@ -214,11 +206,9 @@ function resolveProductActionEntries({
     {
       id: 'library',
       label: 'Add to Library',
-      onSelect: () => {
-        if (!userId) return;
-        void onAddToLibrary();
-      },
-      disabled: !userId,
+      ...(userId
+        ? { onSelect: () => { void onAddToLibrary(); } }
+        : { href: '/login' }),
     },
   ];
 }

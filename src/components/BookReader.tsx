@@ -154,7 +154,7 @@ export function BookReader({ itemId, mode, returnTo }: { itemId: string; mode: '
     }
   }
 
-  if (authLoading || loading) return <div className="native-reader-state">Opening {mode === 'sample' ? 'sample' : 'book'}…</div>;
+  if (authLoading || loading) return <div className="ui44-loading-shell" role="status" aria-label={`Opening ${mode === 'sample' ? 'sample' : 'book'}`} />;
   if (mode === 'full' && !user) return <div className="native-reader-state"><p>Sign in to read this Library book.</p><Link className="os-button os-button-primary" href="/login">Sign In</Link></div>;
   if (error) return <div className="native-reader-state"><p>{error}</p><button className="os-button os-button-primary" type="button" onClick={() => void loadBook()} disabled={!online}>{online ? 'Refresh Access' : 'Offline'}</button></div>;
 

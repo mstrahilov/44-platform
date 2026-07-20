@@ -57,7 +57,7 @@ function MerchDetail({ itemId }: { itemId: string }) {
     <HubHero title={product?.provider_name ?? 'Merch Item'} copy="44OS images and publication are curated here; Printful provider facts remain read-only." />
     <p><Link href="/admin/fulfillment">← All Merch products</Link></p>
     {error ? <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div> : null}
-    {!data ? <div className="dashboard-empty">Loading Merch Item…</div> : !product ? <div className="dashboard-empty">This Merch Item is not mapped to Printful.</div> : <>
+    {!data ? <div className="ui44-loading-shell" role="status" aria-label="Loading Merch Item" /> : !product ? <div className="dashboard-empty">This Merch Item is not mapped to Printful.</div> : <>
       <section className="dashboard-section"><SectionHeader title="Printful facts" description="Read-only provider truth from the latest complete sync." />
         <div className="dashboard-list-surface ui44-list-surface ui44-panel"><div className="dashboard-list-row"><span>Retail price</span><strong>{money(product.retail_price_cents)}</strong></div><div className="dashboard-list-row"><span>Maximum production cost</span><strong>{money(product.maximum_provider_cost_cents)}</strong></div><div className="dashboard-list-row"><span>Mapping status</span><strong>{product.status}</strong></div></div>
       </section>
