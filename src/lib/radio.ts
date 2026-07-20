@@ -65,6 +65,27 @@ export type RadioBundle = {
   status: string;
 };
 
+export function shuffleRadioTracks<T>(tracks: T[], playlistVersion: string): T[] {
+  const shuffled = [...tracks];
+  let state = 2166136261;
+  for (let index = 0; index < playlistVersion.length; index += 1) {
+    state ^= playlistVersion.charCodeAt(index);
+    state = Math.imul(state, 16777619);
+  }
+  const nextRandom = () => {
+    state += 0x6d2b79f5;
+    let value = state;
+    value = Math.imul(value ^ value >>> 15, value | 1);
+    value ^= value + Math.imul(value ^ value >>> 7, value | 61);
+    return ((value ^ value >>> 14) >>> 0) / 4294967296;
+  };
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(nextRandom() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
+}
+
 export async function loadRadioBundle(): Promise<RadioBundle> {
   const playlistResult = await supabase
     .from('radio_playlist_entries')
@@ -150,11 +171,15 @@ export async function loadRadioBundle(): Promise<RadioBundle> {
       sortOrder: entry.sort_order,
     }];
   });
+  const playlistVersion = playlistEntries
+    .map(entry => `${entry.id}:${entry.track_id}:${entry.sort_order}:${entry.added_at}`)
+    .join('|');
+  const shuffledTracks = shuffleRadioTracks(tracks, playlistVersion);
 
   return {
-    tracks,
+    tracks: shuffledTracks,
     requiresSetup: false,
-    status: tracks.length ? '' : 'No playable Radio tracks were found in the playlist.',
+    status: shuffledTracks.length ? '' : 'No playable Radio tracks were found in the playlist.',
   };
 }
 
