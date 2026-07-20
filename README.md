@@ -37,7 +37,7 @@ See Foundation’s **Security, release, and recovery** section for the complete 
 
 ## Audio Processing Operations
 
-New release-track audio can use the private source and verified MP3 pipeline by setting `NEXT_PUBLIC_AUDIO_PIPELINE_ENABLED=true` after the database migration and Cloud Run job are live. The feature flag must remain false if the worker is unavailable.
+New release-track audio currently uses direct Supabase uploads. The private source and verified MP3 pipeline remains installed behind `NEXT_PUBLIC_AUDIO_PIPELINE_ENABLED`; keep it false until a signed production canary proves the complete path end to end.
 
 ```bash
 # Read-only production inventory; writes the manifest to /tmp by default.
