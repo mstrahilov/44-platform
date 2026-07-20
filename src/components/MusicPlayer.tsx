@@ -532,6 +532,35 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTrack, isPlaying]);
 
+  useEffect(() => {
+    if (
+      typeof navigator === 'undefined'
+      || !('mediaSession' in navigator)
+      || typeof navigator.mediaSession.setPositionState !== 'function'
+      || !currentTrack
+    ) return;
+
+    const audio = audioRef.current;
+    const effectiveDuration = audio && Number.isFinite(audio.duration) && audio.duration > 0
+      ? audio.duration
+      : duration || currentTrack.durationSeconds || 0;
+    if (!Number.isFinite(effectiveDuration) || effectiveDuration <= 0) return;
+
+    const effectivePosition = Math.max(
+      0,
+      Math.min(audio?.currentTime || currentTime, effectiveDuration),
+    );
+    try {
+      navigator.mediaSession.setPositionState({
+        duration: effectiveDuration,
+        playbackRate: audio?.playbackRate || 1,
+        position: effectivePosition,
+      });
+    } catch {
+      // WebKit can reject position updates while a media source is changing.
+    }
+  }, [currentTime, currentTrack, duration]);
+
   function setExpanded(nextExpanded: boolean) {
     setExpandedState(Boolean(currentTrack) && nextExpanded);
   }

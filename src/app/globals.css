@@ -8476,8 +8476,6 @@ body.accent-violet {
     to { transform: translateY(0); }
   }
 
-  .music-player-bar::before,
-  .music-player-bar::after,
   .music-player-bar > .music-player-progress {
     display: none;
   }
