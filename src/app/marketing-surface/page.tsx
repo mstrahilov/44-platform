@@ -47,10 +47,10 @@ function ProductMockup({ desktop, mobile, alt, priority = false }: {
   return (
     <div className={styles.productMockup}>
       <div className={styles.desktopDevice}>
-        <Image src={desktop} alt={alt} width={1280} height={800} sizes="(max-width: 767px) 92vw, 1000px" loading={priority ? 'eager' : 'lazy'} />
+        <Image src={desktop} alt={alt} width={1280} height={800} sizes="(max-width: 767px) 92vw, 1000px" loading="eager" priority={priority} unoptimized />
       </div>
       <div className={styles.mobileDevice}>
-        <Image src={mobile} alt={`${alt} Mobile view.`} width={390} height={844} sizes="(max-width: 767px) 34vw, 260px" loading={priority ? 'eager' : 'lazy'} />
+        <Image src={mobile} alt={`${alt} Mobile view.`} width={390} height={844} sizes="(max-width: 767px) 34vw, 260px" loading="eager" priority={priority} unoptimized />
       </div>
     </div>
   );
