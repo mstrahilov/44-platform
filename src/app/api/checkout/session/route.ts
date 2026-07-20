@@ -3,7 +3,7 @@ import type Stripe from 'stripe';
 import {
   authenticateCommerceRequest,
   automaticTaxEnabled,
-  checkoutSiteUrl,
+  applicationOrigin,
   commerceAdminClient,
   CommerceConfigurationError,
   commerceErrorResponse,
@@ -100,7 +100,7 @@ export async function POST(request: Request) {
     if (createResult.error) throw createResult.error;
     const order = createResult.data as unknown as PendingStripeOrder;
     orderId = order.order_id;
-    const siteUrl = checkoutSiteUrl();
+    const siteUrl = applicationOrigin();
     const stripe = stripeClient();
     // Stripe measures the 30-minute minimum from provider-side Session creation,
     // so keep a buffer for request transit instead of submitting the exact edge.

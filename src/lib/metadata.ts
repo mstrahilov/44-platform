@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-const DEFAULT_SITE_URL = 'https://44os.com';
+const DEFAULT_APP_URL = 'https://app.44os.com';
 const DEFAULT_TITLE = '44OS';
 const DEFAULT_DESCRIPTION = 'A creative operating system to discover, collect, create, and connect through independent music, books, art, community, and radio.';
 const DEFAULT_OG_IMAGE = '/og.png';
@@ -9,14 +9,14 @@ function stripTrailingSlash(value: string) {
   return value.replace(/\/+$/, '');
 }
 
-export function getMetadataBaseUrl() {
-  return stripTrailingSlash(process.env.NEXT_PUBLIC_SITE_URL || DEFAULT_SITE_URL);
+export function getAppMetadataBaseUrl() {
+  return stripTrailingSlash(process.env.NEXT_PUBLIC_APP_URL || DEFAULT_APP_URL);
 }
 
-export function absoluteMetadataUrl(path: string) {
+export function absoluteAppUrl(path: string) {
   if (/^https?:\/\//i.test(path)) return path;
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  return `${getMetadataBaseUrl()}${normalizedPath}`;
+  return `${getAppMetadataBaseUrl()}${normalizedPath}`;
 }
 
 export function buildPageMetadata({
@@ -32,8 +32,8 @@ export function buildPageMetadata({
   image?: string | null;
   type?: 'website' | 'profile';
 } = {}): Metadata {
-  const url = absoluteMetadataUrl(path);
-  const imageUrl = absoluteMetadataUrl(image || DEFAULT_OG_IMAGE);
+  const url = absoluteAppUrl(path);
+  const imageUrl = absoluteAppUrl(image || DEFAULT_OG_IMAGE);
 
   return {
     title,

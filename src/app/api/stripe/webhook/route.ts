@@ -121,17 +121,21 @@ async function eventData(stripe: Stripe, event: Stripe.Event): Promise<Record<st
 }
 
 export async function POST(request: Request) {
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  if (!webhookSecret) return Response.json({ error: 'Stripe webhook is not configured.' }, { status: 503 });
+  const webhookSecrets = [process.env.STRIPE_WEBHOOK_SECRET, process.env.STRIPE_WEBHOOK_SECRET_PREVIOUS]
+    .map(value => value?.trim())
+    .filter((value): value is string => Boolean(value));
+  if (!webhookSecrets.length) return Response.json({ error: 'Stripe webhook is not configured.' }, { status: 503 });
   const signature = request.headers.get('stripe-signature');
   if (!signature) return Response.json({ error: 'Stripe signature is required.' }, { status: 400 });
   const rawBody = await request.text();
-  let event: Stripe.Event;
-  try {
-    event = stripeClient().webhooks.constructEvent(rawBody, signature, webhookSecret);
-  } catch {
-    return Response.json({ error: 'Invalid Stripe signature.' }, { status: 400 });
+  let event: Stripe.Event | null = null;
+  for (const webhookSecret of webhookSecrets) {
+    try {
+      event = stripeClient().webhooks.constructEvent(rawBody, signature, webhookSecret);
+      break;
+    } catch { /* Try the bounded compatibility secret during endpoint rotation. */ }
   }
+  if (!event) return Response.json({ error: 'Invalid Stripe signature.' }, { status: 400 });
   if (!HANDLED_EVENTS.has(event.type)) return Response.json({ received: true, ignored: true });
   try {
     const data = await eventData(stripeClient(), event);

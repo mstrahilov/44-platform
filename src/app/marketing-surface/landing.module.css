@@ -1,0 +1,271 @@
+:global(html) {
+  scroll-behavior: smooth;
+}
+
+:global(body.marketing-surface) {
+  margin: 0;
+  background: #f5f5f0;
+  color: #1a1a1a;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", sans-serif;
+}
+
+.page {
+  min-height: 100vh;
+  overflow: clip;
+  background: #f5f5f0;
+  color: #1a1a1a;
+}
+
+.skipLink {
+  position: fixed;
+  z-index: 100;
+  top: 8px;
+  left: 8px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: #1a1a1a;
+  color: #fff;
+  transform: translateY(-160%);
+}
+
+.skipLink:focus { transform: translateY(0); }
+
+.navigation {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  height: 52px;
+  border-bottom: 1px solid #e5e5e0;
+  background: rgba(245, 245, 240, 0.96);
+}
+
+.navInner,
+.footer,
+.features {
+  width: min(1200px, calc(100% - 64px));
+  margin: 0 auto;
+}
+
+.navInner {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #1a1a1a;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.page .navButton,
+.page .primaryButton {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: #1a1a1a;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+  transition: opacity 150ms ease;
+}
+
+.page .navButton { min-height: 36px; padding: 0 20px; font-size: 14px; }
+.page .primaryButton { padding: 0 24px; }
+.page .navButton:hover, .page .primaryButton:hover { color: #fff; opacity: 0.84; }
+.page .navButton:focus-visible, .page .primaryButton:focus-visible, .page a:focus-visible { outline: 3px solid #496d92; outline-offset: 3px; }
+
+.hero {
+  width: min(1200px, calc(100% - 64px));
+  min-height: calc(100vh - 52px);
+  margin: 0 auto;
+  padding: 112px 0 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.heroCopy { max-width: 980px; }
+.hero h1 {
+  max-width: 960px;
+  margin: 0;
+  font-size: clamp(56px, 6.4vw, 80px);
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  line-height: 0.98;
+}
+
+.heroCopy > p {
+  max-width: 800px;
+  margin: 24px auto 32px;
+  color: #6b6b6b;
+  font-size: 20px;
+  font-weight: 300;
+  line-height: 1.45;
+}
+
+.heroVisual {
+  width: min(1100px, 100%);
+  margin-top: 56px;
+}
+
+.productMockup {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 8 / 5;
+}
+
+.desktopDevice,
+.mobileDevice {
+  position: absolute;
+  overflow: hidden;
+  background: #111820;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.16);
+}
+
+.desktopDevice {
+  top: 0;
+  left: 0;
+  width: 92%;
+  aspect-ratio: 8 / 5;
+  border: 4px solid #1a1a1a;
+  border-radius: 20px;
+}
+
+.mobileDevice {
+  right: 0;
+  bottom: 0;
+  width: 24%;
+  aspect-ratio: 390 / 844;
+  border: 6px solid #1a1a1a;
+  border-radius: 30px;
+}
+
+.desktopDevice img,
+.mobileDevice img { width: 100%; height: 100%; object-fit: cover; }
+
+.feature {
+  min-height: 680px;
+  padding: 120px 0;
+  display: grid;
+  grid-template-columns: minmax(320px, 480px) minmax(0, 1fr);
+  align-items: center;
+  gap: 80px;
+}
+
+.featureReverse .featureCopy { order: 2; }
+.featureReverse .featureVisual { order: 1; }
+
+.featureCopy h2,
+.radio h2 {
+  margin: 16px 0 24px;
+  font-size: clamp(44px, 4.5vw, 56px);
+  font-weight: 700;
+  letter-spacing: -0.018em;
+  line-height: 1.02;
+}
+
+.featureCopy p {
+  max-width: 480px;
+  margin: 0 0 16px;
+  color: #6b6b6b;
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.eyebrow {
+  color: #6b6b6b;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.featureVisual {
+  min-width: 0;
+}
+
+.radio {
+  min-height: 480px;
+  padding: 96px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  background: #1a1a1a;
+  color: #fff;
+  text-align: center;
+}
+
+.radio .eyebrow { color: rgba(255, 255, 255, 0.5); }
+.radio h2 { margin-bottom: 32px; }
+.radio a { color: #fff; font-size: 16px; font-weight: 500; text-decoration: none; }
+
+.migrationNotice {
+  width: min(1120px, calc(100% - 64px));
+  margin: 24px auto 0;
+  padding: 24px;
+  border: 1px solid #e5e5e0;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  background: #fff;
+}
+
+.migrationNotice strong { font-size: 20px; }
+.migrationNotice p { margin: 6px 0 0; color: #6b6b6b; line-height: 1.5; }
+
+.footer { padding: 40px 0; }
+.footerPrimary { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.footerBrand { font-size: 14px; font-weight: 500; }
+.footer nav { display: flex; align-items: center; gap: 12px; }
+.footer a { color: #6b6b6b; font-size: 14px; text-decoration: none; }
+.footer a:hover { color: #1a1a1a; }
+.legal { margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e5e0; }
+
+@media (max-width: 767px) {
+  .navInner, .footer, .features, .hero { width: min(100% - 32px, 1200px); }
+  .brand { gap: 5px; font-size: 13px; }
+  .navButton { min-height: 34px; padding: 0 16px; }
+  .hero { min-height: auto; padding: 80px 0 64px; }
+  .hero h1 { font-size: clamp(40px, 12vw, 48px); line-height: 1; }
+  .heroCopy > p { margin: 20px auto 28px; font-size: 18px; }
+  .hero .primaryButton { width: 100%; box-sizing: border-box; }
+  .heroVisual { margin-top: 48px; }
+  .productMockup { aspect-ratio: 1 / 0.94; }
+  .desktopDevice { width: 100%; border-width: 3px; border-radius: 14px; }
+  .mobileDevice { width: 34%; border-width: 4px; border-radius: 22px; }
+  .feature, .featureReverse {
+    min-height: 0;
+    padding: 64px 0;
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  .featureReverse .featureCopy, .featureReverse .featureVisual { order: initial; }
+  .featureCopy h2, .radio h2 { font-size: clamp(32px, 9vw, 36px); }
+  .featureCopy p { font-size: 17px; }
+  .radio { min-height: 400px; padding: 64px 24px; }
+  .migrationNotice { width: calc(100% - 32px); flex-direction: column; align-items: stretch; box-sizing: border-box; }
+  .footerPrimary { flex-direction: column; align-items: flex-start; }
+  .footer nav { flex-wrap: wrap; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :global(html) { scroll-behavior: auto; }
+  .page .navButton, .page .primaryButton { transition: none; }
+}

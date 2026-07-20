@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { COUNTRIES } from '@/lib/marketPreferences';
 import { processEmailOutbox } from '@/lib/server/email';
-import { getSitePathUrl } from '@/lib/siteUrl';
+import { getAppPathUrl } from '@/lib/siteUrl';
 import { isValidUsername } from '@/lib/usernames';
 import type { Database } from '@/lib/database.types';
 
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       email,
       password,
       options: {
-        emailRedirectTo: getSitePathUrl('/'),
+        emailRedirectTo: getAppPathUrl('/'),
         data: {
           display_name: displayName,
           name: displayName,

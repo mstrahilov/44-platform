@@ -13,7 +13,7 @@ export default function TermsPage() {
     title="Terms of Service"
     summary="The terms governing accounts, purchases, publishing, and use of 44OS."
   >
-    <p className="os-type-meta">Effective July 17, 2026 · Last updated July 18, 2026</p>
+    <p className="os-type-meta">Effective July 17, 2026 · Last updated July 20, 2026</p>
 
     <LegalSection title="Agreement and operator">
       <p>

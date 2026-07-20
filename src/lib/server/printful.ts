@@ -105,10 +105,16 @@ function printfulStoreCurrency() {
   return value;
 }
 
-function printfulWebhookSecret() {
-  const value = process.env.PRINTFUL_WEBHOOK_SECRET?.trim();
-  if (!value || value.length < 24) throw new PrintfulConfigurationError('Printful signed-webhook access is not configured.');
-  return value.length % 2 === 0 && /^[a-f0-9]+$/i.test(value) ? Buffer.from(value, 'hex') : Buffer.from(value, 'utf8');
+function printfulWebhookSecrets() {
+  const values = [process.env.PRINTFUL_WEBHOOK_SECRET, process.env.PRINTFUL_WEBHOOK_SECRET_PREVIOUS]
+    .map(value => value?.trim())
+    .filter((value): value is string => Boolean(value));
+  if (!values.length || values.some(value => value.length < 24)) {
+    throw new PrintfulConfigurationError('Printful signed-webhook access is not configured.');
+  }
+  return [...new Set(values)].map(value => value.length % 2 === 0 && /^[a-f0-9]+$/i.test(value)
+    ? Buffer.from(value, 'hex')
+    : Buffer.from(value, 'utf8'));
 }
 
 export function printfulConfigurationPresence() {
@@ -1133,8 +1139,11 @@ export async function createPrintfulDraftOrder(commerceOrderId: string, shipping
 
 export function verifyPrintfulWebhook(rawBody: string, signature: string | null) {
   if (!signature || !/^[a-f0-9]{64}$/i.test(signature)) return false;
-  const expected = createHmac('sha256', printfulWebhookSecret()).update(rawBody).digest('hex');
-  return timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(signature, 'hex'));
+  const received = Buffer.from(signature, 'hex');
+  return printfulWebhookSecrets().some(secret => {
+    const expected = createHmac('sha256', secret).update(rawBody).digest();
+    return timingSafeEqual(expected, received);
+  });
 }
 
 export function printfulWebhookEventId(payload: JsonRecord) {

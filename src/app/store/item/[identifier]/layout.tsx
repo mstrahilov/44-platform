@@ -1,5 +1,5 @@
 import { cache, type ReactNode } from 'react';
-import { absoluteMetadataUrl, buildPageMetadata, conciseDescription } from '@/lib/metadata';
+import { absoluteAppUrl, buildPageMetadata, conciseDescription } from '@/lib/metadata';
 import { getCatalogItem } from '@/lib/domain/itemDetails';
 import { getProductExperience } from '@/lib/experience';
 
@@ -42,7 +42,7 @@ export default async function StoreItemLayout({ children, params }: { children: 
   const item = await loadPublicItem(identifier);
   if (!item || item.status !== 'published') return children;
 
-  const itemUrl = absoluteMetadataUrl(`/store/item/${item.slug || item.id}`);
+  const itemUrl = absoluteAppUrl(`/store/item/${item.slug || item.id}`);
   const creator = item.creators?.display_name || item.creators?.username || item.creator;
   const itemType = getProductExperience(item) === 'music'
     ? 'MusicAlbum'
@@ -54,8 +54,8 @@ export default async function StoreItemLayout({ children, params }: { children: 
       '@context': 'https://schema.org',
       '@type': 'BreadcrumbList',
       itemListElement: [
-        { '@type': 'ListItem', position: 1, name: '44OS', item: absoluteMetadataUrl('/') },
-        { '@type': 'ListItem', position: 2, name: 'Discover', item: absoluteMetadataUrl('/') },
+        { '@type': 'ListItem', position: 1, name: '44OS', item: absoluteAppUrl('/') },
+        { '@type': 'ListItem', position: 2, name: 'Discover', item: absoluteAppUrl('/') },
         { '@type': 'ListItem', position: 3, name: item.title, item: itemUrl },
       ],
     },
@@ -64,7 +64,7 @@ export default async function StoreItemLayout({ children, params }: { children: 
       '@type': itemType,
       name: item.title,
       url: itemUrl,
-      ...(item.cover_url ? { image: absoluteMetadataUrl(item.cover_url) } : {}),
+      ...(item.cover_url ? { image: absoluteAppUrl(item.cover_url) } : {}),
       ...(item.short_description || item.long_description ? { description: conciseDescription(item.short_description, item.long_description) } : {}),
       ...(creator ? { creator: { '@type': 'Person', name: creator } } : {}),
       ...(item.release_date ? { datePublished: item.release_date } : item.year ? { datePublished: String(item.year) } : {}),

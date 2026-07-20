@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import type { User } from '@supabase/supabase-js';
 import { EMAIL_TEMPLATE_VERSIONS, type EmailTemplateKey, type EmailTemplatePayloads } from '@/emails/contracts';
 import { renderEmail } from '@/emails/render';
-import { checkoutSiteUrl, commerceAdminClient } from './commerce';
+import { applicationOrigin, commerceAdminClient } from './commerce';
 
 type OutboxRow = {
   id: string;
@@ -84,7 +84,7 @@ export async function inspectResendWebhookConfiguration(): Promise<ResendWebhook
         signing_secret?: string;
       }>;
     };
-    const expectedEndpoint = `${checkoutSiteUrl()}/api/email/webhook`;
+    const expectedEndpoint = `${applicationOrigin()}/api/email/webhook`;
     const endpoint = (payload.data ?? []).find(candidate => candidate.endpoint === expectedEndpoint);
     if (!endpoint) return { ...unavailable, providerReachable: true };
     const configuredSecret = requiredSecret('RESEND_WEBHOOK_SECRET');
@@ -365,6 +365,8 @@ export async function reconcileResendNewsletterPreference(contactId: string, ema
   return topic?.subscription === 'opt_out' ? 'unsubscribed' as const : 'unchanged' as const;
 }
 
-export function resendWebhookSecret() {
-  return requiredSecret('RESEND_WEBHOOK_SECRET');
+export function resendWebhookSecrets() {
+  const current = requiredSecret('RESEND_WEBHOOK_SECRET');
+  const previous = process.env.RESEND_WEBHOOK_SECRET_PREVIOUS?.trim();
+  return previous && previous !== current ? [current, previous] : [current];
 }

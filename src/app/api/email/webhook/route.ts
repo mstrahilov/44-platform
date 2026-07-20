@@ -1,6 +1,6 @@
 import { Webhook } from 'svix';
 import { commerceAdminClient } from '@/lib/server/commerce';
-import { reconcileResendNewsletterPreference, resendWebhookSecret } from '@/lib/server/email';
+import { reconcileResendNewsletterPreference, resendWebhookSecrets } from '@/lib/server/email';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -22,12 +22,14 @@ export async function POST(request: Request) {
   const timestamp = request.headers.get('svix-timestamp');
   const signature = request.headers.get('svix-signature');
   if (!id || !timestamp || !signature) return rejectSignature('missing_signature_headers');
-  let event: ResendEvent;
-  try {
-    event = new Webhook(resendWebhookSecret()).verify(rawBody, { 'svix-id': id, 'svix-timestamp': timestamp, 'svix-signature': signature }) as ResendEvent;
-  } catch {
-    return rejectSignature('invalid_signature');
+  let event: ResendEvent | null = null;
+  for (const secret of resendWebhookSecrets()) {
+    try {
+      event = new Webhook(secret).verify(rawBody, { 'svix-id': id, 'svix-timestamp': timestamp, 'svix-signature': signature }) as ResendEvent;
+      break;
+    } catch { /* Try the bounded compatibility secret during endpoint rotation. */ }
   }
+  if (!event) return rejectSignature('invalid_signature');
   if (!event.type || !HANDLED.has(event.type)) return Response.json({ received: true, ignored: true });
   const data = event.data ?? {};
   const recipients = Array.isArray(data.to) ? data.to.filter((value): value is string => typeof value === 'string') : [];

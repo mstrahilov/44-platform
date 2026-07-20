@@ -5,7 +5,7 @@ import { loadStripeSandboxEnvironment } from './stripe-sandbox-environment.mjs';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const REQUIRED = [
-  'NEXT_PUBLIC_SITE_URL',
+  'NEXT_PUBLIC_APP_URL',
   'NEXT_PUBLIC_SUPABASE_URL',
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
   'SUPABASE_SERVICE_ROLE_KEY',
@@ -29,17 +29,17 @@ for (const name of REQUIRED) {
   if (!process.env[name]?.trim()) fail(`${name} is absent`);
 }
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
 if (siteUrl) {
   try {
     const parsed = new URL(siteUrl);
     if (parsed.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(parsed.hostname)) {
-      fail('NEXT_PUBLIC_SITE_URL must use HTTPS outside localhost');
+      fail('NEXT_PUBLIC_APP_URL must use HTTPS outside localhost');
     } else {
       pass('checkout return URL is structurally safe');
     }
   } catch {
-    fail('NEXT_PUBLIC_SITE_URL is not a valid URL');
+    fail('NEXT_PUBLIC_APP_URL is not a valid URL');
   }
 }
 

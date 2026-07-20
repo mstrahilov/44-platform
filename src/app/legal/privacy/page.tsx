@@ -16,13 +16,13 @@ export default function PrivacyPage() {
     title="Privacy Policy"
     summary="How forty four collects, uses, discloses, and safeguards information through 44OS."
   >
-    <p className="os-type-meta">Effective July 17, 2026 · Last updated July 18, 2026</p>
+    <p className="os-type-meta">Effective July 17, 2026 · Last updated July 20, 2026</p>
 
     <LegalSection title="Who we are and what this policy covers">
       <p>
         forty four (&ldquo;forty four,&rdquo; &ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;)
-        operates 44OS. This Privacy Policy applies when you visit 44os.com, create or use a 44OS
-        account, buy or publish an Item, contact Support, or otherwise use 44OS. It does not govern
+        operates 44OS. This Privacy Policy applies when you visit 44os.com or app.44os.com, create
+        or use a 44OS account, buy or publish an Item, contact Support, or otherwise use 44OS. It does not govern
         a third party&apos;s own website, service, or privacy practices.
       </p>
     </LegalSection>

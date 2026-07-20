@@ -26,7 +26,7 @@ import {
   setStoredViewerPreferences,
 } from '@/lib/marketPreferences';
 import { isMissingColumnError } from '@/lib/schemaCompat';
-import { getSitePathUrl } from '@/lib/siteUrl';
+import { getAppPathUrl } from '@/lib/siteUrl';
 import { getNotificationPreference, setNotificationPreference, type NotificationPreferenceKind } from '@/lib/notificationPreferences';
 import { WebPushSettingsRow } from '@/components/WebPushNotifications';
 
@@ -316,7 +316,7 @@ function AccountSettings() {
     setStatus('');
     const { error } = await supabase.auth.updateUser(
       { email: newEmail.trim() },
-      { emailRedirectTo: getSitePathUrl('/settings') },
+      { emailRedirectTo: getAppPathUrl('/settings') },
     );
     setSavingEmail(false);
     setStatus(error ? error.message : 'Check your new email to confirm the change.');

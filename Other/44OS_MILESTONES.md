@@ -35,7 +35,20 @@ The following areas are represented as current system truth in Foundation and UI
 
 Work through this single list. User-facing breakage comes before optional launch expansion. Record only the outcome and changed current truth; do not rebuild a step-by-step historical ledger here.
 
-### 1. Creator mobile upload and experience reliability
+### 1. Marketing front door and application-origin migration
+
+**Status: Local implementation and compatibility gates complete; awaiting owner copy/visual approval before external configuration**
+
+- The repository now contains a light editorial landing surface for `44os.com` and keeps the existing application shell canonical at `app.44os.com`. The local preview remains available at `/landing-preview`; `MARKETING_SITE_ENABLED` defaults off, and no DNS, Vercel domain, hosted Supabase, Stripe, Resend, Printful, or production environment setting has changed.
+- Host routing preserves query strings, permanently redirects legacy apex application pages to the matching app path, retains apex APIs/webhooks without redirects, redirects `www` to the apex, reserves `/download` as a 404, rejects the internal marketing route, and serves the PWA manifest only from the app host. An exact Auth fragment/query bridge handles already-issued root callbacks without accepting an arbitrary destination.
+- Application and marketing origins are explicit and centralized. Auth actions, Checkout returns, active email links, Resend diagnostics, canonical metadata, robots, sitemap, and provider preflight checks use the new contract. An unapplied forward migration updates newly queued database email actions while preserving applied migrations and historical outbox evidence.
+- The landing page follows the supplied light-paper visual direction, includes only `Open App`, uses paired desktop/mobile product captures for Discover, Library, Community, and Studio, has host-specific metadata and a marketing share image, and loads no app shell, player, authentication, push prompt, analytics consent, or commerce UI.
+- Lint, strict typecheck, production build, UI cleanup audit, launch smoke, domain migration, email, commerce, Printful, hardening, observability, analytics, experience-polish, and mobile safe-area contracts pass. A cutover-enabled local production build also passed apex/app/www redirects, API compatibility, manifest isolation, reserved-route, robots, and legacy deep-link checks.
+- Remaining work is owner approval of the visual/copy—especially Creator payout and ownership statements—followed by the staged Vercel domain, DNS, hosted Supabase Auth, provider webhook, PWA reinstall, push, Search Console, and monitoring rollout described in the approved migration plan.
+
+**Complete when:** both hosts are live under the permanent domain contract, Auth/payment/email/webhook/PWA/push canaries pass, old links remain compatible, the seven-day stabilization window closes, and Foundation/UI are updated from deployed evidence.
+
+### 2. Creator mobile upload and experience reliability
 
 **Status: Implementation and automated gates complete; awaiting owner visual/device verification**
 
@@ -49,7 +62,7 @@ Work through this single list. User-facing breakage comes before optional launch
 
 **Complete when:** the owner confirms the affected real mobile Creator journey and the requested desktop/mobile UI behavior.
 
-### 2. Production account and repository hygiene
+### 3. Production account and repository hygiene
 
 **Status: Repository pass complete; production account deletion remains open and requires exact target verification**
 
@@ -59,7 +72,7 @@ Work through this single list. User-facing breakage comes before optional launch
 
 **Complete when:** the two approved accounts are absent, unrelated production evidence is preserved, only safe reproducible caches are removed, and the repository passes its proportional quality gates.
 
-### 3. Legal and operating facts
+### 4. Legal and operating facts
 
 **Status: Waiting on owner facts/approval**
 
@@ -70,7 +83,7 @@ Work through this single list. User-facing breakage comes before optional launch
 
 **Complete when:** the published legal and operating facts are accurate, owner-approved, internally consistent, and contain no unsupported designation or placeholder business detail.
 
-### 4. External alerts and operational ownership
+### 5. External alerts and operational ownership
 
 **Status: Open**
 
@@ -81,7 +94,7 @@ Work through this single list. User-facing breakage comes before optional launch
 
 **Complete when:** a real production-critical alert reaches the assigned external channel and every operational responsibility has a named owner and backup/escalation path.
 
-### 5. Manual accessibility and device acceptance
+### 6. Manual accessibility and device acceptance
 
 **Status: Partially complete**
 
@@ -94,7 +107,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** the role/device matrix passes without a launch-blocking accessibility, layout, or input failure and any narrow repairs are verified on affected surfaces.
 
-### 6. Recovery and storage safety
+### 7. Recovery and storage safety
 
 **Status: Open**
 
@@ -105,7 +118,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** the separate-project restore is proven and every candidate object is classified as referenced, intentionally retained, or safely removable with recorded evidence.
 
-### 7. Analytics, search, and Merchant discoverability
+### 8. Analytics, search, and Merchant discoverability
 
 **Status: Foundation deployed; external acceptance open**
 
@@ -120,7 +133,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** consented production analytics records representative journeys without direct personal data or duplicate transactions; intended public routes are accepted by search engines; private routes stay excluded; eligible Merch passes Merchant diagnostics; and monitoring/rollback ownership is recorded.
 
-### 8. Final public-launch decision
+### 9. Final public-launch decision
 
 **Status: Owner action; do not execute early**
 
@@ -130,7 +143,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** the owner gives the terminal launch instruction, the Creator dates are correctly recorded, and rollback ownership is documented. This action starts the clock and must not be used for closed testing.
 
-### 9. One real physical-commerce lifecycle
+### 10. One real physical-commerce lifecycle
 
 **Status: Waiting for owner-approved funds and timing**
 
@@ -141,7 +154,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** the lifecycle ends with zero unexplained payment or fulfillment mismatch and all immutable order/provider evidence is preserved.
 
-### 10. Optional inactive capabilities
+### 11. Optional inactive capabilities
 
 **Status: Deferred; not required while disabled**
 

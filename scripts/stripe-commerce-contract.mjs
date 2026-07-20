@@ -24,7 +24,7 @@ const requirements = [
   ['runtime and operating-model gate', /not controls\.checkout_enabled[\s\S]*operating_model_approved_at/, migration],
   ['exact terms snapshot', /terms_snapshot[\s\S]*'body',terms\.body[\s\S]*'sha256',terms\.body_sha256/, migration],
   ['raw webhook body', /const rawBody = await request\.text\(\)/, webhook],
-  ['Stripe signature verification', /webhooks\.constructEvent\(rawBody, signature, webhookSecret\)/, webhook],
+  ['Stripe signature verification', /for \(const webhookSecret of webhookSecrets\)[\s\S]*webhooks\.constructEvent\(rawBody, signature, webhookSecret\)/, webhook],
   ['invalid signature rejection', /Invalid Stripe signature[\s\S]*status: 400/, webhook],
   ['idempotent provider event inbox', /on conflict\(provider,provider_event_id\)/, migration],
   ['failed event retry path', /processing_status='failed'[\s\S]*retryable/, migration],

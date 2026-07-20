@@ -1,5 +1,7 @@
 import type { MetadataRoute } from 'next';
-import { absoluteMetadataUrl } from '@/lib/metadata';
+import { headers } from 'next/headers';
+import { absoluteAppUrl } from '@/lib/metadata';
+import { getMarketingUrl } from '@/lib/siteUrl';
 import { supabase } from '@/lib/supabase';
 import { SUPPORT_ARTICLES, supportArticleHref } from '@/lib/supportArticles';
 
@@ -20,15 +22,25 @@ const PUBLIC_ROUTES = [
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const lastModified = new Date();
+  const hostname = (await headers()).get('host')?.split(':', 1)[0]?.toLowerCase();
+  const marketingEnabled = process.env.MARKETING_SITE_ENABLED === 'true';
+  if (marketingEnabled && (hostname === '44os.com' || hostname === 'www.44os.com')) {
+    return [{
+      url: `${getMarketingUrl()}/`,
+      lastModified,
+      changeFrequency: 'weekly',
+      priority: 1,
+    }];
+  }
   const staticRoutes: MetadataRoute.Sitemap = PUBLIC_ROUTES.map((path, index) => ({
-    url: absoluteMetadataUrl(path),
+    url: absoluteAppUrl(path),
     lastModified,
     changeFrequency: index === 0 ? 'daily' : 'weekly',
     priority: index === 0 ? 1 : path === '/community' || path === '/radio' ? 0.9 : 0.7,
   }));
 
   const supportRoutes: MetadataRoute.Sitemap = SUPPORT_ARTICLES.map(article => ({
-    url: absoluteMetadataUrl(supportArticleHref(article)),
+    url: absoluteAppUrl(supportArticleHref(article)),
     lastModified,
     changeFrequency: 'monthly',
     priority: 0.6,
@@ -47,7 +59,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const slug = item.slug?.trim();
     if (!slug) return [];
     return [{
-      url: absoluteMetadataUrl(`/store/item/${slug}`),
+      url: absoluteAppUrl(`/store/item/${slug}`),
       lastModified: item.created_at ? new Date(item.created_at) : lastModified,
       changeFrequency: 'weekly' as const,
       priority: 0.8,

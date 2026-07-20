@@ -14,7 +14,7 @@ const required = [
   'STRIPE_BOOK_TAX_CODE',
   'STRIPE_MUSIC_TAX_CODE',
   'STRIPE_SAMPLE_PACK_TAX_CODE',
-  'NEXT_PUBLIC_SITE_URL',
+  'NEXT_PUBLIC_APP_URL',
 ];
 const failures = [];
 const pass = message => console.log(`PASS: ${message}`);
@@ -26,7 +26,7 @@ for (const name of required) {
 if (!process.env.STRIPE_SECRET_KEY?.startsWith('sk_live_')) fail('Stripe secret is not live-mode scoped');
 if (!process.env.STRIPE_WEBHOOK_SECRET?.startsWith('whsec_')) fail('Stripe webhook secret shape is invalid');
 if (process.env.STRIPE_AUTOMATIC_TAX_ENABLED !== 'true') fail('Stripe automatic tax is not approved');
-if (process.env.NEXT_PUBLIC_SITE_URL !== 'https://44os.com') fail('production site URL must be https://44os.com');
+if (process.env.NEXT_PUBLIC_APP_URL !== 'https://app.44os.com') fail('production app URL must be https://app.44os.com');
 if (process.env.NEXT_PUBLIC_PUBLIC_PURCHASES_AVAILABLE === 'true') fail('public purchases must remain off during preflight');
 
 const shippingRates = (process.env.STRIPE_SHIPPING_RATE_IDS ?? '').split(',').map(value => value.trim()).filter(Boolean);
@@ -69,7 +69,7 @@ if (!failures.length) {
       'charge.dispute.closed',
       'charge.dispute.funds_reinstated',
     ]);
-    const endpoint = webhookEndpoints.data.find(candidate => candidate.url === 'https://44os.com/api/stripe/webhook' && candidate.status === 'enabled');
+    const endpoint = webhookEndpoints.data.find(candidate => candidate.url === 'https://app.44os.com/api/stripe/webhook' && candidate.status === 'enabled');
     const enabled = new Set(endpoint?.enabled_events ?? []);
     if (!endpoint || ![...requiredEvents].every(event => enabled.has(event) || enabled.has('*'))) {
       fail('production Stripe webhook is absent or missing required events');

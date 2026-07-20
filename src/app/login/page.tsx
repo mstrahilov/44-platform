@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { accountExistsForEmail, usernameIsTaken } from '@/lib/domain/accounts';
 import { useAuth } from '@/lib/useAuth';
-import { getSitePathUrl } from '@/lib/siteUrl';
+import { getAppPathUrl } from '@/lib/siteUrl';
 import { COUNTRIES } from '@/lib/marketPreferences';
 import { Ui44CheckboxInput, Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
 import { isValidUsername, sanitizeUsernameInput } from '@/lib/usernames';
@@ -179,7 +179,7 @@ export default function LoginPage() {
     setStatus(null);
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: getSitePathUrl('/'), shouldCreateUser: false },
+      options: { emailRedirectTo: getAppPathUrl('/'), shouldCreateUser: false },
     });
     setLinkSubmitting(false);
     setStatus(error ? authMessage(error.message) : 'Check your email for your login link.');
@@ -192,7 +192,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email,
-      options: { emailRedirectTo: getSitePathUrl('/') },
+      options: { emailRedirectTo: getAppPathUrl('/') },
     });
     setResendingConfirmation(false);
     setStatus(error ? authMessage(error.message) : 'Verification email resent. Check your inbox and spam folder.');

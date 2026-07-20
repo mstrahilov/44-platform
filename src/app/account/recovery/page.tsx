@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { getSitePathUrl } from '@/lib/siteUrl';
+import { getAppPathUrl } from '@/lib/siteUrl';
 import { Ui44TextInput } from '@/components/ui44/Inputs';
 
 type RecoveryMode = 'request' | 'reset' | 'complete';
@@ -37,7 +37,7 @@ export default function AccountRecoveryPage() {
     setSubmitting(true);
     setStatus('');
     const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-      redirectTo: getSitePathUrl('/account/recovery'),
+      redirectTo: getAppPathUrl('/account/recovery'),
     });
     setSubmitting(false);
     setStatus(error

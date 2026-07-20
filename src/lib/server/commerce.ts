@@ -47,8 +47,8 @@ export async function authenticateCommerceRequest(request: Request): Promise<Use
   return data.user;
 }
 
-export function checkoutSiteUrl() {
-  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+export function applicationOrigin() {
+  const configured = process.env.NEXT_PUBLIC_APP_URL?.trim();
   const vercel = process.env.VERCEL_URL?.trim();
   const value = configured || (vercel ? `https://${vercel}` : 'http://localhost:3000');
   let url: URL;
@@ -120,7 +120,7 @@ export function checkoutConfigurationPresence({ includePhysical = true }: { incl
     serviceRole: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
     stripeSecret: Boolean(process.env.STRIPE_SECRET_KEY),
     stripeWebhookSecret: Boolean(process.env.STRIPE_WEBHOOK_SECRET),
-    siteUrl: Boolean(process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL),
+    siteUrl: Boolean(process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL),
     automaticTax: process.env.STRIPE_AUTOMATIC_TAX_ENABLED === 'true',
     bookTaxCode: Boolean((process.env.STRIPE_BOOK_TAX_CODE ?? '').trim()),
     musicTaxCode: Boolean((process.env.STRIPE_MUSIC_TAX_CODE ?? '').trim()),

@@ -73,7 +73,7 @@ insert into public.admin_profile_role_events(id,profile_id,previous_role,new_rol
 values('a2470000-0000-4000-8000-000000000001','a2400000-0000-4000-8000-000000000002','member','creator',
   'a2400000-0000-4000-8000-000000000004','Approved Creator notification test');
 select is((select count(*)::integer from public.email_outbox_events where event_key='creator-access-granted/a2470000-0000-4000-8000-000000000001' and template_key='creator_access_granted'),1,'every audited Creator promotion queues one branded email');
-select is((select payload->>'studioUrl' from public.email_outbox_events where event_key='creator-access-granted/a2470000-0000-4000-8000-000000000001'),'https://44os.com/studio','Creator email carries the reviewed Studio action');
+select is((select payload->>'studioUrl' from public.email_outbox_events where event_key='creator-access-granted/a2470000-0000-4000-8000-000000000001'),'https://app.44os.com/studio','Creator email carries the reviewed Studio action');
 select is((select count(*)::integer from public.achievement_events where user_id='a2400000-0000-4000-8000-000000000002' and event_type='creator_access_granted'),1,'Creator promotion also creates an in-app notification');
 select is((select count(*)::integer from public.web_push_deliveries delivery join public.achievement_events event on event.id=delivery.achievement_event_id where event.event_type='creator_access_granted' and delivery.status='pending'),1,'Creator promotion queues native push for subscribed devices');
 

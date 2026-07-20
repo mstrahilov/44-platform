@@ -2,7 +2,7 @@ import { createCipheriv, createHash, randomBytes } from 'node:crypto';
 import type { User } from '@supabase/supabase-js';
 import {
   authenticateCommerceRequest,
-  checkoutSiteUrl,
+  applicationOrigin,
   commerceAdminClient,
   CommerceAuthenticationError,
   CommerceConfigurationError,
@@ -54,7 +54,7 @@ function encryptPrivateValue(value: Buffer): EncryptedValue {
 function assertSameOrigin(request: Request) {
   const origin = request.headers.get('origin');
   if (!origin) return;
-  if (origin !== checkoutSiteUrl()) {
+  if (origin !== applicationOrigin()) {
     throw new SellerOnboardingError('invalid_origin', 'Seller setup request origin is invalid.', 403);
   }
 }

@@ -14,7 +14,7 @@ const templates = {
     values: { '{{ .ConfirmationURL }}': 'https://auth.44os.com/auth/v1/verify?type=email_change&token=preview', '{{ .NewEmail }}': 'new-address@example.com' },
   },
   reauthentication: { subject: '12345678 is your 44OS verification code', values: { '{{ .Token }}': '12345678' } },
-  password_changed: { subject: 'Your 44OS password was changed', values: { '{{ .SiteURL }}': 'https://44os.com' } },
+  password_changed: { subject: 'Your 44OS password was changed', values: { '{{ .SiteURL }}': 'https://app.44os.com' } },
   email_changed: {
     subject: 'Your 44OS email was changed',
     values: { '{{ .OldEmail }}': 'old-address@example.com', '{{ .Email }}': 'new-address@example.com' },
