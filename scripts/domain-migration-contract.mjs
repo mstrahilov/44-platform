@@ -26,6 +26,8 @@ assert.match(proxy, /pathname === '\/manifest\.webmanifest'[\s\S]*status: 404/);
 assert.match(rootLayout, /x-44os-surface/);
 assert.match(rootLayout, /if \(marketing\)[\s\S]*marketing-surface/);
 assert.match(rootLayout, /AUTH_HANDOFF_BOOTSTRAP[\s\S]*absoluteAppUrl\('\/'\)/);
+assert.equal((rootLayout.match(/\$\{marketingUrl\}\/og\.png/g) ?? []).length, 2);
+assert.doesNotMatch(rootLayout, /marketing\/og\.png/);
 assert.match(landing, />Open App</g);
 assert.doesNotMatch(landing, />Download(?: App)?</);
 assert.doesNotMatch(landing, /MusicPlayer|WebPush|AnalyticsConsent|supabase/i);

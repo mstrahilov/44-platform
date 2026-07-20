@@ -127,13 +127,13 @@ function marketingMetadata(): Metadata {
       url: `${marketingUrl}/`,
       siteName: '44OS',
       type: 'website',
-      images: [{ url: `${marketingUrl}/marketing/og.png`, width: 1200, height: 630, alt: '44OS · Independent creative work, in one place' }],
+      images: [{ url: `${marketingUrl}/og.png`, width: 1200, height: 630, alt: '44OS' }],
     },
     twitter: {
       card: 'summary_large_image',
       title: 'A platform for independent creative work.',
       description,
-      images: [`${marketingUrl}/marketing/og.png`],
+      images: [`${marketingUrl}/og.png`],
     },
   };
 }
