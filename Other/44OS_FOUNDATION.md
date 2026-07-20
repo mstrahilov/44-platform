@@ -12,11 +12,12 @@ Read Foundation, then UI, then Milestones before making production-facing change
 
 ## Current production baseline
 
-Recorded July 18, 2026:
+Recorded July 20, 2026:
 
-- `https://44os.com` and `https://www.44os.com` serve the live Vercel application. The latest recorded Ready deployment is `dpl_6kUHQaE67eVAfsLXaLWxEQoGtjQ2`; `/api/health` passed against Supabase.
+- `https://44os.com` is the permanent light editorial front door, `https://www.44os.com` permanently redirects to it, and `https://app.44os.com` is the canonical application origin. All three hosts use the same GitHub-backed Vercel project and release.
+- Legacy apex application paths permanently redirect to the identical path and query on `app.44os.com`. Apex `/api/*` remains a non-public compatibility surface for delayed provider delivery and rollback; it is never redirected. Both host health checks pass against Supabase.
 - The app is Next.js App Router with React 19 and strict TypeScript. Supabase owns authentication and application data; Vercel hosts the app.
-- Linked Supabase history contains the reviewed forward migration chain through `20260718011000_m15_paid_book_download_access.sql`. Never rewrite an applied migration; add a reviewed forward migration.
+- Linked Supabase history contains the reviewed forward migration chain through `20260720060000_application_origin_email_links.sql`. Never rewrite an applied migration; add a reviewed forward migration.
 - The latest recorded full database gate passed clean replay, linked lint, and 22 pgTAP files with 543 assertions. Lint, strict typecheck, production build, launch smoke, mobile safe-area checks, analytics contract, commerce contract, hardening contract, and `git diff --check` also passed for the recorded release.
 - Public Member signup and eligible purchase presentation are enabled. Creator promotion, paid-sale eligibility, fulfillment confirmation, and payout eligibility remain server-authoritative.
 - Two controlled low-value digital orders completed the live payment/refund path. The latest Admin reconciliation checked both orders with zero mismatches. Refunded access was revoked without deleting order or Library history.
@@ -27,7 +28,7 @@ Recorded July 18, 2026:
 - The internal sanitized operational-error sink and Admin Errors view are active. Proven external alert delivery and distinct primary/backup responders are not yet assigned.
 - Wise payout infrastructure exists but batching, operator recording, reconciliation, and payout execution remain disabled; the payout emergency stop remains on.
 - Licensed Beats, creator Merch, international physical shipping, automated Printful confirmation, newsletters, and interactive runtime Items remain disabled or deferred.
-- The working tree intentionally contains the current multi-phase release as uncommitted changes on `main` after checkpoint `da0f2cbf`. Do not reset, clean, discard, broadly reformat, stage, commit, or rewrite this work without explicit owner direction.
+- Production releases flow through GitHub `main` into the linked Vercel project. Direct Vercel rebuilds may apply a reviewed environment revision to the same GitHub commit, but source changes must still be committed and pushed through GitHub.
 
 Open launch work belongs only in `44OS_MILESTONES.md`. Do not repeat an accepted production journey unless relevant code, configuration, provider state, or evidence changed.
 
@@ -39,7 +40,7 @@ Open launch work belongs only in `44OS_MILESTONES.md`. Do not repeat an accepted
 
 Primary applications:
 
-- **Home** — the `Discover` front door at `/`; active catalog filtering changes its workspace identity to `Browse`.
+- **Home** — the application `Discover` front door at `https://app.44os.com/`; active catalog filtering changes its workspace identity to `Browse`.
 - **Store** — public discovery and acquisition at `/store`.
 - **Library** — the signed-in user’s saved, owned, purchased, and unlocked Items.
 - **Community** — posts, questions, collaboration, replies, follows, and creator/fan connection.
@@ -70,8 +71,9 @@ Core principles:
 - Framework: Next.js App Router, React 19, strict TypeScript.
 - Styling: `src/app/globals.css` plus `src/styles/44-ui/canonical-system.css`, using `--os-*` tokens.
 - Backend: Supabase via `@supabase/supabase-js`.
-- Deployment: Vercel, canonical origin `https://44os.com`.
-- Root shell: `src/app/layout.tsx`.
+- Deployment: one Vercel project with explicit origins `https://44os.com` (marketing) and `https://app.44os.com` (application).
+- Host routing: `src/proxy.ts` owns marketing/app selection, permanent legacy redirects, API exemptions, reserved routes, and the server-only `MARKETING_SITE_ENABLED` rollback switch.
+- Root layout: `src/app/layout.tsx` selects an isolated marketing or application layout from the trusted host-routing header. The marketing branch must never load the application shell, player, authentication state, push prompt, analytics consent, or commerce UI.
 - App/navigation registry: `src/lib/osApps.ts`.
 - Store routes: `src/lib/experience.ts` and `src/lib/storeRoutes.ts`.
 - Library routes: `src/lib/libraryRoutes.ts`.
@@ -113,7 +115,7 @@ Playback rules:
 
 ## Canonical routes
 
-Public:
+Public application routes below are canonical on `https://app.44os.com`:
 
 - `/` — `Discover` front door; active catalog filtering uses the `Browse` workspace identity and the route does not redirect.
 - `/store` and `/store/[category]` — Store and Music, Books, Sample Packs, or Merch categories.
@@ -132,7 +134,7 @@ Signed in:
 - `/launch/[itemId]` for an enabled interactive build.
 - `/admin` and its bounded operational routes for administrators.
 
-Compatibility redirects are centralized in `next.config.ts` and must go directly to one canonical destination. Current compatibility includes Browse to Store, Collection to Library, Product to Store Item, Dashboard to Studio, Assets to Sample Packs, and old category routes to their Store equivalents. Removed Resources and Services/Projects routes intentionally return not found.
+Path-level compatibility redirects are centralized in `next.config.ts` and must go directly to one canonical destination. Host-level compatibility belongs in `src/proxy.ts`: apex application pages preserve path/query while moving to the app origin, `www` moves to the apex, `/api/*` stays executable on both hosts, and marketing `/download` remains reserved/not found until real installers exist. Current path compatibility includes Browse to Store, Collection to Library, Product to Store Item, Dashboard to Studio, Assets to Sample Packs, and old category routes to their Store equivalents. Removed Resources and Services/Projects routes intentionally return not found.
 
 Private routes, previews, Admin, Studio, Library, Checkout, Orders, launch sessions, and protected asset URLs must not become search results.
 
@@ -211,8 +213,8 @@ Supabase Auth sends branded account mail through Resend:
 
 - Visible sender: `44OS <accounts@44os.com>`.
 - Authorization/link domain: `auth.44os.com`.
-- Canonical Site URL: `https://44os.com`.
-- Allowed redirects: localhost development, `https://44os.com/**`, and `https://www.44os.com/**`.
+- Canonical Site URL: `https://app.44os.com`.
+- Allowed redirects: localhost development, exact application root/Settings/recovery destinations, and temporary legacy apex/`www` compatibility destinations.
 - Email confirmation and secure two-address email change are enabled.
 - Custom SMTP uses `smtp.resend.com:465`; Auth is limited to 30 emails/hour.
 - OTPs are eight digits and expire after 3,600 seconds.
@@ -232,6 +234,7 @@ Application email uses a separate durable outbox and Resend adapter as `support@
 - Transactional delivery is enabled and accepted for the recorded purchase/refund messages.
 - `support@44os.com` is the human support channel. The in-app support intake remains disabled and must not be presented as active.
 - Newsletter consent is explicit, independently revocable, and locally authoritative. Newsletter synchronization and delivery remain disabled.
+- Newly generated application and Admin email actions use `https://app.44os.com`. Previously generated links remain valid through permanent apex deep-link redirects.
 
 ## Buyer payments and physical fulfillment
 
@@ -245,6 +248,7 @@ Stripe receives all customer money. Checkout is authenticated, Stripe-hosted, an
 - U.S. physical shipping uses the approved `$14.99 USD` Standard Shipping rate and estimated 5–10 business-day window.
 - Automatic tax uses separate configured product tax codes for Books, Music, Sample Packs, clothing, hats, and bags.
 - Digital refunds revoke current file access while retaining order, accounting, and Library history.
+- Checkout success/cancellation returns use the app origin. The canonical Stripe webhook is registered on `app.44os.com` with the previous apex signing secret retained during the compatibility overlap; the signed handler accepts the bounded current/previous secret set.
 
 Stripe Dashboard Products/Prices are not catalog authority. The server sends verified dynamic price data from the 44OS order snapshot.
 
@@ -309,11 +313,12 @@ Migration releases additionally require a fresh backup, linked dry run, strict l
 
 `supabase/migrations/20260712010000_44os_item_baseline.sql` is the canonical replayable starting point and must not be edited after adoption. Every later database change is a timestamped forward migration. `supabase/seed.sql` intentionally contains no production accounts or content; local replay verifies structure and security without copying live user data.
 
-After deployment, run launch smoke against `https://44os.com` and manually verify only the journeys affected by the change. Do not repeat every historical journey for unrelated UI work.
+After deployment, run the marketing host matrix against `https://44os.com`, launch smoke against `https://app.44os.com`, and manually verify only the journeys affected by the change. Do not repeat every historical journey for unrelated UI work.
 
 Operational rules:
 
-- `/api/health` is the bounded application/Supabase readiness endpoint.
+- `/api/health` is the bounded application/Supabase readiness endpoint and remains available on both origins during the compatibility period.
+- Origin-local login state, service workers, PWA installation, push subscriptions, Studio draft recovery, Cart, player queue, and preferences do not transfer across the apex-to-app move. Existing PWA users reinstall from `app.44os.com` and re-enable notifications; server-backed accounts, content, Library entries, purchases, messages, and entitlements are unaffected.
 - `src/instrumentation.ts` and the service-only error sink record sanitized release/runtime/route/error identity. Never record headers, query values, request bodies, user content, credentials, or tokens.
 - Authentication incidents start with Supabase Auth health, redirects, rate limits, SMTP, and recovery. Never request passwords, OTPs, or session links.
 - Publishing/storage incidents preserve permanent Items and protected access. Never repair by hard-deleting an Item or making private files public.

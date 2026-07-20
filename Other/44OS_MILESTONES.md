@@ -6,9 +6,10 @@ Current system behavior belongs in `44OS_FOUNDATION.md`. Current visual behavior
 
 ## Current position
 
-Recorded July 18, 2026:
+Recorded July 20, 2026:
 
 - 44OS is live and healthy.
+- `44os.com` is now the editorial front door, `app.44os.com` is the canonical application and PWA origin, `www` redirects to the apex, and legacy application links preserve their paths and queries on the app host.
 - The architectural, UI, catalog, digital-commerce, Auth-email, transactional-email, Help Center, metadata, structured-data, and consent foundations described in Foundation/UI are implemented.
 - Public Member signup and eligible digital/physical purchase presentation are active.
 - Eight launch Merch products are live.
@@ -29,40 +30,28 @@ The following areas are represented as current system truth in Foundation and UI
 - Stripe-hosted Checkout, signed webhook authority, immutable terms/order evidence, refund/dispute/access/accounting behavior, Admin offer pause/restore, and zero-mismatch reconciliation.
 - Public Member signup, manual Creator paperwork-grace controls, branded Supabase Auth email, Resend transactional outbox/worker/webhook, monitored support mailbox, and production Help Center.
 - Public metadata, published-only sitemap, structured-data foundation, indexability guards, and inert consent-gated analytics foundation.
+- Permanent two-origin architecture: isolated light marketing layout, canonical app shell/PWA, exact host routing, legacy deep-link and API compatibility, app-origin Auth/Checkout/email links, paired desktop/mobile product screenshots, and the server-only rollback switch.
 - Recorded release gates: schema replay, pgTAP security, linked lint/history, lint, typecheck, UI cleanup audit, hardening/observability/provider contracts, safe-area checks, production build, launch smoke, and diff integrity.
 
 ## Open milestones
 
 Work through this single list. User-facing breakage comes before optional launch expansion. Record only the outcome and changed current truth; do not rebuild a step-by-step historical ledger here.
 
-### 1. Marketing front door and application-origin migration
-
-**Status: Local implementation and compatibility gates complete; awaiting owner copy/visual approval before external configuration**
-
-- The repository now contains a light editorial landing surface for `44os.com` and keeps the existing application shell canonical at `app.44os.com`. The local preview remains available at `/landing-preview`; `MARKETING_SITE_ENABLED` defaults off, and no DNS, Vercel domain, hosted Supabase, Stripe, Resend, Printful, or production environment setting has changed.
-- Host routing preserves query strings, permanently redirects legacy apex application pages to the matching app path, retains apex APIs/webhooks without redirects, redirects `www` to the apex, reserves `/download` as a 404, rejects the internal marketing route, and serves the PWA manifest only from the app host. An exact Auth fragment/query bridge handles already-issued root callbacks without accepting an arbitrary destination.
-- Application and marketing origins are explicit and centralized. Auth actions, Checkout returns, active email links, Resend diagnostics, canonical metadata, robots, sitemap, and provider preflight checks use the new contract. An unapplied forward migration updates newly queued database email actions while preserving applied migrations and historical outbox evidence.
-- The landing page follows the supplied light-paper visual direction, includes only `Open App`, uses paired desktop/mobile product captures for Discover, Library, Community, and Studio, has host-specific metadata and a marketing share image, and loads no app shell, player, authentication, push prompt, analytics consent, or commerce UI.
-- Lint, strict typecheck, production build, UI cleanup audit, launch smoke, domain migration, email, commerce, Printful, hardening, observability, analytics, experience-polish, and mobile safe-area contracts pass. A cutover-enabled local production build also passed apex/app/www redirects, API compatibility, manifest isolation, reserved-route, robots, and legacy deep-link checks.
-- Remaining work is owner approval of the visual/copy—especially Creator payout and ownership statements—followed by the staged Vercel domain, DNS, hosted Supabase Auth, provider webhook, PWA reinstall, push, Search Console, and monitoring rollout described in the approved migration plan.
-
-**Complete when:** both hosts are live under the permanent domain contract, Auth/payment/email/webhook/PWA/push canaries pass, old links remain compatible, the seven-day stabilization window closes, and Foundation/UI are updated from deployed evidence.
-
-### 2. Creator mobile upload and experience reliability
+### 1. Creator mobile upload and experience reliability
 
 **Status: Implementation and automated gates complete; awaiting owner visual/device verification**
 
 - The shared uploader now uses resumable transfer for larger files, explicit iOS-compatible audio types, and lightweight non-blocking duration metadata after the uploaded value is safely retained.
 - Music Release Date, Item Type, and Track Count are required for creation and editing; Item Tags remain optional. All 31 published production Music Items already have a Release Date, and Admin can correct approximate historical dates through an audited control that synchronizes year. Standard release creation offers Album, EP, Single, and Mixtape only, leaving Beat in its dedicated workflow and omitting Live Set. New Sample Packs hide their inferred Item Type plus irrelevant Release Date and Item Tags controls.
 - The requested account-menu, Admin/Support navigation, Store/Library details, Tracklist, and URL-only release-video changes are implemented. Releases support up to ten videos.
-- The Home discovery revision uses `Discover`/`Browse` page identities, a public `New Releases` shelf backed by four ordered Admin Featured slots, and a Recently Added shelf that excludes those selected Items, starts creator-diverse, then fills open slots round-robin from creators with deeper catalogs. A represented creator’s selected release is replaced by their next release in release chronology (for example, MUSES yields to GET OUT). The revision also includes a creator-diverse followed-creator shelf, complete Browse sort controls, explicit Browse shelves for smaller catalogs, and aligned header/section actions. Forward migration `20260719010000_home_featured_shelf.sql` and the application revision were promoted to production on July 19, 2026; owner visual review remains the final acceptance check.
+- Home uses `Discover`/`Browse` page identities, a four-slot Admin-curated `New Releases` shelf, and an eight-item `Recently Added` shelf ordered by stable creation time with New Releases Items excluded. Recently Added intentionally allows multiple releases from the same creator. The revision also includes the followed-creator shelf, complete Browse sort controls, explicit Browse shelves for smaller catalogs, and aligned header/section actions.
 - The current Studio/Radio revision makes free Music streaming and Library collection explicit, makes Book reading and Library collection free, replaces Music and Book Availability dropdowns with optional paid-download checkboxes, requires Sample Packs to have a paid download price, requires release-sort metadata for new Music publication, adds audited Admin corrections for historical release dates, and automatically appends playable tracks to Radio only after their Music Item is published. Forward migrations `20260719020000_auto_radio_and_music_download_controls.sql`, `20260719021000_book_access_and_sample_pack_pricing.sql`, `20260719022000_required_music_release_metadata.sql`, and `20260719023000_admin_release_date_corrections.sql` were promoted to production on July 19, 2026.
 - The focused experience contract, lint, typecheck, UI cleanup audit, local schema replay, local database lint, all 24 pgTAP files with 573 assertions, production build, and launch smoke checks pass.
 - Remaining acceptance is the owner’s signed-in mobile and desktop review, including a real mobile audio selection/upload and the requested UI surfaces.
 
 **Complete when:** the owner confirms the affected real mobile Creator journey and the requested desktop/mobile UI behavior.
 
-### 3. Production account and repository hygiene
+### 2. Production account and repository hygiene
 
 **Status: Repository pass complete; production account deletion remains open and requires exact target verification**
 
@@ -72,7 +61,7 @@ Work through this single list. User-facing breakage comes before optional launch
 
 **Complete when:** the two approved accounts are absent, unrelated production evidence is preserved, only safe reproducible caches are removed, and the repository passes its proportional quality gates.
 
-### 4. Legal and operating facts
+### 3. Legal and operating facts
 
 **Status: Waiting on owner facts/approval**
 
@@ -83,7 +72,7 @@ Work through this single list. User-facing breakage comes before optional launch
 
 **Complete when:** the published legal and operating facts are accurate, owner-approved, internally consistent, and contain no unsupported designation or placeholder business detail.
 
-### 5. External alerts and operational ownership
+### 4. External alerts and operational ownership
 
 **Status: Open**
 
@@ -94,7 +83,7 @@ Work through this single list. User-facing breakage comes before optional launch
 
 **Complete when:** a real production-critical alert reaches the assigned external channel and every operational responsibility has a named owner and backup/escalation path.
 
-### 6. Manual accessibility and device acceptance
+### 5. Manual accessibility and device acceptance
 
 **Status: Partially complete**
 
@@ -107,7 +96,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** the role/device matrix passes without a launch-blocking accessibility, layout, or input failure and any narrow repairs are verified on affected surfaces.
 
-### 7. Recovery and storage safety
+### 6. Recovery and storage safety
 
 **Status: Open**
 
@@ -118,7 +107,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** the separate-project restore is proven and every candidate object is classified as referenced, intentionally retained, or safely removable with recorded evidence.
 
-### 8. Analytics, search, and Merchant discoverability
+### 7. Analytics, search, and Merchant discoverability
 
 **Status: Foundation deployed; external acceptance open**
 
@@ -133,7 +122,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** consented production analytics records representative journeys without direct personal data or duplicate transactions; intended public routes are accepted by search engines; private routes stay excluded; eligible Merch passes Merchant diagnostics; and monitoring/rollback ownership is recorded.
 
-### 9. Final public-launch decision
+### 8. Final public-launch decision
 
 **Status: Owner action; do not execute early**
 
@@ -143,7 +132,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** the owner gives the terminal launch instruction, the Creator dates are correctly recorded, and rollback ownership is documented. This action starts the clock and must not be used for closed testing.
 
-### 10. One real physical-commerce lifecycle
+### 9. One real physical-commerce lifecycle
 
 **Status: Waiting for owner-approved funds and timing**
 
@@ -154,7 +143,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** the lifecycle ends with zero unexplained payment or fulfillment mismatch and all immutable order/provider evidence is preserved.
 
-### 11. Optional inactive capabilities
+### 10. Optional inactive capabilities
 
 **Status: Deferred; not required while disabled**
 

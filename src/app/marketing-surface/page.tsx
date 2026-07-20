@@ -31,7 +31,7 @@ const features = [
   {
     eyebrow: 'FOR CREATORS',
     title: 'Publish everything in one place.',
-    body: "Upload music, books, merch, and assets. Set your own prices. Keep what you earn. Fans in your library unlock achievements, receive bonus content, and follow your updates — not an algorithm's version of you.\n\nPayouts go directly to your bank account, wherever you are.",
+    body: "Upload music, books, merch, and assets. Set your own prices. Keep what you earn. Fans in your library unlock achievements, receive bonus content, and follow your updates directly instead of an algorithm's version of you.\n\nPayouts go directly to your bank account, wherever you are.",
     image: '/marketing/studio.webp',
     mobileImage: '/marketing/studio-mobile.webp',
     alt: 'The 44OS Studio dashboard for independent creators.',

@@ -146,9 +146,9 @@
 }
 
 .mobileDevice {
-  right: 0;
-  bottom: 0;
-  width: 24%;
+  right: 1.5%;
+  bottom: 5%;
+  width: 21%;
   aspect-ratio: 390 / 844;
   border: 6px solid #1a1a1a;
   border-radius: 30px;
@@ -247,9 +247,9 @@
   .heroCopy > p { margin: 20px auto 28px; font-size: 18px; }
   .hero .primaryButton { width: 100%; box-sizing: border-box; }
   .heroVisual { margin-top: 48px; }
-  .productMockup { aspect-ratio: 1 / 0.94; }
+  .productMockup { aspect-ratio: 1 / 0.82; }
   .desktopDevice { width: 100%; border-width: 3px; border-radius: 14px; }
-  .mobileDevice { width: 34%; border-width: 4px; border-radius: 22px; }
+  .mobileDevice { right: 1%; bottom: 6%; width: 30%; border-width: 4px; border-radius: 22px; }
   .feature, .featureReverse {
     min-height: 0;
     padding: 64px 0;

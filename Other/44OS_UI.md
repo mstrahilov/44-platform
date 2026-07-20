@@ -6,7 +6,7 @@ Architecture and provider rules live in `44OS_FOUNDATION.md`. Current work lives
 
 ## Experience standard
 
-44OS should feel like a premium creative operating system: calm, tactile, spatially consistent, legible, and fast. It is not a marketing landing page, generic dashboard, theme demo, or collection of unrelated pages.
+The application at `app.44os.com` should feel like a premium creative operating system: calm, tactile, spatially consistent, legible, and fast. It is not a generic dashboard, theme demo, or collection of unrelated pages. The public editorial front door at `44os.com` is intentionally a separate marketing surface described below.
 
 Every shipped screen must provide:
 
@@ -18,18 +18,18 @@ Every shipped screen must provide:
 - Legible theme-aware contrast without making disabled controls look active.
 - Stable image ratios, control sizes, and content rhythm while data loads.
 - The same action, material, and component behavior everywhere it appears.
-- Full support for light/dark signed-in themes; signed-out presentation remains dark with Ocean accent.
+- Full support for light/dark signed-in application themes; signed-out application presentation remains dark with Ocean accent. The marketing origin always uses its light editorial palette.
 
 Technology should be explained through user outcomes. A creator should know what to do next without understanding the schema, entitlement engine, provider APIs, or achievement evaluator. A fan should understand what an Item is, what is free, what is purchased, and what remains in Library history.
 
 ## Visual system
 
-The production cascade is limited to:
+The application cascade is limited to:
 
 - `src/app/globals.css`
 - `src/styles/44-ui/canonical-system.css`
 
-`/44OS_UI` is the responsive living registry for current components, tokens, and classes. Do not restore retired proposal stylesheets, page-specific visual systems, legacy Glass wrappers, or copied desktop/mobile reference routes.
+`/44OS_UI` is the responsive living registry for current application components, tokens, and classes. The isolated marketing page uses one scoped CSS module and does not import the application shell or create another in-app component system. Do not restore retired proposal stylesheets, page-specific application visual systems, legacy Glass wrappers, or copied desktop/mobile reference routes.
 
 Base spacing is 4px. Preferred spacing tokens are 4, 8, 12, 16, 20, 24, 32, 40, 48, and 64px. Use shared containers and tokens before local margins or inline styles.
 
@@ -48,6 +48,16 @@ Typography rules:
 - Labels use primary ink; descriptions and metadata use secondary ink; placeholder ink stays inside controls.
 - Detail rows use primary labels and secondary values.
 - Store Item pages render a plain-text Product Details section only for relevant facts: release date, category, type, tags, track count and total length, page count, or sample count. Library Item pages omit this section.
+
+## Marketing front door
+
+`44os.com` is a light editorial page, not an application workspace. It uses a warm paper background, near-black ink, the system font stack, an 8px editorial layout rhythm, pill-shaped actions, and large concise headings. It does not use gradients, Glass, decorative shapes, external fonts, the dark application shell, Dock, Topbar, player, push prompt, account state, analytics consent, or commerce presentation.
+
+The first release exposes only `Open App`, linking to `https://app.44os.com`. Download navigation and `44os.com/download` remain absent until signed desktop installers exist. Footer links route Community, Support, and legal destinations to the app origin; Contact uses `support@44os.com`.
+
+Marketing product visuals use approved real application screenshots rather than fabricated UI. Each visual pairs a 1280×800 desktop WebP with a 390×844 mobile WebP inside a restrained desktop-and-phone composition. The phone is a smaller foreground accent, lifted above the lower edge so it communicates multi-platform support without lengthening the page. Images load directly and eagerly because they are already optimized; a black lazy placeholder is not an accepted state. The social share image is 1200×630 PNG. Screenshots must exclude private messages, email addresses, payment data, unpublished work, and other personal information.
+
+Marketing copy uses plain direct sentences. Do not use em dashes as a stylistic substitute for punctuation. Claims about ownership, earnings, payouts, or platform availability must match live capability and owner-approved legal language.
 
 ## Materials and elevation
 
@@ -112,7 +122,7 @@ The shell—not individual pages—owns mobile safe areas, Topbar, player, and D
 
 ## Page identity and information architecture
 
-- `/` is `Discover` at rest, not Store, even though it reuses catalog data and sections. Its page identity changes to `Browse` whenever a category or filter is active and returns to `Discover` when that state is cleared.
+- `https://app.44os.com/` is `Discover` at rest, not Store, even though it reuses catalog data and sections. Its page identity changes to `Browse` whenever a category or filter is active and returns to `Discover` when that state is cleared. `https://44os.com/` is the editorial landing page and never renders the application shell.
 - `/store` is `Store`.
 - Primary page titles do not include archived explanatory taglines.
 - Mobile Store, Library, and Community hubs use title plus a circular local-filter action. They do not render local search inputs; global Search is in the mobile Dock.
@@ -139,9 +149,9 @@ Artwork ratios are format-specific:
 
 Public Music/Books ordering is release year newest-first, then creator alphabetically, with stable catalog/date tie-breakers. Studio management lists remain creation-date newest-first. Merch always uses `catalog_items.sort_order` with deterministic fallbacks.
 
-Home discovery uses compact four-Item shelves. `New Releases` appears first and follows the exact four-slot order saved through the Admin Home Featured controls; only currently published Music releases render, so an unavailable selection fails closed instead of receiving an algorithmic substitute. `Recently Added` follows and orders creator groups by stable Item creation time. New Releases Items are excluded completely: each creator first contributes one available release, creators whose selected New Release occupies their newest position use their next release by release chronology, and any remaining shelf slots are filled round-robin from represented creators with additional non-selected releases. A creator with no other eligible release is omitted, so the shelf may show fewer than four only when the eligible catalog itself has fewer than four Items. `Creators You Follow` still shows no more than one Item per followed creator. Smaller catalogs use `Browse Books`, `Browse Sample Packs`, and `Browse Merch`; the Merch shelf retains its curated catalog order.
+Home discovery begins with the four-item `New Releases` shelf in the exact order saved through Admin Home controls; only currently published Music releases render, so an unavailable selection fails closed. `Recently Added` follows with up to eight eligible Music releases in stable Item creation-time order, newest first. Items already present in New Releases are excluded, but Recently Added does not deduplicate creators or substitute by creator. This intentionally lets a newly active creator’s current uploads appear together. `Creators You Follow` shows no more than one Item per followed creator. Smaller catalogs use `Browse Books`, `Browse Sample Packs`, and `Browse Merch`; the Merch shelf retains its curated catalog order.
 
-Browse filters begin with `Sort by`. `Release date` uses public release chronology, while `Recently added` uses stable Item creation time and never bumps an edited Item. The New Releases arrow opens the complete Music catalog in release-date order; the Recently Added arrow opens the complete Music catalog in creation-time order. Admin curation and Home-only creator deduplication never remove Items from Browse. Shared section arrows are vertically centered on their title row, and the desktop Store/Home filter action aligns to the Topbar action column.
+Browse filters begin with `Sort by`. `Release date` uses public release chronology, while `Recently added` uses stable Item creation time and never bumps an edited Item. The New Releases arrow opens the complete Music catalog in release-date order; the Recently Added arrow opens the complete Music catalog in creation-time order. Admin curation and Home-only Featured exclusion never remove Items from Browse. Shared section arrows are vertically centered on their title row, and the desktop Store/Home filter action aligns to the Topbar action column.
 
 Admin Home provides four numbered Featured slots. Published non-Beat Music releases are selectable, slot order is public order, duplicates are unavailable, and later slots require the previous slot. Saving is one confirmed mutation with a required audit reason, pending state, success state, authoritative refetch, and immutable before/after history. If a selected Item later becomes unavailable, Admin identifies it for replacement while public discovery simply omits it.
 
