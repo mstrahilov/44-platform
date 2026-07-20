@@ -32,6 +32,7 @@ function AdminDashboard() {
     <div className="admin-stat-grid" aria-label="Administrator summary">
       <AdminStat label="People" value={summary?.people_count ?? '—'} detail="All accounts" />
       <AdminStat label="Creators" value={summary?.creator_count ?? '—'} detail="Publishing access" />
+      <AdminStat label="Creator requests" value={summary?.pending_creator_request_count ?? '—'} detail="Awaiting review" attention={Boolean(summary?.pending_creator_request_count)} />
       <AdminStat label="Pending" value={summary?.pending_review_count ?? '—'} detail="Content reviews" attention={Boolean(summary?.pending_review_count)} />
       <AdminStat label="Errors" value={summary?.recent_error_count ?? '—'} detail="Last 24 hours" attention={Boolean(summary?.recent_error_count)} />
     </div>
@@ -40,7 +41,8 @@ function AdminDashboard() {
       <SectionHeader title="Administration" description="Open a section to inspect records and use its approved controls." />
       <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
         <AdminNavRow href="/admin/home" title="Home" description="Choose and order the four Music releases shown in Featured on Discover." />
-        <AdminNavRow href="/admin/people" title="People" description="Find every member, creator, or administrator and manage creator access." count={summary?.people_count} />
+        <AdminNavRow href="/admin/people?role=creator_request" title="Creator requests" description="Review people waiting for Creator publishing access." count={summary?.pending_creator_request_count} />
+        <AdminNavRow href="/admin/people" title="People" description="Find and manage any member, creator, or administrator." count={summary?.people_count} />
         <AdminNavRow href="/admin/content" title="Content" description="Inspect every Item, review submissions, and manage publication state." count={summary?.content_count} />
         <AdminNavRow href="/admin/errors" title="Operational errors" description="Read sanitized application error events and safe diagnostic references." count={summary?.recent_error_count} />
         <AdminNavRow href="/admin/email" title="Email" description="Inspect provider readiness, fail-closed delivery controls, operational counts, and activation history." />

@@ -5,7 +5,6 @@ import { SUPPORT_ARTICLES, supportArticleHref } from '@/lib/supportArticles';
 
 const PUBLIC_ROUTES = [
   '/',
-  '/store',
   '/store/music',
   '/store/books',
   '/store/sample-packs',
@@ -25,7 +24,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     url: absoluteMetadataUrl(path),
     lastModified,
     changeFrequency: index === 0 ? 'daily' : 'weekly',
-    priority: index === 0 ? 1 : path === '/store' || path === '/community' || path === '/radio' ? 0.9 : 0.7,
+    priority: index === 0 ? 1 : path === '/community' || path === '/radio' ? 0.9 : 0.7,
   }));
 
   const supportRoutes: MetadataRoute.Sitemap = SUPPORT_ARTICLES.map(article => ({

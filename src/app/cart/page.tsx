@@ -20,7 +20,7 @@ export default function CartPage() {
   const currency = items[0]?.currency ?? 'USD';
   const [legacyItemTypes, setLegacyItemTypes] = useState<Record<string, string>>({});
 
-  useTopbarBack({ href: '/store', label: 'Store' });
+  useTopbarBack({ href: '/', label: 'Home' });
 
   useEffect(() => {
     const missingIds = items.filter(item => !item.item_type).map(item => item.item_id);
@@ -46,7 +46,7 @@ export default function CartPage() {
             <div className="dashboard-empty">
               {PURCHASING_COMING_SOON_COPY}
               <div className="ui44-section-gap-before">
-                <Link className="os-button os-button-primary os-button-compact" href="/store">Keep Exploring</Link>
+                <Link className="os-button os-button-primary os-button-compact" href="/">Keep Exploring</Link>
               </div>
             </div>
           </div>
@@ -64,7 +64,7 @@ export default function CartPage() {
             <div className="dashboard-empty">
               Your cart is empty. Browse merch or creator items to add something.
               <div className="ui44-section-gap-before">
-                <Link className="os-button os-button-primary os-button-compact" href="/store">Open Store</Link>
+                <Link className="os-button os-button-primary os-button-compact" href="/">Open Home</Link>
               </div>
             </div>
           </div>
@@ -134,7 +134,7 @@ export default function CartPage() {
             </span>
           </div>
           <div className="cart-summary-actions">
-            <Link className="os-button os-button-secondary" href="/store">
+            <Link className="os-button os-button-secondary" href="/">
               Keep Shopping
             </Link>
             <Link className="os-button os-button-primary" href="/checkout">

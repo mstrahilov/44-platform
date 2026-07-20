@@ -134,7 +134,7 @@ export const SUPPORT_ARTICLES: SupportArticle[] = [
       { heading: 'Search across 44OS', paragraphs: ['Desktop Search opens from the top bar. Mobile Search is in the Dock. Search results can include Items, creators, Community posts, and Support articles.'] },
       { heading: 'If an Item is missing', paragraphs: ['An Item may be in draft, archived, temporarily unavailable, or removed from public sale. Existing purchase history and eligible Library access are preserved separately from public Store visibility.'] },
     ],
-    actions: [{ label: 'Browse Items', href: '/store' }, { label: 'Search 44OS', href: '/search' }],
+    actions: [{ label: 'Browse Items', href: '/' }, { label: 'Search 44OS', href: '/search' }],
   },
   {
     slug: 'add-items-to-library',

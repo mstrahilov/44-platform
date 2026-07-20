@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { EmptyMessage, HubHero, PageShell, SectionHeader } from '@/components/Ui';
 import { Ui44Panel } from '@/components/ui44/Spacing';
 import { AdminAccessBoundary, AdminActionDialog, AdminAvatar, AdminStatusBadge, formatAdminDate } from '@/components/admin/AdminPrimitives';
-import { getAdminPersonDetail, setAdminCreatorAccess, setAdminCreatorPaidSales, type AdminPersonDetail } from '@/lib/domain/adminOperations';
+import { getAdminPersonDetail, reviewAdminCreatorAccessRequest, setAdminCreatorAccess, setAdminCreatorPaidSales, type AdminPersonDetail } from '@/lib/domain/adminOperations';
 
 export default function AdminPersonDetailApp({ profileId }: { profileId: string }) {
   return <AdminAccessBoundary><PersonDetail profileId={profileId} /></AdminAccessBoundary>;
@@ -17,6 +17,7 @@ function PersonDetail({ profileId }: { profileId: string }) {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [requestDialog, setRequestDialog] = useState<'approved' | 'rejected' | null>(null);
   const [paidSalesDialog, setPaidSalesDialog] = useState<'approved' | 'disabled' | 'rebase' | null>(null);
   const [saving, setSaving] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -37,6 +38,7 @@ function PersonDetail({ profileId }: { profileId: string }) {
   const role = profile?.role || 'member';
   const nextRole = role === 'creator' ? 'member' : 'creator';
   const commerce = detail.commerce;
+  const creatorRequest = detail.creator_request;
 
   async function changeRole(reason: string) {
     setSaving(true); setError(''); setMessage('');
@@ -45,6 +47,21 @@ function PersonDetail({ profileId }: { profileId: string }) {
       setDialogOpen(false);
       setMessage(nextRole === 'creator' ? 'Creator access granted.' : 'Creator access removed.');
       setReloadKey(value => value + 1);
+    } catch (roleError) {
+      setError(roleError instanceof Error ? roleError.message : 'Creator access could not be changed.');
+    } finally { setSaving(false); }
+  }
+
+  async function reviewCreatorRequest(reason: string) {
+    if (!requestDialog) return;
+    setSaving(true); setError(''); setMessage('');
+    try {
+      await reviewAdminCreatorAccessRequest(profileId, requestDialog, reason);
+      setRequestDialog(null);
+      setMessage(requestDialog === 'approved' ? 'Creator request approved.' : 'Creator request rejected. The account remains a member.');
+      setReloadKey(value => value + 1);
+    } catch (reviewError) {
+      setError(reviewError instanceof Error ? reviewError.message : 'Creator request could not be reviewed.');
     } finally { setSaving(false); }
   }
 
@@ -55,6 +72,8 @@ function PersonDetail({ profileId }: { profileId: string }) {
       setPaidSalesDialog(null);
       setMessage(status === 'disabled' ? 'Paid digital sales paused. Purchase and entitlement history is preserved.' : status === 'rebase' ? 'The 30-day manual paperwork follow-up was re-based and recorded.' : 'Paid digital sales restored with a new 30-day paperwork follow-up.');
       setReloadKey(value => value + 1);
+    } catch (salesError) {
+      setError(salesError instanceof Error ? salesError.message : 'Paid-sales access could not be changed.');
     } finally { setSaving(false); }
   }
 
@@ -72,8 +91,30 @@ function PersonDetail({ profileId }: { profileId: string }) {
         <div><dt>Joined</dt><dd>{formatAdminDate(detail.account.created_at, true)}</dd></div>
         <div><dt>Creator type</dt><dd>{profile?.creator_type || 'Not specified'}</dd></div>
       </dl>
-      {role !== 'admin' ? <div className="admin-detail-actions"><button className={nextRole === 'member' ? 'os-button os-button-danger' : 'os-button os-button-primary'} type="button" onClick={() => setDialogOpen(true)}>{nextRole === 'creator' ? 'Grant Creator Access' : 'Return to Member'}</button></div> : <p className="admin-detail-note">Administrator access is visible here but cannot be changed from the web control center.</p>}
+      {role !== 'admin' && creatorRequest?.status !== 'pending' ? <div className="admin-detail-actions"><button className={nextRole === 'member' ? 'os-button os-button-danger' : 'os-button os-button-primary'} type="button" onClick={() => setDialogOpen(true)}>{nextRole === 'creator' ? 'Grant Creator Access' : 'Return to Member'}</button></div> : role === 'admin' ? <p className="admin-detail-note">Administrator access is visible here but cannot be changed from the web control center.</p> : <p className="admin-detail-note">This account has a pending Creator request. Review it below.</p>}
     </Ui44Panel>
+
+    {creatorRequest ? <section className="dashboard-section">
+      <SectionHeader title="Creator access request" description="Creator access requested during account signup" />
+      <Ui44Panel overflow="visible" className="admin-detail-card">
+        <div className="admin-person-hero">
+          <div><h2>{creatorRequest.status === 'pending' ? 'Awaiting review' : `Request ${creatorRequest.status}`}</h2><p>Requested {formatAdminDate(creatorRequest.requested_at, true)}</p></div>
+          <AdminStatusBadge tone={creatorRequest.status === 'approved' ? 'success' : creatorRequest.status === 'rejected' ? 'danger' : 'warning'}>{creatorRequest.status}</AdminStatusBadge>
+        </div>
+        {creatorRequest.reviewed_at ? <dl className="admin-fact-grid">
+          <div><dt>Reviewed</dt><dd>{formatAdminDate(creatorRequest.reviewed_at, true)}</dd></div>
+          <div><dt>Reviewed by</dt><dd>{creatorRequest.reviewed_by || 'Administrator'}</dd></div>
+          <div><dt>Decision reason</dt><dd>{creatorRequest.decision_reason || 'No reason recorded'}</dd></div>
+        </dl> : null}
+        {creatorRequest.status === 'pending' ? <>
+          <div className="admin-detail-actions">
+            <button className="os-button os-button-primary" type="button" onClick={() => setRequestDialog('approved')}>Approve Creator Request</button>
+            <button className="os-button os-button-danger" type="button" onClick={() => setRequestDialog('rejected')}>Reject Request</button>
+          </div>
+          <p className="admin-detail-note">Approval follows the existing verified Creator-access workflow. Rejection keeps the account as a member.</p>
+        </> : null}
+      </Ui44Panel>
+    </section> : null}
 
     {(role === 'creator' || role === 'admin') ? <section className="dashboard-section">
       <SectionHeader title="Creator seller setup" description="Creator promotion plus private tax and Wise email-to-claim readiness" />
@@ -120,6 +161,7 @@ function PersonDetail({ profileId }: { profileId: string }) {
     </section>
 
     <AdminActionDialog open={dialogOpen} title={nextRole === 'creator' ? 'Promote to Creator' : 'Return account to member'} description={nextRole === 'creator' ? 'This records Creator approval and starts the documented manual paperwork follow-up. Tax and Wise onboarding remain separate from digital publication and paid-sale eligibility.' : 'This account will lose Studio publishing access. Existing content and history remain.'} confirmLabel={nextRole === 'creator' ? 'Promote to Creator' : 'Change to Member'} danger={nextRole === 'member'} saving={saving} onClose={() => setDialogOpen(false)} onConfirm={changeRole} />
+    <AdminActionDialog open={requestDialog !== null} title={requestDialog === 'approved' ? 'Approve Creator Request' : 'Reject Creator Request'} description={requestDialog === 'approved' ? 'This uses the existing verified Creator-access workflow. Publication access is granted only if the account satisfies its current approval requirements.' : 'The request will be closed and the account will remain a member. Existing Library activity and account history are preserved.'} confirmLabel={requestDialog === 'approved' ? 'Approve Creator Request' : 'Reject Request'} danger={requestDialog === 'rejected'} saving={saving} onClose={() => setRequestDialog(null)} onConfirm={reviewCreatorRequest} />
     <AdminActionDialog open={paidSalesDialog !== null} title={paidSalesDialog === 'disabled' ? 'Pause Paid Digital Sales' : paidSalesDialog === 'rebase' ? 'Restart 30-Day Paperwork Window' : 'Restore Paid Digital Sales'} description={paidSalesDialog === 'disabled' ? 'This removes the Creator’s paid digital offers from sale. Existing purchases, Library access, entitlements, earnings, and audit history are preserved.' : paidSalesDialog === 'rebase' ? 'Use only at the documented launch point. This records a new 30-day Admin paperwork follow-up without changing paid-sale availability, payouts, tax review, Wise readiness, purchases, or entitlements.' : 'This restores the Creator’s paid digital offers and records a new 30-day Admin paperwork follow-up. It does not make payouts, tax review, or Wise readiness eligible.'} confirmLabel={paidSalesDialog === 'disabled' ? 'Pause Paid Sales' : paidSalesDialog === 'rebase' ? 'Restart Paperwork Window' : 'Restore Paid Sales'} danger={paidSalesDialog === 'disabled'} saving={saving} onClose={() => setPaidSalesDialog(null)} onConfirm={reason => changePaidSales(paidSalesDialog!, reason)} />
   </main></PageShell>;
 }

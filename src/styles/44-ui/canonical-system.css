@@ -3836,6 +3836,32 @@ body:is(.theme-dark, .theme-light) .login-field .os-input-field:is(:focus, :focu
   box-shadow: none;
 }
 
+body:is(.theme-dark, .theme-light) .login-creator-request {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  cursor: pointer;
+}
+
+body:is(.theme-dark, .theme-light) .login-creator-request > span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+body:is(.theme-dark, .theme-light) .login-creator-request strong {
+  color: var(--44ui-text-primary);
+  font: inherit;
+  font-weight: 650;
+}
+
+body:is(.theme-dark, .theme-light) .login-creator-request small {
+  color: var(--44ui-text-secondary);
+  font-size: var(--44ui-type-caption-size);
+  line-height: var(--44ui-type-caption-line);
+}
+
 body:is(.theme-dark, .theme-light)
   :is(
     .page-search-control,

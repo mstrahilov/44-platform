@@ -6,6 +6,7 @@ export type AdminSystemStatus = { enabled: boolean; label: string; phase?: strin
 export type AdminDashboardSummary = {
   people_count: number;
   creator_count: number;
+  pending_creator_request_count: number;
   pending_review_count: number;
   recent_error_count: number;
   content_count: number;
@@ -31,6 +32,8 @@ export type AdminPersonRow = {
   creator_type: string | null;
   item_count: number;
   profile_missing: boolean;
+  creator_request_status: 'pending' | 'approved' | 'rejected' | null;
+  creator_request_requested_at: string | null;
   total_count: number;
 };
 
@@ -41,6 +44,13 @@ export type AdminPersonDetail = {
     email_confirmed_at: string | null;
     last_sign_in_at: string | null;
     created_at: string;
+  };
+  creator_request: null | {
+    status: 'pending' | 'approved' | 'rejected';
+    requested_at: string;
+    reviewed_at: string | null;
+    decision_reason: string | null;
+    reviewed_by: string | null;
   };
   profile: null | {
     id: string;
@@ -241,6 +251,20 @@ export async function setAdminCreatorAccess(profileId: string, role: 'member' | 
     target_reason: reason,
   });
   if (result.error) throw result.error;
+}
+
+export async function reviewAdminCreatorAccessRequest(
+  profileId: string,
+  decision: 'approved' | 'rejected',
+  reason: string,
+) {
+  const result = await supabase.rpc('review_creator_access_request' as never, {
+    target_profile_id: profileId,
+    target_decision: decision,
+    target_reason: reason,
+  } as never);
+  if (result.error) throw result.error;
+  return result.data as unknown as 'approved' | 'rejected';
 }
 
 export async function setAdminCreatorPaidSales(

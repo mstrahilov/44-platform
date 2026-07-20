@@ -97,7 +97,7 @@ function ProductStoreDetail({
 
   useTopbarBack(cameFromRadio
     ? { href: '/radio', label: 'Radio' }
-    : { href: backHref ?? '/store', label: backLabel ?? 'Store' });
+    : { href: backHref ?? '/', label: backLabel ?? 'Home' });
 
   useEffect(() => {
     async function fetchProduct() {

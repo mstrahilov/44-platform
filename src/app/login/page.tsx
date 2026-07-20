@@ -8,7 +8,7 @@ import { accountExistsForEmail, usernameIsTaken } from '@/lib/domain/accounts';
 import { useAuth } from '@/lib/useAuth';
 import { getSitePathUrl } from '@/lib/siteUrl';
 import { COUNTRIES } from '@/lib/marketPreferences';
-import { Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
+import { Ui44CheckboxInput, Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
 import { isValidUsername, sanitizeUsernameInput } from '@/lib/usernames';
 
 type AuthStep = 'email' | 'password';
@@ -36,13 +36,14 @@ export default function LoginPage() {
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
   const [countryCode, setCountryCode] = useState('');
+  const [creatorAccountRequested, setCreatorAccountRequested] = useState(false);
   const [accountExists, setAccountExists] = useState<boolean | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [linkSubmitting, setLinkSubmitting] = useState(false);
   const [resendingConfirmation, setResendingConfirmation] = useState(false);
   const [signupComplete, setSignupComplete] = useState(false);
-  const authenticatedDestination = useRef('/store');
+  const authenticatedDestination = useRef('/');
 
   useEffect(() => {
     if (!loading && user) router.replace(authenticatedDestination.current);
@@ -106,14 +107,14 @@ export default function LoginPage() {
     setStatus(null);
 
     if (accountExists) {
-      authenticatedDestination.current = '/store';
+      authenticatedDestination.current = '/';
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       setSubmitting(false);
       if (error) {
         setStatus(authMessage(error.message));
         return;
       }
-      router.push('/store');
+      router.push('/');
       return;
     }
 
@@ -132,33 +133,44 @@ export default function LoginPage() {
       return;
     }
 
-    authenticatedDestination.current = '/profile';
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: getSitePathUrl('/profile'),
-        data: {
-          display_name: cleanDisplayName,
-          name: cleanDisplayName,
-          username: cleanUsername,
-          country_code: countryCode,
-        },
-      },
+    authenticatedDestination.current = '/';
+    const response = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        password,
+        displayName: cleanDisplayName,
+        username: cleanUsername,
+        countryCode,
+        creatorAccountRequested,
+      }),
     });
+    const data = await response.json() as {
+      error?: string;
+      session?: { accessToken: string; refreshToken: string } | null;
+    };
     setSubmitting(false);
-    if (error) {
-      authenticatedDestination.current = '/store';
-      setStatus(authMessage(error.message));
+    if (!response.ok) {
+      authenticatedDestination.current = '/';
+      setStatus(authMessage(data.error));
       return;
     }
 
     if (data.session) {
-      router.replace('/profile');
+      const sessionResult = await supabase.auth.setSession({ access_token: data.session.accessToken, refresh_token: data.session.refreshToken });
+      if (sessionResult.error) {
+        authenticatedDestination.current = '/';
+        setStatus(authMessage(sessionResult.error.message));
+        return;
+      }
+      router.replace('/');
       return;
     }
     setSignupComplete(true);
-    setStatus('Check your email to verify your address. The link will take you straight to your profile.');
+    setStatus(creatorAccountRequested
+      ? 'Check your email to verify your address. Your Creator access request is pending review, and your account remains a member until it is approved.'
+      : 'Check your email to verify your address. The link will take you straight to Home.');
   }
 
   async function sendEmailLink() {
@@ -167,7 +179,7 @@ export default function LoginPage() {
     setStatus(null);
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: getSitePathUrl('/store'), shouldCreateUser: false },
+      options: { emailRedirectTo: getSitePathUrl('/'), shouldCreateUser: false },
     });
     setLinkSubmitting(false);
     setStatus(error ? authMessage(error.message) : 'Check your email for your login link.');
@@ -180,7 +192,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email,
-      options: { emailRedirectTo: getSitePathUrl('/profile') },
+      options: { emailRedirectTo: getSitePathUrl('/') },
     });
     setResendingConfirmation(false);
     setStatus(error ? authMessage(error.message) : 'Verification email resent. Check your inbox and spam folder.');
@@ -192,6 +204,7 @@ export default function LoginPage() {
     setDisplayName('');
     setUsername('');
     setCountryCode('');
+    setCreatorAccountRequested(false);
     setAccountExists(null);
     setSignupComplete(false);
     setStatus(null);
@@ -296,6 +309,21 @@ export default function LoginPage() {
                       setStatus(null);
                     }}
                   />
+                </label>
+              )}
+              {!isLogin && (
+                <label className="login-creator-request">
+                  <Ui44CheckboxInput
+                    checked={creatorAccountRequested}
+                    onChange={event => {
+                      setCreatorAccountRequested(event.target.checked);
+                      setStatus(null);
+                    }}
+                  />
+                  <span>
+                    <strong>Sign up for a Creator account</strong>
+                    <small>Creators can publish to the platform. Your account starts as a member while 44 reviews your request.</small>
+                  </span>
                 </label>
               )}
               <label className="login-field">

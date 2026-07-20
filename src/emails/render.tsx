@@ -16,6 +16,29 @@ async function welcome(payload: EmailTemplatePayloads['welcome']): Promise<Rende
   };
 }
 
+async function adminSignup(payload: EmailTemplatePayloads['admin_signup_notification']): Promise<RenderedEmail> {
+  const title = payload.creatorRequested ? 'New Creator access request.' : 'New member joined 44OS.';
+  const preview = payload.creatorRequested
+    ? `${payload.displayName} requested Creator access.`
+    : `${payload.displayName} created a member account.`;
+  return {
+    subject: payload.creatorRequested ? `Creator access requested — ${payload.displayName}` : `New 44OS member — ${payload.displayName}`,
+    preview,
+    html: await document(<EmailFrame preview={preview}><Heading>{title}</Heading><Paragraph subtle>{payload.creatorRequested ? 'The account remains a member until you review and approve the request in Admin.' : 'A new member account was created on 44OS.'}</Paragraph><DetailTable rows={[{ label: 'Name', value: payload.displayName }, { label: 'Username', value: `@${payload.username}` }, { label: 'Email', value: payload.email }, ...(payload.countryCode ? [{ label: 'Country', value: payload.countryCode }] : []), { label: 'Joined', value: payload.signedUpAt }, { label: 'Creator request', value: payload.creatorRequested ? 'Pending review' : 'No' }]} /><Button href={payload.adminUrl}>{payload.creatorRequested ? 'Review Creator request' : 'View member'}</Button></EmailFrame>),
+    text: `${title}\n\nName: ${payload.displayName}\nUsername: @${payload.username}\nEmail: ${payload.email}${payload.countryCode ? `\nCountry: ${payload.countryCode}` : ''}\nJoined: ${payload.signedUpAt}\nCreator request: ${payload.creatorRequested ? 'Pending review' : 'No'}\n\nOpen Admin: ${payload.adminUrl}`,
+  };
+}
+
+async function adminRelease(payload: EmailTemplatePayloads['admin_release_notification']): Promise<RenderedEmail> {
+  const preview = `${payload.creatorName} published ${payload.title}.`;
+  return {
+    subject: `New release published — ${payload.title}`,
+    preview,
+    html: await document(<EmailFrame preview={preview}><Heading>New release published.</Heading><Paragraph subtle>A Creator published new Music on 44OS.</Paragraph><DetailTable rows={[{ label: 'Release', value: payload.title }, { label: 'Creator', value: payload.creatorName }, ...(payload.creatorEmail ? [{ label: 'Creator email', value: payload.creatorEmail }] : []), { label: 'Type', value: payload.itemType }, { label: 'Published', value: payload.publishedAt }]} /><Button href={payload.adminUrl}>Open release in Admin</Button></EmailFrame>),
+    text: `New release published\n\nRelease: ${payload.title}\nCreator: ${payload.creatorName}${payload.creatorEmail ? `\nCreator email: ${payload.creatorEmail}` : ''}\nType: ${payload.itemType}\nPublished: ${payload.publishedAt}\n\nOpen Admin: ${payload.adminUrl}`,
+  };
+}
+
 async function purchase(payload: EmailTemplatePayloads['purchase_confirmation']): Promise<RenderedEmail> {
   const preview = `Payment confirmed for order ${payload.orderReference}.`;
   const itemRows = payload.lines.map(line => ({ label: `${line.quantity} × ${line.title}${line.detail ? ` — ${line.detail}` : ''}`, value: line.amount }));
@@ -67,6 +90,8 @@ async function support(payload: EmailTemplatePayloads['support_acknowledgement']
 export async function renderEmail<K extends EmailTemplateKey>(template: K, payload: EmailTemplatePayloads[K]): Promise<RenderedEmail> {
   switch (template) {
     case 'welcome': return welcome(payload as EmailTemplatePayloads['welcome']);
+    case 'admin_signup_notification': return adminSignup(payload as EmailTemplatePayloads['admin_signup_notification']);
+    case 'admin_release_notification': return adminRelease(payload as EmailTemplatePayloads['admin_release_notification']);
     case 'purchase_confirmation': return purchase(payload as EmailTemplatePayloads['purchase_confirmation']);
     case 'refund_cancellation': return refund(payload as EmailTemplatePayloads['refund_cancellation']);
     case 'fulfillment_tracking': return fulfillment(payload as EmailTemplatePayloads['fulfillment_tracking']);

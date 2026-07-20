@@ -122,7 +122,7 @@ export default function CheckoutPage() {
             <div className="dashboard-empty">
               {PURCHASING_COMING_SOON_COPY}
               <div className="checkout-inline-actions">
-                <Link className="os-button os-button-primary os-button-compact" href="/store">Open Store</Link>
+                <Link className="os-button os-button-primary os-button-compact" href="/">Open Home</Link>
               </div>
             </div>
           </div>
@@ -162,7 +162,7 @@ export default function CheckoutPage() {
               {state === 'paid' ? 'Your order is ready for fulfillment.' : 'Do not close this page while payment confirmation is checked.'}
               <div className="checkout-inline-actions">
                 {state === 'paid' ? <Link className="os-button os-button-primary os-button-compact" href="/library">Open Library</Link> : null}
-                <Link className="os-button os-button-secondary os-button-compact" href="/store">Open Store</Link>
+                <Link className="os-button os-button-secondary os-button-compact" href="/">Open Home</Link>
               </div>
             </div>
           </div>
@@ -180,7 +180,7 @@ export default function CheckoutPage() {
             <div className="dashboard-empty">
               Add an Item from Store when you are ready.
               <div className="ui44-section-gap-before">
-                <Link className="os-button os-button-primary os-button-compact" href="/store">Go to Store</Link>
+                <Link className="os-button os-button-primary os-button-compact" href="/">Go Home</Link>
               </div>
             </div>
           </div>
@@ -254,7 +254,7 @@ export default function CheckoutPage() {
               No payment was required. Library keeps the Items you want to return to; public listening remains free where enabled.
               <div className="checkout-inline-actions">
                 <Link className="os-button os-button-primary os-button-compact" href="/library">Open Library</Link>
-                <Link className="os-button os-button-secondary os-button-compact" href="/store">Keep Exploring</Link>
+                <Link className="os-button os-button-secondary os-button-compact" href="/">Keep Exploring</Link>
               </div>
             </div>
           </div>

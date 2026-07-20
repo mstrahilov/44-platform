@@ -79,12 +79,12 @@ export function getExperienceAppSlug(product: ProductExperienceShape): Experienc
 }
 
 export function browseIndexHref(productOrCategory?: ProductExperienceShape | ExperienceAppSlug | 'merch' | 'all' | null) {
-  if (!productOrCategory || productOrCategory === 'all') return '/store';
+  if (!productOrCategory || productOrCategory === 'all') return '/';
   if (typeof productOrCategory === 'string') return `/store/${productOrCategory}`;
   const app = getExperienceAppSlug(productOrCategory);
   if (app) return `/store/${app}`;
   if (getProductExperience(productOrCategory) === 'physical') return '/store/merch';
-  return '/store';
+  return '/';
 }
 
 export function productBrowseHref(product: ProductRouteShape) {

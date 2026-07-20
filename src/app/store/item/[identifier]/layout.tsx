@@ -55,7 +55,7 @@ export default async function StoreItemLayout({ children, params }: { children: 
       '@type': 'BreadcrumbList',
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: '44OS', item: absoluteMetadataUrl('/') },
-        { '@type': 'ListItem', position: 2, name: 'Store', item: absoluteMetadataUrl('/store') },
+        { '@type': 'ListItem', position: 2, name: 'Discover', item: absoluteMetadataUrl('/') },
         { '@type': 'ListItem', position: 3, name: item.title, item: itemUrl },
       ],
     },

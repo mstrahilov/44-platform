@@ -1,5 +1,7 @@
 export const EMAIL_TEMPLATE_VERSIONS = {
   welcome: 1,
+  admin_signup_notification: 1,
+  admin_release_notification: 1,
   purchase_confirmation: 1,
   refund_cancellation: 1,
   fulfillment_tracking: 1,
@@ -19,6 +21,23 @@ export type EmailTemplatePayloads = {
   welcome: {
     displayName?: string;
     libraryUrl: string;
+  };
+  admin_signup_notification: {
+    displayName: string;
+    username: string;
+    email: string;
+    countryCode?: string;
+    creatorRequested: boolean;
+    signedUpAt: string;
+    adminUrl: string;
+  };
+  admin_release_notification: {
+    title: string;
+    creatorName: string;
+    creatorEmail?: string;
+    itemType: string;
+    publishedAt: string;
+    adminUrl: string;
   };
   purchase_confirmation: {
     orderReference: string;
@@ -59,4 +78,3 @@ export type RenderedEmail = {
   html: string;
   text: string;
 };
-

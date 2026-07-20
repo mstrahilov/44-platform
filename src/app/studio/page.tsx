@@ -143,7 +143,7 @@ export default function StudioPage() {
             </p>
             <div className="ui44-creator-gate-actions">
               <Link href="/profile" className="os-button os-button-primary">Open Public Profile</Link>
-              <Link href="/store" className="os-button os-button-ghost">Back to Store</Link>
+              <Link href="/" className="os-button os-button-ghost">Back to Home</Link>
             </div>
           </Ui44Panel>
         </main>

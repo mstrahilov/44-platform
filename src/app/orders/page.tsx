@@ -46,7 +46,7 @@ export default function OrdersPage() {
         ) : orders.length === 0 ? (
           <EmptyMessage>
             No orders yet.
-            <span className="ui44-section-gap-before"><Link className="os-button os-button-primary os-button-compact" href="/store">Open Store</Link></span>
+            <span className="ui44-section-gap-before"><Link className="os-button os-button-primary os-button-compact" href="/">Open Home</Link></span>
           </EmptyMessage>
         ) : (
           <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">

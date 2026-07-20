@@ -7,7 +7,7 @@ import { renderEmail } from '../src/emails/render';
 
 async function main() {
   const keys = Object.keys(EMAIL_TEMPLATE_VERSIONS) as EmailTemplateKey[];
-  assert.deepEqual(keys.sort(), ['fulfillment_tracking','purchase_confirmation','refund_cancellation','support_acknowledgement','welcome']);
+  assert.deepEqual(keys.sort(), ['admin_release_notification','admin_signup_notification','fulfillment_tracking','purchase_confirmation','refund_cancellation','support_acknowledgement','welcome']);
 
   for (const key of keys) {
     const rendered = await renderEmail(key, EMAIL_PREVIEW_FIXTURES[key] as never);
@@ -29,6 +29,12 @@ async function main() {
   assert.match(purchase.text, /Total: \$116\.91/);
   const support = await renderEmail('support_acknowledgement', EMAIL_PREVIEW_FIXTURES.support_acknowledgement);
   assert.match(support.text, /support@44os\.com/);
+  const adminSignup = await renderEmail('admin_signup_notification', EMAIL_PREVIEW_FIXTURES.admin_signup_notification);
+  assert.match(adminSignup.text, /Creator request: Pending review/);
+  assert.match(adminSignup.text, /koukla@example\.com/);
+  const adminRelease = await renderEmail('admin_release_notification', EMAIL_PREVIEW_FIXTURES.admin_release_notification);
+  assert.match(adminRelease.text, /Flippin Out/);
+  assert.match(adminRelease.text, /Koukla/);
   await assert.rejects(
     renderEmail('fulfillment_tracking', { ...EMAIL_PREVIEW_FIXTURES.fulfillment_tracking, trackingUrl: 'javascript:alert(1)' }),
     /valid HTTPS URL/,
@@ -89,6 +95,20 @@ async function main() {
   assert.match(emailMigration, /provider='printful'[\s\S]*signature_verified[\s\S]*processing_status='processed'/, 'fulfillment mail requires a processed verified Printful event');
   assert.match(emailMigration, /commerce_orders_queue_verified_email after update of status,paid_at,refunded_cents/, 'commerce mail is queued from authoritative order-state transitions');
   assert.match(emailMigration, /Support request rate limit exceeded/, 'durable support intake has a database-enforced abuse ceiling');
+
+  const creatorRequestMigration = await readFile(path.join(process.cwd(), 'supabase', 'migrations', '20260720020000_creator_signup_requests_and_admin_notifications.sql'), 'utf8');
+  assert.match(creatorRequestMigration, /create table public\.creator_access_requests/, 'Creator requests have a durable application record');
+  assert.match(creatorRequestMigration, /new\.raw_user_meta_data->>'creator_account_requested'/, 'signup metadata is evaluated inside the authoritative profile trigger');
+  assert.match(creatorRequestMigration, /insert into public\.profiles[\s\S]*'member'/, 'new accounts always begin as members');
+  assert.match(creatorRequestMigration, /'admin-signup\/'\|\|new\.id/, 'signup notifications are idempotent per account');
+  assert.match(creatorRequestMigration, /'admin-release\/'\|\|new\.id/, 'release notifications are idempotent per release');
+  assert.match(creatorRequestMigration, /perform public\.set_admin_creator_access\(target_profile_id,'creator',normalized_reason\)/, 'request approval uses the existing Creator-access workflow');
+
+  const signupRoute = await readFile(path.join(process.cwd(), 'src', 'app', 'api', 'auth', 'signup', 'route.ts'), 'utf8');
+  assert.match(signupRoute, /creator_account_requested: creatorAccountRequested/, 'the server signup boundary passes the explicit Creator choice to Auth');
+  assert.match(signupRoute, /await processEmailOutbox\(5\)\.catch\(\(\) => undefined\)/, 'successful signup gives the durable notification a best-effort delivery pass');
+  const releaseNotificationRoute = await readFile(path.join(process.cwd(), 'src', 'app', 'api', 'email', 'notifications', 'process', 'route.ts'), 'utf8');
+  assert.match(releaseNotificationRoute, /await authenticateEmailRequest\(request\)/, 'the browser-triggered notification pass requires an authenticated account');
 
   const stripeWebhook = await readFile(path.join(process.cwd(), 'src', 'app', 'api', 'stripe', 'webhook', 'route.ts'), 'utf8');
   assert.ok(
