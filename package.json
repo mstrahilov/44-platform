@@ -19,6 +19,7 @@
     "test:hardening-contract": "node scripts/hardening-contract.mjs",
     "test:mobile-safe-area": "node scripts/mobile-safe-area-contract.mjs",
     "test:domain-contract": "node scripts/domain-migration-contract.mjs",
+    "test:team-contract": "node scripts/team-workspace-contract.mjs",
     "test:experience-polish": "node scripts/experience-polish-contract.mjs",
     "test:radio-rotation": "tsx scripts/radio-rotation-contract.ts",
     "test:username-casing": "node scripts/username-casing-contract.mjs && supabase test db --local supabase/tests/m1_case_preserving_usernames_security.sql",
@@ -44,6 +45,7 @@
     "audio:quarantine-orphans": "node scripts/audio-migration.mjs --quarantine-orphans --confirm-production-write"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
     "@react-email/render": "^2.1.0",
     "@supabase/supabase-js": "^2.108.2",
     "@tiptap/extension-color": "^3.27.1",

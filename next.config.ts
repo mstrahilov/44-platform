@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+  outputFileTracingIncludes: {
+    '/api/team/brand-guide': ['./Other/44OS_BRANDING.md'],
+  },
   async redirects() {
     return [
       { source: "/studio/products", destination: "/studio", permanent: true },

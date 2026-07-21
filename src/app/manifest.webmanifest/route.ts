@@ -13,19 +13,19 @@ const APP_MANIFEST: MetadataRoute.Manifest = {
   theme_color: '#0b0b0b',
   icons: [
     {
-      src: '/icon-192.png',
+      src: '/icon-192.png?v=20260721',
       sizes: '192x192',
       type: 'image/png',
       purpose: 'any',
     },
     {
-      src: '/icon-512.png',
+      src: '/icon-512.png?v=20260721',
       sizes: '512x512',
       type: 'image/png',
       purpose: 'any',
     },
     {
-      src: '/maskable-icon-512.png',
+      src: '/maskable-icon-512.png?v=20260721',
       sizes: '512x512',
       type: 'image/png',
       purpose: 'maskable',

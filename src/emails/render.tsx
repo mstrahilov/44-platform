@@ -49,6 +49,16 @@ async function creatorAccessGranted(payload: EmailTemplatePayloads['creator_acce
   };
 }
 
+async function teamAccessGranted(payload: EmailTemplatePayloads['team_access_granted']): Promise<RenderedEmail> {
+  const preview = 'Your private 44 Team workspace is ready.';
+  return {
+    subject: 'You now have access to the 44 Team workspace',
+    preview,
+    html: await document(<EmailFrame preview={preview}><Heading>Welcome to the Team workspace, {payload.displayName}.</Heading><Paragraph subtle>You can now open the current 44 Brand Guide, download approved brand assets, and browse the published Creator and release directories. Your existing 44OS account role has not changed.</Paragraph><Button href={payload.teamUrl}>Open Team</Button><Paragraph subtle>Keep Team materials private. If this access looks unexpected, reply to this email so Support can help.</Paragraph></EmailFrame>),
+    text: `Welcome to the Team workspace, ${payload.displayName}.\n\nYou can now open the current 44 Brand Guide, download approved brand assets, and browse the published Creator and release directories. Your existing 44OS account role has not changed.\n\nOpen Team: ${payload.teamUrl}\n\nKeep Team materials private. If this access looks unexpected, reply to this email so Support can help.`,
+  };
+}
+
 async function purchase(payload: EmailTemplatePayloads['purchase_confirmation']): Promise<RenderedEmail> {
   const preview = `Payment confirmed for order ${payload.orderReference}.`;
   const itemRows = payload.lines.map(line => ({ label: `${line.quantity} × ${line.title}${line.detail ? ` — ${line.detail}` : ''}`, value: line.amount }));
@@ -103,6 +113,7 @@ export async function renderEmail<K extends EmailTemplateKey>(template: K, paylo
     case 'admin_signup_notification': return adminSignup(payload as EmailTemplatePayloads['admin_signup_notification']);
     case 'admin_release_notification': return adminRelease(payload as EmailTemplatePayloads['admin_release_notification']);
     case 'creator_access_granted': return creatorAccessGranted(payload as EmailTemplatePayloads['creator_access_granted']);
+    case 'team_access_granted': return teamAccessGranted(payload as EmailTemplatePayloads['team_access_granted']);
     case 'purchase_confirmation': return purchase(payload as EmailTemplatePayloads['purchase_confirmation']);
     case 'refund_cancellation': return refund(payload as EmailTemplatePayloads['refund_cancellation']);
     case 'fulfillment_tracking': return fulfillment(payload as EmailTemplatePayloads['fulfillment_tracking']);

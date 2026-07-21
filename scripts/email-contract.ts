@@ -7,7 +7,7 @@ import { renderEmail } from '../src/emails/render';
 
 async function main() {
   const keys = Object.keys(EMAIL_TEMPLATE_VERSIONS) as EmailTemplateKey[];
-  assert.deepEqual(keys.sort(), ['admin_release_notification','admin_signup_notification','creator_access_granted','fulfillment_tracking','purchase_confirmation','refund_cancellation','support_acknowledgement','welcome']);
+  assert.deepEqual(keys.sort(), ['admin_release_notification','admin_signup_notification','creator_access_granted','fulfillment_tracking','purchase_confirmation','refund_cancellation','support_acknowledgement','team_access_granted','welcome']);
 
   for (const key of keys) {
     const rendered = await renderEmail(key, EMAIL_PREVIEW_FIXTURES[key] as never);
@@ -38,6 +38,9 @@ async function main() {
   const creatorAccess = await renderEmail('creator_access_granted', EMAIL_PREVIEW_FIXTURES.creator_access_granted);
   assert.match(creatorAccess.text, /You are now a Creator, Miro/);
   assert.match(creatorAccess.html, />Open Studio</);
+  const teamAccess = await renderEmail('team_access_granted', EMAIL_PREVIEW_FIXTURES.team_access_granted);
+  assert.match(teamAccess.text, /Welcome to the Team workspace/i);
+  assert.match(teamAccess.html, />Open Team</);
   await assert.rejects(
     renderEmail('fulfillment_tracking', { ...EMAIL_PREVIEW_FIXTURES.fulfillment_tracking, trackingUrl: 'javascript:alert(1)' }),
     /valid HTTPS URL/,

@@ -4,6 +4,8 @@ This document is the visual, interaction, responsive, and accessibility source o
 
 Architecture and provider rules live in `44OS_FOUNDATION.md`. Current work lives in `44OS_MILESTONES.md`. Do not create additional UI audit, proposal, or handoff documents.
 
+Company/product voice, identity, logo, social, and outreach rules live in the private canonical `44OS_BRANDING.md` source.
+
 ## Experience standard
 
 The application at `app.44os.com` should feel like a premium creative operating system: calm, tactile, spatially consistent, legible, and fast. It is not a generic dashboard, theme demo, or collection of unrelated pages. The public editorial front door at `44os.com` is intentionally a separate marketing surface described below.
@@ -58,6 +60,21 @@ The first release exposes only `Open App`, linking to `https://app.44os.com`. Do
 Marketing product visuals use approved real application screenshots rather than fabricated UI. Each visual pairs a 1280×800 desktop WebP with a 390×844 mobile WebP inside a restrained desktop-and-phone composition. The phone is a smaller foreground accent, lifted above the lower edge so it communicates multi-platform support without lengthening the page. Images load directly and eagerly because they are already optimized; a black lazy placeholder is not an accepted state. The social share image is 1200×630 PNG. Screenshots must exclude private messages, email addresses, payment data, unpublished work, and other personal information.
 
 Marketing copy uses plain direct sentences. Do not use em dashes as a stylistic substitute for punctuation. Claims about ownership, earnings, payouts, or platform availability must match live capability and owner-approved legal language.
+
+## Private Team workspace
+
+The private Team workspace is deployed for Admin and explicitly granted-account review. The Brand Guide copy and Brand Kit assets remain provisional until owner acceptance.
+
+- `/team` uses the standard dark application shell and a compact Overview, Brand, Creators, Releases section navigation.
+- Team appears in the signed-in account menu only after the authenticated no-store access check succeeds.
+- Loading uses the existing animated loading shell. Unauthorized and failed states are explicit and reveal no guide or Brand Kit content.
+- Creator and release directories are searchable, filterable, responsive, and visibly read-only. They use public avatars/artwork and published facts only.
+- `/team/brand` is the deliberate cream-document exception inside the dark app shell. Paper is `#F5F5F0`; Ink is `#1A1A1A`. Desktop uses a sticky table of contents, while mobile uses compact horizontal section navigation.
+- Inter is self-hosted and scoped to the Brand Guide and private marketing assets. The application and public marketing page retain their existing system stacks.
+- The Brand Guide action requests a 60-second private signed download. Until owner-approved masters are registered, the action reports that the approved kit is unavailable rather than serving provisional files as final.
+- Team routes set noindex, nofollow, noarchive and are excluded from robots and sitemap discovery.
+
+44 and 44OS use one two-color logo system: white mark on black/dark and black mark on white/Paper/light. Social profiles use white on black. Acid green is retired from the logo and application-icon identity. Ocean remains an interface accent, never a substitute logo color. The 44OS PWA/Home Screen icons, favicon, and social share artwork use white on black.
 
 ## Materials and elevation
 

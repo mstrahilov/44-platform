@@ -38,6 +38,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
         '/reader',
         '/settings',
         '/studio',
+        '/team',
       ],
     },
     sitemap: absoluteAppUrl('/sitemap.xml'),

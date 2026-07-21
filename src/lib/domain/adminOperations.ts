@@ -34,7 +34,24 @@ export type AdminPersonRow = {
   profile_missing: boolean;
   creator_request_status: 'pending' | 'approved' | 'rejected' | null;
   creator_request_requested_at: string | null;
+  team_access: boolean;
   total_count: number;
+};
+
+export type AdminTeamAccessState = {
+  authorized: boolean;
+  source: 'admin' | 'grant' | 'none';
+  profileId: string;
+  grantedAt: string | null;
+  revokedAt: string | null;
+  history: Array<{
+    id: string;
+    previousActive: boolean;
+    newActive: boolean;
+    reason: string;
+    createdAt: string;
+    changedBy: string;
+  }>;
 };
 
 export type AdminPersonDetail = {
@@ -86,6 +103,7 @@ export type AdminPersonDetail = {
     changed_by: string;
   }>;
   commerce: CreatorPaidSalesState;
+  team: AdminTeamAccessState;
 };
 
 export type CreatorPaidSalesState = {
@@ -232,16 +250,39 @@ export async function listAdminPeople(input: { query?: string | null; role?: str
 }
 
 export async function getAdminPersonDetail(profileId: string) {
-  const [personResult, commerceResult] = await Promise.all([
+  const [personResult, commerceResult, teamResult] = await Promise.all([
     supabase.rpc('get_admin_person_detail', { target_profile_id: profileId }),
     supabase.rpc('get_creator_paid_sales_state' as never, { target_creator_id: profileId } as never),
+    supabase.rpc('get_admin_team_access' as never, { target_profile_id: profileId } as never),
   ]);
   if (personResult.error) throw personResult.error;
   if (commerceResult.error) throw commerceResult.error;
-  return {
-    ...(personResult.data as unknown as Omit<AdminPersonDetail, 'commerce'>),
-    commerce: commerceResult.data as unknown as CreatorPaidSalesState,
+  if (teamResult.error && process.env.NODE_ENV === 'production') throw teamResult.error;
+  const person = personResult.data as unknown as Omit<AdminPersonDetail, 'commerce' | 'team'>;
+  const fallbackTeam: AdminTeamAccessState = {
+    authorized: person.profile?.role === 'admin',
+    source: person.profile?.role === 'admin' ? 'admin' : 'none',
+    profileId,
+    grantedAt: null,
+    revokedAt: null,
+    history: [],
   };
+  return {
+    ...person,
+    commerce: commerceResult.data as unknown as CreatorPaidSalesState,
+    team: teamResult.error ? fallbackTeam : teamResult.data as unknown as AdminTeamAccessState,
+  };
+}
+
+export async function setAdminTeamAccess(profileId: string, enabled: boolean, reason: string) {
+  const result = await supabase.rpc('set_admin_team_access' as never, {
+    target_profile_id: profileId,
+    target_enabled: enabled,
+    target_reason: reason,
+  } as never);
+  if (result.error) throw result.error;
+  if (enabled) void deliverQueuedNotifications();
+  return result.data as unknown as AdminTeamAccessState;
 }
 
 export async function setAdminCreatorAccess(profileId: string, role: 'member' | 'creator', reason: string) {
@@ -270,13 +311,16 @@ export async function reviewAdminCreatorAccessRequest(
 }
 
 async function deliverCreatorPromotionNotifications() {
+  await deliverQueuedNotifications(true);
+}
+
+async function deliverQueuedNotifications(includePush = false) {
   const session = await supabase.auth.getSession();
   const token = session.data.session?.access_token;
   if (!token) return;
-  await Promise.allSettled([
-    fetch('/api/email/notifications/process', { method: 'POST', headers: { Authorization: `Bearer ${token}` } }),
-    fetch('/api/push/process', { method: 'POST', headers: { Authorization: `Bearer ${token}` } }),
-  ]);
+  const requests = [fetch('/api/email/notifications/process', { method: 'POST', headers: { Authorization: `Bearer ${token}` } })];
+  if (includePush) requests.push(fetch('/api/push/process', { method: 'POST', headers: { Authorization: `Bearer ${token}` } }));
+  await Promise.allSettled(requests);
 }
 
 export async function setAdminCreatorPaidSales(

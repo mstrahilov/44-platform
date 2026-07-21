@@ -3,6 +3,7 @@ export const EMAIL_TEMPLATE_VERSIONS = {
   admin_signup_notification: 1,
   admin_release_notification: 1,
   creator_access_granted: 1,
+  team_access_granted: 1,
   purchase_confirmation: 1,
   refund_cancellation: 1,
   fulfillment_tracking: 1,
@@ -43,6 +44,10 @@ export type EmailTemplatePayloads = {
   creator_access_granted: {
     displayName: string;
     studioUrl: string;
+  };
+  team_access_granted: {
+    displayName: string;
+    teamUrl: string;
   };
   purchase_confirmation: {
     orderReference: string;

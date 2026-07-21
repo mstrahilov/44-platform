@@ -15,6 +15,9 @@ export const EMAIL_PREVIEW_FIXTURES: { [K in EmailTemplateKey]: EmailTemplatePay
   creator_access_granted: {
     displayName: 'Miro', studioUrl: 'https://app.44os.com/studio',
   },
+  team_access_granted: {
+    displayName: 'Miro', teamUrl: 'https://app.44os.com/team',
+  },
   purchase_confirmation: {
     orderReference: '44-8F2A19', purchasedAt: 'July 16, 2026 at 2:44 PM CDT',
     lines: [{ title: '44 Hoodie', detail: 'Black / Large', quantity: 1, amount: '$88.00' }, { title: 'ØLSTEN — North Star', quantity: 1, amount: '$12.00' }],

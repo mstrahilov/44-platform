@@ -250,6 +250,19 @@ export async function loadAchievementNotifications(userId: string, limit = 24): 
         href: '/studio',
         kind: 'system',
       });
+      continue;
+    }
+
+    if (event.event_type === 'team_access_granted') {
+      notifications.push({
+        id: event.id,
+        title: 'Team access is ready',
+        description: 'Open the private Team workspace and current Brand Guide.',
+        createdAt: event.created_at,
+        productId: null,
+        href: '/team',
+        kind: 'system',
+      });
     }
   }
 

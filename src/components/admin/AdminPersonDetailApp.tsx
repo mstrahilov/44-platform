@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { EmptyMessage, HubHero, PageShell, SectionHeader } from '@/components/Ui';
 import { Ui44Panel } from '@/components/ui44/Spacing';
 import { AdminAccessBoundary, AdminActionDialog, AdminAvatar, AdminStatusBadge, formatAdminDate } from '@/components/admin/AdminPrimitives';
-import { getAdminPersonDetail, reviewAdminCreatorAccessRequest, setAdminCreatorAccess, setAdminCreatorPaidSales, type AdminPersonDetail } from '@/lib/domain/adminOperations';
+import { getAdminPersonDetail, reviewAdminCreatorAccessRequest, setAdminCreatorAccess, setAdminCreatorPaidSales, setAdminTeamAccess, type AdminPersonDetail } from '@/lib/domain/adminOperations';
 
 export default function AdminPersonDetailApp({ profileId }: { profileId: string }) {
   return <AdminAccessBoundary><PersonDetail profileId={profileId} /></AdminAccessBoundary>;
@@ -19,6 +19,7 @@ function PersonDetail({ profileId }: { profileId: string }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [requestDialog, setRequestDialog] = useState<'approved' | 'rejected' | null>(null);
   const [paidSalesDialog, setPaidSalesDialog] = useState<'approved' | 'disabled' | 'rebase' | null>(null);
+  const [teamDialogOpen, setTeamDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -77,6 +78,19 @@ function PersonDetail({ profileId }: { profileId: string }) {
     } finally { setSaving(false); }
   }
 
+  async function changeTeamAccess(reason: string) {
+    const enabled = !detail!.team.authorized;
+    setSaving(true); setError(''); setMessage('');
+    try {
+      await setAdminTeamAccess(profileId, enabled, reason);
+      setTeamDialogOpen(false);
+      setMessage(enabled ? 'Team access granted. Email and in-app notices were queued.' : 'Team access revoked immediately.');
+      setReloadKey(value => value + 1);
+    } catch (teamError) {
+      setError(teamError instanceof Error ? teamError.message : 'Team access could not be changed.');
+    } finally { setSaving(false); }
+  }
+
   return <PageShell><main className="admin-page">
     <div className="admin-back-row"><Link href="/admin/people">‹ All people</Link></div>
     <HubHero title={name} copy="Account details, creator access, authored content, and administrator history." />
@@ -93,6 +107,24 @@ function PersonDetail({ profileId }: { profileId: string }) {
       </dl>
       {role !== 'admin' && creatorRequest?.status !== 'pending' ? <div className="admin-detail-actions"><button className={nextRole === 'member' ? 'os-button os-button-danger' : 'os-button os-button-primary'} type="button" onClick={() => setDialogOpen(true)}>{nextRole === 'creator' ? 'Grant Creator Access' : 'Return to Member'}</button></div> : role === 'admin' ? <p className="admin-detail-note">Administrator access is visible here but cannot be changed from the web control center.</p> : <p className="admin-detail-note">This account has a pending Creator request. Review it below.</p>}
     </Ui44Panel>
+
+    <section className="dashboard-section">
+      <SectionHeader title="Team workspace" description="Private Brand Guide and published public directories" />
+      <Ui44Panel overflow="visible" className="admin-detail-card">
+        <div className="admin-person-hero">
+          <div><h2>{detail.team.authorized ? 'Team access active' : 'No Team access'}</h2><p>{detail.team.source === 'admin' ? 'Inherited from the Administrator role' : detail.team.source === 'grant' ? 'Additional audited permission' : 'Member or Creator role remains unchanged'}</p></div>
+          <AdminStatusBadge tone={detail.team.authorized ? 'success' : 'quiet'}>{detail.team.authorized ? 'Team' : 'Not granted'}</AdminStatusBadge>
+        </div>
+        {role === 'admin' ? <p className="admin-detail-note">Administrators inherit Team access. No grant row is needed and inherited access cannot be disabled here.</p> : <>
+          <div className="admin-detail-actions"><button className={detail.team.authorized ? 'os-button os-button-danger' : 'os-button os-button-primary'} type="button" onClick={() => setTeamDialogOpen(true)}>{detail.team.authorized ? 'Revoke Team Access' : 'Grant Team Access'}</button></div>
+          <p className="admin-detail-note">This permission does not change Creator publishing, seller setup, payouts, or public profile behavior. Every change requires an audit reason.</p>
+        </>}
+      </Ui44Panel>
+    </section>
+
+    <section className="dashboard-section"><SectionHeader title="Team access history" description="Immutable grant and revocation decisions" />
+      {detail.team.history.length === 0 ? <EmptyMessage>No Team access change has been recorded.</EmptyMessage> : <div className="admin-history-list ui44-panel">{detail.team.history.map(event => <div className="admin-history-row" key={event.id}><div><strong>{event.previousActive ? 'active' : 'not granted'} → {event.newActive ? 'active' : 'revoked'}</strong><p>{event.reason}</p></div><span>{event.changedBy}<time dateTime={event.createdAt}>{formatAdminDate(event.createdAt, true)}</time></span></div>)}</div>}
+    </section>
 
     {creatorRequest ? <section className="dashboard-section">
       <SectionHeader title="Creator access request" description="Creator access requested during account signup" />
@@ -163,5 +195,6 @@ function PersonDetail({ profileId }: { profileId: string }) {
     <AdminActionDialog open={dialogOpen} title={nextRole === 'creator' ? 'Promote to Creator' : 'Return account to member'} description={nextRole === 'creator' ? 'This records Creator approval and starts the documented manual paperwork follow-up. Tax and Wise onboarding remain separate from digital publication and paid-sale eligibility.' : 'This account will lose Studio publishing access. Existing content and history remain.'} confirmLabel={nextRole === 'creator' ? 'Promote to Creator' : 'Change to Member'} danger={nextRole === 'member'} saving={saving} onClose={() => setDialogOpen(false)} onConfirm={changeRole} />
     <AdminActionDialog open={requestDialog !== null} title={requestDialog === 'approved' ? 'Approve Creator Request' : 'Reject Creator Request'} description={requestDialog === 'approved' ? 'This uses the existing verified Creator-access workflow. Publication access is granted only if the account satisfies its current approval requirements.' : 'The request will be closed and the account will remain a member. Existing Library activity and account history are preserved.'} confirmLabel={requestDialog === 'approved' ? 'Approve Creator Request' : 'Reject Request'} danger={requestDialog === 'rejected'} saving={saving} onClose={() => setRequestDialog(null)} onConfirm={reviewCreatorRequest} />
     <AdminActionDialog open={paidSalesDialog !== null} title={paidSalesDialog === 'disabled' ? 'Pause Paid Digital Sales' : paidSalesDialog === 'rebase' ? 'Restart 30-Day Paperwork Window' : 'Restore Paid Digital Sales'} description={paidSalesDialog === 'disabled' ? 'This removes the Creator’s paid digital offers from sale. Existing purchases, Library access, entitlements, earnings, and audit history are preserved.' : paidSalesDialog === 'rebase' ? 'Use only at the documented launch point. This records a new 30-day Admin paperwork follow-up without changing paid-sale availability, payouts, tax review, Wise readiness, purchases, or entitlements.' : 'This restores the Creator’s paid digital offers and records a new 30-day Admin paperwork follow-up. It does not make payouts, tax review, or Wise readiness eligible.'} confirmLabel={paidSalesDialog === 'disabled' ? 'Pause Paid Sales' : paidSalesDialog === 'rebase' ? 'Restart Paperwork Window' : 'Restore Paid Sales'} danger={paidSalesDialog === 'disabled'} saving={saving} onClose={() => setPaidSalesDialog(null)} onConfirm={reason => changePaidSales(paidSalesDialog!, reason)} />
+    <AdminActionDialog open={teamDialogOpen} title={detail.team.authorized ? 'Revoke Team Access' : 'Grant Team Access'} description={detail.team.authorized ? 'Access to the private Brand Guide, directories, and Brand Kit ends immediately. The account role and all public activity remain unchanged.' : 'This adds the private Team workspace without changing Member or Creator status, publishing, seller setup, or payouts.'} confirmLabel={detail.team.authorized ? 'Revoke Team Access' : 'Grant Team Access'} danger={detail.team.authorized} saving={saving} onClose={() => setTeamDialogOpen(false)} onConfirm={changeTeamAccess} />
   </main></PageShell>;
 }

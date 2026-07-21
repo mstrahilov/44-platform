@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+  <title>44 editable Story and Reel template</title>
+  <rect width="1080" height="1920" fill="#1A1A1A"/>
+  <rect x="90" y="360" width="900" height="900" rx="28" fill="#30322F"/>
+  <text x="90" y="1425" fill="#FFFFFF" font-family="Inter" font-size="96" font-weight="700" letter-spacing="-2">Release title</text>
+  <text x="90" y="1515" fill="#FFFFFF" font-family="Inter" font-size="38">Creator display name</text>
+  <text x="90" y="1660" fill="#FFFFFF" font-family="Inter" font-size="28" font-weight="500">Now on 44OS</text>
+  <rect x="90" y="250" width="900" height="1420" fill="none" stroke="#60A5FA" stroke-width="2" stroke-dasharray="12 12"/>
+</svg>

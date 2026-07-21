@@ -52,11 +52,11 @@ function PeopleDirectory() {
   }
 
   return <PageShell><main className="admin-page">
-    <HubHero title="People" copy="Review Creator requests and manage every 44OS account." />
+    <HubHero title="People" copy="Review Creator requests, Team access, and every 44OS account." />
     <form className="admin-filter-bar ui44-panel" onSubmit={submit}>
       <label><span>Search</span><Ui44TextInput value={search} onChange={event => setSearch(event.target.value)} placeholder="Name, username, or email" /></label>
       <label><span>Role</span><Ui44SelectInput value={role} onChange={event => router.push(buildHref(1, search.trim(), event.target.value))}>
-        <option value="all">All people</option><option value="creator_request">Creator requests</option><option value="member">Members</option><option value="creator">Creators</option><option value="admin">Admins</option>
+        <option value="all">All people</option><option value="creator_request">Creator requests</option><option value="team">Team access</option><option value="member">Members</option><option value="creator">Creators</option><option value="admin">Admins</option>
       </Ui44SelectInput></label>
       <button className="os-button os-button-secondary" type="submit">Search</button>
     </form>
@@ -66,9 +66,10 @@ function PeopleDirectory() {
         <div className="admin-record-heading admin-people-grid" aria-hidden="true"><span>Person</span><span>Role</span><span>Joined</span><span>Content</span></div>
         {rows.map(person => <Link key={person.profile_id} href={`/admin/people/${person.profile_id}`} className="admin-record-row admin-people-grid" role="listitem">
           <span className="admin-person-cell"><AdminAvatar src={person.avatar_url} name={person.display_name || person.username || person.email} /><span><strong>{person.display_name || person.username || person.email || 'Unnamed account'}</strong><small>{person.username ? `@${person.username} · ` : ''}{person.email || 'No email'}{person.profile_missing ? ' · Profile missing' : ''}</small></span></span>
-          <span>{person.creator_request_status === 'pending'
+          <span className="admin-status-stack">{person.creator_request_status === 'pending'
             ? <AdminStatusBadge tone="warning">Creator request</AdminStatusBadge>
-            : <AdminStatusBadge tone={person.profile_role === 'creator' ? 'success' : person.profile_role === 'admin' ? 'warning' : 'quiet'}>{person.profile_role}</AdminStatusBadge>}</span>
+            : <AdminStatusBadge tone={person.profile_role === 'creator' ? 'success' : person.profile_role === 'admin' ? 'warning' : 'quiet'}>{person.profile_role}</AdminStatusBadge>}
+            {person.team_access ? <AdminStatusBadge tone="success">Team</AdminStatusBadge> : null}</span>
           <time dateTime={person.signed_up_at}>{formatAdminDate(person.signed_up_at)}</time>
           <span className="admin-row-count">{person.item_count}<span aria-hidden="true">›</span></span>
         </Link>)}

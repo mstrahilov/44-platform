@@ -37,7 +37,20 @@ The following areas are represented as current system truth in Foundation and UI
 
 Work through this single list. User-facing breakage comes before optional launch expansion. Record only the outcome and changed current truth; do not rebuild a step-by-step historical ledger here.
 
-### 1. Desktop Mac and Windows Application
+### 1. Team workspace and Brand system
+
+**Status: Private production workspace deployed; owner copy/asset review, Brand Kit registration, and first Team grant remain open**
+
+- Team access is implemented as a separate audited permission for Admins and explicitly granted Members or Creators. It does not alter Creator publishing, seller setup, payouts, or public profile behavior.
+- The private `/team` hub, cream editorial Brand Guide, published Creator directory, published release directory, conditional account navigation, Admin People badges/filter, and reasoned grant/revoke controls are implemented.
+- `Other/44OS_BRANDING.md` is the private canonical source. The provisional Brand Kit builder packages black/white marks, white-on-black 44OS icons, self-hosted Inter/OFL, tokens, editable SVG social templates, usage guidance, and a checksum manifest.
+- Acid green is retired from the logo identity. Current local app icons, favicon, and 1200×630 Open Graph artwork use the owner-supplied white mark on black.
+- Local schema replay and database lint pass. The focused Team suite passes 33 assertions, and the complete security suite passes all 705 assertions across 32 files. Lint, strict typecheck, Team, email, domain, and hardening contracts, UI cleanup audit, production build, and diff integrity all pass.
+- The additive Team migration is applied to production and the private routes are deployed behind server-authoritative access. The current kit remains explicitly provisional, no production download is registered, and no Member or Creator should receive a grant until the owner approves the guide and final assets.
+
+**Complete when:** the owner approves the guide copy and logo masters, the approved kit is uploaded and checksummed, Admin/unauthorized/granted probes pass, and the first grant delivers email and in-app notice without changing the recipient’s base role.
+
+### 2. Desktop Mac and Windows Application
 
 **Status: Website-shell plan complete; implementation has not started**
 
@@ -50,7 +63,7 @@ Work through this single list. User-facing breakage comes before optional launch
 
 **Complete when:** anonymous users can download the tested Mac or Windows installer from `44os.com/download`, understand the unsigned-publisher warning, install the shell, sign in, and use the live application without a critical wrapper-specific regression.
 
-### 2. Creator mobile upload and experience reliability
+### 3. Creator mobile upload and experience reliability
 
 **Status: Implementation and automated gates complete; awaiting owner visual/device verification**
 
@@ -64,7 +77,7 @@ Work through this single list. User-facing breakage comes before optional launch
 
 **Complete when:** the owner confirms the affected real mobile Creator journey and the requested desktop/mobile UI behavior.
 
-### 3. Production account and repository hygiene
+### 4. Production account and repository hygiene
 
 **Status: Repository pass complete; production account deletion remains open and requires exact target verification**
 
@@ -74,7 +87,7 @@ Work through this single list. User-facing breakage comes before optional launch
 
 **Complete when:** the two approved accounts are absent, unrelated production evidence is preserved, only safe reproducible caches are removed, and the repository passes its proportional quality gates.
 
-### 4. Legal and operating facts
+### 5. Legal and operating facts
 
 **Status: Waiting on owner facts/approval**
 
@@ -85,7 +98,7 @@ Work through this single list. User-facing breakage comes before optional launch
 
 **Complete when:** the published legal and operating facts are accurate, owner-approved, internally consistent, and contain no unsupported designation or placeholder business detail.
 
-### 5. External alerts and operational ownership
+### 6. External alerts and operational ownership
 
 **Status: Open**
 
@@ -96,7 +109,7 @@ Work through this single list. User-facing breakage comes before optional launch
 
 **Complete when:** a real production-critical alert reaches the assigned external channel and every operational responsibility has a named owner and backup/escalation path.
 
-### 6. Manual accessibility and device acceptance
+### 7. Manual accessibility and device acceptance
 
 **Status: Partially complete**
 
@@ -109,7 +122,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** the role/device matrix passes without a launch-blocking accessibility, layout, or input failure and any narrow repairs are verified on affected surfaces.
 
-### 7. Recovery and storage safety
+### 8. Recovery and storage safety
 
 **Status: Open**
 
@@ -120,7 +133,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** the separate-project restore is proven and every candidate object is classified as referenced, intentionally retained, or safely removable with recorded evidence.
 
-### 8. Analytics, search, and Merchant discoverability
+### 9. Analytics, search, and Merchant discoverability
 
 **Status: Foundation deployed; external acceptance open**
 
@@ -135,7 +148,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** consented production analytics records representative journeys without direct personal data or duplicate transactions; intended public routes are accepted by search engines; private routes stay excluded; eligible Merch passes Merchant diagnostics; and monitoring/rollback ownership is recorded.
 
-### 9. Final public-launch decision
+### 10. Final public-launch decision
 
 **Status: Owner action; do not execute early**
 
@@ -145,7 +158,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** the owner gives the terminal launch instruction, the Creator dates are correctly recorded, and rollback ownership is documented. This action starts the clock and must not be used for closed testing.
 
-### 10. One real physical-commerce lifecycle
+### 11. One real physical-commerce lifecycle
 
 **Status: Waiting for owner-approved funds and timing**
 
@@ -156,7 +169,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** the lifecycle ends with zero unexplained payment or fulfillment mismatch and all immutable order/provider evidence is preserved.
 
-### 11. Optional inactive capabilities
+### 12. Optional inactive capabilities
 
 **Status: Deferred; not required while disabled**
 

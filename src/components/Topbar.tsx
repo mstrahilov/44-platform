@@ -22,6 +22,7 @@ import {
   saveNotificationReadState,
 } from '@/lib/notificationState';
 import { hasCustomerOrders } from '@/lib/domain/customerCommerce';
+import { fetchMyTeamAccess } from '@/lib/domain/team';
 
 export type { TopbarTab } from './TopbarContext';
 
@@ -54,6 +55,12 @@ const IconAdmin = () => (
   <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M11 3.2 17.5 5.5v4.8c0 4.1-2.5 6.7-6.5 8.5-4-1.8-6.5-4.4-6.5-8.5V5.5L11 3.2Z" />
     <path d="m8.2 10.8 1.8 1.8 3.8-4" />
+  </svg>
+);
+const IconTeam = () => (
+  <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="8" cy="8" r="3" /><circle cx="15.5" cy="9" r="2.3" />
+    <path d="M2.8 18c.4-3.5 2.3-5.3 5.2-5.3s4.8 1.8 5.2 5.3M13 14.1c.8-.7 1.7-1 2.7-1 2.2 0 3.5 1.5 3.8 4.1" />
   </svg>
 );
 const IconSupport = () => <span className="os-icon os-icon-support os-icon-sm" aria-hidden="true" />;
@@ -90,6 +97,7 @@ type OrderVisibilityState = {
   userId: string;
   hasOrders: boolean;
 };
+type TeamVisibilityState = { userId: string; authorized: boolean };
 
 function labelForPath(path: string | null | undefined) {
   if (!path) return null;
@@ -117,6 +125,7 @@ export function Topbar() {
   const [profileState, setProfileState] = useState<ProfileState | null>(null);
   const [notificationState, setNotificationState] = useState<NotificationState | null>(null);
   const [orderVisibilityState, setOrderVisibilityState] = useState<OrderVisibilityState | null>(null);
+  const [teamVisibilityState, setTeamVisibilityState] = useState<TeamVisibilityState | null>(null);
   const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
   const [hiddenNotificationIds, setHiddenNotificationIds] = useState<Set<string>>(new Set());
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -164,6 +173,21 @@ export function Topbar() {
       .catch(() => {
         if (alive) setOrderVisibilityState({ userId: activeUserId, hasOrders: false });
       });
+    return () => { alive = false; };
+  }, [pathname, userId]);
+
+  useEffect(() => {
+    if (!userId) {
+      Promise.resolve().then(() => setTeamVisibilityState(null));
+      return;
+    }
+    let alive = true;
+    const activeUserId = userId;
+    void fetchMyTeamAccess().then(access => {
+      if (alive) setTeamVisibilityState({ userId: activeUserId, authorized: access.authorized });
+    }).catch(() => {
+      if (alive) setTeamVisibilityState({ userId: activeUserId, authorized: false });
+    });
     return () => { alive = false; };
   }, [pathname, userId]);
 
@@ -366,6 +390,7 @@ export function Topbar() {
   const profile = profileState && profileState.userId === userId ? profileState.profile : null;
   const notifications = notificationState && notificationState.userId === userId ? notificationState.rows : [];
   const hasOrders = Boolean(orderVisibilityState?.userId === userId && orderVisibilityState.hasOrders);
+  const hasTeamAccess = Boolean(teamVisibilityState?.userId === userId && teamVisibilityState.authorized);
   const displayName = profile?.display_name || profile?.username || user?.email?.split('@')[0] || 'You';
   const avatarUrl = profile?.avatar_url ?? null;
   const profileHref = profile?.username ? `/profile/${profile.username}` : '/profile';
@@ -564,6 +589,11 @@ export function Topbar() {
                 {profile?.role === 'admin' && (
                   <Link href="/admin" className="ui44-paper-menu-item os-popover-item" role="menuitem">
                     <IconAdmin /> Admin
+                  </Link>
+                )}
+                {hasTeamAccess && (
+                  <Link href="/team" className="ui44-paper-menu-item os-popover-item" role="menuitem">
+                    <IconTeam /> Team
                   </Link>
                 )}
                 <Link href="/support" className="ui44-paper-menu-item os-popover-item os-popover-item-mobile-only" role="menuitem">
