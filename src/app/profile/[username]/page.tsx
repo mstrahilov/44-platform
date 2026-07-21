@@ -5,13 +5,16 @@ import { getPublicProfile } from '@/lib/domain/profiles';
 export async function generateMetadata({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params;
   const profile = await getPublicProfile(username) as Profile | null;
-  if (!profile) {
-    return buildPageMetadata({
-      title: 'Profile',
-      description: 'View creator and member profiles on 44OS.',
-      path: `/profile/${username}`,
-      type: 'profile',
-    });
+  if (!profile || !profile.is_published) {
+    return {
+      ...buildPageMetadata({
+        title: 'Profile',
+        description: 'View creator and member profiles on 44OS.',
+        path: `/profile/${username}`,
+        type: 'profile',
+      }),
+      robots: { index: false, follow: false },
+    };
   }
 
   const displayName = profile.display_name || profile.username || profile.slug || '44 Creator';

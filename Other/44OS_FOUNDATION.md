@@ -2,13 +2,14 @@
 
 This document is the architectural and operational source of truth for 44OS. It describes how the live system works now. It is not a project diary.
 
-The complete handoff is intentionally limited to three files:
+The complete handoff is intentionally limited to four files:
 
 - `44OS_FOUNDATION.md` — product, architecture, data, security, providers, and operations.
 - `44OS_UI.md` — visual, interaction, responsive, and accessibility rules.
 - `44OS_MILESTONES.md` — only current work and its completion criteria.
+- `44OS_DESKTOP_APPLICATIONS.md` — the detailed cross-session tracker for the active Mac and Windows website-shell milestone.
 
-Read Foundation, then UI, then Milestones before making production-facing changes. When a decision changes, update every affected handoff file in the same change. Do not recreate retired proposal, research, setup, or runbook documents.
+Read Foundation, then UI, then Milestones before making production-facing changes. Read the Desktop Applications tracker before desktop-shell work. When a decision changes, update every affected handoff file in the same change. Do not recreate other retired proposal, research, setup, or runbook documents.
 
 ## Current production baseline
 
@@ -30,7 +31,7 @@ Recorded July 20, 2026:
 - Licensed Beats, creator Merch, international physical shipping, automated Printful confirmation, newsletters, and interactive runtime Items remain disabled or deferred.
 - Production releases flow through GitHub `main` into the linked Vercel project. Direct Vercel rebuilds may apply a reviewed environment revision to the same GitHub commit, but source changes must still be committed and pushed through GitHub.
 
-Open launch work belongs only in `44OS_MILESTONES.md`. Do not repeat an accepted production journey unless relevant code, configuration, provider state, or evidence changed.
+Open launch work belongs in `44OS_MILESTONES.md`; only the active desktop milestone may expand into `44OS_DESKTOP_APPLICATIONS.md`. Do not repeat an accepted production journey unless relevant code, configuration, provider state, or evidence changed.
 
 ## Product model
 

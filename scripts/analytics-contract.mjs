@@ -18,6 +18,8 @@ assert.match(analytics, /VerifiedCommerceAnalyticsEvent[\s\S]*name: 'refund'[\s\
 assert.doesNotMatch(analytics, /gtag\('event',\s*'(?:purchase|refund)'/, 'browser emitter never claims purchase or refund truth');
 assert.match(analytics, /page_path: pagePath/, 'page paths are sanitized before emission');
 assert.match(analytics, /const safePayload = sanitizeEventPayload/, 'runtime event payloads are allowlisted');
+assert.match(analytics, /ANALYTICS_CONSENT_COOKIE/, 'consent is shared safely across the apex and app subdomain');
+assert.match(analytics, /Domain=\.44os\.com/, 'production consent cookie covers both 44OS origins');
 
 for (const consentType of ['analytics_storage','ad_storage','ad_user_data','ad_personalization']) {
   assert.match(consent, new RegExp(`${consentType}: 'denied'`), `${consentType} defaults denied`);
@@ -29,6 +31,7 @@ assert.match(consent, /allow_ad_personalization_signals: false/, 'ad personaliza
 assert.match(consent, /name === '_ga' \|\| name\.startsWith\('_ga_'\)/, 'revocation removes accessible analytics cookies');
 assert.match(config, /\^G-\[A-Z0-9\]\{4,20\}\$/, 'only a valid GA4 measurement ID activates the boundary');
 assert.match(layout, /AnalyticsConsentBoundary measurementId=\{analyticsMeasurementId\}/, 'root layout owns one consent boundary');
+assert.match(layout, /if \(marketing\)[\s\S]*AnalyticsConsentBoundary/, 'the marketing surface participates in consented measurement');
 assert.match(privacy, /AnalyticsPrivacyControls measurementId=\{analyticsMeasurementId\}/, 'Privacy exposes a durable preference control');
 assert.match(privacy, /We do not send your[\s\S]*email address[\s\S]*private messages[\s\S]*Creator tax information/, 'Privacy records excluded direct and sensitive data');
 assert.match(envExample, /NEXT_PUBLIC_GA_MEASUREMENT_ID=\s*$/m, 'analytics configuration defaults empty');

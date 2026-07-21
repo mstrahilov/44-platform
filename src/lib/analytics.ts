@@ -1,6 +1,7 @@
 'use client';
 
 export const ANALYTICS_CONSENT_STORAGE_KEY = '44-analytics-consent-v1';
+export const ANALYTICS_CONSENT_COOKIE = '44-analytics-consent-v1';
 export const ANALYTICS_CONSENT_EVENT = '44-analytics-consent-changed';
 export const ANALYTICS_READY_EVENT = '44-analytics-ready';
 
@@ -43,6 +44,8 @@ declare global {
 
 export function getAnalyticsConsent(): AnalyticsConsent {
   if (typeof window === 'undefined') return 'unset';
+  const sharedConsent = readAnalyticsConsentCookie();
+  if (sharedConsent !== 'unset') return sharedConsent;
   try {
     const value = window.localStorage.getItem(ANALYTICS_CONSENT_STORAGE_KEY);
     return value === 'granted' || value === 'denied' ? value : 'unset';
@@ -54,7 +57,18 @@ export function getAnalyticsConsent(): AnalyticsConsent {
 export function setAnalyticsConsent(value: Exclude<AnalyticsConsent, 'unset'>) {
   if (typeof window === 'undefined') return;
   try { window.localStorage.setItem(ANALYTICS_CONSENT_STORAGE_KEY, value); } catch { /* A blocked store remains fail-closed. */ }
+  const sharedDomain = window.location.hostname === '44os.com' || window.location.hostname.endsWith('.44os.com')
+    ? '; Domain=.44os.com'
+    : '';
+  const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = `${ANALYTICS_CONSENT_COOKIE}=${value}; Max-Age=31536000; Path=/; SameSite=Lax${sharedDomain}${secure}`;
   window.dispatchEvent(new CustomEvent(ANALYTICS_CONSENT_EVENT, { detail: { value } }));
+}
+
+function readAnalyticsConsentCookie(): AnalyticsConsent {
+  const prefix = `${ANALYTICS_CONSENT_COOKIE}=`;
+  const value = document.cookie.split(';').map(part => part.trim()).find(part => part.startsWith(prefix))?.slice(prefix.length);
+  return value === 'granted' || value === 'denied' ? value : 'unset';
 }
 
 export function trackBrowserAnalyticsEvent<Name extends keyof BrowserAnalyticsEventMap>(

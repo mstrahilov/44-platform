@@ -48,7 +48,7 @@ for (const route of routes) {
     const body = await response.text();
     const bytes = Buffer.byteLength(body);
     if (bytes > maxHtmlBytes) fail(`${route}: ${bytes} bytes exceeds ${maxHtmlBytes} byte HTML budget`);
-    if (route === '/' && !/<title>Discover(?: · 44OS)?<\/title>/i.test(body)) fail('/: root document identity must be Discover');
+    if (route === '/' && !/<title>44OS<\/title>/i.test(body)) fail('/: root document identity must be 44OS');
     if (route === '/support') {
       if (!/How can we help\?/i.test(body)) fail('/support: missing Help Center search identity');
       if (/launching without customer payments|Paid checkout remains unavailable|protected full downloads remain unavailable/i.test(body)) fail('/support: stale closed-commerce guidance is still rendered');

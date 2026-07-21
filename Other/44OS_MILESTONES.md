@@ -37,7 +37,20 @@ The following areas are represented as current system truth in Foundation and UI
 
 Work through this single list. User-facing breakage comes before optional launch expansion. Record only the outcome and changed current truth; do not rebuild a step-by-step historical ledger here.
 
-### 1. Creator mobile upload and experience reliability
+### 1. Desktop Mac and Windows Application
+
+**Status: Website-shell plan complete; implementation has not started**
+
+- Build a minimal Tauri 2 shell that displays the canonical website at `https://app.44os.com` rather than creating a separate desktop frontend or bundling the server-rendered Next.js application.
+- Produce a universal Mac DMG and Windows x64 NSIS installer with the approved 44OS icon. Ordinary website updates continue through GitHub/Vercel and therefore require no native updater.
+- V1 intentionally excludes Apple Developer enrollment, Apple notarization, paid Windows code signing, app stores, native auto-update, native push, offline mode, tray/background services, and broad native computer access.
+- Because the installers are not publicly code-signed, the Download page must accurately explain macOS Gatekeeper and Windows SmartScreen unidentified-publisher warnings without telling users to disable system security.
+- Validate login, playback, Radio, Community, Library, uploads over 50 MiB, protected downloads, Checkout, Studio, Admin, external links, in-app notifications, window behavior, and uninstall on real supported Mac and Windows devices.
+- The complete phased implementation tracker, evidence gates, time estimate, release order, rollback, references, and cross-session progress log live in `44OS_DESKTOP_APPLICATIONS.md`. Expected effort is 4–8 focused hours, with a second short session only if Windows CI or real-device WebView behavior exposes a problem.
+
+**Complete when:** anonymous users can download the tested Mac or Windows installer from `44os.com/download`, understand the unsigned-publisher warning, install the shell, sign in, and use the live application without a critical wrapper-specific regression.
+
+### 2. Creator mobile upload and experience reliability
 
 **Status: Implementation and automated gates complete; awaiting owner visual/device verification**
 
@@ -51,7 +64,7 @@ Work through this single list. User-facing breakage comes before optional launch
 
 **Complete when:** the owner confirms the affected real mobile Creator journey and the requested desktop/mobile UI behavior.
 
-### 2. Production account and repository hygiene
+### 3. Production account and repository hygiene
 
 **Status: Repository pass complete; production account deletion remains open and requires exact target verification**
 
@@ -61,7 +74,7 @@ Work through this single list. User-facing breakage comes before optional launch
 
 **Complete when:** the two approved accounts are absent, unrelated production evidence is preserved, only safe reproducible caches are removed, and the repository passes its proportional quality gates.
 
-### 3. Legal and operating facts
+### 4. Legal and operating facts
 
 **Status: Waiting on owner facts/approval**
 
@@ -72,7 +85,7 @@ Work through this single list. User-facing breakage comes before optional launch
 
 **Complete when:** the published legal and operating facts are accurate, owner-approved, internally consistent, and contain no unsupported designation or placeholder business detail.
 
-### 4. External alerts and operational ownership
+### 5. External alerts and operational ownership
 
 **Status: Open**
 
@@ -83,7 +96,7 @@ Work through this single list. User-facing breakage comes before optional launch
 
 **Complete when:** a real production-critical alert reaches the assigned external channel and every operational responsibility has a named owner and backup/escalation path.
 
-### 5. Manual accessibility and device acceptance
+### 6. Manual accessibility and device acceptance
 
 **Status: Partially complete**
 
@@ -96,7 +109,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** the role/device matrix passes without a launch-blocking accessibility, layout, or input failure and any narrow repairs are verified on affected surfaces.
 
-### 6. Recovery and storage safety
+### 7. Recovery and storage safety
 
 **Status: Open**
 
@@ -107,7 +120,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** the separate-project restore is proven and every candidate object is classified as referenced, intentionally retained, or safely removable with recorded evidence.
 
-### 7. Analytics, search, and Merchant discoverability
+### 8. Analytics, search, and Merchant discoverability
 
 **Status: Foundation deployed; external acceptance open**
 
@@ -122,7 +135,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** consented production analytics records representative journeys without direct personal data or duplicate transactions; intended public routes are accepted by search engines; private routes stay excluded; eligible Merch passes Merchant diagnostics; and monitoring/rollback ownership is recorded.
 
-### 8. Final public-launch decision
+### 9. Final public-launch decision
 
 **Status: Owner action; do not execute early**
 
@@ -132,7 +145,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** the owner gives the terminal launch instruction, the Creator dates are correctly recorded, and rollback ownership is documented. This action starts the clock and must not be used for closed testing.
 
-### 9. One real physical-commerce lifecycle
+### 10. One real physical-commerce lifecycle
 
 **Status: Waiting for owner-approved funds and timing**
 
@@ -143,7 +156,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** the lifecycle ends with zero unexplained payment or fulfillment mismatch and all immutable order/provider evidence is preserved.
 
-### 10. Optional inactive capabilities
+### 11. Optional inactive capabilities
 
 **Status: Deferred; not required while disabled**
 

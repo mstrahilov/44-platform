@@ -37,12 +37,17 @@ const AUTH_HANDOFF_BOOTSTRAP = `(function(){try{
 const SITE_IDENTITY_JSON_LD = JSON.stringify({
   '@context': 'https://schema.org',
   '@type': 'WebSite',
+  '@id': `${absoluteAppUrl('/')}#website`,
   name: '44OS',
+  alternateName: '44 OS',
   url: absoluteAppUrl('/'),
   publisher: {
     '@type': 'Organization',
+    '@id': `${getMarketingUrl()}/#organization`,
     name: '44OS',
-    url: absoluteAppUrl('/'),
+    alternateName: 'forty four',
+    url: `${getMarketingUrl()}/`,
+    logo: `${getMarketingUrl()}/icon-512.png`,
   },
 }).replace(/</g, '\\u003c');
 
@@ -154,15 +159,18 @@ export async function generateViewport(): Promise<Viewport> {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const marketing = await isMarketingRequest();
+  const analyticsMeasurementId = getAnalyticsMeasurementId();
   if (marketing) {
     return (
       <html lang="en">
         <head><script dangerouslySetInnerHTML={{ __html: AUTH_HANDOFF_BOOTSTRAP }} /></head>
-        <body className="marketing-surface">{children}</body>
+        <body className="marketing-surface">
+          <AnalyticsConsentBoundary measurementId={analyticsMeasurementId} />
+          {children}
+        </body>
       </html>
     );
   }
-  const analyticsMeasurementId = getAnalyticsMeasurementId();
   return (
     <html lang="en">
       <head>

@@ -12,6 +12,7 @@ import {
   type RadioBundle,
   type RadioPlayableTrack,
 } from '@/lib/radio';
+import { radioRotationDayKey } from '@/lib/radioRotation';
 
 const REFRESH_MS = 15000;
 
@@ -23,17 +24,24 @@ export default function RadioPage() {
 
   useEffect(() => {
     let alive = true;
+    let loadedDayKey = '';
 
     async function load() {
-      const nextBundle = await loadRadioBundle();
+      const loadedAt = new Date();
+      const nextBundle = await loadRadioBundle(loadedAt);
       if (!alive) return;
+      loadedDayKey = radioRotationDayKey(loadedAt);
       setBundle(nextBundle);
-      setNow(new Date());
+      setNow(loadedAt);
       setLoading(false);
     }
 
     void load();
-    const timer = window.setInterval(() => setNow(new Date()), REFRESH_MS);
+    const timer = window.setInterval(() => {
+      const nextNow = new Date();
+      setNow(nextNow);
+      if (radioRotationDayKey(nextNow) !== loadedDayKey) void load();
+    }, REFRESH_MS);
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') void load();
     };

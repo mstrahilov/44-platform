@@ -2,6 +2,7 @@ import { creatorHref } from '@/lib/platform';
 import { productBrowseHref } from '@/lib/experience';
 import { isMissingRelationError } from '@/lib/schemaCompat';
 import { supabase } from '@/lib/supabase';
+import { buildFairRadioRotation, radioRotationDayKey } from '@/lib/radioRotation';
 
 export type RadioPlaylistEntry = {
   id: string;
@@ -44,6 +45,7 @@ export type RadioProductRow = {
 export type RadioPlayableTrack = {
   playlistEntryId: string;
   trackId: string;
+  artistKey: string;
   title: string;
   artistName: string;
   artistProfileSlug: string | null;
@@ -61,32 +63,13 @@ export type RadioPlayableTrack = {
 
 export type RadioBundle = {
   tracks: RadioPlayableTrack[];
+  rotationKey: string;
   requiresSetup: boolean;
   status: string;
 };
 
-export function shuffleRadioTracks<T>(tracks: T[], playlistVersion: string): T[] {
-  const shuffled = [...tracks];
-  let state = 2166136261;
-  for (let index = 0; index < playlistVersion.length; index += 1) {
-    state ^= playlistVersion.charCodeAt(index);
-    state = Math.imul(state, 16777619);
-  }
-  const nextRandom = () => {
-    state += 0x6d2b79f5;
-    let value = state;
-    value = Math.imul(value ^ value >>> 15, value | 1);
-    value ^= value + Math.imul(value ^ value >>> 7, value | 61);
-    return ((value ^ value >>> 14) >>> 0) / 4294967296;
-  };
-  for (let index = shuffled.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(nextRandom() * (index + 1));
-    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
-  }
-  return shuffled;
-}
-
-export async function loadRadioBundle(): Promise<RadioBundle> {
+export async function loadRadioBundle(now = new Date()): Promise<RadioBundle> {
+  const dayKey = radioRotationDayKey(now);
   const playlistResult = await supabase
     .from('radio_playlist_entries')
     .select('id,track_id,sort_order,is_active,added_at')
@@ -96,6 +79,7 @@ export async function loadRadioBundle(): Promise<RadioBundle> {
   if (isMissingRelationError(playlistResult.error)) {
     return {
       tracks: [],
+      rotationKey: dayKey,
       requiresSetup: true,
       status: 'Radio playlist tables are not in Supabase yet. Apply the reviewed SQL file first.',
     };
@@ -104,6 +88,7 @@ export async function loadRadioBundle(): Promise<RadioBundle> {
   if (playlistResult.error) {
     return {
       tracks: [],
+      rotationKey: dayKey,
       requiresSetup: true,
       status: playlistResult.error.message,
     };
@@ -113,6 +98,7 @@ export async function loadRadioBundle(): Promise<RadioBundle> {
   if (!playlistEntries.length) {
     return {
       tracks: [],
+      rotationKey: dayKey,
       requiresSetup: false,
       status: 'Radio playlist is empty. Import current uploaded tracks into the Radio playlist.',
     };
@@ -127,6 +113,7 @@ export async function loadRadioBundle(): Promise<RadioBundle> {
   if (tracksResult.error) {
     return {
       tracks: [],
+      rotationKey: dayKey,
       requiresSetup: false,
       status: tracksResult.error.message,
     };
@@ -142,6 +129,7 @@ export async function loadRadioBundle(): Promise<RadioBundle> {
   if (productsResult.error) {
     return {
       tracks: [],
+      rotationKey: dayKey,
       requiresSetup: false,
       status: productsResult.error.message,
     };
@@ -153,11 +141,13 @@ export async function loadRadioBundle(): Promise<RadioBundle> {
     if (!track?.audio_url || !track.duration_seconds || track.duration_seconds <= 0) return [];
     const product = products.get(track.item_id);
     if (!product || product.status !== 'published' || product.experience_type !== 'music' || product.streaming_enabled === false) return [];
+    const artistName = product.creators?.display_name || product.creator || '44 Creator';
     return [{
       playlistEntryId: entry.id,
       trackId: track.id,
+      artistKey: product.author_id || product.creators?.username || product.creators?.slug || artistName.trim().toLocaleLowerCase('en-US'),
       title: track.title,
-      artistName: product.creators?.display_name || product.creator || '44 Creator',
+      artistName,
       artistProfileSlug: product.creators?.username || product.creators?.slug || null,
       artistAvatarUrl: product.creators?.avatar_url ?? null,
       coverUrl: product.cover_url || product.hero_url || null,
@@ -174,10 +164,12 @@ export async function loadRadioBundle(): Promise<RadioBundle> {
   const playlistVersion = playlistEntries
     .map(entry => `${entry.id}:${entry.track_id}:${entry.sort_order}:${entry.added_at}`)
     .join('|');
-  const shuffledTracks = shuffleRadioTracks(tracks, playlistVersion);
+  const rotationKey = `${dayKey}:${playlistVersion}`;
+  const shuffledTracks = buildFairRadioRotation(tracks, rotationKey);
 
   return {
     tracks: shuffledTracks,
+    rotationKey,
     requiresSetup: false,
     status: shuffledTracks.length ? '' : 'No playable Radio tracks were found in the playlist.',
   };

@@ -6,52 +6,42 @@ import styles from './landing.module.css';
 const features = [
   {
     eyebrow: 'THE STORE',
-    title: 'Discover and own the work.',
-    body: "Browse music, books, merch, and creative assets from independent artists around the world. When you add something to your library, it's yours. Not rented. Not streamed from somewhere you don't control. Yours.",
-    image: '/marketing/discover.webp',
-    mobileImage: '/marketing/discover-mobile.webp',
+    title: 'Discover something new.',
+    body: 'Browse music, books, merch, and creative assets from independent creators around the world. Listen to music for free, save your favorites to your library, and buy downloads when you want to support a creator directly. Purchased downloads are yours to keep.',
+    image: '/marketing/mockups/store-combined.webp',
     alt: 'The 44OS Discover screen showing independent music releases.',
   },
   {
     eyebrow: 'THE LIBRARY',
     title: "Everything you've collected, in one place.",
-    body: "Your library holds everything you've saved or purchased. Listen, read, download, and unlock achievements as you go. The relationship between you and the work doesn't disappear when you close the tab.",
-    image: '/marketing/library.webp',
-    mobileImage: '/marketing/library-mobile.webp',
+    body: "Your library keeps everything you've saved or purchased together. Listen, read, download your purchases, and unlock achievements as you go. It stays synced across your devices, so your collection is ready wherever you sign in.",
+    image: '/marketing/mockups/library-combined.webp',
     alt: 'A 44OS Library containing saved independent work.',
   },
   {
     eyebrow: 'THE COMMUNITY',
     title: 'The people behind the work are here too.',
-    body: "Ask questions. Share what you're working on. Find collaborators. Talk directly with the creators who made the things in your library. Whether you're making something or just here because you like what's being made, there's a place for you.",
-    image: '/marketing/community.webp',
-    mobileImage: '/marketing/community-mobile.webp',
+    body: "Ask questions, share what you're working on, and find collaborators. Talk directly with the creators behind the work you enjoy. And make some new friends along the way.",
+    image: '/marketing/mockups/community-combined.webp',
     alt: 'The 44OS Community with public posts and replies.',
   },
   {
     eyebrow: 'FOR CREATORS',
     title: 'Publish everything in one place.',
-    body: "Upload music, books, merch, and assets. Set your own prices. Keep what you earn. Fans in your library unlock achievements, receive bonus content, and follow your updates directly instead of an algorithm's version of you.\n\nPayouts go directly to your bank account, wherever you are.",
-    image: '/marketing/studio.webp',
-    mobileImage: '/marketing/studio-mobile.webp',
+    body: 'Upload music, books, merch, and creative assets. Set your own prices and publish updates from one place. People can follow your work, add it to their libraries, and hear from you directly.\n\nWhen someone buys your work, your earnings are paid to your connected bank account.',
+    image: '/marketing/mockups/studio-combined.webp',
     alt: 'The 44OS Studio dashboard for independent creators.',
   },
 ] as const;
 
-function ProductMockup({ desktop, mobile, alt, priority = false }: {
-  desktop: string;
-  mobile: string;
+function ProductMockup({ image, alt, priority = false }: {
+  image: string;
   alt: string;
   priority?: boolean;
 }) {
   return (
     <div className={styles.productMockup}>
-      <div className={styles.desktopDevice}>
-        <Image src={desktop} alt={alt} width={1280} height={800} sizes="(max-width: 767px) 92vw, 1000px" loading="eager" priority={priority} unoptimized />
-      </div>
-      <div className={styles.mobileDevice}>
-        <Image src={mobile} alt={`${alt} Mobile view.`} width={390} height={844} sizes="(max-width: 767px) 34vw, 260px" loading="eager" priority={priority} unoptimized />
-      </div>
+      <Image src={image} alt={alt} width={1800} height={1125} sizes="(max-width: 767px) 100vw, 1100px" loading={priority ? 'eager' : 'lazy'} priority={priority} unoptimized />
     </div>
   );
 }
@@ -59,13 +49,35 @@ function ProductMockup({ desktop, mobile, alt, priority = false }: {
 export default function MarketingLandingPage() {
   const appUrl = getAppPathUrl('/');
   const marketingUrl = getMarketingUrl();
+  const description = 'Music, books, merch, and creative assets from independent artists, all in one place.';
   const structuredData = JSON.stringify({
     '@context': 'https://schema.org',
-    '@type': 'WebSite',
-    name: '44OS',
-    url: `${marketingUrl}/`,
-    publisher: { '@type': 'Organization', name: 'forty four', url: `${marketingUrl}/` },
-    potentialAction: { '@type': 'ViewAction', target: appUrl, name: 'Open 44OS' },
+    '@graph': [
+      {
+        '@type': 'WebSite',
+        '@id': `${marketingUrl}/#website`,
+        name: '44OS',
+        alternateName: '44 OS',
+        url: `${marketingUrl}/`,
+        description,
+        publisher: { '@id': `${marketingUrl}/#organization` },
+        potentialAction: { '@type': 'ViewAction', target: appUrl, name: 'Open 44OS' },
+      },
+      {
+        '@type': 'Organization',
+        '@id': `${marketingUrl}/#organization`,
+        name: '44OS',
+        alternateName: 'forty four',
+        url: `${marketingUrl}/`,
+        logo: {
+          '@type': 'ImageObject',
+          url: `${marketingUrl}/icon-512.png`,
+          width: 512,
+          height: 512,
+        },
+        email: 'support@44os.com',
+      },
+    ],
   }).replace(/</g, '\\u003c');
   return (
     <main id="top" className={styles.page}>
@@ -74,7 +86,7 @@ export default function MarketingLandingPage() {
       <nav className={styles.navigation} aria-label="44OS">
         <div className={styles.navInner}>
           <a className={styles.brand} href="#top" aria-label="44OS by forty four, return to top">
-            <span>44OS</span><span aria-hidden="true">·</span><span>by forty four</span>
+            <span className={styles.brandMark}>44OS</span><span>by forty four</span>
           </a>
           <a className={styles.navButton} href={appUrl}>Open App</a>
         </div>
@@ -86,13 +98,12 @@ export default function MarketingLandingPage() {
         <section className={styles.hero} aria-labelledby="landing-title">
           <div className={styles.heroCopy}>
             <h1 id="landing-title">A platform for independent creative work.</h1>
-            <p>Music. Books. Merch. Assets. All in one place, owned by the people who made it.</p>
+            <p>Music. Books. Merch. Assets. Discover new work and connect with the creators that made it.</p>
             <a className={styles.primaryButton} href={appUrl}>Open App</a>
           </div>
           <div className={styles.heroVisual}>
             <ProductMockup
-              desktop="/marketing/discover.webp"
-              mobile="/marketing/discover-mobile.webp"
+              image="/marketing/mockups/hero-combined.webp"
               alt="44OS Discover showing new independent music releases."
               priority
             />
@@ -108,7 +119,7 @@ export default function MarketingLandingPage() {
                 {feature.body.split('\n\n').map(paragraph => <p key={paragraph}>{paragraph}</p>)}
               </div>
               <div className={styles.featureVisual}>
-                <ProductMockup desktop={feature.image} mobile={feature.mobileImage} alt={feature.alt} />
+                <ProductMockup image={feature.image} alt={feature.alt} />
               </div>
             </section>
           ))}
@@ -117,26 +128,28 @@ export default function MarketingLandingPage() {
         <section className={styles.radio} aria-labelledby="radio-title">
           <div className={styles.eyebrow}>LIVE NOW</div>
           <h2 id="radio-title">44 Radio is always on.</h2>
-          <a href={getAppPathUrl('/radio')}>Listen now <span aria-hidden="true">→</span></a>
+          <a href={getAppPathUrl('/radio')}>Listen now</a>
         </section>
       </div>
 
       <footer className={styles.footer}>
         <div className={styles.footerPrimary}>
-          <div className={styles.footerBrand}>44OS by forty four</div>
-          <nav aria-label="Footer">
+          <nav className={styles.footerLinks} aria-label="Community and support">
             <a href={getAppPathUrl('/community')}>Community</a>
             <span aria-hidden="true">·</span>
             <a href={getAppPathUrl('/support')}>Support</a>
             <span aria-hidden="true">·</span>
             <a href="mailto:support@44os.com">Contact</a>
           </nav>
+          <div className={styles.footerBrand}><span className={styles.brandMark}>44OS</span> by forty four</div>
+          <nav className={styles.legal} aria-label="Legal">
+            <a href={getAppPathUrl('/legal/terms')}>Terms</a>
+            <span aria-hidden="true">·</span>
+            <a href={getAppPathUrl('/legal/privacy')}>Privacy</a>
+            <span aria-hidden="true">·</span>
+            <a href={getAppPathUrl('/legal/copyright')}>Copyright</a>
+          </nav>
         </div>
-        <nav className={styles.legal} aria-label="Legal">
-          <a href={getAppPathUrl('/legal/terms')}>Terms</a>
-          <a href={getAppPathUrl('/legal/privacy')}>Privacy</a>
-          <a href={getAppPathUrl('/legal/copyright')}>Copyright</a>
-        </nav>
       </footer>
     </main>
   );
