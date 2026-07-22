@@ -12,7 +12,7 @@ import {
   type HomeFeaturedCandidate,
 } from '@/lib/domain/homeDiscovery';
 
-const FEATURED_SLOT_COUNT = 4;
+const FEATURED_SLOT_COUNT = 8;
 
 export default function AdminHomeApp() {
   return <AdminAccessBoundary><AdminHomeShelfEditor /></AdminAccessBoundary>;
@@ -73,7 +73,7 @@ function AdminHomeShelfEditor() {
       const nextState = await setAdminHomeFeaturedItems(selectedIds, reason);
       applyState(nextState);
       setDialogOpen(false);
-      setSuccess('Featured was updated on Discover.');
+      setSuccess('New Releases was updated on Discover.');
       await load();
     } catch (saveError) {
       throw saveError instanceof Error ? saveError : new Error('Could not update Featured.');
@@ -85,7 +85,7 @@ function AdminHomeShelfEditor() {
   return <PageShell><main className="admin-page admin-home-page">
     <HubHero
       title="Home"
-      copy="Choose and order the four Music releases shown in Featured on Discover."
+      copy="Choose and order the eight Music releases shown in New Releases on Discover."
       actions={<Link href="/" className="os-button os-button-ghost">View Discover</Link>}
     />
 
@@ -98,7 +98,7 @@ function AdminHomeShelfEditor() {
       {!state.mutation_ready ? <div className="dashboard-status ui44-status" role="status">Preview only: promote the Featured shelf migration before saving these slots.</div> : null}
       <section className="dashboard-section">
         <SectionHeader
-          title="Featured"
+          title="New Releases"
           description="Slot 1 appears at the left. Only published Music releases are available; empty slots are allowed."
         />
         <div className="admin-featured-slots ui44-panel">
@@ -130,13 +130,13 @@ function AdminHomeShelfEditor() {
             type="button"
             disabled={!dirty || saving || !state.mutation_ready}
             onClick={() => setDialogOpen(true)}
-          >Save Featured</button>
+          >Save New Releases</button>
         </div>
       </section>
 
       <section className="dashboard-section">
-        <SectionHeader title="History" description="The latest audited Featured shelf changes." />
-        {state.history.length === 0 ? <EmptyMessage>No Featured changes have been recorded yet.</EmptyMessage> : (
+        <SectionHeader title="History" description="The latest audited New Releases shelf changes." />
+        {state.history.length === 0 ? <EmptyMessage>No New Releases changes have been recorded yet.</EmptyMessage> : (
           <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-overflow-clip">
             {state.history.map(event => <div className="ui44-list-row ui44-list-row-event" key={event.id}>
               <span className="ui44-list-row-copy">
@@ -152,9 +152,9 @@ function AdminHomeShelfEditor() {
 
     <AdminActionDialog
       open={dialogOpen}
-      title="Save Featured shelf?"
-      description="This immediately changes the four ordered Featured cards on Discover."
-      confirmLabel="Save Featured"
+      title="Save New Releases shelf?"
+      description="This immediately changes the eight ordered New Releases cards on Discover."
+      confirmLabel="Save New Releases"
       saving={saving}
       onClose={() => setDialogOpen(false)}
       onConfirm={save}

@@ -463,11 +463,11 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     const musicProducts = products.filter(product => getProductExperience(product) === 'music' && !isBeatProduct(product));
     const musicProductsById = new Map(musicProducts.map(product => [product.id, product]));
     const featuredProducts = featuredItemIds === null
-      ? musicProducts.filter(product => product.featured).sort(comparePublicCatalogProducts).slice(0, 4)
+      ? musicProducts.filter(product => product.featured).sort(comparePublicCatalogProducts).slice(0, 8)
       : featuredItemIds.flatMap(itemId => {
         const product = musicProductsById.get(itemId);
         return product ? [product] : [];
-      }).slice(0, 4);
+      }).slice(0, 8);
     const featuredProductIds = new Set(featuredProducts.map(product => product.id));
     const recentlyAddedProducts = buildRecentlyAddedProducts(
       [...musicProducts].sort(compareRecentlyAddedProducts),

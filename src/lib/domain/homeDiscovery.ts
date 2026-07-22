@@ -103,7 +103,7 @@ async function getLegacyAdminHomeFeaturedState(): Promise<AdminHomeFeaturedState
     candidates: candidates.map(toFeaturedCandidate),
     entries: candidates
       .filter(product => product.featured)
-      .slice(0, 4)
+      .slice(0, 8)
       .map((product, index) => ({ ...toFeaturedCandidate(product), position: index + 1 })),
     history: [],
   };
