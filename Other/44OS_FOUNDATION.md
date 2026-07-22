@@ -2,24 +2,23 @@
 
 This document is the architectural and operational source of truth for 44OS. It describes how the live system works now. It is not a project diary.
 
-The complete handoff is intentionally limited to five files:
+The complete handoff is intentionally limited to four files:
 
 - `44OS_FOUNDATION.md` — product, architecture, data, security, providers, and operations.
 - `44OS_UI.md` — visual, interaction, responsive, and accessibility rules.
 - `44OS_MILESTONES.md` — only current work and its completion criteria.
-- `44OS_DESKTOP_APPLICATIONS.md` — the detailed cross-session tracker for the active Mac and Windows website-shell milestone.
 - `44OS_HANDBOOK.md` — the canonical private Team source for company, product, writing, logo, support, social, developer, outreach, and approval guidance.
 
-Read Foundation, then UI, then Milestones before making production-facing changes. Read the Desktop Applications tracker before desktop-shell work. When a decision changes, update every affected handoff file in the same change. Do not recreate other retired proposal, research, setup, or runbook documents.
+Read Foundation, then UI, then Milestones before making production-facing changes. Read the Handbook when work touches company identity, language, Team practices, Support, or developer presentation. When a decision changes, update every affected handoff file in the same change. Do not recreate other retired proposal, research, setup, or runbook documents.
 
 ## Current production baseline
 
-Recorded July 21, 2026:
+Recorded July 22, 2026:
 
 - `https://44os.com` is the permanent light editorial front door, `https://www.44os.com` permanently redirects to it, and `https://app.44os.com` is the canonical application origin. All three hosts use the same GitHub-backed Vercel project and release.
 - Legacy apex application paths permanently redirect to the identical path and query on `app.44os.com`. Apex `/api/*` remains a non-public compatibility surface for delayed provider delivery and rollback; it is never redirected. Both host health checks pass against Supabase.
 - The app is Next.js App Router with React 19 and strict TypeScript. Supabase owns authentication and application data; Vercel hosts the app.
-- Linked Supabase history contains the reviewed forward migration chain through the applied Team migration `20260721010000_team_workspace_and_brand_system.sql`. Never rewrite an applied migration; add a reviewed forward migration.
+- Linked Supabase history contains the reviewed forward migration chain through `20260722010000_admin_content_sorting.sql`, including the applied Team workspace foundation immediately before it. Never rewrite an applied migration; add a reviewed forward migration.
 - The private Team workspace is production truth. Admins inherit access, `@spiiriit` retains a Creator role with an additional Team grant, and `@ojdagod` retains a Member role with an additional Team grant. Both grants have immutable reasons and queued email plus in-app notices.
 - The latest recorded full database gate passed clean replay, linked lint, and 22 pgTAP files with 543 assertions. Lint, strict typecheck, production build, launch smoke, mobile safe-area checks, analytics contract, commerce contract, hardening contract, and `git diff --check` also passed for the recorded release.
 - Public Member signup and eligible purchase presentation are enabled. Creator promotion, paid-sale eligibility, fulfillment confirmation, and payout eligibility remain server-authoritative.
@@ -33,7 +32,7 @@ Recorded July 21, 2026:
 - Licensed Beats, creator Merch, international physical shipping, automated Printful confirmation, newsletters, and interactive runtime Items remain disabled or deferred.
 - Production releases flow through GitHub `main` into the linked Vercel project. Direct Vercel rebuilds may apply a reviewed environment revision to the same GitHub commit, but source changes must still be committed and pushed through GitHub.
 
-Open launch work belongs in `44OS_MILESTONES.md`; only the active desktop milestone may expand into `44OS_DESKTOP_APPLICATIONS.md`. Do not repeat an accepted production journey unless relevant code, configuration, provider state, or evidence changed.
+Open work, including the detailed desktop-application implementation tracker, belongs in `44OS_MILESTONES.md`. Do not repeat an accepted production journey unless relevant code, configuration, provider state, or evidence changed.
 
 ## Product model
 
@@ -348,8 +347,8 @@ Generated caches and local QA renders do not belong in Git. Migrations, template
 
 ## Maintenance rules
 
-- Keep exactly the three handoff documents named at the top of this file in `Other/`.
-- Foundation and UI state current behavior; Milestones states only current work.
+- Keep exactly the four handoff documents named at the top of this file in `Other/`.
+- Foundation and UI state current behavior; Milestones states only current work; Handbook states current Team guidance.
 - Do not restore retired setup guides, research dumps, proposal documents, execution diaries, or completed milestone ledgers.
 - Record durable architectural or provider decisions here, not step-by-step dashboard history.
 - Record visual and interaction decisions in UI.

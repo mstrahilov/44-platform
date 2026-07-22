@@ -321,7 +321,7 @@ Settings Appearance contains Theme and Accent on one two-column row. Theme is a 
 Admin navigation is visible only to administrators, but server authorization remains authoritative for direct route access.
 
 - `/admin` is a single-column hub linking People, Content, Errors, Payments, Email, and Fulfillment.
-- Lists use URL-backed search/filter/pagination with desktop columns and mobile stacked cards.
+- Lists use URL-backed search/filter/sort/pagination with desktop columns and mobile stacked cards. Admin Content can order the complete paginated result by newest creation time or newest Release Date; missing Release Dates fall behind dated Items.
 - People exposes safe identity/account/role facts only; passwords, tokens, raw Auth metadata, phone numbers, and provider credentials never render.
 - Content keeps publication and review status separate and preserves immutable lifecycle/review history.
 - Every mutation requires confirmation, a reason, pending state, success feedback, and authoritative refetch. Archival also requires exact-title confirmation.

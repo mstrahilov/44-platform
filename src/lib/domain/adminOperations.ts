@@ -147,6 +147,7 @@ export type AdminContentRow = {
   publication_status: 'draft' | 'published' | 'archived';
   review_status: 'none' | 'pending' | 'approved' | 'rejected' | 'withdrawn';
   pending_submission_id: string | null;
+  release_date: string | null;
   created_at: string;
   updated_at: string;
   total_count: number;
@@ -337,15 +338,16 @@ export async function setAdminCreatorPaidSales(
   return result.data as unknown as CreatorPaidSalesState;
 }
 
-export async function listAdminContent(input: { query?: string | null; status?: string | null; type?: string | null; page?: number } = {}) {
+export async function listAdminContent(input: { query?: string | null; status?: string | null; type?: string | null; sort?: 'created' | 'release_date'; page?: number } = {}) {
   const page = Math.max(1, input.page ?? 1);
-  const result = await supabase.rpc('list_admin_content', {
+  const result = await supabase.rpc('list_admin_content_sorted', {
     target_query: input.query || undefined,
     target_status: input.status && input.status !== 'all' ? input.status : undefined,
     target_type: input.type && input.type !== 'all' ? input.type : undefined,
+    target_sort: input.sort ?? 'created',
     target_limit: ADMIN_PAGE_SIZE,
     target_offset: (page - 1) * ADMIN_PAGE_SIZE,
-  });
+  } as never);
   if (result.error) throw result.error;
   const rows = (result.data ?? []) as AdminContentRow[];
   return { rows, total: Number(rows[0]?.total_count ?? 0), page };

@@ -10021,6 +10021,35 @@ export type Database = {
           updated_at: string
         }[]
       }
+      list_admin_content_sorted: {
+        Args: {
+          target_limit?: number
+          target_offset?: number
+          target_query?: string
+          target_sort?: string
+          target_status?: string
+          target_type?: string
+        }
+        Returns: {
+          assigned_type: string
+          cover_url: string
+          created_at: string
+          creator_id: string
+          creator_name: string
+          creator_username: string
+          experience_type: string
+          item_id: string
+          item_type: string
+          pending_submission_id: string
+          publication_status: string
+          release_date: string
+          review_status: string
+          slug: string
+          title: string
+          total_count: number
+          updated_at: string
+        }[]
+      }
       list_admin_error_events: {
         Args: {
           target_limit?: number
