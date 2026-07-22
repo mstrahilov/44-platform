@@ -1,4 +1,4 @@
-# Brand Guide
+# Handbook
 
 Updated July 21, 2026
 
@@ -134,6 +134,16 @@ The private Brand Kit brings the working files together in one place. It include
 - A manifest and checksum for the current version.
 
 Use the Download Brand Kit button at the top of this page to get the current files.
+
+## Support
+
+Support is useful context for everyone, even when it is not part of your everyday role.
+
+People can find answers to common account, Library, order, payment, publishing, Community, privacy, and copyright questions at `https://app.44os.com/support`. If they still need help, they can email `support@44os.com` or reply to a transactional email from 44OS. Those replies reach the monitored Support mailbox.
+
+If someone asks you for help directly, you do not need to solve the issue alone. Point them to Support and, when useful, share a short summary or the relevant 44OS link. Account security, payments, orders, rights, privacy, and safety questions may require private records, so the Support channel gives the person and the team one safe place to follow up.
+
+Support will never need someone's password or sign-in code. Keeping sensitive account and payment details out of ordinary messages helps us protect the people using 44OS.
 
 ## For Developers
 

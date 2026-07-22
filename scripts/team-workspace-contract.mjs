@@ -16,7 +16,7 @@ const [migration, guideRoute, kitRoute, teamServer, boundary, brandClient, teamL
   read('src/app/robots.ts'),
   read('src/app/sitemap.ts'),
   read('next.config.ts'),
-  read('Other/44OS_BRANDING.md'),
+  read('Other/44OS_HANDBOOK.md'),
   read('package.json'),
 ]);
 
@@ -40,14 +40,15 @@ assert.match(guideRoute, /Cache-Control': 'private, no-store/, 'guide responses 
 assert.match(kitRoute, /createSignedUrl\(kit\.storage_path, 60/, 'Brand Kit links are short-lived');
 assert.match(kitRoute, /from\('team-brand'\)/, 'Brand Kit downloads come from private Team storage');
 assert.match(kitRoute, /forty-four-brand-kit-1\.0\.zip/, 'local and production review use the approved version 1.0 archive name');
-assert.doesNotMatch(brandClient, /44OS_BRANDING|Who Is forty four|Logo System/, 'private guide copy is not embedded in the client bundle');
+assert.doesNotMatch(brandClient, /44OS_HANDBOOK|Who Is forty four|Logo System/, 'private Handbook copy is not embedded in the client bundle');
 assert.match(boundary, /fetchMyTeamAccess/, 'Team pages fail closed behind the authenticated boundary');
 assert.match(teamLayout, /index: false, follow: false, nocache: true/, 'Team metadata is noindex and nofollow');
 assert.match(robots, /'\/team'/, 'robots excludes Team');
 assert.doesNotMatch(sitemap, /['"`]\/team/, 'Team routes are absent from the sitemap');
-assert.match(config, /outputFileTracingIncludes[\s\S]*44OS_BRANDING\.md/, 'the private canonical guide is packaged only for its API route');
-assert.match(guide, /^# Brand Guide/m, 'canonical Brand Guide uses its approved page title');
-assert.match(guide, /## Working With People[\s\S]*## Brand Kit[\s\S]*## For Developers/, 'Brand Kit appears before the developer reference');
+assert.match(config, /outputFileTracingIncludes[\s\S]*44OS_HANDBOOK\.md/, 'the private canonical Handbook is packaged only for its API route');
+assert.match(guide, /^# Handbook/m, 'canonical Handbook uses its approved page title');
+assert.match(guide, /## Working With People[\s\S]*## Brand Kit[\s\S]*## Support[\s\S]*## For Developers/, 'Support appears immediately before the developer reference');
+assert.match(guide, /app\.44os\.com\/support[\s\S]*support@44os\.com/, 'Handbook includes both monitored Support paths');
 assert.doesNotMatch(guide, /Editable social templates|Editable templates in the Brand Kit/, 'Brand Kit does not prescribe social templates');
 assert.match(guide, /white mark is available for dark backgrounds[\s\S]*black mark is available for light backgrounds/i, 'guide contains the approved two-color logo system');
 assert.doesNotMatch(guide, /green (?:44|forty four) mark|(?:44|forty four) logo (?:is|uses?) green|logo green/i, 'retired acid-green logo language is absent');

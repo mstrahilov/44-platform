@@ -257,7 +257,7 @@ export async function loadAchievementNotifications(userId: string, limit = 24): 
       notifications.push({
         id: event.id,
         title: 'Team access is ready',
-        description: 'Open the private Team workspace and current Brand Guide.',
+        description: 'Open the private Team workspace and current Handbook.',
         createdAt: event.created_at,
         productId: null,
         href: '/team',

@@ -4,7 +4,7 @@ This document is the visual, interaction, responsive, and accessibility source o
 
 Architecture and provider rules live in `44OS_FOUNDATION.md`. Current work lives in `44OS_MILESTONES.md`. Do not create additional UI audit, proposal, or handoff documents.
 
-Company/product voice, identity, logo, social, and outreach rules live in the private canonical `44OS_BRANDING.md` source.
+Company/product voice, identity, logo, support, social, developer, and outreach guidance lives in the private canonical `44OS_HANDBOOK.md` source.
 
 ## Experience standard
 
@@ -63,16 +63,16 @@ Marketing copy uses plain direct sentences. Do not use em dashes as a stylistic 
 
 ## Private Team workspace
 
-The private Team workspace is deployed for Admins and explicitly granted Members or Creators. The Brand Guide and version 1.0 Brand Kit are approved Team references.
+The private Team workspace is deployed for Admins and explicitly granted Members or Creators. The Handbook and version 1.0 Brand Kit are approved Team references.
 
 - `/team` uses the standard dark application shell and three summary cards for Brand, Creators, and Releases. Child pages rely on the canonical top-bar back action rather than repeating a Team tab bar.
 - Team appears in the signed-in account menu only after the authenticated no-store access check succeeds.
 - Loading uses the existing animated loading shell. Unauthorized and failed states are explicit and reveal no guide or Brand Kit content.
 - Creator and release directories are searchable, filterable, responsive, and visibly read-only. They use public avatars/artwork and published facts only. The Creator directory does not expose or filter by the retired Creator Type field.
 - Team page headers follow the canonical app rhythm: title, description, then divider. Release-directory artwork uses a fixed 1:1 square at every breakpoint regardless of the source Item category.
-- `/team/brand` is the deliberate cream-document exception inside the dark app shell. Paper is `#F5F5F0`; Ink is `#1A1A1A`. It is one full-width, normally scrollable editorial document without an internal contents rail. Its opening uses the simple `Brand Guide` title followed by the updated date and divider. The logo and developer sections use visual reference cards for approved marks, accents, materials, geometry, elevation, and representative application typography.
-- Inter is self-hosted and scoped to the Brand Guide and private marketing assets. The application and public marketing page retain their existing system stacks.
-- The Brand Guide action requests a 60-second private signed download of the checksum-verified version 1.0 archive in production. Local Team review can download the same repository-built version without adding a service-role credential to the developer environment.
+- `/team/brand` is the deliberate cream-document exception inside the dark app shell. Paper is `#F5F5F0`; Ink is `#1A1A1A`. It is one full-width, normally scrollable editorial document without an internal contents rail. Its opening uses the simple `Handbook` title followed by the updated date and divider. The logo and developer sections use visual reference cards for approved marks, accents, materials, geometry, elevation, and representative application typography.
+- Inter is self-hosted and scoped to the Handbook and private marketing assets. The application and public marketing page retain their existing system stacks.
+- The Handbook action requests a 60-second private signed download of the checksum-verified version 1.0 archive in production. Local Team review can download the same repository-built version without adding a service-role credential to the developer environment.
 - Team routes set noindex, nofollow, noarchive and are excluded from robots and sitemap discovery.
 
 **forty four** and **44OS** use one two-color logo system: white mark on black/dark and black mark on white/Paper/light. Social profiles use white on black. Acid green is retired from the logo and application-icon identity. Ocean remains an interface accent, never a substitute logo color. The 44OS PWA/Home Screen icons, favicon, and social share artwork use white on black.

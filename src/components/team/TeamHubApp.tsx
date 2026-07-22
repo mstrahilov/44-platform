@@ -5,7 +5,7 @@ import { HubHero, PageShell } from '@/components/Ui';
 import { TeamAccessBoundary } from '@/components/team/TeamPrimitives';
 
 const sections = [
-  { href: '/team/brand', eyebrow: 'Identity', title: 'Brand Guide', copy: 'Current names, voice, logo rules, colors, typography, social standards, and approval boundaries.' },
+  { href: '/team/brand', eyebrow: 'Team reference', title: 'Handbook', copy: 'How forty four and 44OS work, including identity, support, Team guidance, and the developer system.' },
   { href: '/team/creators', eyebrow: 'Directory', title: 'Creators', copy: 'Published public Creator information in one read-only workspace.' },
   { href: '/team/releases', eyebrow: 'Catalog', title: 'Releases', copy: 'Published release artwork and facts for routine editorial and social planning.' },
 ];

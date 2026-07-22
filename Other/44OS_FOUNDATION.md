@@ -8,7 +8,7 @@ The complete handoff is intentionally limited to five files:
 - `44OS_UI.md` — visual, interaction, responsive, and accessibility rules.
 - `44OS_MILESTONES.md` — only current work and its completion criteria.
 - `44OS_DESKTOP_APPLICATIONS.md` — the detailed cross-session tracker for the active Mac and Windows website-shell milestone.
-- `44OS_BRANDING.md` — the canonical private source for company, product, writing, logo, color, typography, social, outreach, and approval guidance.
+- `44OS_HANDBOOK.md` — the canonical private Team source for company, product, writing, logo, support, social, developer, outreach, and approval guidance.
 
 Read Foundation, then UI, then Milestones before making production-facing changes. Read the Desktop Applications tracker before desktop-shell work. When a decision changes, update every affected handoff file in the same change. Do not recreate other retired proposal, research, setup, or runbook documents.
 
@@ -176,7 +176,7 @@ RLS and reviewed RPCs remain the browser boundary. Service-role credentials, pro
 
 The private Team workspace is deployed at `/team`, `/team/brand`, `/team/creators`, and `/team/releases`. The feature flag is server-only, and production authorization fails closed at the database and authenticated API boundaries. Admins inherit access; Members and Creators require an explicit audited grant.
 
-`Other/44OS_BRANDING.md` is the canonical guide. The file is packaged for one authenticated no-store API route and is not embedded in the public client bundle. The client renders a restricted Markdown subset without raw HTML or scripts. `/team` is noindex, nofollow, noarchive, disallowed by robots, and absent from the sitemap.
+`Other/44OS_HANDBOOK.md` is the canonical Handbook. The file is packaged for one authenticated no-store API route and is not embedded in the public client bundle. The client renders a restricted Markdown subset without raw HTML or scripts. `/team` is noindex, nofollow, noarchive, disallowed by robots, and absent from the sitemap.
 
 An Admin grant requires a 3–500 character reason, preserves the target Member or Creator role, creates immutable history, and queues one idempotent in-app notification and transactional email. Revocation is immediate and does not send a revocation email. Delivery failure never rolls back authorization.
 

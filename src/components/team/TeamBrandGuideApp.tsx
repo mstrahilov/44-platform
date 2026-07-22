@@ -131,13 +131,13 @@ function BrandGuide() {
   useEffect(() => {
     let alive = true;
     void teamBearerToken().then(async token => {
-      if (!token) throw new Error('Sign in again to open the Brand Guide.');
+      if (!token) throw new Error('Sign in again to open the Handbook.');
       const response = await fetch('/api/team/brand-guide', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
       const body = await response.json() as { markdown?: string; error?: string };
-      if (!response.ok || !body.markdown) throw new Error(body.error || 'The Brand Guide could not be loaded.');
+      if (!response.ok || !body.markdown) throw new Error(body.error || 'The Handbook could not be loaded.');
       if (alive) { setMarkdown(body.markdown); setLoading(false); }
     }).catch(loadError => {
-      if (alive) { setError(loadError instanceof Error ? loadError.message : 'The Brand Guide could not be loaded.'); setLoading(false); }
+      if (alive) { setError(loadError instanceof Error ? loadError.message : 'The Handbook could not be loaded.'); setLoading(false); }
     });
     return () => { alive = false; };
   }, []);
@@ -171,7 +171,7 @@ function BrandGuide() {
     } finally { setDownloading(false); }
   }
 
-  if (loading) return <div className="team-brand-loading"><div className="ui44-loading-shell" role="status" aria-label="Loading Brand Guide" /></div>;
+  if (loading) return <div className="team-brand-loading"><div className="ui44-loading-shell" role="status" aria-label="Loading Handbook" /></div>;
   if (error) return <div className="team-brand-error" role="alert">{error}</div>;
 
   return <PageShell><main className="team-brand-surface">

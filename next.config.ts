@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
     root: process.cwd(),
   },
   outputFileTracingIncludes: {
-    '/api/team/brand-guide': ['./Other/44OS_BRANDING.md'],
+    '/api/team/brand-guide': ['./Other/44OS_HANDBOOK.md'],
   },
   async redirects() {
     return [
