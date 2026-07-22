@@ -5,13 +5,13 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
 const root = process.cwd();
-const provisional = process.argv.includes('--provisional-local');
-assert.ok(provisional, 'Brand Kit packaging requires --provisional-local until the owner approves final masters.');
+const approved = process.argv.includes('--approved-production');
+assert.ok(approved, 'Brand Kit packaging requires --approved-production after the Team approves the source masters.');
 
-const version = '0.1-provisional';
+const version = '1.0';
 const outputDir = path.join(root, 'artifacts', 'team-brand-kit');
-const stage = path.join(outputDir, `44-brand-kit-${version}`);
-const archive = path.join(outputDir, `44-brand-kit-${version}.zip`);
+const stage = path.join(outputDir, `forty-four-brand-kit-${version}`);
+const archive = path.join(outputDir, `forty-four-brand-kit-${version}.zip`);
 assert.ok(stage.startsWith(path.join(root, 'artifacts', 'team-brand-kit')), 'Refusing an unsafe staging path.');
 
 await mkdir(outputDir, { recursive: true });
@@ -22,9 +22,12 @@ await mkdir(path.join(stage, '44os-icons'), { recursive: true });
 await mkdir(path.join(stage, 'fonts', 'inter'), { recursive: true });
 
 await cp(path.join(root, 'Other', 'brand-kit'), stage, { recursive: true });
+await rm(path.join(stage, 'templates'), { recursive: true, force: true });
 const blackLogo = await readFile(path.join(root, 'public', 'icons', 'logo', '44-BLACK.svg'), 'utf8');
 await writeFile(path.join(stage, 'logos', '44-black.svg'), blackLogo.replace(/22px/g, '220px'));
 await writeFile(path.join(stage, 'logos', '44-white.svg'), blackLogo.replace(/22px/g, '220px').replaceAll('#000000', '#FFFFFF'));
+await cp(path.join(root, 'public', 'brand', 'forty-four-mark-black.png'), path.join(stage, 'logos', 'forty-four-mark-black.png'));
+await cp(path.join(root, 'public', 'brand', 'forty-four-mark-white.png'), path.join(stage, 'logos', 'forty-four-mark-white.png'));
 await cp(path.join(root, 'public', 'icon-192.png'), path.join(stage, '44os-icons', '44os-icon-192.png'));
 await cp(path.join(root, 'public', 'icon-512.png'), path.join(stage, '44os-icons', '44os-icon-512.png'));
 await cp(path.join(root, 'public', 'maskable-icon-512.png'), path.join(stage, '44os-icons', '44os-maskable-512.png'));
@@ -52,7 +55,7 @@ for (const relative of files) {
   const details = await stat(full);
   manifest.push({ path: relative.split(path.sep).join('/'), bytes: details.size, sha256: createHash('sha256').update(bytes).digest('hex') });
 }
-await writeFile(path.join(stage, 'manifest-sha256.json'), `${JSON.stringify({ version, provisional: true, files: manifest }, null, 2)}\n`);
+await writeFile(path.join(stage, 'manifest-sha256.json'), `${JSON.stringify({ version, approved: true, files: manifest }, null, 2)}\n`);
 
 const zipped = spawnSync('zip', ['-qr', archive, path.basename(stage)], { cwd: outputDir, encoding: 'utf8' });
 if (zipped.status !== 0) throw new Error(zipped.stderr || 'zip failed');

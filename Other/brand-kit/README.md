@@ -1,25 +1,21 @@
-# 44 Brand Kit
+# forty four Brand Kit
 
 This source folder supports the private, versioned Team Brand Kit. It is not a public download directory.
 
-The current kit is provisional. The 44 marks and 44OS icons can be used for local review, but they must not be described as final masters until the owner approves the source artwork.
+Version 1.0 is the approved Team Brand Kit. It collects the current **forty four** marks, 44OS icons, typography, and reference files in one place.
 
 ## Names
 
-- Parent company: `44`
-- Operator reference: `forty four`
+- Parent company: `forty four`
 - Product: `44OS`
 
 ## Included source material
 
 - Editorial palette and typography tokens in CSS and JSON.
-- Editable SVG templates for 4:5 feed, square feed, and 9:16 Story or Reel work.
-- Logo-use and prohibited-use notes.
+- A short logo reference.
 
-The packaging script adds the current black and white 44 SVGs, 44OS raster icons, self-hosted Inter variable font files, the Inter SIL Open Font License, and a SHA-256 manifest.
+The packaging script adds the current black and white **forty four** marks, 44OS raster icons, self-hosted Inter variable font files, the Inter SIL Open Font License, and a SHA-256 manifest.
 
-Build a local review archive with:
+Build the approved versioned archive with:
 
-`node scripts/build-team-brand-kit.mjs --provisional-local`
-
-Do not upload or mark an archive current until the owner has approved the logo masters and kit contents.
+`node scripts/build-team-brand-kit.mjs --approved-production`

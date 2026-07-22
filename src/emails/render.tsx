@@ -50,12 +50,12 @@ async function creatorAccessGranted(payload: EmailTemplatePayloads['creator_acce
 }
 
 async function teamAccessGranted(payload: EmailTemplatePayloads['team_access_granted']): Promise<RenderedEmail> {
-  const preview = 'Your private 44 Team workspace is ready.';
+  const preview = 'Your private forty four Team workspace is ready.';
   return {
-    subject: 'You now have access to the 44 Team workspace',
+    subject: 'You now have access to the forty four Team workspace',
     preview,
-    html: await document(<EmailFrame preview={preview}><Heading>Welcome to the Team workspace, {payload.displayName}.</Heading><Paragraph subtle>You can now open the current 44 Brand Guide, download approved brand assets, and browse the published Creator and release directories. Your existing 44OS account role has not changed.</Paragraph><Button href={payload.teamUrl}>Open Team</Button><Paragraph subtle>Keep Team materials private. If this access looks unexpected, reply to this email so Support can help.</Paragraph></EmailFrame>),
-    text: `Welcome to the Team workspace, ${payload.displayName}.\n\nYou can now open the current 44 Brand Guide, download approved brand assets, and browse the published Creator and release directories. Your existing 44OS account role has not changed.\n\nOpen Team: ${payload.teamUrl}\n\nKeep Team materials private. If this access looks unexpected, reply to this email so Support can help.`,
+    html: await document(<EmailFrame preview={preview}><Heading>Welcome to the Team workspace, {payload.displayName}.</Heading><Paragraph subtle>You can now open the current forty four Brand Guide, download approved brand assets, and browse the published Creator and release directories. Your existing 44OS account role has not changed.</Paragraph><Button href={payload.teamUrl}>Open Team</Button><Paragraph subtle>Keep Team materials private. If this access looks unexpected, reply to this email so Support can help.</Paragraph></EmailFrame>),
+    text: `Welcome to the Team workspace, ${payload.displayName}.\n\nYou can now open the current forty four Brand Guide, download approved brand assets, and browse the published Creator and release directories. Your existing 44OS account role has not changed.\n\nOpen Team: ${payload.teamUrl}\n\nKeep Team materials private. If this access looks unexpected, reply to this email so Support can help.`,
   };
 }
 

@@ -215,6 +215,7 @@ function resolveProductActionEntries({
 
 export function HubHero({
   title,
+  copy,
   actions,
   className = '',
 }: {
@@ -227,6 +228,7 @@ export function HubHero({
     <header className={`app-header ui44-page-header ${className}`.trim()}>
       <div className="app-header-copy ui44-page-header-copy">
         <Ui44Text as="h1" variant="page-title">{title}</Ui44Text>
+        {copy ? <p>{copy}</p> : null}
       </div>
       {actions}
     </header>

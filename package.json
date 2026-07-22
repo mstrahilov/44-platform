@@ -20,6 +20,8 @@
     "test:mobile-safe-area": "node scripts/mobile-safe-area-contract.mjs",
     "test:domain-contract": "node scripts/domain-migration-contract.mjs",
     "test:team-contract": "node scripts/team-workspace-contract.mjs",
+    "team:build-brand-kit": "node scripts/build-team-brand-kit.mjs --approved-production",
+    "team:publish-brand-kit": "node scripts/publish-team-brand-kit.mjs --confirm-production-write",
     "test:experience-polish": "node scripts/experience-polish-contract.mjs",
     "test:radio-rotation": "tsx scripts/radio-rotation-contract.ts",
     "test:username-casing": "node scripts/username-casing-contract.mjs && supabase test db --local supabase/tests/m1_case_preserving_usernames_security.sql",

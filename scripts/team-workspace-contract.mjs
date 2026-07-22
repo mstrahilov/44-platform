@@ -39,15 +39,18 @@ assert.match(guideRoute, /requireTeamRequest\(request\)/, 'guide API authorizes 
 assert.match(guideRoute, /Cache-Control': 'private, no-store/, 'guide responses cannot be cached');
 assert.match(kitRoute, /createSignedUrl\(kit\.storage_path, 60/, 'Brand Kit links are short-lived');
 assert.match(kitRoute, /from\('team-brand'\)/, 'Brand Kit downloads come from private Team storage');
-assert.doesNotMatch(brandClient, /44OS_BRANDING|What 44 Is|Logo System/, 'private guide copy is not embedded in the client bundle');
+assert.match(kitRoute, /forty-four-brand-kit-1\.0\.zip/, 'local and production review use the approved version 1.0 archive name');
+assert.doesNotMatch(brandClient, /44OS_BRANDING|Who Is forty four|Logo System/, 'private guide copy is not embedded in the client bundle');
 assert.match(boundary, /fetchMyTeamAccess/, 'Team pages fail closed behind the authenticated boundary');
 assert.match(teamLayout, /index: false, follow: false, nocache: true/, 'Team metadata is noindex and nofollow');
 assert.match(robots, /'\/team'/, 'robots excludes Team');
 assert.doesNotMatch(sitemap, /['"`]\/team/, 'Team routes are absent from the sitemap');
 assert.match(config, /outputFileTracingIncludes[\s\S]*44OS_BRANDING\.md/, 'the private canonical guide is packaged only for its API route');
-assert.match(guide, /^# 44 Brand Guide/m, 'canonical Brand Guide exists');
-assert.match(guide, /white 44 mark on black[\s\S]*black 44 mark on white/i, 'guide contains the approved two-color logo system');
-assert.doesNotMatch(guide, /#7CFF4F|green 44 mark|logo green/i, 'retired acid-green logo language is absent');
+assert.match(guide, /^# Brand Guide/m, 'canonical Brand Guide uses its approved page title');
+assert.match(guide, /## Working With People[\s\S]*## Brand Kit[\s\S]*## For Developers/, 'Brand Kit appears before the developer reference');
+assert.doesNotMatch(guide, /Editable social templates|Editable templates in the Brand Kit/, 'Brand Kit does not prescribe social templates');
+assert.match(guide, /white mark is available for dark backgrounds[\s\S]*black mark is available for light backgrounds/i, 'guide contains the approved two-color logo system');
+assert.doesNotMatch(guide, /green (?:44|forty four) mark|(?:44|forty four) logo (?:is|uses?) green|logo green/i, 'retired acid-green logo language is absent');
 assert.match(packageJson, /@fontsource-variable\/inter/, 'Inter is self-hosted through a reviewed local dependency');
 
 console.log('Team workspace contract passed.');

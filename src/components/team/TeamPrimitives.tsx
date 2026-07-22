@@ -32,12 +32,3 @@ export function TeamAccessBoundary({ children }: { children: ReactNode }) {
   if (!state.access?.authorized) return <PageShell><EmptyMessage>{state.error || 'Team access is required.'}</EmptyMessage></PageShell>;
   return children;
 }
-
-export function TeamSectionNav() {
-  return <nav className="team-section-nav" aria-label="Team workspace">
-    <Link href="/team">Overview</Link>
-    <Link href="/team/brand">Brand</Link>
-    <Link href="/team/creators">Creators</Link>
-    <Link href="/team/releases">Releases</Link>
-  </nav>;
-}

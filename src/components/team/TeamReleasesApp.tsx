@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useEffect, useState, type FormEvent } from 'react';
 import { EmptyMessage, HubHero, PageShell } from '@/components/Ui';
 import { Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
-import { TeamAccessBoundary, TeamSectionNav } from '@/components/team/TeamPrimitives';
+import { TeamAccessBoundary } from '@/components/team/TeamPrimitives';
 import { listTeamReleases, type TeamRelease } from '@/lib/domain/team';
 
 function dateLabel(value: string | null) {
@@ -36,7 +36,7 @@ function ReleaseDirectory() {
   function submit(event: FormEvent) { event.preventDefault(); setSubmittedQuery(query.trim()); }
 
   return <PageShell><main className="team-page">
-    <TeamSectionNav /><HubHero title="Releases" copy="Published catalog facts and artwork for editorial planning. This directory is read-only." />
+    <HubHero title="Releases" copy="Published catalog facts and artwork for editorial planning. This directory is read-only." />
     <form className="team-filter-bar ui44-panel" onSubmit={submit}>
       <label><span>Search</span><Ui44TextInput value={query} onChange={event => setQuery(event.target.value)} placeholder="Release or Creator" /></label>
       <label><span>Category</span><Ui44SelectInput value={category} onChange={event => setCategory(event.target.value)}><option value="">All categories</option><option value="music">Music</option><option value="book">Books</option><option value="asset">Sample packs</option><option value="merch">Merch</option><option value="game">Games</option></Ui44SelectInput></label>
@@ -46,7 +46,9 @@ function ReleaseDirectory() {
     {error ? <div className="ui44-status ui44-status-error" role="alert">{error}</div> : null}
     {loading ? <div className="ui44-loading-shell" role="status" aria-label="Loading releases" /> : rows.length === 0 ? <EmptyMessage>No published releases match this view.</EmptyMessage> : <div className="team-release-grid">
       {rows.map(release => <Link key={release.item_id} href={release.item_url} className="team-release-card">
-        {release.artwork_url ? <Image src={release.artwork_url} alt="" width={420} height={420} unoptimized /> : <span className="team-release-art-empty" aria-hidden="true">44</span>}
+        <span className="team-release-art">
+          {release.artwork_url ? <Image src={release.artwork_url} alt="" fill sizes="(max-width: 700px) 46vw, (max-width: 980px) 30vw, 280px" unoptimized /> : <span className="team-release-art-empty" aria-hidden="true">44</span>}
+        </span>
         <h2>{release.title}</h2><p>{release.creator_name}</p><small>{release.item_type} · {dateLabel(release.release_date)}</small>
       </Link>)}
     </div>}

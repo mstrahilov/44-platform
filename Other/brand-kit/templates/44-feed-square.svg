@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
-  <title>44 editable square social template</title>
-  <rect width="1080" height="1080" fill="#F5F5F0"/>
-  <rect x="80" y="80" width="920" height="640" rx="24" fill="#E7E7E1"/>
-  <text x="80" y="850" fill="#1A1A1A" font-family="Inter" font-size="96" font-weight="700" letter-spacing="-2">Release title</text>
-  <text x="80" y="930" fill="#1A1A1A" font-family="Inter" font-size="38">Creator display name</text>
-  <text x="80" y="1000" fill="#1A1A1A" font-family="Inter" font-size="28" font-weight="500">Now on 44OS</text>
-  <rect x="80" y="80" width="920" height="640" fill="none" stroke="#60A5FA" stroke-width="2" stroke-dasharray="12 12"/>
-</svg>

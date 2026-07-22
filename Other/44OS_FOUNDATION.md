@@ -14,13 +14,13 @@ Read Foundation, then UI, then Milestones before making production-facing change
 
 ## Current production baseline
 
-Recorded July 20, 2026:
+Recorded July 21, 2026:
 
 - `https://44os.com` is the permanent light editorial front door, `https://www.44os.com` permanently redirects to it, and `https://app.44os.com` is the canonical application origin. All three hosts use the same GitHub-backed Vercel project and release.
 - Legacy apex application paths permanently redirect to the identical path and query on `app.44os.com`. Apex `/api/*` remains a non-public compatibility surface for delayed provider delivery and rollback; it is never redirected. Both host health checks pass against Supabase.
 - The app is Next.js App Router with React 19 and strict TypeScript. Supabase owns authentication and application data; Vercel hosts the app.
-- Linked Supabase history contains the reviewed forward migration chain through `20260720060000_application_origin_email_links.sql`. Never rewrite an applied migration; add a reviewed forward migration.
-- The worktree contains the backward-compatible Team candidate `20260721010000_team_workspace_and_brand_system.sql`. It has passed local replay and security tests but is not production truth until the owner approves the guide/assets and the migration is deliberately applied.
+- Linked Supabase history contains the reviewed forward migration chain through the applied Team migration `20260721010000_team_workspace_and_brand_system.sql`. Never rewrite an applied migration; add a reviewed forward migration.
+- The private Team workspace is production truth. Admins inherit access, `@spiiriit` retains a Creator role with an additional Team grant, and `@ojdagod` retains a Member role with an additional Team grant. Both grants have immutable reasons and queued email plus in-app notices.
 - The latest recorded full database gate passed clean replay, linked lint, and 22 pgTAP files with 543 assertions. Lint, strict typecheck, production build, launch smoke, mobile safe-area checks, analytics contract, commerce contract, hardening contract, and `git diff --check` also passed for the recorded release.
 - Public Member signup and eligible purchase presentation are enabled. Creator promotion, paid-sale eligibility, fulfillment confirmation, and payout eligibility remain server-authoritative.
 - Two controlled low-value digital orders completed the live payment/refund path. The latest Admin reconciliation checked both orders with zero mismatches. Refunded access was revoked without deleting order or Library history.
@@ -37,7 +37,7 @@ Open launch work belongs in `44OS_MILESTONES.md`; only the active desktop milest
 
 ## Product model
 
-44 is the parent creative company. `forty four` is the recorded operator name; `44OS` is the platform brand. Final public legal copy still requires the exact registered entity spelling/type and public business address.
+`forty four` is the parent creative company. `44OS` is its first software product. Final public legal copy still requires the exact registered entity spelling/type and public business address.
 
 44OS is a web-first creative operating system for fans, creators, collaborators, and clients. It should feel like a durable creative library and operating environment rather than an ad-driven social network.
 
@@ -167,8 +167,8 @@ Core data roles:
 - `home_shelf_entries` owns exact ordered editorial slots; its public RPC returns only eligible published Items. Admin Home replacement is atomic and appends immutable before/after snapshots to `admin_home_shelf_events`.
 - Admin role, Home shelf, Item lifecycle, offer lifecycle, email, payout, and provider operations append immutable audit records.
 - The staged `team_access_grants` table owns current Team permission and `team_access_events` owns immutable grant/revoke history. Admins inherit Team access. Grants never promote a Creator, change seller setup, or affect payouts.
-- The staged Team Creator and release RPCs return published public facts only. Account email, country, Auth metadata, drafts, archives, private files, sales, payouts, moderation, Support, and Admin activity remain outside this boundary.
-- The staged `team-brand` bucket is private. Service-role/Admin operations register versioned ZIP metadata and Team downloads receive only a short-lived signed URL after bearer authentication and server-authoritative access verification.
+- The production Team Creator and release RPCs return published public facts only. Account email, country, Auth metadata, drafts, archives, private files, sales, payouts, moderation, Support, and Admin activity remain outside this boundary.
+- The production `team-brand` bucket is private. Service-role/Admin operations register versioned ZIP metadata and Team downloads receive only a short-lived signed URL after bearer authentication and server-authoritative access verification.
 
 RLS and reviewed RPCs remain the browser boundary. Service-role credentials, provider credentials, private tax forms, payout destinations, raw Auth data, and signing secrets never enter browser code.
 
@@ -180,7 +180,7 @@ The private Team workspace is deployed at `/team`, `/team/brand`, `/team/creator
 
 An Admin grant requires a 3–500 character reason, preserves the target Member or Creator role, creates immutable history, and queues one idempotent in-app notification and transactional email. Revocation is immediate and does not send a revocation email. Delivery failure never rolls back authorization.
 
-The Brand Kit build is private and versioned. The current archive is explicitly provisional and is not registered for production download. It contains black/white marks, white-on-black 44OS application icons, self-hosted Inter and the SIL Open Font License, palette/type tokens, editable SVG social templates, logo-use guidance, and a SHA-256 manifest. It cannot be registered as the current production kit until the owner approves the source masters.
+The Brand Kit build is private and versioned. Approved version 1.0 contains black/white marks, white-on-black 44OS application icons, self-hosted Inter and the SIL Open Font License, palette/type tokens, logo-use guidance, and a SHA-256 manifest. The production registry points to the checksum-verified private object `brand-kits/1.0/forty-four-brand-kit-1.0.zip`; authorized downloads receive only a 60-second signed URL. Local Team review may download the same repository-built version without adding a service-role credential to the developer environment.
 
 ## Store, Library, Community, and Studio behavior
 
@@ -269,7 +269,7 @@ Stripe receives all customer money. Checkout is authenticated, Stripe-hosted, an
 
 Stripe Dashboard Products/Prices are not catalog authority. The server sends verified dynamic price data from the 44OS order snapshot.
 
-Printful is inventory and fulfillment authority for 44-owned Merch:
+Printful is inventory and fulfillment authority for Merch owned by **forty four**:
 
 - Printful controls product presence, name, retail price, SKU, size, color, availability, and production cost.
 - 44OS controls customer imagery, featured image, publication, orders, support, and immutable history.

@@ -63,18 +63,19 @@ Marketing copy uses plain direct sentences. Do not use em dashes as a stylistic 
 
 ## Private Team workspace
 
-The private Team workspace is deployed for Admin and explicitly granted-account review. The Brand Guide copy and Brand Kit assets remain provisional until owner acceptance.
+The private Team workspace is deployed for Admins and explicitly granted Members or Creators. The Brand Guide and version 1.0 Brand Kit are approved Team references.
 
-- `/team` uses the standard dark application shell and a compact Overview, Brand, Creators, Releases section navigation.
+- `/team` uses the standard dark application shell and three summary cards for Brand, Creators, and Releases. Child pages rely on the canonical top-bar back action rather than repeating a Team tab bar.
 - Team appears in the signed-in account menu only after the authenticated no-store access check succeeds.
 - Loading uses the existing animated loading shell. Unauthorized and failed states are explicit and reveal no guide or Brand Kit content.
-- Creator and release directories are searchable, filterable, responsive, and visibly read-only. They use public avatars/artwork and published facts only.
-- `/team/brand` is the deliberate cream-document exception inside the dark app shell. Paper is `#F5F5F0`; Ink is `#1A1A1A`. Desktop uses a sticky table of contents, while mobile uses compact horizontal section navigation.
+- Creator and release directories are searchable, filterable, responsive, and visibly read-only. They use public avatars/artwork and published facts only. The Creator directory does not expose or filter by the retired Creator Type field.
+- Team page headers follow the canonical app rhythm: title, description, then divider. Release-directory artwork uses a fixed 1:1 square at every breakpoint regardless of the source Item category.
+- `/team/brand` is the deliberate cream-document exception inside the dark app shell. Paper is `#F5F5F0`; Ink is `#1A1A1A`. It is one full-width, normally scrollable editorial document without an internal contents rail. Its opening uses the simple `Brand Guide` title followed by the updated date and divider. The logo and developer sections use visual reference cards for approved marks, accents, materials, geometry, elevation, and representative application typography.
 - Inter is self-hosted and scoped to the Brand Guide and private marketing assets. The application and public marketing page retain their existing system stacks.
-- The Brand Guide action requests a 60-second private signed download. Until owner-approved masters are registered, the action reports that the approved kit is unavailable rather than serving provisional files as final.
+- The Brand Guide action requests a 60-second private signed download of the checksum-verified version 1.0 archive in production. Local Team review can download the same repository-built version without adding a service-role credential to the developer environment.
 - Team routes set noindex, nofollow, noarchive and are excluded from robots and sitemap discovery.
 
-44 and 44OS use one two-color logo system: white mark on black/dark and black mark on white/Paper/light. Social profiles use white on black. Acid green is retired from the logo and application-icon identity. Ocean remains an interface accent, never a substitute logo color. The 44OS PWA/Home Screen icons, favicon, and social share artwork use white on black.
+**forty four** and **44OS** use one two-color logo system: white mark on black/dark and black mark on white/Paper/light. Social profiles use white on black. Acid green is retired from the logo and application-icon identity. Ocean remains an interface accent, never a substitute logo color. The 44OS PWA/Home Screen icons, favicon, and social share artwork use white on black.
 
 ## Materials and elevation
 
@@ -252,7 +253,7 @@ Studio is a creator workspace, not a public discovery grid.
 - The overview shows four operational metrics: Saves, Plays, Sold, Earned.
 - Only populated Events and Item-management sections render.
 - One circular plus menu in the title row contains only Add Music, Add Book, Add Pack, and Add Update, in that order. The shorter `Pack` label applies only to this menu; Event creation is omitted from this shortcut.
-- Merch creation stays hidden because Merch is 44-owned.
+- Merch creation stays hidden because Merch is owned by **forty four**.
 - Rows show title, Type, and catalog-health issues without exposing Draft/Published switches.
 - Earnings remain distinct from payout-ready money; no UI implies that pending money is available or paid.
 

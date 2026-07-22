@@ -3,7 +3,7 @@ import 'server-only';
 import { createClient } from '@supabase/supabase-js';
 import type { User } from '@supabase/supabase-js';
 import type { Database } from '@/lib/database.types';
-import { authenticateCommerceRequest, commerceAdminClient } from '@/lib/server/commerce';
+import { commerceAdminClient } from '@/lib/server/commerce';
 
 export class TeamAccessError extends Error {
   constructor(public status: number, message: string) { super(message); }
@@ -29,7 +29,12 @@ function teamUserClient(token: string) {
 
 async function getDevelopmentAdminAccess(user: User) {
   if (process.env.NODE_ENV === 'production') return null;
-  const profile = await commerceAdminClient().from('profiles').select('role').eq('id', user.id).maybeSingle();
+  let profile;
+  try {
+    profile = await commerceAdminClient().from('profiles').select('role').eq('id', user.id).maybeSingle();
+  } catch {
+    return null;
+  }
   if (profile.error || profile.data?.role !== 'admin') return null;
   return { authorized: true, source: 'admin' as const, profileId: user.id, grantedAt: null };
 }
@@ -41,10 +46,11 @@ export async function getTeamRequestAccess(request: Request): Promise<{
   if (!teamWorkspaceEnabled()) throw new TeamAccessError(404, 'Team workspace is unavailable.');
   const token = requestToken(request);
   if (!token) throw new TeamAccessError(401, 'Sign in to continue.');
-  let user: User;
-  try { user = await authenticateCommerceRequest(request); }
-  catch { throw new TeamAccessError(401, 'Sign in to continue.'); }
-  const result = await teamUserClient(token).rpc('get_my_team_access' as never);
+  const userClient = teamUserClient(token);
+  const authenticated = await userClient.auth.getUser(token);
+  if (authenticated.error || !authenticated.data.user) throw new TeamAccessError(401, 'Sign in to continue.');
+  const user = authenticated.data.user;
+  const result = await userClient.rpc('get_my_team_access' as never);
   if (result.error) {
     const developmentAccess = await getDevelopmentAdminAccess(user);
     if (developmentAccess) return { user, access: developmentAccess };
@@ -61,7 +67,7 @@ export async function getTeamRequestAccess(request: Request): Promise<{
 export async function requireTeamRequest(request: Request) {
   const state = await getTeamRequestAccess(request);
   if (!state.access.authorized) throw new TeamAccessError(403, 'Team access is required.');
-  return { ...state, admin: commerceAdminClient() };
+  return state;
 }
 
 export function teamErrorResponse(error: unknown) {
