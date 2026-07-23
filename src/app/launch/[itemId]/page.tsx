@@ -121,11 +121,13 @@ export default function InteractiveLaunchPage() {
   useEffect(() => {
     if (!launch || !entryOrigin) return;
     const expiryTimer = window.setTimeout(() => { setState('expired'); setLaunch(null); }, Math.max(0, new Date(launch.expires_at).getTime() - Date.now()));
+    const initializeTimer = window.setInterval(initializeFrame, 500);
     function receive(event: MessageEvent) {
       if (event.origin !== entryOrigin || event.source !== frameRef.current?.contentWindow) return;
       const incoming = parseInteractiveBridgeMessage(event.data);
       if (!incoming || incoming.sessionId !== launch!.session_id) return;
       if (incoming.type === 'ready') {
+        window.clearInterval(initializeTimer);
         if (build?.requires_cross_origin_isolation && incoming.crossOriginIsolated !== true) {
           setMessage('This build requires cross-origin isolation, but its host headers are incomplete.');
           setState('failed');
@@ -147,8 +149,9 @@ export default function InteractiveLaunchPage() {
       }
     }
     window.addEventListener('message', receive);
-    return () => { window.clearTimeout(expiryTimer); window.removeEventListener('message', receive); };
-  }, [build?.requires_cross_origin_isolation, entryOrigin, launch]);
+    initializeFrame();
+    return () => { window.clearTimeout(expiryTimer); window.clearInterval(initializeTimer); window.removeEventListener('message', receive); };
+  }, [build?.requires_cross_origin_isolation, entryOrigin, initializeFrame, launch]);
 
   const title = state === 'unsupported' ? 'Desktop Required' : state === 'unavailable' ? 'Experience Coming Soon' : state === 'expired' ? 'Session Expired' : state === 'exited' ? 'Experience Closed' : state === 'failed' ? 'Could Not Launch' : 'Interactive Experience';
   return <section className="interactive-launch-page" aria-label="Interactive experience" aria-live="polite">
