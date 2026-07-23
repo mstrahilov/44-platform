@@ -89,6 +89,7 @@ function ensureTrackCount(current: DraftTrack[], nextCount: number) {
 function experienceTypeForSection(sectionId: StudioCatalogSectionId) {
   if (sectionId === 'merch') return 'merch';
   if (sectionId === 'books') return 'book';
+  if (sectionId === 'games') return 'game';
   if (sectionId === 'assets') return 'asset';
   return 'music';
 }
@@ -96,6 +97,7 @@ function experienceTypeForSection(sectionId: StudioCatalogSectionId) {
 function productAssetTypeForSection(sectionId: StudioCatalogSectionId) {
   if (sectionId === 'merch') return 'merch';
   if (sectionId === 'books') return 'book';
+  if (sectionId === 'games') return 'webgl';
   if (sectionId === 'assets') return 'sample_pack';
   return 'music';
 }
@@ -330,16 +332,18 @@ export default function EditProductPage() {
   const section = useMemo(() => {
     const slug = selectedCategory?.slug;
     if (slug === 'books') return getStudioCatalogSectionForProduct({ item_type: productType, experience_type: 'book', fulfillment_type: 'digital' });
+    if (slug === 'games' || slug === 'interactive') return getStudioCatalogSectionForProduct({ item_type: productType, experience_type: 'game', fulfillment_type: 'digital' });
     if (slug === 'assets' || slug === 'sample-packs') return getStudioCatalogSectionForProduct({ item_type: productType, experience_type: 'asset', fulfillment_type: 'digital' });
     if (slug === 'merch') return getStudioCatalogSectionForProduct({ item_type: productType, experience_type: 'merch', fulfillment_type: 'physical' });
     return getStudioCatalogSectionForProduct({ item_type: productType, experience_type: 'music', fulfillment_type: 'digital' });
   }, [productType, selectedCategory]);
   const deleteLabel = `Remove ${section.itemLabel.replace(/\b\w/g, char => char.toUpperCase())}`;
   const isMusicProduct = section.id === 'music';
+  const isGameProduct = section.id === 'games';
   const isMerchProduct = section.id === 'merch';
-  const needsDigitalFile = section.id === 'books' || section.id === 'assets';
+  const needsDigitalFile = section.id === 'books' || section.id === 'games' || section.id === 'assets';
   const merchUsesLocalOnlyPricing = isMerchProduct && (merchFulfillmentMode === 'deliver' || merchShippingScope === 'local');
-  const creatorCommerceUnavailable = !isMerchProduct && !paidSales?.can_sell_paid;
+  const creatorCommerceUnavailable = !isMerchProduct && !isGameProduct && !paidSales?.can_sell_paid;
 
   useTopbarBack({ href: section.href, label: section.label });
 
@@ -380,7 +384,7 @@ export default function EditProductPage() {
 
     const cleanTitle = title.trim();
     const normalizedReleaseDate = normalizeOptionalReleaseDate(releaseDate);
-    if (!cleanTitle || !categoryId || !storeTypeId) {
+    if (!cleanTitle || !categoryId || (!isGameProduct && !storeTypeId)) {
       setError('Please fill out the title and choose an Item Type.');
       return;
     }
@@ -408,7 +412,11 @@ export default function EditProductPage() {
       }
     }
     if (needsDigitalFile && !itemFileUrl.trim()) {
-      setError(section.id === 'books' ? 'Books need an uploaded file before saving.' : 'Sample packs need an uploaded file before saving.');
+      setError(section.id === 'books'
+        ? 'Books need an uploaded file before saving.'
+        : isGameProduct
+          ? 'Games need a Unity WebGL export ZIP before saving.'
+          : 'Sample packs need an uploaded file before saving.');
       return;
     }
     if (section.id === 'assets' && samplePreviews.some(sample => !sample.title.trim() || !sample.previewUrl.trim())) {
@@ -454,10 +462,10 @@ export default function EditProductPage() {
     const enteredLocalPriceCents = localPrice.trim() && Number.isFinite(localPriceNumber)
       ? Math.max(0, Math.round(localPriceNumber * 100))
       : null;
-    const requiresGlobalPrice = isMerchProduct ? !merchUsesLocalOnlyPricing : !creatorCommerceUnavailable && availability === 'paid';
+    const requiresGlobalPrice = isGameProduct ? false : isMerchProduct ? !merchUsesLocalOnlyPricing : !creatorCommerceUnavailable && availability === 'paid';
     const requiresLocalPrice = isMerchProduct
       ? merchUsesLocalOnlyPricing || marketMode === 'global_plus_local'
-      : !creatorCommerceUnavailable && availability === 'paid' && marketMode === 'global_plus_local';
+      : !isGameProduct && !creatorCommerceUnavailable && availability === 'paid' && marketMode === 'global_plus_local';
     if (requiresGlobalPrice && (!Number.isFinite(priceNumber) || priceNumber <= 0)) {
       setSaving(false);
       setError('Enter a price greater than zero for a paid Item.');
@@ -468,8 +476,10 @@ export default function EditProductPage() {
       setError(`Enter a ${localCurrency} local price greater than zero.`);
       return;
     }
-    const isFree = isMerchProduct ? false : creatorCommerceUnavailable ? savedIsFree : availability === 'free';
-    const priceCents = creatorCommerceUnavailable
+    const isFree = isGameProduct ? true : isMerchProduct ? false : creatorCommerceUnavailable ? savedIsFree : availability === 'free';
+    const priceCents = isGameProduct
+      ? 0
+      : creatorCommerceUnavailable
       ? savedPriceCents
       : isFree || merchUsesLocalOnlyPricing ? 0 : Math.round(priceNumber * 100);
     const localPriceCents = enteredLocalPriceCents;
@@ -488,9 +498,9 @@ export default function EditProductPage() {
         : isFree || (marketMode === 'global' && !merchUsesLocalOnlyPricing) ? null : localCurrency,
       available_locally_only: isMerchProduct ? merchUsesLocalOnlyPricing : false,
       is_free: isFree,
-      ...(!isMerchProduct && !creatorCommerceUnavailable ? {
-        ...(isMusicProduct ? { streaming_enabled: true } : {}),
-        download_purchase_enabled: !isFree,
+      ...(!isMerchProduct && (!creatorCommerceUnavailable || isGameProduct) ? {
+        ...(isMusicProduct ? { streaming_enabled: true } : isGameProduct ? { streaming_enabled: false } : {}),
+        download_purchase_enabled: isGameProduct ? false : !isFree,
       } : {}),
       cover_url: coverUrl.trim() || null,
       experience_type: experienceTypeForSection(section.id),
@@ -557,7 +567,7 @@ export default function EditProductPage() {
           title: productType.trim() || title.trim(),
           file_url: null,
           storage_path: itemFileUrl.trim(),
-          is_downloadable: true,
+          is_downloadable: !isGameProduct,
           sort_order: 0,
         });
         const fullAsset = insertedAssets[0];
@@ -569,7 +579,7 @@ export default function EditProductPage() {
             samplePageLimit: bookSamplePages ? Number(bookSamplePages) : null,
             languageCode: bookLanguage.trim() || null,
           });
-        } else {
+        } else if (section.id === 'assets') {
           await replaceStudioSampleFiles(id, samplePreviews.map(sample => ({
             title: sample.title.trim(), previewUrl: sample.previewUrl.trim() || null,
             durationSeconds: sample.durationSeconds, waveformPeaks: sample.waveformPeaks,
@@ -609,16 +619,22 @@ export default function EditProductPage() {
     // ownership again or re-run the first-publication gate.
     if (itemStatus === 'published') {
       setSaving(false);
-      setSuccess('Changes saved and published.');
+      setSuccess(isGameProduct ? 'Changes saved. The uploaded WebGL package will not replace the live build until 44OS approves it.' : 'Changes saved and published.');
       clearStudioFormRecovery(recoveryKey);
-      router.push(`${section.href}?studioStatus=published`);
+      const resultHash = section.id === 'assets' ? 'sample-packs' : section.id;
+      router.push(`/studio?studioStatus=${isGameProduct ? 'game-submitted' : 'published'}#${resultHash}`);
       return;
     }
 
     let reviewRequired = false;
     try {
       reviewRequired = await isPublishingReviewRequired();
-      if (reviewRequired) {
+      if (isGameProduct && reviewRequired) {
+        await submitStudioItemForReview(id, crypto.randomUUID());
+      } else if (isGameProduct) {
+        // Keep the draft private until the submitted archive has been reviewed
+        // and its hosted interactive-build manifest is ready.
+      } else if (reviewRequired) {
         await submitStudioItemForReview(id, crypto.randomUUID());
       } else {
         await setStudioPublicationStatus(id, 'published');
@@ -630,9 +646,11 @@ export default function EditProductPage() {
     }
 
     setSaving(false);
-    setSuccess(reviewRequired ? 'Changes submitted for review.' : 'Changes saved and published.');
+    setSuccess(isGameProduct ? 'Game package saved for review.' : reviewRequired ? 'Changes submitted for review.' : 'Changes saved and published.');
     clearStudioFormRecovery(recoveryKey);
-    router.push(`${section.href}?studioStatus=${reviewRequired ? 'submitted' : 'published'}`);
+    const resultStatus = isGameProduct ? 'game-submitted' : reviewRequired ? 'submitted' : 'published';
+    const resultHash = section.id === 'assets' ? 'sample-packs' : section.id;
+    router.push(`/studio?studioStatus=${resultStatus}#${resultHash}`);
   }
 
   if (loading || !user || fetching) return <PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>;
@@ -684,9 +702,9 @@ export default function EditProductPage() {
             <section className="dashboard-form-section">
               <SectionHeader title="Details" description="Set the core title, type, artwork, and main details for this item." />
               <div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible">
-            <label className="dashboard-field"><div className="dashboard-field-label">{isMerchProduct ? 'Product Name' : 'Title'}</div><Ui44TextInput className="os-input-field" value={title} placeholder={isMerchProduct ? 'Enter product name' : section.id === 'books' ? 'Enter book title' : section.id === 'assets' ? 'Enter sample pack title' : 'Enter release title'} onChange={e => setTitle(e.target.value)} /></label>
+            <label className="dashboard-field"><div className="dashboard-field-label">{isMerchProduct ? 'Product Name' : 'Title'}</div><Ui44TextInput className="os-input-field" value={title} placeholder={isMerchProduct ? 'Enter product name' : section.id === 'books' ? 'Enter book title' : isGameProduct ? 'Enter game title' : section.id === 'assets' ? 'Enter sample pack title' : 'Enter release title'} onChange={e => setTitle(e.target.value)} /></label>
 
-            {(section.id === 'books' || section.id === 'assets') ? (
+            {(section.id === 'books' || section.id === 'games' || section.id === 'assets') ? (
               <label className="dashboard-field">
                 <div className="dashboard-field-label">Description</div>
                 <Ui44Textarea className="os-input-field dashboard-textarea" value={description} placeholder="Enter description" onChange={event => setDescription(event.target.value)} />
@@ -716,6 +734,17 @@ export default function EditProductPage() {
                       <option key={count} value={count}>{count}</option>
                     ))}
                   </Ui44SelectInput>
+                </label>
+              </div>
+            ) : isGameProduct ? (
+              <div className="dashboard-form-grid dashboard-form-grid-2 release-core-grid ui44-form-grid">
+                <label className="dashboard-field">
+                  <div className="dashboard-field-label">Item Type</div>
+                  <Ui44TextInput className="os-input-field" value={productType || 'Game'} readOnly aria-label="Item Type" />
+                </label>
+                <label className="dashboard-field">
+                  <div className="dashboard-field-label">Release Date (Optional)</div>
+                  <Ui44TextInput className="os-input-field release-date-input" type="date" value={releaseDate} onChange={e => { setReleaseDate(e.target.value); setYear(e.target.value.slice(0, 4)); }} />
                 </label>
               </div>
             ) : (
@@ -771,7 +800,11 @@ export default function EditProductPage() {
               </div>
             ) : null}
 
-            {!isMerchProduct ? (
+            {isGameProduct ? (
+              <div className="dashboard-status ui44-status" role="note">
+                Games stay desktop-only and free during private review. Replacing this ZIP does not change the hosted build until 44OS inspects and approves it.
+              </div>
+            ) : !isMerchProduct ? (
               <StudioDigitalPricingFields
                 availability={availability}
                 marketMode={marketMode}
@@ -832,13 +865,13 @@ export default function EditProductPage() {
 
             {needsDigitalFile ? (
               <UploadField
-                label={section.id === 'books' ? 'Book File' : 'Sample Pack ZIP'}
-                folder={section.id === 'books' ? 'products/books' : 'products/assets'}
+                label={section.id === 'books' ? 'Book File' : isGameProduct ? 'Unity WebGL Export ZIP' : 'Sample Pack ZIP'}
+                folder={section.id === 'books' ? 'products/books' : isGameProduct ? 'products/games' : 'products/assets'}
                 storage="private-item"
                 userId={user.id}
                 value={itemFileUrl}
                 accept={section.id === 'books' ? 'application/pdf,.pdf' : 'application/zip,.zip'}
-                buttonLabel={section.id === 'books' ? 'Upload full PDF' : 'Upload full pack ZIP'}
+                buttonLabel={section.id === 'books' ? 'Upload full PDF' : isGameProduct ? 'Replace WebGL ZIP' : 'Upload full pack ZIP'}
                 onChange={setItemFileUrl}
                 onUploadingChange={handleUploadActivity}
               />

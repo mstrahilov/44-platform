@@ -153,7 +153,12 @@ export default function NotificationsPage() {
   return (
     <PageShell>
       <main className="dashboard-page">
-        <HubHero title="Notifications" copy="Mentions, replies, achievements, and other account activity." actions={notificationTools} />
+        <HubHero
+          title="Notifications"
+          copy="Mentions, replies, achievements, and other account activity."
+          actions={notificationTools}
+          className="notifications-page-header"
+        />
         <section className="dashboard-section">
           {visibleNotifications.length > 0 ? (
             <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">

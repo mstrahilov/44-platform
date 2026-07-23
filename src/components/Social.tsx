@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import type { ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useContextMenu, type ContextMenuEntry } from '@/components/ContextMenu';
-import { authorDisplayName, authorHandle, authorHref, compactDate, initials, type SocialAuthor, type SocialLiker, type SocialPost } from '@/lib/social';
+import { authorDisplayName, authorHandle, authorHref, compactDate, initials, type SocialAuthor, type SocialLiker, type SocialPost, type SocialReply } from '@/lib/social';
 import { communityThreadHref } from '@/lib/platform';
 import { pinDockItem } from '@/lib/dockPreferences';
+import type { CommunityReference } from '@/lib/communityV11';
 
 function socialTokenHref(token: string) {
   if (token.startsWith('@')) return `/profile/${token.slice(1)}`;
@@ -14,7 +15,11 @@ function socialTokenHref(token: string) {
   return '';
 }
 
-export function SocialRichText({ text }: { text: string }) {
+function escapeSocialReference(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function SocialFallbackRichText({ text, keyPrefix = '' }: { text: string; keyPrefix?: string }) {
   const parts = text.split(/([@#][a-zA-Z0-9_]+)/g);
   return (
     <>
@@ -23,7 +28,7 @@ export function SocialRichText({ text }: { text: string }) {
         const href = socialTokenHref(part);
         return href ? (
           <Link
-            key={`${part}-${index}`}
+            key={`${keyPrefix}${part}-${index}`}
             href={href}
             className="social-rich-link"
             onClick={event => event.stopPropagation()}
@@ -31,7 +36,45 @@ export function SocialRichText({ text }: { text: string }) {
             {part}
           </Link>
         ) : (
-          <span key={`${part}-${index}`}>{part}</span>
+          <span key={`${keyPrefix}${part}-${index}`}>{part}</span>
+        );
+      })}
+    </>
+  );
+}
+
+export function SocialRichText({ text, references = [] }: { text: string; references?: CommunityReference[] }) {
+  if (references.length === 0) return <SocialFallbackRichText text={text} />;
+
+  const aliases = references.flatMap(reference => (
+    reference.kind === 'person'
+      ? [`@${reference.label}`]
+      : [`@${reference.label}`, reference.label]
+  )).sort((a, b) => b.length - a.length);
+  const referenceByAlias = new Map<string, CommunityReference>();
+  references.forEach(reference => {
+    referenceByAlias.set(`@${reference.label}`.toLocaleLowerCase(), reference);
+    if (reference.kind === 'item') referenceByAlias.set(reference.label.toLocaleLowerCase(), reference);
+  });
+  const pattern = new RegExp(`(${aliases.map(escapeSocialReference).join('|')})`, 'giu');
+  const parts = text.split(pattern);
+
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (!part) return null;
+        const reference = referenceByAlias.get(part.toLocaleLowerCase());
+        if (!reference) return <SocialFallbackRichText key={`plain-${index}`} text={part} keyPrefix={`${index}-`} />;
+        return (
+          <Link
+            key={`${reference.kind}-${reference.id}-${index}`}
+            href={reference.href}
+            className="social-rich-link social-rich-reference"
+            data-reference-kind={reference.kind}
+            onClick={event => event.stopPropagation()}
+          >
+            {part}
+          </Link>
         );
       })}
     </>
@@ -64,18 +107,20 @@ export function SocialAuthorLine({
   author,
   createdAt,
   meta,
+  trailing,
   handleOnly = false,
 }: {
   author?: Partial<SocialAuthor> | null;
   createdAt?: string | null;
   meta?: ReactNode;
+  trailing?: ReactNode;
   handleOnly?: boolean;
 }) {
   const handle = authorHandle(author);
   const href = authorHref(author);
   const nameContent = handleOnly && handle ? `@${handle}` : authorDisplayName(author);
   return (
-    <div className="social-row-meta">
+    <div className={meta ? 'social-row-meta social-row-meta-has-meta' : 'social-row-meta'}>
       {handleOnly && handle ? (
         <Link className="social-author-name" href={href} onClick={event => event.stopPropagation()}>
           {nameContent}
@@ -90,16 +135,17 @@ export function SocialAuthorLine({
       )}
       {createdAt && (
         <>
-          <span className="social-dot" />
+          <span className="social-dot social-time-dot" />
           <span className="social-time">{compactDate(createdAt)}</span>
         </>
       )}
       {meta && (
         <>
-          <span className="social-dot" />
+          <span className="social-dot social-meta-dot" />
           {meta}
         </>
       )}
+      {trailing && <span className="social-row-meta-trailing">{trailing}</span>}
     </div>
   );
 }
@@ -115,11 +161,10 @@ function HeartIcon({ filled }: { filled?: boolean }) {
   );
 }
 
-function LikeActionContent({ filled, count }: { filled: boolean; count: number }) {
+function LikeActionContent({ filled }: { filled: boolean }) {
   return (
-    <span className={count > 0 ? 'social-action-like-hit social-action-like-hit-count' : 'social-action-like-hit'}>
+    <span className="social-action-like-hit">
       <HeartIcon filled={filled} />
-      {count > 0 && <span className="social-action-count">{count}</span>}
     </span>
   );
 }
@@ -140,14 +185,64 @@ function TrashIcon() {
   );
 }
 
+export function SocialPencilIcon() {
+  return (
+    <svg className="social-action-icon ui44-row-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="m4 20 4.2-1 10.7-10.7a2.1 2.1 0 0 0-3-3L5.2 16 4 20zM14.8 6.4l2.9 2.9" />
+    </svg>
+  );
+}
+
+export function SocialMoreButton({
+  label,
+  entries,
+}: {
+  label: string;
+  entries: ContextMenuEntry[];
+}) {
+  const { openContextMenu } = useContextMenu();
+  return (
+    <button
+      type="button"
+      className="social-more-button"
+      aria-label={label}
+      aria-haspopup="menu"
+      onClick={event => {
+        const rect = event.currentTarget.getBoundingClientRect();
+        openContextMenu({
+          preventDefault: () => event.preventDefault(),
+          stopPropagation: () => event.stopPropagation(),
+          clientX: rect.right,
+          clientY: rect.bottom + 4,
+        }, entries);
+      }}
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none" />
+        <circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none" />
+        <circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none" />
+      </svg>
+    </button>
+  );
+}
+
+export function wasSocialContentEdited(createdAt?: string | null, updatedAt?: string | null) {
+  if (!createdAt || !updatedAt) return false;
+  const created = new Date(createdAt).getTime();
+  const updated = new Date(updatedAt).getTime();
+  return Number.isFinite(created) && Number.isFinite(updated) && updated - created > 1_000;
+}
+
 export function SocialPostRow({
   post,
   replyCount = 0,
-  likeCount = 0,
   liked = false,
   onLike,
   onDelete,
+  onEdit,
+  onReport,
   canDelete = false,
+  canEdit = false,
   disabled,
   showTitle = false,
   titleSize = 'default',
@@ -158,8 +253,23 @@ export function SocialPostRow({
   replyActionLabel,
   repliesOpen = false,
   rowClickable = true,
+  references = [],
+  bodyClamp = false,
+  bodyExpanded = false,
+  onToggleBody,
+  editing = false,
+  editBody = '',
+  editSaving = false,
+  onEditBodyChange,
+  onSaveEdit,
+  onCancelEdit,
+  hrefOverride,
+  articleId,
+  replyId,
+  rowClassName,
+  contentLabel = 'Post',
 }: {
-  post: SocialPost;
+  post: SocialPost | SocialReply;
   replyCount?: number;
   likeCount?: number;
   liked?: boolean;
@@ -167,7 +277,10 @@ export function SocialPostRow({
   repliers?: SocialLiker[];
   onLike?: () => void;
   onDelete?: () => void;
+  onEdit?: () => void;
+  onReport?: () => void;
   canDelete?: boolean;
+  canEdit?: boolean;
   disabled?: boolean;
   showTitle?: boolean;
   titleSize?: 'default' | 'lg';
@@ -178,13 +291,49 @@ export function SocialPostRow({
   replyActionLabel?: string;
   repliesOpen?: boolean;
   rowClickable?: boolean;
+  references?: CommunityReference[];
+  bodyClamp?: boolean;
+  bodyExpanded?: boolean;
+  onToggleBody?: () => void;
+  editing?: boolean;
+  editBody?: string;
+  editSaving?: boolean;
+  onEditBodyChange?: (value: string) => void;
+  onSaveEdit?: () => void;
+  onCancelEdit?: () => void;
+  hrefOverride?: string;
+  articleId?: string;
+  replyId?: string;
+  rowClassName?: string;
+  contentLabel?: 'Post' | 'Reply';
 }) {
   const router = useRouter();
-  const { openContextMenu } = useContextMenu();
+  const { openContextMenu, showCopiedToast } = useContextMenu();
+  const isReply = 'post_id' in post;
+  const author = isReply ? post.authors : post.creators;
   const body = post.body || '';
-  const href = communityThreadHref(post);
-  const authorLink = authorHref(post.creators);
-  const authorName = authorDisplayName(post.creators);
+  const href = hrefOverride ?? (isReply
+    ? `/community/thread/${post.post_id}/reply/${post.id}`
+    : communityThreadHref(post));
+  const authorLink = authorHref(author);
+  const authorName = authorDisplayName(author);
+  const bodyRef = useRef<HTMLParagraphElement>(null);
+  const [bodyOverflowing, setBodyOverflowing] = useState(false);
+
+  useLayoutEffect(() => {
+    const element = bodyRef.current;
+    if (!bodyClamp || !element || bodyExpanded) return;
+
+    const updateOverflow = () => {
+      setBodyOverflowing(element.scrollHeight > element.clientHeight + 1);
+    };
+
+    updateOverflow();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(updateOverflow);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [body, bodyClamp, bodyExpanded]);
 
   function openThread() {
     if (!rowClickable) return;
@@ -209,14 +358,14 @@ export function SocialPostRow({
 
   function postMenuEntries(): ContextMenuEntry[] {
     return [
-      { id: 'open', label: 'Open Post', href },
+      { id: 'open', label: `Open ${contentLabel}`, href },
       { id: 'author', label: 'View Author', href: authorLink },
       { id: 'reply', label: 'Reply', href },
       ...(onLike ? [{ id: 'like', label: liked ? 'Unlike' : 'Like', onSelect: onLike, disabled }] as ContextMenuEntry[] : []),
       ...(canDelete && onDelete
         ? [
             { kind: 'divider', id: 'post-actions' },
-            { id: 'delete', label: 'Delete Post', onSelect: onDelete, danger: true },
+            { id: 'delete', label: `Delete ${contentLabel}`, onSelect: onDelete, danger: true },
           ] as ContextMenuEntry[]
         : []),
     ];
@@ -226,21 +375,36 @@ export function SocialPostRow({
     return [
       { id: 'open-author', label: 'View Creator', href: authorLink },
       { id: 'pin-author', label: 'Pin to Dock', onSelect: () => pinDockItem({
-        id: `profile:${post.creators?.id ?? authorLink}`,
+        id: `profile:${author?.id ?? authorLink}`,
         label: authorName,
         href: authorLink,
         iconClass: 'os-icon-user',
         kind: 'profile',
-        imageUrl: post.creators?.avatar_url ?? null,
+        imageUrl: author?.avatar_url ?? null,
       }) },
     ];
   }
 
+  function copyPostLink() {
+    const absoluteHref = new URL(href, window.location.origin).href;
+    void navigator.clipboard.writeText(absoluteHref)
+      .then(() => showCopiedToast())
+      .catch(() => showCopiedToast('Could not copy link'));
+  }
+
+  const publicMenuEntries: ContextMenuEntry[] = [
+    { id: 'copy-link', label: 'Copy Link', onSelect: copyPostLink },
+    ...(onReport ? [{ id: 'report', label: 'Report', onSelect: onReport }] as ContextMenuEntry[] : []),
+  ];
+  const edited = wasSocialContentEdited(post.created_at, post.updated_at);
+
   return (
     <article
+      id={articleId}
+      data-reply-id={replyId}
       className={rowClickable
-        ? 'social-row social-post-row social-row-interactive ui44-list-row ui44-list-row-community ui44-list-row-interactive'
-        : 'social-row social-post-row ui44-list-row ui44-list-row-community'}
+        ? `social-row social-post-row social-row-interactive ui44-list-row ui44-list-row-community ui44-list-row-interactive${rowClassName ? ` ${rowClassName}` : ''}`
+        : `social-row social-post-row ui44-list-row ui44-list-row-community${rowClassName ? ` ${rowClassName}` : ''}`}
       role={rowClickable ? 'link' : undefined}
       tabIndex={rowClickable ? 0 : undefined}
       onClick={rowClickable ? openThread : undefined}
@@ -248,29 +412,84 @@ export function SocialPostRow({
       onContextMenu={event => openContextMenu(event, postMenuEntries())}
     >
       <Link
-        className="ui44-community-avatar-link"
+        className={isReply ? 'ui44-community-avatar-link ui44-reply-avatar-link' : 'ui44-community-avatar-link'}
         href={authorLink}
         aria-label={authorName}
         onClick={stopRowNavigation}
         onContextMenu={event => openContextMenu(event, authorMenuEntries())}
       >
-        <SocialAvatar profile={post.creators} />
+        <SocialAvatar profile={author} />
       </Link>
       <div
         className={rowClickable
-          ? 'social-row-main social-row-main-clickable ui44-community-copy'
-          : 'social-row-main ui44-community-copy'}
+          ? `social-row-main social-row-main-clickable ui44-community-copy${isReply ? ' ui44-reply-copy' : ''}`
+          : `social-row-main ui44-community-copy${isReply ? ' ui44-reply-copy' : ''}`}
       >
-        <div className="ui44-community-author-line">
-          <SocialAuthorLine author={post.creators} createdAt={post.created_at} handleOnly={handleOnly} meta={meta} />
+        <div className={isReply ? 'ui44-community-author-line ui44-reply-author-line' : 'ui44-community-author-line'}>
+          <SocialAuthorLine
+            author={author}
+            createdAt={post.created_at}
+            handleOnly={handleOnly}
+            meta={meta}
+            trailing={<SocialMoreButton label={`${contentLabel} options`} entries={publicMenuEntries} />}
+          />
         </div>
         <div className="ui44-community-content">
           {showTitle && (
             <h2 className={titleSize === 'lg' ? 'social-row-title social-row-title-lg' : 'social-row-title'}>
-              {post.title}
+              {'title' in post ? post.title : ''}
             </h2>
           )}
-          {body && <p className="social-row-body ui44-type ui44-type-body ui44-tone-secondary ui44-community-body"><SocialRichText text={body} /></p>}
+          {editing ? (
+            <form
+              className="community-inline-editor"
+              onSubmit={event => {
+                event.preventDefault();
+                onSaveEdit?.();
+              }}
+              onClick={stopRowNavigation}
+            >
+              <textarea
+                className="ui44-input ui44-textarea community-inline-editor-input"
+                value={editBody}
+                onChange={event => onEditBodyChange?.(event.target.value)}
+                rows={4}
+                autoFocus
+                disabled={editSaving}
+                aria-label={`Edit ${contentLabel.toLowerCase()}`}
+              />
+              <div className="community-inline-editor-actions">
+                <button type="button" className="os-button os-button-secondary os-button-compact" onClick={onCancelEdit} disabled={editSaving}>
+                  Cancel
+                </button>
+                <button type="submit" className="os-button os-button-primary os-button-compact" disabled={editSaving || !editBody.trim()}>
+                  {editSaving ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+            </form>
+          ) : body && (
+            <>
+              <p
+                ref={bodyRef}
+                className={`social-row-body ui44-type ui44-type-body ui44-tone-secondary ui44-community-body${bodyClamp && !bodyExpanded ? ' social-row-body-clamped' : ''}`}
+              >
+                <SocialRichText text={body} references={references} />
+              </p>
+              {bodyClamp && (bodyOverflowing || bodyExpanded) && onToggleBody ? (
+                <button
+                  type="button"
+                  className="social-row-show-more"
+                  aria-expanded={bodyExpanded}
+                  onClick={event => {
+                    event.stopPropagation();
+                    onToggleBody();
+                  }}
+                >
+                  {bodyExpanded ? 'Show less' : 'Show more'}
+                </button>
+              ) : null}
+            </>
+          )}
         </div>
         <div className="social-actions ui44-community-actions" onClick={stopRowNavigation}>
           {onLike ? (
@@ -282,11 +501,11 @@ export function SocialPostRow({
               disabled={disabled}
               aria-label={liked ? 'Unlike' : 'Like'}
             >
-              <LikeActionContent filled={liked} count={likeCount} />
+              <LikeActionContent filled={liked} />
             </button>
           ) : (
-            <span className="social-action social-action-like ui44-row-action" data-liked={liked ? 'true' : 'false'} aria-label={`${likeCount} likes`}>
-              <LikeActionContent filled={liked} count={likeCount} />
+            <span className="social-action social-action-like ui44-row-action" data-liked={liked ? 'true' : 'false'} aria-label={liked ? 'Liked' : 'Like'}>
+              <LikeActionContent filled={liked} />
             </span>
           )}
           {onReplyClick ? (
@@ -308,15 +527,31 @@ export function SocialPostRow({
               {replyCount > 0 && <span className="social-action-count">{replyCount}</span>}
             </Link>
           )}
-          {canDelete && onDelete && (
+          {!editing && canEdit && onEdit && (
+            <button
+              type="button"
+              className="social-action social-action-flush ui44-row-action ui44-row-action-edit"
+              onClick={onEdit}
+              aria-label={`Edit ${contentLabel.toLowerCase()}`}
+            >
+              <SocialPencilIcon />
+            </button>
+          )}
+          {!editing && canDelete && onDelete && (
             <button
               type="button"
               className="social-action social-action-danger ui44-row-action ui44-row-action-delete"
               onClick={onDelete}
-              aria-label="Delete post"
+              aria-label={`Delete ${contentLabel.toLowerCase()}`}
             >
               <TrashIcon />
             </button>
+          )}
+          {!canEdit && edited && <span className="community-edited-label">Edited</span>}
+          {!canEdit && !canDelete && (
+            <span className="social-action-more-mobile">
+              <SocialMoreButton label={`${contentLabel} options`} entries={publicMenuEntries} />
+            </span>
           )}
         </div>
       </div>

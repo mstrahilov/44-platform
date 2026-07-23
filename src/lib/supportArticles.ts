@@ -59,12 +59,12 @@ export const SUPPORT_ARTICLES: SupportArticle[] = [
   {
     slug: 'find-your-way-around',
     title: 'Find your way around 44OS',
-    description: 'A quick guide to Home, Browse, Library, Radio, Community, Search, and account tools.',
+    description: 'A quick guide to Discover, Community, Radio, Library, Account, Search, and account tools.',
     category: 'getting-started',
     keywords: ['navigation', 'dock', 'home', 'browse', 'store', 'library', 'radio', 'community', 'search', 'settings'],
     sections: [
-      { heading: 'Main destinations', bullets: ['Home highlights new and featured work.', 'Browse contains Music, Books, Sample Packs, and Merch.', 'Library contains work you saved, added, or purchased.', 'Radio plays the shared 44 Radio stream.', 'Community contains posts, questions, and collaboration.', 'Search finds Items, creators, posts, and help articles.'] },
-      { heading: 'Account destinations', paragraphs: ['Open your avatar menu for Profile, Inbox, Orders, Settings, and—if your account is approved—Studio. On mobile, the fixed Dock keeps the most-used destinations within reach.'] },
+      { heading: 'Main destinations', bullets: ['Discover highlights new work and opens the complete catalog.', 'Community contains posts, questions, collaboration, and Creator updates.', 'Radio plays the shared 44 Radio stream.', 'Library contains work you saved, added, or purchased.', 'Account opens Profile, Notifications, Inbox, Orders, Creator tools, Support, Settings, and Log Out.'] },
+      { heading: 'Search and account destinations', paragraphs: ['On mobile, Search appears at the top of Discover, Community, and Library, while Account is the fifth Dock destination. Detail and account-tool pages use Back instead. On desktop, Search and the compact account menu remain in the top bar.'] },
       { heading: 'Change appearance', paragraphs: ['Signed-in Members can open Settings and use Appearance to choose a theme and accent color.'] },
     ],
     actions: [{ label: 'Open Settings', href: '/settings' }],
@@ -131,7 +131,7 @@ export const SUPPORT_ARTICLES: SupportArticle[] = [
     keywords: ['discover', 'search', 'filter', 'music', 'books', 'samples', 'merch', 'creators', 'posts'],
     sections: [
       { heading: 'Browse by format', paragraphs: ['Use Browse to explore published Music, Books, Sample Packs, and 44-owned Merch. Filters narrow the current catalog without changing an Item’s publication or availability.'] },
-      { heading: 'Search across 44OS', paragraphs: ['Desktop Search opens from the top bar. Mobile Search is in the Dock. Search results can include Items, creators, Community posts, and Support articles.'] },
+      { heading: 'Search across 44OS', paragraphs: ['Search opens from the top bar on desktop and mobile. Search results can include Items, creators, Community posts, and Support articles.'] },
       { heading: 'If an Item is missing', paragraphs: ['An Item may be in draft, archived, temporarily unavailable, or removed from public sale. Existing purchase history and eligible Library access are preserved separately from public Store visibility.'] },
     ],
     actions: [{ label: 'Browse Items', href: '/' }, { label: 'Search 44OS', href: '/search' }],

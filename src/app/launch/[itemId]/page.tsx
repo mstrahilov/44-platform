@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { beginInteractiveLaunch, endInteractiveLaunch, getInteractiveBuild, recordInteractiveProgress, type InteractiveBuild, type InteractiveLaunch } from '@/lib/domain/interactive';
 import { INTERACTIVE_PROTOCOL, interactiveEntryOrigin, parseInteractiveBridgeMessage } from '@/lib/interactiveBridge';
+import { LOCAL_MASK_ITEM_ID, localMaskPreviewEnabled } from '@/lib/localMaskPreview';
 
 type LaunchState = 'loading' | 'signed-out' | 'unavailable' | 'unsupported' | 'starting' | 'running' | 'failed' | 'expired' | 'exited';
 type Compatibility = { browser: string; mobile: boolean; webgl2: boolean; wasm: boolean; deviceMemoryMb: number | null; reasons: string[] };
@@ -52,6 +53,15 @@ export default function InteractiveLaunchPage() {
 
   const entryOrigin = useMemo(() => launch ? interactiveEntryOrigin(launch.entry_url) : null, [launch]);
 
+  const initializeFrame = useCallback(() => {
+    if (!launch || !entryOrigin) return;
+    frameRef.current?.contentWindow?.postMessage({
+      protocol: INTERACTIVE_PROTOCOL,
+      type: 'initialize',
+      sessionId: launch.session_id,
+    }, entryOrigin);
+  }, [entryOrigin, launch]);
+
   const start = useCallback(async () => {
     if (!user || !build || !compatibility) return;
     setState('starting');
@@ -84,6 +94,10 @@ export default function InteractiveLaunchPage() {
     }
     if (authLoading) return;
     if (!user) { Promise.resolve().then(() => setState('signed-out')); return; }
+    if (localMaskPreviewEnabled && itemId === LOCAL_MASK_ITEM_ID) {
+      window.location.replace('/api/local-mask/index.html');
+      return;
+    }
     let alive = true;
     getInteractiveBuild(itemId).then(nextBuild => {
       if (!alive) return;
@@ -117,7 +131,6 @@ export default function InteractiveLaunchPage() {
           setState('failed');
           return;
         }
-        frameRef.current?.contentWindow?.postMessage({ protocol: INTERACTIVE_PROTOCOL, type: 'initialize', sessionId: launch!.session_id }, entryOrigin!);
         setState('running');
         setMessage('');
       } else if (incoming.type === 'progress' && incoming.eventKey && Number.isInteger(incoming.sequence) && incoming.sequence! > 0) {
@@ -142,7 +155,7 @@ export default function InteractiveLaunchPage() {
     <div className="interactive-launch-surface">
       <Link className="interactive-launch-close" href={returnTo} aria-label="Return to Library" title="Return to Library">×</Link>
       {launch && !['failed','expired','exited'].includes(state) ? <>
-        <iframe ref={frameRef} title="Interactive experience" src={launch.entry_url} className="interactive-launch-frame"
+        <iframe ref={frameRef} title="Interactive experience" src={launch.entry_url} className="interactive-launch-frame" onLoad={initializeFrame}
           sandbox="allow-scripts allow-same-origin allow-pointer-lock allow-downloads" allow="fullscreen; gamepad" referrerPolicy="no-referrer" />
         {state !== 'running' && <div className="interactive-launch-overlay" role="status"><span className="interactive-launch-spinner" aria-hidden="true" /><p>{message}</p></div>}
       </> : <div className="interactive-launch-state">

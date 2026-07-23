@@ -1,19 +1,9 @@
-:global(html) {
-  scroll-behavior: smooth;
-}
-
-:global(body.marketing-surface) {
-  margin: 0;
-  background: #f5f5f0;
-  color: #1a1a1a;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", sans-serif;
-}
-
 .page {
   min-height: 100vh;
   overflow: clip;
   background: #f5f5f0;
   color: #1a1a1a;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", sans-serif;
 }
 
 .skipLink {
@@ -261,6 +251,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :global(html) { scroll-behavior: auto; }
   .page .navButton, .page .primaryButton, .radio a { transition: none; }
 }

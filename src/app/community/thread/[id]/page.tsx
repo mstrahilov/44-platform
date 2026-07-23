@@ -1,31 +1,26 @@
 'use client';
 
-import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/useAuth';
-import { PageShell, CenteredMessage } from '@/components/Ui';
+import { CenteredMessage, PageShell } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
-import { Ui44Textarea } from '@/components/ui44/Inputs';
 import {
-  SocialAuthorLine,
-  SocialAvatar,
-  SocialChatBubbleIcon,
-  SocialHeartIcon,
+  CommunityReportDialog,
+  type CommunityReportTarget,
+} from '@/components/CommunityReportDialog';
+import {
   SocialPostRow,
-  SocialRichText,
-  SocialTrashIcon,
 } from '@/components/Social';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import {
   authorDisplayName,
-  authorHref,
+  authorHandle,
   likersByPost,
   type LikeRow,
   type SocialLiker,
-  type SocialPost,
   type SocialReply,
 } from '@/lib/social';
 import {
@@ -35,159 +30,236 @@ import {
   loadDiscussionThread,
   setDiscussionLike,
   setReplyLike,
+  updateDiscussion,
+  updateDiscussionReply,
   type ReplyLikeRow,
 } from '@/lib/domain/community';
+import {
+  COMMUNITY_INTENT_LABELS,
+  createLocalCommunityReply,
+  inferCommunityIntent,
+  removeLocalCommunityPost,
+  removeLocalCommunityReply,
+  updateLocalCommunityPost,
+  updateLocalCommunityReply,
+  type CommunityV11Post,
+  type CommunityV11Reply,
+} from '@/lib/communityV11';
+import {
+  buildCommunityThreadModel,
+  COMMUNITY_BRANCH_PAGE_SIZE,
+  COMMUNITY_BRANCH_PREVIEW_SIZE,
+  COMMUNITY_THREAD_PAGE_SIZE,
+  visibleBranchReplies,
+  visibleDirectReplies,
+  type CommunityThreadBranch,
+} from '@/lib/communityThreadModel';
 
 type ThreadProfileState = {
   userId: string;
   profile: StudioProfile | null;
 };
 
+function roundUp(value: number, pageSize: number) {
+  return Math.ceil(Math.max(1, value) / pageSize) * pageSize;
+}
+
+function isLocalPost(post: CommunityV11Post) {
+  return Boolean(post.local_only);
+}
+
+function isLocalReply(reply: CommunityV11Reply) {
+  return Boolean(reply.local_only || reply.id.startsWith('optimistic-'));
+}
+
 export default function CommunityThreadPage() {
   const { id, replyId } = useParams<{ id: string; replyId?: string }>();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const userId = user?.id ?? null;
-  useTopbarBack({ href: replyId ? `/community/thread/${id}` : '/community', label: replyId ? 'Post' : 'Community' });
-  const [thread, setThread] = useState<SocialPost | null>(null);
-  const [replies, setReplies] = useState<SocialReply[]>([]);
+  useTopbarBack({ href: '/community', label: 'Community' });
+
+  const [thread, setThread] = useState<CommunityV11Post | null>(null);
+  const [replies, setReplies] = useState<CommunityV11Reply[]>([]);
   const [likes, setLikes] = useState<LikeRow[]>([]);
   const [replyLikes, setReplyLikes] = useState<ReplyLikeRow[]>([]);
   const [profileState, setProfileState] = useState<ThreadProfileState | null>(null);
   const [replyBody, setReplyBody] = useState('');
-  const [replyComposerOpen, setReplyComposerOpen] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
-  const [inlineBody, setInlineBody] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [liking, setLiking] = useState(false);
-  const [replyLiking, setReplyLiking] = useState<string>('');
+  const [replyLiking, setReplyLiking] = useState('');
+  const [directLimit, setDirectLimit] = useState(COMMUNITY_THREAD_PAGE_SIZE);
+  const [expandedBranchIds, setExpandedBranchIds] = useState<Set<string>>(new Set());
+  const [branchLimits, setBranchLimits] = useState<Record<string, number>>({});
+  const [highlightedReplyId, setHighlightedReplyId] = useState<string | null>(null);
+  const [keyboardInset, setKeyboardInset] = useState(0);
+  const [editingThread, setEditingThread] = useState(false);
+  const [threadEditBody, setThreadEditBody] = useState('');
+  const [threadEditSaving, setThreadEditSaving] = useState(false);
+  const [reportTarget, setReportTarget] = useState<CommunityReportTarget | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-
   const [setupGateOpen, setSetupGateOpen] = useState(false);
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
+    let alive = true;
     async function loadThread() {
       setLoading(true);
-
-      let result;
+      setError('');
       try {
-        result = await loadDiscussionThread(id);
+        const result = await loadDiscussionThread(id);
+        if (!alive) return;
+        if (!result) {
+          setThread(null);
+          setReplies([]);
+          setLikes([]);
+          setReplyLikes([]);
+        } else {
+          setThread(result.post);
+          setReplies(result.replies);
+          setLikes(result.likes);
+          setReplyLikes(result.replyLikes);
+        }
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Could not load this thread.');
-        setLoading(false);
-        return;
+        if (alive) setError(loadError instanceof Error ? loadError.message : 'Could not load this thread.');
+      } finally {
+        if (alive) setLoading(false);
       }
-      if (!result) {
-        setThread(null);
-        setReplies([]);
-        setLikes([]);
-        setReplyLikes([]);
-        setLoading(false);
-        return;
-      }
-
-      setThread(result.post);
-      setReplies(result.replies);
-      setLikes(result.likes);
-      setReplyLikes(result.replyLikes);
-      setLoading(false);
     }
+    void loadThread();
+    return () => { alive = false; };
+  }, [id]);
 
-    loadThread();
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      setDirectLimit(COMMUNITY_THREAD_PAGE_SIZE);
+      setExpandedBranchIds(new Set());
+      setBranchLimits({});
+      setHighlightedReplyId(null);
+      setComposerOpen(false);
+      setReplyingTo(null);
+      setReplyBody('');
+    });
   }, [id]);
 
   useEffect(() => {
     if (!userId) return;
     const activeUserId = userId;
     let alive = true;
-    loadStudioProfile(activeUserId).then(result => {
+    void loadStudioProfile(activeUserId).then(result => {
       if (alive) setProfileState({ userId: activeUserId, profile: result.profile });
     });
     return () => { alive = false; };
   }, [userId]);
 
-  const profile = profileState && profileState.userId === userId ? profileState.profile : null;
-
-  const likedByUser = useMemo(() => {
-    if (!user) return false;
-    return likes.some(like => like.profile_id === user.id);
-  }, [likes, user]);
-
-  const likersMap = useMemo(() => likersByPost(likes), [likes]);
-  const threadLikers = thread ? (likersMap[thread.id] ?? []) : [];
-
-  const replyLikeCounts = useMemo(() => {
-    const map: Record<string, number> = {};
-    replyLikes.forEach(row => {
-      map[row.reply_id] = (map[row.reply_id] ?? 0) + 1;
-    });
-    return map;
-  }, [replyLikes]);
-
-  const replyLikedByUser = useMemo(() => {
-    const set = new Set<string>();
-    if (!user) return set;
-    replyLikes.forEach(row => {
-      if (row.profile_id === user.id) set.add(row.reply_id);
-    });
-    return set;
-  }, [replyLikes, user]);
-
-  const { focusedReply, replyTree } = useMemo(() => {
-    const byId = new Map<string, SocialReply>();
-    replies.forEach(r => byId.set(r.id, r));
-    const childrenByParent = new Map<string, SocialReply[]>();
-    replies.forEach(r => {
-      if (!r.parent_reply_id || !byId.has(r.parent_reply_id)) return;
-      if (!childrenByParent.has(r.parent_reply_id)) childrenByParent.set(r.parent_reply_id, []);
-      childrenByParent.get(r.parent_reply_id)!.push(r);
-    });
-    const byNewest = (a: SocialReply, b: SocialReply) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    childrenByParent.forEach(children => children.sort(byNewest));
-
-    function descendantsOf(parentId: string) {
-      const descendants: SocialReply[] = [];
-      const seen = new Set<string>();
-      function visit(nextParentId: string) {
-        (childrenByParent.get(nextParentId) ?? []).forEach(child => {
-          if (seen.has(child.id)) return;
-          seen.add(child.id);
-          descendants.push(child);
-          visit(child.id);
-        });
-      }
-      visit(parentId);
-      return descendants;
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    function updateKeyboardInset() {
+      const inset = Math.max(0, window.innerHeight - viewport!.height - viewport!.offsetTop);
+      setKeyboardInset(inset > 80 ? Math.round(inset) : 0);
     }
-
-    const focused = replyId ? byId.get(replyId) ?? null : null;
-    if (focused) {
-      const directReplies = childrenByParent.get(focused.id) ?? [];
-      return {
-        focusedReply: focused,
-        replyTree: directReplies.map(top => {
-          const allChildren = descendantsOf(top.id);
-          return { top, children: allChildren, totalChildren: allChildren.length };
-        }),
-      };
-    }
-
-    const tops = replies.filter(reply => !reply.parent_reply_id || !byId.has(reply.parent_reply_id)).sort(byNewest);
-    return {
-      focusedReply: null,
-      replyTree: tops.map(top => {
-        const allChildren = descendantsOf(top.id);
-        return {
-          top,
-          children: allChildren.slice(0, 3),
-          totalChildren: allChildren.length,
-        };
-      }),
+    updateKeyboardInset();
+    viewport.addEventListener('resize', updateKeyboardInset);
+    viewport.addEventListener('scroll', updateKeyboardInset);
+    return () => {
+      viewport.removeEventListener('resize', updateKeyboardInset);
+      viewport.removeEventListener('scroll', updateKeyboardInset);
     };
-  }, [replies, replyId]);
+  }, []);
 
+  const profile = profileState && profileState.userId === userId ? profileState.profile : null;
   const canInteract = hasCommunityIdentity(profile);
+  const threadModel = useMemo(() => buildCommunityThreadModel(replies), [replies]);
+  const directReplies = threadModel.directReplies;
+  const visibleReplies = useMemo(
+    () => visibleDirectReplies(threadModel, directLimit),
+    [directLimit, threadModel],
+  );
+
+  useEffect(() => {
+    if (!replyId || loading) return;
+    const target = threadModel.byId.get(replyId);
+    if (!target) return;
+
+    let root = target;
+    const visited = new Set<string>();
+    while (root.parent_reply_id && threadModel.byId.has(root.parent_reply_id) && !visited.has(root.id)) {
+      visited.add(root.id);
+      root = threadModel.byId.get(root.parent_reply_id)!;
+    }
+
+    const directIndex = directReplies.findIndex(reply => reply.id === root.id);
+    const branch = target.id !== root.id ? threadModel.branches.get(root.id) : undefined;
+    const descendantIndex = branch?.descendants.findIndex(row => row.reply.id === target.id) ?? -1;
+    let nestedFrame = 0;
+    const frame = window.requestAnimationFrame(() => {
+      if (directIndex >= 0) {
+        setDirectLimit(current => Math.max(current, roundUp(directIndex + 1, COMMUNITY_THREAD_PAGE_SIZE)));
+      }
+      if (target.id !== root.id) {
+        setExpandedBranchIds(current => {
+          if (current.has(root.id)) return current;
+          const next = new Set(current);
+          next.add(root.id);
+          return next;
+        });
+        if (descendantIndex >= 0) {
+          setBranchLimits(current => ({
+            ...current,
+            [root.id]: Math.max(
+              current[root.id] ?? COMMUNITY_BRANCH_PAGE_SIZE,
+              roundUp(descendantIndex + 1, COMMUNITY_BRANCH_PAGE_SIZE),
+            ),
+          }));
+        }
+      }
+      nestedFrame = window.requestAnimationFrame(() => {
+        document.getElementById(`community-reply-${replyId}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        setHighlightedReplyId(replyId);
+      });
+    });
+    const timer = window.setTimeout(() => setHighlightedReplyId(current => current === replyId ? null : current), 2_000);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.cancelAnimationFrame(nestedFrame);
+      window.clearTimeout(timer);
+    };
+  }, [directReplies, loading, replyId, threadModel]);
+
+  const likedByUser = useMemo(
+    () => Boolean(user && likes.some(like => like.profile_id === user.id)),
+    [likes, user],
+  );
+  const threadLikers = useMemo(
+    () => thread ? (likersByPost(likes)[thread.id] ?? []) : [],
+    [likes, thread],
+  );
+  const replyLikeCounts = useMemo(() => replyLikes.reduce<Record<string, number>>((counts, row) => {
+    counts[row.reply_id] = (counts[row.reply_id] ?? 0) + 1;
+    return counts;
+  }, {}), [replyLikes]);
+  const replyLikedByUser = useMemo(() => new Set(
+    user
+      ? replyLikes.filter(row => row.profile_id === user.id).map(row => row.reply_id)
+      : [],
+  ), [replyLikes, user]);
+
+  const repliers = useMemo(() => {
+    const rows: SocialLiker[] = [];
+    const seen = new Set<string>();
+    [...directReplies].reverse().forEach(reply => {
+      if (reply.authors && !seen.has(reply.authors.id)) {
+        seen.add(reply.authors.id);
+        rows.push(reply.authors);
+      }
+    });
+    return rows;
+  }, [directReplies]);
+
   const isThreadAuthor = Boolean(user && thread && thread.author_id === user.id);
 
   function requireCommunityInteraction(action: () => void) {
@@ -202,143 +274,268 @@ export default function CommunityThreadPage() {
     action();
   }
 
+  function focusComposer(parentReplyId: string | null) {
+    requireCommunityInteraction(() => {
+      setComposerOpen(true);
+      setReplyingTo(parentReplyId);
+      window.requestAnimationFrame(() => {
+        composerRef.current?.focus({ preventScroll: true });
+      });
+    });
+  }
+
+  function closeComposer() {
+    setComposerOpen(false);
+    setReplyingTo(null);
+    setReplyBody('');
+    composerRef.current?.blur();
+  }
+
+  function directRootFor(replyIdToFind: string) {
+    let current = threadModel.byId.get(replyIdToFind) ?? null;
+    const seen = new Set<string>();
+    while (current?.parent_reply_id && threadModel.byId.has(current.parent_reply_id) && !seen.has(current.id)) {
+      seen.add(current.id);
+      current = threadModel.byId.get(current.parent_reply_id) ?? null;
+    }
+    return current;
+  }
+
   async function toggleLike() {
     if (!thread || liking) return;
-    if (!user) {
-      router.push('/login');
-      return;
-    }
-    if (!canInteract) {
-      setSetupGateOpen(true);
-      return;
-    }
+    requireCommunityInteraction(() => { void toggle(); });
 
-    setLiking(true);
-    setError('');
-
-    if (likedByUser) {
+    async function toggle() {
+      if (!thread || !user) return;
+      setLiking(true);
+      setError('');
+      const wasLiked = likedByUser;
+      const optimistic: LikeRow = {
+        post_id: thread.id,
+        profile_id: user.id,
+        profiles: profile ? {
+          id: profile.id,
+          display_name: profile.display_name,
+          username: profile.username,
+          avatar_url: profile.avatar_url,
+        } : null,
+      };
+      setLikes(current => wasLiked
+        ? current.filter(row => !(row.post_id === thread.id && row.profile_id === user.id))
+        : [optimistic, ...current]);
       try {
-        await setDiscussionLike(thread.id, user.id, false);
-        setLikes(current => current.filter(entry => !(entry.post_id === thread.id && entry.profile_id === user.id)));
-      } catch (likeError) { setError(likeError instanceof Error ? likeError.message : 'Could not update this like.'); }
-    } else {
-      try {
-        await setDiscussionLike(thread.id, user.id, true);
-        const nextLike: LikeRow = {
-          post_id: thread.id,
-          profile_id: user.id,
-          profiles: profile ? { id: profile.id, display_name: profile.display_name, username: profile.username, avatar_url: profile.avatar_url } : null,
-        };
-        setLikes(current => [nextLike, ...current]);
-      } catch (likeError) { setError(likeError instanceof Error ? likeError.message : 'Could not update this like.'); }
+        if (!isLocalPost(thread)) await setDiscussionLike(thread.id, user.id, !wasLiked);
+      } catch (likeError) {
+        setLikes(current => wasLiked
+          ? [optimistic, ...current]
+          : current.filter(row => !(row.post_id === thread.id && row.profile_id === user.id)));
+        setError(likeError instanceof Error ? likeError.message : 'Could not update this like.');
+      } finally {
+        setLiking(false);
+      }
     }
-
-    setLiking(false);
   }
 
-  async function toggleReplyLike(reply: SocialReply) {
+  async function toggleReplyLike(reply: CommunityV11Reply) {
     if (replyLiking) return;
-    if (!user) {
-      router.push('/login');
-      return;
-    }
-    if (!canInteract) {
-      setSetupGateOpen(true);
-      return;
-    }
-    setReplyLiking(reply.id);
-    setError('');
+    requireCommunityInteraction(() => { void toggle(); });
 
-    const alreadyLiked = replyLikedByUser.has(reply.id);
-    if (alreadyLiked) {
+    async function toggle() {
+      if (!user) return;
+      setReplyLiking(reply.id);
+      setError('');
+      const wasLiked = replyLikedByUser.has(reply.id);
+      const optimistic: ReplyLikeRow = {
+        reply_id: reply.id,
+        profile_id: user.id,
+        profiles: profile ? {
+          id: profile.id,
+          display_name: profile.display_name,
+          username: profile.username,
+          avatar_url: profile.avatar_url,
+        } : null,
+      };
+      setReplyLikes(current => wasLiked
+        ? current.filter(row => !(row.reply_id === reply.id && row.profile_id === user.id))
+        : [optimistic, ...current]);
       try {
-        await setReplyLike(reply.id, user.id, false);
-        setReplyLikes(current => current.filter(entry => !(entry.reply_id === reply.id && entry.profile_id === user.id)));
-      } catch (likeError) { setError(likeError instanceof Error ? likeError.message : 'Could not update this reply like.'); }
-    } else {
-      try {
-        await setReplyLike(reply.id, user.id, true);
-        const nextLike: ReplyLikeRow = {
-          reply_id: reply.id,
-          profile_id: user.id,
-          profiles: profile ? { id: profile.id, display_name: profile.display_name, username: profile.username, avatar_url: profile.avatar_url } : null,
-        };
-        setReplyLikes(current => [nextLike, ...current]);
-      } catch (likeError) { setError(likeError instanceof Error ? likeError.message : 'Could not update this reply like.'); }
-    }
-
-    setReplyLiking('');
-  }
-
-  async function insertReply(body: string, parentReplyId: string | null) {
-    if (!thread || !user) return null;
-    const trimmedBody = body.trim();
-    try {
-      return await createDiscussionReply({ postId: thread.id, authorId: user.id, parentReplyId, body: trimmedBody });
-    } catch (insertError) {
-      setError(insertError instanceof Error ? insertError.message : 'Could not create this reply.');
-      return null;
+        if (!isLocalReply(reply)) await setReplyLike(reply.id, user.id, !wasLiked);
+      } catch (likeError) {
+        setReplyLikes(current => wasLiked
+          ? [optimistic, ...current]
+          : current.filter(row => !(row.reply_id === reply.id && row.profile_id === user.id)));
+        setError(likeError instanceof Error ? likeError.message : 'Could not update this reply like.');
+      } finally {
+        setReplyLiking('');
+      }
     }
   }
 
   async function submitReply(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!thread || !user || !replyBody.trim() || submitting) return;
+    if (!thread || !user || !profile || !replyBody.trim() || submitting) return;
     if (!canInteract) {
       setSetupGateOpen(true);
       return;
     }
-    setSubmitting(true);
-    setError('');
-    const created = await insertReply(replyBody, null);
-    if (created) {
-      setReplies(current => [...current, created]);
-      setReplyBody('');
-      setReplyComposerOpen(false);
-    }
-    setSubmitting(false);
-  }
 
-  async function submitInlineReply(event: React.FormEvent<HTMLFormElement>, parentReplyId: string) {
-    event.preventDefault();
-    if (!thread || !user || !inlineBody.trim() || submitting) return;
-    if (!canInteract) {
-      setSetupGateOpen(true);
-      return;
-    }
+    const body = replyBody.trim();
+    const parentReplyId = replyingTo;
+    const optimisticId = `optimistic-${crypto.randomUUID()}`;
+    const optimisticReply: CommunityV11Reply = {
+      id: optimisticId,
+      post_id: thread.id,
+      author_id: user.id,
+      parent_reply_id: parentReplyId,
+      body,
+      status: 'published',
+      created_at: new Date().toISOString(),
+      authors: profile,
+      local_only: isLocalPost(thread),
+    };
+
     setSubmitting(true);
     setError('');
-    const created = await insertReply(inlineBody, parentReplyId);
-    if (created) {
-      setReplies(current => [...current, created]);
-      setInlineBody('');
-      setReplyingTo(null);
+    setReplies(current => [...current, optimisticReply]);
+    setHighlightedReplyId(optimisticId);
+
+    const branchRoot = parentReplyId ? directRootFor(parentReplyId) : null;
+    if (branchRoot) {
+      setExpandedBranchIds(current => new Set(current).add(branchRoot.id));
+      setBranchLimits(current => ({
+        ...current,
+        [branchRoot.id]: Math.max(
+          current[branchRoot.id] ?? COMMUNITY_BRANCH_PAGE_SIZE,
+          (threadModel.branches.get(branchRoot.id)?.descendants.length ?? 0) + 1,
+        ),
+      }));
+    } else {
+      setDirectLimit(current => Math.max(current, directReplies.length + 1));
     }
-    setSubmitting(false);
+
+    try {
+      const created = isLocalPost(thread)
+        ? createLocalCommunityReply({
+          postId: thread.id,
+          author: profile,
+          parentReplyId,
+          body,
+        })
+        : await createDiscussionReply({
+          postId: thread.id,
+          authorId: user.id,
+          parentReplyId,
+          body,
+        });
+      setReplies(current => current.map(reply => reply.id === optimisticId ? created : reply));
+      closeComposer();
+      setHighlightedReplyId(created.id);
+      window.setTimeout(() => {
+        document.getElementById(`community-reply-${created.id}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }, 40);
+      window.setTimeout(() => setHighlightedReplyId(current => current === created.id ? null : current), 2_000);
+    } catch (insertError) {
+      setReplies(current => current.filter(reply => reply.id !== optimisticId));
+      setHighlightedReplyId(null);
+      setError(`${insertError instanceof Error ? insertError.message : 'Could not create this reply.'} Your draft is still here—tap Reply to retry.`);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function deleteThread() {
     if (!thread || !user || !isThreadAuthor) return;
     if (!window.confirm('Delete this post? This cannot be undone.')) return;
     try {
-      await deleteDiscussion(thread.id, user.id);
+      if (isLocalPost(thread)) removeLocalCommunityPost(thread.id);
+      else await deleteDiscussion(thread.id, user.id);
+      router.push('/community');
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : 'Could not delete this thread.');
-      return;
     }
-    router.push('/community');
   }
 
-  async function deleteReply(reply: SocialReply) {
+  function beginEditingThread() {
+    if (!thread || !user || thread.author_id !== user.id) return;
+    setThreadEditBody(thread.body ?? '');
+    setEditingThread(true);
+  }
+
+  function cancelEditingThread() {
+    if (threadEditSaving) return;
+    setEditingThread(false);
+    setThreadEditBody('');
+  }
+
+  async function saveThreadEdit() {
+    if (!thread || !user || thread.author_id !== user.id || threadEditSaving || !threadEditBody.trim()) return;
+    setThreadEditSaving(true);
+    setError('');
+    try {
+      const updated = isLocalPost(thread)
+        ? updateLocalCommunityPost(thread.id, threadEditBody)
+        : await updateDiscussion(thread.id, user.id, threadEditBody);
+      if (!updated) throw new Error('Could not update this post.');
+      setThread(updated);
+      setEditingThread(false);
+      setThreadEditBody('');
+    } catch (editError) {
+      setError(editError instanceof Error ? editError.message : 'Could not update this post.');
+    } finally {
+      setThreadEditSaving(false);
+    }
+  }
+
+  async function editReply(reply: CommunityV11Reply, body: string) {
+    if (!user || reply.author_id !== user.id || !body.trim()) return;
+    setError('');
+    try {
+      const updated = isLocalReply(reply)
+        ? updateLocalCommunityReply(reply.id, body)
+        : await updateDiscussionReply(reply.id, user.id, body);
+      if (!updated) throw new Error('Could not update this reply.');
+      setReplies(current => current.map(row => row.id === reply.id ? updated : row));
+    } catch (editError) {
+      setError(editError instanceof Error ? editError.message : 'Could not update this reply.');
+      throw editError;
+    }
+  }
+
+  function openReport(target: CommunityReportTarget) {
+    requireCommunityInteraction(() => setReportTarget(target));
+  }
+
+  async function deleteReply(reply: CommunityV11Reply) {
     if (!user || reply.author_id !== user.id) return;
     if (!window.confirm('Delete this reply? This cannot be undone.')) return;
     try {
-      await deleteDiscussionReply(reply.id, user.id);
+      if (isLocalReply(reply)) removeLocalCommunityReply(reply.id);
+      else await deleteDiscussionReply(reply.id, user.id);
+      const removed = new Set<string>([reply.id]);
+      let changed = true;
+      while (changed) {
+        changed = false;
+        replies.forEach(row => {
+          if (row.parent_reply_id && removed.has(row.parent_reply_id) && !removed.has(row.id)) {
+            removed.add(row.id);
+            changed = true;
+          }
+        });
+      }
+      setReplies(current => current.filter(row => !removed.has(row.id)));
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : 'Could not delete this reply.');
-      return;
     }
-    setReplies(current => current.filter(r => r.id !== reply.id));
+  }
+
+  function jumpToLatest() {
+    setDirectLimit(directReplies.length);
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const latest = directReplies.at(-1);
+        if (latest) document.getElementById(`community-reply-${latest.id}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      });
+    });
   }
 
   if (loading || authLoading) {
@@ -346,387 +543,350 @@ export default function CommunityThreadPage() {
   }
 
   if (!thread) {
-    return <PageShell><CenteredMessage>Thread not found.</CenteredMessage></PageShell>;
+    return <PageShell><CenteredMessage>{error || 'Thread not found.'}</CenteredMessage></PageShell>;
   }
 
-  const repliers: SocialLiker[] = [];
-  const seenReplyAuthors = new Set<string>();
-  [...replies].reverse().forEach(r => {
-    if (r.authors && !seenReplyAuthors.has(r.authors.id)) {
-      seenReplyAuthors.add(r.authors.id);
-      repliers.push(r.authors);
-    }
-  });
+  const intent = inferCommunityIntent(thread);
+  const composerParent = replyingTo ? threadModel.byId.get(replyingTo) ?? null : null;
+  const composerTarget = composerParent?.authors ?? thread.creators;
+  const composerTargetName = authorHandle(composerTarget) || authorDisplayName(composerTarget);
 
   return (
     <PageShell>
-      <main className="social-shell social-thread-page">
-        <section aria-label="Replies">
-          {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error ui44-field-error" role="alert">{error}</div>}
+      <main className="social-shell social-thread-page community-thread-v11">
+        <section className="community-thread-conversation" aria-label="Conversation">
+          {error && (
+            <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error ui44-field-error community-thread-error" role="alert">
+              {error}
+            </div>
+          )}
 
-          <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip social-feed social-feed-list" aria-label="Thread replies">
-            {!focusedReply && (
-              <>
-                <SocialPostRow
-                  post={thread}
-                  replyCount={replies.length}
-                  likeCount={likes.length}
-                  liked={likedByUser}
-                  likers={threadLikers}
-                  repliers={repliers}
-                  onLike={toggleLike}
-                  onReplyClick={() => requireCommunityInteraction(() => setReplyComposerOpen(open => !open))}
-                  replyActionLabel="Reply"
-                  canDelete={isThreadAuthor}
-                  onDelete={deleteThread}
-                  disabled={liking}
-                  titleSize="lg"
-                  handleOnly
-                  rowClickable={false}
-                />
-                {replyComposerOpen && (
-                  user && canInteract ? (
-                    <form className="social-composer social-composer-inline-surface" onSubmit={submitReply}>
-                      <div className="social-composer-box ui44-composed-field ui44-composed-field-editor">
-                        <Ui44Textarea
-                          surface="bare"
-                          className="os-input-textarea"
-                          value={replyBody}
-                          onChange={event => setReplyBody(event.target.value)}
-                          placeholder="Write reply"
-                          autoFocus
-                        />
-                        <div className="social-composer-actions">
-                          <div className="social-inline-composer-actions">
-                            <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => { setReplyComposerOpen(false); setReplyBody(''); }}>
-                              Cancel
-                            </button>
-                            <button className="os-button os-button-primary os-button-compact" type="submit" disabled={submitting || !replyBody.trim()}>
-                              {submitting ? 'Posting...' : 'Reply'}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </form>
-                  ) : user ? (
-                    <div className="social-composer social-composer-inline-surface">
-                      <div className="social-composer-actions">
-                        <div className="social-note os-type-body">Finish your community profile to reply and like posts.</div>
-                        <button type="button" className="os-button os-button-primary os-button-compact" onClick={() => setSetupGateOpen(true)}>Finish Setup</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="social-composer social-composer-inline-surface">
-                      <div className="social-composer-actions">
-                        <div className="social-note os-type-body">Sign in to join this conversation.</div>
-                        <Link href="/login" className="os-button os-button-primary os-button-compact">Sign In</Link>
-                      </div>
-                    </div>
-                  )
-                )}
-              </>
-            )}
-            {focusedReply && (
-              <ReplyConversation
-                top={focusedReply}
-                isFocusedRoot
-                currentUserId={user?.id ?? null}
-                canInteract={canInteract}
-                replyingTo={replyingTo}
-                onOpenReply={replyIdToOpen => requireCommunityInteraction(() => { setReplyingTo(replyIdToOpen); setInlineBody(''); })}
-                onCancelReply={() => { setReplyingTo(null); setInlineBody(''); }}
-                inlineBody={inlineBody}
-                onInlineChange={setInlineBody}
-                onSubmitInline={submitInlineReply}
-                submitting={submitting}
-                replyLikeCounts={replyLikeCounts}
-                replyLikedByUser={replyLikedByUser}
-                onLikeReply={toggleReplyLike}
-                replyLiking={replyLiking}
-                onDeleteReply={deleteReply}
-                onOpenThread={reply => router.push(`/community/thread/${id}/reply/${reply.id}`)}
-                onBlockedInteraction={() => requireCommunityInteraction(() => {})}
-              >
-                {[]}
-              </ReplyConversation>
-            )}
-            {replyTree.length === 0 ? (
-              null
+          <div className="community-thread-root ui44-panel ui44-panel-glass">
+            <SocialPostRow
+              post={thread}
+              replyCount={directReplies.length}
+              likeCount={likes.length}
+              liked={likedByUser}
+              likers={threadLikers}
+              repliers={repliers}
+              onLike={toggleLike}
+              onReplyClick={() => focusComposer(null)}
+              replyActionLabel="Reply"
+              canDelete={isThreadAuthor}
+              canEdit={isThreadAuthor}
+              onDelete={deleteThread}
+              onEdit={beginEditingThread}
+              onReport={() => openReport({ kind: 'post', id: thread.id })}
+              disabled={liking}
+              titleSize="lg"
+              handleOnly
+              rowClickable={false}
+              meta={intent === 'general' ? undefined : (
+                <span className="community-intent-label">{COMMUNITY_INTENT_LABELS[intent]}</span>
+              )}
+              references={thread.community_references}
+              editing={editingThread}
+              editBody={threadEditBody}
+              editSaving={threadEditSaving}
+              onEditBodyChange={setThreadEditBody}
+              onSaveEdit={() => { void saveThreadEdit(); }}
+              onCancelEdit={cancelEditingThread}
+            />
+          </div>
+
+          <header className="community-thread-replies-heading">
+            <h1>Replies</h1>
+            <span>{directReplies.length}</span>
+          </header>
+
+          <div className="community-thread-reply-list" aria-live="polite">
+            {directReplies.length === 0 ? (
+              <div className="community-thread-empty">
+                <strong>Start the conversation.</strong>
+                <span>Be the first to reply.</span>
+              </div>
             ) : (
-              replyTree.map(({ top, children, totalChildren }) => (
-                <ReplyConversation
-                  key={top.id}
-                  top={top}
-                  viewAllHref={!focusedReply && totalChildren > children.length
-                    ? `/community/thread/${id}/reply/${top.id}`
-                    : undefined}
-                  totalReplyCount={totalChildren}
-                  currentUserId={user?.id ?? null}
-                  canInteract={canInteract}
-                  replyingTo={replyingTo}
-                  onOpenReply={id => requireCommunityInteraction(() => { setReplyingTo(id); setInlineBody(''); })}
-                  onCancelReply={() => { setReplyingTo(null); setInlineBody(''); }}
-                  inlineBody={inlineBody}
-                  onInlineChange={setInlineBody}
-                  onSubmitInline={submitInlineReply}
-                  submitting={submitting}
-                  replyLikeCounts={replyLikeCounts}
-                  replyLikedByUser={replyLikedByUser}
-                  onLikeReply={toggleReplyLike}
-                  replyLiking={replyLiking}
-                  onDeleteReply={deleteReply}
-                  onOpenThread={reply => router.push(`/community/thread/${id}/reply/${reply.id}`)}
-                  onBlockedInteraction={() => requireCommunityInteraction(() => {})}
-                >
-                  {children}
-                </ReplyConversation>
-              ))
+              visibleReplies.map(reply => {
+                const branch = threadModel.branches.get(reply.id) ?? { root: reply, descendants: [] };
+                const expanded = expandedBranchIds.has(reply.id);
+                const branchLimit = branchLimits[reply.id] ?? COMMUNITY_BRANCH_PAGE_SIZE;
+                return (
+                  <ReplyBranch
+                    key={reply.id}
+                    threadId={thread.id}
+                    branch={branch}
+                    expanded={expanded}
+                    branchLimit={branchLimit}
+                    currentUserId={userId}
+                    highlightedReplyId={highlightedReplyId}
+                    replyLikeCounts={replyLikeCounts}
+                    replyLikedByUser={replyLikedByUser}
+                    replyLiking={replyLiking}
+                    onLikeReply={toggleReplyLike}
+                    onReply={focusComposer}
+                    onDeleteReply={deleteReply}
+                    onEditReply={editReply}
+                    onReportReply={reply => openReport({ kind: 'reply', id: reply.id })}
+                    onExpand={() => {
+                      setExpandedBranchIds(current => new Set(current).add(reply.id));
+                      setBranchLimits(current => ({
+                        ...current,
+                        [reply.id]: Math.max(current[reply.id] ?? 0, COMMUNITY_BRANCH_PAGE_SIZE),
+                      }));
+                    }}
+                    onCollapse={() => setExpandedBranchIds(current => {
+                      const next = new Set(current);
+                      next.delete(reply.id);
+                      return next;
+                    })}
+                    onLoadMore={() => setBranchLimits(current => ({
+                      ...current,
+                      [reply.id]: (current[reply.id] ?? COMMUNITY_BRANCH_PAGE_SIZE) + COMMUNITY_BRANCH_PAGE_SIZE,
+                    }))}
+                  />
+                );
+              })
             )}
           </div>
+
+          {directReplies.length > COMMUNITY_THREAD_PAGE_SIZE && (
+            <div className="community-thread-pagination">
+              {visibleReplies.length < directReplies.length && (
+                <button
+                  type="button"
+                  className="os-button os-button-secondary os-button-compact"
+                  onClick={() => setDirectLimit(current => current + COMMUNITY_THREAD_PAGE_SIZE)}
+                >
+                  Load {Math.min(COMMUNITY_THREAD_PAGE_SIZE, directReplies.length - visibleReplies.length)} more
+                </button>
+              )}
+              <button type="button" className="os-button os-button-ghost os-button-compact" onClick={jumpToLatest}>
+                Jump to latest
+              </button>
+            </div>
+          )}
         </section>
       </main>
+
+      {composerOpen && user && canInteract && (
+        <div
+          className="community-thread-composer-shell"
+          data-keyboard-open={keyboardInset > 0 ? 'true' : 'false'}
+          style={{ '--community-keyboard-inset': `${keyboardInset}px` } as React.CSSProperties}
+        >
+          <form className="community-thread-composer" onSubmit={submitReply}>
+            <div className="community-thread-composer-context">
+              <span className="community-thread-composer-context-copy">
+                <span>Replying to </span>
+                <span className="community-thread-composer-target">@{composerTargetName}</span>
+              </span>
+              <button type="button" onClick={closeComposer} aria-label="Close reply composer">×</button>
+            </div>
+            <div className="community-thread-composer-row">
+              <textarea
+                ref={composerRef}
+                className="ui44-input ui44-textarea ui44-input-bare community-thread-composer-input"
+                rows={1}
+                value={replyBody}
+                onChange={event => setReplyBody(event.target.value)}
+                placeholder="Type your reply"
+                aria-label="Write a reply"
+              />
+              <button
+                className="os-button os-button-primary os-button-compact community-thread-composer-submit"
+                type="submit"
+                disabled={submitting || !replyBody.trim()}
+              >
+                {submitting ? 'Posting…' : error && replyBody.trim() ? 'Retry' : 'Reply'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       <CommunitySetupGate open={setupGateOpen} onClose={() => setSetupGateOpen(false)} />
+      <CommunityReportDialog target={reportTarget} onClose={() => setReportTarget(null)} />
     </PageShell>
   );
 }
 
-function ReplyConversation({
-  top,
-  children,
-  isFocusedRoot = false,
-  viewAllHref,
-  totalReplyCount,
+function ReplyBranch({
+  threadId,
+  branch,
+  expanded,
+  branchLimit,
   currentUserId,
-  canInteract,
-  replyingTo,
-  onOpenReply,
-  onCancelReply,
-  inlineBody,
-  onInlineChange,
-  onSubmitInline,
-  submitting,
+  highlightedReplyId,
   replyLikeCounts,
   replyLikedByUser,
-  onLikeReply,
   replyLiking,
+  onLikeReply,
+  onReply,
   onDeleteReply,
-  onOpenThread,
-  onBlockedInteraction,
+  onEditReply,
+  onReportReply,
+  onExpand,
+  onCollapse,
+  onLoadMore,
 }: {
-  top: SocialReply;
-  children: SocialReply[];
-  isFocusedRoot?: boolean;
-  viewAllHref?: string;
-  totalReplyCount?: number;
+  threadId: string;
+  branch: CommunityThreadBranch;
+  expanded: boolean;
+  branchLimit: number;
   currentUserId: string | null;
-  canInteract: boolean;
-  replyingTo: string | null;
-  onOpenReply: (id: string) => void;
-  onCancelReply: () => void;
-  inlineBody: string;
-  onInlineChange: (value: string) => void;
-  onSubmitInline: (event: React.FormEvent<HTMLFormElement>, parentReplyId: string) => void;
-  submitting: boolean;
+  highlightedReplyId: string | null;
   replyLikeCounts: Record<string, number>;
   replyLikedByUser: Set<string>;
-  onLikeReply: (reply: SocialReply) => void;
   replyLiking: string;
-  onDeleteReply: (reply: SocialReply) => void;
-  onOpenThread: (reply: SocialReply) => void;
-  onBlockedInteraction: () => void;
+  onLikeReply: (reply: CommunityV11Reply) => void;
+  onReply: (replyId: string) => void;
+  onDeleteReply: (reply: CommunityV11Reply) => void;
+  onEditReply: (reply: CommunityV11Reply, body: string) => Promise<void>;
+  onReportReply: (reply: CommunityV11Reply) => void;
+  onExpand: () => void;
+  onCollapse: () => void;
+  onLoadMore: () => void;
 }) {
-  return (
-    <div className={isFocusedRoot ? 'social-reply-group social-reply-group-focused' : 'social-reply-group'}>
-      <ReplyRow
-        reply={top}
-        rowClickable={!isFocusedRoot}
-        connectAfter={children.length > 0}
-        onOpenThread={() => onOpenThread(top)}
-        onReplyClick={() => (currentUserId && canInteract ? onOpenReply(top.id) : onBlockedInteraction())}
-        likeCount={replyLikeCounts[top.id] ?? 0}
-        liked={replyLikedByUser.has(top.id)}
-        onLike={() => onLikeReply(top)}
-        likeDisabled={replyLiking === top.id}
-        canDelete={Boolean(currentUserId && top.author_id === currentUserId)}
-        onDelete={() => onDeleteReply(top)}
-      />
-      {replyingTo === top.id && (
-        <InlineReplyForm
-          value={inlineBody}
-          onChange={onInlineChange}
-          onCancel={onCancelReply}
-          onSubmit={event => onSubmitInline(event, top.id)}
-          submitting={submitting}
-        />
-      )}
-      {children.map((child, index) => (
-        <div key={child.id} className="social-reply-item">
-          <ReplyRow
-            reply={child}
-            connectBefore
-            connectAfter={index < children.length - 1}
-            onOpenThread={() => onOpenThread(child)}
-            onReplyClick={() => (currentUserId && canInteract ? onOpenReply(child.id) : onBlockedInteraction())}
-            likeCount={replyLikeCounts[child.id] ?? 0}
-            liked={replyLikedByUser.has(child.id)}
-            onLike={() => onLikeReply(child)}
-            likeDisabled={replyLiking === child.id}
-            canDelete={Boolean(currentUserId && child.author_id === currentUserId)}
-            onDelete={() => onDeleteReply(child)}
-          />
-          {replyingTo === child.id && (
-            <InlineReplyForm
-              value={inlineBody}
-              onChange={onInlineChange}
-              onCancel={onCancelReply}
-              onSubmit={event => onSubmitInline(event, child.id)}
-              submitting={submitting}
-            />
-          )}
-        </div>
-      ))}
-      {viewAllHref ? (
-        <Link className="social-reply-view-all" href={viewAllHref}>
-          View all {totalReplyCount ?? children.length} replies
-        </Link>
-      ) : null}
-    </div>
-  );
-}
+  const visibleDescendants = visibleBranchReplies(branch, expanded, branchLimit);
+  const hiddenCount = branch.descendants.length - visibleDescendants.length;
 
-function ReplyRow({
-  reply,
-  rowClickable = true,
-  connectBefore = false,
-  connectAfter = false,
-  onOpenThread,
-  onReplyClick,
-  likeCount,
-  liked,
-  onLike,
-  likeDisabled,
-  canDelete,
-  onDelete,
-}: {
-  reply: SocialReply;
-  rowClickable?: boolean;
-  connectBefore?: boolean;
-  connectAfter?: boolean;
-  onOpenThread: () => void;
-  onReplyClick: () => void;
-  likeCount: number;
-  liked: boolean;
-  onLike: () => void;
-  likeDisabled: boolean;
-  canDelete: boolean;
-  onDelete: () => void;
-}) {
   return (
-    <article
-      className={`social-row ui44-list-row ui44-list-row-reply${rowClickable ? ' ui44-list-row-interactive' : ''}${connectBefore ? ' social-reply-connect-before' : ''}${connectAfter ? ' social-reply-connect-after' : ''}`}
-      role={rowClickable ? 'link' : undefined}
-      tabIndex={rowClickable ? 0 : undefined}
-      onClick={rowClickable ? onOpenThread : undefined}
-      onKeyDown={rowClickable ? event => {
-        if (event.target !== event.currentTarget) return;
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onOpenThread();
-        }
-      } : undefined}
-    >
-      <Link
-        className="ui44-reply-avatar-link"
-        href={authorHref(reply.authors)}
-        aria-label={authorDisplayName(reply.authors)}
-        onClick={event => event.stopPropagation()}
-      >
-        <SocialAvatar profile={reply.authors} />
-      </Link>
-      <div className="social-row-main ui44-reply-copy">
-        <div className="ui44-community-author-line ui44-reply-author-line">
-          <SocialAuthorLine author={reply.authors} createdAt={reply.created_at} handleOnly />
+    <article className="community-thread-branch">
+      <ReplyRow
+        threadId={threadId}
+        reply={branch.root}
+        highlighted={highlightedReplyId === branch.root.id}
+        likeCount={replyLikeCounts[branch.root.id] ?? 0}
+        liked={replyLikedByUser.has(branch.root.id)}
+        likeDisabled={replyLiking === branch.root.id}
+        canDelete={Boolean(currentUserId && branch.root.author_id === currentUserId)}
+        onLike={() => onLikeReply(branch.root as CommunityV11Reply)}
+        onReply={() => onReply(branch.root.id)}
+        onDelete={() => onDeleteReply(branch.root as CommunityV11Reply)}
+        onEdit={body => onEditReply(branch.root as CommunityV11Reply, body)}
+        onReport={() => onReportReply(branch.root as CommunityV11Reply)}
+      />
+
+      {visibleDescendants.length > 0 && (
+        <div className="community-thread-branch-replies">
+          {visibleDescendants.map(({ reply }) => (
+            <ReplyRow
+              key={reply.id}
+              threadId={threadId}
+              reply={reply}
+              highlighted={highlightedReplyId === reply.id}
+              likeCount={replyLikeCounts[reply.id] ?? 0}
+              liked={replyLikedByUser.has(reply.id)}
+              likeDisabled={replyLiking === reply.id}
+              canDelete={Boolean(currentUserId && reply.author_id === currentUserId)}
+              onLike={() => onLikeReply(reply as CommunityV11Reply)}
+              onReply={() => onReply(reply.id)}
+              onDelete={() => onDeleteReply(reply as CommunityV11Reply)}
+              onEdit={body => onEditReply(reply as CommunityV11Reply, body)}
+              onReport={() => onReportReply(reply as CommunityV11Reply)}
+            />
+          ))}
         </div>
-        <p className="social-row-body"><SocialRichText text={reply.body} /></p>
-        <div className="social-actions" onClick={event => event.stopPropagation()}>
-          <button
-            type="button"
-            className="social-action social-action-like ui44-row-action"
-            data-liked={liked ? 'true' : 'false'}
-            onClick={onLike}
-            disabled={likeDisabled}
-            aria-label={liked ? 'Unlike' : 'Like'}
-          >
-            <span className={likeCount > 0 ? 'social-action-like-hit social-action-like-hit-count' : 'social-action-like-hit'}>
-              <SocialHeartIcon filled={liked} />
-              {likeCount > 0 && <span className="social-action-count">{likeCount}</span>}
-            </span>
-          </button>
-          <button
-            type="button"
-            className="social-action social-action-reply-label ui44-row-action"
-            onClick={onReplyClick}
-            aria-label="Reply"
-          >
-            <SocialChatBubbleIcon />
-            <span className="social-action-label">Reply</span>
-          </button>
-          {canDelete && (
-            <button
-              type="button"
-              className="social-action social-action-danger social-action-flush ui44-row-action ui44-row-action-delete"
-              onClick={onDelete}
-              aria-label="Delete reply"
-            >
-              <SocialTrashIcon />
+      )}
+
+      {branch.descendants.length > COMMUNITY_BRANCH_PREVIEW_SIZE && (
+        <div className="community-thread-branch-controls">
+          {!expanded ? (
+            <button type="button" onClick={onExpand}>
+              View {branch.descendants.length - COMMUNITY_BRANCH_PREVIEW_SIZE} more {branch.descendants.length - COMMUNITY_BRANCH_PREVIEW_SIZE === 1 ? 'reply' : 'replies'}
             </button>
+          ) : (
+            <>
+              {hiddenCount > 0 && (
+                <button type="button" onClick={onLoadMore}>
+                  Load {Math.min(COMMUNITY_BRANCH_PAGE_SIZE, hiddenCount)} more
+                </button>
+              )}
+              <button type="button" onClick={onCollapse}>Hide replies</button>
+            </>
           )}
         </div>
-      </div>
+      )}
     </article>
   );
 }
 
-function InlineReplyForm({
-  value,
-  onChange,
-  onCancel,
-  onSubmit,
-  submitting,
+function ReplyRow({
+  threadId,
+  reply,
+  highlighted,
+  likeCount,
+  liked,
+  likeDisabled,
+  canDelete,
+  onLike,
+  onReply,
+  onDelete,
+  onEdit,
+  onReport,
 }: {
-  value: string;
-  onChange: (value: string) => void;
-  onCancel: () => void;
-  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
-  submitting: boolean;
+  threadId: string;
+  reply: SocialReply;
+  highlighted: boolean;
+  likeCount: number;
+  liked: boolean;
+  likeDisabled: boolean;
+  canDelete: boolean;
+  onLike: () => void;
+  onReply: () => void;
+  onDelete: () => void;
+  onEdit: (body: string) => Promise<void>;
+  onReport: () => void;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [editBody, setEditBody] = useState(reply.body);
+  const [editSaving, setEditSaving] = useState(false);
+  const href = `/community/thread/${threadId}/reply/${reply.id}`;
+
+  async function saveEdit() {
+    if (editSaving || !editBody.trim()) return;
+    setEditSaving(true);
+    try {
+      await onEdit(editBody);
+      setEditing(false);
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
   return (
-    <form
-      className="social-inline-composer"
-      onSubmit={onSubmit}
-    >
-      <div className="social-inline-composer-box ui44-composed-field ui44-composed-field-editor">
-        <Ui44Textarea
-          surface="bare"
-          className="os-input-textarea"
-          value={value}
-          onChange={event => onChange(event.target.value)}
-          placeholder="Write reply"
-          autoFocus
-        />
-        <div className="social-inline-composer-actions">
-          <button type="button" className="os-button os-button-ghost os-button-compact" onClick={onCancel}>
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="os-button os-button-primary os-button-compact"
-            disabled={submitting || !value.trim()}
-          >
-            {submitting ? 'Posting...' : 'Reply'}
-          </button>
-        </div>
-      </div>
-    </form>
+    <SocialPostRow
+      post={reply}
+      articleId={`community-reply-${reply.id}`}
+      replyId={reply.id}
+      rowClassName={`ui44-list-row-reply community-thread-reply${highlighted ? ' community-thread-reply-highlighted' : ''}`}
+      hrefOverride={href}
+      contentLabel="Reply"
+      likeCount={likeCount}
+      liked={liked}
+      onLike={onLike}
+      onReplyClick={onReply}
+      replyActionLabel="Reply"
+      canDelete={canDelete}
+      canEdit={canDelete}
+      onDelete={onDelete}
+      onEdit={() => {
+        setEditBody(reply.body);
+        setEditing(true);
+      }}
+      onReport={onReport}
+      disabled={likeDisabled}
+      handleOnly
+      rowClickable={false}
+      editing={editing}
+      editBody={editBody}
+      editSaving={editSaving}
+      onEditBodyChange={setEditBody}
+      onSaveEdit={() => { void saveEdit(); }}
+      onCancelEdit={() => {
+        setEditBody(reply.body);
+        setEditing(false);
+      }}
+    />
   );
 }

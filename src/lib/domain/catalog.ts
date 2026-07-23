@@ -3,6 +3,7 @@ import type { Product } from '@/lib/products';
 import { supabase } from '@/lib/supabase';
 import { beatReviewSurfacesEnabled, hydrateBeatProducts } from '@/lib/domain/beats';
 import { hydratePaidSalesStatus } from '@/lib/domain/paidSalesStatus';
+import { localMaskPreviewEnabled, localMaskProduct } from '@/lib/localMaskPreview';
 
 export type PlayableTrack = Pick<
   Database['public']['Tables']['tracks']['Row'],
@@ -71,7 +72,10 @@ export async function loadStoreDiscoveryCatalog(limit = 200, reviewOwnerId?: str
     browse_type: typeByItem.get(item.id) ?? null,
     browse_tags: tagsByItem.get(item.id) ?? [],
   }));
-  return hydrateBeatProducts(await hydratePaidSalesStatus(products));
+  const hydrated = await hydrateBeatProducts(await hydratePaidSalesStatus(products));
+  return localMaskPreviewEnabled && !hydrated.some(item => item.id === localMaskProduct.id)
+    ? [...hydrated, localMaskProduct]
+    : hydrated;
 }
 
 export async function listPlayableItemTracks(itemId: string) {

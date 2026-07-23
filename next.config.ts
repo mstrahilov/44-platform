@@ -71,7 +71,7 @@ const nextConfig: NextConfig = {
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-          { key: "Content-Security-Policy", value: "base-uri 'self'; object-src 'none'; frame-src 'self' https://interactive.44os.com https://www.youtube.com https://www.youtube-nocookie.com; frame-ancestors 'none'; form-action 'self'" },
+          { key: "Content-Security-Policy", value: "base-uri 'self'; object-src 'none'; frame-src 'self' https://interactive.44os.com https://44os-mask.vercel.app https://www.youtube.com https://www.youtube-nocookie.com; frame-ancestors 'none'; form-action 'self'" },
           { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
         ],
       },

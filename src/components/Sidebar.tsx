@@ -14,14 +14,13 @@
  */
 
 import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
-import { getActiveOSAppId, getAvailableDockApps, getOSApp, type OSApp, type OSAppChild } from '@/lib/osApps';
+import { getActiveMobileOSAppId, getActiveOSAppId, getAvailableDockApps, getOSApp, type OSApp } from '@/lib/osApps';
 import { setDockMode, unpinDockItem, useDockPreferences, type PinnedDockItem } from '@/lib/dockPreferences';
 import { useContextMenu, type ContextMenuEntry } from '@/components/ContextMenu';
-import { useMobileMenu } from '@/components/MobileMenuContext';
 
 const DRAG_TOGGLE_DISTANCE = 56;
 const DRAG_START_DISTANCE = 12;
@@ -130,22 +129,15 @@ function DockSection({
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const { user } = useAuth();
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const { mode, pinnedItems } = useDockPreferences();
   const now = useNow();
   const activeAppId = getActiveOSAppId(pathname);
+  const activeMobileAppId = getActiveMobileOSAppId(pathname);
   const { openContextMenu } = useContextMenu();
-  const { open: mobileMenuOpen, setOpen: setMobileMenuOpen } = useMobileMenu();
-  const [expandedAppId, setExpandedAppId] = useState<string | null>(null);
 
   const compact = mode === 'compact';
-
-  useEffect(() => {
-    const activeApp = activeAppId ? getOSApp(activeAppId) : undefined;
-    if (activeApp?.children) Promise.resolve().then(() => setExpandedAppId(activeApp.id));
-  }, [activeAppId]);
 
   // Drag-to-toggle: track a horizontal pointer drag anywhere on the Dock.
   const dragRef = useRef<{ startX: number } | null>(null);
@@ -206,29 +198,23 @@ export default function Sidebar() {
   const dockApps = availableApps;
   const activePinnedItem = pinnedItems.find(item => isPinnedDockItemActive(pathname, item.href));
   const mainActiveAppId = activePinnedItem ? '' : activeAppId;
-  const libraryApp = dockApps.find(app => app.id === 'library') ?? null;
   const primaryApps = ['store', 'radio', 'library', 'community']
     .map(id => dockApps.find(app => app.id === id))
     .filter((app): app is OSApp => Boolean(app))
     .map(app => app.id === 'store' ? { ...app, label: 'Home' } : app);
   const supportApp = dockApps.find(app => app.id === 'support') ?? null;
   const settingsApp = dockApps.find(app => app.id === 'settings') ?? null;
-  const studioApp = dockApps.find(app => app.id === 'studio') ?? getOSApp('studio') ?? null;
-  const menuLibraryApp = libraryApp ?? getOSApp('library') ?? null;
-  const menuApps = [menuLibraryApp, getOSApp('store'), getOSApp('radio'), getOSApp('community'), studioApp, supportApp, settingsApp]
-    .filter((app): app is OSApp => Boolean(app))
-    .filter((app, index, apps) => apps.findIndex(candidate => candidate.id === app.id) === index);
-  const mobileDockApps = ['store', 'library', 'radio', 'community', 'search']
-    .map(id => getOSApp(id as OSApp['id']))
-    .filter((app): app is OSApp => Boolean(app));
+  const mobileDockApps = [
+    { app: getOSApp('store'), label: 'Home' },
+    { app: getOSApp('library'), label: 'Library' },
+    { app: getOSApp('radio'), label: 'Radio' },
+    { app: getOSApp('community'), label: 'Community' },
+    { app: getOSApp('you'), label: 'Account' },
+  ].filter((entry): entry is { app: OSApp; label: string } => Boolean(entry.app));
 
   const time = now
     ? now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
     : '';
-
-  function openApp(app: OSApp) {
-    setExpandedAppId(app.children ? app.id : null);
-  }
 
   return <>
     <aside
@@ -289,70 +275,25 @@ export default function Sidebar() {
           </Link>
         ) : null}
       </nav>
-      <nav className="sidebar-nav-mobile" aria-label="Quick access">
-        {mobileDockApps.map(app => (
-          <Link key={app.id} href={app.href} className={activeAppId === app.id ? 'mobile-dock-item mobile-dock-item-active' : 'mobile-dock-item'} aria-label={app.label}>
-            <span className={`os-icon ${app.iconClass}`} aria-hidden="true" />
+      <nav className="sidebar-nav-mobile" aria-label="Primary navigation">
+        {mobileDockApps.map(({ app, label }) => (
+          <Link
+            key={app.id}
+            href={app.href}
+            className={activeMobileAppId === app.id ? 'mobile-dock-item mobile-dock-item-active' : 'mobile-dock-item'}
+            aria-label={label}
+            aria-current={activeMobileAppId === app.id ? 'page' : undefined}
+          >
+            <span className={`mobile-dock-icon os-icon ${app.iconClass}`} aria-hidden="true" />
+            <span className="mobile-dock-label">{label}</span>
           </Link>
         ))}
       </nav>
     </aside>
-    <div className={mobileMenuOpen ? 'mobile-nav-layer mobile-nav-layer-open' : 'mobile-nav-layer'} aria-hidden={!mobileMenuOpen}>
-      <button type="button" className="mobile-nav-scrim" aria-label="Close menu" onClick={() => setMobileMenuOpen(false)} />
-      <aside className="mobile-nav-drawer" role="dialog" aria-modal="true" aria-label="Menu">
-        <div className="mobile-nav-header">
-          <span>Menu</span>
-          <button type="button" className="mobile-nav-close" aria-label="Close menu" onClick={() => setMobileMenuOpen(false)}>×</button>
-        </div>
-        <nav className="mobile-nav-list">
-          {menuApps.map(app => {
-            const expanded = expandedAppId === app.id;
-            return <div className="mobile-nav-app" key={app.id}>
-              <Link href={app.href} className={activeAppId === app.id ? 'mobile-nav-item mobile-nav-item-active' : 'mobile-nav-item'}
-                aria-expanded={app.children ? expanded : undefined}
-                onClick={() => {
-                  if (app.children) openApp(app);
-                  setMobileMenuOpen(false);
-                }}>
-                <span className={`os-icon ${app.iconClass}`} aria-hidden="true" />
-                <span>{app.label}</span>
-              </Link>
-              {app.children && expanded && <div className="mobile-nav-children">
-                {app.children.map(child => <Link key={child.id} href={child.href}
-                  className={isChildActive(child, pathname, searchParams) ? 'mobile-nav-child mobile-nav-child-active' : 'mobile-nav-child'}
-                  onClick={() => setMobileMenuOpen(false)}>
-                  <span className="mobile-nav-child-icon mobile-nav-child-icon-empty" aria-hidden="true" />
-                  <span>{child.label}</span>
-                </Link>)}
-              </div>}
-            </div>;
-          })}
-          {pinnedItems.length > 0 && <div className="mobile-nav-divider" />}
-          {pinnedItems.map(item => <Link key={item.id} href={item.href} className="mobile-nav-item" onClick={() => setMobileMenuOpen(false)}>
-            <span className="sidebar-pin-art" aria-hidden="true">{item.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={item.imageUrl} alt="" />
-            ) : <span className={`os-icon ${item.iconClass}`} />}</span>
-            <span>{item.label}</span>
-          </Link>)}
-          {!user && <Link href="/login" className="mobile-nav-item" onClick={() => setMobileMenuOpen(false)}>
-            <span className="os-icon os-icon-user" aria-hidden="true" /><span>Log In</span>
-          </Link>}
-        </nav>
-      </aside>
-    </div>
   </>;
 }
 
 function isPinnedDockItemActive(pathname: string, href: string) {
   const path = href.split('?')[0];
   return pathname === path || pathname.startsWith(`${path}/`);
-}
-
-function isChildActive(child: OSAppChild, pathname: string, searchParams: URLSearchParams) {
-  const [childPath, childQuery = ''] = child.href.split('?');
-  if (pathname !== childPath && !pathname.startsWith(`${childPath}/`)) return false;
-  const expected = new URLSearchParams(childQuery);
-  if (expected.size === 0) return searchParams.size === 0;
-  return Array.from(expected.entries()).every(([key, value]) => searchParams.get(key) === value);
 }

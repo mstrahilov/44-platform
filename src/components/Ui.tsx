@@ -260,8 +260,8 @@ export function HubSection({
   );
 }
 
-export function ProductGrid({ children }: { children: ReactNode }) {
-  return <div className="app-grid ui44-catalog-grid">{children}</div>;
+export function ProductGrid({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <div className={`app-grid ui44-catalog-grid ${className}`.trim()}>{children}</div>;
 }
 
 /* Plain text empty state — no panel, no shadow, no card. Cards are for

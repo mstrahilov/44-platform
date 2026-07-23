@@ -4,6 +4,7 @@ import type { StudioCatalogSectionId } from '@/lib/studioCatalog';
 export const STORE_TYPES_BY_EXPERIENCE: Partial<Record<ProductExperience, readonly string[]>> = {
   music: ['Album', 'EP', 'Single', 'Mixtape', 'Live Set'],
   book: ['Novel', 'Artbook', 'Zine'],
+  interactive: ['Game'],
   physical: ['Apparel', 'Accessories', 'Physical Music', 'Goods & Collectibles'],
   asset: ['Sample Packs'],
 };
@@ -15,6 +16,7 @@ export function storeTypesForExperience(experience: ProductExperience | null | u
 export function storeTypesForStudioSection(sectionId: StudioCatalogSectionId) {
   if (sectionId === 'music') return storeTypesForExperience('music');
   if (sectionId === 'books') return storeTypesForExperience('book');
+  if (sectionId === 'games') return storeTypesForExperience('interactive');
   if (sectionId === 'merch') return storeTypesForExperience('physical');
   return storeTypesForExperience('asset');
 }

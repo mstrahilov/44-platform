@@ -106,6 +106,7 @@ export interface CommunityPost {
   body: string | null;
   status: string;
   created_at: string;
+  updated_at?: string | null;
   creators?: Pick<Creator, 'id' | 'slug' | 'name' | 'avatar_url'> | null;
 }
 

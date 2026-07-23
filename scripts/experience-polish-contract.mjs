@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 const [
   topbar,
+  youApp,
   customerCommerce,
   supportArticle,
   supportLayout,
@@ -17,11 +18,8 @@ const [
   uploads,
   uploadField,
   storeDiscovery,
-  adminHome,
-  homeDiscoveryDomain,
   canonicalCss,
   videoMigration,
-  featuredShelfMigration,
   studioPricing,
   radioDomain,
   autoRadioMigration,
@@ -33,6 +31,7 @@ const [
   legacyTrackRepairMigration,
 ] = await Promise.all([
   read('src/components/Topbar.tsx'),
+  read('src/components/YouApp.tsx'),
   read('src/lib/domain/customerCommerce.ts'),
   read('src/app/support/[slug]/page.tsx'),
   read('src/app/support/layout.tsx'),
@@ -46,11 +45,8 @@ const [
   read('src/lib/uploads.ts'),
   read('src/components/UploadField.tsx'),
   read('src/components/StoreApp.tsx'),
-  read('src/components/admin/AdminHomeApp.tsx'),
-  read('src/lib/domain/homeDiscovery.ts'),
   read('src/styles/44-ui/canonical-system.css'),
   read('supabase/migrations/20260718012000_m13_release_video_limit_ten.sql'),
-  read('supabase/migrations/20260719010000_home_featured_shelf.sql'),
   read('src/components/StudioPricingFields.tsx'),
   read('src/lib/radio.ts'),
   read('supabase/migrations/20260719020000_auto_radio_and_music_download_controls.sql'),
@@ -73,10 +69,10 @@ for (const parent of ['/admin/content/', '/admin/fulfillment/', '/admin/people/'
 assert.match(customerCommerce, /export async function hasCustomerOrders/, 'the account menu has a focused order-existence query');
 assert.match(customerCommerce, /neq\('status', 'draft'\)[\s\S]*limit\(1\)/, 'only placed orders make Orders visible');
 assert.match(topbar, /\{hasOrders && \([\s\S]*href="\/orders"/, 'Orders is hidden until an order exists');
-const mobileSupportIndex = topbar.indexOf('href="/support"');
-const mobileSettingsIndex = topbar.indexOf('href="/settings"');
+const mobileSupportIndex = youApp.indexOf("href: '/support'");
+const mobileSettingsIndex = youApp.indexOf("href: '/settings'");
 assert.ok(mobileSupportIndex > 0 && mobileSupportIndex < mobileSettingsIndex, 'mobile Support appears immediately above Settings');
-assert.match(topbar.slice(mobileSupportIndex, mobileSettingsIndex), /os-popover-item-mobile-only/, 'the added Support menu item remains mobile-only');
+assert.doesNotMatch(topbar, /href="\/support"[\s\S]*href="\/settings"/, 'desktop account menu does not repeat Support and Settings from the Dock');
 
 assert.match(storeDetail, /<ProductDetailsSection details=\{productDetails\}/, 'Store renders relevant Product Details');
 assert.doesNotMatch(`${storeDetail}\n${storeDiscovery}`, /Sign In to Save|Purchasing coming soon|Paid sales unavailable/, 'Store actions never replace available actions with signed-out or coming-soon labels');
@@ -108,15 +104,15 @@ assert.match(adminReleaseDateMigration, /set_admin_item_release_date[\s\S]*exper
 assert.match(adminReleaseDateMigration, /admin_item_release_date_events_immutable[\s\S]*reject_admin_audit_mutation/, 'Release Date correction history is immutable');
 assert.match(adminContentDetail, /setAdminItemReleaseDate\(item\.id, releaseDate, reason\)/, 'Admin content detail persists the confirmed Release Date correction');
 assert.match(adminContentDetail, /title="Release Date"[\s\S]*setReleaseDateAction\(true\)[\s\S]*title="Save Release Date\?"/, 'Admin content detail exposes a confirmed Release Date correction control');
-assert.match(studioOverview, /const STUDIO_CREATE_ACTIONS = \[[\s\S]*Add Music[\s\S]*Add Book[\s\S]*Add Pack[\s\S]*Add Update[\s\S]*\];/, 'Studio plus actions use the intended concise order');
-assert.doesNotMatch(studioOverview.match(/const STUDIO_CREATE_ACTIONS = \[[\s\S]*?\];/)?.[0] ?? '', /Add Sample Pack|Add Samples|Add Beat|Add Event/, 'Studio plus actions contain only the four intended labels');
+assert.match(studioOverview, /const STUDIO_CREATE_ACTIONS = \[[\s\S]*Add Music[\s\S]*Add Book[\s\S]*Add Game[\s\S]*Add Sample Pack[\s\S]*\];/, 'Studio plus actions use the intended concise order');
+assert.doesNotMatch(studioOverview.match(/const STUDIO_CREATE_ACTIONS = \[[\s\S]*?\];/)?.[0] ?? '', /Add Update|Add Samples|Add Beat|Add Event/, 'Studio plus actions contain only the four intended labels');
 assert.match(canonicalCss, /\.release-core-grid \.release-date-input \{[\s\S]*min-inline-size: 0;[\s\S]*max-inline-size: 100%;/, 'mobile release-date controls stay inside their grid column');
 assert.match(studioPricing, /freeAccessDescription[\s\S]*Offer a paid download/, 'Music and Book Studio explain free access and optional paid downloads with a checkbox');
 assert.match(studioPricing, /paidDownloadRequired[\s\S]*Sample Packs are paid downloads/, 'Sample Pack Studio always presents required paid-download pricing');
 assert.match(newItem, /Everyone can listen and add this release to their Library for free[\s\S]*Everyone can read and add this book to their Library for free[\s\S]*paidDownloadRequired=\{section\.id === 'assets'\}/, 'new Music, Books, and Sample Packs use their intended pricing model');
 assert.match(editItem, /Everyone can listen and add this release to their Library for free[\s\S]*Everyone can read and add this book to their Library for free[\s\S]*paidDownloadRequired=\{section\.id === 'assets'\}/, 'Music, Book, and Sample Pack edits preserve their intended pricing model');
-assert.match(newItem, /streaming_enabled: isMusicProduct \? true : undefined,[\s\S]*download_purchase_enabled: !isMerchProduct \? !isFree : undefined/, 'new digital Items persist streaming and paid-download capabilities independently');
-assert.match(editItem, /streaming_enabled: true[\s\S]*download_purchase_enabled: !isFree/, 'digital Item edits persist the optional or required paid-download choice');
+assert.match(newItem, /streaming_enabled: isMusicProduct \? true : isGameProduct \? false : undefined,[\s\S]*download_purchase_enabled: !isMerchProduct \? \(isGameProduct \? false : !isFree\) : undefined/, 'new digital Items persist streaming and paid-download capabilities independently while reviewed Games remain non-downloadable');
+assert.match(editItem, /isMusicProduct \? \{ streaming_enabled: true \} : isGameProduct \? \{ streaming_enabled: false \} : \{\}[\s\S]*download_purchase_enabled: isGameProduct \? false : !isFree/, 'digital Item edits preserve streaming and paid-download choices while reviewed Games remain non-downloadable');
 assert.doesNotMatch(`${newItem}\n${editItem}`, /Creator payouts enabled\./, 'Studio omits the redundant creator-payout success status');
 assert.match(autoRadioMigration, /item\.status='published'[\s\S]*item\.experience_type='music'[\s\S]*streaming_enabled[\s\S]*radio_playlist_entries/, 'automatic Radio enrollment accepts only published streaming Music');
 assert.match(autoRadioMigration, /tracks_sync_radio_playlist[\s\S]*catalog_items_sync_radio_playlist/, 'Radio enrollment reacts to both playable track creation and Item publication');
@@ -132,25 +128,18 @@ assert.match(uploads, /retryDelays: \[0, 1_000, 3_000, 5_000, 10_000\]/, 'large 
 assert.ok(uploadField.indexOf('onChange(uploadedValue)') < uploadField.indexOf('analyzeAudioFile(file)'), 'durable upload completes before optional audio analysis');
 assert.match(uploadField, /if \(processed\)[\s\S]*processed\.durationSeconds[\s\S]*else if \(!processed && accept\?\.includes\('audio'\) && onAudioMetadata\)[\s\S]*readAudioDuration\(file\)/, 'processed release tracks use verified worker duration while legacy uploads keep lightweight metadata reads');
 
-assert.ok(storeDiscovery.indexOf('title="New Releases"') < storeDiscovery.indexOf('title="Recently Added"'), 'New Releases is the first Home shelf');
-assert.match(storeDiscovery, /featuredItemIds\.flatMap\([\s\S]*musicProductsById\.get\(itemId\)/, 'Featured follows the exact ordered Item IDs from Admin');
-assert.match(storeDiscovery, /function buildRecentlyAddedProducts\(products: Product\[\], featuredProductIds: Set<string>, limit: number\)[\s\S]*filter\(product => !featuredProductIds\.has\(product\.id\)\)[\s\S]*slice\(0, limit\)/, 'Recently Added excludes New Releases and selects the newest remaining uploads directly');
-assert.match(storeDiscovery, /const recentlyAddedProducts = buildRecentlyAddedProducts\([\s\S]*sort\(compareRecentlyAddedProducts\)[\s\S]*featuredProductIds,[\s\S]*8,[\s\S]*\)/, 'Recently Added displays the eight newest non-featured uploads in creation order');
+assert.ok(storeDiscovery.indexOf('title="Recently Added"') < storeDiscovery.indexOf('title="New in Music"'), 'Recently Added is the first Home shelf');
+assert.match(storeDiscovery, /const newReleaseProducts = \[\.\.\.musicProducts\][\s\S]*sort\(comparePublicCatalogProducts\)[\s\S]*slice\(0, 8\)/, 'New in Music uses the eight newest releases by public release chronology');
+assert.match(storeDiscovery, /function buildRecentlyAddedProducts\(products: Product\[\], excludedProductIds: Set<string>, limit: number\)[\s\S]*filter\(product => !excludedProductIds\.has\(product\.id\)\)[\s\S]*slice\(0, limit\)/, 'Recently Added excludes New in Music and selects the newest remaining uploads directly');
+assert.match(storeDiscovery, /const recentlyAddedProducts = buildRecentlyAddedProducts\([\s\S]*\['music', 'book', 'interactive', 'asset', 'physical'\][\s\S]*sort\(compareRecentlyAddedProducts\)[\s\S]*newReleaseProductIds,[\s\S]*8,[\s\S]*\)/, 'Recently Added displays eight Items across all supported categories in creation order');
+assert.match(storeDiscovery, /HOME_BROWSE_SHELF_ORDER[\s\S]*\['book', 'interactive', 'physical', 'asset'\]/, 'category shelves follow Books, Games, Merch, and Sample Packs');
+assert.match(storeDiscovery, /const showStoreFilter = !frontDoor \|\| effectiveFilter !== 'all' \|\| hasActiveFacetFilters/, 'Featured hides its irrelevant filter until a category or facet is active');
 assert.match(storeDiscovery, /const followingProducts = keepNewestProductPerCreator/, 'Creators You Follow keeps one Item per creator');
 assert.match(storeDiscovery, />Sort by<[\s\S]*value="release-date">Release date<[\s\S]*value="recently-added">Recently added</, 'Browse exposes release-date and recently-added sorting first in the filter');
-assert.match(storeDiscovery, /title="New Releases"[\s\S]*browseCategory\('music', 'release-date'\)/, 'New Releases opens release-date Browse');
-assert.match(storeDiscovery, /browseCategory\('music', 'recently-added'\)/, 'Recently Added opens creation-time Browse');
-assert.match(homeDiscoveryDomain, /listHomeFeaturedItemIds[\s\S]*slot_position[\s\S]*item_id/, 'public Featured data access preserves database slot order');
-assert.doesNotMatch(homeDiscoveryDomain, /rpc\([^\n]*as never/, 'Featured shelf data access uses generated database RPC types');
-assert.match(adminHome, /FEATURED_SLOT_COUNT = 4[\s\S]*Save Featured shelf\?[\s\S]*onConfirm=\{save\}/, 'Admin Home presents four slots and a confirmed save');
-assert.match(adminHome, /setAdminHomeFeaturedItems\(selectedIds, reason\)[\s\S]*await load\(\)/, 'Admin Home saves once and authoritatively refetches');
-assert.match(featuredShelfMigration, /position smallint not null check \(position between 1 and 4\)/, 'Featured storage is bounded to four ordered slots');
-assert.match(featuredShelfMigration, /item\.status='published'[\s\S]*item\.experience_type='music'[\s\S]*item_type\.slug='beat'/, 'Featured selection is limited to published non-Beat Music');
-assert.match(featuredShelfMigration, /admin_home_shelf_events_immutable[\s\S]*reject_admin_audit_mutation/, 'Featured before/after audit is immutable');
-assert.match(featuredShelfMigration, /char_length\(coalesce\(normalized_reason,''\)\) not between 3 and 500/, 'Featured mutation requires a bounded audit reason');
-assert.match(featuredShelfMigration, /pg_advisory_xact_lock[\s\S]*for share/, 'Featured mutation serializes shelf saves and locks selected Item lifecycle state');
+assert.match(storeDiscovery, /title="New in Music"[\s\S]*browseCategory\('music', 'release-date'\)/, 'New in Music opens release-date Browse');
+assert.match(storeDiscovery, /title="Recently Added"[\s\S]*browseCategory\('music', 'recently-added'\)/, 'Recently Added opens creation-time Browse');
 assert.match(canonicalCss, /:is\(\.ui44-section-header, \.hub-section-head\) \{[\s\S]*align-items: center;/, 'shared section actions center on the title row');
-assert.match(canonicalCss, /\.store-app-page \.page-filter-menu \{\s*margin-right: 12px;/, 'desktop Store filters align with the Topbar action column');
+assert.match(canonicalCss, /\.store-app-page \.page-filter-menu \{\s*margin-right: 0;/, 'desktop Store filters align with the Topbar action column');
 assert.match(legacyTrackRepairMigration, /62277a2a-f9cf-4e3b-9a29-09deb03bb512[\s\S]*1783191107348-01-touch-feat\.-kholor-\.mp3/, 'the legacy touch track repair targets the verified replacement object');
 assert.match(legacyTrackRepairMigration, /ad7f8882-b3e2-55ab-8359-d11fedb83f42[\s\S]*07\.%20Where%20You%20At'/, 'the legacy Where You At track repair removes the URL-breaking question mark');
 assert.match(legacyTrackRepairMigration, /0025cb74-5e4b-4f36-9dc6-fea8f09759ba[\s\S]*duration_seconds = 155/, 'GET OUT receives its measured source-file duration');

@@ -3,54 +3,47 @@ import type { Product } from '@/lib/products';
 import type { SocialPost } from '@/lib/social';
 import type { LikeRow, ReplyEngagerRow } from '@/lib/social';
 import { supabase } from '@/lib/supabase';
+import { localMaskPreviewEnabled, localMaskProduct } from '@/lib/localMaskPreview';
+import { loadCommunityFeed } from '@/lib/domain/community';
+import { listLocalCommunityPosts, listLocalCommunityReplies } from '@/lib/communityV11';
 
 export type SearchProfile = Pick<Profile, 'id' | 'slug' | 'username' | 'display_name' | 'avatar_url' | 'bio' | 'role' | 'creator_type'>;
 
 export async function loadPlatformSearchIndex() {
-  const [itemResult, postResult, profileResult] = await Promise.all([
+  const [itemResult, communityIndex, profileResult] = await Promise.all([
     supabase
       .from('catalog_items')
       .select('*, creators:profiles!author_id(*)')
       .eq('status', 'published')
       .order('created_at', { ascending: false })
       .limit(120),
-    supabase
-      .from('community_discussions')
-      .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type)')
-      .eq('status', 'published')
-      .order('created_at', { ascending: false })
-      .limit(120),
+    loadCommunityFeed(),
     supabase
       .from('profiles')
       .select('id,slug,username,display_name,avatar_url,bio,role,creator_type')
       .order('display_name', { ascending: true })
       .limit(120),
   ]);
-  const error = itemResult.error || postResult.error || profileResult.error;
+  const error = itemResult.error || profileResult.error;
   if (error) throw error;
-  const posts = (postResult.data as SocialPost[] | null) ?? [];
-  const postIds = posts.map(post => post.id);
-  let replies: ReplyEngagerRow[] = [];
-  let likes: LikeRow[] = [];
-  if (postIds.length > 0) {
-    const [replyResult, likeResult] = await Promise.all([
-      supabase
-        .from('community_discussion_replies')
-        .select('post_id, author_id, authors:profiles!author_id(id, display_name, username, avatar_url)')
-        .in('post_id', postIds)
-        .eq('status', 'published'),
-      supabase
-        .from('community_discussion_likes')
-        .select('post_id, profile_id, profiles:profiles!profile_id(id, display_name, username, avatar_url)')
-        .in('post_id', postIds),
-    ]);
-    const engagementError = replyResult.error || likeResult.error;
-    if (engagementError) throw engagementError;
-    replies = (replyResult.data as ReplyEngagerRow[] | null) ?? [];
-    likes = (likeResult.data as LikeRow[] | null) ?? [];
-  }
+  const localPosts = listLocalCommunityPosts();
+  const localReplies = listLocalCommunityReplies()
+    .filter(reply => !reply.parent_reply_id)
+    .flatMap<ReplyEngagerRow>(reply => reply.author_id ? [{
+      post_id: reply.post_id,
+      author_id: reply.author_id,
+      authors: reply.authors ?? null,
+    }] : []);
+  const posts: SocialPost[] = [...localPosts, ...communityIndex.posts];
+  const replies: ReplyEngagerRow[] = [...localReplies, ...communityIndex.replies];
+  const likes: LikeRow[] = communityIndex.likes;
+  const products = (itemResult.data as Product[] | null) ?? [];
+  const searchableProducts = localMaskPreviewEnabled && !products.some(item => item.id === localMaskProduct.id)
+    ? [...products, localMaskProduct]
+    : products;
+
   return {
-    products: (itemResult.data as Product[] | null) ?? [],
+    products: searchableProducts,
     posts,
     profiles: (profileResult.data as SearchProfile[] | null) ?? [],
     replies,

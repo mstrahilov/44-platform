@@ -177,6 +177,7 @@ export default function StudioPage() {
       if (section.id === 'beats') return item.browse_type?.slug === 'beat';
       if (section.id === 'music') return experience === 'music' && item.browse_type?.slug !== 'beat';
       if (section.id === 'books') return experience === 'book';
+      if (section.id === 'games') return experience === 'interactive';
       if (section.id === 'assets') return experience === 'asset';
       return experience === 'physical';
     }).sort((a, b) => comparePublicCatalogItems(a, b)),
@@ -206,6 +207,11 @@ export default function StudioPage() {
         {studioStatus === 'published' && (
           <div className="dashboard-status dashboard-status-success ui44-status ui44-status-success studio-submission-banner" role="status">
             Published successfully. Your release is now live in the catalog.
+          </div>
+        )}
+        {studioStatus === 'game-submitted' && (
+          <div className="dashboard-status dashboard-status-warning ui44-status ui44-status-warning studio-submission-banner" role="status">
+            Game package saved for review. 44OS will inspect and host the WebGL build before it can go live.
           </div>
         )}
         {studioStatus === 'update-published' && (
@@ -285,8 +291,8 @@ function OverviewStatCard({ label, value }: { label: string; value: string | num
 const STUDIO_CREATE_ACTIONS = [
   { label: 'Add Music', href: '/studio/products/new?section=music' },
   { label: 'Add Book', href: '/studio/products/new?section=books' },
-  { label: 'Add Pack', href: '/studio/products/new?section=sample-packs' },
-  { label: 'Add Update', href: '/studio/updates/new' },
+  { label: 'Add Game', href: '/studio/products/new?section=games' },
+  { label: 'Add Sample Pack', href: '/studio/products/new?section=sample-packs' },
 ];
 
 function StudioCreateMenu() {

@@ -29,11 +29,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const hostname = (await headers()).get('host')?.split(':', 1)[0]?.toLowerCase();
   const marketingEnabled = process.env.MARKETING_SITE_ENABLED === 'true';
   if (marketingEnabled && (hostname === '44os.com' || hostname === 'www.44os.com')) {
-    return [{
-      url: `${getMarketingUrl()}/`,
-      changeFrequency: 'weekly',
-      priority: 1,
-    }];
+    return [
+      {
+        url: `${getMarketingUrl()}/`,
+        changeFrequency: 'weekly',
+        priority: 1,
+      },
+      {
+        url: `${getMarketingUrl()}/releases`,
+        changeFrequency: 'monthly',
+        priority: 0.7,
+      },
+    ];
   }
   const staticRoutes: MetadataRoute.Sitemap = PUBLIC_ROUTES.map((path, index) => ({
     url: absoluteAppUrl(path),

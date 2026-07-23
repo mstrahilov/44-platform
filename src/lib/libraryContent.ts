@@ -29,6 +29,7 @@ export function getProductRuntimeKind(product: Product): ProductRuntimeKind {
   if (experience === 'music') return 'music';
   if (experience === 'book') return 'book';
   if (experience === 'asset') return 'sample_pack';
+  if (experience === 'game') return 'interactive';
 
   if (productType.includes('book')) return 'book';
   if (productType.includes('sample') || productType.includes('stem')) return 'sample_pack';

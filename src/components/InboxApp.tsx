@@ -100,7 +100,7 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
   const messageListRef = useRef<HTMLDivElement>(null);
   const standaloneConversation = Boolean(routeConversationId);
 
-  useTopbarBack(standaloneConversation || !mobileListOpen ? { href: '/inbox', label: 'Inbox' } : undefined);
+  useTopbarBack(standaloneConversation || !mobileListOpen ? { href: '/inbox', label: 'Messages' } : undefined);
 
   useEffect(() => {
     const conversation = searchParams.get('conversation');
@@ -363,7 +363,7 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
         {!standaloneConversation && <header className="social-header">
           <div className="social-title-row">
             <div>
-              <h1 className="os-type-display ui44-type ui44-type-page-title">Inbox</h1>
+              <h1 className="os-type-display ui44-type ui44-type-page-title">Messages</h1>
             </div>
             <button type="button" className="ui44-symbol-button ui44-symbol-button-add page-compose-button" aria-label="New Message" onClick={() => {
               setInboxError('');
@@ -381,11 +381,11 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
             ? 'social-inbox social-inbox-conversation-route'
             : composing
               ? 'social-inbox social-inbox-mobile-thread'
-              : 'social-inbox social-inbox-mobile-list social-inbox-index'} aria-label={standaloneConversation ? 'Conversation' : 'Inbox'}>
+              : 'social-inbox social-inbox-mobile-list social-inbox-index'} aria-label={standaloneConversation ? 'Conversation' : 'Messages'}>
             {!standaloneConversation && (
             <aside className="social-inbox-list ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
               <OnboardingTip id="messages-refresh">
-                Inbox refreshes when you return to this window. Open a profile to start a new conversation.
+                Messages refresh when you return to this window. Open a profile to start a new conversation.
               </OnboardingTip>
               {composing && (
                 <button

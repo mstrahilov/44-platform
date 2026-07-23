@@ -8,6 +8,7 @@ import { getPublicNativeContent } from '@/lib/domain/nativeContent';
 import type { ReleaseVideoEmbed } from '@/lib/domain/releaseFeatures';
 import { beatReviewSurfacesEnabled, listBuyerBeatLicenses } from '@/lib/domain/beats';
 import { hydratePaidSalesStatus } from '@/lib/domain/paidSalesStatus';
+import { LOCAL_MASK_ITEM_ID, LOCAL_MASK_LIBRARY_ID, localMaskIsSaved, localMaskPreviewEnabled, localMaskProduct, saveLocalMask } from '@/lib/localMaskPreview';
 
 export type DetailedLibraryItemRow = {
   id: string;
@@ -21,6 +22,14 @@ export type DetailedLibraryItemRow = {
 export type ItemAssetManifestRow = Database['public']['Functions']['list_item_asset_manifest']['Returns'][number];
 
 export async function getDetailedLibraryItem(userId: string, libraryEntryId: string) {
+  if (libraryEntryId === LOCAL_MASK_LIBRARY_ID && localMaskIsSaved()) return {
+    id: LOCAL_MASK_LIBRARY_ID,
+    item_id: LOCAL_MASK_ITEM_ID,
+    acquisition_type: 'free',
+    acquired_at: new Date().toISOString(),
+    status: 'visible',
+    products: localMaskProduct,
+  };
   const result = await supabase
     .from('library_entries')
     .select('id,item_id,acquisition_type,acquired_at,status,products:catalog_items(*, creators:profiles!author_id(*))')
@@ -35,6 +44,10 @@ export async function getDetailedLibraryItem(userId: string, libraryEntryId: str
 export async function getLibraryItemBundle(userId: string, libraryEntryId: string) {
   const row = await getDetailedLibraryItem(userId, libraryEntryId);
   if (!row?.products) return null;
+  if (row.item_id === LOCAL_MASK_ITEM_ID) return {
+    row, tracks: [], achievements: [], unlockedAchievements: [], assets: [], videoEmbeds: [],
+    nativeContent: { book: null, samples: [] }, beatLicenses: [], hasActiveDownload: false,
+  };
 
   const [trackResult, achievementResult, unlockedResult, assetResult, downloadEntitlementResult, videoResult, nativeContent, beatLicenses] = await Promise.all([
     supabase
@@ -93,6 +106,7 @@ export async function getLibraryItemBundle(userId: string, libraryEntryId: strin
 }
 
 export async function getCatalogItem(identifier: string) {
+  if (localMaskPreviewEnabled && (identifier === LOCAL_MASK_ITEM_ID || identifier.toLowerCase() === 'mask')) return localMaskProduct;
   const query = supabase.from('catalog_items').select('*, creators:profiles!author_id(*), external_links:item_external_links(id,label,platform,url,sort_order)');
   const result = await (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier)
     ? query.eq('id', identifier)
@@ -124,7 +138,7 @@ export async function getCatalogItem(identifier: string) {
   } as Product;
 }
 
-export async function listRelatedCatalogItems(item: Product, limit = 4) {
+export async function listRelatedCatalogItems(item: Product, limit = 8) {
   const experience = getProductExperience(item);
   const categoryId = item.item_category_id ?? null;
   const query = supabase
@@ -149,6 +163,9 @@ export async function listRelatedCatalogItems(item: Product, limit = 4) {
 }
 
 export async function getItemLibraryOwnership(userId: string, itemId: string) {
+  if (itemId === LOCAL_MASK_ITEM_ID) return localMaskIsSaved()
+    ? { id: LOCAL_MASK_LIBRARY_ID, item_id: LOCAL_MASK_ITEM_ID, acquisition_type: 'free', has_active_download: false }
+    : null;
   const [result, downloadEntitlement] = await Promise.all([
     supabase
       .from('library_entries')
@@ -173,6 +190,10 @@ export async function getItemLibraryOwnership(userId: string, itemId: string) {
 }
 
 export async function saveItemToLibrary(userId: string, itemId: string) {
+  if (itemId === LOCAL_MASK_ITEM_ID) {
+    saveLocalMask();
+    return { id: LOCAL_MASK_LIBRARY_ID, item_id: LOCAL_MASK_ITEM_ID, acquisition_type: 'free', has_active_download: false };
+  }
   const saveResult = await supabase.rpc('save_item_to_library', { target_item_id: itemId });
   if (saveResult.error) throw saveResult.error;
   return getItemLibraryOwnership(userId, itemId);

@@ -23,6 +23,9 @@ export function parseInteractiveBridgeMessage(value: unknown): InteractiveBridge
 
 export function interactiveEntryOrigin(entryUrl: string) {
   const url = new URL(entryUrl);
-  if (url.protocol !== 'https:') throw new Error('Interactive builds require HTTPS.');
+  const localPreview = process.env.NODE_ENV === 'development'
+    && url.protocol === 'http:'
+    && ['localhost', '127.0.0.1'].includes(url.hostname);
+  if (url.protocol !== 'https:' && !localPreview) throw new Error('Interactive builds require HTTPS.');
   return url.origin;
 }

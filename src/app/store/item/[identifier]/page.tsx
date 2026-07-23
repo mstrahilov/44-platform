@@ -9,8 +9,9 @@ import { productMeta } from '@/lib/products';
 import { isFreeLibraryClaim } from '@/lib/libraryContent';
 import { browseIndexHref, getProductExperience, productBrowseHref, productLibraryHref } from '@/lib/experience';
 import { creatorHref } from '@/lib/platform';
-import { ProductGrid, ProductCard } from '@/components/Ui';
+import { ProductGrid, ProductCard, SectionHeader } from '@/components/Ui';
 import { ProductReviewsSection } from '@/components/ProductReviewsSection';
+import { SocialPostRow } from '@/components/Social';
 import { LibraryVideoEmbedsSection, ProductDetailHeader, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
 import { useTopbarBack } from '@/components/TopbarContext';
@@ -27,6 +28,12 @@ import {
   recordItemShareVisit,
   saveItemToLibrary,
 } from '@/lib/domain/itemDetails';
+import { loadCommunityPostsForItem, type ItemCommunityFeed } from '@/lib/domain/community';
+import {
+  COMMUNITY_INTENT_LABELS,
+  inferCommunityIntent,
+  inferItemReferences,
+} from '@/lib/communityV11';
 import { getPublicNativeContent, type BookContent, type SamplePackFile } from '@/lib/domain/nativeContent';
 import { SamplePackExperience } from '@/components/SamplePackExperience';
 import { Ui44OverflowTrackTitle } from '@/components/ui44/OverflowTrackTitle';
@@ -44,6 +51,12 @@ type ProductTrack = {
   duration_seconds?: number | null;
   audio_url?: string | null;
   download_url?: string | null;
+};
+
+const EMPTY_ITEM_COMMUNITY: ItemCommunityFeed = {
+  posts: [],
+  replyCounts: {},
+  likeCounts: {},
 };
 
 export default function ProductPage() {
@@ -77,6 +90,7 @@ function ProductStoreDetail({
   const [product, setProduct] = useState<Product | null>(null);
   const [tracks, setTracks] = useState<ProductTrack[]>([]);
   const [related, setRelated] = useState<Product[]>([]);
+  const [itemCommunity, setItemCommunity] = useState<ItemCommunityFeed>(EMPTY_ITEM_COMMUNITY);
   const [toast, setToast] = useState<AchievementToastData | null>(null);
   const [owned, setOwned] = useState(false);
   const [ownedLibraryItemId, setOwnedLibraryItemId] = useState<string | null>(null);
@@ -103,6 +117,8 @@ function ProductStoreDetail({
     async function fetchProduct() {
       setLoading(true);
       setTracks([]);
+      setRelated([]);
+      setItemCommunity(EMPTY_ITEM_COMMUNITY);
       setBookContent(null);
       setSampleFiles([]);
       setVideoEmbeds([]);
@@ -152,7 +168,12 @@ function ProductStoreDetail({
           setVideoEmbeds(embeds);
         }
 
-        setRelated(await listRelatedCatalogItems(data));
+        const [relatedItems, communityFeed] = await Promise.all([
+          listRelatedCatalogItems(data),
+          loadCommunityPostsForItem(data).catch(() => EMPTY_ITEM_COMMUNITY),
+        ]);
+        setRelated(relatedItems);
+        setItemCommunity(communityFeed);
         if (['book', 'asset'].includes(getProductExperience(data))) {
           const nativeContent = await getPublicNativeContent(data.id);
           setBookContent(nativeContent.book);
@@ -299,7 +320,7 @@ function ProductStoreDetail({
   const isMerch = productExperience === 'physical';
   const creatorLink = creatorHref(product.creators ?? product.creator);
   const creatorTabLink = `${creatorLink}${creatorLink.includes('?') ? '&' : '?'}tab=${isBeat ? 'beats' : creatorProfileTab(productExperience)}${product.id ? `&fromProduct=${encodeURIComponent(product.id)}` : ''}`;
-  const creatorMoreLink = isMerch ? '/store/merch' : `${creatorLink}${creatorLink.includes('?') ? '&' : '?'}tab=${isBeat ? 'beats' : creatorProfileTab(productExperience)}`;
+  const creatorMoreLink = `${creatorLink}${creatorLink.includes('?') ? '&' : '?'}tab=${isBeat ? 'beats' : creatorProfileTab(productExperience)}`;
   const libraryHref = ownedLibraryItemId ? productLibraryHref(product, ownedLibraryItemId) : browseIndexHref(product).replace('/store', '/library');
   const merchGallery = [
     ...merchImages,
@@ -533,17 +554,46 @@ function ProductStoreDetail({
 
       {related.length > 0 && (
         <div className="view-section">
-          <div className="item-community-header item-community-section-header">
-            <h2 className="view-section-title item-community-section-title">Similar Items</h2>
-            <Ui44SectionArrow href={creatorMoreLink} label="View more similar items" />
-          </div>
-          <ProductGrid>
+          <SectionHeader
+            title="More from the creator"
+            action={<Ui44SectionArrow href={creatorMoreLink} label={`View more from ${creatorDisplayName}`} />}
+          />
+          <ProductGrid className="store-mobile-shelf">
             {related.map(item => <ProductCard key={item.id} product={item} />)}
           </ProductGrid>
         </div>
       )}
 
       <ProductReviewsSection productId={product.id} canPost={owned} />
+
+      {itemCommunity.posts.length > 0 && (
+        <div className="view-section">
+          <SectionHeader title="Community" />
+          <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip social-feed social-feed-list social-feed-panel item-community-surface item-community-posts">
+            {itemCommunity.posts.map(post => {
+              const intent = inferCommunityIntent(post);
+              const references = post.community_references?.length
+                ? post.community_references
+                : inferItemReferences(post.body ?? '', [product], {
+                  authorHandle: post.creators?.username || post.creators?.slug,
+              });
+              return (
+                <div key={post.id} className="social-feed-post">
+                  <SocialPostRow
+                    post={post}
+                    likeCount={itemCommunity.likeCounts[post.id] ?? 0}
+                    replyCount={itemCommunity.replyCounts[post.id] ?? 0}
+                    meta={intent === 'general' ? undefined : (
+                      <span className="community-intent-label">{COMMUNITY_INTENT_LABELS[intent]}</span>
+                    )}
+                    references={references}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <AchievementToast toast={toast} onDone={() => setToast(null)} />
     </div>
@@ -717,6 +767,14 @@ function resolveStoreActions({
   }
 
   if (experience === 'asset' && free && canClaimToLibrary) {
+    return [owned
+      ? { label: 'View in Library', href: libraryHref }
+      : userSignedIn
+        ? { label: 'Add to Library', onClick: onAddToLibrary }
+        : { label: 'Add to Library', href: '/login' }];
+  }
+
+  if (experience === 'interactive' && free && canClaimToLibrary) {
     return [owned
       ? { label: 'View in Library', href: libraryHref }
       : userSignedIn

@@ -74,6 +74,7 @@ function ensureTrackCount(current: DraftTrack[], nextCount: number) {
 function experienceTypeForSection(sectionId: StudioCatalogSectionId) {
   if (sectionId === 'merch') return 'merch';
   if (sectionId === 'books') return 'book';
+  if (sectionId === 'games') return 'game';
   if (sectionId === 'assets') return 'asset';
   return 'music';
 }
@@ -81,6 +82,7 @@ function experienceTypeForSection(sectionId: StudioCatalogSectionId) {
 function productAssetTypeForSection(sectionId: StudioCatalogSectionId) {
   if (sectionId === 'merch') return 'merch';
   if (sectionId === 'books') return 'book';
+  if (sectionId === 'games') return 'webgl';
   if (sectionId === 'assets') return 'sample_pack';
   return 'music';
 }
@@ -97,6 +99,7 @@ function categoryMatchesSection(category: ProductCategory, sectionId: StudioCata
   const name = `${category.name} ${category.slug}`.toLowerCase();
   if (sectionId === 'merch') return name.includes('merch') || name.includes('apparel') || name.includes('shop');
   if (sectionId === 'books') return name.includes('book');
+  if (sectionId === 'games') return name.includes('game') || name.includes('interactive');
   if (sectionId === 'assets') return name.includes('asset') || name.includes('sample') || name.includes('preset') || name.includes('template');
   return name.includes('music');
 }
@@ -169,9 +172,12 @@ function NewProductContent() {
 
       const resolvedCategories = categoryRows;
       const resolvedCategoryId = resolvedCategories.find(category => categoryMatchesSection(category, section.id))?.id ?? resolvedCategories[0]?.id ?? '';
-      const implicitSamplePackType = section.id === 'assets'
+      const implicitSectionType = section.id === 'assets'
         ? taxonomy.types.find(type => type.category_id === resolvedCategoryId && type.is_active && type.slug === 'sample-packs')
           ?? taxonomy.types.find(type => type.category_id === resolvedCategoryId && type.is_active)
+        : section.id === 'games'
+          ? taxonomy.types.find(type => type.category_id === resolvedCategoryId && type.is_active && type.slug === 'game')
+            ?? taxonomy.types.find(type => type.category_id === resolvedCategoryId && type.is_active)
         : null;
       setCategoryId(resolvedCategoryId);
 
@@ -186,14 +192,14 @@ function NewProductContent() {
       setExternalLinkPlatforms(linkPlatforms);
       setPaidSales(paidSalesResult);
       setExternalLinks(materializeExternalLinkDrafts(linkPlatforms, []));
-      setStoreTypeId(implicitSamplePackType?.id ?? '');
-      setProductType(implicitSamplePackType?.label ?? (section.id === 'assets' ? defaultProductType : ''));
+      setStoreTypeId(implicitSectionType?.id ?? '');
+      setProductType(implicitSectionType?.label ?? (section.id === 'assets' || section.id === 'games' ? defaultProductType : ''));
 
       const recovered = readStudioFormRecovery<NewItemRecovery>(recoveryKey);
       if (recovered) {
         setTitle(recovered.title); setDescription(recovered.description); setCategoryId(section.id === 'assets' ? resolvedCategoryId : recovered.categoryId);
-        setProductType(section.id === 'assets' ? implicitSamplePackType?.label ?? defaultProductType : recovered.productType);
-        setStoreTypeId(section.id === 'assets' ? implicitSamplePackType?.id ?? '' : recovered.storeTypeId);
+        setProductType(section.id === 'assets' ? implicitSectionType?.label ?? defaultProductType : recovered.productType || (section.id === 'games' ? implicitSectionType?.label ?? defaultProductType : ''));
+        setStoreTypeId(section.id === 'assets' ? implicitSectionType?.id ?? '' : recovered.storeTypeId || (section.id === 'games' ? implicitSectionType?.id ?? '' : ''));
         setSelectedTagIds(section.id === 'assets' ? [] : recovered.selectedTagIds);
         setPrice(recovered.price); setAvailability(section.id === 'assets' ? 'paid' : recovered.availability ?? 'free'); setMarketMode(recovered.marketMode);
         setLocalPrice(recovered.localCurrency === nextCurrency ? recovered.localPrice : '');
@@ -224,10 +230,11 @@ function NewProductContent() {
     samplePreviews, selectedTagIds, storeTypeId, title, trackCount, tracks, year, releaseDate]);
 
   const isMusicProduct = section.id === 'music';
+  const isGameProduct = section.id === 'games';
   const isMerchProduct = section.id === 'merch';
-  const needsDigitalFile = section.id === 'books' || section.id === 'assets';
+  const needsDigitalFile = section.id === 'books' || section.id === 'games' || section.id === 'assets';
   const merchUsesLocalOnlyPricing = isMerchProduct && (merchFulfillmentMode === 'deliver' || merchShippingScope === 'local');
-  const creatorCommerceUnavailable = !isMerchProduct && !paidSales?.can_sell_paid;
+  const creatorCommerceUnavailable = !isMerchProduct && !isGameProduct && !paidSales?.can_sell_paid;
 
   useEffect(() => {
     if (profile && isMerchProduct && profile.role !== 'admin') router.replace('/studio');
@@ -270,7 +277,7 @@ function NewProductContent() {
     const cleanType = productType.trim();
     const normalizedReleaseDate = normalizeOptionalReleaseDate(releaseDate);
 
-    if (!cleanTitle || !categoryId || !cleanType || !storeTypeId) {
+    if (!cleanTitle || !categoryId || (!isGameProduct && (!cleanType || !storeTypeId))) {
       setError('Please fill out the title and choose an Item Type.');
       return;
     }
@@ -307,7 +314,11 @@ function NewProductContent() {
       }
     }
     if (needsDigitalFile && !itemFileUrl.trim()) {
-      setError(section.id === 'books' ? 'Books need an uploaded file before saving.' : 'Sample packs need an uploaded file before saving.');
+      setError(section.id === 'books'
+        ? 'Books need an uploaded file before saving.'
+        : isGameProduct
+          ? 'Games need a Unity WebGL export ZIP before submitting.'
+          : 'Sample packs need an uploaded file before saving.');
       return;
     }
     if (section.id === 'assets' && samplePreviews.some(sample => !sample.title.trim() || !sample.previewUrl.trim())) {
@@ -336,10 +347,10 @@ function NewProductContent() {
     const enteredLocalPriceCents = localPrice.trim() && Number.isFinite(localPriceNumber)
       ? Math.max(0, Math.round(localPriceNumber * 100))
       : null;
-    const requiresGlobalPrice = isMerchProduct ? !merchUsesLocalOnlyPricing : !creatorCommerceUnavailable && availability === 'paid';
+    const requiresGlobalPrice = isGameProduct ? false : isMerchProduct ? !merchUsesLocalOnlyPricing : !creatorCommerceUnavailable && availability === 'paid';
     const requiresLocalPrice = isMerchProduct
       ? merchUsesLocalOnlyPricing || marketMode === 'global_plus_local'
-      : !creatorCommerceUnavailable && availability === 'paid' && marketMode === 'global_plus_local';
+      : !isGameProduct && !creatorCommerceUnavailable && availability === 'paid' && marketMode === 'global_plus_local';
     if (requiresGlobalPrice && (!Number.isFinite(priceNumber) || priceNumber <= 0)) {
       setSaving(false);
       setError('Enter a price greater than zero for a paid Item.');
@@ -350,7 +361,7 @@ function NewProductContent() {
       setError(`Enter a ${localCurrency} local price greater than zero.`);
       return;
     }
-    const isFree = isMerchProduct ? false : creatorCommerceUnavailable || availability === 'free';
+    const isFree = isGameProduct ? true : isMerchProduct ? false : creatorCommerceUnavailable || availability === 'free';
     const priceCents = isFree || merchUsesLocalOnlyPricing ? 0 : Math.round(priceNumber * 100);
     const localPriceCents = requiresLocalPrice ? enteredLocalPriceCents : null;
     const slug = buildSlug(cleanTitle);
@@ -370,8 +381,8 @@ function NewProductContent() {
       local_currency: isFree || (marketMode === 'global' && !merchUsesLocalOnlyPricing) ? null : localCurrency,
       available_locally_only: isMerchProduct ? merchUsesLocalOnlyPricing : false,
       is_free: isFree,
-      streaming_enabled: isMusicProduct ? true : undefined,
-      download_purchase_enabled: !isMerchProduct ? !isFree : undefined,
+      streaming_enabled: isMusicProduct ? true : isGameProduct ? false : undefined,
+      download_purchase_enabled: !isMerchProduct ? (isGameProduct ? false : !isFree) : undefined,
       cover_url: coverUrl.trim() || null,
       hero_url: null,
       experience_type: experienceTypeForSection(section.id),
@@ -437,7 +448,7 @@ function NewProductContent() {
         title: cleanType || cleanTitle,
         file_url: null,
         storage_path: itemFileUrl.trim(),
-        is_downloadable: true,
+        is_downloadable: !isGameProduct,
         sort_order: 0,
         }]);
         const fullAsset = insertedAssets[0];
@@ -451,7 +462,7 @@ function NewProductContent() {
             samplePageLimit: null,
             languageCode: null,
           });
-        } else {
+        } else if (section.id === 'assets') {
           await replaceStudioSampleFiles(insertedProductId, samplePreviews.map(sample => ({
             title: sample.title.trim(), previewUrl: sample.previewUrl.trim() || null,
             durationSeconds: sample.durationSeconds, waveformPeaks: sample.waveformPeaks,
@@ -507,7 +518,13 @@ function NewProductContent() {
     let reviewRequired = false;
     try {
       reviewRequired = await isPublishingReviewRequired();
-      if (reviewRequired) {
+      if (isGameProduct && reviewRequired) {
+        await submitStudioItemForReview(insertedProductId, crypto.randomUUID());
+      } else if (isGameProduct) {
+        // Games remain private drafts until 44OS has inspected the ZIP, hosted
+        // the unpacked WebGL export on the isolated origin, and approved its
+        // interactive build manifest.
+      } else if (reviewRequired) {
         await submitStudioItemForReview(insertedProductId, crypto.randomUUID());
       } else {
         await setStudioPublicationStatus(insertedProductId, 'published');
@@ -520,7 +537,9 @@ function NewProductContent() {
 
     setSaving(false);
     clearStudioFormRecovery(recoveryKey);
-    router.push(`${section.href}?studioStatus=${reviewRequired ? 'submitted' : 'published'}`);
+    const resultStatus = isGameProduct ? 'game-submitted' : reviewRequired ? 'submitted' : 'published';
+    const resultHash = section.id === 'assets' ? 'sample-packs' : section.id;
+    router.push(`/studio?studioStatus=${resultStatus}#${resultHash}`);
   }
 
   if (loading || !user) {
@@ -547,7 +566,7 @@ function NewProductContent() {
                   className="os-input-field"
                   value={title}
                   onChange={event => setTitle(event.target.value)}
-                  placeholder={isMerchProduct ? 'Enter product name' : section.id === 'books' ? 'Enter book title' : section.id === 'assets' ? 'Enter sample pack title' : 'Enter release title'}
+                  placeholder={isMerchProduct ? 'Enter product name' : section.id === 'books' ? 'Enter book title' : isGameProduct ? 'Enter game title' : section.id === 'assets' ? 'Enter sample pack title' : 'Enter release title'}
                 />
               </label>
 
@@ -576,6 +595,17 @@ function NewProductContent() {
                         <option key={count} value={count}>{count}</option>
                       ))}
                     </Ui44SelectInput>
+                  </label>
+                </div>
+              ) : isGameProduct ? (
+                <div className="dashboard-form-grid dashboard-form-grid-2 release-core-grid ui44-form-grid">
+                  <label className="dashboard-field">
+                    <div className="dashboard-field-label">Item Type</div>
+                    <Ui44TextInput className="os-input-field" value={productType || 'Game'} readOnly aria-label="Item Type" />
+                  </label>
+                  <label className="dashboard-field">
+                    <div className="dashboard-field-label">Release Date (Optional)</div>
+                    <Ui44TextInput className="os-input-field release-date-input" type="date" value={releaseDate} onChange={event => { setReleaseDate(event.target.value); setYear(event.target.value.slice(0, 4)); }} />
                   </label>
                 </div>
               ) : section.id === 'books' ? (
@@ -653,7 +683,11 @@ function NewProductContent() {
                 </div>
               ) : null}
 
-              {!isMerchProduct ? (
+              {isGameProduct ? (
+                <div className="dashboard-status ui44-status" role="note">
+                  Games are desktop-only and free during this private submission phase. Upload one ZIP containing the complete Unity WebGL export; 44OS will inspect, unpack, and host it before the Item can go live.
+                </div>
+              ) : !isMerchProduct ? (
                 <>
                   <StudioDigitalPricingFields
                     availability={availability}
@@ -701,7 +735,7 @@ function NewProductContent() {
                 </div>
               )}
 
-              {(section.id === 'books' || section.id === 'assets') ? (
+              {(section.id === 'books' || section.id === 'games' || section.id === 'assets') ? (
                 <label className="dashboard-field">
                   <div className="dashboard-field-label">Description</div>
                   <Ui44Textarea className="os-input-field dashboard-textarea" value={description} onChange={event => setDescription(event.target.value)} placeholder="Enter description" />
@@ -765,13 +799,13 @@ function NewProductContent() {
                 </div>
               ) : needsDigitalFile ? (
                 <UploadField
-                label={section.id === 'books' ? 'Book File' : 'Sample Pack ZIP'}
-                folder={section.id === 'books' ? 'products/books' : 'products/assets'}
+                label={section.id === 'books' ? 'Book File' : isGameProduct ? 'Unity WebGL Export ZIP' : 'Sample Pack ZIP'}
+                folder={section.id === 'books' ? 'products/books' : isGameProduct ? 'products/games' : 'products/assets'}
                 storage="private-item"
                 userId={user.id}
                 value={itemFileUrl}
                 accept={section.id === 'books' ? 'application/pdf,.pdf' : 'application/zip,.zip'}
-                buttonLabel={section.id === 'books' ? 'Upload full PDF' : 'Upload full pack ZIP'}
+                buttonLabel={section.id === 'books' ? 'Upload full PDF' : isGameProduct ? 'Upload WebGL ZIP' : 'Upload full pack ZIP'}
                 onChange={setItemFileUrl}
                 onUploadingChange={handleUploadActivity}
                 />
@@ -866,7 +900,7 @@ function NewProductContent() {
                   Cancel
                 </Link>
                 <button className="os-button os-button-primary" type="submit" disabled={saving || activeUploadCount > 0}>
-                  {activeUploadCount > 0 ? 'Uploading files…' : saving ? 'Publishing…' : 'Publish'}
+                  {activeUploadCount > 0 ? 'Uploading files…' : saving ? (isGameProduct ? 'Submitting…' : 'Publishing…') : (isGameProduct ? 'Submit Game' : 'Publish')}
                 </button>
               </div>
             </div>

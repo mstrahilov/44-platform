@@ -1,5 +1,6 @@
 import type { Product } from '@/lib/products';
 import { supabase } from '@/lib/supabase';
+import { hideLocalMask, LOCAL_MASK_LIBRARY_ID, localMaskIsSaved, localMaskProduct } from '@/lib/localMaskPreview';
 
 export type LibraryItemRow = {
   id: string;
@@ -20,7 +21,15 @@ export async function listVisibleLibraryItems(userId: string) {
     .order('acquired_at', { ascending: false });
 
   if (result.error) throw result.error;
-  return (result.data ?? []) as unknown as LibraryItemRow[];
+  const rows = (result.data ?? []) as unknown as LibraryItemRow[];
+  return localMaskIsSaved() ? [...rows, {
+    id: LOCAL_MASK_LIBRARY_ID,
+    item_id: localMaskProduct.id,
+    acquired_at: new Date().toISOString(),
+    acquisition_type: 'free',
+    status: 'visible',
+    products: localMaskProduct,
+  }] : rows;
 }
 
 export async function listVisibleLibraryItemIds(userId: string) {
@@ -30,9 +39,10 @@ export async function listVisibleLibraryItemIds(userId: string) {
     .eq('user_id', userId);
 
   if (result.error) throw result.error;
-  return (result.data ?? []).flatMap(row => (
+  const ids = (result.data ?? []).flatMap(row => (
     row.item_id && row.status !== 'hidden' ? [row.item_id] : []
   ));
+  return localMaskIsSaved() ? [...ids, localMaskProduct.id] : ids;
 }
 
 export async function removeLibraryItem(userId: string, libraryEntryId: string) {
@@ -46,6 +56,7 @@ export async function removeLibraryItem(userId: string, libraryEntryId: string) 
 }
 
 export async function hideLibraryItem(userId: string, libraryEntryId: string) {
+  if (libraryEntryId === LOCAL_MASK_LIBRARY_ID) { hideLocalMask(); return; }
   const result = await supabase
     .from('library_entries')
     .update({ status: 'hidden' })

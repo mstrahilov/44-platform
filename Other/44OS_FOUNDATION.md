@@ -13,7 +13,7 @@ Read Foundation, then UI, then Milestones before making production-facing change
 
 ## Current production baseline
 
-Recorded July 22, 2026:
+Recorded July 23, 2026:
 
 - `https://44os.com` is the permanent light editorial front door, `https://www.44os.com` permanently redirects to it, and `https://app.44os.com` is the canonical application origin. All three hosts use the same GitHub-backed Vercel project and release.
 - Legacy apex application paths permanently redirect to the identical path and query on `app.44os.com`. Apex `/api/*` remains a non-public compatibility surface for delayed provider delivery and rollback; it is never redirected. Both host health checks pass against Supabase.
@@ -29,7 +29,7 @@ Recorded July 22, 2026:
 - Consent-gated analytics code is deployed but inert because no production Google measurement ID is configured.
 - The internal sanitized operational-error sink and Admin Errors view are active. Proven external alert delivery and distinct primary/backup responders are not yet assigned.
 - Wise payout infrastructure exists but batching, operator recording, reconciliation, and payout execution remain disabled; the payout emergency stop remains on.
-- Licensed Beats, creator Merch, international physical shipping, automated Printful confirmation, newsletters, and interactive runtime Items remain disabled or deferred.
+- Licensed Beats, creator Merch, international physical shipping, automated Printful confirmation, and newsletters remain disabled or deferred. MASK by ØLSTEN is the first enabled desktop interactive Item; additional game publication remains Admin-managed.
 - Production releases flow through GitHub `main` into the linked Vercel project. Direct Vercel rebuilds may apply a reviewed environment revision to the same GitHub commit, but source changes must still be committed and pushed through GitHub.
 
 Open work, including the detailed desktop-application implementation tracker, belongs in `44OS_MILESTONES.md`. Do not repeat an accepted production journey unless relevant code, configuration, provider state, or evidence changed.
@@ -221,7 +221,7 @@ Interactive infrastructure uses one `interactive_builds` manifest per canonical 
 - Replay protection uses signed event IDs, timestamps, nonces, and constant-time HMAC verification.
 - Mobile/narrow devices do not request a session in the current phase.
 
-Infrastructure is complete, but real Unity/WebGL runtime acceptance is still open. Interactive Items remain disabled until that acceptance passes.
+MASK by ØLSTEN is the first accepted Unity/WebGL runtime. Its compiled export is deployed outside Git on the isolated `https://44os-mask.vercel.app` origin with exact gzip, WebAssembly, cache, CSP, and frame-ancestor headers. The published canonical Item is free to add to Library, launches only on desktop through the session boundary above, and uses an explicit Play gesture before requesting pointer lock. The Unity project, debug output, and large compiled artifacts remain outside the application repository. Additional interactive Items still require individual Admin review and activation.
 
 ## Authentication and email
 

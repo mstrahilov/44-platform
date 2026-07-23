@@ -7,6 +7,8 @@ const MARKETING_HOSTNAME = new URL(MARKETING_ORIGIN).hostname;
 const MARKETING_ENABLED = process.env.MARKETING_SITE_ENABLED === 'true';
 const INTERNAL_MARKETING_PATH = '/marketing-surface';
 const LOCAL_PREVIEW_PATH = '/landing-preview';
+const RELEASES_PATH = '/releases';
+const INTERNAL_RELEASES_PATH = `${INTERNAL_MARKETING_PATH}${RELEASES_PATH}`;
 
 function isPublicAsset(pathname: string) {
   return pathname.startsWith('/_next/')
@@ -24,11 +26,11 @@ function isPublicAsset(pathname: string) {
     || pathname === '/sitemap.xml';
 }
 
-function marketingRewrite(request: NextRequest) {
+function marketingRewrite(request: NextRequest, internalPath = INTERNAL_MARKETING_PATH) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-44os-surface', 'marketing');
   const destination = request.nextUrl.clone();
-  destination.pathname = INTERNAL_MARKETING_PATH;
+  destination.pathname = internalPath;
   return NextResponse.rewrite(destination, { request: { headers: requestHeaders } });
 }
 
@@ -58,7 +60,11 @@ export function proxy(request: NextRequest) {
     return marketingRewrite(request);
   }
 
-  if (pathname === INTERNAL_MARKETING_PATH) {
+  if (local && pathname === RELEASES_PATH && process.env.NODE_ENV !== 'production') {
+    return marketingRewrite(request, INTERNAL_RELEASES_PATH);
+  }
+
+  if (pathname === INTERNAL_MARKETING_PATH || pathname.startsWith(`${INTERNAL_MARKETING_PATH}/`)) {
     return new NextResponse(null, { status: 404 });
   }
 
@@ -80,6 +86,15 @@ export function proxy(request: NextRequest) {
       return NextResponse.redirect(destination, 308);
     }
     return marketingRewrite(request);
+  }
+
+  if (pathname === RELEASES_PATH) {
+    if (isWww) {
+      const destination = new URL(RELEASES_PATH, MARKETING_ORIGIN);
+      destination.search = request.nextUrl.search;
+      return NextResponse.redirect(destination, 308);
+    }
+    return marketingRewrite(request, INTERNAL_RELEASES_PATH);
   }
 
   if (pathname === '/download' || pathname.startsWith('/download/')) {

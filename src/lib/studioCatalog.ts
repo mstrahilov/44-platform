@@ -1,7 +1,7 @@
 import type { Product } from '@/lib/products';
 import { getProductExperience } from '@/lib/experience';
 
-export type StudioCatalogSectionId = 'music' | 'books' | 'assets' | 'merch';
+export type StudioCatalogSectionId = 'music' | 'books' | 'games' | 'assets' | 'merch';
 
 export type StudioCatalogSection = {
   id: StudioCatalogSectionId;
@@ -45,6 +45,19 @@ export const STUDIO_CATALOG_SECTIONS: StudioCatalogSection[] = [
     typeOptions: ['Lyrics Book', 'Art Book', 'Novel'],
   },
   {
+    id: 'games',
+    label: 'Games',
+    href: '/studio#games',
+    itemLabel: 'game',
+    itemLabelPlural: 'games',
+    newLabel: 'New Game',
+    editTitle: 'Edit Game',
+    createTitle: 'New Game',
+    createCopy: 'Submit a desktop Unity WebGL game package for private review and isolated hosting by 44OS.',
+    typeLabel: 'Game Type',
+    typeOptions: ['Game'],
+  },
+  {
     id: 'assets',
     label: 'Sample Packs',
     href: '/studio#sample-packs',
@@ -81,6 +94,7 @@ export function getStudioCatalogSectionForProduct(product: Pick<Product, 'item_t
   const experience = getProductExperience(product);
   if (experience === 'physical') return getStudioCatalogSection('merch');
   if (experience === 'book') return getStudioCatalogSection('books');
+  if (experience === 'interactive') return getStudioCatalogSection('games');
   if (experience === 'asset') return getStudioCatalogSection('assets');
   return getStudioCatalogSection('music');
 }

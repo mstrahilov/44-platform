@@ -12,6 +12,7 @@
 
 export type OSAppId =
   | 'home'
+  | 'you'
   | 'search'
   | 'music'
   | 'books'
@@ -91,6 +92,15 @@ export const OS_APPS: OSApp[] = [
     group: 'media',
   },
   {
+    id: 'you',
+    label: 'Account',
+    description: 'Your profile, activity, messages, creator tools, settings, and support.',
+    href: '/you',
+    iconClass: 'os-icon-user',
+    group: 'account',
+    hidden: true,
+  },
+  {
     id: 'store',
     label: 'Store',
     description: 'Find releases, books, sample packs, and merch from independent creators.',
@@ -163,8 +173,8 @@ export const OS_APPS: OSApp[] = [
   },
   {
     id: 'inbox',
-    label: 'Inbox',
-    description: 'Direct messages and project communication.',
+    label: 'Messages',
+    description: 'Private conversations and project communication.',
     href: '/inbox',
     iconClass: 'os-icon-inbox',
     group: 'community',
@@ -319,6 +329,115 @@ export function getActiveOSAppId(pathname: string): OSAppId | '' {
   if (pathname.startsWith('/settings')) return 'settings';
   if (pathname.startsWith('/support')) return 'support';
   return '';
+}
+
+export function getActiveMobileOSAppId(pathname: string): OSAppId | '' {
+  const desktopOwner = getActiveOSAppId(pathname);
+  if (desktopOwner === 'store' || desktopOwner === 'community' || desktopOwner === 'radio' || desktopOwner === 'library') {
+    return desktopOwner;
+  }
+  if (
+    pathname.startsWith('/you') ||
+    pathname.startsWith('/profile') ||
+    pathname.startsWith('/inbox') ||
+    pathname.startsWith('/notifications') ||
+    pathname.startsWith('/orders') ||
+    pathname.startsWith('/studio') ||
+    pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/team') ||
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/settings') ||
+    pathname.startsWith('/account') ||
+    pathname.startsWith('/support') ||
+    pathname.startsWith('/login')
+  ) return 'you';
+  return '';
+}
+
+export type MobileTopbarState =
+  | { mode: 'search' }
+  | { mode: 'search-back'; fallbackHref: string }
+  | { mode: 'back'; fallbackHref: string }
+  | { mode: 'quiet' };
+
+const MOBILE_STORE_SEARCH_ROUTES = new Set([
+  '/',
+  '/store',
+  '/store/music',
+  '/store/books',
+  '/store/games',
+  '/store/sample-packs',
+  '/store/merch',
+]);
+
+const MOBILE_COMMUNITY_SEARCH_ROUTES = new Set([
+  '/community',
+  '/community/general',
+  '/community/questions',
+  '/community/help',
+  '/community/collaboration',
+  '/community/showcase',
+  '/community/updates',
+]);
+
+const MOBILE_LIBRARY_SEARCH_ROUTES = new Set([
+  '/library',
+  '/library/all',
+  '/library/music',
+  '/library/books',
+  '/library/sample-packs',
+  '/library/games',
+]);
+
+export function getMobileTopbarState(pathname: string): MobileTopbarState {
+  if (
+    MOBILE_STORE_SEARCH_ROUTES.has(pathname) ||
+    MOBILE_COMMUNITY_SEARCH_ROUTES.has(pathname) ||
+    MOBILE_LIBRARY_SEARCH_ROUTES.has(pathname) ||
+    pathname === '/radio' ||
+    pathname === '/you'
+  ) {
+    return { mode: 'search' };
+  }
+
+  if (pathname === '/search') {
+    return { mode: 'search-back', fallbackHref: '/' };
+  }
+
+  if (pathname.startsWith('/store/item/')) {
+    return { mode: 'back', fallbackHref: '/' };
+  }
+  if (pathname.startsWith('/library/item/')) {
+    return { mode: 'back', fallbackHref: '/library' };
+  }
+  if (pathname.startsWith('/community/')) {
+    return { mode: 'back', fallbackHref: '/community' };
+  }
+  if (pathname.startsWith('/conversation/')) {
+    return { mode: 'back', fallbackHref: '/inbox' };
+  }
+  if (
+    pathname.startsWith('/profile') ||
+    pathname.startsWith('/inbox') ||
+    pathname.startsWith('/notifications') ||
+    pathname.startsWith('/orders') ||
+    pathname.startsWith('/studio') ||
+    pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/team') ||
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/settings') ||
+    pathname.startsWith('/account') ||
+    pathname.startsWith('/support') ||
+    pathname.startsWith('/login')
+  ) {
+    return { mode: 'back', fallbackHref: '/you' };
+  }
+
+  if (pathname.startsWith('/calendar')) {
+    return { mode: 'back', fallbackHref: '/community' };
+  }
+
+  return { mode: 'back', fallbackHref: '/' };
 }
 
 /** Apps the Dock can offer to a given user, before Dock preferences apply. */

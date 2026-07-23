@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { PageShell, ProductCard, ProductGrid, HubHero, HubSection, EmptyMessage } from '@/components/Ui';
 import { getProductExperience, type ProductExperience } from '@/lib/experience';
 import { comparePublicCatalogProducts, type Product } from '@/lib/products';
@@ -14,7 +15,6 @@ import { FilterPopover } from '@/components/FilterPopover';
 import { Ui44SectionArrow } from '@/components/ui44/Controls';
 import { Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
 import { beatReviewSurfacesEnabled } from '@/lib/domain/beats';
-import { listHomeFeaturedItemIds } from '@/lib/domain/homeDiscovery';
 
 const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
   music: 'music',
@@ -58,7 +58,6 @@ const CATEGORY_COPY: Record<StoreCategory, { title: string; copy: string; empty:
 };
 
 type StoreFilter = 'all' | 'music' | 'book' | 'interactive' | 'asset' | 'physical';
-type PriceFilter = 'all' | 'free' | 'paid';
 type StoreSort = 'release-date' | 'recently-added';
 
 const STORE_FILTER_LABELS: Record<StoreFilter, string> = {
@@ -71,14 +70,28 @@ const STORE_FILTER_LABELS: Record<StoreFilter, string> = {
 };
 
 const STORE_FILTER_ORDER: StoreFilter[] = ['all', 'music', 'physical', 'book', 'asset', 'interactive'];
-const HOME_BROWSE_SHELF_ORDER: Array<Exclude<StoreFilter, 'all' | 'music'>> = ['book', 'asset', 'physical', 'interactive'];
+const HOME_BROWSE_SHELF_ORDER: Array<Exclude<StoreFilter, 'all' | 'music'>> = ['book', 'interactive', 'physical', 'asset'];
 
 const HOME_BROWSE_SHELF_TITLES: Record<Exclude<StoreFilter, 'all' | 'music'>, string> = {
-  book: 'Browse Books',
-  asset: 'Browse Sample Packs',
-  physical: 'Browse Merch',
-  interactive: 'Browse Games',
+  book: 'New in Books',
+  asset: 'New in Sample Packs',
+  physical: 'New in Merch',
+  interactive: 'New in Games',
 };
+
+const MOBILE_DISCOVER_CATEGORIES: Array<{
+  category: StoreCategory;
+  filter: StoreFilter;
+  label: string;
+  href: string;
+}> = [
+  { category: 'all', filter: 'all', label: 'Featured', href: '/' },
+  { category: 'music', filter: 'music', label: 'Music', href: '/store/music' },
+  { category: 'books', filter: 'book', label: 'Books', href: '/store/books' },
+  { category: 'games', filter: 'interactive', label: 'Games', href: '/store/games' },
+  { category: 'merch', filter: 'physical', label: 'Merch', href: '/store/merch' },
+  { category: 'sample-packs', filter: 'asset', label: 'Sample Packs', href: '/store/sample-packs' },
+];
 
 function creatorFilterKey(product: Product) {
   return product.author_id || product.creators?.id || product.creator;
@@ -104,16 +117,15 @@ function keepNewestProductPerCreator(products: Product[], avoidedProductIds = ne
   ));
 }
 
-function buildRecentlyAddedProducts(products: Product[], featuredProductIds: Set<string>, limit: number) {
+function buildRecentlyAddedProducts(products: Product[], excludedProductIds: Set<string>, limit: number) {
   return products
-    .filter(product => !featuredProductIds.has(product.id))
+    .filter(product => !excludedProductIds.has(product.id))
     .slice(0, limit);
 }
 
 export default function StoreApp({ category, frontDoor = false }: { category: StoreCategory; frontDoor?: boolean }) {
   const { user, loading: authLoading } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
-  const [featuredItemIds, setFeaturedItemIds] = useState<string[] | null>(null);
   const [ownedProductIds, setOwnedProductIds] = useState<Set<string>>(new Set());
   const [followedProfileIds, setFollowedProfileIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -121,11 +133,9 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<StoreFilter>('all');
   const [sortBy, setSortBy] = useState<StoreSort>('release-date');
-  const [priceFilter, setPriceFilter] = useState<PriceFilter>('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [urlFilterReady, setUrlFilterReady] = useState(false);
   const [tagFilter, setTagFilter] = useState('all');
-  const [capabilityFilter, setCapabilityFilter] = useState<'all' | 'achievements'>('all');
   const [creatorFilter, setCreatorFilter] = useState('all');
   const [beatBpmMin, setBeatBpmMin] = useState('');
   const [beatBpmMax, setBeatBpmMax] = useState('');
@@ -143,13 +153,9 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
 
       if (authLoading) return;
       try {
-        const [items, nextFeaturedItemIds] = await Promise.all([
-          loadStoreDiscoveryCatalog(200, user?.id),
-          listHomeFeaturedItemIds(),
-        ]);
+        const items = await loadStoreDiscoveryCatalog(200, user?.id);
         if (!alive) return;
         setProducts(items);
-        setFeaturedItemIds(nextFeaturedItemIds);
       } catch (loadError) {
         if (!alive) return;
         setError(loadError instanceof Error ? loadError.message : 'Could not load Browse.');
@@ -273,11 +279,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
         if (beatInstrument !== 'all' && !product.beat.instruments.includes(beatInstrument)) return false;
         if (beatTier !== 'all' && !product.beat.availableTierCodes.includes(beatTier)) return false;
       }
-      const hasPaidPrice = product.beat ? product.beat.hasPaidOffers : !(product.is_free || product.price_cents === 0);
-      if (priceFilter === 'free' && hasPaidPrice) return false;
-      if (priceFilter === 'paid' && !hasPaidPrice) return false;
       if (effectiveTagFilter !== 'all' && !(product.browse_tags ?? []).some(tag => tag.label.toLowerCase() === effectiveTagFilter.toLowerCase())) return false;
-      if (capabilityFilter !== 'all' && !(product.capability_keys ?? []).includes(capabilityFilter)) return false;
       if (effectiveCreatorFilter === 'following' && !(product.author_id && followedProfileIds.has(product.author_id))) return false;
       if (effectiveCreatorFilter !== 'all' && effectiveCreatorFilter !== 'following' && creatorFilterKey(product) !== effectiveCreatorFilter) return false;
       if (!normalizedQuery) return true;
@@ -285,70 +287,36 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
       const taxonomy = [product.browse_type?.label, ...(product.browse_tags ?? []).map(tag => tag.label)].filter(Boolean).join(' ');
       return `${product.title} ${creator} ${taxonomy}`.toLowerCase().includes(normalizedQuery);
     }).sort(sortBy === 'recently-added' ? compareRecentlyAddedProducts : comparePublicCatalogProducts);
-  }, [beatBpmMax, beatBpmMin, beatFiltersVisible, beatInstrument, beatKey, beatMood, beatTier, capabilityFilter, category, effectiveCreatorFilter, effectiveFilter, effectiveTagFilter, effectiveTypeFilter, followedProfileIds, priceFilter, products, query, sortBy]);
-  const hasActiveFilters = (category === 'all' && effectiveFilter !== 'all')
-    || sortBy !== 'release-date'
-    || priceFilter !== 'all'
+  }, [beatBpmMax, beatBpmMin, beatFiltersVisible, beatInstrument, beatKey, beatMood, beatTier, category, effectiveCreatorFilter, effectiveFilter, effectiveTagFilter, effectiveTypeFilter, followedProfileIds, products, query, sortBy]);
+  const hasActiveFacetFilters = (Boolean(selectedExperience) && sortBy !== 'release-date')
     || effectiveTypeFilter !== 'all'
     || effectiveTagFilter !== 'all'
-    || capabilityFilter !== 'all'
     || effectiveCreatorFilter !== 'all'
-    || (beatFiltersVisible && Boolean(beatBpmMin || beatBpmMax || beatKey !== 'all' || beatMood !== 'all' || beatInstrument !== 'all' || beatTier !== 'all'))
+    || (beatFiltersVisible && Boolean(beatBpmMin || beatBpmMax || beatKey !== 'all' || beatMood !== 'all' || beatInstrument !== 'all' || beatTier !== 'all'));
+  const showProductGrid = category !== 'all'
+    || effectiveFilter !== 'all'
+    || hasActiveFacetFilters
     || Boolean(query.trim());
+  const showStoreFilter = !frontDoor || effectiveFilter !== 'all' || hasActiveFacetFilters;
 
-  const surfaceName = hasActiveFilters ? 'Browse' : (frontDoor ? 'Discover' : 'Store');
-  const activeFilterChips = [
-    sortBy === 'recently-added' ? { id: 'sort', label: 'Recently added', clear: () => setSortBy('release-date') } : null,
-    effectiveTagFilter !== 'all' ? { id: 'tag', label: effectiveTagFilter, clear: () => setTagFilter('all') } : null,
-    effectiveTypeFilter !== 'all' ? { id: 'type', label: effectiveTypeFilter, clear: () => { setTypeFilter('all'); setTagFilter('all'); } } : null,
-    category === 'all' && effectiveFilter !== 'all' ? { id: 'category', label: STORE_FILTER_LABELS[effectiveFilter], clear: () => { setActiveFilter('all'); setTypeFilter('all'); setTagFilter('all'); } } : null,
-    effectiveCreatorFilter !== 'all' ? { id: 'creator', label: effectiveCreatorFilter === 'following' ? 'Creators You Follow' : availableCreators.find(creator => creator.id === effectiveCreatorFilter)?.label || 'Creator', clear: () => setCreatorFilter('all') } : null,
-    capabilityFilter !== 'all' ? { id: 'feature', label: 'Achievements', clear: () => setCapabilityFilter('all') } : null,
-    priceFilter !== 'all' ? { id: 'price', label: priceFilter === 'free' ? 'Free' : 'Paid', clear: () => setPriceFilter('all') } : null,
-    beatBpmMin || beatBpmMax ? { id: 'bpm', label: `BPM ${beatBpmMin || '40'}–${beatBpmMax || '240'}`, clear: () => { setBeatBpmMin(''); setBeatBpmMax(''); } } : null,
-    beatKey !== 'all' ? { id: 'beat-key', label: beatKey, clear: () => setBeatKey('all') } : null,
-    beatMood !== 'all' ? { id: 'beat-mood', label: beatMood, clear: () => setBeatMood('all') } : null,
-    beatInstrument !== 'all' ? { id: 'beat-instrument', label: beatInstrument, clear: () => setBeatInstrument('all') } : null,
-    beatTier !== 'all' ? { id: 'beat-tier', label: `${beatTier} license`, clear: () => setBeatTier('all') } : null,
-  ].filter((chip): chip is { id: string; label: string; clear: () => void } => Boolean(chip));
-  const renderActiveFilters = (className: string) => activeFilterChips.length > 0 ? (
-    <div className={`store-active-filters ${className}`} aria-label="Active filters">
-      {activeFilterChips.map(chip => (
-        <span key={chip.id} className="tag-select-pill">
-          <span className="tag-select-pill-label">{chip.label}</span>
-          <button type="button" aria-label={`Remove ${chip.label} filter`} onClick={chip.clear}>×</button>
-        </span>
-      ))}
-    </div>
-  ) : null;
+  const surfaceName = frontDoor ? 'Discover' : CATEGORY_COPY[category].title;
   const storeTools = (
     <div className="page-header-tools">
       {!frontDoor && <label className="page-search-control ui44-composed-field ui44-composed-field-search">
         <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
         <Ui44TextInput surface="bare" value={query} onChange={event => setQuery(event.target.value)} placeholder={`Search ${surfaceName}`} aria-label={`Search ${surfaceName}`} />
       </label>}
-      <FilterPopover label={`Filter ${surfaceName}`} active={hasActiveFilters}>
+      {showStoreFilter && <FilterPopover label={`Filter ${surfaceName}`} active={hasActiveFacetFilters}>
         {() => <>
-          <label className="store-filter-group">
+          {selectedExperience && <label className="store-filter-group">
             <span className="store-filter-label">Sort by</span>
             <Ui44SelectInput value={sortBy} onChange={event => setSortBy(event.target.value as StoreSort)}>
               <option value="release-date">Release date</option>
               <option value="recently-added">Recently added</option>
             </Ui44SelectInput>
-          </label>
-          <label className="store-filter-group">
-            <span className="store-filter-label">Category</span>
-            <Ui44SelectInput value={effectiveFilter} onChange={event => {
-              setActiveFilter(event.target.value as StoreFilter);
-              setTypeFilter('all');
-              setTagFilter('all');
-              setCreatorFilter('all');
-            }}>
-              {availableStoreFilters.map(filter => <option key={filter} value={filter}>{STORE_FILTER_LABELS[filter]}</option>)}
-            </Ui44SelectInput>
-          </label>
+          </label>}
           {selectedExperience && <label className="store-filter-group">
-            <span className="store-filter-label">Type</span>
+            <span className="store-filter-label">{selectedExperience === 'music' ? 'Release type' : 'Type'}</span>
             <Ui44SelectInput value={effectiveTypeFilter} onChange={event => {
               setTypeFilter(event.target.value);
               setTagFilter('all');
@@ -385,45 +353,25 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
               {availableCreators.map(creator => <option key={creator.id} value={creator.id}>{creator.label}</option>)}
             </Ui44SelectInput>
           </label>
-          <label className="store-filter-group">
-            <span className="store-filter-label">Features</span>
-            <Ui44SelectInput value={capabilityFilter} onChange={event => setCapabilityFilter(event.target.value as 'all' | 'achievements')}>
-              <option value="all">Any feature</option>
-              <option value="achievements">Achievements</option>
-            </Ui44SelectInput>
-          </label>
-          <label className="store-filter-group">
-            <span className="store-filter-label">Price</span>
-            <Ui44SelectInput value={priceFilter} onChange={event => setPriceFilter(event.target.value as PriceFilter)}>
-              <option value="all">Any price</option>
-              <option value="free">Free</option>
-              <option value="paid">Paid</option>
-            </Ui44SelectInput>
-          </label>
-          {hasActiveFilters && (
+          {hasActiveFacetFilters && (
             <button type="button" className="ui44-paper-menu-item page-filter-option" onClick={() => {
-              setActiveFilter('all');
               setSortBy('release-date');
-              setPriceFilter('all');
               setTypeFilter('all');
               setTagFilter('all');
-              setCapabilityFilter('all');
               setCreatorFilter('all');
               setBeatBpmMin(''); setBeatBpmMax(''); setBeatKey('all'); setBeatMood('all'); setBeatInstrument('all'); setBeatTier('all');
-              setQuery('');
             }}><span className="store-clear-filters">Clear filters</span></button>
           )}
         </>}
-      </FilterPopover>
+      </FilterPopover>}
     </div>
   );
 
   const copy = CATEGORY_COPY[category];
-  const pageTitle = hasActiveFilters ? 'Browse' : (frontDoor ? 'Discover' : copy.title);
+  const pageTitle = frontDoor ? 'Discover' : copy.title;
   const storeHeader = (
     <div className="store-browse-header">
       <HubHero title={pageTitle} actions={storeTools} />
-      {renderActiveFilters('store-active-filters-below-header')}
     </div>
   );
 
@@ -432,9 +380,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     setSortBy(nextSort);
     setTypeFilter('all');
     setTagFilter('all');
-    setCapabilityFilter('all');
     setCreatorFilter('all');
-    setPriceFilter('all');
     setQuery('');
     document.querySelector<HTMLElement>('.app-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -452,33 +398,69 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     setSortBy('release-date');
     setTypeFilter('all');
     setTagFilter('all');
-    setCapabilityFilter('all');
-    setPriceFilter('all');
     setCreatorFilter('following');
     setQuery('');
     document.querySelector<HTMLElement>('.app-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  const mobileDiscoverRail = (
+    <nav className="store-mobile-category-rail" aria-label="Discover categories">
+      {MOBILE_DISCOVER_CATEGORIES.map(option => {
+        const selected = category === 'all'
+          ? effectiveFilter === option.filter
+          : category === option.category;
+        return category === 'all' ? (
+          <button
+            key={option.category}
+            type="button"
+            className="store-mobile-category-tab"
+            aria-current={selected ? 'page' : undefined}
+            onClick={() => browseCategory(option.filter)}
+          >
+            {option.label}
+          </button>
+        ) : (
+          <Link
+            key={option.category}
+            href={option.href}
+            className="store-mobile-category-tab"
+            aria-current={selected ? 'page' : undefined}
+          >
+            {option.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+
+  const storeOpening = (
+    <div className="store-discover-opening">
+      {storeHeader}
+      {mobileDiscoverRail}
+    </div>
+  );
+
   if (category === 'all') {
     const musicProducts = products.filter(product => getProductExperience(product) === 'music' && !isBeatProduct(product));
-    const musicProductsById = new Map(musicProducts.map(product => [product.id, product]));
-    const featuredProducts = featuredItemIds === null
-      ? musicProducts.filter(product => product.featured).sort(comparePublicCatalogProducts).slice(0, 8)
-      : featuredItemIds.flatMap(itemId => {
-        const product = musicProductsById.get(itemId);
-        return product ? [product] : [];
-      }).slice(0, 8);
-    const featuredProductIds = new Set(featuredProducts.map(product => product.id));
+    const newReleaseProducts = [...musicProducts]
+      .sort(comparePublicCatalogProducts)
+      .slice(0, 8);
+    const newReleaseProductIds = new Set(newReleaseProducts.map(product => product.id));
     const recentlyAddedProducts = buildRecentlyAddedProducts(
-      [...musicProducts].sort(compareRecentlyAddedProducts),
-      featuredProductIds,
+      products
+        .filter(product => (
+          ['music', 'book', 'interactive', 'asset', 'physical'].includes(getProductExperience(product))
+          && (beatReviewSurfacesEnabled || !isBeatProduct(product))
+        ))
+        .sort(compareRecentlyAddedProducts),
+      newReleaseProductIds,
       8,
     );
     const followingProducts = keepNewestProductPerCreator(
       products
         .filter(product => product.author_id && followedProfileIds.has(product.author_id))
         .sort(comparePublicCatalogProducts),
-    ).slice(0, 4);
+    ).slice(0, 8);
     const categoryShelves = HOME_BROWSE_SHELF_ORDER
       .map(filter => ({
         filter,
@@ -486,15 +468,15 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
         products: products
           .filter(product => getProductExperience(product) === filter)
           .sort(comparePublicCatalogProducts)
-          .slice(0, 4),
+          .slice(0, 8),
       }))
       .filter(shelf => shelf.products.length > 0);
-    const beatShelf = beatReviewSurfacesEnabled ? products.filter(isBeatProduct).sort(comparePublicCatalogProducts).slice(0, 4) : [];
+    const beatShelf = beatReviewSurfacesEnabled ? products.filter(isBeatProduct).sort(comparePublicCatalogProducts).slice(0, 8) : [];
 
     return (
       <PageShell>
         <main className="app-page store-app-page">
-          {storeHeader}
+          {storeOpening}
           {loading ? (
             <EmptyMessage status>Loading...</EmptyMessage>
           ) : error ? (
@@ -503,26 +485,29 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
             <EmptyMessage>{query ? 'No items match your search.' : 'No items match this filter.'}</EmptyMessage>
           ) : (
             <>
-              {hasActiveFilters ? (
+              {showProductGrid ? (
                 <ProductGrid>
                   {visibleProducts.map(product => (
                     <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />
                   ))}
                 </ProductGrid>
               ) : <>
-                {featuredProducts.length > 0 && (
-                <HubSection title="New Releases" action={<Ui44SectionArrow label="Browse all music by release date" onClick={() => browseCategory('music', 'release-date')} />}>
-                  <ProductGrid>
-                    {featuredProducts.map(product => (
+                {recentlyAddedProducts.length > 0 && (
+                <HubSection
+                  title="Recently Added"
+                  action={<Ui44SectionArrow label="Browse recently added music" onClick={() => browseCategory('music', 'recently-added')} />}
+                >
+                  <ProductGrid className="store-mobile-shelf">
+                    {recentlyAddedProducts.map(product => (
                       <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />
                     ))}
                   </ProductGrid>
                 </HubSection>
                 )}
-                {recentlyAddedProducts.length > 0 && (
-                <HubSection title="Recently Added" action={<Ui44SectionArrow label="Browse recently added music" onClick={() => browseCategory('music', 'recently-added')} />}>
-                  <ProductGrid>
-                    {recentlyAddedProducts.map(product => (
+                {newReleaseProducts.length > 0 && (
+                <HubSection title="New in Music" action={<Ui44SectionArrow label="Browse all music by release date" onClick={() => browseCategory('music', 'release-date')} />}>
+                  <ProductGrid className="store-mobile-shelf">
+                    {newReleaseProducts.map(product => (
                       <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />
                     ))}
                   </ProductGrid>
@@ -532,9 +517,9 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
               <HubSection
                 key={shelf.filter}
                 title={shelf.title}
-                action={<Ui44SectionArrow label={shelf.title.replace('Browse ', 'Browse all ')} onClick={() => browseCategory(shelf.filter)} />}
+                action={<Ui44SectionArrow label={`Browse all ${STORE_FILTER_LABELS[shelf.filter]}`} onClick={() => browseCategory(shelf.filter)} />}
               >
-                  <ProductGrid>
+                  <ProductGrid className="store-mobile-shelf">
                     {shelf.products.map(product => (
                       <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />
                     ))}
@@ -545,11 +530,11 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
                   title="Browse Beats"
                   action={<Ui44SectionArrow label="Browse all Beats" onClick={() => { window.location.href = '/store/music?type=beat'; }} />}
                 >
-                  <ProductGrid>{beatShelf.map(product => <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />)}</ProductGrid>
+                  <ProductGrid className="store-mobile-shelf">{beatShelf.map(product => <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />)}</ProductGrid>
                 </HubSection>}
                 {followingProducts.length > 0 && (
                 <HubSection title="Creators You Follow" action={<Ui44SectionArrow label="View all from creators you follow" onClick={browseFollowedCreators} />}>
-                  <ProductGrid>
+                  <ProductGrid className="store-mobile-shelf">
                     {followingProducts.map(product => (
                       <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />
                     ))}
@@ -567,7 +552,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   return (
     <PageShell>
       <main className="app-page store-app-page">
-        {storeHeader}
+        {storeOpening}
         {loading ? (
           <EmptyMessage status>Loading...</EmptyMessage>
         ) : error ? (

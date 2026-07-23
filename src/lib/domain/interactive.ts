@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { LOCAL_MASK_ITEM_ID, localMaskPreviewEnabled } from '@/lib/localMaskPreview';
 
 export type InteractiveBuild = {
   id: string;
@@ -34,6 +35,15 @@ export type InteractiveLaunch = {
 };
 
 export async function getInteractiveBuild(itemId: string) {
+  if (localMaskPreviewEnabled && itemId === LOCAL_MASK_ITEM_ID) return {
+    id: '44a50000-0000-4000-8000-000000000004', item_id: itemId, runtime: 'unity_webgl', manifest_version: 1,
+    build_version: '1.0', unity_version: '6000.5.3f1', status: 'ready', entry_url: '/api/local-mask/index.html',
+    compression: 'gzip', decompression_fallback: false, webgl_version: 2, wasm_required: true,
+    requires_cross_origin_isolation: false, supports_desktop: true, supports_mobile: false,
+    supported_browsers: ['chrome', 'edge', 'firefox', 'safari'], supported_inputs: ['keyboard', 'mouse'],
+    preferred_orientation: 'landscape', minimum_device_memory_mb: null, maximum_heap_memory_mb: 256,
+    download_size_mb: 60.08, max_session_minutes: 240,
+  } satisfies InteractiveBuild;
   const result = await supabase
     .from('interactive_builds' as never)
     .select('*')
@@ -45,6 +55,14 @@ export async function getInteractiveBuild(itemId: string) {
 }
 
 export async function beginInteractiveLaunch(itemId: string, clientContext: Record<string, unknown>) {
+  if (localMaskPreviewEnabled && itemId === LOCAL_MASK_ITEM_ID && typeof window !== 'undefined') {
+    const alternateHost = window.location.hostname === 'localhost' ? '127.0.0.1' : 'localhost';
+    return {
+      session_id: crypto.randomUUID(), session_token: crypto.randomUUID(),
+      entry_url: `${window.location.protocol}//${alternateHost}:${window.location.port}/api/local-mask/index.html`,
+      expires_at: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(), manifest: {},
+    };
+  }
   const result = await supabase.rpc('begin_interactive_launch' as never, {
     target_item_id: itemId,
     client_context: clientContext,

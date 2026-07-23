@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { supabase } from '@/lib/supabase';
-import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
+import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import {
   ACHIEVEMENT_NOTIFICATIONS_UPDATED,
   loadAchievementNotifications,
@@ -23,6 +23,8 @@ import {
 } from '@/lib/notificationState';
 import { hasCustomerOrders } from '@/lib/domain/customerCommerce';
 import { fetchMyTeamAccess } from '@/lib/domain/team';
+import { getMobileTopbarState } from '@/lib/osApps';
+import { MobileSearchOverlay } from '@/components/MobileSearchOverlay';
 
 export type { TopbarTab } from './TopbarContext';
 
@@ -37,40 +39,11 @@ const IconCart = () => (
   </svg>
 );
 
-const IconProfile = () => (
-  <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="7.5" r="3.5"/>
-    <path d="M3 19c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/>
-  </svg>
-);
-
-const IconStudio = () => <span className="os-icon os-icon-dashboard os-icon-sm" aria-hidden="true" />;
-const IconOrders = () => (
-  <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M6 3.5h10v15H6z" />
-    <path d="M8.5 7h5M8.5 10.5h5M8.5 14h3" />
-  </svg>
-);
-const IconAdmin = () => (
-  <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M11 3.2 17.5 5.5v4.8c0 4.1-2.5 6.7-6.5 8.5-4-1.8-6.5-4.4-6.5-8.5V5.5L11 3.2Z" />
-    <path d="m8.2 10.8 1.8 1.8 3.8-4" />
-  </svg>
-);
-const IconTeam = () => (
-  <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <circle cx="8" cy="8" r="3" /><circle cx="15.5" cy="9" r="2.3" />
-    <path d="M2.8 18c.4-3.5 2.3-5.3 5.2-5.3s4.8 1.8 5.2 5.3M13 14.1c.8-.7 1.7-1 2.7-1 2.2 0 3.5 1.5 3.8 4.1" />
-  </svg>
-);
-const IconSupport = () => <span className="os-icon os-icon-support os-icon-sm" aria-hidden="true" />;
-const IconSettings = () => <span className="os-icon os-icon-settings os-icon-sm" aria-hidden="true" />;
-
-const IconMessages = () => (
-  <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M18 12.5a1.5 1.5 0 0 1-1.5 1.5H8l-4 3.5V5.5A1.5 1.5 0 0 1 5.5 4h11a1.5 1.5 0 0 1 1.5 1.5v7z"/>
-  </svg>
-);
+const IconProfile = () => <span className="os-icon os-icon-user os-icon-sm" aria-hidden="true" />;
+const IconMessages = () => <span className="os-icon os-icon-inbox os-icon-sm" aria-hidden="true" />;
+const IconOrders = () => <span className="os-icon os-icon-orders os-icon-sm" aria-hidden="true" />;
+const IconStudio = () => <span className="os-icon os-icon-studio-disc os-icon-sm" aria-hidden="true" />;
+const IconTeam = () => <span className="os-icon os-icon-friends os-icon-sm" aria-hidden="true" />;
 
 const IconSignOut = () => (
   <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -131,6 +104,7 @@ export function Topbar() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notifMenuOpen, setNotifMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [searchDraft, setSearchDraft] = useState('');
   const [previousPath, setPreviousPath] = useState<string | null>(null);
   const [searchKey, setSearchKey] = useState(() => (
@@ -258,6 +232,12 @@ export function Topbar() {
       setUserMenuOpen(false);
       setNotifMenuOpen(false);
       setSearchOpen(false);
+      setMobileSearchOpen(false);
+      if (pathname !== '/search') {
+        setSearchDraft('');
+        const mobileSearchInput = document.querySelector<HTMLInputElement>('.os-topbar-search-mobile-input');
+        if (mobileSearchInput && mobileSearchInput === document.activeElement) mobileSearchInput.blur();
+      }
     });
   }, [pathname]);
 
@@ -276,6 +256,29 @@ export function Topbar() {
     const frame = window.requestAnimationFrame(() => setPreviousPath(nextPreviousPath));
     return () => window.cancelAnimationFrame(frame);
   }, [pathname, searchKey]);
+
+  useEffect(() => {
+    if (pathname !== '/search') return;
+    const query = new URLSearchParams(searchKey).get('q') ?? '';
+    Promise.resolve().then(() => setSearchDraft(query));
+  }, [pathname, searchKey]);
+
+  useEffect(() => {
+    if (pathname !== '/search' || typeof window === 'undefined') return;
+    if (!window.matchMedia('(max-width: 768px)').matches) return;
+
+    const query = searchDraft.trim();
+    const currentQuery = new URLSearchParams(searchKey).get('q')?.trim() ?? '';
+    if (query === currentQuery) return;
+
+    const timer = window.setTimeout(() => {
+      const nextSearchKey = query ? `q=${encodeURIComponent(query)}` : '';
+      setSearchKey(nextSearchKey);
+      router.replace(query ? `/search?${nextSearchKey}` : '/search', { scroll: false });
+    }, 240);
+
+    return () => window.clearTimeout(timer);
+  }, [pathname, router, searchDraft, searchKey]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -400,6 +403,7 @@ export function Topbar() {
   ));
   const unreadNotificationCount = visibleNotifications.filter(n => !seenIds.has(n.id)).length;
   const backLabel = labelForPath(previousPath?.split('?')[0]) ?? back?.label ?? 'Back';
+  const mobileTopbarState = getMobileTopbarState(pathname);
 
   async function handleSignOut() {
     setUserMenuOpen(false);
@@ -425,15 +429,39 @@ export function Topbar() {
   function submitSearch(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const query = searchDraft.trim();
+    setSearchKey(query ? `q=${encodeURIComponent(query)}` : '');
     router.push(query ? `/search?q=${encodeURIComponent(query)}` : '/search');
   }
 
+  const closeMobileSearch = useCallback(() => {
+    setMobileSearchOpen(false);
+  }, []);
+
+  const openMobileSearch = useCallback(() => {
+    setMobileSearchOpen(true);
+    setUserMenuOpen(false);
+    setNotifMenuOpen(false);
+  }, []);
+
+  const submitMobileSearch = useCallback((value: string, href?: string) => {
+    const query = value.trim();
+    setMobileSearchOpen(false);
+    if (href) {
+      router.push(href);
+      return;
+    }
+    setSearchKey(query ? `q=${encodeURIComponent(query)}` : '');
+    router.push(query ? `/search?q=${encodeURIComponent(query)}` : '/search');
+  }, [router]);
+
   return (
-    <div className="os-topbar">
-      <div className="os-topbar-left">
-        <Link href="/" className="os-mobile-logo" aria-label="44OS Home">
-          <span className="os-logo-44" aria-hidden="true" />
-        </Link>
+    <>
+      <div className={`os-topbar os-topbar-mode-${mobileTopbarState.mode}`}>
+        <div className="os-topbar-left">
+          <Link href="/" className="os-mobile-logo os-mobile-brand-logo" aria-label="44OS Home">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/44-topbar-logo.png" alt="" />
+          </Link>
         {back && (
           <button
             type="button"
@@ -453,6 +481,25 @@ export function Topbar() {
             </svg>
           </button>
         )}
+        {!back && (mobileTopbarState.mode === 'back' || mobileTopbarState.mode === 'search-back') && (
+          <button
+            type="button"
+            className="ui44-symbol-button ui44-symbol-button-back os-topbar-back os-topbar-back-mobile-only"
+            aria-label={backLabel}
+            title={backLabel}
+            onClick={() => {
+              if (typeof window !== 'undefined' && window.history.length > 1) {
+                router.back();
+                return;
+              }
+              router.push(mobileTopbarState.fallbackHref);
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M13 5l-6 6 6 6"/>
+            </svg>
+          </button>
+        )}
         {tabs?.map(tab => {
           const className = tab.active ? 'os-topbar-tab os-topbar-tab-active' : 'os-topbar-tab';
           return tab.href ? (
@@ -461,9 +508,9 @@ export function Topbar() {
             <button key={tab.id} type="button" className={className} onClick={tab.onClick}>{tab.label}</button>
           );
         })}
-      </div>
+        </div>
 
-      <div className="os-topbar-right">
+        <div className="os-topbar-right">
         {PUBLIC_PURCHASES_AVAILABLE && cartCount > 0 && (
           <Link href="/cart" className="ui44-symbol-button ui44-symbol-button-cart os-topbar-icon-button os-topbar-cart-button" aria-label={`Cart · ${cartCount} item${cartCount === 1 ? '' : 's'}`}>
             <IconCart />
@@ -471,7 +518,7 @@ export function Topbar() {
           </Link>
         )}
 
-        <div className="os-topbar-search" ref={searchWrapRef}>
+        <div className="os-topbar-search os-topbar-search-desktop" ref={searchWrapRef}>
           {searchOpen ? (
             <form className="os-topbar-search-form ui44-composed-field ui44-composed-field-search" role="search" onSubmit={submitSearch}>
               <span className="os-topbar-search-icon os-icon os-icon-search os-icon-sm" aria-hidden="true" />
@@ -496,6 +543,57 @@ export function Topbar() {
             </button>
           )}
         </div>
+        {mobileTopbarState.mode !== 'search-back' && (
+          <button
+            type="button"
+            className="ui44-symbol-button ui44-symbol-button-search os-topbar-icon-button os-topbar-mobile-search-trigger"
+            aria-label="Search"
+            aria-expanded={mobileSearchOpen}
+            onClick={openMobileSearch}
+          >
+            <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
+          </button>
+        )}
+        {mobileTopbarState.mode === 'search-back' && <form
+          className="os-topbar-search-mobile"
+          role="search"
+          onSubmit={submitSearch}
+        >
+          <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
+          <Ui44TextInput
+            surface="bare"
+            type="search"
+            enterKeyHint="search"
+            autoComplete="off"
+            className="os-topbar-search-mobile-input"
+            value={searchDraft}
+            onFocus={() => {
+              if (pathname !== '/search') router.push('/search');
+            }}
+            onChange={event => {
+              const value = event.target.value;
+              const query = value.trim();
+              setSearchDraft(value);
+              if (pathname !== '/search' && query) {
+                const nextSearchKey = `q=${encodeURIComponent(query)}`;
+                setSearchKey(nextSearchKey);
+                router.push(`/search?${nextSearchKey}`);
+              }
+            }}
+            placeholder="Search"
+            aria-label="Search 44OS"
+          />
+          {searchDraft && (
+            <button
+              type="button"
+              className="os-topbar-search-clear"
+              aria-label="Clear search"
+              onClick={() => setSearchDraft('')}
+            >
+              ×
+            </button>
+          )}
+        </form>}
 
         {user && (
           <div ref={notifWrapRef} className="os-topbar-notification-menu">
@@ -572,36 +670,32 @@ export function Topbar() {
             </button>
             {userMenuOpen && (
               <div className="ui44-paper-menu os-popover os-account-popover" role="menu">
-                <Link href={profileHref} className="ui44-paper-menu-item os-popover-item" role="menuitem">
-                  <IconProfile /> Profile
+                <Link href={profileHref} className="ui44-paper-menu-item os-popover-item os-account-menu-item" role="menuitem">
+                  <IconProfile />
+                  <span className="os-account-menu-copy"><strong>Profile</strong><span>View or edit your profile</span></span>
                 </Link>
-                <Link href="/inbox" className="ui44-paper-menu-item os-popover-item" role="menuitem">
-                  <IconMessages /> Inbox
+                <Link href="/inbox" className="ui44-paper-menu-item os-popover-item os-account-menu-item" role="menuitem">
+                  <IconMessages />
+                  <span className="os-account-menu-copy"><strong>Messages</strong><span>View or send messages</span></span>
                 </Link>
                 {hasOrders && (
-                  <Link href="/orders" className="ui44-paper-menu-item os-popover-item" role="menuitem">
-                    <IconOrders /> Orders
+                  <Link href="/orders" className="ui44-paper-menu-item os-popover-item os-account-menu-item" role="menuitem">
+                    <IconOrders />
+                    <span className="os-account-menu-copy"><strong>Orders</strong><span>View purchases and orders</span></span>
                   </Link>
                 )}
-                <Link href="/studio" className="ui44-paper-menu-item os-popover-item" role="menuitem">
-                  <IconStudio /> Studio
-                </Link>
-                {profile?.role === 'admin' && (
-                  <Link href="/admin" className="ui44-paper-menu-item os-popover-item" role="menuitem">
-                    <IconAdmin /> Admin
+                {isCreatorProfile(profile) && (
+                  <Link href="/studio" className="ui44-paper-menu-item os-popover-item os-account-menu-item" role="menuitem">
+                    <IconStudio />
+                    <span className="os-account-menu-copy"><strong>Studio</strong><span>Publish and manage work</span></span>
                   </Link>
                 )}
                 {hasTeamAccess && (
-                  <Link href="/team" className="ui44-paper-menu-item os-popover-item" role="menuitem">
-                    <IconTeam /> Team
+                  <Link href="/team" className="ui44-paper-menu-item os-popover-item os-account-menu-item" role="menuitem">
+                    <IconTeam />
+                    <span className="os-account-menu-copy"><strong>Team</strong><span>Open Team resources</span></span>
                   </Link>
                 )}
-                <Link href="/support" className="ui44-paper-menu-item os-popover-item os-popover-item-mobile-only" role="menuitem">
-                  <IconSupport /> Support
-                </Link>
-                <Link href="/settings" className="ui44-paper-menu-item os-popover-item os-popover-item-mobile-only" role="menuitem">
-                  <IconSettings /> Settings
-                </Link>
                 <div className="os-popover-divider" />
                 <button type="button" className="ui44-paper-menu-item os-popover-item" role="menuitem" onClick={handleSignOut}>
                   <IconSignOut /> Log Out
@@ -614,7 +708,15 @@ export function Topbar() {
             <IconUser />
           </Link>
         )}
+        </div>
       </div>
-    </div>
+      <MobileSearchOverlay
+        open={mobileSearchOpen}
+        value={searchDraft}
+        onValueChange={setSearchDraft}
+        onClose={closeMobileSearch}
+        onSubmit={submitMobileSearch}
+      />
+    </>
   );
 }

@@ -18,15 +18,17 @@ const CATEGORY_EXPERIENCE: Partial<Record<LibraryCategory, ProductExperience>> =
   music: 'music',
   books: 'book',
   'sample-packs': 'asset',
+  games: 'interactive',
 };
 
-type LibraryFilter = 'all' | 'music' | 'book' | 'asset';
+type LibraryFilter = 'all' | 'music' | 'book' | 'asset' | 'interactive';
 
 const FILTER_LABELS: Record<LibraryFilter, string> = {
   all: 'All',
   music: 'Music',
   book: 'Books',
   asset: 'Sample Packs',
+  interactive: 'Games',
 };
 
 interface LibraryRow {
@@ -52,11 +54,11 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
     rows
       .filter(row => row.products)
       .map(row => getProductExperience(row.products!))
-      .filter((experience): experience is ProductExperience => ['music', 'book', 'asset'].includes(experience)),
+      .filter((experience): experience is ProductExperience => ['music', 'book', 'asset', 'interactive'].includes(experience)),
   ), [rows]);
 
   const availableFilters = useMemo(() => (
-    (['music', 'book', 'asset'] as LibraryFilter[]).filter(filter => ownedExperiences.has(filter as ProductExperience))
+    (['music', 'book', 'asset', 'interactive'] as LibraryFilter[]).filter(filter => ownedExperiences.has(filter as ProductExperience))
   ), [ownedExperiences]);
 
   useEffect(() => {
@@ -96,7 +98,7 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
     return productRows.filter(row => {
       const product = row.products!;
       const experience = getProductExperience(product);
-      if (!['music', 'book', 'asset'].includes(experience)) return false;
+      if (!['music', 'book', 'asset', 'interactive'].includes(experience)) return false;
       if (activeFilter !== 'all' && experience !== activeFilter) return false;
       if (!normalizedQuery) return true;
       const creator = product.creators?.display_name || product.creator || '';
@@ -106,7 +108,7 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
 
   const visibleRowGroups = useMemo(() => {
     if (activeFilter !== 'all') return [visibleRows];
-    return (['music', 'book', 'asset'] as ProductExperience[])
+    return (['music', 'book', 'asset', 'interactive'] as ProductExperience[])
       .map(experience => visibleRows.filter(row => getProductExperience(row.products!) === experience))
       .filter(group => group.length > 0);
   }, [activeFilter, visibleRows]);
@@ -245,6 +247,7 @@ function getLibraryItemLabel(product: Product) {
   if (experience === 'music') return 'Release';
   if (experience === 'book') return 'Book';
   if (experience === 'asset') return 'Sample Pack';
+  if (experience === 'interactive') return 'Game';
   return 'Item';
 }
 
@@ -253,5 +256,6 @@ function getDockIconForProduct(product: Product) {
   if (experience === 'music') return 'os-icon-music';
   if (experience === 'book') return 'os-icon-books';
   if (experience === 'asset') return 'os-icon-assets';
+  if (experience === 'interactive') return 'os-icon-games';
   return 'os-icon-home';
 }

@@ -135,6 +135,8 @@ export default function MarketingLandingPage() {
       <footer className={styles.footer}>
         <div className={styles.footerPrimary}>
           <nav className={styles.footerLinks} aria-label="Community and support">
+            <a href="/releases">Release Notes</a>
+            <span aria-hidden="true">·</span>
             <a href={getAppPathUrl('/community')}>Community</a>
             <span aria-hidden="true">·</span>
             <a href={getAppPathUrl('/support')}>Support</a>

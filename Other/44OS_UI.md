@@ -111,15 +111,15 @@ Desktop Dock:
 - Dock rows use a 56px rhythm; expanded child rows use 40px and text-only labels.
 - The Dock clock uses the viewer’s timezone in two-digit 24-hour `HH:mm` format.
 
-Mobile Dock is fixed to Home, Library, Radio, Community, and Search. Settings is in the avatar menu. There is no mobile Dock menu button.
+Mobile Dock is fixed to Home, Library, Radio, Community, and Account. There is no mobile Dock menu button. Account is the role-aware destination for Profile, Notifications, Messages, Orders, Studio, Team, Support, Settings, and Log Out.
 
 Topbar:
 
 - Desktop Search expands immediately left of Notifications.
 - The populated mobile Cart control is one compact icon/count pill; the count never becomes a separate overlapping badge.
-- Mobile top-left shows the 44 logo linking home. Detail pages add a circular back button beside it.
+- Mobile hub top-left shows the 44 logo linking Home; detail pages replace it with the circular back button. Home, Community, and Library show the circular Search action on the right. Search opens a full-page Paper overlay with live people and Item suggestions and falls through to the Search results page when the query is submitted.
 - Signed-out mobile top-right links the default profile icon to Login.
-- Signed-in account order is Profile, Inbox, conditional Orders, Studio, and role-gated Admin. Orders appears only when the member has at least one non-draft order. Mobile additionally exposes Support immediately above Settings; Log Out remains the final action.
+- The desktop account menu shrink-wraps its content and contains Profile, Messages, conditional Orders, Studio, conditional Team, and Log Out. Notifications, Support, and Settings are not duplicated because they already have desktop shell destinations. Admin access is nested under Team.
 - The Dock answers “where am I going?”; in-page controls answer “what part am I viewing?”
 
 ## Responsive geometry
@@ -140,11 +140,11 @@ The shell—not individual pages—owns mobile safe areas, Topbar, player, and D
 
 ## Page identity and information architecture
 
-- `https://app.44os.com/` is `Discover` at rest, not Store, even though it reuses catalog data and sections. Its page identity changes to `Browse` whenever a category or filter is active and returns to `Discover` when that state is cleared. `https://44os.com/` is the editorial landing page and never renders the application shell.
+- `https://app.44os.com/` is always titled `Discover`, not Store, even though it reuses catalog data and sections. Featured, Music, Books, Games, Merch, and Sample Packs change the content without renaming the page. `https://44os.com/` is the editorial landing page and never renders the application shell.
 - `/store` is `Store`.
 - Primary page titles do not include archived explanatory taglines.
-- Mobile Store, Library, and Community hubs use title plus a circular local-filter action. They do not render local search inputs; global Search is in the mobile Dock.
-- Desktop Home and Community use global Topbar Search. Library may keep its compact `Filter Library` control.
+- Discover and Community place their horizontally scrollable category tabs directly below the title divider. Discover hides its filter on Featured and exposes category-relevant controls on every other tab. Community keeps its compose and filter actions aligned below desktop Search and Notifications.
+- Home, Community, and Library use the route-aware global Search overlay on mobile and desktop. Radio, Account, detail pages, and Account subpages do not show Search unless their route contract explicitly calls for it.
 - Radio is the intentional exception: the Now Playing composition is the page and does not repeat a page title.
 - Use `HubHero`, `HubSection`, and `SectionHeader` rather than page-specific title systems.
 - Simple sections use a title only. Guided sections may add one concise sentence when the concept is unfamiliar.
@@ -223,12 +223,13 @@ Radio is a centered full-bleed composition between shell controls: artwork, Now 
 
 ## Community, profiles, Inbox, and notifications
 
-Community and profile post rows share one identity, hover, action, divider, and routing contract.
+Community and profile post rows share one identity, action, divider, and routing contract. Mobile uses full-width rows; desktop uses rounded cards with the same four-corner composition.
 
 - Initial requests show loading, not premature empty states. Read failures show errors.
 - Feed posts open canonical thread pages; feed pages do not reintroduce inline reply drawers.
-- Profile identity, Like, Reply, Report, and owner Delete controls keep independent actions inside the clickable row.
-- Thread roots and direct replies use full-width rows. Reply-to-reply relationships use one centered profile connector without adding nested cards.
+- Profile identity, Like, Reply, Edit/Delete for owners, and the Copy Link/Report menu for other members keep independent actions inside the clickable row. Public Like totals remain hidden.
+- Post metadata orders category, separator, and timestamp consistently. Long feed bodies collapse behind a text expansion action while thread roots remain complete.
+- Thread roots and direct replies reuse the feed component. Reply-to-reply relationships use one visual indentation level without opening indefinitely nested pages.
 - Like/Reply/Delete use neutral theme-aware action color; only an activated Like fills its heart.
 - Reporting is available for signed-in non-owners and enters the Admin moderation boundary without deleting evidence.
 - Item pages include Item Questions and reviews with explicit loading/empty/error/signed-in states.
@@ -252,7 +253,7 @@ Studio is a creator workspace, not a public discovery grid.
 
 - The overview shows four operational metrics: Saves, Plays, Sold, Earned.
 - Only populated Events and Item-management sections render.
-- One circular plus menu in the title row contains only Add Music, Add Book, Add Pack, and Add Update, in that order. The shorter `Pack` label applies only to this menu; Event creation is omitted from this shortcut.
+- One circular plus menu in the title row contains Add Music, Add Book, Add Game, and Add Sample Pack. Community Updates are composed in Community rather than Studio; Event creation is omitted from this shortcut.
 - Merch creation stays hidden because Merch is owned by **forty four**.
 - Rows show title, Type, and catalog-health issues without exposing Draft/Published switches.
 - Earnings remain distinct from payout-ready money; no UI implies that pending money is available or paid.
@@ -311,6 +312,7 @@ Interactive Items:
 - The launch window suppresses ordinary Sidebar, Topbar, page heading, and player and provides one persistent return action.
 - Loading, unavailable, unsupported, failure, expiry, and exit states share the immersive surface with announcements and visible focus.
 - Narrow/mobile devices stop before session issuance and show Desktop Required.
+- The compiled MASK runtime has no Unity template border or redundant fullscreen control. Its isolated page fills the launch window, begins only after the member selects Play MASK, and keeps pointer-lock initiation inside that user gesture.
 
 Beat review surfaces remain completely absent unless the client review flag is enabled. When reviewed, they use the same Item composition, shared player, Glass/Paper system, device recovery, and responsive/accessibility rules. Draft legal terms and inactive commerce always look unavailable, never purchasable.
 
