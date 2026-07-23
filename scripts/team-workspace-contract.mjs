@@ -5,7 +5,7 @@ import path from 'node:path';
 const root = process.cwd();
 const read = relative => readFile(path.join(root, relative), 'utf8');
 
-const [migration, guideRoute, kitRoute, teamServer, boundary, brandClient, teamLayout, robots, sitemap, config, guide, packageJson] = await Promise.all([
+const [migration, guideRoute, kitRoute, teamServer, boundary, brandClient, teamLayout, robots, sitemap, config, guide, packageJson, brandKitBuild] = await Promise.all([
   read('supabase/migrations/20260721010000_team_workspace_and_brand_system.sql'),
   read('src/app/api/team/brand-guide/route.ts'),
   read('src/app/api/team/brand-kit/route.ts'),
@@ -16,8 +16,9 @@ const [migration, guideRoute, kitRoute, teamServer, boundary, brandClient, teamL
   read('src/app/robots.ts'),
   read('src/app/sitemap.ts'),
   read('next.config.ts'),
-  read('Other/44OS_HANDBOOK.md'),
+  read('content/team/44OS_HANDBOOK.md'),
   read('package.json'),
+  read('scripts/build-team-brand-kit.mjs'),
 ]);
 
 assert.match(migration, /create table public\.team_access_grants/, 'current Team permission is separate from profile roles');
@@ -46,6 +47,8 @@ assert.match(teamLayout, /index: false, follow: false, nocache: true/, 'Team met
 assert.match(robots, /'\/team'/, 'robots excludes Team');
 assert.doesNotMatch(sitemap, /['"`]\/team/, 'Team routes are absent from the sitemap');
 assert.match(config, /outputFileTracingIncludes[\s\S]*44OS_HANDBOOK\.md/, 'the private canonical Handbook is packaged only for its API route');
+assert.match(guideRoute, /content', 'team', '44OS_HANDBOOK\.md'/, 'the Handbook source lives with the tracked Team content rather than the handoff documents');
+assert.match(brandKitBuild, /content', 'team', 'brand-kit'/, 'Brand Kit packaging reads its tracked Team source directory');
 assert.match(guide, /^# Handbook/m, 'canonical Handbook uses its approved page title');
 assert.match(guide, /## Working With People[\s\S]*## Brand Kit[\s\S]*## Support[\s\S]*## For Developers/, 'Support appears immediately before the developer reference');
 assert.match(guide, /app\.44os\.com\/support[\s\S]*support@44os\.com/, 'Handbook includes both monitored Support paths');

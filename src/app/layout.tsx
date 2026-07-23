@@ -9,7 +9,6 @@ import { MusicPlayerBar, MusicPlayerProvider } from '@/components/MusicPlayer';
 import ThemeSync from '@/components/ThemeSync';
 import SystemShell from '@/components/SystemShell';
 import { ContextMenuProvider } from '@/components/ContextMenu';
-import { MobileMenuProvider } from '@/components/MobileMenuContext';
 import { Suspense } from 'react';
 import { absoluteAppUrl, getAppMetadataBaseUrl } from '@/lib/metadata';
 import { getMarketingUrl } from '@/lib/siteUrl';
@@ -191,21 +190,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
         <MusicPlayerProvider>
           <TopbarProvider>
-           <MobileMenuProvider>
             <ContextMenuProvider>
-            <SystemShell />
-            <div className="app-frame">
-              <div className="app-shell">
-                <Suspense fallback={null}><Sidebar /></Suspense>
-                <div className="app-main">
-                  <Topbar />
-                  <div className="app-main-content">{children}</div>
-                  <MusicPlayerBar />
+              <SystemShell />
+              <div className="app-frame">
+                <div className="app-shell">
+                  <Suspense fallback={null}><Sidebar /></Suspense>
+                  <div className="app-main">
+                    <Topbar />
+                    <div className="app-main-content">{children}</div>
+                    <MusicPlayerBar />
+                  </div>
                 </div>
               </div>
-            </div>
             </ContextMenuProvider>
-           </MobileMenuProvider>
           </TopbarProvider>
         </MusicPlayerProvider>
 

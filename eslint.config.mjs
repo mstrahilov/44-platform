@@ -11,8 +11,7 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
-    "Interactable Demo/**",
-    "Other/MASK/Build/**",
+    ".local-artifacts/**",
     "next-env.d.ts",
   ]),
 ]);

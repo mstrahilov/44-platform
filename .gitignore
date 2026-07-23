@@ -20,6 +20,7 @@
 # production
 /build
 /artifacts/
+/.local-artifacts/
 
 # local catalog import packages (media is uploaded directly to Supabase Storage)
 /imports/

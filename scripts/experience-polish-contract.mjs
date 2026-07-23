@@ -29,6 +29,10 @@ const [
   adminContentDetail,
   studioOverview,
   legacyTrackRepairMigration,
+  libraryApp,
+  itemDetails,
+  adminPage,
+  nextConfig,
 ] = await Promise.all([
   read('src/components/Topbar.tsx'),
   read('src/components/YouApp.tsx'),
@@ -56,6 +60,10 @@ const [
   read('src/components/admin/AdminContentDetailApp.tsx'),
   read('src/app/studio/page.tsx'),
   read('supabase/migrations/20260720050000_repair_legacy_track_metadata.sql'),
+  read('src/components/LibraryApp.tsx'),
+  read('src/lib/domain/itemDetails.ts'),
+  read('src/app/admin/page.tsx'),
+  read('next.config.ts'),
 ]);
 
 assert.doesNotMatch(supportArticle, /Reviewed for (?:the )?.*launch/i, 'Support articles omit internal launch-review copy');
@@ -135,6 +143,12 @@ assert.match(storeDiscovery, /const recentlyAddedProducts = buildRecentlyAddedPr
 assert.match(storeDiscovery, /HOME_BROWSE_SHELF_ORDER[\s\S]*\['book', 'interactive', 'physical', 'asset'\]/, 'category shelves follow Books, Games, Merch, and Sample Packs');
 assert.match(storeDiscovery, /const showStoreFilter = !frontDoor \|\| effectiveFilter !== 'all' \|\| hasActiveFacetFilters/, 'Featured hides its irrelevant filter until a category or facet is active');
 assert.match(storeDiscovery, /const followingProducts = keepNewestProductPerCreator/, 'Creators You Follow keeps one Item per creator');
+assert.match(libraryApp, /LIBRARY_GROUP_ORDER[\s\S]*Music[\s\S]*Books[\s\S]*Games[\s\S]*Sample Packs/, 'Library All groups saved Items under labeled content sections');
+assert.match(libraryApp, /activeFilter !== 'all'[\s\S]*label: null, rows: visibleRows/, 'filtered Library views show only the selected content without a redundant section heading');
+assert.match(itemDetails, /localMaskPreviewEnabled && itemId === LOCAL_MASK_ITEM_ID[\s\S]*saveLocalMask\(\)/, 'the MASK browser-storage shortcut is development-only');
+assert.match(itemDetails, /const saveResult = await supabase\.rpc\('save_item_to_library'/, 'production MASK acquisition uses the canonical Library RPC');
+assert.doesNotMatch(adminPage, /\/admin\/home|New Releases/, 'Admin no longer exposes the retired manual Discover shelf editor');
+assert.match(nextConfig, /source: "\/admin\/home", destination: "\/admin", permanent: true/, 'retired Admin Home links return to the active Admin hub');
 assert.match(storeDiscovery, />Sort by<[\s\S]*value="release-date">Release date<[\s\S]*value="recently-added">Recently added</, 'Browse exposes release-date and recently-added sorting first in the filter');
 assert.match(storeDiscovery, /title="New in Music"[\s\S]*browseCategory\('music', 'release-date'\)/, 'New in Music opens release-date Browse');
 assert.match(storeDiscovery, /title="Recently Added"[\s\S]*browseCategory\('music', 'recently-added'\)/, 'Recently Added opens creation-time Browse');

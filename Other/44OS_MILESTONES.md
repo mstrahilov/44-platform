@@ -6,7 +6,7 @@ Current system behavior belongs in `44OS_FOUNDATION.md`. Current visual behavior
 
 ## Current position
 
-Recorded July 22, 2026:
+Recorded July 23, 2026:
 
 - 44OS is live and healthy.
 - `44os.com` is now the editorial front door, `app.44os.com` is the canonical application and PWA origin, `www` redirects to the apex, and legacy application links preserve their paths and queries on the app host.
@@ -14,6 +14,8 @@ Recorded July 22, 2026:
 - Public Member signup and eligible digital/physical purchase presentation are active.
 - Eight launch Merch products are live.
 - The private Team workspace, Handbook, read-only Creator/release directories, and versioned Brand Kit are live for Admins and explicitly granted Team members.
+- 44OS 1.1 is live with the accepted mobile shell, unified Discover and Community presentation, intent-based Community posts, route-aware Search, Account hub, Item-linked Community surfaces, and MASK as the first published desktop Game.
+- The July 23 repository sweep restored the three-document `Other/` boundary, removed obsolete Admin Home controls and dead UI code, preserved local source artifacts outside Git, and brought the reviewed dependency tree to zero known npm vulnerabilities.
 - Two controlled digital orders completed purchase, refund, access revocation, email, and reconciliation with zero unexplained mismatch.
 - The broad-launch audit was paused by the owner to preserve time and credits for user-facing improvements.
 - No milestone below authorizes destructive cleanup, a Creator-clock re-base, a paid physical test, provider expansion, payout activation, or optional feature activation without its stated approval.
@@ -26,7 +28,7 @@ The following areas are represented as current system truth in Foundation and UI
 - Persistent shell, canonical routes/redirects, Store, Library, Community, profiles, Inbox, Search, Radio, Studio, Admin, Support, Settings, Orders, and Calendar.
 - Canonical UI materials/tokens/components, responsive shell/safe areas, shared player, page identity, and completed CSS/component cleanup baseline.
 - Music achievements, named YouTube embeds, Overachiever Item unlocks, protected downloads, PDF Books, Sample Packs, form recovery, external links, Events, and Calendar.
-- Interactive and Beat infrastructure kept safely disabled pending their separate optional acceptance.
+- Interactive infrastructure is active only for the accepted MASK runtime; additional Games and Beat licensing remain disabled pending separate acceptance.
 - Printful-owned catalog synchronization, eight-product Merch launch catalog, Admin image workflow, featured/color/bonus imagery, safe replacement/orphan queue, signed provider webhook, quotes, and non-charging drafts.
 - Stripe-hosted Checkout, signed webhook authority, immutable terms/order evidence, refund/dispute/access/accounting behavior, Admin offer pause/restore, and zero-mismatch reconciliation.
 - Public Member signup, manual Creator paperwork-grace controls, branded Supabase Auth email, Resend transactional outbox/worker/webhook, monitored support mailbox, and production Help Center.
@@ -409,31 +411,17 @@ Research verified July 20, 2026. Recheck current versions before implementation.
 
 **Complete when:** anonymous users can download the tested Mac or Windows installer from `44os.com/download`, understand the unsigned-publisher warning, install the shell, sign in, and use the live application without a critical wrapper-specific regression.
 
-### 2. Creator mobile upload and experience reliability
+### 2. Production account and repository hygiene
 
-**Status: Implementation and automated gates complete; awaiting owner visual/device verification**
+**Status: Repository sweep refreshed July 23; production account deletion remains open and requires exact target verification**
 
-- The shared uploader now uses resumable transfer for larger files, explicit iOS-compatible audio types, and lightweight non-blocking duration metadata after the uploaded value is safely retained.
-- Music Release Date, Item Type, and Track Count are required for creation and editing; Item Tags remain optional. Current published Music Items have a Release Date, and Admin can correct approximate historical dates through an audited control that synchronizes year. Standard release creation offers Album, EP, Single, and Mixtape only, leaving Beat in its dedicated workflow and omitting Live Set. New Sample Packs hide their inferred Item Type plus irrelevant Release Date and Item Tags controls.
-- The requested account-menu, Admin/Support navigation, Store/Library details, Tracklist, and URL-only release-video changes are implemented. Releases support up to ten videos.
-- Home uses `Discover`/`Browse` page identities, an eight-slot Admin-curated `New Releases` shelf, and an eight-item `Recently Added` shelf ordered by stable creation time with New Releases Items excluded. Recently Added intentionally allows multiple releases from the same creator. The revision also includes the followed-creator shelf, complete Browse sort controls, explicit Browse shelves for smaller catalogs, and aligned header/section actions.
-- The current Studio/Radio revision makes free Music streaming and Library collection explicit, makes Book reading and Library collection free, replaces Music and Book Availability dropdowns with optional paid-download checkboxes, requires Sample Packs to have a paid download price, requires release-sort metadata for new Music publication, adds audited Admin corrections for historical release dates, and automatically appends playable tracks to Radio only after their Music Item is published. Forward migrations `20260719020000_auto_radio_and_music_download_controls.sql`, `20260719021000_book_access_and_sample_pack_pricing.sql`, `20260719022000_required_music_release_metadata.sql`, and `20260719023000_admin_release_date_corrections.sql` were promoted to production on July 19, 2026.
-- The focused experience contract, lint, typecheck, UI cleanup audit, local schema replay, local database lint, all 24 pgTAP files with 573 assertions, production build, and launch smoke checks pass.
-- Remaining acceptance is the owner’s signed-in mobile and desktop review, including a real mobile audio selection/upload and the requested UI surfaces.
-
-**Complete when:** the owner confirms the affected real mobile Creator journey and the requested desktop/mobile UI behavior.
-
-### 3. Production account and repository hygiene
-
-**Status: Repository pass complete; production account deletion remains open and requires exact target verification**
-
-- Repository hygiene is complete: obsolete generated caches, QA residue, unreferenced backups, empty route shells, unused assets, unreachable source modules, and unused/shadowed CSS were removed. Migrations, security tests, seed data, required local configuration, production assets, and the single recovery-test fixture were retained. A clean production build, production smoke test, UI cleanup audit, and diff-integrity check pass.
+- Repository hygiene keeps `Other/` limited to Foundation, UI, and Milestones. The live Team Handbook and Brand Kit sources live under `content/team/`; local Unity exports, design references, source artwork, and retired working notes live only in the ignored `.local-artifacts/` archive. Migrations, security tests, seed data, required local configuration, production assets, and the recovery-test fixture remain preserved.
 - Verify the exact live identities and dependencies for the owner-named usernames `Adrian` and `Test`; distinguish usernames from content or track titles.
 - Back up current data, delete only the approved accounts through the Auth Admin boundary, and compare preservation of unrelated Items, Community content, messages, Library, entitlements, orders, achievements, Events, and playback.
 
 **Complete when:** the two approved accounts are absent, unrelated production evidence is preserved, only safe reproducible caches are removed, and the repository passes its proportional quality gates.
 
-### 4. Legal and operating facts
+### 3. Legal and operating facts
 
 **Status: Waiting on owner facts/approval**
 
@@ -444,7 +432,7 @@ Research verified July 20, 2026. Recheck current versions before implementation.
 
 **Complete when:** the published legal and operating facts are accurate, owner-approved, internally consistent, and contain no unsupported designation or placeholder business detail.
 
-### 5. External alerts and operational ownership
+### 4. External alerts and operational ownership
 
 **Status: Open**
 
@@ -455,7 +443,7 @@ Research verified July 20, 2026. Recheck current versions before implementation.
 
 **Complete when:** a real production-critical alert reaches the assigned external channel and every operational responsibility has a named owner and backup/escalation path.
 
-### 6. Manual accessibility and device acceptance
+### 5. Manual accessibility and device acceptance
 
 **Status: Partially complete**
 
@@ -468,7 +456,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** the role/device matrix passes without a launch-blocking accessibility, layout, or input failure and any narrow repairs are verified on affected surfaces.
 
-### 7. Recovery and storage safety
+### 6. Recovery and storage safety
 
 **Status: Open**
 
@@ -479,7 +467,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** the separate-project restore is proven and every candidate object is classified as referenced, intentionally retained, or safely removable with recorded evidence.
 
-### 8. Analytics, search, and Merchant discoverability
+### 7. Analytics, search, and Merchant discoverability
 
 **Status: Foundation deployed; external acceptance open**
 
@@ -494,7 +482,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** consented production analytics records representative journeys without direct personal data or duplicate transactions; intended public routes are accepted by search engines; private routes stay excluded; eligible Merch passes Merchant diagnostics; and monitoring/rollback ownership is recorded.
 
-### 9. Final public-launch decision
+### 8. Final public-launch decision
 
 **Status: Owner action; do not execute early**
 
@@ -504,7 +492,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** the owner gives the terminal launch instruction, the Creator dates are correctly recorded, and rollback ownership is documented. This action starts the clock and must not be used for closed testing.
 
-### 10. One real physical-commerce lifecycle
+### 9. One real physical-commerce lifecycle
 
 **Status: Waiting for owner-approved funds and timing**
 
@@ -515,7 +503,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** the lifecycle ends with zero unexplained payment or fulfillment mismatch and all immutable order/provider evidence is preserved.
 
-### 11. Optional inactive capabilities
+### 10. Optional inactive capabilities
 
 **Status: Mostly deferred; first interactive runtime active**
 

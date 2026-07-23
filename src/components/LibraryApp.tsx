@@ -31,6 +31,13 @@ const FILTER_LABELS: Record<LibraryFilter, string> = {
   interactive: 'Games',
 };
 
+const LIBRARY_GROUP_ORDER: Array<{ filter: Exclude<LibraryFilter, 'all'>; label: string }> = [
+  { filter: 'music', label: 'Music' },
+  { filter: 'book', label: 'Books' },
+  { filter: 'interactive', label: 'Games' },
+  { filter: 'asset', label: 'Sample Packs' },
+];
+
 interface LibraryRow {
   id: string;
   item_id: string;
@@ -107,10 +114,13 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
   }, [activeFilter, query, rows]);
 
   const visibleRowGroups = useMemo(() => {
-    if (activeFilter !== 'all') return [visibleRows];
-    return (['music', 'book', 'asset', 'interactive'] as ProductExperience[])
-      .map(experience => visibleRows.filter(row => getProductExperience(row.products!) === experience))
-      .filter(group => group.length > 0);
+    if (activeFilter !== 'all') return [{ filter: activeFilter, label: null, rows: visibleRows }];
+    return LIBRARY_GROUP_ORDER
+      .map(group => ({
+        ...group,
+        rows: visibleRows.filter(row => getProductExperience(row.products!) === group.filter),
+      }))
+      .filter(group => group.rows.length > 0);
   }, [activeFilter, visibleRows]);
 
   if (authLoading) {
@@ -179,12 +189,15 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
           <EmptyMessage>{query ? 'No Library items match your search.' : activeFilter === 'all' ? 'Your library is empty.' : `No ${FILTER_LABELS[activeFilter].toLowerCase()} in your Library.`}</EmptyMessage>
         ) : (
           <div className="library-item-groups">
-            {visibleRowGroups.map((group, index) => (
-              <div className="app-grid ui44-catalog-grid" key={`${getProductExperience(group[0].products!)}-${index}`}>
-                {group.map(row => (
-                  <LibraryCard key={row.id} row={row} onRemove={removeLibraryRow} />
-                ))}
-              </div>
+            {visibleRowGroups.map(group => (
+              <section className="library-item-group" key={group.filter}>
+                {group.label && <h2 className="view-section-title library-group-title">{group.label}</h2>}
+                <div className="app-grid ui44-catalog-grid">
+                  {group.rows.map(row => (
+                    <LibraryCard key={row.id} row={row} onRemove={removeLibraryRow} />
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         )}

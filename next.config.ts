@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
     root: process.cwd(),
   },
   outputFileTracingIncludes: {
-    '/api/team/brand-guide': ['./Other/44OS_HANDBOOK.md'],
+    '/api/team/brand-guide': ['./content/team/44OS_HANDBOOK.md'],
   },
   async redirects() {
     return [
@@ -53,6 +53,7 @@ const nextConfig: NextConfig = {
       { source: "/community/following", destination: "/community?filter=following", permanent: false },
       { source: "/community/profile/:username", destination: "/profile/:username", permanent: true },
       { source: "/studio/analytics", destination: "/studio", permanent: false },
+      { source: "/admin/home", destination: "/admin", permanent: true },
       { source: "/product/:id", destination: "/store/item/:id", permanent: true },
       {
         source: "/dashboard/:path*",

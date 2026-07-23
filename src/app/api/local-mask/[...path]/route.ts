@@ -16,7 +16,7 @@ const CONTENT_TYPES: Record<string, string> = {
 export async function GET(_request: Request, context: { params: Promise<{ path: string[] }> }) {
   if (process.env.NODE_ENV !== 'development') return new NextResponse(null, { status: 404 });
   const segments = (await context.params).path;
-  const root = path.resolve(process.cwd(), 'Other/MASK');
+  const root = path.resolve(process.cwd(), '.local-artifacts/interactive/MASK-runtime');
   const target = path.resolve(root, ...segments);
   if (target !== root && !target.startsWith(`${root}${path.sep}`)) return new NextResponse(null, { status: 404 });
 

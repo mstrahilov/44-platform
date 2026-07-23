@@ -21,7 +21,7 @@ await mkdir(path.join(stage, 'logos'), { recursive: true });
 await mkdir(path.join(stage, '44os-icons'), { recursive: true });
 await mkdir(path.join(stage, 'fonts', 'inter'), { recursive: true });
 
-await cp(path.join(root, 'Other', 'brand-kit'), stage, { recursive: true });
+await cp(path.join(root, 'content', 'team', 'brand-kit'), stage, { recursive: true });
 await rm(path.join(stage, 'templates'), { recursive: true, force: true });
 const blackLogo = await readFile(path.join(root, 'public', 'icons', 'logo', '44-BLACK.svg'), 'utf8');
 await writeFile(path.join(stage, 'logos', '44-black.svg'), blackLogo.replace(/22px/g, '220px'));

@@ -1,0 +1,22 @@
+{
+  "version": "1.0",
+  "colors": {
+    "paper": "#F5F5F0",
+    "ink": "#1A1A1A",
+    "black": "#000000",
+    "white": "#FFFFFF",
+    "oceanInterface": "#60A5FA"
+  },
+  "typography": {
+    "family": "Inter Variable",
+    "headline": { "size": 96, "lineHeight": 0.98, "weight": 700, "trackingEm": -0.02 },
+    "subheading": { "size": 48, "lineHeight": 1.15, "weight": 600 },
+    "body": { "size": 38, "lineHeight": 1.35, "weight": 400 },
+    "metadata": { "size": 28, "lineHeight": 1.25, "weight": 500 }
+  },
+  "social": {
+    "feed": { "width": 1080, "height": 1350, "edgeMargin": 80 },
+    "square": { "width": 1080, "height": 1080, "edgeMargin": 80 },
+    "story": { "width": 1080, "height": 1920, "horizontalSafeArea": 90, "verticalSafeArea": 250 }
+  }
+}

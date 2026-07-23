@@ -2,14 +2,13 @@
 
 This document is the architectural and operational source of truth for 44OS. It describes how the live system works now. It is not a project diary.
 
-The complete handoff is intentionally limited to four files:
+The complete repository handoff is intentionally limited to three files in `Other/`:
 
 - `44OS_FOUNDATION.md` — product, architecture, data, security, providers, and operations.
 - `44OS_UI.md` — visual, interaction, responsive, and accessibility rules.
 - `44OS_MILESTONES.md` — only current work and its completion criteria.
-- `44OS_HANDBOOK.md` — the canonical private Team source for company, product, writing, logo, support, social, developer, outreach, and approval guidance.
 
-Read Foundation, then UI, then Milestones before making production-facing changes. Read the Handbook when work touches company identity, language, Team practices, Support, or developer presentation. When a decision changes, update every affected handoff file in the same change. Do not recreate other retired proposal, research, setup, or runbook documents.
+Read Foundation, then UI, then Milestones before making production-facing changes. Read `content/team/44OS_HANDBOOK.md` when work touches company identity, language, Team practices, Support, or developer presentation. The Handbook remains the authenticated Team source used by the live application; it is not a fourth handoff file in `Other/`. When a decision changes, update every affected source in the same change. Do not recreate other retired proposal, research, setup, or runbook documents.
 
 ## Current production baseline
 
@@ -17,10 +16,10 @@ Recorded July 23, 2026:
 
 - `https://44os.com` is the permanent light editorial front door, `https://www.44os.com` permanently redirects to it, and `https://app.44os.com` is the canonical application origin. All three hosts use the same GitHub-backed Vercel project and release.
 - Legacy apex application paths permanently redirect to the identical path and query on `app.44os.com`. Apex `/api/*` remains a non-public compatibility surface for delayed provider delivery and rollback; it is never redirected. Both host health checks pass against Supabase.
-- The app is Next.js App Router with React 19 and strict TypeScript. Supabase owns authentication and application data; Vercel hosts the app.
+- The app is Next.js 16.2.11 App Router with React 19 and strict TypeScript. Supabase owns authentication and application data; Vercel hosts the app. Patched PostCSS and Sharp overrides keep the reviewed dependency tree free of known npm advisories.
 - Linked Supabase history contains the reviewed forward migration chain through `20260722020000_expand_home_featured_to_eight.sql`, including Admin content sorting and the Team workspace foundation immediately before it. Never rewrite an applied migration; add a reviewed forward migration.
 - The private Team workspace is production truth. Admins inherit access, `@spiiriit` retains a Creator role with an additional Team grant, and `@ojdagod` retains a Member role with an additional Team grant. Both grants have immutable reasons and queued email plus in-app notices.
-- The latest recorded full database gate passed clean replay, linked lint, and 22 pgTAP files with 543 assertions. Lint, strict typecheck, production build, launch smoke, mobile safe-area checks, analytics contract, commerce contract, hardening contract, and `git diff --check` also passed for the recorded release.
+- The latest recorded full database gate passed clean replay, linked lint, and 33 pgTAP files with 709 assertions. Lint, strict typecheck, dependency audit, production build, launch smoke, UI cleanup, mobile safe-area, analytics, commerce, email, hardening, Team, domain, and experience contracts plus `git diff --check` also passed for the recorded release.
 - Public Member signup and eligible purchase presentation are enabled. Creator promotion, paid-sale eligibility, fulfillment confirmation, and payout eligibility remain server-authoritative.
 - Two controlled low-value digital orders completed the live payment/refund path. The latest Admin reconciliation checked both orders with zero mismatches. Refunded access was revoked without deleting order or Library history.
 - All eight launch Merch Items are synchronized, imaged, reviewed, and published: 44 T-Shirt, Sweatshirt, Hoodie, Windbreaker, Beanie, Hat, Bag, and Satchel. Legacy 44 Tote was removed after dependency checks.
@@ -42,7 +41,7 @@ Open work, including the detailed desktop-application implementation tracker, be
 
 Primary applications:
 
-- **Home** — the application `Discover` front door at `https://app.44os.com/`; active catalog filtering changes its workspace identity to `Browse`.
+- **Home** — the application `Discover` front door at `https://app.44os.com/`; category tabs and filters change its content without renaming the workspace.
 - **Store** — public discovery and acquisition at `/store`.
 - **Library** — the signed-in user’s saved, owned, purchased, and unlocked Items.
 - **Community** — posts, questions, collaboration, replies, follows, and creator/fan connection.
@@ -56,7 +55,7 @@ Primary applications:
 Product language:
 
 - `Item` is the permanent domain noun. The canonical table is `catalog_items`, the application type is `Item`, and the universal key is `item_id`.
-- User-facing copy says Browse, Library, Item, release, Music, Book, Sample Pack, Merch, Creator Update, earnings, and orders.
+- User-facing copy says Discover, Store, Library, Item, release, Music, Book, Game, Sample Pack, Merch, Update, earnings, and orders.
 - Do not present “Collection” as the Library model.
 - Resources and the old Services/Projects workflow are not part of the active application.
 - Store is discovery; Library is the durable record of a person’s relationship with an Item.
@@ -101,7 +100,7 @@ Navigation rules:
 
 - Desktop signed in: Library, Home, Radio, Community, Support, Settings, plus approved pinned Items.
 - Desktop signed out: Home, Radio, Community, Support, Log In.
-- Mobile: Home, Library, Radio, Community, Search.
+- Mobile: Home, Library, Radio, Community, Account.
 - Studio opens from the owner profile or account menu and is not a Dock app.
 - Notifications are a Topbar control. Inbox and Profile are account-menu surfaces.
 - Settings is in the mobile account menu rather than the mobile Dock.
@@ -120,7 +119,7 @@ Playback rules:
 
 Public application routes below are canonical on `https://app.44os.com`:
 
-- `/` — `Discover` front door; active catalog filtering uses the `Browse` workspace identity and the route does not redirect.
+- `/` — `Discover` front door; Featured and category tabs change content without changing the title or redirecting the route.
 - `/store` and `/store/[category]` — Store and Music, Books, Sample Packs, or Merch categories.
 - `/store/item/[identifier]` — public Item detail, resolving slug first with ID fallback.
 - `/cart`, `/checkout` — acquisition flow.
@@ -163,7 +162,7 @@ Core data roles:
 - Commerce orders, items, addresses, attempts, events, terms, grants, adjustments, and earnings are server-authoritative ledgers.
 - `content_entries` and typed detail tables own Community posts, questions, collaboration, reviews, Creator Updates, replies, reactions, and moderation evidence.
 - `item_play_events` is the append-only creator analytics source for validated playback starts across Store, Library, and Radio.
-- `home_shelf_entries` owns exact ordered editorial slots; its public RPC returns only eligible published Items. Admin Home replacement is atomic and appends immutable before/after snapshots to `admin_home_shelf_events`.
+- `home_shelf_entries` and `admin_home_shelf_events` preserve the former audited Home-curation record. Current Discover shelves are derived from published catalog release and creation chronology rather than Admin slot assignment.
 - Admin role, Home shelf, Item lifecycle, offer lifecycle, email, payout, and provider operations append immutable audit records.
 - The staged `team_access_grants` table owns current Team permission and `team_access_events` owns immutable grant/revoke history. Admins inherit Team access. Grants never promote a Creator, change seller setup, or affect payouts.
 - The production Team Creator and release RPCs return published public facts only. Account email, country, Auth metadata, drafts, archives, private files, sales, payouts, moderation, Support, and Admin activity remain outside this boundary.
@@ -175,7 +174,7 @@ RLS and reviewed RPCs remain the browser boundary. Service-role credentials, pro
 
 The private Team workspace is deployed at `/team`, `/team/brand`, `/team/creators`, and `/team/releases`. The feature flag is server-only, and production authorization fails closed at the database and authenticated API boundaries. Admins inherit access; Members and Creators require an explicit audited grant.
 
-`Other/44OS_HANDBOOK.md` is the canonical Handbook. The file is packaged for one authenticated no-store API route and is not embedded in the public client bundle. The client renders a restricted Markdown subset without raw HTML or scripts. `/team` is noindex, nofollow, noarchive, disallowed by robots, and absent from the sitemap.
+`content/team/44OS_HANDBOOK.md` is the canonical Handbook. The file is packaged for one authenticated no-store API route and is not embedded in the public client bundle. The client renders a restricted Markdown subset without raw HTML or scripts. `/team` is noindex, nofollow, noarchive, disallowed by robots, and absent from the sitemap.
 
 An Admin grant requires a 3–500 character reason, preserves the target Member or Creator role, creates immutable history, and queues one idempotent in-app notification and transactional email. Revocation is immediate and does not send a revocation email. Delivery failure never rolls back authorization.
 
@@ -189,6 +188,7 @@ Acquisition is capability-based:
 - `Add to Library` is a free save backed by a zero-cost offer and server-issued entitlement.
 - `Buy Download` is a separate paid offer and never changes whether public listening is allowed.
 - Physical Merch uses `Add to Cart` and is not placed in Library as though it were digital content.
+- Library `All` groups visible Items under Music, Books, Games, and Sample Packs in that order, omitting empty groups. Category Library routes show only their selected format without a redundant group heading.
 - Browser prices are display hints. Checkout recalculates active offers and eligibility on the server.
 - Account Country determines display currency. Global USD prices use cached daily exchange rates for display; an eligible creator-local offer uses its independently stored local amount and currency. Missing rates fall back to showing USD rather than relabeling an unconverted number.
 - Paid Download actions appear only while the current buyer has the matching visible Library entry and active file entitlement. Refund/revocation removes access without deleting history.
@@ -347,8 +347,9 @@ Generated caches and local QA renders do not belong in Git. Migrations, template
 
 ## Maintenance rules
 
-- Keep exactly the four handoff documents named at the top of this file in `Other/`.
-- Foundation and UI state current behavior; Milestones states only current work; Handbook states current Team guidance.
+- Keep exactly the three handoff documents named at the top of this file in `Other/`.
+- Foundation and UI state current behavior; Milestones states only current work; `content/team/44OS_HANDBOOK.md` states current Team guidance.
+- Local exports, design references, source artwork, and retired working notes belong in the ignored `.local-artifacts/` archive, not `Other/` or Git.
 - Do not restore retired setup guides, research dumps, proposal documents, execution diaries, or completed milestone ledgers.
 - Record durable architectural or provider decisions here, not step-by-step dashboard history.
 - Record visual and interaction decisions in UI.

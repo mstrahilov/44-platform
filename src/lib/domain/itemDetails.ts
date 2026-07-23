@@ -163,7 +163,7 @@ export async function listRelatedCatalogItems(item: Product, limit = 8) {
 }
 
 export async function getItemLibraryOwnership(userId: string, itemId: string) {
-  if (itemId === LOCAL_MASK_ITEM_ID) return localMaskIsSaved()
+  if (localMaskPreviewEnabled && itemId === LOCAL_MASK_ITEM_ID) return localMaskIsSaved()
     ? { id: LOCAL_MASK_LIBRARY_ID, item_id: LOCAL_MASK_ITEM_ID, acquisition_type: 'free', has_active_download: false }
     : null;
   const [result, downloadEntitlement] = await Promise.all([
@@ -190,7 +190,7 @@ export async function getItemLibraryOwnership(userId: string, itemId: string) {
 }
 
 export async function saveItemToLibrary(userId: string, itemId: string) {
-  if (itemId === LOCAL_MASK_ITEM_ID) {
+  if (localMaskPreviewEnabled && itemId === LOCAL_MASK_ITEM_ID) {
     saveLocalMask();
     return { id: LOCAL_MASK_LIBRARY_ID, item_id: LOCAL_MASK_ITEM_ID, acquisition_type: 'free', has_active_download: false };
   }

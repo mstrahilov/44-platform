@@ -40,7 +40,6 @@ function AdminDashboard() {
     <section className="dashboard-section">
       <SectionHeader title="Administration" description="Open a section to inspect records and use its approved controls." />
       <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
-        <AdminNavRow href="/admin/home" title="Home" description="Choose and order the eight Music releases shown in New Releases on Discover." />
         <AdminNavRow href="/admin/people?role=creator_request" title="Creator requests" description="Review people waiting for Creator publishing access." count={summary?.pending_creator_request_count} />
         <AdminNavRow href="/admin/people" title="People" description="Find and manage any member, creator, or administrator." count={summary?.people_count} />
         <AdminNavRow href="/admin/content" title="Content" description="Inspect every Item, review submissions, and manage publication state." count={summary?.content_count} />
