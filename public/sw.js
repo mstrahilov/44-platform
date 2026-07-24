@@ -8,8 +8,8 @@ self.addEventListener('push', event => {
   event.waitUntil(Promise.all([
     self.registration.showNotification(title, {
       body,
-      icon: '/icon-192.png?v=20260721',
-      badge: '/icon-192.png?v=20260721',
+      icon: '/icon-192.png?v=20260724',
+      badge: '/icon-192.png?v=20260724',
       tag: typeof payload.tag === 'string' ? payload.tag : undefined,
       data: { url },
     }),

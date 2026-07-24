@@ -72,12 +72,12 @@ const APPLICATION_METADATA: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/favicon.ico?v=20260721', sizes: 'any' },
-      { url: '/icon-192.png?v=20260721', type: 'image/png', sizes: '192x192' },
-      { url: '/icon-512.png?v=20260721', type: 'image/png', sizes: '512x512' },
+      { url: '/favicon.ico?v=20260724', sizes: 'any' },
+      { url: '/icon-192.png?v=20260724', type: 'image/png', sizes: '192x192' },
+      { url: '/icon-512.png?v=20260724', type: 'image/png', sizes: '512x512' },
     ],
     apple: [
-      { url: '/favicon.png?v=20260721', sizes: '400x400', type: 'image/png' },
+      { url: '/apple-touch-icon.png?v=20260724', sizes: '180x180', type: 'image/png' },
     ],
   },
   openGraph: {
@@ -122,8 +122,8 @@ function marketingMetadata(): Metadata {
     manifest: null,
     appleWebApp: false,
     icons: {
-      icon: [{ url: '/favicon.ico?v=20260721', sizes: 'any' }],
-      apple: [{ url: '/apple-touch-icon.png?v=20260721', sizes: '180x180', type: 'image/png' }],
+      icon: [{ url: '/favicon.ico?v=20260724', sizes: 'any' }],
+      apple: [{ url: '/apple-touch-icon.png?v=20260724', sizes: '180x180', type: 'image/png' }],
     },
     openGraph: {
       title: 'A platform for independent creative work.',
