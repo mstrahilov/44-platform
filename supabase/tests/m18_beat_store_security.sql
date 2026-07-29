@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(25);
+select plan(29);
 
 insert into auth.users(id,email,raw_user_meta_data) values
  ('51000000-0000-0000-0000-000000000001','beat-buyer@example.test','{"username":"beat_buyer"}'),
@@ -44,7 +44,7 @@ select '86000000-0000-0000-0000-000000000001','44B-M18TEST','85000000-0000-0000-
 from public.beat_license_templates template where template.tier_code='basic' and template.version=1;
 
 select ok(public.is_beat_item('61000000-0000-0000-0000-000000000001'),'Beat identity comes from the assigned Music Item Type or capability');
-select is((select review_surfaces_enabled from public.beat_runtime_controls where singleton),false,'review surfaces default off');
+select is((select review_surfaces_enabled from public.beat_runtime_controls where singleton),true,'Beat draft review surfaces are enabled without activating public catalog or checkout');
 select is((select catalog_enabled from public.beat_runtime_controls where singleton),false,'Beat catalog defaults off');
 select is((select checkout_enabled from public.beat_runtime_controls where singleton),false,'Beat checkout defaults off');
 select is((select status from public.beat_license_templates where tier_code='basic' and version=1),'draft','standard seed terms remain draft');
@@ -83,10 +83,37 @@ select throws_ok($$update public.beat_license_grants set terms_text='changed' wh
 
 select set_config('request.jwt.claim.sub','51000000-0000-0000-0000-000000000002',true);
 select ok(public.can_access_item_file('beats/51000000-0000-0000-0000-000000000002/m18.wav'),'creator can retrieve a managed private Beat file');
-select throws_ok($$select public.save_owned_beat_draft(null,'Blocked Beat','Description','https://example.test/cover.jpg','2026-07-15','https://example.test/tagged.mp3',120,100,'C','minor',false,'4/4','none','','','{}','{}','{}','{}')$$,'55000','Beat review surfaces are disabled.','transactional Beat save is fail-closed at the database control');
+select lives_ok($$select public.save_owned_beat_draft(null,'Review Beat','Description','https://example.test/cover.jpg','2026-07-15','https://example.test/tagged.mp3',120,100,'C','minor',false,'4/4','none','','','{}','{}','{}','{}')$$,'approved creators can save a review-only Beat draft while public controls remain off');
 
 set local role service_role;
 select set_config('request.jwt.claim.role','service_role',true);
+update public.profiles set role='admin' where id='51000000-0000-0000-0000-000000000001';
+set local role authenticated;
+select set_config('request.jwt.claim.role','authenticated',true);
+select set_config('request.jwt.claim.sub','51000000-0000-0000-0000-000000000001',true);
+select lives_ok($$select public.activate_standard_nonexclusive_beat_licenses()$$,'a platform administrator can activate the original standard non-exclusive license versions');
+select is((select status from public.beat_license_templates where tier_code='basic' and version=2),'active','the approved Basic version becomes active');
+select is((select count(*)::integer from public.beat_license_templates where version=2 and is_exclusive),0,'the activated version set contains no Exclusive license');
+
+set local role service_role;
+select set_config('request.jwt.claim.role','service_role',true);
+update public.catalog_offers set status='active' where id='83000000-0000-0000-0000-000000000001';
+update public.beat_license_offers set template_id=(select id from public.beat_license_templates where tier_code='basic' and version=2)
+where offer_id='83000000-0000-0000-0000-000000000001';
+insert into public.commerce_orders(id,buyer_id,status,currency,subtotal_cents,total_cents,idempotency_key)
+values('84000000-0000-0000-0000-000000000002','51000000-0000-0000-0000-000000000001','pending_payment','USD',2500,2500,'m18-snapshot-order');
+reset role;
+alter table public.commerce_order_items disable trigger commerce_order_items_paid_sales_eligibility;
+insert into public.commerce_order_items(id,order_id,offer_id,item_id,seller_id,item_title,offer_title,offer_type,unit_price_cents,line_total_cents,currency)
+values('85000000-0000-0000-0000-000000000002','84000000-0000-0000-0000-000000000002','83000000-0000-0000-0000-000000000001','61000000-0000-0000-0000-000000000001','51000000-0000-0000-0000-000000000002','M18 Beat','Basic','beat_license',2500,2500,'USD');
+alter table public.commerce_order_items enable trigger commerce_order_items_paid_sales_eligibility;
+set local role service_role;
+select is(
+  (select beat_license_snapshot->>'termsSha256' from public.commerce_order_items where id='85000000-0000-0000-0000-000000000002'),
+  (select terms_sha256 from public.beat_license_templates where tier_code='basic' and version=2),
+  'checkout snapshots the exact accepted Beat license digest before provider payment'
+);
+
 update public.beat_license_templates set terms_text='DRAFT — replacement text that remains legally inactive.' where tier_code='basic' and version=1;
 select isnt((select terms_text from public.beat_license_templates where tier_code='basic' and version=1),(select terms_text from public.beat_license_grants where id='86000000-0000-0000-0000-000000000001'),'template edits do not mutate an existing buyer contract snapshot');
 update public.beat_collaborator_splits set revenue_share_bps=9000 where item_id='61000000-0000-0000-0000-000000000001';

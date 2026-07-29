@@ -1,6 +1,6 @@
-export type LibraryCategory = 'all' | 'music' | 'books' | 'sample-packs' | 'games';
+export type LibraryCategory = 'all' | 'music' | 'books' | 'games' | 'beats' | 'sample-packs';
 
-export const LIBRARY_CATEGORIES: LibraryCategory[] = ['all', 'music', 'books', 'sample-packs', 'games'];
+export const LIBRARY_CATEGORIES: LibraryCategory[] = ['all', 'music', 'books', 'games', 'beats', 'sample-packs'];
 
 export function isLibraryCategory(value: string): value is LibraryCategory {
   return LIBRARY_CATEGORIES.includes(value as LibraryCategory);

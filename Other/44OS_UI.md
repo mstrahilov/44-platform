@@ -140,7 +140,7 @@ The shell—not individual pages—owns mobile safe areas, Topbar, player, and D
 
 ## Page identity and information architecture
 
-- `https://app.44os.com/` is always titled `Discover`, not Store, even though it reuses catalog data and sections. Featured, Music, Books, Games, Merch, and Sample Packs change the content without renaming the page. `https://44os.com/` is the editorial landing page and never renders the application shell.
+- `https://app.44os.com/` is always titled `Discover`, not Store, even though it reuses catalog data and sections. Featured, Music, Books, Games, Merch, Beats, and Sample Packs change the content without renaming the page. `https://44os.com/` is the editorial landing page and never renders the application shell.
 - `/store` is `Store`.
 - Primary page titles do not include archived explanatory taglines.
 - Discover and Community place their horizontally scrollable category tabs directly below the title divider. Discover hides its filter on Featured and exposes category-relevant controls on every other tab. Community keeps its compose and filter actions aligned below desktop Search and Notifications.
@@ -161,19 +161,19 @@ Shared page containers:
 
 Artwork ratios are format-specific:
 
-- Music and Sample Packs: square.
+- Music, Beats, and Sample Packs: square.
 - Books: 2:3 portrait.
 - Merch: 3:4 portrait.
 
 Public Music/Books ordering is release year newest-first, then creator alphabetically, with stable catalog/date tie-breakers. Studio management lists remain creation-date newest-first. Merch always uses `catalog_items.sort_order` with deterministic fallbacks.
 
-Discover begins with `Recently Added`, showing up to eight eligible Items across Music, Books, Games, Merch, and Sample Packs in stable creation-time order, newest first. Items already present in `New in Music` are excluded. It then shows `New in Music`, `New in Books`, `New in Games`, `New in Merch`, and `New in Sample Packs` in the same order as the category tabs; each shelf contains up to eight published Items and uses the same card sizing and alignment as its catalog grid. `Creators You Follow` shows no more than one Item per followed creator.
+Discover begins with `Recently Added`, showing up to eight eligible Items across Music, Books, Games, Merch, Beats, and Sample Packs in stable creation-time order, newest first. Items already present in `New in Music` are excluded. It then shows `New in Music`, `New in Books`, `New in Games`, `New in Merch`, `Browse Beats`, and `New in Sample Packs` in the same order as the category tabs; each shelf contains up to eight eligible Items and uses the same card sizing and alignment as its catalog grid. `Creators You Follow` shows no more than one Item per followed creator.
 
 Category filters begin with `Sort by`. `Release date` uses public release chronology, while `Recently added` uses stable Item creation time and never bumps an edited Item. The `New in Music` arrow opens the complete Music catalog in release-date order; the `Recently Added` arrow opens Music in creation-time order. Shared section arrows are vertically centered on their title row, and the desktop Store/Home filter action aligns to the Topbar action column.
 
 The former Admin Home-slot history remains preserved for audit, but it does not determine current Discover shelf membership or order.
 
-Library `All` uses the stable section order Music, Books, Games, then Sample Packs and omits empty sections. A selected Library category displays only that format and does not repeat its name as a section heading. Library excludes physical Merch.
+Library `All` uses the stable section order Music, Books, Games, Beats, then Sample Packs and omits empty sections. A selected Library category displays only that format and does not repeat its name as a section heading. Library excludes physical Merch.
 
 Item cards share stable artwork, title, metadata, and action placement. Hover does not scale layout.
 
@@ -199,6 +199,7 @@ Checkout:
 - Signed-out users are asked to sign in.
 - Missing runtime, terms, seller, offer, tax, shipping, or provider readiness shows one explicit unavailable state and collects no card/delivery data.
 - Exact terms consent is required before Stripe-hosted Checkout.
+- A Beat order names the selected tier and files, requires consent to every selected Beat license, and rejects a changed terms digest before Stripe opens.
 - A return from Stripe displays Confirming Payment until signed webhook authority resolves the order.
 - Decline, cancellation, expiry, configuration error, or provider failure preserves the Cart and never implies access or fulfillment.
 
@@ -207,6 +208,8 @@ Library detail uses one primary format action:
 - Music: Play.
 - Book: Read.
 - Sample Pack: Download.
+
+Beat detail uses Play for the tagged preview. A purchased Beat also shows the immutable license number, tier, status, terms digest and full terms, plus only the private MP3/WAV/stem files granted by that tier.
 
 An active downloadable entitlement may add Download beside Play or Read. Music then exposes per-track downloads; Books and Sample Packs use short-lived authorized asset links. Refund/revocation removes current access without deleting historical presentation. Book/Sample Pack pages do not add a redundant View Creator action; Music does not add Shuffle.
 
@@ -264,6 +267,7 @@ Publishing forms:
 
 - Use shared labels, controls, helpers, recovery, validation, and action rows.
 - New and Edit use the same pricing fields for Music, Books, and Sample Packs.
+- Studio's add menu places `Add Beat` before `Add Sample Pack`. Add/Edit Beat uses the standard form language and separate sections for artwork and tagged preview, sound metadata, sample disclosure, private delivery files, and Basic/Premium/Trackout license selection. The creator may save a draft or save and submit it for review.
 - Music is always streamable and may always be added to Library for free. Books may always be read and added to Library for free. Both formats present `Offer a paid download` as an optional checkbox; Market and price controls appear only when it is enabled.
 - Sample Packs are paid downloadable products. Studio always shows their Market and price controls, and publication requires an enabled download with a positive price. Studio does not use segmented choice controls.
 - New Music requires an Item Type, Release Date, Track Count, and complete Track files; Item Tags remain optional. Its standard Item Type chooser contains only Album, EP, Single, and Mixtape; Beat remains in its dedicated workflow and Live Set is not offered. New Sample Packs infer their single Item Type and hide Item Type, Release Date, and Item Tags from the creation screen.
@@ -316,7 +320,7 @@ Interactive Items:
 - Narrow/mobile devices stop before session issuance and show Desktop Required.
 - The compiled MASK runtime has no Unity template border or redundant fullscreen control. Its isolated page fills the launch window, begins only after the member selects Play MASK, and keeps pointer-lock initiation inside that user gesture.
 
-Beat review surfaces remain completely absent unless the client review flag is enabled. When reviewed, they use the same Item composition, shared player, Glass/Paper system, device recovery, and responsive/accessibility rules. Draft legal terms and inactive commerce always look unavailable, never purchasable.
+Beat surfaces remain completely absent unless the client review flag is enabled. When reviewed, they use the same Item composition, shared player, Glass/Paper system, device recovery, and responsive/accessibility rules. Inactive license versions or commerce always look unavailable, never purchasable.
 
 Settings Appearance contains Theme and Accent on one two-column row. Theme is a dropdown; accents are Amber, Sage, Ocean, and Violet. Account Country is the only region/currency choice and automatically determines display and creator-local currency. There is no Landing App or standalone currency selector.
 

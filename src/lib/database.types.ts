@@ -927,6 +927,7 @@ export type Database = {
           id: string
           included_file_kinds: string[]
           is_exclusive: boolean
+          platform_approved_at: string | null
           short_summary: string
           status: string
           terms_sha256: string | null
@@ -943,6 +944,7 @@ export type Database = {
           id?: string
           included_file_kinds: string[]
           is_exclusive: boolean
+          platform_approved_at?: string | null
           short_summary: string
           status?: string
           terms_sha256?: string | null
@@ -959,6 +961,7 @@ export type Database = {
           id?: string
           included_file_kinds?: string[]
           is_exclusive?: boolean
+          platform_approved_at?: string | null
           short_summary?: string
           status?: string
           terms_sha256?: string | null
@@ -1465,6 +1468,7 @@ export type Database = {
       }
       commerce_order_items: {
         Row: {
+          beat_license_snapshot: Json
           created_at: string
           currency: string
           entitlement_snapshot: Json
@@ -1489,6 +1493,7 @@ export type Database = {
           unit_price_cents: number
         }
         Insert: {
+          beat_license_snapshot?: Json
           created_at?: string
           currency: string
           entitlement_snapshot?: Json
@@ -1513,6 +1518,7 @@ export type Database = {
           unit_price_cents: number
         }
         Update: {
+          beat_license_snapshot?: Json
           created_at?: string
           currency?: string
           entitlement_snapshot?: Json

@@ -508,7 +508,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 **Status: Mostly deferred; first interactive runtime active**
 
 - Interactive: MASK by ØLSTEN is the first published desktop Unity/WebGL Item. Its isolated compiled export, gzip/MIME headers, user-gesture start, Library entitlement, reviewed manifest, and desktop-only launch boundary are active. Progress events, signed achievements, and publication of additional games remain separate acceptance work.
-- Beat Store: perform review-environment upload/edit/recovery/Store/Cart/Library/device acceptance; obtain counsel-approved license templates; then separately approve non-exclusive single-owner pilot, splits, and exclusivity.
+- Beat Store: the local implementation now covers Add Beat, edit/recovery, dedicated Discover/Store/Library Beats categories, original Basic/Premium/Trackout terms, exact license acceptance/snapshotting, signed-payment grants, refund/dispute status, and protected Library files. Perform review-environment upload/edit/Store/Cart/Library/device acceptance, record owner approval of the standard terms, and then separately approve the non-exclusive single-owner public pilot. Splits remain a later acceptance; Exclusive licensing is out of scope.
 - Radio programming, newsletters, creator Merch, international physical shipping, Wise payout execution, desktop packaging, Services, and other ecosystem expansion require separate owner promotion into this open list.
 
 **Complete when:** each capability receives its own explicit activation decision and required legal, provider, security, failure, accessibility, and rollback acceptance. Until then it remains hidden and fail-closed.

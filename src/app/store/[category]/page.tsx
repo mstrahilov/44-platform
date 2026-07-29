@@ -12,6 +12,10 @@ const CATEGORY_METADATA: Record<Exclude<StoreCategory, 'all'>, { title: string; 
     title: 'Books',
     description: 'Explore art books, poetry, stories, and digital publishing from independent creators on 44OS.',
   },
+  beats: {
+    title: 'Beats',
+    description: 'Explore Beats with clear non-exclusive Basic, Premium, and Trackout licenses from independent creators on 44OS.',
+  },
   'sample-packs': {
     title: 'Sample Packs',
     description: 'Explore downloadable sample packs from independent creators on 44OS.',

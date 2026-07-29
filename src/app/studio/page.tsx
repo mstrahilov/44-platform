@@ -292,6 +292,7 @@ const STUDIO_CREATE_ACTIONS = [
   { label: 'Add Music', href: '/studio/products/new?section=music' },
   { label: 'Add Book', href: '/studio/products/new?section=books' },
   { label: 'Add Game', href: '/studio/products/new?section=games' },
+  ...(beatReviewSurfacesEnabled ? [{ label: 'Add Beat', href: '/studio/beats/new' }] : []),
   { label: 'Add Sample Pack', href: '/studio/products/new?section=sample-packs' },
 ];
 

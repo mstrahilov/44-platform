@@ -35,6 +35,7 @@ export default function CheckoutPage() {
   const idempotencyKey = useRef<string | null>(null);
   const catalogReady = items.length > 0 && items.every(item => Boolean(catalogItems[item.item_id]));
   const hasPhysicalItem = catalogReady && items.some(item => getProductExperience(catalogItems[item.item_id]) === 'physical');
+  const hasBeatLicense = items.some(item => Boolean(item.tier_code && item.terms_sha256));
 
   useTopbarBack({ href: '/cart', label: 'Cart' });
 
@@ -218,6 +219,9 @@ export default function CheckoutPage() {
             })),
             idempotencyKey: idempotencyKey.current,
             termsAccepted: true,
+            licenseAcceptances: items.flatMap(item => item.offer_id && item.terms_sha256
+              ? [{ offerId: item.offer_id, termsSha256: item.terms_sha256 }]
+              : []),
           }),
         });
         const payload = await response.json() as { url?: string; error?: string };
@@ -289,7 +293,7 @@ export default function CheckoutPage() {
             {canStartPaidCheckout && checkoutConfig?.terms ? (
               <label className="settings-checkbox-row">
                 <input type="checkbox" checked={termsAccepted} onChange={event => setTermsAccepted(event.target.checked)} />
-                <span>I agree to the <Link href="/legal/terms">Terms &amp; Conditions</Link>.</span>
+                <span>I agree to the <Link href="/legal/terms">Terms &amp; Conditions</Link>{hasBeatLicense ? ' and each selected Beat license shown in this order' : ''}.</span>
               </label>
             ) : null}
 
@@ -318,6 +322,7 @@ export default function CheckoutPage() {
                     <div className="checkout-summary-title">{item.title}</div>
                     <div className="dashboard-row-subtitle">{item.creator}</div>
                     {item.merch_variant_name ? <div className="os-type-meta">{formatMerchOptions(item.merch_option_values) || item.merch_variant_name}</div> : null}
+                    {item.tier_code ? <div className="os-type-meta">{item.offer_title || `${item.tier_code[0].toUpperCase()}${item.tier_code.slice(1)} License`} · {(item.included_files ?? []).map(file => file.replaceAll('_', ' ')).join(', ')}</div> : null}
                   </div>
                   <div className="cart-row-price">{formatMoney(item.price_cents, item.currency)}</div>
                 </div>

@@ -27,7 +27,7 @@ export type BeatDraftInput = {
   tagIds: string[];
   attributeTermIds: string[];
   privateFiles: Record<'untagged_mp3' | 'untagged_wav' | 'stems_zip', string>;
-  tierPrices: Partial<Record<'basic' | 'premium' | 'trackout' | 'exclusive', number>>;
+  tierPrices: Partial<Record<'basic' | 'premium' | 'trackout', number>>;
 };
 
 export async function isBeatDatabaseReviewEnabled() {
@@ -133,8 +133,8 @@ export async function loadBeatCatalogSummaries(itemIds: string[]) {
   (detailsResult.data ?? []).forEach(details => {
     const attributes = attributesByItem.get(details.item_id) ?? [];
     const licenseOffers = (offersByItem.get(details.item_id) ?? []).sort((left, right) => (
-      ['basic', 'premium', 'trackout', 'exclusive'].indexOf(left.tierCode)
-      - ['basic', 'premium', 'trackout', 'exclusive'].indexOf(right.tierCode)
+      ['basic', 'premium', 'trackout'].indexOf(left.tierCode)
+      - ['basic', 'premium', 'trackout'].indexOf(right.tierCode)
     ));
     const paidOffers = licenseOffers.filter(offer => offer.priceCents > 0);
     summaries.set(details.item_id, {

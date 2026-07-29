@@ -9,7 +9,13 @@ import { UploadField } from '@/components/UploadField';
 import { TagMultiSelect } from '@/components/TagMultiSelect';
 import { Ui44CheckboxInput, Ui44SelectInput, Ui44TextInput, Ui44Textarea } from '@/components/ui44/Inputs';
 import { useAuth } from '@/lib/useAuth';
-import { listCatalogTaxonomy } from '@/lib/domain/studioPublishing';
+import {
+  attestStudioItemRights,
+  isPublishingReviewRequired,
+  listCatalogTaxonomy,
+  setStudioPublicationStatus,
+  submitStudioItemForReview,
+} from '@/lib/domain/studioPublishing';
 import {
   beatReviewSurfacesEnabled,
   isBeatDatabaseReviewEnabled,
@@ -21,7 +27,7 @@ import {
 import { clearStudioFormRecovery, readStudioFormRecovery, writeStudioFormRecovery } from '@/lib/studioFormRecovery';
 import type { Database } from '@/lib/database.types';
 
-type TierCode = 'basic' | 'premium' | 'trackout' | 'exclusive';
+type TierCode = 'basic' | 'premium' | 'trackout';
 type BeatFormState = {
   title: string; description: string; coverUrl: string; releaseDate: string; previewUrl: string; previewDuration: string;
   bpm: string; keyRoot: string; keyMode: string; keyNotApplicable: boolean; timeSignature: string;
@@ -34,14 +40,13 @@ const TIER_DEFINITIONS: Array<{ code: TierCode; title: string; files: string }> 
   { code: 'basic', title: 'Basic', files: 'Untagged MP3' },
   { code: 'premium', title: 'Premium', files: 'MP3 + WAV' },
   { code: 'trackout', title: 'Trackout', files: 'MP3 + WAV + stems' },
-  { code: 'exclusive', title: 'Exclusive', files: 'One sale · MP3 + WAV + stems' },
 ];
 
 const EMPTY_FORM: BeatFormState = {
   title: '', description: '', coverUrl: '', releaseDate: '', previewUrl: '', previewDuration: '', bpm: '',
   keyRoot: 'C', keyMode: 'minor', keyNotApplicable: false, timeSignature: '4/4', sampleStatus: 'none',
   sampleDisclosure: '', externalUrl: '', tagIds: [], attributeTermIds: [], mp3Path: '', wavPath: '', stemsPath: '',
-  enabledTiers: [], tierPrices: { basic: '', premium: '', trackout: '', exclusive: '' }, rightsConfirmed: false,
+  enabledTiers: [], tierPrices: { basic: '', premium: '', trackout: '' }, rightsConfirmed: false,
 };
 
 function dollarsToCents(value: string) {
@@ -138,6 +143,8 @@ export function BeatStudioForm({ itemId = null }: { itemId?: string | null }) {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!user || saving) return;
+    const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+    const publishRequested = submitter?.value === 'submit';
     const bpm = Number(form.bpm);
     if (!databaseEnabled) { setError('The database Beat review control is off. An administrator must enable the review environment before drafts can be saved.'); return; }
     if (!form.title.trim() || !form.coverUrl || !form.releaseDate || !form.previewUrl || bpm < 40 || bpm > 240) { setError('Add title, square artwork, release date, tagged preview, and a BPM from 40–240.'); return; }
@@ -148,7 +155,7 @@ export function BeatStudioForm({ itemId = null }: { itemId?: string | null }) {
       const cents = dollarsToCents(form.tierPrices[tier]);
       if (cents === null) { setError(`Add a valid USD price for the ${tier} license.`); return; }
       prices[tier] = cents;
-      if (!form.mp3Path || ((tier === 'premium' || tier === 'trackout' || tier === 'exclusive') && !form.wavPath) || ((tier === 'trackout' || tier === 'exclusive') && !form.stemsPath)) {
+      if (!form.mp3Path || ((tier === 'premium' || tier === 'trackout') && !form.wavPath) || (tier === 'trackout' && !form.stemsPath)) {
         setError(`${tier[0].toUpperCase() + tier.slice(1)} is missing a required private delivery file.`); return;
       }
     }
@@ -162,6 +169,19 @@ export function BeatStudioForm({ itemId = null }: { itemId?: string | null }) {
         tagIds: form.tagIds, attributeTermIds: form.attributeTermIds,
         privateFiles: { untagged_mp3: form.mp3Path, untagged_wav: form.wavPath, stems_zip: form.stemsPath }, tierPrices: prices,
       });
+      await attestStudioItemRights(savedId);
+      if (publishRequested) {
+        if (await isPublishingReviewRequired()) {
+          await submitStudioItemForReview(savedId, crypto.randomUUID(), '2026-07-29-beat-v1');
+          clearStudioFormRecovery(recoveryKey);
+          router.push('/studio?status=submitted#beats');
+          return;
+        }
+        await setStudioPublicationStatus(savedId, 'published');
+        clearStudioFormRecovery(recoveryKey);
+        router.push('/studio?status=published#beats');
+        return;
+      }
       clearStudioFormRecovery(recoveryKey);
       router.push(`/studio/beats/${savedId}?saved=1`);
     } catch (saveError) {
@@ -205,7 +225,7 @@ export function BeatStudioForm({ itemId = null }: { itemId?: string | null }) {
           <UploadField label="Stems / trackouts ZIP" folder="beats/stems" userId={user.id} value={form.stemsPath} accept="application/zip,application/x-zip-compressed" storage="private-item" onChange={value => update('stemsPath', value)} />
         </div></section>
 
-        <section className="dashboard-section"><SectionHeader title="License offers" /><p className="os-type-body">Draft standard terms are shown for review only. Offers cannot become purchasable until counsel approves a new template version and commerce is activated.</p><div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass">
+        <section className="dashboard-section"><SectionHeader title="License offers" /><p className="os-type-body">Choose any combination of the standard non-exclusive licenses. Each tier grants the same usage rights; higher tiers add higher-quality delivery files.</p><div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass">
           {TIER_DEFINITIONS.map(tier => {
             const enabled = form.enabledTiers.includes(tier.code);
             return <div className="dashboard-list-row beat-tier-row" key={tier.code}>
@@ -216,7 +236,11 @@ export function BeatStudioForm({ itemId = null }: { itemId?: string | null }) {
         </div></section>
 
         <label className="dashboard-check-row"><Ui44CheckboxInput checked={form.rightsConfirmed} onChange={event => update('rightsConfirmed', event.target.checked)} /><span>I own or control this Beat, every upload, all samples and loops, and the rights needed to offer these licenses.</span></label>
-        <div className="dashboard-form-actions"><button type="submit" className="os-button os-button-primary" disabled={saving || !databaseEnabled}>{saving ? 'Saving…' : 'Save Beat Draft'}</button><Link href="/studio" className="os-button os-button-ghost">Cancel</Link></div>
+        <div className="dashboard-form-actions">
+          <button type="submit" name="intent" value="draft" className="os-button os-button-secondary" disabled={saving || !databaseEnabled}>{saving ? 'Saving…' : 'Save Draft'}</button>
+          <button type="submit" name="intent" value="submit" className="os-button os-button-primary" disabled={saving || !databaseEnabled}>{saving ? 'Saving…' : 'Save & Submit for Review'}</button>
+          <Link href="/studio" className="os-button os-button-ghost">Cancel</Link>
+        </div>
       </form>
     </main>
   </PageShell>;

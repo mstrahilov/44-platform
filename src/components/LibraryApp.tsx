@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useContextMenu, type ContextMenuEntry } from '@/components/ContextMenu';
 import { PageShell, HubHero, CenteredMessage, EmptyMessage } from '@/components/Ui';
-import { getProductExperience, productLibraryHref, type ProductExperience } from '@/lib/experience';
+import { getProductExperience, productLibraryHref } from '@/lib/experience';
 import { pinDockItem } from '@/lib/dockPreferences';
 import type { LibraryCategory } from '@/lib/libraryRoutes';
 import type { Product } from '@/lib/products';
@@ -14,29 +14,37 @@ import { hideLibraryItem, listVisibleLibraryItems } from '@/lib/domain/library';
 import { FilterPopover } from '@/components/FilterPopover';
 import { Ui44TextInput } from '@/components/ui44/Inputs';
 
-const CATEGORY_EXPERIENCE: Partial<Record<LibraryCategory, ProductExperience>> = {
+type LibraryFilter = 'all' | 'music' | 'book' | 'interactive' | 'beats' | 'asset';
+
+const CATEGORY_FILTER: Record<LibraryCategory, LibraryFilter> = {
+  all: 'all',
   music: 'music',
   books: 'book',
-  'sample-packs': 'asset',
   games: 'interactive',
+  beats: 'beats',
+  'sample-packs': 'asset',
 };
-
-type LibraryFilter = 'all' | 'music' | 'book' | 'asset' | 'interactive';
 
 const FILTER_LABELS: Record<LibraryFilter, string> = {
   all: 'All',
   music: 'Music',
   book: 'Books',
-  asset: 'Sample Packs',
   interactive: 'Games',
+  beats: 'Beats',
+  asset: 'Sample Packs',
 };
 
 const LIBRARY_GROUP_ORDER: Array<{ filter: Exclude<LibraryFilter, 'all'>; label: string }> = [
   { filter: 'music', label: 'Music' },
   { filter: 'book', label: 'Books' },
   { filter: 'interactive', label: 'Games' },
+  { filter: 'beats', label: 'Beats' },
   { filter: 'asset', label: 'Sample Packs' },
 ];
+
+function isBeatProduct(product: Product) {
+  return product.browse_type?.slug === 'beat' || product.capability_keys?.includes('beat_licensing') || Boolean(product.beat);
+}
 
 interface LibraryRow {
   id: string;
@@ -54,22 +62,20 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<LibraryFilter>(() => (
-    (CATEGORY_EXPERIENCE[category] as LibraryFilter | undefined) ?? 'all'
+    CATEGORY_FILTER[category]
   ));
 
-  const ownedExperiences = useMemo(() => new Set(
-    rows
-      .filter(row => row.products)
-      .map(row => getProductExperience(row.products!))
-      .filter((experience): experience is ProductExperience => ['music', 'book', 'asset', 'interactive'].includes(experience)),
+  const availableFilters = useMemo(() => (
+    (['music', 'book', 'interactive', 'beats', 'asset'] as LibraryFilter[]).filter(filter => rows.some(row => {
+      if (!row.products) return false;
+      if (filter === 'beats') return isBeatProduct(row.products);
+      if (filter === 'music') return getProductExperience(row.products) === 'music' && !isBeatProduct(row.products);
+      return getProductExperience(row.products) === filter;
+    }))
   ), [rows]);
 
-  const availableFilters = useMemo(() => (
-    (['music', 'book', 'asset', 'interactive'] as LibraryFilter[]).filter(filter => ownedExperiences.has(filter as ProductExperience))
-  ), [ownedExperiences]);
-
   useEffect(() => {
-    const requested = (CATEGORY_EXPERIENCE[category] as LibraryFilter | undefined) ?? 'all';
+    const requested = CATEGORY_FILTER[category];
     Promise.resolve().then(() => setActiveFilter(requested));
   }, [category]);
 
@@ -106,7 +112,9 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
       const product = row.products!;
       const experience = getProductExperience(product);
       if (!['music', 'book', 'asset', 'interactive'].includes(experience)) return false;
-      if (activeFilter !== 'all' && experience !== activeFilter) return false;
+      if (activeFilter === 'beats' && !isBeatProduct(product)) return false;
+      if (activeFilter === 'music' && (experience !== 'music' || isBeatProduct(product))) return false;
+      if (!['all', 'beats', 'music'].includes(activeFilter) && experience !== activeFilter) return false;
       if (!normalizedQuery) return true;
       const creator = product.creators?.display_name || product.creator || '';
       return `${product.title} ${creator}`.toLowerCase().includes(normalizedQuery);
@@ -118,7 +126,11 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
     return LIBRARY_GROUP_ORDER
       .map(group => ({
         ...group,
-        rows: visibleRows.filter(row => getProductExperience(row.products!) === group.filter),
+        rows: visibleRows.filter(row => group.filter === 'beats'
+          ? isBeatProduct(row.products!)
+          : group.filter === 'music'
+            ? getProductExperience(row.products!) === 'music' && !isBeatProduct(row.products!)
+            : getProductExperience(row.products!) === group.filter),
       }))
       .filter(group => group.rows.length > 0);
   }, [activeFilter, visibleRows]);

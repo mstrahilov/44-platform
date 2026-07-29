@@ -21,6 +21,7 @@ type CheckoutRequestBody = {
   lines?: Array<{ itemId?: string; offerId?: string | null; merchVariantId?: string | null }>;
   idempotencyKey?: string;
   termsAccepted?: boolean;
+  licenseAcceptances?: Array<{ offerId?: string; termsSha256?: string }>;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -82,6 +83,39 @@ export async function POST(request: Request) {
     const offerById = new Map((offerResult.data ?? []).map(offer => [offer.id, offer]));
     if (offerById.size !== resolvedOfferIds.length || lines.some((line, index) => offerById.get(resolvedOfferIds[index])?.item_id !== line.itemId)) {
       return Response.json({ error: 'One or more offers are not available for this Item.', code: 'offer_unavailable' }, { status: 409 });
+    }
+    const beatOfferIds = resolvedOfferIds.filter(offerId => offerById.get(offerId)?.offer_type === 'beat_license');
+    if (beatOfferIds.length) {
+      const acceptances = body.licenseAcceptances ?? [];
+      const acceptanceByOffer = new Map(acceptances.map(acceptance => [acceptance.offerId, acceptance.termsSha256]));
+      if (acceptances.length !== beatOfferIds.length
+        || acceptances.some(acceptance => !acceptance.offerId || !UUID.test(acceptance.offerId)
+          || !acceptance.termsSha256 || !/^[a-f0-9]{64}$/.test(acceptance.termsSha256))) {
+        return Response.json({ error: 'Accept each selected Beat license before continuing.', code: 'license_acceptance_required' }, { status: 400 });
+      }
+      const mappingResult = await admin.from('beat_license_offers')
+        .select('offer_id,template_id')
+        .in('offer_id', beatOfferIds);
+      if (mappingResult.error) throw mappingResult.error;
+      const templateIds = (mappingResult.data ?? []).map(mapping => mapping.template_id);
+      const templateResult = await admin.from('beat_license_templates')
+        .select('id,terms_sha256,status,is_exclusive,tier_code')
+        .in('id', templateIds);
+      if (templateResult.error) throw templateResult.error;
+      const templateById = new Map((templateResult.data ?? []).map(template => [template.id, template]));
+      const mappingByOffer = new Map((mappingResult.data ?? []).map(mapping => [mapping.offer_id, mapping]));
+      const invalidBeatOffer = beatOfferIds.some(offerId => {
+        const mapping = mappingByOffer.get(offerId);
+        const template = mapping ? templateById.get(mapping.template_id) : null;
+        return !template
+          || template.status !== 'active'
+          || template.is_exclusive
+          || !['basic', 'premium', 'trackout'].includes(template.tier_code)
+          || acceptanceByOffer.get(offerId) !== template.terms_sha256;
+      });
+      if (invalidBeatOffer) {
+        return Response.json({ error: 'A selected Beat license changed or is no longer available. Review it again before checkout.', code: 'license_changed' }, { status: 409 });
+      }
     }
     const itemTypeResult = await admin.from('catalog_items').select('id,experience_type').in('id', itemIds);
     if (itemTypeResult.error) throw itemTypeResult.error;

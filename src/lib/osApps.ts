@@ -103,7 +103,7 @@ export const OS_APPS: OSApp[] = [
   {
     id: 'store',
     label: 'Store',
-    description: 'Find releases, books, sample packs, and merch from independent creators.',
+    description: 'Find releases, books, Beats, sample packs, and merch from independent creators.',
     href: '/',
     iconClass: 'os-icon-store',
     group: 'media',
@@ -111,6 +111,9 @@ export const OS_APPS: OSApp[] = [
       { id: 'music', label: 'Music', href: '/store/music', iconClass: 'os-icon-music' },
       { id: 'books', label: 'Books', href: '/store/books', iconClass: 'os-icon-books' },
       { id: 'merch', label: 'Merch', href: '/store/merch', iconClass: 'os-icon-merch' },
+      ...(process.env.NEXT_PUBLIC_ENABLE_BEAT_REVIEW_SURFACES === 'true'
+        ? [{ id: 'beats', label: 'Beats', href: '/store/beats', iconClass: 'os-icon-music' }]
+        : []),
       { id: 'assets', label: 'Sample Packs', href: '/store/sample-packs', iconClass: 'os-icon-assets' },
     ],
   },
@@ -242,6 +245,9 @@ export const OS_APPS: OSApp[] = [
       { id: 'overview', label: 'Overview', href: '/studio', iconClass: 'os-icon-dashboard' },
       { id: 'music', label: 'Music', href: '/studio#music', iconClass: 'os-icon-music' },
       { id: 'books', label: 'Books', href: '/studio#books', iconClass: 'os-icon-books' },
+      ...(process.env.NEXT_PUBLIC_ENABLE_BEAT_REVIEW_SURFACES === 'true'
+        ? [{ id: 'beats', label: 'Beats', href: '/studio#beats', iconClass: 'os-icon-music' }]
+        : []),
       { id: 'assets', label: 'Sample Packs', href: '/studio#sample-packs', iconClass: 'os-icon-assets' },
     ],
   },
@@ -366,6 +372,7 @@ const MOBILE_STORE_SEARCH_ROUTES = new Set([
   '/store/music',
   '/store/books',
   '/store/games',
+  '/store/beats',
   '/store/sample-packs',
   '/store/merch',
 ]);
@@ -385,6 +392,7 @@ const MOBILE_LIBRARY_SEARCH_ROUTES = new Set([
   '/library/all',
   '/library/music',
   '/library/books',
+  '/library/beats',
   '/library/sample-packs',
   '/library/games',
 ]);

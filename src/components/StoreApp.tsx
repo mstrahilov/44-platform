@@ -18,6 +18,7 @@ import { beatReviewSurfacesEnabled } from '@/lib/domain/beats';
 
 const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
   music: 'music',
+  beats: 'music',
   books: 'book',
   'sample-packs': 'asset',
   merch: 'physical',
@@ -27,13 +28,18 @@ const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
 const CATEGORY_COPY: Record<StoreCategory, { title: string; copy: string; empty: string }> = {
   all: {
     title: 'Store',
-    copy: 'Find releases, books, sample packs, and merch from independent creators.',
+    copy: 'Find releases, books, Beats, sample packs, and merch from independent creators.',
     empty: 'No items are published yet.',
   },
   music: {
     title: 'Music',
     copy: 'Explore albums, EPs, singles, and releases built to grow over time.',
     empty: 'No music releases are published yet.',
+  },
+  beats: {
+    title: 'Beats',
+    copy: 'Explore Beats with clear non-exclusive Basic, Premium, and Trackout licenses.',
+    empty: 'No Beats are available yet.',
   },
   books: {
     title: 'Books',
@@ -70,7 +76,7 @@ const STORE_FILTER_LABELS: Record<StoreFilter, string> = {
 };
 
 const STORE_FILTER_ORDER: StoreFilter[] = ['all', 'music', 'physical', 'book', 'asset', 'interactive'];
-const HOME_BROWSE_SHELF_ORDER: Array<Exclude<StoreFilter, 'all' | 'music'>> = ['book', 'interactive', 'physical', 'asset'];
+const HOME_BROWSE_SHELF_ORDER: Array<Exclude<StoreFilter, 'all' | 'music'>> = ['book', 'interactive', 'physical'];
 
 const HOME_BROWSE_SHELF_TITLES: Record<Exclude<StoreFilter, 'all' | 'music'>, string> = {
   book: 'New in Books',
@@ -90,6 +96,7 @@ const MOBILE_DISCOVER_CATEGORIES: Array<{
   { category: 'books', filter: 'book', label: 'Books', href: '/store/books' },
   { category: 'games', filter: 'interactive', label: 'Games', href: '/store/games' },
   { category: 'merch', filter: 'physical', label: 'Merch', href: '/store/merch' },
+  ...(beatReviewSurfacesEnabled ? [{ category: 'beats' as const, filter: 'music' as const, label: 'Beats', href: '/store/beats' }] : []),
   { category: 'sample-packs', filter: 'asset', label: 'Sample Packs', href: '/store/sample-packs' },
 ];
 
@@ -194,7 +201,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     if (typeof window === 'undefined') return;
     const requestedType = beatReviewSurfacesEnabled && category === 'music'
       ? new URLSearchParams(window.location.search).get('type') || 'all'
-      : 'all';
+      : category === 'beats' ? 'Beat' : 'all';
     Promise.resolve().then(() => {
       if (!alive) return;
       setTypeFilter(requestedType);
@@ -219,10 +226,12 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     if (beatReviewSurfacesEnabled && selectedExperience === 'music') types.add('Beat');
     return Array.from(types).sort((a, b) => a.localeCompare(b));
   }, [products, selectedExperience]);
-  const effectiveTypeFilter = selectedExperience
+  const effectiveTypeFilter = category === 'beats'
+    ? 'Beat'
+    : selectedExperience
     ? availableTypes.find(type => type.toLowerCase() === typeFilter.toLowerCase()) ?? 'all'
     : 'all';
-  const beatFiltersVisible = beatReviewSurfacesEnabled && selectedExperience === 'music' && effectiveTypeFilter.toLowerCase() === 'beat';
+  const beatFiltersVisible = beatReviewSurfacesEnabled && (category === 'beats' || (selectedExperience === 'music' && effectiveTypeFilter.toLowerCase() === 'beat'));
   const availableBeatKeys = useMemo(() => Array.from(new Set(products.filter(isBeatProduct).map(product => (
     product.beat?.keyNotApplicable ? 'Atonal / N/A' : [product.beat?.keyRoot, product.beat?.keyMode].filter(Boolean).join(' ')
   )).filter(Boolean))).sort(), [products]);
@@ -266,6 +275,8 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
       const experience = getProductExperience(product);
       if (!['music', 'book', 'interactive', 'asset', 'physical'].includes(experience)) return false;
       if (expected && experience !== expected) return false;
+      if (category === 'beats' && !isBeatProduct(product)) return false;
+      if (category === 'music' && isBeatProduct(product)) return false;
       if (effectiveFilter !== 'all' && experience !== effectiveFilter) return false;
       if (effectiveTypeFilter !== 'all' && !itemMatchesStoreType(product, effectiveTypeFilter)) return false;
       if (beatFiltersVisible) {
@@ -308,7 +319,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
       </label>}
       {showStoreFilter && <FilterPopover label={`Filter ${surfaceName}`} active={hasActiveFacetFilters}>
         {() => <>
-          {selectedExperience && <label className="store-filter-group">
+          {selectedExperience && category !== 'beats' && <label className="store-filter-group">
             <span className="store-filter-label">Sort by</span>
             <Ui44SelectInput value={sortBy} onChange={event => setSortBy(event.target.value as StoreSort)}>
               <option value="release-date">Release date</option>
@@ -409,7 +420,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
         const selected = category === 'all'
           ? effectiveFilter === option.filter
           : category === option.category;
-        return category === 'all' ? (
+        return category === 'all' && option.category !== 'beats' ? (
           <button
             key={option.category}
             type="button"
@@ -472,6 +483,10 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
       }))
       .filter(shelf => shelf.products.length > 0);
     const beatShelf = beatReviewSurfacesEnabled ? products.filter(isBeatProduct).sort(comparePublicCatalogProducts).slice(0, 8) : [];
+    const samplePackShelf = products
+      .filter(product => getProductExperience(product) === 'asset')
+      .sort(comparePublicCatalogProducts)
+      .slice(0, 8);
 
     return (
       <PageShell>
@@ -528,9 +543,15 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
                 ))}
                 {beatShelf.length > 0 && <HubSection
                   title="Browse Beats"
-                  action={<Ui44SectionArrow label="Browse all Beats" onClick={() => { window.location.href = '/store/music?type=beat'; }} />}
+                  action={<Ui44SectionArrow label="Browse all Beats" onClick={() => { window.location.href = '/store/beats'; }} />}
                 >
                   <ProductGrid className="store-mobile-shelf">{beatShelf.map(product => <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />)}</ProductGrid>
+                </HubSection>}
+                {samplePackShelf.length > 0 && <HubSection
+                  title="New in Sample Packs"
+                  action={<Ui44SectionArrow label="Browse all Sample Packs" onClick={() => { window.location.href = '/store/sample-packs'; }} />}
+                >
+                  <ProductGrid className="store-mobile-shelf">{samplePackShelf.map(product => <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />)}</ProductGrid>
                 </HubSection>}
                 {followingProducts.length > 0 && (
                 <HubSection title="Creators You Follow" action={<Ui44SectionArrow label="View all from creators you follow" onClick={browseFollowedCreators} />}>
