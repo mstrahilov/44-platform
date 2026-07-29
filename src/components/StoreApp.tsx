@@ -216,6 +216,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
       filter === 'all' || products.some(product => getProductExperience(product) === filter)
     ));
   }, [category, products]);
+  const hasBeatProducts = beatReviewSurfacesEnabled && products.some(isBeatProduct);
   const effectiveFilter = CATEGORY_EXPERIENCE[category] as StoreFilter | undefined
     ?? (availableStoreFilters.includes(activeFilter) ? activeFilter : 'all');
   const selectedExperience = CATEGORY_EXPERIENCE[category] ?? (effectiveFilter === 'all' ? null : effectiveFilter);
@@ -223,9 +224,9 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     const types = new Set(products
       .filter(product => getProductExperience(product) === selectedExperience)
       .flatMap(product => product.browse_type?.label ? [product.browse_type.label] : []));
-    if (beatReviewSurfacesEnabled && selectedExperience === 'music') types.add('Beat');
+    if (hasBeatProducts && selectedExperience === 'music') types.add('Beat');
     return Array.from(types).sort((a, b) => a.localeCompare(b));
-  }, [products, selectedExperience]);
+  }, [hasBeatProducts, products, selectedExperience]);
   const effectiveTypeFilter = category === 'beats'
     ? 'Beat'
     : selectedExperience
@@ -416,7 +417,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
 
   const mobileDiscoverRail = (
     <nav className="store-mobile-category-rail" aria-label="Discover categories">
-      {MOBILE_DISCOVER_CATEGORIES.map(option => {
+      {MOBILE_DISCOVER_CATEGORIES.filter(option => option.category !== 'beats' || hasBeatProducts).map(option => {
         const selected = category === 'all'
           ? effectiveFilter === option.filter
           : category === option.category;
@@ -507,6 +508,15 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
                   ))}
                 </ProductGrid>
               ) : <>
+                {newReleaseProducts.length > 0 && (
+                <HubSection title="New in Music" action={<Ui44SectionArrow label="Browse all music by release date" onClick={() => browseCategory('music', 'release-date')} />}>
+                  <ProductGrid className="store-mobile-shelf">
+                    {newReleaseProducts.map(product => (
+                      <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />
+                    ))}
+                  </ProductGrid>
+                </HubSection>
+                )}
                 {recentlyAddedProducts.length > 0 && (
                 <HubSection
                   title="Recently Added"
@@ -514,15 +524,6 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
                 >
                   <ProductGrid className="store-mobile-shelf">
                     {recentlyAddedProducts.map(product => (
-                      <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />
-                    ))}
-                  </ProductGrid>
-                </HubSection>
-                )}
-                {newReleaseProducts.length > 0 && (
-                <HubSection title="New in Music" action={<Ui44SectionArrow label="Browse all music by release date" onClick={() => browseCategory('music', 'release-date')} />}>
-                  <ProductGrid className="store-mobile-shelf">
-                    {newReleaseProducts.map(product => (
                       <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />
                     ))}
                   </ProductGrid>

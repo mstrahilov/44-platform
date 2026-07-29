@@ -197,35 +197,50 @@ export function BeatStudioForm({ itemId = null }: { itemId?: string | null }) {
       {!databaseEnabled && <div className="dashboard-status dashboard-status-warning ui44-status ui44-status-warning" role="status">Review UI is visible, but database Beat review writes remain fail-closed.</div>}
       {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div>}
       <form className="dashboard-form" onSubmit={handleSubmit}>
-        <section className="dashboard-section"><SectionHeader title="Beat" /><div className="dashboard-form-grid">
-          <label className="dashboard-field"><span className="dashboard-field-label">Title</span><Ui44TextInput value={form.title} onChange={event => update('title', event.target.value)} required /></label>
-          <label className="dashboard-field"><span className="dashboard-field-label">Release date</span><Ui44TextInput type="date" value={form.releaseDate} onChange={event => update('releaseDate', event.target.value)} required /></label>
-          <div className="dashboard-field dashboard-field-wide"><UploadField label="Square artwork" folder="products/covers" userId={user.id} value={form.coverUrl} accept="image/*" previewKind="image" onChange={value => update('coverUrl', value)} /></div>
-          <label className="dashboard-field dashboard-field-wide"><span className="dashboard-field-label">Description</span><Ui44Textarea value={form.description} onChange={event => update('description', event.target.value)} rows={5} /></label>
-          <div className="dashboard-field dashboard-field-wide"><UploadField label="Tagged MP3 preview" folder="products/beat-previews" userId={user.id} value={form.previewUrl} accept="audio/mpeg,audio/mp3" onChange={value => update('previewUrl', value)} onAudioMetadata={duration => update('previewDuration', duration.toString())} /></div>
-          <label className="dashboard-field"><span className="dashboard-field-label">YouTube link</span><Ui44TextInput type="url" value={form.externalUrl} onChange={event => update('externalUrl', event.target.value)} placeholder="https://youtube.com/…" /></label>
-        </div></section>
+        <section className="dashboard-form-section">
+          <SectionHeader title="Beat" description="Set the title, artwork, public preview, and release details for this Beat." />
+          <div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible">
+            <div className="dashboard-form-grid dashboard-form-grid-2 ui44-form-grid">
+              <label className="dashboard-field"><span className="dashboard-field-label">Title</span><Ui44TextInput value={form.title} onChange={event => update('title', event.target.value)} required /></label>
+              <label className="dashboard-field"><span className="dashboard-field-label">Release date</span><Ui44TextInput type="date" value={form.releaseDate} onChange={event => update('releaseDate', event.target.value)} required /></label>
+              <div className="dashboard-field"><UploadField label="Square artwork" folder="products/covers" userId={user.id} value={form.coverUrl} accept="image/*" previewKind="image" onChange={value => update('coverUrl', value)} /></div>
+              <div className="dashboard-field"><UploadField label="Tagged MP3 preview" folder="products/beat-previews" userId={user.id} value={form.previewUrl} accept="audio/mpeg,audio/mp3" onChange={value => update('previewUrl', value)} onAudioMetadata={duration => update('previewDuration', duration.toString())} /></div>
+              <label className="dashboard-field dashboard-field-wide"><span className="dashboard-field-label">Description</span><Ui44Textarea value={form.description} onChange={event => update('description', event.target.value)} rows={5} /></label>
+              <label className="dashboard-field"><span className="dashboard-field-label">YouTube link</span><Ui44TextInput type="url" value={form.externalUrl} onChange={event => update('externalUrl', event.target.value)} placeholder="https://youtube.com/…" /></label>
+            </div>
+          </div>
+        </section>
 
-        <section className="dashboard-section"><SectionHeader title="Sound" /><div className="dashboard-form-grid">
-          <label className="dashboard-field"><span className="dashboard-field-label">BPM</span><Ui44TextInput type="number" min={40} max={240} value={form.bpm} onChange={event => update('bpm', event.target.value)} required /></label>
-          <label className="dashboard-field"><span className="dashboard-field-label">Time signature</span><Ui44SelectInput value={form.timeSignature} onChange={event => update('timeSignature', event.target.value)}>{['2/4','3/4','4/4','5/4','6/8','7/8','12/8'].map(value => <option key={value}>{value}</option>)}</Ui44SelectInput></label>
-          <label className="dashboard-field"><span className="dashboard-field-label">Key</span><Ui44SelectInput disabled={form.keyNotApplicable} value={form.keyRoot} onChange={event => update('keyRoot', event.target.value)}>{['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'].map(value => <option key={value}>{value}</option>)}</Ui44SelectInput></label>
-          <label className="dashboard-field"><span className="dashboard-field-label">Mode</span><Ui44SelectInput disabled={form.keyNotApplicable} value={form.keyMode} onChange={event => update('keyMode', event.target.value)}><option value="major">Major</option><option value="minor">Minor</option></Ui44SelectInput></label>
-          <label className="dashboard-check-row dashboard-field-wide"><Ui44CheckboxInput checked={form.keyNotApplicable} onChange={event => update('keyNotApplicable', event.target.checked)} /><span>Atonal / key not applicable</span></label>
-          <div className="dashboard-field dashboard-field-wide"><span className="dashboard-field-label">Genre / style</span><TagMultiSelect options={tags.map(tag => ({ id: tag.id, label: tag.label }))} value={form.tagIds} onChange={value => update('tagIds', value)} /></div>
-          <div className="dashboard-field"><span className="dashboard-field-label">Moods</span><TagMultiSelect options={moods.map(term => ({ id: term.id, label: term.label }))} value={selectedMoods} onChange={value => update('attributeTermIds', [...selectedInstruments, ...value])} /></div>
-          <div className="dashboard-field"><span className="dashboard-field-label">Instruments</span><TagMultiSelect options={instruments.map(term => ({ id: term.id, label: term.label }))} value={selectedInstruments} onChange={value => update('attributeTermIds', [...selectedMoods, ...value])} /></div>
-          <label className="dashboard-field"><span className="dashboard-field-label">Third-party samples / loops</span><Ui44SelectInput value={form.sampleStatus} onChange={event => update('sampleStatus', event.target.value)}><option value="none">None</option><option value="royalty_free">Royalty-free</option><option value="separately_cleared">Separately cleared</option></Ui44SelectInput></label>
-          {form.sampleStatus !== 'none' && <label className="dashboard-field dashboard-field-wide"><span className="dashboard-field-label">Disclosure and required credit</span><Ui44Textarea value={form.sampleDisclosure} onChange={event => update('sampleDisclosure', event.target.value)} rows={4} required /></label>}
-        </div></section>
+        <section className="dashboard-form-section">
+          <SectionHeader title="Sound" description="Describe how the Beat sounds so listeners can find the right fit." />
+          <div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible">
+            <div className="dashboard-form-grid dashboard-form-grid-2 ui44-form-grid">
+              <label className="dashboard-field"><span className="dashboard-field-label">BPM</span><Ui44TextInput type="number" min={40} max={240} value={form.bpm} onChange={event => update('bpm', event.target.value)} required /></label>
+              <label className="dashboard-field"><span className="dashboard-field-label">Time signature</span><Ui44SelectInput value={form.timeSignature} onChange={event => update('timeSignature', event.target.value)}>{['2/4','3/4','4/4','5/4','6/8','7/8','12/8'].map(value => <option key={value}>{value}</option>)}</Ui44SelectInput></label>
+              <label className="dashboard-field"><span className="dashboard-field-label">Key</span><Ui44SelectInput disabled={form.keyNotApplicable} value={form.keyRoot} onChange={event => update('keyRoot', event.target.value)}>{['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'].map(value => <option key={value}>{value}</option>)}</Ui44SelectInput></label>
+              <label className="dashboard-field"><span className="dashboard-field-label">Mode</span><Ui44SelectInput disabled={form.keyNotApplicable} value={form.keyMode} onChange={event => update('keyMode', event.target.value)}><option value="major">Major</option><option value="minor">Minor</option></Ui44SelectInput></label>
+              <label className="dashboard-check-row dashboard-field-wide"><Ui44CheckboxInput checked={form.keyNotApplicable} onChange={event => update('keyNotApplicable', event.target.checked)} /><span>Atonal / key not applicable</span></label>
+              <div className="dashboard-field dashboard-field-wide"><span className="dashboard-field-label">Genre / style</span><TagMultiSelect options={tags.map(tag => ({ id: tag.id, label: tag.label }))} value={form.tagIds} onChange={value => update('tagIds', value)} /></div>
+              <div className="dashboard-field"><span className="dashboard-field-label">Moods</span><TagMultiSelect options={moods.map(term => ({ id: term.id, label: term.label }))} value={selectedMoods} onChange={value => update('attributeTermIds', [...selectedInstruments, ...value])} /></div>
+              <div className="dashboard-field"><span className="dashboard-field-label">Instruments</span><TagMultiSelect options={instruments.map(term => ({ id: term.id, label: term.label }))} value={selectedInstruments} onChange={value => update('attributeTermIds', [...selectedMoods, ...value])} /></div>
+              <label className="dashboard-field"><span className="dashboard-field-label">Third-party samples / loops</span><Ui44SelectInput value={form.sampleStatus} onChange={event => update('sampleStatus', event.target.value)}><option value="none">None</option><option value="royalty_free">Royalty-free</option><option value="separately_cleared">Separately cleared</option></Ui44SelectInput></label>
+              {form.sampleStatus !== 'none' && <label className="dashboard-field dashboard-field-wide"><span className="dashboard-field-label">Disclosure and required credit</span><Ui44Textarea value={form.sampleDisclosure} onChange={event => update('sampleDisclosure', event.target.value)} rows={4} required /></label>}
+            </div>
+          </div>
+        </section>
 
-        <section className="dashboard-section"><SectionHeader title="Private delivery files" /><div className="dashboard-form-grid">
-          <UploadField label="Untagged MP3" folder="beats/mp3" userId={user.id} value={form.mp3Path} accept="audio/mpeg,audio/mp3" storage="private-item" onChange={value => update('mp3Path', value)} />
-          <UploadField label="Untagged WAV" folder="beats/wav" userId={user.id} value={form.wavPath} accept="audio/wav,audio/x-wav" storage="private-item" onChange={value => update('wavPath', value)} />
-          <UploadField label="Stems / trackouts ZIP" folder="beats/stems" userId={user.id} value={form.stemsPath} accept="application/zip,application/x-zip-compressed" storage="private-item" onChange={value => update('stemsPath', value)} />
-        </div></section>
+        <section className="dashboard-form-section">
+          <SectionHeader title="Private delivery files" description="Upload the untagged files that each selected license tier can deliver." />
+          <div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible">
+            <div className="dashboard-form-grid dashboard-form-grid-2 ui44-form-grid">
+              <UploadField label="Untagged MP3" folder="beats/mp3" userId={user.id} value={form.mp3Path} accept="audio/mpeg,audio/mp3" storage="private-item" onChange={value => update('mp3Path', value)} />
+              <UploadField label="Untagged WAV" folder="beats/wav" userId={user.id} value={form.wavPath} accept="audio/wav,audio/x-wav" storage="private-item" onChange={value => update('wavPath', value)} />
+              <UploadField label="Stems / trackouts ZIP" folder="beats/stems" userId={user.id} value={form.stemsPath} accept="application/zip,application/x-zip-compressed" storage="private-item" onChange={value => update('stemsPath', value)} />
+            </div>
+          </div>
+        </section>
 
-        <section className="dashboard-section"><SectionHeader title="License offers" /><p className="os-type-body">Choose any combination of the standard non-exclusive licenses. Each tier grants the same usage rights; higher tiers add higher-quality delivery files.</p><div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass">
+        <section className="dashboard-form-section"><SectionHeader title="License offers" description="Choose any combination of the standard non-exclusive licenses. Each tier grants the same usage rights; higher tiers add higher-quality delivery files." /><div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass">
           {TIER_DEFINITIONS.map(tier => {
             const enabled = form.enabledTiers.includes(tier.code);
             return <div className="dashboard-list-row beat-tier-row" key={tier.code}>
