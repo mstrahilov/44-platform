@@ -10,6 +10,33 @@ export type PlayableTrack = Pick<
   'id' | 'title' | 'number' | 'duration_seconds' | 'audio_url'
 >;
 
+export type DiscoveryCreator = Pick<
+  Database['public']['Tables']['profiles']['Row'],
+  'id' | 'slug' | 'username' | 'display_name' | 'avatar_url' | 'bio' | 'created_at'
+>;
+
+export async function listNewDiscoveryCreators(limit = 10): Promise<DiscoveryCreator[]> {
+  const result = await supabase
+    .from('profiles')
+    .select('id,slug,username,display_name,avatar_url,bio,created_at')
+    .in('role', ['creator', 'admin'])
+    .eq('is_published', true)
+    .not('avatar_url', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (result.error) throw result.error;
+  return (result.data ?? []).filter(profile => Boolean(profile.avatar_url)) as DiscoveryCreator[];
+}
+
+export async function listHomeFeaturedItemIds(): Promise<string[]> {
+  const result = await supabase.rpc('list_home_featured_item_ids');
+  if (result.error) return [];
+  return (result.data ?? [])
+    .sort((a, b) => a.slot_position - b.slot_position)
+    .map(entry => entry.item_id);
+}
+
 export async function listPublishedCatalogItems(limit = 120) {
   const result = await supabase
     .from('catalog_items')
@@ -23,29 +50,54 @@ export async function listPublishedCatalogItems(limit = 120) {
 }
 
 export async function loadStoreDiscoveryCatalog(limit = 200, reviewOwnerId?: string | null) {
-  const reviewDraftResult = beatReviewSurfacesEnabled && reviewOwnerId
-    ? await supabase
-      .from('catalog_items')
-      .select('*, creators:profiles!author_id(*)')
-      .eq('author_id', reviewOwnerId)
-      .neq('status', 'archived')
-      .order('created_at', { ascending: false })
-      .limit(limit)
-    : { data: [], error: null };
-  const [itemResult, capabilityResult, typeResult, tagResult, typeAssignmentResult, tagAssignmentResult] = await Promise.all([
+  const [itemResult, reviewDraftResult] = await Promise.all([
     supabase
       .from('catalog_items')
       .select('*, creators:profiles!author_id(*)')
       .eq('status', 'published')
       .order('created_at', { ascending: false })
       .limit(limit),
-    supabase.from('item_capabilities').select('item_id,capability_key'),
-    supabase.from('item_types').select('*').eq('is_active', true).order('sort_order'),
-    supabase.from('item_tags').select('*').eq('is_active', true).order('sort_order'),
-    supabase.from('item_type_assignments').select('item_id,item_type_id'),
-    supabase.from('item_tag_assignments').select('item_id,item_tag_id'),
+    beatReviewSurfacesEnabled && reviewOwnerId
+      ? supabase
+      .from('catalog_items')
+      .select('*, creators:profiles!author_id(*)')
+      .eq('author_id', reviewOwnerId)
+      .neq('status', 'archived')
+      .order('created_at', { ascending: false })
+      .limit(limit)
+      : Promise.resolve({ data: [], error: null }),
   ]);
-  const error = reviewDraftResult.error || itemResult.error || capabilityResult.error || typeResult.error || tagResult.error || typeAssignmentResult.error || tagAssignmentResult.error;
+  const itemError = reviewDraftResult.error || itemResult.error;
+  if (itemError) throw itemError;
+
+  const publicItems = (itemResult.data ?? []) as Product[];
+  const reviewItems = (reviewDraftResult.data ?? []) as Product[];
+  const itemIds = [...new Set([...publicItems, ...reviewItems].map(item => item.id))];
+  const [capabilityResult, typeAssignmentResult, tagAssignmentResult] = itemIds.length > 0
+    ? await Promise.all([
+      supabase.from('item_capabilities').select('item_id,capability_key').in('item_id', itemIds),
+      supabase.from('item_type_assignments').select('item_id,item_type_id').in('item_id', itemIds),
+      supabase.from('item_tag_assignments').select('item_id,item_tag_id').in('item_id', itemIds),
+    ])
+    : [
+      { data: [], error: null },
+      { data: [], error: null },
+      { data: [], error: null },
+    ];
+  const assignmentError = capabilityResult.error || typeAssignmentResult.error || tagAssignmentResult.error;
+  if (assignmentError) throw assignmentError;
+
+  const typeIds = [...new Set((typeAssignmentResult.data ?? []).map(row => row.item_type_id))];
+  const tagIds = [...new Set((tagAssignmentResult.data ?? []).map(row => row.item_tag_id))];
+  const [typeResult, tagResult] = await Promise.all([
+    typeIds.length > 0
+      ? supabase.from('item_types').select('*').in('id', typeIds).eq('is_active', true).order('sort_order')
+      : Promise.resolve({ data: [], error: null }),
+    tagIds.length > 0
+      ? supabase.from('item_tags').select('*').in('id', tagIds).eq('is_active', true).order('sort_order')
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  const error = typeResult.error || tagResult.error;
   if (error) throw error;
   const capabilitiesByItem = new Map<string, string[]>();
   (capabilityResult.data ?? []).forEach(row => {
@@ -60,9 +112,8 @@ export async function loadStoreDiscoveryCatalog(limit = 200, reviewOwnerId?: str
     const tag = tagsById.get(row.item_tag_id);
     if (tag) tagsByItem.set(row.item_id, [...(tagsByItem.get(row.item_id) ?? []), tag]);
   });
-  const publicItems = (itemResult.data ?? []) as Product[];
   const publicItemIds = new Set(publicItems.map(item => item.id));
-  const reviewBeatItems = ((reviewDraftResult.data ?? []) as Product[]).filter(item => {
+  const reviewBeatItems = reviewItems.filter(item => {
     const type = typeByItem.get(item.id);
     return !publicItemIds.has(item.id) && type?.slug === 'beat';
   });

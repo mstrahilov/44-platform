@@ -8,7 +8,7 @@ import { useAuth } from '@/lib/useAuth';
 import { clearCart, useCart } from '@/lib/cart';
 import { getProductExperience } from '@/lib/experience';
 import type { Product } from '@/lib/products';
-import { PUBLIC_PURCHASES_AVAILABLE } from '@/lib/commerceAvailability';
+import { cartCheckoutUiAvailable } from '@/lib/commerceAvailability';
 import { getCartCatalogItems, saveFreeCartToLibrary } from '@/lib/domain/acquisition';
 import { supabase } from '@/lib/supabase';
 
@@ -36,6 +36,7 @@ export default function CheckoutPage() {
   const catalogReady = items.length > 0 && items.every(item => Boolean(catalogItems[item.item_id]));
   const hasPhysicalItem = catalogReady && items.some(item => getProductExperience(catalogItems[item.item_id]) === 'physical');
   const hasBeatLicense = items.some(item => Boolean(item.tier_code && item.terms_sha256));
+  const checkoutUiAvailable = cartCheckoutUiAvailable(items);
 
   useTopbarBack({ href: '/cart', label: 'Cart' });
 
@@ -52,22 +53,22 @@ export default function CheckoutPage() {
   }, [items]);
 
   useEffect(() => {
-    if (!PUBLIC_PURCHASES_AVAILABLE || !user || !catalogReady) return;
+    if (!checkoutUiAvailable || !user || !catalogReady) return;
     let active = true;
     void supabase.auth.getSession().then(async ({ data }) => {
       const token = data.session?.access_token;
       if (!token) return;
-      const response = await fetch(`/api/checkout/config?requires_physical=${hasPhysicalItem ? 'true' : 'false'}`, {
+      const response = await fetch(`/api/checkout/config?requires_physical=${hasPhysicalItem ? 'true' : 'false'}&requires_beat=${hasBeatLicense ? 'true' : 'false'}`, {
         headers: { Authorization: `Bearer ${token}` }, cache: 'no-store',
       });
       const payload = await response.json() as CheckoutConfig;
       if (active && response.ok) setCheckoutConfig(payload);
     }).catch(() => undefined);
     return () => { active = false; };
-  }, [catalogReady, hasPhysicalItem, user]);
+  }, [catalogReady, checkoutUiAvailable, hasBeatLicense, hasPhysicalItem, user]);
 
   useEffect(() => {
-    if (!PUBLIC_PURCHASES_AVAILABLE || !user || typeof window === 'undefined') return;
+    if (!checkoutUiAvailable || !user || typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const checkoutReturn = params.get('checkout');
     const sessionId = params.get('session_id');
@@ -109,12 +110,12 @@ export default function CheckoutPage() {
     }
     void poll();
     return () => { active = false; if (timer) clearTimeout(timer); };
-  }, [user]);
+  }, [checkoutUiAvailable, user]);
 
   const canCompleteFreeSave = items.length > 0 && subtotalCents === 0 && !hasPhysicalItem;
-  const canStartPaidCheckout = PUBLIC_PURCHASES_AVAILABLE && items.length > 0 && subtotalCents > 0 && Boolean(checkoutConfig?.available && checkoutConfig.terms);
+  const canStartPaidCheckout = checkoutUiAvailable && items.length > 0 && subtotalCents > 0 && Boolean(checkoutConfig?.available && checkoutConfig.terms);
 
-  if (!PUBLIC_PURCHASES_AVAILABLE) {
+  if (!checkoutUiAvailable && items.length > 0) {
     return (
       <PageShell>
         <main className="dashboard-page">

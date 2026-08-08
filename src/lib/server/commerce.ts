@@ -100,7 +100,7 @@ export function merchTaxCode(itemTitle: string) {
 export function digitalTaxCode(experienceType: string) {
   const environmentName = experienceType === 'book'
     ? 'STRIPE_BOOK_TAX_CODE'
-    : experienceType === 'music'
+    : experienceType === 'music' || experienceType === 'beat'
       ? 'STRIPE_MUSIC_TAX_CODE'
       : experienceType === 'asset'
         ? 'STRIPE_SAMPLE_PACK_TAX_CODE'
@@ -115,7 +115,13 @@ export function digitalTaxCode(experienceType: string) {
   return value;
 }
 
-export function checkoutConfigurationPresence({ includePhysical = true }: { includePhysical?: boolean } = {}) {
+export function checkoutConfigurationPresence({
+  includePhysical = true,
+  beatOnly = false,
+}: {
+  includePhysical?: boolean;
+  beatOnly?: boolean;
+} = {}) {
   return {
     serviceRole: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
     stripeSecret: Boolean(process.env.STRIPE_SECRET_KEY),
@@ -125,7 +131,7 @@ export function checkoutConfigurationPresence({ includePhysical = true }: { incl
     bookTaxCode: Boolean((process.env.STRIPE_BOOK_TAX_CODE ?? '').trim()),
     musicTaxCode: Boolean((process.env.STRIPE_MUSIC_TAX_CODE ?? '').trim()),
     samplePackTaxCode: Boolean((process.env.STRIPE_SAMPLE_PACK_TAX_CODE ?? '').trim()),
-    publicPurchases: process.env.NEXT_PUBLIC_PUBLIC_PURCHASES_AVAILABLE === 'true',
+    publicPurchases: beatOnly || process.env.NEXT_PUBLIC_PUBLIC_PURCHASES_AVAILABLE === 'true',
     ...(includePhysical ? {
       shippingRates: Boolean((process.env.STRIPE_SHIPPING_RATE_IDS ?? '').trim()),
       merchTaxCode: Boolean((process.env.STRIPE_MERCH_TAX_CODE ?? '').trim()),

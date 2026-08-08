@@ -31,7 +31,7 @@ body.theme-dark {
   --44ui-interactive-hover: rgba(255, 255, 255, 0.12);
 }
 
-/* Glass panels reuse the Dock/Sidebar tint over the already-blurred App Shell.
+/* Glass panels reuse the Sidebar tint over the already-blurred App Shell.
    The Shell remains the sole owner of environmental blur and saturation. */
 
 .ui44-panel {
@@ -1272,7 +1272,7 @@ body.theme-dark .ui44-type-audit {
  * 44 UI — canonical production system
  *
  * The audit pages and product UI consume the same tokens from this file.
- * App Shell, Dock, media heroes, and Radio deliberately remain outside this
+ * App Shell, Sidebar, media heroes, and Radio deliberately remain outside this
  * mapping because they are specialized environment-level experiences.
  */
 
@@ -2057,7 +2057,7 @@ body:is(.theme-dark, .theme-light) .ui44-section-header > :not(:first-child) {
 
 @media (min-width: 769px) {
   .app-shell {
-    --os-active-sidebar-width: var(--os-sidebar-width);
+    --os-active-sidebar-width: var(--os-sidebar-user-width, var(--os-sidebar-width));
   }
 
   .app-shell:has(.app-sidebar-compact) {
@@ -3562,7 +3562,7 @@ body:is(.theme-dark, .theme-light) .product-tile-creator.ui44-catalog-subheadlin
 
 /* Desktop player is intentionally Paper for the present review wave. The
    mobile sheet remains theme-aware below so it still reads as an extension of
-   the mini-player and Dock. */
+   the mini-player and primary mobile navigation. */
 @media (min-width: 769px) {
   body:is(.theme-dark, .theme-light) .music-player-sheet {
     border-color: var(--44ui-panel-border);
@@ -4119,14 +4119,7 @@ body:is(.theme-dark, .theme-light)
   body:is(.theme-dark, .theme-light)
     .settings-two-column
     .settings-theme-field {
-    grid-column: 1 / span 6;
-    grid-row: 1;
-  }
-
-  body:is(.theme-dark, .theme-light)
-    .settings-two-column
-    .settings-landing-field {
-    grid-column: 7 / -1;
+    grid-column: 1 / -1;
     grid-row: 1;
   }
 
@@ -4289,14 +4282,7 @@ body:is(.theme-dark, .theme-light) .music-player-sheet {
   }
 
 
-  body:is(.theme-dark, .theme-light) .settings-landing-field {
-    display: grid !important;
-  }
-
   body:is(.theme-dark, .theme-light) .settings-two-column .settings-theme-field,
-  body:is(.theme-dark, .theme-light)
-    .settings-two-column
-    .settings-landing-field,
   body:is(.theme-dark, .theme-light)
     .settings-two-column
     .settings-accent-field {
@@ -4474,7 +4460,7 @@ body:is(.theme-dark, .theme-light) .music-player-sheet {
     font: 400 13px/18px var(--44ui-font-app);
   }
 
-  /* Mobile Now Playing is a bottom sheet above the unchanged usable Dock. */
+  /* Mobile Now Playing is a bottom sheet above unchanged primary navigation. */
   .music-player-overlay {
     inset: var(--os-topbar-height) 0
       calc(var(--os-mobile-dock-height) + env(safe-area-inset-bottom)) 0;
@@ -5833,7 +5819,7 @@ body:is(.theme-dark, .theme-light) .ui44-disclosure-content {
 }
 
 /* Wave 6: specialized player composition. The compact desktop player uses
-   Dock-tint Glass; expanded desktop Now Playing sits directly on the real App
+   Sidebar-tint Glass; expanded desktop Now Playing sits directly on the real App
    Shell with route content hidden. Mobile retains its existing full-screen
    treatment and safe-area ownership. */
 body:is(.theme-dark, .theme-light) .ui44-player-overlay .music-player-scrim {
@@ -6102,9 +6088,9 @@ body:is(.theme-dark, .theme-light)
   }
 }
 
-/* Account is the personal destination on the mobile Dock. It opens with one
-   compact greeting and one predictable list, while desktop keeps the compact
-   account popover in the top bar. */
+/* Account is the personal destination in both shells. Mobile opens it from the
+   fifth dock item; desktop opens the same role-aware hub from the avatar-backed
+   Account item at the bottom of the Sidebar. */
 body:is(.theme-dark, .theme-light) .you-page {
   width: min(100%, 760px);
   margin-inline: auto;
@@ -6115,12 +6101,42 @@ body:is(.theme-dark, .theme-light) .you-navigation-copy {
   min-width: 0;
 }
 
-body:is(.theme-dark, .theme-light) .you-greeting .ui44-type-page-title {
-  overflow-wrap: anywhere;
+body:is(.theme-dark, .theme-light) .you-mobile-identity {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding-top: 16px;
+  text-align: center;
 }
 
-body:is(.theme-dark, .theme-light) .you-mobile-identity {
-  display: none;
+body:is(.theme-dark, .theme-light) .you-mobile-avatar-link {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--os-color-ink);
+  text-decoration: none;
+}
+
+body:is(.theme-dark, .theme-light)
+  .you-mobile-avatar-link
+  .social-avatar {
+  width: 56px;
+  min-width: 56px;
+  height: 56px;
+  border: 1px solid var(--44ui-panel-border);
+  font-size: 16px;
+}
+
+body:is(.theme-dark, .theme-light) .you-mobile-identity h1 {
+  max-width: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--os-color-ink);
+  font: 700 26px/32px var(--44ui-font-app);
+  letter-spacing: -0.025em;
+  text-align: center;
 }
 
 body:is(.theme-dark, .theme-light) .you-navigation {
@@ -6167,12 +6183,14 @@ body:is(.theme-dark, .theme-light) .you-navigation-chevron {
   font: 300 26px/1 var(--44ui-font-app);
 }
 
-body:is(.theme-dark, .theme-light) .you-navigation-logout {
-  cursor: pointer;
+body:is(.theme-dark, .theme-light) .you-logout-action {
+  display: flex;
+  justify-content: center;
+  padding-top: 4px;
 }
 
-body:is(.theme-dark, .theme-light) .you-navigation-signout {
-  fill: none;
+body:is(.theme-dark, .theme-light) .you-logout-action .os-button {
+  min-width: 120px;
 }
 
 @media (max-width: 768px) {
@@ -6181,57 +6199,12 @@ body:is(.theme-dark, .theme-light) .you-navigation-signout {
     gap: 20px;
   }
 
-  body:is(.theme-dark, .theme-light) .you-greeting {
-    display: none;
-  }
-
-  body:is(.theme-dark, .theme-light) .you-mobile-identity {
-    display: grid;
-    justify-items: center;
-    gap: 8px;
-    padding-top: 16px;
-    text-align: center;
-  }
-
-  body:is(.theme-dark, .theme-light) .you-mobile-avatar-link {
-    display: grid;
-    width: 56px;
-    height: 56px;
-    place-items: center;
-    border-radius: 50%;
-    color: var(--os-color-ink);
-    text-decoration: none;
-  }
-
-  body:is(.theme-dark, .theme-light)
-    .you-mobile-avatar-link
-    .social-avatar {
-    width: 56px;
-    min-width: 56px;
-    height: 56px;
-    border: 1px solid var(--44ui-panel-border);
-    font-size: 16px;
-  }
-
-  body:is(.theme-dark, .theme-light) .you-mobile-identity h1 {
-    max-width: 100%;
-    margin: 0;
-    overflow-wrap: anywhere;
-    color: var(--os-color-ink);
-    font: 700 26px/32px var(--44ui-font-app);
-    letter-spacing: -0.025em;
-    text-align: center;
-  }
-
   body:is(.theme-dark, .theme-light)
     .you-navigation
     .you-navigation-row {
     min-height: 70px;
   }
 
-  body:is(.theme-dark, .theme-light) .you-navigation-logout-description {
-    display: none;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

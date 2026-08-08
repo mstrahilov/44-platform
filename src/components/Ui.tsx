@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { creatorHref } from '@/lib/platform';
 import { useContextMenu } from '@/components/ContextMenu';
 import type { Product } from '@/lib/products';
@@ -10,7 +10,7 @@ import { useAuth } from '@/lib/useAuth';
 import { COPY_TO_CLIPBOARD_TOAST_EVENT } from '@/components/ContextMenu';
 import { addToCart, removeFromCart, useCart } from '@/lib/cart';
 import { isFreeLibraryClaim } from '@/lib/libraryContent';
-import { getItemLibraryOwnership, saveItemToLibrary } from '@/lib/domain/itemDetails';
+import { saveItemToLibrary } from '@/lib/domain/itemDetails';
 import { Ui44SectionArrow } from '@/components/ui44/Controls';
 import { Ui44Text } from '@/components/ui44/Typography';
 
@@ -36,7 +36,7 @@ export function SectionHeader({
   );
 }
 
-export function ProductCard({ product, owned: ownedProp }: { product: Product; owned?: boolean }) {
+export function ProductCard({ product, owned: ownedProp }: { product: Product; owned: boolean }) {
   const { openContextMenu } = useContextMenu();
   const { user } = useAuth();
   const cart = useCart();
@@ -45,31 +45,14 @@ export function ProductCard({ product, owned: ownedProp }: { product: Product; o
   const creatorLabel = product.creators?.display_name || product.creator || '44 Creator';
   const experience = getProductExperience(product);
   const shape = experience === 'physical' ? 'portrait' : experience === 'book' ? 'book' : 'square';
-  const [owned, setOwned] = useState(Boolean(ownedProp));
-
-  useEffect(() => {
-    let alive = true;
-    async function loadOwned() {
-      if (typeof ownedProp === 'boolean') {
-        setOwned(ownedProp);
-        return;
-      }
-      if (!user) {
-        setOwned(false);
-        return;
-      }
-      const data = await getItemLibraryOwnership(user.id, product.id);
-      if (alive) setOwned(Boolean(data));
-    }
-    loadOwned();
-    return () => { alive = false; };
-  }, [ownedProp, product.id, user]);
+  const [localOwnership, setLocalOwnership] = useState<{ productId: string; userId: string } | null>(null);
+  const owned = ownedProp || Boolean(user && localOwnership?.productId === product.id && localOwnership.userId === user.id);
 
   async function addProductToLibrary() {
     if (!user) return;
     try {
       await saveItemToLibrary(user.id, product.id);
-      setOwned(true);
+      setLocalOwnership({ productId: product.id, userId: user.id });
     } catch {
       // The detail page presents actionable acquisition errors; cards stay non-disruptive.
     }

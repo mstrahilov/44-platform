@@ -41,6 +41,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         changeFrequency: 'monthly',
         priority: 0.7,
       },
+      {
+        url: `${getMarketingUrl()}/download`,
+        changeFrequency: 'monthly',
+        priority: 0.8,
+      },
     ];
   }
   const staticRoutes: MetadataRoute.Sitemap = PUBLIC_ROUTES.map((path, index) => ({

@@ -3,8 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/prepare-surface-css.mjs",
     "dev": "next dev --webpack",
     "dev:stripe-sandbox": "node scripts/stripe-sandbox-dev.mjs",
+    "prebuild": "node scripts/prepare-surface-css.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -23,6 +25,8 @@
     "team:build-brand-kit": "node scripts/build-team-brand-kit.mjs --approved-production",
     "team:publish-brand-kit": "node scripts/publish-team-brand-kit.mjs --confirm-production-write",
     "test:experience-polish": "node scripts/experience-polish-contract.mjs",
+    "test:catalog-query-contract": "node scripts/catalog-query-contract.mjs",
+    "test:surface-isolation": "node scripts/surface-isolation-contract.mjs",
     "test:radio-rotation": "tsx scripts/radio-rotation-contract.ts",
     "test:username-casing": "node scripts/username-casing-contract.mjs && supabase test db --local supabase/tests/m1_case_preserving_usernames_security.sql",
     "test:settings-studio-currency": "tsx scripts/settings-studio-currency-contract.ts",
@@ -44,12 +48,17 @@
     "test:security": "supabase test db --local supabase/tests",
     "audio:inventory": "node scripts/audio-migration.mjs",
     "audio:register-legacy": "node scripts/audio-migration.mjs --apply-repairs --register --confirm-production-write",
-    "audio:quarantine-orphans": "node scripts/audio-migration.mjs --quarantine-orphans --confirm-production-write"
+    "audio:quarantine-orphans": "node scripts/audio-migration.mjs --quarantine-orphans --confirm-production-write",
+    "desktop:dev": "tauri dev",
+    "desktop:check": "node scripts/desktop-contract.mjs && node scripts/desktop-download-contract.mjs && cargo fmt --manifest-path src-tauri/Cargo.toml --check && cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings && cargo test --manifest-path src-tauri/Cargo.toml",
+    "desktop:build": "tauri build",
+    "desktop:import:windows": "node scripts/import-windows-installer.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
     "@react-email/render": "^2.1.0",
     "@supabase/supabase-js": "^2.108.2",
+    "@tauri-apps/plugin-notification": "2.3.3",
     "@tiptap/extension-color": "^3.27.1",
     "@tiptap/extension-highlight": "^3.27.1",
     "@tiptap/extension-image": "^3.27.1",
@@ -68,10 +77,13 @@
     "web-push": "^3.6.7"
   },
   "overrides": {
-    "postcss": "8.5.22",
-    "sharp": "0.35.3"
+    "dompurify": "3.4.13",
+    "postcss": "8.5.26",
+    "sharp": "0.35.3",
+    "undici": "7.29.0"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "2.11.4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

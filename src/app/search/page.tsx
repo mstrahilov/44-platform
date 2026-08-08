@@ -14,6 +14,7 @@ import { setDiscussionLike } from '@/lib/domain/community';
 import { useAuth } from '@/lib/useAuth';
 import { Ui44TextInput } from '@/components/ui44/Inputs';
 import { searchSupportArticles, supportArticleHref } from '@/lib/supportArticles';
+import { listVisibleLibraryItemIds } from '@/lib/domain/library';
 
 type SearchIndex = {
   products: Product[];
@@ -61,6 +62,7 @@ function SearchContent() {
   const [likes, setLikes] = useState<LikeRow[]>([]);
   const [likingId, setLikingId] = useState('');
   const [loading, setLoading] = useState(Boolean(query));
+  const [ownedProductIds, setOwnedProductIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let alive = true;
@@ -89,6 +91,24 @@ function SearchContent() {
   useEffect(() => {
     Promise.resolve().then(() => setDraft(query));
   }, [query]);
+
+  useEffect(() => {
+    let active = true;
+    if (!user) {
+      Promise.resolve().then(() => {
+        if (active) setOwnedProductIds(new Set());
+      });
+      return () => { active = false; };
+    }
+    void listVisibleLibraryItemIds(user.id)
+      .then(ids => {
+        if (active) setOwnedProductIds(new Set(ids));
+      })
+      .catch(() => {
+        if (active) setOwnedProductIds(new Set());
+      });
+    return () => { active = false; };
+  }, [user]);
 
   function submitSearch(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -165,7 +185,7 @@ function SearchContent() {
               <HubSection title="Items">
                 <ProductGrid>
                   {productMatches.map(product => (
-                    <ProductCard key={product.id} product={product} />
+                    <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />
                   ))}
                 </ProductGrid>
               </HubSection>

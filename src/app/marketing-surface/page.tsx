@@ -57,7 +57,6 @@ export default function MarketingLandingPage() {
         '@type': 'WebSite',
         '@id': `${marketingUrl}/#website`,
         name: '44OS',
-        alternateName: '44 OS',
         url: `${marketingUrl}/`,
         description,
         publisher: { '@id': `${marketingUrl}/#organization` },
@@ -88,7 +87,10 @@ export default function MarketingLandingPage() {
           <a className={styles.brand} href="#top" aria-label="44OS by forty four, return to top">
             <span className={styles.brandMark}>44OS</span><span>by forty four</span>
           </a>
-          <a className={styles.navButton} href={appUrl}>Open App</a>
+          <div className={styles.navActions}>
+            <a className={styles.navDownloadButton} href="/download">Download App</a>
+            <a className={styles.navButton} href={appUrl}>Open App</a>
+          </div>
         </div>
       </nav>
 
@@ -127,7 +129,7 @@ export default function MarketingLandingPage() {
 
         <section className={styles.radio} aria-labelledby="radio-title">
           <div className={styles.eyebrow}>LIVE NOW</div>
-          <h2 id="radio-title">44 Radio is always on.</h2>
+          <h2 id="radio-title">44OS Radio is always on.</h2>
           <a href={getAppPathUrl('/radio')}>Listen now</a>
         </section>
       </div>

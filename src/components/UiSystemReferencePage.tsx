@@ -293,9 +293,9 @@ function ShellSystem() {
     ['os-icon-settings', 'Settings'],
   ];
   return <div className="ui-system-shell-grid">
-    <Specimen title="App shell, Dock, and Topbar" description="The environment and one shell-glass window own global navigation. This reduced specimen uses the same icon masks and control material without mounting a second live shell." source="SystemShell · Sidebar · Topbar">
+    <Specimen title="App shell, Sidebar, and Topbar" description="The environment and one shell-glass window own global navigation. This reduced specimen uses the same icon masks and control material without mounting a second live shell." source="SystemShell · Sidebar · Topbar">
       <div className="ui-system-shell-miniature">
-        <aside className="ui-system-dock-miniature" aria-label="Dock specimen">
+        <aside className="ui-system-dock-miniature" aria-label="Sidebar specimen">
           <span className="ui-system-logo">44</span>
           {dockItems.map(([icon, label]) => <span className="ui-system-dock-item" title={label} key={label}><span className={`os-icon ${icon}`} aria-hidden="true" /></span>)}
         </aside>

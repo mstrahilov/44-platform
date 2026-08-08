@@ -13,7 +13,7 @@ export default function TermsPage() {
     title="Terms of Service"
     summary="The terms governing accounts, purchases, publishing, and use of 44OS."
   >
-    <p className="os-type-meta">Effective July 17, 2026 · Last updated July 20, 2026</p>
+    <p className="os-type-meta">Effective July 17, 2026 · Last updated August 7, 2026</p>
 
     <LegalSection title="Agreement and operator">
       <p>
@@ -71,6 +71,24 @@ export default function TermsPage() {
         44OS may preserve the purchase and entitlement record even if an Item later leaves public
         sale. Access can be restricted where payment is refunded, reversed, disputed, fraudulent,
         unlawful, or used outside the applicable license.
+      </p>
+    </LegalSection>
+
+    <LegalSection title="Beat licenses">
+      <p>
+        A Beat purchase grants the exact non-exclusive Basic, Premium, or Trackout license shown
+        on the Item and accepted at checkout. The license is directly between the Creator identified
+        as licensor in the permanent license record and the buyer identified as licensee. forty four
+        provides the marketplace, payment record, license record, and protected file delivery; it
+        does not acquire ownership of the Beat or become the licensor.
+      </p>
+      <p>
+        Each license applies to one new song and does not transfer copyright or exclusivity. The
+        complete versioned terms shown before purchase—including allowed uses, delivered files,
+        credit expectations, restrictions on redistributing the Beat, automated rights-claiming
+        systems, synchronization, transfer, breach, and payment disputes—form part of the order and
+        control over this summary. A refund, chargeback, dispute, or material breach may change the
+        license record status and suspend protected downloads as provided by those terms and law.
       </p>
     </LegalSection>
 

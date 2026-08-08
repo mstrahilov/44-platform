@@ -39,7 +39,7 @@ export async function POST(request: Request) {
       email,
       password,
       options: {
-        emailRedirectTo: getAppPathUrl('/'),
+        emailRedirectTo: getAppPathUrl('/welcome'),
         data: {
           display_name: displayName,
           name: displayName,

@@ -1,16 +1,14 @@
 'use client';
 
 /**
- * The 44OS Dock. Renders from the app registry (src/lib/osApps.ts) —
+ * The 44OS Sidebar. Renders from the app registry (src/lib/osApps.ts) —
  * do not add nav items here; register them in the registry instead.
- * The file keeps its Sidebar name for compatibility; product language
- * for this surface is "Dock".
  *
  * OS behaviors owned here:
- * - Right-click on a Dock item → context menu (Open / Dock mode /
- *   Dock Settings). Right-click on empty Dock → mode + settings.
- * - Horizontal drag on the Dock (≈56px) toggles full ↔ compact mode;
- *   the drag never resizes the Dock freely, it snaps between the two modes.
+ * - Right-click on a Sidebar item → context menu (Open / Sidebar mode /
+ *   Sidebar Settings). Right-click on empty Sidebar → mode + settings.
+ * - Drag the desktop Sidebar's trailing edge between its compact and expanded
+ *   bounds. Crossing the label-safe threshold snaps to the compact icon rail.
  */
 
 import Link from 'next/link';
@@ -19,11 +17,20 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { getActiveMobileOSAppId, getActiveOSAppId, getAvailableDockApps, getOSApp, type OSApp } from '@/lib/osApps';
-import { setDockMode, unpinDockItem, useDockPreferences, type PinnedDockItem } from '@/lib/dockPreferences';
+import {
+  SIDEBAR_COMPACT_WIDTH,
+  SIDEBAR_MAX_WIDTH,
+  SIDEBAR_MIN_EXPANDED_WIDTH,
+  setDockMode,
+  setSidebarWidth,
+  unpinDockItem,
+  useDockPreferences,
+  type PinnedDockItem,
+} from '@/lib/dockPreferences';
 import { useContextMenu, type ContextMenuEntry } from '@/components/ContextMenu';
 
-const DRAG_TOGGLE_DISTANCE = 56;
-const DRAG_START_DISTANCE = 12;
+const RESIZE_STEP = 16;
+const EXPAND_DRAG_DISTANCE = 12;
 
 function useNow() {
   const [now, setNow] = useState<Date | null>(null);
@@ -35,18 +42,18 @@ function useNow() {
   return now;
 }
 
-function dockModeEntries(compact: boolean): ContextMenuEntry[] {
+function sidebarModeEntries(compact: boolean): ContextMenuEntry[] {
   return [
     {
       id: 'dock-mode',
-      label: compact ? 'Expand Dock' : 'Compact Dock',
+      label: compact ? 'Expand Sidebar' : 'Compact Sidebar',
       onSelect: () => setDockMode(compact ? 'full' : 'compact'),
     },
-    { id: 'dock-settings', label: 'Dock Settings', href: '/settings#dock' },
+    { id: 'dock-settings', label: 'Sidebar Settings', href: '/settings#appearance' },
   ];
 }
 
-function DockItem({
+function SidebarItem({
   app,
   active,
   compact,
@@ -60,7 +67,7 @@ function DockItem({
   const entries: ContextMenuEntry[] = [
     { id: 'open', label: `Open ${app.label}`, href: app.href },
     { kind: 'divider', id: 'divider-1' },
-    ...dockModeEntries(compact),
+    ...sidebarModeEntries(compact),
   ];
 
   return <div className="sidebar-app-group">
@@ -77,7 +84,33 @@ function DockItem({
     </div>;
 }
 
-function PinnedDockItemRow({ item, active, compact }: { item: PinnedDockItem; active: boolean; compact: boolean }) {
+function SidebarAccountItem({ profile, active, compact }: { profile: StudioProfile | null; active: boolean; compact: boolean }) {
+  const { openContextMenu } = useContextMenu();
+  const label = 'Account';
+  return <div className="sidebar-app-group">
+    <Link
+      href="/you"
+      className={active ? 'sidebar-item sidebar-item-active sidebar-account-item' : 'sidebar-item sidebar-account-item'}
+      title={compact ? label : undefined}
+      aria-label={label}
+      onContextMenu={event => openContextMenu(event, [
+        { id: 'open', label: 'Open Account', href: '/you' },
+        { kind: 'divider', id: 'divider-1' },
+        ...sidebarModeEntries(compact),
+      ])}
+    >
+      <span className="sidebar-account-avatar" aria-hidden="true">
+        {profile?.avatar_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={profile.avatar_url} alt="" />
+        ) : <span className="os-icon os-icon-user" />}
+      </span>
+      <span className="sidebar-item-label">{label}</span>
+    </Link>
+  </div>;
+}
+
+function PinnedSidebarItemRow({ item, active, compact }: { item: PinnedDockItem; active: boolean; compact: boolean }) {
   const { openContextMenu } = useContextMenu();
   return (
     <Link
@@ -88,7 +121,7 @@ function PinnedDockItemRow({ item, active, compact }: { item: PinnedDockItem; ac
       onContextMenu={event => openContextMenu(event, [
         { id: 'open', label: `Open ${item.label}`, href: item.href },
         { kind: 'divider', id: 'divider-1' },
-        { id: 'unpin', label: 'Unpin Item', onSelect: () => unpinDockItem(item.id) },
+        { id: 'unpin', label: 'Unpin from Sidebar', onSelect: () => unpinDockItem(item.id) },
       ])}
     >
       <span className="sidebar-pin-art" aria-hidden="true">
@@ -104,7 +137,7 @@ function PinnedDockItemRow({ item, active, compact }: { item: PinnedDockItem; ac
   );
 }
 
-function DockSection({
+function SidebarSection({
   label,
   apps,
   activeAppId,
@@ -121,7 +154,7 @@ function DockSection({
     <div className="sidebar-section" aria-label={label}>
       {label && <div className="sidebar-section-label">{label}</div>}
       {apps.map(app => (
-        <DockItem key={app.id} app={app} active={activeAppId === app.id} compact={compact} />
+        <SidebarItem key={app.id} app={app} active={activeAppId === app.id} compact={compact} />
       ))}
     </div>
   );
@@ -131,7 +164,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const { user } = useAuth();
   const [profile, setProfile] = useState<StudioProfile | null>(null);
-  const { mode, pinnedItems } = useDockPreferences();
+  const { mode, width, pinnedItems } = useDockPreferences();
   const now = useNow();
   const activeAppId = getActiveOSAppId(pathname);
   const activeMobileAppId = getActiveMobileOSAppId(pathname);
@@ -139,50 +172,98 @@ export default function Sidebar() {
 
   const compact = mode === 'compact';
 
-  // Drag-to-toggle: track a horizontal pointer drag anywhere on the Dock.
-  const dragRef = useRef<{ startX: number } | null>(null);
-  const suppressClickRef = useRef(false);
-  const compactRef = useRef(compact);
+  const resizeRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startWidth: number;
+    compact: boolean;
+  } | null>(null);
 
   useEffect(() => {
-    compactRef.current = compact;
-  }, [compact]);
+    document.documentElement.style.setProperty('--os-sidebar-user-width', `${width}px`);
+  }, [width]);
 
-  function onPointerDown(event: React.PointerEvent<HTMLElement>) {
+  useEffect(() => () => {
+    document.body.classList.remove('sidebar-resizing');
+  }, []);
+
+  function expandSidebar(nextWidth = width) {
+    setSidebarWidth(nextWidth);
+    setDockMode('full');
+  }
+
+  function compactSidebar() {
+    setDockMode('compact');
+  }
+
+  function onResizePointerDown(event: React.PointerEvent<HTMLDivElement>) {
     if (event.button !== 0) return;
-    dragRef.current = { startX: event.clientX };
-    suppressClickRef.current = false;
-  }
-
-  function onPointerMove(event: React.PointerEvent<HTMLElement>) {
-    const drag = dragRef.current;
-    if (!drag) return;
-    const dx = event.clientX - drag.startX;
-    if (Math.abs(dx) > DRAG_START_DISTANCE && !suppressClickRef.current) {
-      // A real drag has started: capture the pointer so the gesture
-      // completes even if it leaves the Dock, and swallow the click.
-      suppressClickRef.current = true;
-      try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* pointer already gone */ }
-    }
-    if (!compactRef.current && dx < -DRAG_TOGGLE_DISTANCE) {
-      setDockMode('compact');
-      dragRef.current = null;
-    } else if (compactRef.current && dx > DRAG_TOGGLE_DISTANCE) {
-      setDockMode('full');
-      dragRef.current = null;
-    }
-  }
-
-  function onPointerEnd() {
-    dragRef.current = null;
-  }
-
-  // After a drag, swallow the click that would otherwise open the item under the pointer.
-  function onClickCapture(event: React.MouseEvent<HTMLElement>) {
-    if (!suppressClickRef.current) return;
-    suppressClickRef.current = false;
     event.preventDefault();
     event.stopPropagation();
+    resizeRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startWidth: compact ? SIDEBAR_COMPACT_WIDTH : width,
+      compact,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    document.body.classList.add('sidebar-resizing');
+  }
+
+  function onResizePointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    const resize = resizeRef.current;
+    if (!resize || resize.pointerId !== event.pointerId) return;
+    const dx = event.clientX - resize.startX;
+
+    if (resize.compact) {
+      if (dx < EXPAND_DRAG_DISTANCE) return;
+      expandSidebar(SIDEBAR_MIN_EXPANDED_WIDTH);
+      resizeRef.current = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startWidth: SIDEBAR_MIN_EXPANDED_WIDTH,
+        compact: false,
+      };
+      return;
+    }
+
+    const nextWidth = Math.min(SIDEBAR_MAX_WIDTH, resize.startWidth + dx);
+    if (nextWidth <= SIDEBAR_MIN_EXPANDED_WIDTH) {
+      setSidebarWidth(SIDEBAR_MIN_EXPANDED_WIDTH);
+      compactSidebar();
+      resizeRef.current = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startWidth: SIDEBAR_COMPACT_WIDTH,
+        compact: true,
+      };
+      return;
+    }
+    setSidebarWidth(nextWidth);
+  }
+
+  function onResizePointerEnd(event: React.PointerEvent<HTMLDivElement>) {
+    if (resizeRef.current?.pointerId !== event.pointerId) return;
+    resizeRef.current = null;
+    document.body.classList.remove('sidebar-resizing');
+    try { event.currentTarget.releasePointerCapture(event.pointerId); } catch { /* pointer already released */ }
+  }
+
+  function onResizeKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      if (compact || width - RESIZE_STEP <= SIDEBAR_MIN_EXPANDED_WIDTH) compactSidebar();
+      else setSidebarWidth(width - RESIZE_STEP);
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      expandSidebar(compact ? SIDEBAR_MIN_EXPANDED_WIDTH : width + RESIZE_STEP);
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      compactSidebar();
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      expandSidebar(SIDEBAR_MAX_WIDTH);
+    }
   }
 
   useEffect(() => {
@@ -203,7 +284,7 @@ export default function Sidebar() {
     .filter((app): app is OSApp => Boolean(app))
     .map(app => app.id === 'store' ? { ...app, label: 'Home' } : app);
   const supportApp = dockApps.find(app => app.id === 'support') ?? null;
-  const settingsApp = dockApps.find(app => app.id === 'settings') ?? null;
+  const accountApp = dockApps.find(app => app.id === 'you') ?? null;
   const mobileDockApps = [
     { app: getOSApp('store'), label: 'Home' },
     { app: getOSApp('library'), label: 'Library' },
@@ -219,16 +300,11 @@ export default function Sidebar() {
   return <>
     <aside
       className={compact ? 'app-sidebar app-sidebar-compact' : 'app-sidebar'}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerEnd}
-      onPointerCancel={onPointerEnd}
-      onClickCapture={onClickCapture}
       onDragStart={event => event.preventDefault()}
       onContextMenu={event => {
-        // Items open their own menus; this handles the Dock background.
-        if ((event.target as HTMLElement).closest('.sidebar-item, .sidebar-logo')) return;
-        openContextMenu(event, dockModeEntries(compact));
+        // Items open their own menus; this handles the Sidebar background.
+        if ((event.target as HTMLElement).closest('.sidebar-item, .sidebar-logo, .sidebar-resize-handle')) return;
+        openContextMenu(event, sidebarModeEntries(compact));
       }}
     >
       <div className="sidebar-top">
@@ -238,14 +314,14 @@ export default function Sidebar() {
         <span className="sidebar-clock" aria-live="polite">{time}</span>
       </div>
 
-      <nav className="sidebar-nav sidebar-nav-desktop" aria-label="Dock">
-        <DockSection apps={primaryApps} activeAppId={mainActiveAppId} compact={compact} />
+      <nav className="sidebar-nav sidebar-nav-desktop" aria-label="Sidebar">
+        <SidebarSection apps={primaryApps} activeAppId={mainActiveAppId} compact={compact} />
 
         {pinnedItems.length > 0 && (
           <>
             <div className="sidebar-divider" />
             {pinnedItems.map(item => (
-              <PinnedDockItemRow key={item.id} item={item} active={activePinnedItem?.id === item.id} compact={compact} />
+              <PinnedSidebarItemRow key={item.id} item={item} active={activePinnedItem?.id === item.id} compact={compact} />
             ))}
           </>
         )}
@@ -253,13 +329,13 @@ export default function Sidebar() {
         <div className="sidebar-spacer" />
 
         {supportApp && (
-          <DockItem app={supportApp} active={mainActiveAppId === supportApp.id} compact={compact} />
+          <SidebarItem app={supportApp} active={mainActiveAppId === supportApp.id} compact={compact} />
         )}
 
-        {user && settingsApp && (
+        {user && accountApp && (
           <>
             <div className="sidebar-divider" />
-            <DockItem app={settingsApp} active={mainActiveAppId === settingsApp.id} compact={compact} />
+            <SidebarAccountItem profile={profile} active={mainActiveAppId === accountApp.id} compact={compact} />
           </>
         )}
 
@@ -289,6 +365,23 @@ export default function Sidebar() {
           </Link>
         ))}
       </nav>
+      <div
+        className="sidebar-resize-handle"
+        role="separator"
+        aria-label="Resize Sidebar"
+        aria-orientation="vertical"
+        aria-valuemin={SIDEBAR_COMPACT_WIDTH}
+        aria-valuemax={SIDEBAR_MAX_WIDTH}
+        aria-valuenow={compact ? SIDEBAR_COMPACT_WIDTH : width}
+        tabIndex={0}
+        title="Resize Sidebar"
+        onDoubleClick={() => compact ? expandSidebar() : compactSidebar()}
+        onKeyDown={onResizeKeyDown}
+        onPointerDown={onResizePointerDown}
+        onPointerMove={onResizePointerMove}
+        onPointerUp={onResizePointerEnd}
+        onPointerCancel={onResizePointerEnd}
+      />
     </aside>
   </>;
 }

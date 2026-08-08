@@ -1,14 +1,22 @@
 import { readFile } from 'node:fs/promises';
 
-const [migration, session, webhook, checkout, diagnostics, envExample, preflight, sandboxVerify] = await Promise.all([
+const [migration, beatActivation, session, webhook, checkout, checkoutConfig, availability, commerce, diagnostics, envExample, preflight, sandboxVerify] = await Promise.all([
   Promise.all([
     readFile('supabase/migrations/20260716022000_m12_stripe_verified_payments.sql', 'utf8'),
     readFile('supabase/migrations/20260716025000_m12_stripe_processor_fee_allocation.sql', 'utf8'),
     readFile('supabase/migrations/20260716030000_m12_stripe_acceptance_reconciliation.sql', 'utf8'),
   ]).then(parts => parts.join('\n')),
+  Promise.all([
+    readFile('supabase/migrations/20260729010000_m18_nonexclusive_beat_store_activation.sql', 'utf8'),
+    readFile('supabase/migrations/20260807010000_v12_activate_standard_beat_sales.sql', 'utf8'),
+    readFile('supabase/migrations/20260807020000_v12_sync_published_beat_offers.sql', 'utf8'),
+  ]).then(parts => parts.join('\n')),
   readFile('src/app/api/checkout/session/route.ts', 'utf8'),
   readFile('src/app/api/stripe/webhook/route.ts', 'utf8'),
   readFile('src/app/checkout/page.tsx', 'utf8'),
+  readFile('src/app/api/checkout/config/route.ts', 'utf8'),
+  readFile('src/lib/commerceAvailability.ts', 'utf8'),
+  readFile('src/lib/server/commerce.ts', 'utf8'),
   readFile('src/app/api/admin/commerce/diagnostics/route.ts', 'utf8'),
   readFile('.env.example', 'utf8'),
   readFile('scripts/stripe-sandbox-preflight.mjs', 'utf8'),
@@ -18,7 +26,17 @@ const [migration, session, webhook, checkout, diagnostics, envExample, preflight
 const requirements = [
   ['durable order before provider redirect', /create_stripe_pending_order[\s\S]*stripe\.checkout\.sessions\.create/, session],
   ['server offer price is the Stripe amount', /unit_amount:\s*line\.unit_price_cents/, session],
-  ['digital and physical offer resolution', /\['physical_purchase', 'digital_download'\]/, session],
+  ['implicit offer resolution remains digital and physical only', /\['physical_purchase', 'digital_download'\]/, session],
+  ['Beat checkout requires an exact selected offer', /beatOfferIds[\s\S]*licenseAcceptances[\s\S]*termsSha256/, session],
+  ['Beat checkout accepts only active standard non-exclusive terms', /template\.status !== 'active'[\s\S]*template\.is_exclusive[\s\S]*\['basic', 'premium', 'trackout'\]/, session],
+  ['Beat launch no longer depends on the retired deployment presentation flag', /const beatOfferIds[\s\S]*const nonBeatOfferIds[\s\S]*nonBeatOfferIds\.length[\s\S]*NEXT_PUBLIC_PUBLIC_PURCHASES_AVAILABLE/, session],
+  ['standard Beat licenses use the approved digital music tax classification', /experienceType === 'music' \|\| experienceType === 'beat'[\s\S]*STRIPE_MUSIC_TAX_CODE/, commerce],
+  ['Beat cart boundary requires offer, tier, and terms digest', /PUBLIC_BEAT_PURCHASES_AVAILABLE[\s\S]*item\.offer_id && item\.tier_code && item\.terms_sha256/, availability],
+  ['Beat configuration checks all server runtime gates', /catalog_enabled,publishing_enabled,checkout_enabled,nonexclusive_pilot_enabled[\s\S]*beatReady/, checkoutConfig],
+  ['Beat launch keeps split and exclusive sales disabled', /checkout_enabled=true[\s\S]*nonexclusive_pilot_enabled=true[\s\S]*split_sales_enabled=false[\s\S]*exclusive_sales_enabled=false/, beatActivation],
+  ['Beat launch activates only complete published approved-creator offers', /item\.status='published'[\s\S]*is_creator_paid_sales_enabled[\s\S]*beat_configuration_health/, beatActivation],
+  ['future eligible Beat publications activate their standard offers', /catalog_items_sync_published_beat_offers[\s\S]*template\.tier_code in \('basic','premium','trackout'\)[\s\S]*beat_configuration_health/, beatActivation],
+  ['Beat license order snapshot is immutable fulfillment evidence', /beat_license_snapshot[\s\S]*termsText[\s\S]*termsSha256[\s\S]*file_manifest/, beatActivation],
   ['physical-only shipping collection', /hasPhysical[\s\S]*shipping_address_collection[\s\S]*shippingRateIds/, session],
   ['Stripe-hosted payment Session', /checkout\.sessions\.create[\s\S]*mode:\s*'payment'/, session],
   ['runtime and operating-model gate', /not controls\.checkout_enabled[\s\S]*operating_model_approved_at/, migration],

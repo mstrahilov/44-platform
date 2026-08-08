@@ -1,8 +1,8 @@
 # 44OS UI
 
-This document is the visual, interaction, responsive, and accessibility source of truth for 44OS. It describes the current system, not the history of how it was built.
+This document is the visual, interaction, responsive, and accessibility source of truth for the 44OS web application. It describes the current web system, not the history of how it was built. The native iOS application uses this product as a reference but follows its own accepted rules in `44OS_IOS.md`.
 
-Architecture and provider rules live in `44OS_FOUNDATION.md`. Current work lives in `44OS_MILESTONES.md`. Do not create additional UI audit, proposal, or handoff documents.
+Architecture and provider rules live in `44OS_FOUNDATION.md`. Native iOS rules live in `44OS_IOS.md`. Current work lives in `44OS_MILESTONES.md`. Do not create additional UI audit, proposal, or handoff documents.
 
 Company/product voice, identity, logo, support, social, developer, and outreach guidance lives in the private canonical `44OS_HANDBOOK.md` source.
 
@@ -26,14 +26,18 @@ Technology should be explained through user outcomes. A creator should know what
 
 ## Visual system
 
-The application cascade is limited to:
+The application cascade is authored only in:
 
 - `src/app/globals.css`
 - `src/styles/44-ui/canonical-system.css`
 
-`/44OS_UI` is the responsive living registry for current application components, tokens, and classes. The isolated marketing page uses one scoped CSS module and does not import the application shell or create another in-app component system. Do not restore retired proposal stylesheets, page-specific application visual systems, legacy Glass wrappers, or copied desktop/mobile reference routes.
+`scripts/prepare-surface-css.mjs` combines those sources in order into an ignored build artifact linked only by the application shell. `/44OS_UI` is the responsive living registry for current application components, tokens, and classes. The isolated marketing page uses scoped CSS modules plus minimal shared surface/consent CSS and does not import the application stylesheet or create another in-app component system. Do not restore retired proposal stylesheets, page-specific application visual systems, legacy Glass wrappers, or copied desktop/mobile reference routes.
+
+The marketing Download page follows the existing 44os.com editorial system rather than the application shell: warm off-white canvas, black/gray typography, oversized compact headlines, quiet dividers, monochrome pill actions, restrained white platform cards, and the same navigation/footer. Installer availability and security disclosures must remain explicit; a missing or unaccepted artifact renders as unavailable rather than a placeholder link.
 
 Base spacing is 4px. Preferred spacing tokens are 4, 8, 12, 16, 20, 24, 32, 40, 48, and 64px. Use shared containers and tokens before local margins or inline styles.
+
+At desktop widths the application shell reaches the viewport edges: `--os-app-frame-inset` is zero, and the shell does not draw a second outer radius, border, or shadow. The browser viewport or native desktop window owns the outside edge and corner treatment. Mobile retains its existing edge-to-edge and safe-area rules.
 
 Font stack:
 
@@ -53,9 +57,9 @@ Typography rules:
 
 ## Marketing front door
 
-`44os.com` is a light editorial page, not an application workspace. It uses a warm paper background, near-black ink, the system font stack, an 8px editorial layout rhythm, pill-shaped actions, and large concise headings. It does not use gradients, Glass, decorative shapes, external fonts, the dark application shell, Dock, Topbar, player, push prompt, account state, analytics consent, or commerce presentation.
+`44os.com` is a light editorial page, not an application workspace. It uses a warm paper background, near-black ink, the system font stack, an 8px editorial layout rhythm, pill-shaped actions, and large concise headings. It does not use gradients, Glass, decorative shapes, external fonts, the application stylesheet, dark application shell, Sidebar, Topbar, player, push prompt, account state, or commerce presentation. It retains the same lightweight analytics-consent boundary as the application so one first-party consent choice applies across both origins.
 
-The first release exposes only `Open App`, linking to `https://app.44os.com`. Download navigation and `44os.com/download` remain absent until signed desktop installers exist. Footer links route Community, Support, and legal destinations to the app origin; Contact uses `support@44os.com`.
+The marketing header pairs a white **Download App** action with the black **Open App** action. Download links become active independently only when their exact installer has passed the release gate; an unavailable Windows build remains visibly **Coming soon**. `Open App` links to `https://app.44os.com`. Footer links route Community, Support, and legal destinations to the app origin; Contact uses `support@44os.com`.
 
 Marketing product visuals use approved real application screenshots rather than fabricated UI. Each visual pairs a 1280×800 desktop WebP with a 390×844 mobile WebP inside a restrained desktop-and-phone composition. The phone is a smaller foreground accent, lifted above the lower edge so it communicates multi-platform support without lengthening the page. Images load directly and eagerly because they are already optimized; a black lazy placeholder is not an accepted state. The social share image is 1200×630 PNG. Screenshots must exclude private messages, email addresses, payment data, unpublished work, and other personal information.
 
@@ -82,8 +86,8 @@ The private Team workspace is deployed for Admins and explicitly granted Members
 Four material roles exist:
 
 - **Environment** — fixed background behind the OS window.
-- **Shell glass** — the unified `.app-shell` behind Dock, Topbar, and workspace.
-- **Glass** — the canonical ordinary panel/control/input/list surface. It uses the Dock/Sidebar semantic tint and owns no blur, saturation, or shadow.
+- **Shell glass** — the unified `.app-shell` behind Sidebar, Topbar, and workspace.
+- **Glass** — the canonical ordinary panel/control/input/list surface. It uses the Sidebar semantic tint and owns no blur, saturation, or shadow.
 - **Paper** — opaque raised surface used only for menus, dropdowns, popovers, context menus, and selection lists.
 
 Content patterns:
@@ -102,16 +106,17 @@ Do not introduce decorative orbs, bokeh, heavy gradients, nested cards, page-spe
 
 44OS uses one persistent shell. Only the workspace content changes between apps.
 
-Desktop Dock:
+Desktop Sidebar:
 
-- Signed in: Library, divider, Home, Radio, Community, optional pinned Items, spacer, Support, divider, Settings.
+- Signed in: Library, divider, Home, Radio, Community, optional pinned Items, spacer, Support, divider, Account. Account uses the signed-in profile image when available and falls back to the standard user icon.
 - Signed out: Home, Radio, Community, spacer, Support, Log In.
-- Studio is opened from the creator’s profile or account menu and is not a Dock app.
+- Studio is opened from the creator’s profile or account menu and is not a Sidebar app.
 - Notifications remain in the Topbar. Inbox and Profile remain account-menu destinations.
-- Dock rows use a 56px rhythm; expanded child rows use 40px and text-only labels.
-- The Dock clock uses the viewer’s timezone in two-digit 24-hour `HH:mm` format.
+- Sidebar rows use a 56px rhythm; expanded child rows use 40px and text-only labels.
+- The Sidebar clock uses the viewer’s timezone in two-digit 24-hour `HH:mm` format.
+- At desktop widths the Sidebar trailing edge uses the native horizontal resize cursor. Expanded width persists between 196px and the original 280px maximum; crossing the label-safe minimum snaps to the 76px icon-only Sidebar. The separator also supports Arrow Left/Right, Home, and End.
 
-Mobile Dock is fixed to Home, Library, Radio, Community, and Account. There is no mobile Dock menu button. Account is the role-aware destination for Profile, Notifications, Messages, Orders, Studio, Team, Support, Settings, and Log Out.
+Primary mobile navigation is fixed to Home, Library, Radio, Community, and Account. There is no mobile navigation menu button. Account is the focused role-aware destination for Profile, conditional Studio, conditional Orders, Messages, and Settings. Log Out is centered separately beneath that menu; Notifications remain in the Topbar and Support remains in primary navigation. When signed out, Account immediately displays the shared `44OS` email-first form with **Enter your email to get started.**, Email, and Continue; it never inserts a separate Log In button before that form.
 
 Topbar:
 
@@ -119,19 +124,21 @@ Topbar:
 - The populated mobile Cart control is one compact icon/count pill; the count never becomes a separate overlapping badge.
 - Mobile hub top-left shows the 44 logo linking Home; detail pages replace it with the circular back button. Home, Community, and Library show the circular Search action on the right. Search opens a full-page Paper overlay with live people and Item suggestions and falls through to the Search results page when the query is submitted.
 - Signed-out mobile top-right links the default profile icon to Login.
-- The desktop account menu shrink-wraps its content and contains Profile, Messages, conditional Orders, Studio, conditional Team, and Log Out. Notifications, Support, and Settings are not duplicated because they already have desktop shell destinations. Admin access is nested under Team.
-- The Dock answers “where am I going?”; in-page controls answer “what part am I viewing?”
+- Desktop does not duplicate Account in the Topbar. The avatar-backed Sidebar Account destination opens the shared role-aware Account hub. A centered avatar/name identity leads Profile, conditional Studio, conditional Orders, Messages, role-gated Admin or Team, and Settings; Log Out is a separate centered action beneath the menu. Notifications and Support stay in their established shell controls rather than repeating inside Account.
+- Home, Community, and signed-in Library begin with section navigation below the page-title divider. Once that original rail scrolls out of view, the same controls dock into the Topbar's left content column. Both states reuse the open text-and-underline rail exactly—transparent background, muted inactive labels, Ocean active label, and no pill border, fill, radius, or shadow. The first label aligns exactly with the page content edge; Search and Notifications remain fixed at the right.
+- When Cart contains an Item or Beat license, the right action order is Search, Notifications, then Cart. Cart is a slightly wider pill that shows the current Item count. It remains reachable whenever a selection is staged; an empty Cart does not occupy Topbar space. Standard non-exclusive Beat checkout may be active while unrelated paid formats remain behind their general launch switch.
+- The Sidebar answers “where am I going?”; in-page controls answer “what part am I viewing?”
 
 ## Responsive geometry
 
-The shell—not individual pages—owns mobile safe areas, Topbar, player, and Dock spacing.
+The shell—not individual pages—owns mobile safe areas, Topbar, player, and primary-navigation spacing.
 
 - `viewport-fit=cover` is required.
 - Total mobile Topbar height includes `env(safe-area-inset-top)` plus the fixed 56px control row.
 - Search, menus, player sheets, route overlays, scroll offsets, and content placement use the same total Topbar height.
 - `html[data-safe-area-test="notch"]` provides a deterministic 47px test inset.
 - `--os-content-inset` owns ordinary mobile page padding. Do not double-inset a shared container.
-- Mobile content clears the Dock, optional player, and `env(safe-area-inset-bottom)` through shared shell spacing.
+- Mobile content clears primary navigation, the optional player, and `env(safe-area-inset-bottom)` through shared shell spacing.
 - Controls use `width: 100%` and `min-width: 0` where necessary; long content must not force viewport expansion.
 - Hub titles flex while action groups remain auto-width and right-aligned.
 - Mobile filter popovers stay inside both viewport insets and close on outside interaction.
@@ -140,10 +147,10 @@ The shell—not individual pages—owns mobile safe areas, Topbar, player, and D
 
 ## Page identity and information architecture
 
-- `https://app.44os.com/` is always titled `Discover`, not Store, even though it reuses catalog data and sections. Featured, Music, Books, Games, Merch, Beats, and Sample Packs change the content without renaming the page. `https://44os.com/` is the editorial landing page and never renders the application shell.
+- `https://app.44os.com/` is the Home front door. Signed-out Featured is titled `Discover`; signed-in Featured is `Welcome, [name]`. Its 1.2 tab order is Featured, Music, Beats, Samples, Merch, Books, then Games. Every Home category is the same in-route button treatment and uses `Browse Music`, `Browse Beats`, `Browse Samples`, `Browse Merch`, `Browse Books`, or `Browse Games`; Beats never becomes a differently styled link or introduces inline Search. `https://44os.com/` is the editorial landing page and never renders the application shell.
 - `/store` is `Store`.
 - Primary page titles do not include archived explanatory taglines.
-- Discover and Community place their horizontally scrollable category tabs directly below the title divider. Discover hides its filter on Featured and exposes category-relevant controls on every other tab. Community keeps its compose and filter actions aligned below desktop Search and Notifications.
+- Discover hides its filter on Featured and exposes category-relevant controls on every other tab. Community keeps its compose and filter actions aligned below desktop Search and Notifications.
 - Home, Community, and Library use the route-aware global Search overlay on mobile and desktop. Radio, Account, detail pages, and Account subpages do not show Search unless their route contract explicitly calls for it.
 - Radio is the intentional exception: the Now Playing composition is the page and does not repeat a page title.
 - Use `HubHero`, `HubSection`, and `SectionHeader` rather than page-specific title systems.
@@ -167,13 +174,13 @@ Artwork ratios are format-specific:
 
 Public Music/Books ordering is release year newest-first, then creator alphabetically, with stable catalog/date tie-breakers. Studio management lists remain creation-date newest-first. Merch always uses `catalog_items.sort_order` with deterministic fallbacks.
 
-Discover begins with `New in Music`, showing up to eight Music Items in public release-date order. `Recently Added` follows with up to eight eligible Items across Music, Books, Games, Merch, Beats, and Sample Packs in stable creation-time order, newest first; Items already present in `New in Music` are excluded. It then shows `New in Books`, `New in Games`, `New in Merch`, `Browse Beats`, and `New in Sample Packs` in the same order as the category tabs; each shelf contains up to eight eligible Items and uses the same card sizing and alignment as its catalog grid. `Creators You Follow` shows no more than one Item per followed creator.
+Discover begins with one large editorial feature selected from Admin Home. The selected published Music Item supplies the banner artwork and destination; if no curated Item is available, the newest Music release is the safe fallback. The banner uses a tall editorial proportion, a continuous edge-free image shade, no hover motion, and only `FEATURED RELEASE`, the Item title, and `Explore release →`—no descriptive sentence. `New Releases` then shows at most eight Items: the latest release from each creator in public release chronology, excluding the featured Item and falling back to that creator's prior release when available. After `New Creators` and nonempty `Creators You Follow`, `Browse Music` uses the next Music releases without duplicating either the feature or `New Releases`. The remaining shelf order is `Browse Beats`, `Browse Samples`, `Browse Merch`, `Browse Books`, then `Browse Games`. `Creators You Follow` shows no more than one Item per followed creator. Empty shelves are omitted. `New Creators` includes only published Creator/Admin profiles with an image, orders them by account creation time, and renders a circular portrait at the same width as a square Item card with only the creator name below it. The entire portrait/name unit opens the creator's first available published-content tab in the order Music, Beats, Books, Sample Packs, Games, then Merch; profiles without published Items use their normal Posts/default view. No inline follow or secondary action is shown. Product shelves use up to eight eligible Items and the same card sizing and alignment as the catalog grid.
 
-Category filters begin with `Sort by`. `Release date` uses public release chronology, while `Recently added` uses stable Item creation time and never bumps an edited Item. The `New in Music` arrow opens the complete Music catalog in release-date order; the `Recently Added` arrow opens Music in creation-time order. Shared section arrows are vertically centered on their title row, and the desktop Store/Home filter action aligns to the Topbar action column.
+Category filters begin with `Sort by`. `Release date` uses public release chronology, while `Recently added` remains a Browse sorting option that uses stable Item creation time and never bumps an edited Item. It is not a separate Discover shelf. The `New Releases` arrow opens the complete Music catalog in release-date order. Shared section arrows are vertically centered on their title row, and the desktop Store/Home filter action aligns to the Topbar action column.
 
-The former Admin Home-slot history remains preserved for audit, but it does not determine current Discover shelf membership or order.
+Admin Home is a narrow editorial control: an administrator selects one eligible published Music Item and supplies an audit reason. It controls only the Discover banner, not automatic shelf membership or order; its immutable prior slot history remains preserved.
 
-Library `All` uses the stable section order Music, Books, Games, Beats, then Sample Packs and omits empty sections. A selected Library category displays only that format and does not repeat its name as a section heading. Library excludes physical Merch.
+Library `All` uses the stable section order Music, Beats, Sample Packs, Books, then Games and omits empty sections. Its dockable rail shows All plus only the content categories present in that member's Library. A selected Library category displays only that format and does not repeat its name as a section heading. Library excludes physical Merch.
 
 Item cards share stable artwork, title, metadata, and action placement. Hover does not scale layout.
 
@@ -209,7 +216,7 @@ Library detail uses one primary format action:
 - Book: Read.
 - Sample Pack: Download.
 
-Beat detail uses Play for the tagged preview. A purchased Beat also shows the immutable license number, tier, status, terms digest and full terms, plus only the private MP3/WAV/stem files granted by that tier.
+Beat Store detail uses **Buy License** in place of Add to Library and scrolls that action to the license choices. Its public section order is **Preview**, **Licenses**, then **Product Details**. Product Details owns BPM, key, time signature, moods, instruments, sample status/disclosure, and tags instead of generic track counts. Each aligned license row exposes price, **License Info**, then the rightmost **Add to Cart** (or **View Cart** once selected); License Info opens a centered, focus-managed dialog above a full-window dark scrim with an explicit close control. Beat detail omits Reviews and filters **More from the creator** to other Beats, retaining a clear empty state when none exist. Adding an offer to Cart does not weaken the fail-closed Checkout boundary: the server still revalidates runtime controls, seller eligibility, exact terms, offer state, price, and files before accepting payment. A purchased Beat shows the immutable license number, tier, status, terms digest and full terms, plus only the private MP3/WAV/stem files granted by that tier.
 
 An active downloadable entitlement may add Download beside Play or Read. Music then exposes per-track downloads; Books and Sample Packs use short-lived authorized asset links. Refund/revocation removes current access without deleting historical presentation. Book/Sample Pack pages do not add a redundant View Creator action; Music does not add Shuffle.
 
@@ -222,7 +229,7 @@ The shared music player is the only audio engine for Music, Store/Library previe
 - In expanded Now Playing, artist opens the profile, artwork opens the source release, and title opens the release with the current track selected.
 - Expanded Now Playing is transparent and shadowless over the shell.
 - Desktop Queue divides the workspace with one hairline. Mobile Queue replaces the player sheet at the same height; its close action returns to Now Playing first.
-- Player, Queue, and mobile Dock meet without a gap.
+- Player, Queue, and primary mobile navigation meet without a gap.
 
 Radio is a centered full-bleed composition between shell controls: artwork, Now Playing, track, text-only artist, and Stream/Stop. It uses no separate opaque hero panel or scroll-heavy layout.
 
@@ -244,13 +251,17 @@ Profiles:
 - Registration and Edit Profile accept 3–32 uppercase or lowercase ASCII letters, numbers, and underscores. The chosen capitalization renders everywhere, while availability and routing remain case-insensitive.
 - Populated tabs appear in the stable order Posts, Music, Books, Sample Packs, Merch, Events.
 - Tabs are flat, horizontally scrollable, separated by hairlines, and use an underline for the active state.
-- Other-user actions are Follow then Message. Owner actions are Edit Profile then Open Studio.
+- Other-user actions are Follow then Message. Owner profiles omit large identity-row actions and instead expose one circular glass pencil button in the upper-right page action column; it opens Edit Profile. Studio remains available from Account rather than being duplicated on the profile.
 - Mobile action pairs occupy equal columns.
 - External destinations appear as compact non-wrapping monochrome icon rows with recognizable glyphs, descriptive accessible names, and visible focus.
 
-Inbox uses a two-column list/thread desktop layout and distinct mobile list/thread states. Mobile thread navigation uses the global Topbar back control. Incoming and outgoing bubbles remain visually distinct; the composer clears the Dock. New Message places recipient search at the top and the composer at the bottom without a redundant Cancel control.
+Inbox uses a two-column list/thread desktop layout and distinct mobile list/thread states. Mobile thread navigation uses the global Topbar back control. Incoming and outgoing bubbles remain visually distinct; the composer clears primary navigation. New Message places recipient search at the top and the composer at the bottom without a redundant Cancel control.
 
 Notifications show image/icon, title, description, and dismissal. They do not add uppercase event-kind labels or full date columns that compete with mobile width.
+
+The installed macOS and Windows shells reuse the same **Stay connected** permission prompt and Device Notifications setting. Their narrowly scoped native bridge may display new activity while the desktop app is open or minimized. Copy must not promise delivery after the app is fully quit; background remote push remains a separately approved platform project.
+
+The macOS application menu includes **Settings…** under 44OS. Its **View** menu mirrors the focused Account destinations—Profile, Studio, Orders, Messages, and Settings—and delegates navigation back to the authenticated web application. **Help** contains **44OS Support**. It does not duplicate Log Out.
 
 ## Studio UI
 
@@ -320,9 +331,9 @@ Interactive Items:
 - Narrow/mobile devices stop before session issuance and show Desktop Required.
 - The compiled MASK runtime has no Unity template border or redundant fullscreen control. Its isolated page fills the launch window, begins only after the member selects Play MASK, and keeps pointer-lock initiation inside that user gesture.
 
-Beat surfaces remain completely absent unless the client review flag is enabled. When reviewed, they use the same Item composition, shared player, Glass/Paper system, device recovery, and responsive/accessibility rules. Inactive license versions or commerce always look unavailable, never purchasable.
+Beat catalog and Studio surfaces are a permanent 1.2 destination rather than a deployment-flagged preview. Server-side seller, offer, template, file, tax, Stripe, Beat-runtime, and general-commerce controls remain authoritative, and inactive license versions or failed controls always look unavailable, never purchasable.
 
-Settings Appearance contains Theme and Accent on one two-column row. Theme is a dropdown; accents are Amber, Sage, Ocean, and Violet. Account Country is the only region/currency choice and automatically determines display and creator-local currency. There is no Landing App or standalone currency selector.
+Settings is one continuous page ordered Appearance, Account, and Notifications; canonical hash links scroll to the matching section. Appearance presents Theme and Accent as separate full-width rows aligned to the left. Every Theme and Accent pill uses the same width with its dot and label centered. Theme uses circular System, Light, and Dark selectors matching the Amber, Sage, Ocean, and Violet Accent selectors; System is represented by a half-light, half-dark circle. Account Country is the only region/currency choice and automatically determines display and creator-local currency. There is no Landing App or standalone currency selector.
 
 ## Admin UI
 

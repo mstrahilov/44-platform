@@ -11,8 +11,8 @@ import type { Product } from '@/lib/products';
 import { creatorHref } from '@/lib/platform';
 import { useAuth } from '@/lib/useAuth';
 import { hideLibraryItem, listVisibleLibraryItems } from '@/lib/domain/library';
-import { FilterPopover } from '@/components/FilterPopover';
 import { Ui44TextInput } from '@/components/ui44/Inputs';
+import { SectionTab, SectionTabs } from '@/components/SectionTabs';
 
 type LibraryFilter = 'all' | 'music' | 'book' | 'interactive' | 'beats' | 'asset';
 
@@ -36,11 +36,21 @@ const FILTER_LABELS: Record<LibraryFilter, string> = {
 
 const LIBRARY_GROUP_ORDER: Array<{ filter: Exclude<LibraryFilter, 'all'>; label: string }> = [
   { filter: 'music', label: 'Music' },
-  { filter: 'book', label: 'Books' },
-  { filter: 'interactive', label: 'Games' },
   { filter: 'beats', label: 'Beats' },
   { filter: 'asset', label: 'Sample Packs' },
+  { filter: 'book', label: 'Books' },
+  { filter: 'interactive', label: 'Games' },
 ];
+
+const LIBRARY_FILTER_ORDER: LibraryFilter[] = ['all', 'music', 'beats', 'asset', 'book', 'interactive'];
+const LIBRARY_FILTER_HREFS: Record<LibraryFilter, string> = {
+  all: '/library',
+  music: '/library/music',
+  beats: '/library/beats',
+  asset: '/library/sample-packs',
+  book: '/library/books',
+  interactive: '/library/games',
+};
 
 function isBeatProduct(product: Product) {
   return product.browse_type?.slug === 'beat' || product.capability_keys?.includes('beat_licensing') || Boolean(product.beat);
@@ -134,6 +144,16 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
       }))
       .filter(group => group.rows.length > 0);
   }, [activeFilter, visibleRows]);
+  const libraryFilters = LIBRARY_FILTER_ORDER.filter(filter => (
+    filter === 'all' || filter === activeFilter || availableFilters.includes(filter)
+  ));
+  const libraryTopbarTabs = libraryFilters.map(filter => ({
+    id: filter,
+    label: filter === 'asset' ? 'Samples' : FILTER_LABELS[filter],
+    href: LIBRARY_FILTER_HREFS[filter],
+    active: activeFilter === filter,
+    variant: 'section' as const,
+  }));
 
   if (authLoading) {
     return <PageShell><CenteredMessage status>Loading...</CenteredMessage></PageShell>;
@@ -179,22 +199,16 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
                 <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
                 <Ui44TextInput surface="bare" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search Library" aria-label="Search Library" />
               </label>
-              <FilterPopover label="Filter Library" active={activeFilter !== 'all'}>
-                {({ close }) => <>
-                  {(['all', ...availableFilters] as LibraryFilter[]).map(filter => (
-                    <button key={filter} type="button" className={activeFilter === filter ? 'ui44-paper-menu-item ui44-paper-menu-item-selected page-filter-option page-filter-option-active' : 'ui44-paper-menu-item page-filter-option'} onClick={event => {
-                      setActiveFilter(filter);
-                      event.currentTarget.blur();
-                      close();
-                    }}>
-                      {FILTER_LABELS[filter]}
-                    </button>
-                  ))}
-                </>}
-              </FilterPopover>
             </div>
           )}
         />
+        <SectionTabs ariaLabel="Library categories" dockToTopbar topbarTabs={libraryTopbarTabs}>
+          {libraryFilters.map(filter => (
+            <SectionTab key={filter} href={LIBRARY_FILTER_HREFS[filter]} active={activeFilter === filter}>
+              {filter === 'asset' ? 'Samples' : FILTER_LABELS[filter]}
+            </SectionTab>
+          ))}
+        </SectionTabs>
         {error ? (
           <EmptyMessage>{error}</EmptyMessage>
         ) : visibleRows.length === 0 ? (
@@ -231,7 +245,7 @@ function LibraryCard({ row, onRemove }: { row: LibraryRow; onRemove: (row: Libra
   const entries: ContextMenuEntry[] = [
     { id: 'open', label: `Open ${label}`, href },
     { id: 'creator', label: 'View Creator', href: creatorLink },
-    { id: 'pin', label: 'Pin to Dock', onSelect: () => pinDockItem({
+    { id: 'pin', label: 'Pin to Sidebar', onSelect: () => pinDockItem({
       id: `library:${row.id}`,
       label: product.title,
       href,
@@ -239,7 +253,7 @@ function LibraryCard({ row, onRemove }: { row: LibraryRow; onRemove: (row: Libra
       kind: experience === 'music' ? 'music' : experience === 'book' ? 'book' : experience === 'asset' ? 'asset' : 'item',
       imageUrl: image ?? null,
     }) },
-    { id: 'pin-creator', label: 'Pin Creator to Dock', onSelect: () => pinDockItem({
+    { id: 'pin-creator', label: 'Pin Creator to Sidebar', onSelect: () => pinDockItem({
       id: `profile:${product.creators?.id ?? creatorLink}`,
       label: creatorName,
       href: creatorLink,

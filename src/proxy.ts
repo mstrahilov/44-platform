@@ -9,6 +9,8 @@ const INTERNAL_MARKETING_PATH = '/marketing-surface';
 const LOCAL_PREVIEW_PATH = '/landing-preview';
 const RELEASES_PATH = '/releases';
 const INTERNAL_RELEASES_PATH = `${INTERNAL_MARKETING_PATH}${RELEASES_PATH}`;
+const DOWNLOAD_PATH = '/download';
+const INTERNAL_DOWNLOAD_PATH = `${INTERNAL_MARKETING_PATH}${DOWNLOAD_PATH}`;
 
 function isPublicAsset(pathname: string) {
   return pathname.startsWith('/_next/')
@@ -64,6 +66,10 @@ export function proxy(request: NextRequest) {
     return marketingRewrite(request, INTERNAL_RELEASES_PATH);
   }
 
+  if (local && pathname === DOWNLOAD_PATH && process.env.NODE_ENV !== 'production') {
+    return marketingRewrite(request, INTERNAL_DOWNLOAD_PATH);
+  }
+
   if (pathname === INTERNAL_MARKETING_PATH || pathname.startsWith(`${INTERNAL_MARKETING_PATH}/`)) {
     return new NextResponse(null, { status: 404 });
   }
@@ -97,7 +103,16 @@ export function proxy(request: NextRequest) {
     return marketingRewrite(request, INTERNAL_RELEASES_PATH);
   }
 
-  if (pathname === '/download' || pathname.startsWith('/download/')) {
+  if (pathname === DOWNLOAD_PATH) {
+    if (isWww) {
+      const destination = new URL(DOWNLOAD_PATH, MARKETING_ORIGIN);
+      destination.search = request.nextUrl.search;
+      return NextResponse.redirect(destination, 308);
+    }
+    return marketingRewrite(request, INTERNAL_DOWNLOAD_PATH);
+  }
+
+  if (pathname.startsWith(`${DOWNLOAD_PATH}/`)) {
     return new NextResponse(null, { status: 404 });
   }
 

@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
@@ -51,6 +50,7 @@ import {
 } from '@/lib/social';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { useAuth } from '@/lib/useAuth';
+import { SectionTab, SectionTabs } from '@/components/SectionTabs';
 
 type CommunityProfileState = {
   userId: string;
@@ -498,18 +498,27 @@ function CommunityPageContent() {
       <main className="app-page community-app-page community-v11-page">
         <div className="community-v11-opening">
           <HubHero title="Community" actions={communityTools} />
-          <nav className="community-intent-rail" aria-label="Community post types">
+          <SectionTabs
+            ariaLabel="Community post types"
+            className="community-intent-rail"
+            dockToTopbar
+            topbarTabs={INTENT_TABS.map(tab => ({
+              ...tab,
+              active: activeIntent === tab.id,
+              variant: 'section' as const,
+            }))}
+          >
             {INTENT_TABS.map(tab => (
-              <Link
+              <SectionTab
                 key={tab.id}
                 href={tab.href}
                 className="community-intent-tab"
-                aria-current={activeIntent === tab.id ? 'page' : undefined}
+                active={activeIntent === tab.id}
               >
                 {tab.label}
-              </Link>
+              </SectionTab>
             ))}
-          </nav>
+          </SectionTabs>
         </div>
 
         {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div>}

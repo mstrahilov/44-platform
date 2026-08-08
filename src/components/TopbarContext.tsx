@@ -8,6 +8,7 @@ export type TopbarTab = {
   href?: string;
   onClick?: () => void;
   active?: boolean;
+  variant?: 'pill' | 'section';
 };
 
 type TopbarContextValue = {

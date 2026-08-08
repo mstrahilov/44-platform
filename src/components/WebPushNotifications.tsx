@@ -13,18 +13,28 @@ import {
   webPushSupported,
   type WebPushState,
 } from '@/lib/webPush';
+import {
+  desktopNotificationsSupported,
+  disableDesktopNotifications,
+  enableDesktopNotifications,
+  getDesktopNotificationState,
+} from '@/lib/deviceNotifications';
 
 function useWebPushState() {
   const [state, setState] = useState<WebPushState>('unsupported');
   const [busy, setBusy] = useState(false);
 
   const refresh = useCallback(async () => {
-    try { setState(await getWebPushState()); }
+    try {
+      setState(desktopNotificationsSupported()
+        ? await getDesktopNotificationState()
+        : await getWebPushState());
+    }
     catch { setState('error'); }
   }, []);
 
   useEffect(() => {
-    void register44ServiceWorker().catch(() => undefined);
+    if (!desktopNotificationsSupported()) void register44ServiceWorker().catch(() => undefined);
     void Promise.resolve().then(refresh);
     window.addEventListener(WEB_PUSH_STATE_UPDATED, refresh);
     return () => window.removeEventListener(WEB_PUSH_STATE_UPDATED, refresh);
@@ -32,14 +42,26 @@ function useWebPushState() {
 
   async function enable(onPermissionDecision?: (permission: NotificationPermission) => void) {
     setBusy(true);
-    try { setState(await enableWebPush(onPermissionDecision)); }
+    try {
+      if (desktopNotificationsSupported()) {
+        const nextState = await enableDesktopNotifications();
+        onPermissionDecision?.(nextState === 'enabled' ? 'granted' : 'denied');
+        setState(nextState);
+      } else {
+        setState(await enableWebPush(onPermissionDecision));
+      }
+    }
     catch { setState('error'); }
     finally { setBusy(false); }
   }
 
   async function disable() {
     setBusy(true);
-    try { setState(await disableWebPush()); }
+    try {
+      setState(desktopNotificationsSupported()
+        ? await disableDesktopNotifications()
+        : await disableWebPush());
+    }
     catch { setState('error'); }
     finally { setBusy(false); }
   }
@@ -53,13 +75,15 @@ export function WebPushNotificationPrompt() {
   const [dismissed, setDismissed] = useState(true);
 
   useEffect(() => {
-    if (!user || !webPushSupported() || !isStandaloneWebApp()) return;
+    const desktop = desktopNotificationsSupported();
+    if (!user || (!desktop && (!webPushSupported() || !isStandaloneWebApp()))) return;
     const key = `44-web-push-prompt-dismissed:${user.id}`;
     void Promise.resolve().then(() => setDismissed(window.localStorage.getItem(key) === 'true'));
-    void syncExistingWebPushSubscription().catch(() => undefined);
+    if (!desktop) void syncExistingWebPushSubscription().catch(() => undefined);
   }, [user]);
 
-  if (!user || dismissed || state !== 'default' || !isStandaloneWebApp()) return null;
+  const eligible = desktopNotificationsSupported() || isStandaloneWebApp();
+  if (!user || dismissed || state !== 'default' || !eligible) return null;
 
   function dismiss() {
     window.localStorage.setItem(`44-web-push-prompt-dismissed:${user!.id}`, 'true');

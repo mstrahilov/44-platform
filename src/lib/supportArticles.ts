@@ -64,7 +64,7 @@ export const SUPPORT_ARTICLES: SupportArticle[] = [
     keywords: ['navigation', 'dock', 'home', 'browse', 'store', 'library', 'radio', 'community', 'search', 'settings'],
     sections: [
       { heading: 'Main destinations', bullets: ['Discover highlights new work and opens the complete catalog.', 'Community contains posts, questions, collaboration, and Creator updates.', 'Radio plays the shared 44 Radio stream.', 'Library contains work you saved, added, or purchased.', 'Account opens Profile, Notifications, Inbox, Orders, Creator tools, Support, Settings, and Log Out.'] },
-      { heading: 'Search and account destinations', paragraphs: ['On mobile, Search appears at the top of Discover, Community, and Library, while Account is the fifth Dock destination. Detail and account-tool pages use Back instead. On desktop, Search and the compact account menu remain in the top bar.'] },
+      { heading: 'Search and account destinations', paragraphs: ['On mobile, Search appears at the top of Discover, Community, and Library, while Account is the fifth primary navigation destination. Detail and account-tool pages use Back instead. On desktop, Search and the compact account menu remain in the top bar.'] },
       { heading: 'Change appearance', paragraphs: ['Signed-in Members can open Settings and use Appearance to choose a theme and accent color.'] },
     ],
     actions: [{ label: 'Open Settings', href: '/settings' }],
@@ -117,7 +117,7 @@ export const SUPPORT_ARTICLES: SupportArticle[] = [
     category: 'account-profile',
     keywords: ['profile', 'avatar', 'bio', 'username', 'display name', 'email change', 'secure email'],
     sections: [
-      { heading: 'Public profile', paragraphs: ['Your display name, username, avatar, bio, and approved links help people recognize you. Open your own Profile and choose Edit Profile to update available fields.'] },
+      { heading: 'Public profile', paragraphs: ['Your display name, username, avatar, bio, and approved links help people recognize you. Open your own Profile and use the pencil button to update available fields.'] },
       { heading: 'Change your login email', paragraphs: ['Email changes are security-sensitive. Open Settings and follow the email-change flow. You may need to confirm the change from both the old and new addresses before it becomes active.'] },
       { heading: 'Username and links', paragraphs: ['Choose a username you are comfortable displaying publicly. Creator external links accept only supported, validated destinations and appear only after they are saved successfully.'] },
     ],
@@ -361,7 +361,7 @@ export const SUPPORT_ARTICLES: SupportArticle[] = [
     category: 'creators-studio',
     keywords: ['studio', 'publish', 'upload', 'music', 'book', 'sample pack', 'draft', 'archive', 'remove'],
     sections: [
-      { heading: 'Supported creator formats', paragraphs: ['Approved Creators can manage Music, Books, Sample Packs, Events, and Creator Updates in Studio. Creator Merch and licensed Beats remain outside the active creator-selling scope unless separately approved.'] },
+      { heading: 'Supported creator formats', paragraphs: ['Approved Creators can manage Music, Books, Sample Packs, Beats, Events, and Creator Updates in Studio. Standard non-exclusive Beat licenses may be sold only after the Creator, Beat, files, offers, and exact license terms pass the separate paid-sale and publication controls. Creator Merch, split Beat sales, and exclusive Beat sales remain outside the active creator-selling scope unless separately approved.'] },
       { heading: 'Prepare the Item', bullets: ['Use accurate title, creator, year, artwork, description where supported, and taxonomy.', 'Upload only files you own or have permission to distribute.', 'For Books, provide the protected full PDF.', 'For Sample Packs, provide the protected ZIP and optional public audio previews.', 'Set only prices and availability you are authorized to offer.'] },
       { heading: 'Save, publish, or remove', paragraphs: ['Publication makes an eligible Item public. Studio forms preserve in-progress values on the current device during common refresh or app-switch interruptions. Remove is archival rather than destructive deletion: Store visibility ends while permanent IDs, buyer history, entitlements, and audit records are preserved as required.'] },
     ],

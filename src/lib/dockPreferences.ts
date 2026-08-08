@@ -1,10 +1,11 @@
 'use client';
 
 /**
- * Dock preferences — localStorage-first (Supabase `user_dock_items` /
- * Server persistence can be added later when cross-device Dock sync is built.
+ * Sidebar preferences — localStorage-first (the legacy storage keys retain
+ * their `dock` names so existing device preferences continue to work).
+ * Server persistence can be added later when cross-device Sidebar sync is built.
  *
- * All reads/writes go through this module so the Dock and Settings Appearance
+ * All reads/writes go through this module so the Sidebar and Settings Appearance
  * stay in sync via a window event.
  */
 
@@ -26,6 +27,10 @@ export const DOCK_MODE_STORAGE_KEY = '44-dock-mode';
 export const DOCK_HIDDEN_STORAGE_KEY = '44-dock-hidden';
 export const DOCK_ORDER_STORAGE_KEY = '44-dock-order';
 export const DOCK_PINNED_STORAGE_KEY = '44-dock-pinned';
+export const SIDEBAR_WIDTH_STORAGE_KEY = '44-sidebar-width';
+export const SIDEBAR_COMPACT_WIDTH = 76;
+export const SIDEBAR_MIN_EXPANDED_WIDTH = 196;
+export const SIDEBAR_MAX_WIDTH = 280;
 const DOCK_PREFERENCES_UPDATED = '44-dock-preferences-updated';
 const DEFAULT_HIDDEN_DOCK_APP_IDS: OSAppId[] = [];
 const DEFAULT_DOCK_ORDER: OSAppId[] = ['library', 'store', 'radio', 'community', 'search', 'studio', 'support', 'settings'];
@@ -44,6 +49,22 @@ export function getDockMode(): DockMode {
 export function setDockMode(mode: DockMode) {
   if (typeof window === 'undefined') return;
   window.localStorage.setItem(DOCK_MODE_STORAGE_KEY, mode);
+  window.dispatchEvent(new Event(DOCK_PREFERENCES_UPDATED));
+}
+
+export function getSidebarWidth(): number {
+  if (typeof window === 'undefined') return SIDEBAR_MAX_WIDTH;
+  const raw = window.localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY);
+  if (raw === null) return SIDEBAR_MAX_WIDTH;
+  const stored = Number(raw);
+  if (!Number.isFinite(stored)) return SIDEBAR_MAX_WIDTH;
+  return Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_EXPANDED_WIDTH, Math.round(stored)));
+}
+
+export function setSidebarWidth(width: number) {
+  if (typeof window === 'undefined') return;
+  const normalized = Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_EXPANDED_WIDTH, Math.round(width)));
+  window.localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(normalized));
   window.dispatchEvent(new Event(DOCK_PREFERENCES_UPDATED));
 }
 
@@ -93,6 +114,7 @@ export function resetDockPreferences() {
   window.localStorage.setItem(DOCK_HIDDEN_STORAGE_KEY, JSON.stringify(DEFAULT_HIDDEN_DOCK_APP_IDS));
   window.localStorage.setItem(DOCK_ORDER_STORAGE_KEY, JSON.stringify(DEFAULT_DOCK_ORDER));
   window.localStorage.removeItem(DOCK_PINNED_STORAGE_KEY);
+  window.localStorage.removeItem(SIDEBAR_WIDTH_STORAGE_KEY);
   window.dispatchEvent(new Event(DOCK_PREFERENCES_UPDATED));
 }
 
@@ -132,9 +154,10 @@ function isPinnedDockItem(value: unknown): value is PinnedDockItem {
     && (item.imageUrl === undefined || item.imageUrl === null || typeof item.imageUrl === 'string');
 }
 
-/** Live Dock preferences for components. Re-renders on any preference change. */
-export function useDockPreferences(): { mode: DockMode; hiddenIds: OSAppId[]; order: OSAppId[]; pinnedItems: PinnedDockItem[] } {
+/** Live Sidebar preferences for components. Re-renders on any preference change. */
+export function useDockPreferences(): { mode: DockMode; width: number; hiddenIds: OSAppId[]; order: OSAppId[]; pinnedItems: PinnedDockItem[] } {
   const [mode, setModeState] = useState<DockMode>('full');
+  const [width, setWidth] = useState(SIDEBAR_MAX_WIDTH);
   const [hiddenIds, setHiddenIds] = useState<OSAppId[]>([]);
   const [order, setOrder] = useState<OSAppId[]>(DEFAULT_DOCK_ORDER);
   const [pinnedItems, setPinnedItems] = useState<PinnedDockItem[]>([]);
@@ -142,6 +165,7 @@ export function useDockPreferences(): { mode: DockMode; hiddenIds: OSAppId[]; or
   useEffect(() => {
     function sync() {
       setModeState(getDockMode());
+      setWidth(getSidebarWidth());
       setHiddenIds(getHiddenDockAppIds());
       setOrder(getDockAppOrder());
       setPinnedItems(getPinnedDockItems());
@@ -155,5 +179,5 @@ export function useDockPreferences(): { mode: DockMode; hiddenIds: OSAppId[]; or
     };
   }, []);
 
-  return { mode, hiddenIds, order, pinnedItems };
+  return { mode, width, hiddenIds, order, pinnedItems };
 }

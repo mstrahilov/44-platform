@@ -4,13 +4,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useContextMenu, COPY_TO_CLIPBOARD_TOAST_EVENT } from '@/components/ContextMenu';
 import { useAuth } from '@/lib/useAuth';
-import type { Product } from '@/lib/products';
+import type { BeatLicenseOfferSummary, Product } from '@/lib/products';
 import { productMeta } from '@/lib/products';
 import { isFreeLibraryClaim } from '@/lib/libraryContent';
 import { browseIndexHref, getProductExperience, productBrowseHref, productLibraryHref } from '@/lib/experience';
 import { creatorHref } from '@/lib/platform';
 import { ProductGrid, ProductCard, SectionHeader } from '@/components/Ui';
 import { ProductReviewsSection } from '@/components/ProductReviewsSection';
+import { InformationDialog } from '@/components/InformationDialog';
 import { SocialPostRow } from '@/components/Social';
 import { LibraryVideoEmbedsSection, ProductDetailHeader, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
@@ -39,10 +40,10 @@ import { SamplePackExperience } from '@/components/SamplePackExperience';
 import { Ui44OverflowTrackTitle } from '@/components/ui44/OverflowTrackTitle';
 import { Ui44SectionArrow } from '@/components/ui44/Controls';
 import { beatReviewSurfacesEnabled, loadBeatCatalogSummaries } from '@/lib/domain/beats';
-import { COMMERCE_TEST_MODE, paidSalesUiAvailable } from '@/lib/commerceAvailability';
 import { listActiveMerchVariants, type MerchVariant } from '@/lib/domain/merchVariants';
 import { listPublicMerchImages, type MerchProductImage } from '@/lib/domain/merchImages';
 import { listReleaseVideoEmbeds, type ReleaseVideoEmbed } from '@/lib/domain/releaseFeatures';
+import { listVisibleLibraryItemIds } from '@/lib/domain/library';
 
 type ProductTrack = {
   id: string;
@@ -93,6 +94,7 @@ function ProductStoreDetail({
   const [itemCommunity, setItemCommunity] = useState<ItemCommunityFeed>(EMPTY_ITEM_COMMUNITY);
   const [toast, setToast] = useState<AchievementToastData | null>(null);
   const [owned, setOwned] = useState(false);
+  const [ownedProductIds, setOwnedProductIds] = useState<Set<string>>(new Set());
   const [ownedLibraryItemId, setOwnedLibraryItemId] = useState<string | null>(null);
   const [ownedAcquisitionType, setOwnedAcquisitionType] = useState<string | null>(null);
   const [hasActiveDownload, setHasActiveDownload] = useState(false);
@@ -191,8 +193,12 @@ function ProductStoreDetail({
   useEffect(() => {
     async function fetchOwnership(userId: string) {
       if (!product) return;
-      const data = await getItemLibraryOwnership(userId, product.id);
+      const [data, visibleItemIds] = await Promise.all([
+        getItemLibraryOwnership(userId, product.id),
+        listVisibleLibraryItemIds(userId),
+      ]);
       setOwned(Boolean(data));
+      setOwnedProductIds(new Set(visibleItemIds));
       setOwnedLibraryItemId(data?.id ?? null);
       setOwnedAcquisitionType(data?.acquisition_type ?? null);
       setHasActiveDownload(data?.has_active_download ?? false);
@@ -200,6 +206,7 @@ function ProductStoreDetail({
     if (user) fetchOwnership(user.id);
     else Promise.resolve().then(() => {
       setOwned(false);
+      setOwnedProductIds(new Set());
       setOwnedLibraryItemId(null);
       setOwnedAcquisitionType(null);
       setHasActiveDownload(false);
@@ -392,6 +399,7 @@ function ProductStoreDetail({
     cartHasItem: isMerch ? selectedVariantInCart : cart.has(product.id),
     onAddToLibrary: addToLibrary,
     onAddToCart: addProductToCart,
+    onBuyLicense: () => document.getElementById('beat-licenses')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
     merchOptionState: isMerch ? !merchVariants.length ? 'unavailable' : selectedMerchVariant ? 'ready' : 'choose' : undefined,
   });
   const contentHeading = getContentHeading(product);
@@ -466,8 +474,6 @@ function ProductStoreDetail({
           Converted display price · <a href="https://www.exchangerate-api.com" target="_blank" rel="noreferrer">Rates by Exchange Rate API</a>
         </p>
       ) : null}
-
-      {isBeat && product.beat ? <BeatLicenseReviewPanel product={product} /> : null}
 
       {(((['book', 'asset'].includes(productExperience) || isBeat) && productDescription) || isMerch) ? (
         <div className="view-section item-description-section">
@@ -548,23 +554,27 @@ function ProductStoreDetail({
         ) : null}
       </div> : null}
 
-      {isReleasePage ? <LibraryVideoEmbedsSection embeds={videoEmbeds} /> : null}
+      {isBeat && product.beat ? <BeatLicensePanel product={product} /> : null}
+
+      {isReleasePage && !isBeat ? <LibraryVideoEmbedsSection embeds={videoEmbeds} /> : null}
 
       <ProductDetailsSection details={productDetails} />
 
-      {related.length > 0 && (
+      {isReleasePage && isBeat ? <LibraryVideoEmbedsSection embeds={videoEmbeds} /> : null}
+
+      {(related.length > 0 || isBeat) && (
         <div className="view-section">
           <SectionHeader
             title="More from the creator"
             action={<Ui44SectionArrow href={creatorMoreLink} label={`View more from ${creatorDisplayName}`} />}
           />
-          <ProductGrid className="store-mobile-shelf">
-            {related.map(item => <ProductCard key={item.id} product={item} />)}
-          </ProductGrid>
+          {related.length > 0 ? <ProductGrid className="store-mobile-shelf">
+            {related.map(item => <ProductCard key={item.id} product={item} owned={ownedProductIds.has(item.id)} />)}
+          </ProductGrid> : <p className="os-type-body view-description">No other Beats from this creator yet.</p>}
         </div>
       )}
 
-      <ProductReviewsSection productId={product.id} canPost={owned} />
+      {!isBeat ? <ProductReviewsSection productId={product.id} canPost={owned} /> : null}
 
       {itemCommunity.posts.length > 0 && (
         <div className="view-section">
@@ -715,6 +725,7 @@ function resolveStoreActions({
   cartHasItem,
   onAddToLibrary,
   onAddToCart,
+  onBuyLicense,
   merchOptionState,
 }: {
   product: Product;
@@ -726,6 +737,7 @@ function resolveStoreActions({
   cartHasItem: boolean;
   onAddToLibrary: () => void;
   onAddToCart: () => void;
+  onBuyLicense: () => void;
   merchOptionState?: 'ready' | 'choose' | 'unavailable';
 }): ProductDetailAction[] {
   const experience = getProductExperience(product);
@@ -733,6 +745,13 @@ function resolveStoreActions({
   const paidDownloadAvailable = product.download_purchase_enabled
     && product.price_cents > 0
     && product.paid_offer_available === true;
+  if (product.beat) {
+    return [{
+      label: 'Buy License',
+      onClick: onBuyLicense,
+      disabled: product.beat.licenseOffers.length === 0,
+    }];
+  }
   if (experience === 'music') {
     return [
       owned
@@ -796,7 +815,7 @@ function resolveStoreActions({
 }
 
 function getContentHeading(product: Product) {
-  if (product.beat) return 'Tagged Preview';
+  if (product.beat) return 'Preview';
   const experience = getProductExperience(product);
   if (experience === 'music') return 'Tracklist';
   if (experience === 'book') return 'Book Sample';
@@ -824,6 +843,23 @@ function buildProductDetails({
   const releaseDate = formatProductReleaseDate(product.release_date, product.year);
   const totalTrackSeconds = tracks.reduce((total, track) => total + (getTrackDurationSeconds(track, inferredTrackDurations) ?? 0), 0);
   const tags = (product.browse_tags ?? []).map(tag => tag.label).filter(Boolean).join(', ');
+  if (product.beat) {
+    const beat = product.beat;
+    const key = beat.keyNotApplicable
+      ? 'Atonal / N/A'
+      : [beat.keyRoot, humanizeBeatValue(beat.keyMode)].filter(Boolean).join(' ');
+    return [
+      releaseDate ? { label: 'Release date', value: releaseDate } : null,
+      { label: 'BPM', value: String(beat.bpm) },
+      { label: 'Key', value: key },
+      { label: 'Time signature', value: beat.timeSignature },
+      beat.moods.length ? { label: 'Moods', value: beat.moods.join(', ') } : null,
+      beat.instruments.length ? { label: 'Instruments', value: beat.instruments.join(', ') } : null,
+      beat.sampleStatus ? { label: 'Sample status', value: humanizeBeatValue(beat.sampleStatus) } : null,
+      beat.sampleDisclosure ? { label: 'Sample disclosure', value: beat.sampleDisclosure } : null,
+      tags ? { label: 'Tags', value: tags } : null,
+    ].filter((detail): detail is ProductDetail => Boolean(detail?.value));
+  }
   return [
     releaseDate ? { label: 'Release date', value: releaseDate } : null,
     product.browse_category?.label ? { label: 'Category', value: product.browse_category.label } : null,
@@ -834,6 +870,12 @@ function buildProductDetails({
     experience === 'book' && bookContent?.total_pages ? { label: 'Pages', value: String(bookContent.total_pages) } : null,
     experience === 'asset' ? { label: 'Samples', value: String(sampleFiles.length) } : null,
   ].filter((detail): detail is ProductDetail => Boolean(detail?.value));
+}
+
+function humanizeBeatValue(value: string | null | undefined) {
+  return (value ?? '')
+    .replaceAll('_', ' ')
+    .replace(/\b\w/g, character => character.toUpperCase());
 }
 
 function ProductDetailsSection({ details }: { details: ProductDetail[] }) {
@@ -866,28 +908,54 @@ function formatTotalDuration(seconds: number) {
   return `${remainingSeconds} sec`;
 }
 
-function BeatLicenseReviewPanel({ product }: { product: Product }) {
+function BeatLicensePanel({ product }: { product: Product }) {
   const beat = product.beat;
   const cart = useCart();
+  const router = useRouter();
+  const [selectedOffer, setSelectedOffer] = useState<BeatLicenseOfferSummary | null>(null);
   if (!beat) return null;
-  return <div className="view-section beat-license-section">
+  function selectOffer(offer: BeatLicenseOfferSummary) {
+    if (cart.hasOffer(offer.id)) {
+      router.push('/cart');
+      return;
+    }
+    addToCart({
+      item_id: product.id,
+      offer_id: offer.id,
+      title: product.title,
+      creator: product.creators?.display_name || product.creator,
+      item_type: 'Beat',
+      cover_url: product.cover_url,
+      price_cents: offer.priceCents,
+      currency: offer.currency,
+      slug: product.slug,
+      href: productBrowseHref(product),
+      offer_title: offer.title,
+      tier_code: offer.tierCode,
+      included_files: offer.includedFileKinds,
+      terms_sha256: offer.termsSha256,
+    });
+  }
+
+  return <div className="view-section beat-license-section" id="beat-licenses">
     <div className="item-community-header item-community-section-header"><h2 className="view-section-title item-community-section-title">Licenses</h2></div>
-    <div className="beat-meta-strip" aria-label="Beat metadata">
-      <span>{beat.bpm} BPM</span><span>{beat.keyNotApplicable ? 'Atonal / N/A' : `${beat.keyRoot} ${beat.keyMode}`}</span><span>{beat.timeSignature}</span>
-    </div>
-    {beat.sampleDisclosure ? <p className="os-type-body beat-sample-disclosure"><strong>Sample disclosure:</strong> {beat.sampleDisclosure}</p> : null}
-    {beat.licenseOffers.length ? <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
-      {beat.licenseOffers.map(offer => <details className="beat-license-offer" key={offer.id}>
-        <summary className="dashboard-list-row">
-          <span className="dashboard-row-copy"><strong className="dashboard-row-title">{offer.title}</strong><span className="dashboard-row-subtitle">{offer.summary} · {offer.includedFileKinds.map(kind => kind.replaceAll('_', ' ')).join(', ')}</span></span>
-          <span className="dashboard-row-actions"><strong>{new Intl.NumberFormat('en-US', { style: 'currency', currency: offer.currency }).format(offer.priceCents / 100)}</strong>{offer.status === 'active' && paidSalesUiAvailable(product) ? <button type="button" className="os-button os-button-primary os-button-compact" onClick={event => { event.preventDefault(); addToCart({ item_id: product.id, offer_id: offer.id, title: product.title, creator: product.creators?.display_name || product.creator, item_type: 'Beat', cover_url: product.cover_url, price_cents: offer.priceCents, currency: offer.currency, slug: product.slug, href: productBrowseHref(product), offer_title: offer.title, tier_code: offer.tierCode, included_files: offer.includedFileKinds, terms_sha256: offer.termsSha256 }); }}>{cart.hasOffer(offer.id) ? 'Selected' : 'Choose'}</button> : <span className="dashboard-status-pill studio-status-pill-draft ui44-badge">Review only</span>}</span>
-        </summary>
-        <div className="beat-license-terms"><p className="os-type-body">{offer.termsText}</p><small>License terms digest: {offer.termsSha256 || 'Created when the standard terms are activated.'}</small></div>
-      </details>)}
+    {beat.licenseOffers.length ? <div className="beat-license-list ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
+      {beat.licenseOffers.map(offer => <article className="beat-license-offer" key={offer.id}>
+        <span className="beat-license-copy"><strong>{offer.title}</strong><span>{offer.summary}</span></span>
+        <span className="beat-license-actions">
+          <strong className="beat-license-price">{new Intl.NumberFormat('en-US', { style: 'currency', currency: offer.currency }).format(offer.priceCents / 100)}</strong>
+          <button type="button" className="os-button os-button-secondary os-button-compact" onClick={() => setSelectedOffer(offer)}>License Info</button>
+          <button type="button" className="os-button os-button-primary os-button-compact" onClick={() => selectOffer(offer)}>{cart.hasOffer(offer.id) ? 'View Cart' : 'Add to Cart'}</button>
+        </span>
+      </article>)}
     </div> : <p className="os-type-body view-description">No license tiers are enabled for this Beat.</p>}
-    <p className="os-type-meta">{COMMERCE_TEST_MODE
-      ? 'Local test mode is on. Checkout still revalidates every offer and license on the server.'
-      : 'Purchasing is unavailable while Beat commerce and approved legal templates are off.'}</p>
+    <InformationDialog open={Boolean(selectedOffer)} title={selectedOffer?.title ?? 'License Information'} onClose={() => setSelectedOffer(null)}>
+      {selectedOffer ? <>
+        <p>{selectedOffer.summary}</p>
+        <p className="information-dialog-meta"><strong>Includes:</strong> {selectedOffer.includedFileKinds.map(kind => kind.replaceAll('_', ' ')).join(', ')}</p>
+        <div className="information-dialog-terms">{selectedOffer.termsText}</div>
+      </> : null}
+    </InformationDialog>
   </div>;
 }
 

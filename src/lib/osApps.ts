@@ -1,8 +1,8 @@
 /**
  * 44OS App Registry
  *
- * The single source of truth for every app in the 44OS shell. The Dock,
- * Settings Appearance/Dock controls, Home quick-launch, and (later) context menus and the
+ * The single source of truth for every app in the 44OS shell. The Sidebar,
+ * Settings Appearance/Sidebar controls, Home quick-launch, and (later) context menus and the
  * Electron app menu all render from this registry — never from local
  * nav arrays.
  *
@@ -50,7 +50,7 @@ export type OSApp = {
   href: string;
   iconClass: string;
   children?: OSAppChild[];
-  /** Dock cluster: media, community, studio, account, system, or hidden legacy. */
+  /** Sidebar cluster: media, community, studio, account, system, or hidden legacy. */
   group: OSAppGroup;
   /** Only rendered for signed-in users. */
   requiresAuth?: boolean;
@@ -60,7 +60,7 @@ export type OSApp = {
   requiresAdmin?: boolean;
   /** Registered but not shipped yet — never rendered. */
   hidden?: boolean;
-  /** Cannot be hidden from the Dock via Settings. */
+  /** Cannot be hidden from the Sidebar via Settings. */
   locked?: boolean;
 };
 
@@ -98,7 +98,7 @@ export const OS_APPS: OSApp[] = [
     href: '/you',
     iconClass: 'os-icon-user',
     group: 'account',
-    hidden: true,
+    requiresAuth: true,
   },
   {
     id: 'store',
@@ -111,9 +111,7 @@ export const OS_APPS: OSApp[] = [
       { id: 'music', label: 'Music', href: '/store/music', iconClass: 'os-icon-music' },
       { id: 'books', label: 'Books', href: '/store/books', iconClass: 'os-icon-books' },
       { id: 'merch', label: 'Merch', href: '/store/merch', iconClass: 'os-icon-merch' },
-      ...(process.env.NEXT_PUBLIC_ENABLE_BEAT_REVIEW_SURFACES === 'true'
-        ? [{ id: 'beats', label: 'Beats', href: '/store/beats', iconClass: 'os-icon-music' }]
-        : []),
+      { id: 'beats', label: 'Beats', href: '/store/beats', iconClass: 'os-icon-music' },
       { id: 'assets', label: 'Sample Packs', href: '/store/sample-packs', iconClass: 'os-icon-assets' },
     ],
   },
@@ -245,9 +243,7 @@ export const OS_APPS: OSApp[] = [
       { id: 'overview', label: 'Overview', href: '/studio', iconClass: 'os-icon-dashboard' },
       { id: 'music', label: 'Music', href: '/studio#music', iconClass: 'os-icon-music' },
       { id: 'books', label: 'Books', href: '/studio#books', iconClass: 'os-icon-books' },
-      ...(process.env.NEXT_PUBLIC_ENABLE_BEAT_REVIEW_SURFACES === 'true'
-        ? [{ id: 'beats', label: 'Beats', href: '/studio#beats', iconClass: 'os-icon-music' }]
-        : []),
+      { id: 'beats', label: 'Beats', href: '/studio#beats', iconClass: 'os-icon-music' },
       { id: 'assets', label: 'Sample Packs', href: '/studio#sample-packs', iconClass: 'os-icon-assets' },
     ],
   },
@@ -270,11 +266,12 @@ export const OS_APPS: OSApp[] = [
   {
     id: 'settings',
     label: 'Settings',
-    description: 'Account, region, appearance, and Dock controls.',
+    description: 'Account, region, appearance, and Sidebar controls.',
     href: '/settings',
     iconClass: 'os-icon-settings',
     group: 'system',
     requiresAuth: true,
+    hidden: true,
     locked: true,
   },
 
@@ -289,7 +286,7 @@ export const OS_APPS: OSApp[] = [
   },
 ];
 
-export const DOCK_APP_IDS: OSAppId[] = ['library', 'store', 'radio', 'community', 'admin', 'support', 'settings'];
+export const DOCK_APP_IDS: OSAppId[] = ['library', 'store', 'radio', 'community', 'admin', 'support', 'you'];
 
 export function getOSApp(id: OSAppId): OSApp | undefined {
   return OS_APPS.find(app => app.id === id);
@@ -297,7 +294,7 @@ export function getOSApp(id: OSAppId): OSApp | undefined {
 
 /**
  * Which app owns the current route. Every route in the shell maps to
- * exactly one Dock app so the active state is always coherent.
+ * exactly one Sidebar app so the active state is always coherent.
  */
 export function getActiveOSAppId(pathname: string): OSAppId | '' {
   if (pathname.startsWith('/search')) return 'search';
@@ -326,13 +323,16 @@ export function getActiveOSAppId(pathname: string): OSAppId | '' {
   if (pathname.startsWith('/friends')) return 'community';
   if (pathname.startsWith('/calendar')) return 'community';
   if (pathname.startsWith('/community')) return 'community';
-  if (pathname.startsWith('/profile')) return 'profile';
-  if (pathname.startsWith('/inbox')) return 'inbox';
-  if (pathname.startsWith('/notifications')) return 'notifications';
-  if (pathname.startsWith('/account')) return 'settings';
-  if (pathname.startsWith('/dashboard') || pathname.startsWith('/studio')) return 'studio';
+  if (pathname.startsWith('/you')) return 'you';
+  if (pathname.startsWith('/profile')) return 'you';
+  if (pathname.startsWith('/inbox')) return 'you';
+  if (pathname.startsWith('/notifications')) return 'you';
+  if (pathname.startsWith('/orders')) return 'you';
+  if (pathname.startsWith('/account')) return 'you';
+  if (pathname.startsWith('/dashboard') || pathname.startsWith('/studio')) return 'you';
+  if (pathname.startsWith('/team')) return 'you';
   if (pathname.startsWith('/admin')) return 'admin';
-  if (pathname.startsWith('/settings')) return 'settings';
+  if (pathname.startsWith('/settings')) return 'you';
   if (pathname.startsWith('/support')) return 'support';
   return '';
 }
@@ -448,7 +448,7 @@ export function getMobileTopbarState(pathname: string): MobileTopbarState {
   return { mode: 'back', fallbackHref: '/' };
 }
 
-/** Apps the Dock can offer to a given user, before Dock preferences apply. */
+/** Apps the Sidebar can offer to a given user, before Sidebar preferences apply. */
 export function getAvailableDockApps(options: {
   signedIn: boolean;
   isCreator: boolean;

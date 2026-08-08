@@ -1,0 +1,18 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "desktop-notifications",
+  "description": "Allows only the canonical 44OS desktop webview to request and display operating-system notifications.",
+  "windows": ["main"],
+  "platforms": ["macOS", "windows"],
+  "remote": {
+    "urls": [
+      "https://app.44os.com/*",
+      "http://localhost:3000/*"
+    ]
+  },
+  "permissions": [
+    "notification:allow-is-permission-granted",
+    "notification:allow-request-permission",
+    "notification:allow-notify"
+  ]
+}

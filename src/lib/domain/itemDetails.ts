@@ -6,7 +6,7 @@ import type { ProductAchievement, Track, UserAchievement } from '@/lib/platform'
 import { supabase } from '@/lib/supabase';
 import { getPublicNativeContent } from '@/lib/domain/nativeContent';
 import type { ReleaseVideoEmbed } from '@/lib/domain/releaseFeatures';
-import { beatReviewSurfacesEnabled, listBuyerBeatLicenses } from '@/lib/domain/beats';
+import { beatReviewSurfacesEnabled, hydrateBeatProducts, listBuyerBeatLicenses } from '@/lib/domain/beats';
 import { hydratePaidSalesStatus } from '@/lib/domain/paidSalesStatus';
 import { LOCAL_MASK_ITEM_ID, LOCAL_MASK_LIBRARY_ID, localMaskIsSaved, localMaskPreviewEnabled, localMaskProduct, saveLocalMask } from '@/lib/localMaskPreview';
 
@@ -152,10 +152,14 @@ export async function listRelatedCatalogItems(item: Product, limit = 8) {
     : query.eq('creator', item.creator));
 
   if (result.error) throw result.error;
-  const rows = await hydratePaidSalesStatus((result.data ?? []) as Product[]);
+  const paidRows = await hydratePaidSalesStatus((result.data ?? []) as Product[]);
+  const rows = item.beat && beatReviewSurfacesEnabled
+    ? await hydrateBeatProducts(paidRows)
+    : paidRows;
   return rows
     .filter(candidate => (
       getProductExperience(candidate) === experience
+      && (!item.beat || Boolean(candidate.beat))
       && (!categoryId || candidate.item_category_id === categoryId)
     ))
     .sort(comparePublicCatalogProducts)

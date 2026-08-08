@@ -2,7 +2,9 @@ import type { Database, Json } from '@/lib/database.types';
 import type { BeatCatalogSummary, BeatLicenseOfferSummary, Product } from '@/lib/products';
 import { supabase } from '@/lib/supabase';
 
-export const beatReviewSurfacesEnabled = process.env.NEXT_PUBLIC_ENABLE_BEAT_REVIEW_SURFACES === 'true';
+// Beat catalog, Studio, and standard non-exclusive checkout launched in 1.2.
+// Database runtime controls remain the authoritative emergency boundary.
+export const beatReviewSurfacesEnabled = true;
 
 export type BeatAttributeTerm = Database['public']['Tables']['beat_attribute_terms']['Row'];
 export type BeatDetails = Database['public']['Tables']['beat_details']['Row'];

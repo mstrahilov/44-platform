@@ -1,28 +1,11 @@
 import type { Metadata, Viewport } from 'next';
 import { headers } from 'next/headers';
-import './globals.css';
-import '@/styles/44-ui/canonical-system.css';
-import Sidebar from '@/components/Sidebar';
-import { Topbar } from '@/components/Topbar';
-import { TopbarProvider } from '@/components/TopbarContext';
-import { MusicPlayerBar, MusicPlayerProvider } from '@/components/MusicPlayer';
-import ThemeSync from '@/components/ThemeSync';
-import SystemShell from '@/components/SystemShell';
-import { ContextMenuProvider } from '@/components/ContextMenu';
-import { Suspense } from 'react';
+import './surface-base.css';
+import './analytics-consent.css';
 import { absoluteAppUrl, getAppMetadataBaseUrl } from '@/lib/metadata';
 import { getMarketingUrl } from '@/lib/siteUrl';
 import AnalyticsConsentBoundary from '@/components/AnalyticsConsent';
 import { getAnalyticsMeasurementId } from '@/lib/analyticsConfig';
-import { MarketPreferenceSync } from '@/components/MarketPreferenceSync';
-import { WebPushNotificationPrompt } from '@/components/WebPushNotifications';
-
-// Applies the saved theme before first paint to avoid a flash of the wrong theme.
-const THEME_BOOTSTRAP = `(function(){try{
-  localStorage.removeItem('44-theme-mode');
-  localStorage.removeItem('44-theme-accent');
-  document.body.className = 'theme-dark accent-ocean';
-}catch(e){}})();`;
 
 const AUTH_HANDOFF_BOOTSTRAP = `(function(){try{
   var search=new URLSearchParams(location.search);
@@ -32,23 +15,6 @@ const AUTH_HANDOFF_BOOTSTRAP = `(function(){try{
   var isAuth=queryKeys.some(function(key){return search.has(key);})||hashKeys.some(function(key){return hash.has(key);});
   if(isAuth){location.replace(${JSON.stringify(absoluteAppUrl('/'))}+location.search+location.hash);}
 }catch(e){}})();`;
-
-const SITE_IDENTITY_JSON_LD = JSON.stringify({
-  '@context': 'https://schema.org',
-  '@type': 'WebSite',
-  '@id': `${absoluteAppUrl('/')}#website`,
-  name: '44OS',
-  alternateName: '44 OS',
-  url: absoluteAppUrl('/'),
-  publisher: {
-    '@type': 'Organization',
-    '@id': `${getMarketingUrl()}/#organization`,
-    name: '44OS',
-    alternateName: 'forty four',
-    url: `${getMarketingUrl()}/`,
-    logo: `${getMarketingUrl()}/icon-512.png`,
-  },
-}).replace(/</g, '\\u003c');
 
 const APPLICATION_METADATA: Metadata = {
   metadataBase: new URL(getAppMetadataBaseUrl()),
@@ -115,10 +81,10 @@ function marketingMetadata(): Metadata {
   const description = 'Music, books, merch, and creative assets from independent artists, all in one place.';
   return {
     metadataBase: new URL(marketingUrl),
-    title: '44OS · Independent creative work, in one place',
+    title: '44 · Independent creative work, in one place',
     description,
     alternates: { canonical: `${marketingUrl}/` },
-    applicationName: '44OS',
+    applicationName: '44',
     manifest: null,
     appleWebApp: false,
     icons: {
@@ -129,9 +95,9 @@ function marketingMetadata(): Metadata {
       title: 'A platform for independent creative work.',
       description,
       url: `${marketingUrl}/`,
-      siteName: '44OS',
+      siteName: '44',
       type: 'website',
-      images: [{ url: `${marketingUrl}/og.png`, width: 1200, height: 630, alt: '44OS' }],
+      images: [{ url: `${marketingUrl}/og.png`, width: 1200, height: 630, alt: '44' }],
     },
     twitter: {
       card: 'summary_large_image',
@@ -170,43 +136,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </html>
     );
   }
-  return (
-    <html lang="en">
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: SITE_IDENTITY_JSON_LD }} />
-      </head>
-      <body className="theme-dark accent-ocean" suppressHydrationWarning>
-        <ThemeSync />
-        <MarketPreferenceSync />
-        <AnalyticsConsentBoundary measurementId={analyticsMeasurementId} />
-        <WebPushNotificationPrompt />
-
-        <div className="app-environment" aria-hidden="true">
-          <div className="app-environment-image" />
-          <div className="app-environment-veil" />
-          <div className="app-environment-noise" />
-        </div>
-
-        <MusicPlayerProvider>
-          <TopbarProvider>
-            <ContextMenuProvider>
-              <SystemShell />
-              <div className="app-frame">
-                <div className="app-shell">
-                  <Suspense fallback={null}><Sidebar /></Suspense>
-                  <div className="app-main">
-                    <Topbar />
-                    <div className="app-main-content">{children}</div>
-                    <MusicPlayerBar />
-                  </div>
-                </div>
-              </div>
-            </ContextMenuProvider>
-          </TopbarProvider>
-        </MusicPlayerProvider>
-
-      </body>
-    </html>
-  );
+  const { default: ApplicationShell } = await import('./ApplicationShell');
+  return <ApplicationShell analyticsMeasurementId={analyticsMeasurementId}>{children}</ApplicationShell>;
 }

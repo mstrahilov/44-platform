@@ -1,0 +1,61 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "44OS",
+  "version": "0.1.0",
+  "identifier": "com.fortyfour.os44",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "https://app.44os.com/"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "label": "main",
+        "title": "44OS",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 960,
+        "minHeight": 640,
+        "center": true,
+        "decorations": true,
+        "titleBarStyle": "Transparent",
+        "hiddenTitle": true,
+        "backgroundColor": "#0b0b0b"
+      }
+    ],
+    "security": {
+      "capabilities": ["desktop-notifications"]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "copyright": "Copyright © forty four",
+    "category": "Music",
+    "shortDescription": "Discover and collect independent creative work.",
+    "longDescription": "44OS is a creative operating system for discovering, collecting, creating, and connecting through independent work.",
+    "homepage": "https://44os.com",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "signingIdentity": "-"
+    },
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      },
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
+  },
+  "plugins": {}
+}

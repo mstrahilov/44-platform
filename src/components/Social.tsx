@@ -374,7 +374,7 @@ export function SocialPostRow({
   function authorMenuEntries(): ContextMenuEntry[] {
     return [
       { id: 'open-author', label: 'View Creator', href: authorLink },
-      { id: 'pin-author', label: 'Pin to Dock', onSelect: () => pinDockItem({
+      { id: 'pin-author', label: 'Pin to Sidebar', onSelect: () => pinDockItem({
         id: `profile:${author?.id ?? authorLink}`,
         label: authorName,
         href: authorLink,
@@ -574,7 +574,7 @@ export function SocialProfileRow({
   const name = authorDisplayName(profile);
   const entries: ContextMenuEntry[] = [
     { id: 'open-profile', label: 'View Creator', href },
-    { id: 'pin-profile', label: 'Pin to Dock', onSelect: () => pinDockItem({
+    { id: 'pin-profile', label: 'Pin to Sidebar', onSelect: () => pinDockItem({
       id: `profile:${profile.id ?? href}`,
       label: name,
       href,

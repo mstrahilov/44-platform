@@ -16,6 +16,8 @@
 # next.js
 /.next/
 /out/
+/public/_surface/
+/src-tauri/target/
 
 # production
 /build
@@ -29,6 +31,17 @@
 .DS_Store
 .claude
 *.pem
+
+# Xcode user state and generated products
+**/xcuserdata/
+*.xcuserstate
+DerivedData/
+*.xcresult
+*.xcarchive
+*.dSYM
+*.dSYM.zip
+*.ipa
+ios/44OS/Configuration/Local.xcconfig
 
 # debug
 npm-debug.log*

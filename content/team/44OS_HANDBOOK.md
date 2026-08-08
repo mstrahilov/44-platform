@@ -165,7 +165,7 @@ Accent color helps communicate focus, selection, and state. It belongs to the ap
 The application uses four material roles:
 
 - **Environment** is the background behind the application window.
-- **Shell glass** is the unified surface behind the Dock, Topbar, and workspace.
+- **Shell glass** is the unified surface behind the Sidebar, Topbar, and workspace.
 - **Glass** is the flat material for ordinary panels, controls, inputs, and lists.
 - **Paper** is the raised material for menus, dropdowns, popovers, and selection lists.
 

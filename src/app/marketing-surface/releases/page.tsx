@@ -54,7 +54,10 @@ export default function MarketingReleasesPage() {
           <Link className={styles.brand} href="/" aria-label="44OS by forty four">
             <span className={styles.brandMark}>44OS</span><span>by forty four</span>
           </Link>
-          <a className={styles.navButton} href={getAppPathUrl('/')}>Open App</a>
+          <div className={marketingStyles.navActions}>
+            <Link className={marketingStyles.navDownloadButton} href="/download">Download App</Link>
+            <a className={styles.navButton} href={getAppPathUrl('/')}>Open App</a>
+          </div>
         </div>
       </nav>
 

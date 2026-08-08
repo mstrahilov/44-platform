@@ -34,11 +34,18 @@ import type { CreatorEvent } from '@/lib/domain/events';
 import { formatEventDate } from '@/lib/eventTime';
 import { beatReviewSurfacesEnabled, hydrateBeatProducts } from '@/lib/domain/beats';
 
-type ProfileTab = 'posts' | 'music' | 'beats' | 'books' | 'sample-packs' | 'merch' | 'events';
+type ProfileTab = 'posts' | 'music' | 'beats' | 'books' | 'sample-packs' | 'games' | 'merch' | 'events';
 type CurrentProfileState = {
   userId: string;
   profile: StudioProfile | null;
 };
+
+function ProfileEditIcon() {
+  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z" />
+  </svg>;
+}
 
 function parseProfileTab(value: string | null, isCreator: boolean): ProfileTab | null {
   if (!value) return null;
@@ -49,6 +56,7 @@ function parseProfileTab(value: string | null, isCreator: boolean): ProfileTab |
   if (normalized === 'beats' && beatReviewSurfacesEnabled) return 'beats';
   if (normalized === 'books') return 'books';
   if (normalized === 'sample-packs' || normalized === 'assets') return 'sample-packs';
+  if (normalized === 'games' || normalized === 'interactive') return 'games';
   if (normalized === 'merch') return 'merch';
   if (normalized === 'events') return 'events';
   return null;
@@ -281,6 +289,12 @@ export default function PublicProfilePage() {
       .sort(comparePublicCatalogProducts),
     [publishedProducts],
   );
+  const gameProducts = useMemo(
+    () => publishedProducts
+      .filter(product => getProductExperience(product) === 'interactive')
+      .sort(comparePublicCatalogProducts),
+    [publishedProducts],
+  );
   const generalPosts = posts;
   const likeCounts = useMemo(() => countById(likes, 'post_id'), [likes]);
   const likersMap = useMemo(() => likersByPost(likes), [likes]);
@@ -296,13 +310,14 @@ export default function PublicProfilePage() {
         if (beatProducts.length > 0) creatorTabs.push({ id: 'beats', label: 'Beats' });
         if (bookProducts.length > 0) creatorTabs.push({ id: 'books', label: 'Books' });
         if (assetProducts.length > 0) creatorTabs.push({ id: 'sample-packs', label: 'Sample Packs' });
+        if (gameProducts.length > 0) creatorTabs.push({ id: 'games', label: 'Games' });
         if (merchProducts.length > 0) creatorTabs.push({ id: 'merch', label: 'Merch' });
         if (events.length > 0) creatorTabs.push({ id: 'events', label: 'Events' });
         return creatorTabs;
       }
       return generalPosts.length > 0 ? [{ id: 'posts' as const, label: 'Posts' }] : [];
     },
-    [assetProducts.length, beatProducts.length, bookProducts.length, events.length, generalPosts.length, isCreator, merchProducts.length, musicProducts.length],
+    [assetProducts.length, beatProducts.length, bookProducts.length, events.length, gameProducts.length, generalPosts.length, isCreator, merchProducts.length, musicProducts.length],
   );
 
   useEffect(() => {
@@ -336,6 +351,11 @@ export default function PublicProfilePage() {
   return (
     <PageShell>
       <main className="social-shell social-shell-wide social-profile-page">
+        {isOwn && <div className="social-profile-owner-tools">
+          <Link href="/profile/edit" className="os-topbar-icon-button social-profile-edit-action" aria-label="Edit profile" title="Edit profile">
+            <ProfileEditIcon />
+          </Link>
+        </div>}
         <section className="social-profile-head">
           <div className="social-profile-main">
             <div className="social-profile-identity">
@@ -345,7 +365,7 @@ export default function PublicProfilePage() {
                 aria-label={`Pin or view ${displayName}`}
                 onContextMenu={event => openContextMenu(event, [
                   { id: 'open-profile', label: 'View Creator', href: profileHref },
-                  { id: 'pin-profile', label: 'Pin to Dock', onSelect: () => pinDockItem({
+                  { id: 'pin-profile', label: 'Pin to Sidebar', onSelect: () => pinDockItem({
                     id: `profile:${profile.id}`,
                     label: displayName,
                     href: profileHref,
@@ -367,13 +387,7 @@ export default function PublicProfilePage() {
                 </p>
                 <div className="social-profile-link-row">
                   <ExternalLinkActions links={externalLinks} context="profile" label={`${displayName} around the web`} />
-                  <div className="social-profile-actions">
-                    {isOwn ? (
-                      <>
-                        <Link href="/profile/edit" className="os-button os-button-secondary">Edit Profile</Link>
-                        {isCreator && <Link href="/studio" className="os-button os-button-primary">Open Studio</Link>}
-                      </>
-                    ) : (
+                  {!isOwn && <div className="social-profile-actions">
                       <>
                         <button type="button" className="os-button os-button-primary" onClick={handleFollowAction} disabled={busy === 'follow'}>
                           {isFollowing ? 'Following' : 'Follow'}
@@ -382,8 +396,7 @@ export default function PublicProfilePage() {
                           Message
                         </button>
                       </>
-                    )}
-                  </div>
+                  </div>}
                 </div>
               </div>
             </div>
@@ -506,6 +519,20 @@ export default function PublicProfilePage() {
                 meta={profileProductYear(product)}
                 image={product.cover_url}
                 shape="portrait"
+              />
+            ))}
+          </ArtifactGrid>
+        )}
+
+        {tab === 'games' && (
+          <ArtifactGrid empty="No games published yet.">
+            {gameProducts.map(product => (
+              <SocialArtifactCard
+                key={product.id}
+                href={productBrowseHref(product)}
+                title={product.title}
+                meta={profileProductYear(product)}
+                image={product.cover_url}
               />
             ))}
           </ArtifactGrid>

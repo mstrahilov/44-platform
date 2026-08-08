@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { supabase } from '@/lib/supabase';
-import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import {
   ACHIEVEMENT_NOTIFICATIONS_UPDATED,
   loadAchievementNotifications,
@@ -15,22 +14,21 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useTopbar } from './TopbarContext';
 import { useCart } from '@/lib/cart';
 import { Ui44TextInput } from '@/components/ui44/Inputs';
-import { PUBLIC_PURCHASES_AVAILABLE } from '@/lib/commerceAvailability';
 import {
   loadNotificationReadState,
   NOTIFICATION_STATE_UPDATED,
   saveNotificationReadState,
 } from '@/lib/notificationState';
-import { hasCustomerOrders } from '@/lib/domain/customerCommerce';
-import { fetchMyTeamAccess } from '@/lib/domain/team';
 import { getMobileTopbarState } from '@/lib/osApps';
 import { MobileSearchOverlay } from '@/components/MobileSearchOverlay';
+import {
+  deliverNewDesktopNotifications,
+  primeDesktopNotificationRows,
+} from '@/lib/deviceNotifications';
 
 export type { TopbarTab } from './TopbarContext';
 
 const IconBell = () => <span className="os-icon os-icon-notifications os-icon-sm" aria-hidden="true" />;
-const IconUser = () => <span className="os-icon os-icon-user os-icon-sm" aria-hidden="true" />;
-
 const IconCart = () => (
   <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M3 4h2.4l2.2 10.2a1.6 1.6 0 0 0 1.6 1.3h7.2a1.6 1.6 0 0 0 1.6-1.2L19.5 7H6.2" />
@@ -39,38 +37,13 @@ const IconCart = () => (
   </svg>
 );
 
-const IconProfile = () => <span className="os-icon os-icon-user os-icon-sm" aria-hidden="true" />;
-const IconMessages = () => <span className="os-icon os-icon-inbox os-icon-sm" aria-hidden="true" />;
-const IconOrders = () => <span className="os-icon os-icon-orders os-icon-sm" aria-hidden="true" />;
-const IconStudio = () => <span className="os-icon os-icon-studio-disc os-icon-sm" aria-hidden="true" />;
-const IconTeam = () => <span className="os-icon os-icon-friends os-icon-sm" aria-hidden="true" />;
-
-const IconSignOut = () => (
-  <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 3H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h4"/>
-    <path d="M14 15l4-4-4-4"/>
-    <line x1="18" y1="11" x2="8" y2="11"/>
-  </svg>
-);
-
 const CURRENT_PATH_KEY = '44-current-path';
 const PREVIOUS_PATH_KEY = '44-previous-path';
 const SCROLL_PREFIX = '44-scroll:';
-type ProfileState = {
-  userId: string;
-  profile: StudioProfile | null;
-};
-
 type NotificationState = {
   userId: string;
   rows: AchievementNotification[];
 };
-
-type OrderVisibilityState = {
-  userId: string;
-  hasOrders: boolean;
-};
-type TeamVisibilityState = { userId: string; authorized: boolean };
 
 function labelForPath(path: string | null | undefined) {
   if (!path) return null;
@@ -95,13 +68,9 @@ export function Topbar() {
   const userId = user?.id ?? null;
   const { tabs, back } = useTopbar();
   const { count: cartCount } = useCart();
-  const [profileState, setProfileState] = useState<ProfileState | null>(null);
   const [notificationState, setNotificationState] = useState<NotificationState | null>(null);
-  const [orderVisibilityState, setOrderVisibilityState] = useState<OrderVisibilityState | null>(null);
-  const [teamVisibilityState, setTeamVisibilityState] = useState<TeamVisibilityState | null>(null);
   const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
   const [hiddenNotificationIds, setHiddenNotificationIds] = useState<Set<string>>(new Set());
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notifMenuOpen, setNotifMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -110,7 +79,6 @@ export function Topbar() {
   const [searchKey, setSearchKey] = useState(() => (
     typeof window === 'undefined' ? '' : window.location.search.replace(/^\?/, '')
   ));
-  const userWrapRef = useRef<HTMLDivElement | null>(null);
   const notifWrapRef = useRef<HTMLDivElement | null>(null);
   const searchWrapRef = useRef<HTMLDivElement | null>(null);
 
@@ -122,48 +90,6 @@ export function Topbar() {
     window.addEventListener('popstate', updateSearchKey);
     return () => window.removeEventListener('popstate', updateSearchKey);
   }, [pathname]);
-
-  useEffect(() => {
-    if (!userId) return;
-    let alive = true;
-    const activeUserId = userId;
-    loadStudioProfile(activeUserId).then(r => {
-      if (alive) setProfileState({ userId: activeUserId, profile: r.profile });
-    });
-    return () => { alive = false; };
-  }, [userId]);
-
-  useEffect(() => {
-    if (!userId) {
-      Promise.resolve().then(() => setOrderVisibilityState(null));
-      return;
-    }
-    let alive = true;
-    const activeUserId = userId;
-    void hasCustomerOrders(activeUserId)
-      .then(hasOrders => {
-        if (alive) setOrderVisibilityState({ userId: activeUserId, hasOrders });
-      })
-      .catch(() => {
-        if (alive) setOrderVisibilityState({ userId: activeUserId, hasOrders: false });
-      });
-    return () => { alive = false; };
-  }, [pathname, userId]);
-
-  useEffect(() => {
-    if (!userId) {
-      Promise.resolve().then(() => setTeamVisibilityState(null));
-      return;
-    }
-    let alive = true;
-    const activeUserId = userId;
-    void fetchMyTeamAccess().then(access => {
-      if (alive) setTeamVisibilityState({ userId: activeUserId, authorized: access.authorized });
-    }).catch(() => {
-      if (alive) setTeamVisibilityState({ userId: activeUserId, authorized: false });
-    });
-    return () => { alive = false; };
-  }, [pathname, userId]);
 
   useEffect(() => {
     if (!userId) {
@@ -196,7 +122,11 @@ export function Topbar() {
     let alive = true;
     const activeUserId = userId;
     loadAchievementNotifications(activeUserId).then(rows => {
-      if (alive) setNotificationState({ userId: activeUserId, rows: rows.slice(0, 24) });
+      if (alive) {
+        const visibleRows = rows.slice(0, 24);
+        primeDesktopNotificationRows(activeUserId, visibleRows);
+        setNotificationState({ userId: activeUserId, rows: visibleRows });
+      }
     });
     return () => { alive = false; };
   }, [userId]);
@@ -207,7 +137,9 @@ export function Topbar() {
 
     async function refreshNotifications() {
       const rows = await loadAchievementNotifications(activeUserId);
-      setNotificationState({ userId: activeUserId, rows: rows.slice(0, 24) });
+      const visibleRows = rows.slice(0, 24);
+      void deliverNewDesktopNotifications(activeUserId, visibleRows);
+      setNotificationState({ userId: activeUserId, rows: visibleRows });
     }
 
     function onAchievementUpdate() {
@@ -229,7 +161,6 @@ export function Topbar() {
 
   useEffect(() => {
     Promise.resolve().then(() => {
-      setUserMenuOpen(false);
       setNotifMenuOpen(false);
       setSearchOpen(false);
       setMobileSearchOpen(false);
@@ -354,7 +285,6 @@ export function Topbar() {
   function openNotifMenu() {
     const nextOpen = !notifMenuOpen;
     setNotifMenuOpen(nextOpen);
-    setUserMenuOpen(false);
     if (nextOpen && visibleNotifications.length > 0) {
       const merged = new Set(seenIds);
       visibleNotifications.forEach(n => merged.add(n.id));
@@ -364,20 +294,14 @@ export function Topbar() {
   }
 
   useEffect(() => {
-    if (!userMenuOpen && !notifMenuOpen && !searchOpen) return;
+    if (!notifMenuOpen && !searchOpen) return;
     function onClick(e: MouseEvent) {
-      if (userMenuOpen && userWrapRef.current && !userWrapRef.current.contains(e.target as Node)) setUserMenuOpen(false);
       if (notifMenuOpen && notifWrapRef.current && !notifWrapRef.current.contains(e.target as Node)) setNotifMenuOpen(false);
       if (searchOpen && searchWrapRef.current && !searchWrapRef.current.contains(e.target as Node)) setSearchOpen(false);
     }
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== 'Escape') return;
-      const returnTarget = userMenuOpen
-        ? userWrapRef.current
-        : notifMenuOpen
-          ? notifWrapRef.current
-          : searchWrapRef.current;
-      setUserMenuOpen(false);
+      const returnTarget = notifMenuOpen ? notifWrapRef.current : searchWrapRef.current;
       setNotifMenuOpen(false);
       setSearchOpen(false);
       window.requestAnimationFrame(() => returnTarget?.querySelector<HTMLElement>('button, a')?.focus());
@@ -388,15 +312,9 @@ export function Topbar() {
       document.removeEventListener('mousedown', onClick);
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [userMenuOpen, notifMenuOpen, searchOpen]);
+  }, [notifMenuOpen, searchOpen]);
 
-  const profile = profileState && profileState.userId === userId ? profileState.profile : null;
   const notifications = notificationState && notificationState.userId === userId ? notificationState.rows : [];
-  const hasOrders = Boolean(orderVisibilityState?.userId === userId && orderVisibilityState.hasOrders);
-  const hasTeamAccess = Boolean(teamVisibilityState?.userId === userId && teamVisibilityState.authorized);
-  const displayName = profile?.display_name || profile?.username || user?.email?.split('@')[0] || 'You';
-  const avatarUrl = profile?.avatar_url ?? null;
-  const profileHref = profile?.username ? `/profile/${profile.username}` : '/profile';
   const visibleNotifications = notifications.filter(notification => (
     notificationIsEnabled(notification) &&
     !hiddenNotificationIds.has(notification.id)
@@ -404,13 +322,6 @@ export function Topbar() {
   const unreadNotificationCount = visibleNotifications.filter(n => !seenIds.has(n.id)).length;
   const backLabel = labelForPath(previousPath?.split('?')[0]) ?? back?.label ?? 'Back';
   const mobileTopbarState = getMobileTopbarState(pathname);
-
-  async function handleSignOut() {
-    setUserMenuOpen(false);
-    await supabase.auth.signOut();
-    router.push('/');
-    router.refresh();
-  }
 
   function hideNotification(id: string) {
     const next = new Set(hiddenNotificationIds);
@@ -439,7 +350,6 @@ export function Topbar() {
 
   const openMobileSearch = useCallback(() => {
     setMobileSearchOpen(true);
-    setUserMenuOpen(false);
     setNotifMenuOpen(false);
   }, []);
 
@@ -500,8 +410,13 @@ export function Topbar() {
             </svg>
           </button>
         )}
-        {tabs?.map(tab => {
-          const className = tab.active ? 'os-topbar-tab os-topbar-tab-active' : 'os-topbar-tab';
+        {tabs?.map((tab, index) => {
+          const className = [
+            'os-topbar-tab',
+            tab.variant === 'section' ? 'os-topbar-tab-section' : '',
+            tab.variant === 'section' && index === 0 ? 'os-topbar-tab-section-first' : '',
+            tab.active ? 'os-topbar-tab-active' : '',
+          ].filter(Boolean).join(' ');
           return tab.href ? (
             <Link key={tab.id} href={tab.href} className={className} scroll={false}>{tab.label}</Link>
           ) : (
@@ -511,13 +426,6 @@ export function Topbar() {
         </div>
 
         <div className="os-topbar-right">
-        {PUBLIC_PURCHASES_AVAILABLE && cartCount > 0 && (
-          <Link href="/cart" className="ui44-symbol-button ui44-symbol-button-cart os-topbar-icon-button os-topbar-cart-button" aria-label={`Cart · ${cartCount} item${cartCount === 1 ? '' : 's'}`}>
-            <IconCart />
-            <span className="os-topbar-cart-count">{cartCount}</span>
-          </Link>
-        )}
-
         <div className="os-topbar-search os-topbar-search-desktop" ref={searchWrapRef}>
           {searchOpen ? (
             <form className="os-topbar-search-form ui44-composed-field ui44-composed-field-search" role="search" onSubmit={submitSearch}>
@@ -536,7 +444,6 @@ export function Topbar() {
           ) : (
             <button type="button" className="ui44-symbol-button ui44-symbol-button-search os-topbar-icon-button" aria-label="Search" onClick={() => {
               setSearchOpen(true);
-              setUserMenuOpen(false);
               setNotifMenuOpen(false);
             }}>
               <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
@@ -653,61 +560,13 @@ export function Topbar() {
           </div>
         )}
 
-        {user ? (
-          <div ref={userWrapRef} className="os-topbar-account-menu">
-            <button
-              type="button"
-              className="os-topbar-avatar"
-              aria-label="Your account"
-              onClick={() => { setUserMenuOpen(o => !o); setNotifMenuOpen(false); }}
-            >
-              {avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={avatarUrl} alt={displayName} />
-              ) : (
-                <IconUser />
-              )}
-            </button>
-            {userMenuOpen && (
-              <div className="ui44-paper-menu os-popover os-account-popover" role="menu">
-                <Link href={profileHref} className="ui44-paper-menu-item os-popover-item os-account-menu-item" role="menuitem">
-                  <IconProfile />
-                  <span className="os-account-menu-copy"><strong>Profile</strong><span>View or edit your profile</span></span>
-                </Link>
-                <Link href="/inbox" className="ui44-paper-menu-item os-popover-item os-account-menu-item" role="menuitem">
-                  <IconMessages />
-                  <span className="os-account-menu-copy"><strong>Messages</strong><span>View or send messages</span></span>
-                </Link>
-                {hasOrders && (
-                  <Link href="/orders" className="ui44-paper-menu-item os-popover-item os-account-menu-item" role="menuitem">
-                    <IconOrders />
-                    <span className="os-account-menu-copy"><strong>Orders</strong><span>View purchases and orders</span></span>
-                  </Link>
-                )}
-                {isCreatorProfile(profile) && (
-                  <Link href="/studio" className="ui44-paper-menu-item os-popover-item os-account-menu-item" role="menuitem">
-                    <IconStudio />
-                    <span className="os-account-menu-copy"><strong>Studio</strong><span>Publish and manage work</span></span>
-                  </Link>
-                )}
-                {hasTeamAccess && (
-                  <Link href="/team" className="ui44-paper-menu-item os-popover-item os-account-menu-item" role="menuitem">
-                    <IconTeam />
-                    <span className="os-account-menu-copy"><strong>Team</strong><span>Open Team resources</span></span>
-                  </Link>
-                )}
-                <div className="os-popover-divider" />
-                <button type="button" className="ui44-paper-menu-item os-popover-item" role="menuitem" onClick={handleSignOut}>
-                  <IconSignOut /> Log Out
-                </button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <Link href="/login" className="os-topbar-avatar os-topbar-login-avatar" aria-label="Log in">
-            <IconUser />
+        {cartCount > 0 && (
+          <Link href="/cart" className="ui44-symbol-button ui44-symbol-button-cart os-topbar-icon-button os-topbar-cart-button" aria-label={`Cart · ${cartCount} item${cartCount === 1 ? '' : 's'}`}>
+            <IconCart />
+            <span className="os-topbar-cart-count">{cartCount}</span>
           </Link>
         )}
+
         </div>
       </div>
       <MobileSearchOverlay

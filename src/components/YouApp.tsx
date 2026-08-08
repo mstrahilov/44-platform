@@ -4,9 +4,9 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SocialAvatar } from '@/components/Social';
-import { EmptyMessage, HubHero, PageShell } from '@/components/Ui';
+import { AuthExperience } from '@/components/AuthExperience';
+import { PageShell } from '@/components/Ui';
 import { hasCustomerOrders } from '@/lib/domain/customerCommerce';
-import { fetchMyTeamAccess } from '@/lib/domain/team';
 import { supabase } from '@/lib/supabase';
 import {
   isCreatorProfile,
@@ -14,6 +14,7 @@ import {
   type StudioProfile,
 } from '@/lib/studioProfiles';
 import { useAuth } from '@/lib/useAuth';
+import { fetchMyTeamAccess } from '@/lib/domain/team';
 
 type YouState = {
   profile: StudioProfile | null;
@@ -74,12 +75,8 @@ export function YouApp() {
   if (!user) {
     return (
       <PageShell>
-        <main className="dashboard-page you-page">
-          <HubHero title="Account" />
-          <EmptyMessage>Log in to open your profile, messages, Library tools, and account settings.</EmptyMessage>
-          <div className="ui44-centered-action">
-            <Link href="/login" className="os-button os-button-primary">Log In</Link>
-          </div>
+        <main className="login-page login-page-account page-scroll">
+          <AuthExperience variant="account" authenticatedDestination={null} />
         </main>
       </PageShell>
     );
@@ -96,42 +93,35 @@ export function YouApp() {
       description: 'View or edit your profile',
       iconClass: 'os-icon-user',
     },
-    {
-      href: '/notifications',
-      label: 'Notifications',
-      description: 'View or edit notifications',
-      iconClass: 'os-icon-notifications',
-    },
-    {
-      href: '/inbox',
-      label: 'Messages',
-      description: 'View or send messages',
-      iconClass: 'os-icon-inbox',
-    },
-    ...(hasOrders ? [{
-      href: '/orders',
-      label: 'Orders',
-      description: 'View purchases and orders',
-      iconClass: 'os-icon-orders',
-    }] : []),
     ...(isCreatorProfile(profile) ? [{
       href: '/studio',
       label: 'Studio',
       description: 'Publish and manage work',
       iconClass: 'os-icon-studio-disc',
     }] : []),
-    ...(hasTeamAccess ? [{
-      href: '/team',
-      label: 'Team',
-      description: 'Open Team resources',
-      iconClass: 'os-icon-friends',
+    ...(hasOrders ? [{
+      href: '/orders',
+      label: 'Orders',
+      description: 'View purchases and orders',
+      iconClass: 'os-icon-orders',
     }] : []),
     {
-      href: '/support',
-      label: 'Support',
-      description: 'Get help with 44OS',
-      iconClass: 'os-icon-support',
+      href: '/inbox',
+      label: 'Messages',
+      description: 'View or send messages',
+      iconClass: 'os-icon-inbox',
     },
+    ...(profile?.role === 'admin' ? [{
+      href: '/admin',
+      label: 'Admin',
+      description: 'Manage people, content, and operations',
+      iconClass: 'os-icon-dashboard',
+    }] : hasTeamAccess ? [{
+      href: '/team',
+      label: 'Team',
+      description: 'Open the private Team workspace',
+      iconClass: 'os-icon-friends',
+    }] : []),
     {
       href: '/settings',
       label: 'Settings',
@@ -149,7 +139,6 @@ export function YouApp() {
   return (
     <PageShell>
       <main className="dashboard-page you-page">
-        <HubHero title={`Welcome, ${displayName}`} className="you-greeting" />
         <section className="you-mobile-identity" aria-label={displayName}>
           <Link href={profileHref} className="you-mobile-avatar-link" aria-label={`Open ${displayName}'s profile`}>
             <SocialAvatar profile={profile} />
@@ -167,17 +156,10 @@ export function YouApp() {
               <span className="you-navigation-chevron" aria-hidden="true">›</span>
             </Link>
           ))}
-          <button type="button" className="you-navigation-row you-navigation-logout ui44-list-row ui44-list-row-interactive" onClick={() => void handleSignOut()}>
-            <svg className="you-navigation-icon you-navigation-signout" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M10 4H5.5A1.5 1.5 0 0 0 4 5.5v13A1.5 1.5 0 0 0 5.5 20H10" />
-              <path d="m16 16 4-4-4-4M20 12H9" />
-            </svg>
-            <span className="you-navigation-copy">
-              <strong>Log Out</strong>
-              <span className="you-navigation-logout-description">End this session</span>
-            </span>
-          </button>
         </nav>
+        <div className="you-logout-action">
+          <button type="button" className="os-button os-button-ghost" onClick={() => void handleSignOut()}>Log Out</button>
+        </div>
       </main>
     </PageShell>
   );

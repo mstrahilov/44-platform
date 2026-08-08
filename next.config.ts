@@ -53,7 +53,6 @@ const nextConfig: NextConfig = {
       { source: "/community/following", destination: "/community?filter=following", permanent: false },
       { source: "/community/profile/:username", destination: "/profile/:username", permanent: true },
       { source: "/studio/analytics", destination: "/studio", permanent: false },
-      { source: "/admin/home", destination: "/admin", permanent: true },
       { source: "/product/:id", destination: "/store/item/:id", permanent: true },
       {
         source: "/dashboard/:path*",
@@ -64,6 +63,13 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      {
+        source: "/downloads/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+          { key: "Content-Disposition", value: "attachment" },
+        ],
+      },
       {
         source: "/(.*)",
         headers: [

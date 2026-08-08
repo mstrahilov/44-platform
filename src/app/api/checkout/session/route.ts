@@ -85,6 +85,10 @@ export async function POST(request: Request) {
       return Response.json({ error: 'One or more offers are not available for this Item.', code: 'offer_unavailable' }, { status: 409 });
     }
     const beatOfferIds = resolvedOfferIds.filter(offerId => offerById.get(offerId)?.offer_type === 'beat_license');
+    const nonBeatOfferIds = resolvedOfferIds.filter(offerId => offerById.get(offerId)?.offer_type !== 'beat_license');
+    if (nonBeatOfferIds.length && process.env.NEXT_PUBLIC_PUBLIC_PURCHASES_AVAILABLE !== 'true') {
+      throw new CommerceConfigurationError('Paid purchasing is not configured for this Item type.');
+    }
     if (beatOfferIds.length) {
       const acceptances = body.licenseAcceptances ?? [];
       const acceptanceByOffer = new Map(acceptances.map(acceptance => [acceptance.offerId, acceptance.termsSha256]));

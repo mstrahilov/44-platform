@@ -9,7 +9,7 @@ import {
   removeFromCart,
   useCart,
 } from '@/lib/cart';
-import { PUBLIC_PURCHASES_AVAILABLE } from '@/lib/commerceAvailability';
+import { cartCheckoutUiAvailable } from '@/lib/commerceAvailability';
 
 function formatMoney(cents: number, currency: string) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100);
@@ -19,6 +19,7 @@ export default function CartPage() {
   const { items, count, subtotalCents } = useCart();
   const currency = items[0]?.currency ?? 'USD';
   const [legacyItemTypes, setLegacyItemTypes] = useState<Record<string, string>>({});
+  const checkoutUiAvailable = cartCheckoutUiAvailable(items);
 
   useTopbarBack({ href: '/', label: 'Home' });
 
@@ -37,7 +38,7 @@ export default function CartPage() {
     return () => { active = false; };
   }, [items]);
 
-  if (!PUBLIC_PURCHASES_AVAILABLE) {
+  if (!checkoutUiAvailable && items.length > 0) {
     return (
       <PageShell>
         <main className="dashboard-page">

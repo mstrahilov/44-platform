@@ -43,8 +43,8 @@ export default function AnalyticsConsentBoundary({ measurementId }: { measuremen
       <Link href="/legal/privacy#analytics">Privacy details</Link>
     </div>
     <div className="analytics-consent-actions">
-      <button type="button" className="os-button os-button-secondary os-button-compact" onClick={() => setAnalyticsConsent('denied')}>Decline</button>
-      <button type="button" className="os-button os-button-primary os-button-compact" onClick={() => setAnalyticsConsent('granted')}>Allow analytics</button>
+      <button type="button" className="os-button os-button-secondary os-button-compact analytics-consent-button" onClick={() => setAnalyticsConsent('denied')}>Decline</button>
+      <button type="button" className="os-button os-button-primary os-button-compact analytics-consent-button analytics-consent-button-primary" onClick={() => setAnalyticsConsent('granted')}>Allow analytics</button>
     </div>
   </aside>;
 }
@@ -56,8 +56,8 @@ export function AnalyticsPrivacyControls({ measurementId }: { measurementId: str
   return <div className="analytics-preferences" aria-label="Analytics preferences">
     <p className="analytics-preferences-status" role="status">Current choice: {consent === 'granted' ? 'Allowed' : consent === 'denied' ? 'Declined' : 'Not selected'}</p>
     <div className="analytics-consent-actions">
-      <button type="button" className="os-button os-button-secondary os-button-compact" onClick={() => setAnalyticsConsent('denied')}>Decline analytics</button>
-      <button type="button" className="os-button os-button-primary os-button-compact" onClick={() => setAnalyticsConsent('granted')}>Allow analytics</button>
+      <button type="button" className="os-button os-button-secondary os-button-compact analytics-consent-button" onClick={() => setAnalyticsConsent('denied')}>Decline analytics</button>
+      <button type="button" className="os-button os-button-primary os-button-compact analytics-consent-button analytics-consent-button-primary" onClick={() => setAnalyticsConsent('granted')}>Allow analytics</button>
     </div>
   </div>;
 }

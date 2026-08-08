@@ -1,0 +1,17 @@
+html,
+body {
+  min-height: 100%;
+}
+
+body.marketing-surface {
+  margin: 0;
+  background: #f5f5f0;
+  color: #1a1a1a;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", sans-serif;
+}
+
+body.marketing-surface *,
+body.marketing-surface *::before,
+body.marketing-surface *::after {
+  box-sizing: border-box;
+}

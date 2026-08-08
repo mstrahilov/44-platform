@@ -6,7 +6,7 @@ Current system behavior belongs in `44OS_FOUNDATION.md`. Current visual behavior
 
 ## Current position
 
-Recorded July 23, 2026:
+Recorded July 26, 2026:
 
 - 44OS is live and healthy.
 - `44os.com` is now the editorial front door, `app.44os.com` is the canonical application and PWA origin, `www` redirects to the apex, and legacy application links preserve their paths and queries on the app host.
@@ -15,10 +15,11 @@ Recorded July 23, 2026:
 - Eight launch Merch products are live.
 - The private Team workspace, Handbook, read-only Creator/release directories, and versioned Brand Kit are live for Admins and explicitly granted Team members.
 - 44OS 1.1 is live with the accepted mobile shell, unified Discover and Community presentation, intent-based Community posts, route-aware Search, Account hub, Item-linked Community surfaces, and MASK as the first published desktop Game.
-- The July 23 repository sweep restored the three-document `Other/` boundary, removed obsolete Admin Home controls and dead UI code, preserved local source artifacts outside Git, and brought the reviewed dependency tree to zero known npm vulnerabilities.
+- The repository handoff remains limited to the four Foundation, UI, iOS, and Milestones documents. The August 7 web polish removed the signed-out Account login detour, cleared the production npm audit, batched repeated-card ownership, bounded Discover auxiliary queries, corrected stale experience contracts, and isolated marketing from the application stylesheet and shell chunks while preserving shared analytics consent.
 - Two controlled digital orders completed purchase, refund, access revocation, email, and reconciliation with zero unexplained mismatch.
 - The broad-launch audit was paused by the owner to preserve time and credits for user-facing improvements.
 - No milestone below authorizes destructive cleanup, a Creator-clock re-base, a paid physical test, provider expansion, payout activation, or optional feature activation without its stated approval.
+- A fully native SwiftUI iOS client is the next active product build. The existing mobile web application is its product and visual reference, but core iOS screens will be rebuilt natively and will share the existing server-authoritative 44OS platform rather than embed the website.
 
 ## Completed baseline — do not re-audit by default
 
@@ -28,7 +29,7 @@ The following areas are represented as current system truth in Foundation and UI
 - Persistent shell, canonical routes/redirects, Store, Library, Community, profiles, Inbox, Search, Radio, Studio, Admin, Support, Settings, Orders, and Calendar.
 - Canonical UI materials/tokens/components, responsive shell/safe areas, shared player, page identity, and completed CSS/component cleanup baseline.
 - Music achievements, named YouTube embeds, Overachiever Item unlocks, protected downloads, PDF Books, Sample Packs, form recovery, external links, Events, and Calendar.
-- Interactive infrastructure is active only for the accepted MASK runtime; additional Games and Beat licensing remain disabled pending separate acceptance.
+- Interactive infrastructure is active only for the accepted MASK runtime; additional Games remain disabled pending separate acceptance. Version 1.2 promotes only standard single-owner non-exclusive Beat licenses through the existing independently gated Stripe path; split and exclusive Beat sales remain disabled.
 - Printful-owned catalog synchronization, eight-product Merch launch catalog, Admin image workflow, featured/color/bonus imagery, safe replacement/orphan queue, signed provider webhook, quotes, and non-charging drafts.
 - Stripe-hosted Checkout, signed webhook authority, immutable terms/order evidence, refund/dispute/access/accounting behavior, Admin offer pause/restore, and zero-mismatch reconciliation.
 - Public Member signup, manual Creator paperwork-grace controls, branded Supabase Auth email, Resend transactional outbox/worker/webhook, monitored support mailbox, and production Help Center.
@@ -40,19 +41,107 @@ The following areas are represented as current system truth in Foundation and UI
 
 Work through this single list. User-facing breakage comes before optional launch expansion. Record only the outcome and changed current truth; do not rebuild a step-by-step historical ledger here.
 
-### 1. Desktop Mac and Windows Application
+### 1. Native iOS Application
+
+**Status: Native member/Creator Studio route-parity checkpoint complete; live Auth, protected behavior, accessibility matrix, and distribution acceptance remain open**
+
+`44OS_IOS.md` is the canonical native product and architecture reference. This milestone records only the current implementation sequence and evidence gates.
+
+#### Phase 0 — Environment and permanent decisions
+
+- [x] Install Xcode 26.6 (build 17F113) and verify the bundled iPhone Simulator 26.5 SDK.
+- [x] Change the active developer directory from `/Library/Developer/CommandLineTools` to the installed Xcode developer directory, accept any remaining first-launch/license requirements, and install at least one iOS Simulator runtime.
+- [x] Verify `xcodebuild -version`, selected developer directory, installed SDKs, and available simulator/device destinations through the active command-line toolchain.
+- [x] Inspect and preserve the complete Git working tree before creating files.
+- [x] Confirm product name `44OS`, bundle identifier `com.fortyfour.os44`, iOS 18.0 minimum, iPhone-only first-release destination, current no-paid-membership signing state, and Simulator-first path before owner-device, TestFlight, or App Store distribution.
+- [x] Confirm the member-first feature boundary: shell/design system, Auth, Home, Library, Radio/player, Community, Account, Store/Item details, remaining member utilities, approved native integrations, then commerce/distribution. By later explicit owner direction, Creator Studio visual/native route parity moved into the pre-refinement scope; its authenticated writes remain deferred.
+- [x] Inventory the existing typed web domain services, Supabase RLS/RPC calls, authenticated route handlers, protected-asset flows, realtime needs, and server-only operations; record the accepted initial native split in `44OS_IOS.md`.
+- [x] Record the accepted Xcode folder/project structure and Apple-frameworks-first dependency policy in `44OS_IOS.md`.
+
+**Complete when:** Xcode can build an empty signed Debug application for an available simulator, the permanent identity decisions are recorded, and the backend inventory identifies how the first native journey obtains authorized data without a service-role credential.
+
+#### Phase 1 — Native foundation and design system
+
+- [x] Create the Xcode project, application target, unit-test target, and UI-test target without adding a WebView implementation of the product.
+- [ ] Establish SwiftUI application lifecycle, dependency composition, typed navigation, feature boundaries, environment configuration, and sanitized diagnostics.
+- [ ] Translate the accepted 44OS colors, typography roles, spacing, artwork ratios, Glass/Paper semantics, icons, controls, loading, empty, error, and accessibility states into reusable native primitives.
+- [x] Build the five-destination Home, Library, Radio, Community, and Account navigation structure with placeholder feature boundaries only where needed.
+- [ ] Verify safe areas, keyboard behavior, Dynamic Type, VoiceOver labels/order, light/dark presentation, reduced motion, and compact/large iPhone widths.
+- [ ] Keep signing material, DerivedData, archives, and generated simulator data out of Git.
+
+**Complete when:** the native shell and reference components render consistently in accepted simulators, pass the initial accessibility checks, and contain no copied React/CSS or embedded core web screens.
+
+#### Phase 2 — Authentication and shared data boundary
+
+- [x] Select and pin only the native dependencies justified by the Phase 0 inventory. Supabase Swift is pinned exactly at `2.53.0` with its resolved transitive graph recorded by Swift Package Manager.
+- [ ] Connect the native client to the existing Supabase identities and reviewed 44OS service boundaries with user-scoped credentials.
+- [ ] Implement secure session storage, refresh, logout, revoked-session handling, confirmation, recovery, and native-safe callback states.
+- [x] Establish typed Auth, own-profile repository, and first-party HTTPS transport boundaries; SwiftUI views do not call database tables or arbitrary endpoints directly.
+- [ ] Prove that Member, Creator, Team, and Admin visibility remains server-authoritative and that no native bundle contains privileged credentials.
+- [x] Add deterministic development/test configuration without connecting automated tests to production data. Public local values are ignored by Git, validated before client construction, and replaced by offline services whenever `--ui-testing` is present.
+
+Current evidence: Debug and Release simulator builds pass; offline unit tests cover configuration rejection, stable navigation identity, session/profile restoration, and mismatched-profile failure; the targeted UI path verifies the signed-out Library and native Account form. The built Info.plist contains all three required configuration values without printing the anonymous key. A normal Debug launch completed only the bounded public published-catalog read and rendered live production titles/artwork; no live signup, login, profile read, logout, migration, commerce action, or production write was performed. The owner approved an eventual controlled Auth check but selected UI-first implementation, so owner-account acceptance, callback design, revoked-session behavior, and role/permission verification remain open until a meaningful end-to-end native journey is ready.
+
+**Complete when:** an owner-controlled account can authenticate in a native test build, load a bounded authorized read, persist/refresh securely, log out, and fail closed without weakening the web platform.
+
+#### Phase 3 — Core member experience
+
+- [ ] Implement Home discovery, category navigation, shelves, search entry points, and Item routing.
+- [ ] Implement Library grouping/filtering and entitled Item presentation.
+- [ ] Implement the single native Radio/Music player, queue, seek, interruptions, audio routes, lock-screen/remote behavior if approved, and recovery after suspension.
+- [ ] Implement Community feed, categories, composer, mentions, reactions without public totals, conversations, editing, reporting, and Item references.
+- [ ] Implement Account, public/owner profile, notifications, messages, settings, Support, recovery, legal, and role-aware Creator Studio destinations within the accepted version boundary. Calendar is hidden to match production; Checkout and Orders remain excluded.
+- [ ] Implement Store and Item pages required for discovery, saving, listening, reading, and understanding work.
+- [ ] Keep MASK and other interactive Items desktop-only unless a separate native-game milestone is approved.
+
+Current Home/Search evidence: the native Discover screen uses a typed published-catalog repository; preserves Featured, Music, Books, Games, Merch, Beats, and Sample Packs; limits Recently Added to eight Music Items for a consistent square-card rail; keeps those distinct from eight additional New in Music fixtures; and provides eight deterministic examples for every remaining category. An August 1 production-mobile comparison refined the native presentation to a horizontal text-and-underline category rail, `New in Music` before `Recently Added`, tappable shelf headers with category disclosure, responsive two-up artwork/title/creator cards without web-only format labels, and a compact toolbar menu for supported sort and format controls. Category pages no longer duplicate the page title or inline Search; global Search remains the dedicated native search destination. The typed category source still supports title/creator search, format filtering, and Release Date/Recently Added/Title sorting. Native Search aggregates bounded published Items, public profiles, visible Community posts, and canonical Support links behind one read-only typed repository, with ranked suggestions, explicit submission, case/diacritic-insensitive matching, Items/Creators/Posts/Help sections, and native Item, reusable public-profile, and Community destinations. The Home/Search live-read-only catalog acceptance passed without Auth or production mutation. A thermal-safe single-job Simulator build, the complete 53-test unit target, and the focused primary-navigation UI journey passed August 1; the UI result includes retained screenshots of refined Featured and Music category states. The compact/large simulator matrix, manual VoiceOver, and real-device evidence remain open.
+
+Current Library evidence: the native account surface uses a bounded `library_entries` repository constrained to the authenticated user and visible rows, with bounded nested Item/creator fields and no direct write path. Source covers Music, Books, Games, Beats, and Sample Packs grouping; physical Merch exclusion; title/creator search; a compact native category menu; full Library Item composition; tracklists; achievements/progress; included and bonus content; Creator Updates; local Reader layout; sample browser; and desktop-only interactive launch state. The August 1 production-reference pass removes acquisition labels from visual shelf cards, reduces the root to the accepted title/search-filter/category hierarchy, and translates music detail into centered artwork and identity, monochrome Play, and a full-width divider tracklist without a desktop panel. Relationship data remains available to the repository and accessibility boundary without being repeated as visual decoration. Live detail deliberately returns no invented protected achievements/assets until a contract is accepted. A thermal-safe single-job build, the complete 53-test unit target, and the refined signed-in Library root/music detail/tracklist/filter/game-detail journey pass on iPhone 17 Pro Simulator. Historical archived/revoked presentation, entitlement-aware playback/reading/download, protected assets, save/remove/progress mutations, owner-account read acceptance, and manual VoiceOver remain open.
+
+Current Radio/player evidence: the native station uses a bounded read-only repository for active playlist entries plus track, published Music, streaming, artwork, and creator fields; SwiftUI does not access those tables directly. A shell-owned `PlayerStore` uses one `AVPlayer`/`AVAudioSession` foreground engine while test runs substitute a deterministic no-network engine. The August 1 production-reference pass confirms the intentional title-free centered Now Playing composition, synchronized station offset, square artwork, track and artist identity, one monochrome capsule Play/Stop control, loading/empty/retry states, and pull-to-refresh; accent color no longer dominates the primary playback control. The offline suite now has seventeen passing tests, including station looping, fail-closed loading, and shared player start/stop; the refined Radio UI composition/play/stop test passes on iPhone 17 Pro Simulator. Light and dark accessibility-extra-extra-extra-large renders were inspected. Live playlist decoding/audio acceptance, exact web creator-balanced rotation parity, queue/seek, analytics, interruption and route handling, lock-screen/remote controls, suspension recovery, approved background behavior, manual VoiceOver, and real-device evidence remain open, so the Radio/player checkbox is not yet complete.
+
+Current Community evidence: the native feed and canonical thread pages use a typed repository; SwiftUI does not access Community tables or RPCs directly. Public reads are bounded to published, moderation-visible entries and replies, while post/reply creation, viewer-only Like state, and evidence-preserving reports remain authenticated user-scoped operations. Offline fixtures prove the stable All, General, Updates, Questions, Collaborations, Showcase, and Assistance filter order; Item references; hidden public Like totals; native navigation; root and nested replies; independent Like, Reply, Copy Link, and non-owner Report actions; signed-in composers; loading/empty/retry/refresh states; reusable public profiles; and fail-closed transport behavior. A compact Community author now expands through a bounded read-only public-profile repository into bio, icon links, all visible posts, and published Items. The complete 53-test unit target, signed-in filter/thread/reply/Like/post journey, dedicated public-profile journey, and primary navigation pass on iPhone 17 Pro Simulator with parallel cloning disabled; primary navigation also passed at accessibility-extra-extra-extra-large. Light and dark renders were inspected. Creator Update creation remains deliberately disabled until a published Item can be selected. Live owner identity/RLS/RPC acceptance, mentions, Item tagging, owner edit/delete, following, reply reactions, moderation/report acceptance, manual VoiceOver, and real-device evidence remain open, so the Community checkbox is not yet complete.
+
+Current Account evidence: the native signed-in hub uses typed repositories for the matching owner's profile/external links, notifications, and participant-private Messages; SwiftUI does not access those tables or RPCs directly, identity mismatch fails closed, and Checkout/Orders are hidden. Stable source destinations are Profile, Creator Studio, Notifications, Messages, Support, and Settings. Calendar is also hidden because it is not a visible production feature; the Account acceptance journey asserts its absence. The signed-out state now matches production's progressive visual hierarchy: `44OS`, guidance, Email, and Continue first, followed by Welcome back, change-email summary, Password, Log in, and recovery. It preserves the reviewed native password sign-in implementation without yet copying production's server-orchestrated account discovery/signup path. The signed-in hub matches the accepted mobile information density with no redundant title/copy, a centered uncarded avatar and name, and one material list of production-ordered title/description rows with Log Out integrated at the end. Owner and visitor Profile share one content-backed native composition with centered identity, system typography, neutral avatar treatment, icon-only Around the Web links, monochrome controls, full-width tab rails, Community-style edge-to-edge post rows, and artwork-led Item grids with year metadata. Owner actions are Edit Profile/Open Studio; visitor actions remain safe Follow/Message/Share boundaries. Edit Profile uses a centered live preview, native form sections, the production external-link set, and a toolbar Save action that remains local-only. Email, Admin/Creator labels, and redundant Item-format labels are absent from public identity. Content-backed tabs expose published Music and other categories only when present. Notifications use production copy, a single native filter menu, one divider-separated material list, and restrained per-row overflow actions; the filter/thread/dismiss/achievement journey passes. Messages retain the native large-title plain-list inbox and now include production's participant `@username` detail; the inbox/thread/local-send/new-message journey passes. Settings matches production's Appearance-first hierarchy and exposes local System/Light/Dark and Amber/Sage/Ocean/Violet choices; static ambient gradients, shared native ultra-thin material surfaces, and selected-accent tint provide restrained theme-responsive glass without animation, continuous blur work, or Supabase writes. Support matches production's introduction, How can we help search, Quick help, grouped non-commerce topics, and monitored-email safety guidance through native large-title navigation, material divider lists, and native article detail. Its focused search/article journey passes with one test and zero failures plus a retained landing screenshot. Account Recovery now mirrors production's reset-request title, guidance, email field, and action in a focused native layout, while remaining an explicit no-send/no-write preview until delivery and native callback work is approved; the focused Log In-to-Recovery journey passes with one test and zero failures and a retained iPhone screenshot. Settings uses exact production titles/descriptions for Terms of Service, Privacy Policy, and Copyright and Takedowns and presents each canonical live document through Apple `SFSafariViewController`, keeping versioned text current without duplicating it in Swift or using `WKWebView` for a core feature. The legal title/URL contract test passes. Creator Studio follows production's landing hierarchy with the canonical title/copy, a monochrome create action, Saves/Plays/Sold/Earned metrics, Catalog, and Creator Tools. The Release editor now mirrors production's Details, Download/Market/Price, Artwork, Tracks, External Links, Achievements, Videos, removal, and save hierarchy using persistent native field labels, date/stepper/picker/toggle controls, appropriate URL and decimal keyboards, monochrome tint, and a hidden tab bar for deep form navigation. Asset selection, removal, and saving remain accurate local-only boundaries; its focused composition journey passes with one test and zero failures and two retained screenshots, followed by a clean final build after visual polish. Item-type-specific editors, Event and Update new/edit, Radio selection, Earnings, Payouts, and onboarding remain local-only routes. Team stays hidden until server-authoritative capability proves access. A thermal-safe single-job Simulator build, the complete 53-test unit target, the focused Community public-profile journey, the focused Account/Profile/Edit Profile/Studio journey, focused Support, Notifications, and Messages journeys, and the focused Account appearance journey pass on iPhone 17 Pro Simulator. Live Auth account discovery/signup/profile/recovery/callback acceptance, real following state, username validation, image/upload and Studio writes, notification/message synchronization, APNs, role-aware capability reads, manual VoiceOver, and real-device evidence remain open.
+
+Current Store/Item evidence: Discover provides the stable Featured, Music, Books, Games, Merch, Beats, and Sample Packs entry structure. Its August 1 production-reference pass now uses native text-and-underline category navigation, category-disclosing shelf headers, responsive two-up cards, and a toolbar filter for the supported sort and format controls. Global Search remains separate. The full public detail screen remains behind a typed repository for bounded published tracks, external links, and same-creator related Items; SwiftUI does not query those tables directly. A production-mobile comparison against `Muses` refined Music detail to centered square artwork and release identity, a monochrome Library action plus compact Share control, and a full-width divider tracklist without the former desktop panel. Section names now match the accepted product language: Creator Updates, Community, Product Details, and More from the creator. Source also covers permanent routing, experience-specific artwork ratios, Beat metadata and license preview, public book/sample preview layouts, videos, reviews, merch-option selection, external links, native loading/retry, and explicit desktop-only Game states. Deterministic fixtures exercise these layouts; live Beat and expanded detail fields return nil or empty rather than inventing schema or authorization truth. A thermal-safe single-job build and the focused Product journey pass on iPhone 17 Pro Simulator with one test and zero failures, retaining refined Music and desktop-only Game screenshots. The Library action currently performs no write. Ownership/save, protected playback/reading/downloads, accepted live review/Item Community/merch reads, prices, Cart/Checkout/Orders, StoreKit, commerce policy review, manual VoiceOver, and real-device evidence remain open.
+
+**Complete when:** the owner can complete the accepted everyday member journeys natively against the same canonical platform data, with no core WebView screen and no duplicate client-side authorization truth.
+
+#### Phase 4 — Native integration and resilience
+
+- [ ] Add only approved native capabilities such as APNs notifications, universal links, background audio, sharing, downloads, or offline behavior.
+- [ ] Verify app switching, memory pressure, network transitions, interruption, keyboard/file pickers, protected assets, deep links, and recovery from terminated state.
+- [ ] Measure launch time, scrolling, image loading, audio stability, energy, memory, and data usage on representative real devices.
+- [ ] Complete VoiceOver, Dynamic Type, contrast, reduced motion, touch-target, and orientation acceptance.
+- [ ] Preserve privacy declarations, permission purpose strings, and sanitized diagnostics that match actual behavior.
+
+**Complete when:** accepted native integrations improve the iOS experience without introducing an unnecessary permission, privacy mismatch, protected-content leak, or server-authority regression.
+
+#### Phase 5 — Commerce and distribution
+
+- [ ] Review current App Store rules for digital content, external purchase links, reader behavior, physical Merch, StoreKit, entitlement restoration, refunds, and every intended launch country before implementing native purchase presentation.
+- [ ] Obtain explicit owner approval before creating StoreKit products, changing commerce architecture, or running any production payment.
+- [ ] Configure signing, provisioning, privacy manifests/answers, App Store metadata, screenshots, review notes, support/privacy links, and an approved review account or demo mode.
+- [ ] Pass clean Debug/Release builds, unit/UI tests, static checks, simulator matrix, physical-device acceptance, archive validation, and TestFlight review.
+- [ ] Submit to the App Store only after explicit owner approval; treat review feedback as a new bounded task.
+
+**Complete when:** an accepted signed build passes owner-device and TestFlight testing, accurately declares its data and commerce behavior, preserves the existing 44OS platform boundary, and is approved for the chosen distribution path.
+
+### 2. Desktop Mac and Windows Application
 
 This is the detailed implementation tracker and handoff for the 44OS Mac and Windows website shells. It is intentionally thorough so a future session can resume without reconstructing the plan. Read Foundation and UI first, then resume from the earliest incomplete evidence gate in this milestone.
 
 #### Current status
 
-Recorded July 20, 2026:
+Recorded August 7, 2026:
 
 - The repository and live domain architecture have been reviewed.
 - Tauri 2 has been selected for a thin desktop shell that displays `https://app.44os.com`.
 - Scope, risks, build targets, checks, release sequence, and estimated effort are documented below.
-- No Tauri code, installer, public Download page, or desktop artifact exists yet.
-- The next implementation step is **Phase 1 — Scaffold the shell**.
+- The minimal Tauri source, locked Rust graph, desktop icon set, exact Tauri CLI, security contract, and private manual Windows workflow now exist. Local format, Clippy, and Rust tests pass.
+- An ignored private universal Mac application and ad-hoc-signed DMG build successfully. The application launched directly into `https://app.44os.com/` with the accepted 44OS shell and live Discover content. No installed-package acceptance, Windows artifact, or public Download page exists yet.
+- The next implementation step is to inspect/install the private DMG through the real Gatekeeper path, complete the Mac behavior/parity matrix, then run the private Windows workflow.
 
 Checkboxes are evidence gates. Mark one complete only when its stated artifact or acceptance evidence exists. Add a dated progress-log entry after every implementation session.
 
@@ -73,7 +162,7 @@ The shell will not:
 
 - Bundle or copy the Next.js frontend.
 - Create a second API or database.
-- Add native features, broad computer access, a tray, launch-at-login, native push, native menus, offline mode, or background services.
+- Add broad computer access, a tray, launch-at-login, native menus, offline mode, or background services. The only narrow native feature is the approved notification permission/display bridge while the app is running.
 - Use the Mac App Store, Microsoft Store, Apple Developer program, Apple notarization, or paid Windows code signing.
 - Add a native auto-updater. Website changes already appear on the next page load; a rare shell-only update can use a newly downloaded installer.
 - Attempt to transfer browser/PWA sessions into the desktop WebView.
@@ -121,12 +210,12 @@ A second short session may be needed if Windows CI, WebView-specific audio/downl
 
 Resolve these while scaffolding and record the final values here:
 
-- [ ] Confirm shell application name: recommended `44OS`.
-- [ ] Confirm permanent application identifier: recommended `com.fortyfour.os44`.
-- [ ] Confirm v1 Mac target: recommended universal DMG for Apple Silicon and Intel.
-- [ ] Confirm v1 Windows target: recommended x64 NSIS installer for current Windows 10 and Windows 11.
-- [ ] Confirm minimum window: recommended 960×640, with 1280×800 initial size.
-- [ ] Confirm the Download page may disclose the unsigned-publisher warning before download.
+- [x] Confirm shell application name: `44OS`.
+- [x] Confirm permanent application identifier: `com.fortyfour.os44`.
+- [x] Confirm v1 Mac target: universal DMG for Apple Silicon and Intel.
+- [x] Confirm v1 Windows target: x64 NSIS installer for current Windows 10 and Windows 11.
+- [x] Confirm minimum window: 960×640, with 1280×800 initial size.
+- [x] Confirm the Download page may disclose the unsigned-publisher warning before download.
 
 Changing the application identifier later can make the operating system treat the replacement as a separate app, so it should be chosen once.
 
@@ -167,13 +256,13 @@ Do not create another frontend package, copy pages into `src-tauri`, run a bundl
 The production window loads remote web content. That content must not receive general access to the user’s computer.
 
 - Keep `withGlobalTauri` false.
-- Begin with no remote Tauri capabilities.
+- Keep the sole remote Tauri capability limited to the exact app/local-development origins and notification permission/status/display commands.
 - Do not enable Shell, Process, File System, HTTP client, Clipboard, Store, Dialog, Upload, or arbitrary command APIs.
 - Explicitly list any capability file in `tauri.conf.json`; do not automatically accept every file found in the capabilities directory.
 - Do not embed Supabase service-role credentials, provider secrets, Vercel secrets, Auth tokens, updater keys, or signing material.
 - Use only HTTPS in production and only the exact `https://app.44os.com` start URL.
 - Block unsafe schemes and unexpected embedded origins. External creator links, YouTube destinations, email links, and support links should open safely without granting their pages a native bridge.
-- Do not add a native permission merely to imitate something that already works in the WebView.
+- Do not expand the native boundary beyond the notification bridge without a separately approved security review.
 
 #### Phase 0 — Planning
 
@@ -188,34 +277,34 @@ The production window loads remote web content. That content must not receive ge
 
 #### Phase 1 — Scaffold the shell
 
-- [ ] Inspect the latest Git status and dependencies before changing files.
-- [ ] Add the current compatible Tauri 2 CLI as an exact dev dependency.
-- [ ] Initialize `src-tauri` without replacing or reconfiguring the Next.js application.
-- [ ] Commit `Cargo.lock` and use compatible pinned Tauri/Rust dependency versions.
-- [ ] Set product name, application identifier, shell version, copyright, homepage, and package targets.
-- [ ] Configure the development WebView URL as an explicit localhost address.
-- [ ] Configure the production WebView URL as exactly `https://app.44os.com/`.
-- [ ] Do not set `frontendDist` to the Next.js build and do not add `output: 'export'`.
-- [ ] Do not run `npm run build` as though the website were bundled into the installer.
-- [ ] Configure a standard decorated window with dark initial background, centered launch, 1280×800 initial size, and 960×640 minimum size unless the owner selects different values.
+- [x] Inspect the latest Git status and dependencies before changing files.
+- [x] Add Tauri CLI `2.11.4` as an exact dev dependency.
+- [x] Initialize `src-tauri` without replacing or reconfiguring the Next.js application.
+- [x] Generate and preserve `Cargo.lock` with compatible locked Tauri/Rust dependency versions; staging and commit remain owner-controlled.
+- [x] Set product name, application identifier, shell version, copyright, homepage, and package targets.
+- [x] Configure the development WebView URL as explicit `http://localhost:3000`.
+- [x] Configure the production WebView URL as exactly `https://app.44os.com/`.
+- [x] Do not set `frontendDist` to the Next.js build and do not add `output: 'export'`.
+- [x] Do not run `npm run build` as though the website were bundled into the installer.
+- [x] Configure a standard decorated window with dark initial background, centered launch, 1280×800 initial size, and 960×640 minimum size.
 - [ ] Keep DevTools available for local development and disabled in the release build.
-- [ ] Keep the Rust entry point minimal and free of business logic.
-- [ ] Add `desktop:dev`, `desktop:check`, and `desktop:build` scripts.
+- [x] Keep the Rust entry point minimal and free of business logic.
+- [x] Add `desktop:dev`, `desktop:check`, and `desktop:build` scripts.
 - [ ] Verify `desktop:dev` opens localhost and production mode opens only the app origin.
 
-**Complete when:** the Mac development shell opens the real 44OS UI, refreshes normally, and contains no unnecessary native plugin or permission.
+**Complete when:** the Mac development shell opens the real 44OS UI, refreshes normally, and contains no native plugin or permission beyond the reviewed notification bridge.
 
 #### Phase 2 — Icons and platform packages
 
-- [ ] Use the approved black background and white 44 logo as the source artwork.
-- [ ] Generate the complete Tauri PNG, `.icns`, and `.ico` icon set from one source.
+- [x] Use the approved `public/icon-512.png` black-background 44 mark as the source artwork.
+- [x] Generate the complete Tauri PNG, `.icns`, and `.ico` icon set from that source.
 - [ ] Inspect the Mac Dock, Finder, Windows desktop, Start menu, taskbar, installer, and uninstall icon presentation.
-- [ ] Configure macOS direct-download targets as `.app` and DMG.
-- [ ] Build the Mac package with Tauri’s ad-hoc signing identity (`-`), not an Apple Developer certificate.
-- [ ] Configure the Windows x64 NSIS setup executable.
-- [ ] Use the standard WebView2 bootstrap behavior unless a clean Windows test proves an offline runtime is required.
+- [x] Configure macOS direct-download targets as `.app` and DMG.
+- [x] Build the universal Mac `.app` and DMG with Tauri’s ad-hoc signing identity (`-`), not an Apple Developer certificate.
+- [x] Configure the Windows x64 NSIS setup executable.
+- [x] Use the standard WebView2 download-bootstrapper behavior unless a clean Windows test proves an offline runtime is required.
 - [ ] Record artifact filename, shell version, target, architecture, size, SHA-256 checksum, commit, and build date.
-- [ ] Keep built installers out of Git history.
+- [x] Keep generated desktop build output and installers out of Git history.
 
 **Complete when:** the Mac DMG and Windows installer display the approved icon, install into the expected location, launch, and uninstall cleanly.
 
@@ -227,11 +316,12 @@ Keep behavior browser-like unless a verified defect requires a narrow fix.
 - [ ] A second launch either focuses the existing window or creates only the clearly intended single additional instance. Prefer one application instance if achievable without adding frontend permissions.
 - [ ] The window never flashes a large white screen before the dark app loads.
 - [ ] A network failure does not leave an unexplained permanent blank screen. At minimum, the operating-system/WebView error must allow refresh; a tiny local Retry surface is permitted only if necessary.
-- [ ] The shell never loads the marketing page in place of the app.
+- [x] The first private production launch opens the application origin and accepted Discover shell rather than the marketing page.
 - [ ] Internal `app.44os.com` routes stay in the shell.
 - [ ] External HTTPS, `mailto:`, and support links behave predictably and do not create an unsafe native-capable page.
 - [ ] Unexpected `file:`, `javascript:`, or arbitrary custom-scheme navigation is blocked.
 - [ ] Popup-dependent behavior is tested instead of assumed.
+- [x] The macOS 44OS menu exposes Settings, View mirrors Profile, Studio, Orders, Messages, and Settings, and Help links 44OS Support without adding a duplicate Log Out action or a remote menu capability.
 
 **Complete when:** the wrapper feels like one stable 44OS window and cannot be navigated into an unsafe local or native-capable context.
 
@@ -277,8 +367,9 @@ These tests prove the existing website works inside the platform WebViews. They 
 ##### Notifications
 
 - [ ] The in-app bell, unread count, mention, reply, message, like, and achievement history work.
-- [ ] Native desktop push is not part of v1 and is not promised on the Download page.
-- [ ] The PWA notification prompt must not loop or falsely imply the desktop shell is an installed PWA.
+- [x] macOS and Windows use the shared permission prompt through an origin-bound native bridge and can display newly observed activity while the app is running or minimized.
+- [x] The PWA notification prompt distinguishes the desktop shell and does not falsely require installed-PWA display mode.
+- [ ] Delivery after the desktop app is fully quit remains outside v1 and is not promised on the Download page.
 
 **Complete when:** the accepted website journeys work on installed Mac and Windows shells without a wrapper-specific playback, upload, download, Auth, or payment failure.
 
@@ -286,25 +377,25 @@ These tests prove the existing website works inside the platform WebViews. They 
 
 Windows packaging should use a native Windows GitHub Actions runner rather than cross-compilation from the owner’s Mac.
 
-- [ ] Create `.github/workflows/desktop-build.yml` with manual dispatch.
+- [x] Create `.github/workflows/desktop-build.yml` with manual dispatch.
 - [ ] Add a macOS job only if it provides useful reproducibility; the first Mac artifact may be built locally.
-- [ ] Add `windows-latest` x64 with Node LTS, Rust stable, npm cache, Cargo cache, `npm ci`, desktop contracts, Rust formatting/Clippy/tests, and the Tauri build.
-- [ ] Do not run the workflow on every web push to `main`; shell installers change only when desktop files or the shell version change.
-- [ ] Upload the installer as a private workflow artifact for owner review before any public release.
+- [x] Add `windows-latest` x64 with Node LTS, Rust stable, npm cache, `npm ci`, desktop contracts, Rust formatting/Clippy/tests, and the Tauri build. Cargo reuses the runner cache until a dedicated reviewed cache step is justified.
+- [x] Do not run the workflow on every web push to `main`; it is manual-only.
+- [x] Upload the installer as a private 14-day workflow artifact for owner review before any public release.
 - [ ] Pin third-party Actions to reviewed versions or commit SHAs before relying on the workflow.
-- [ ] Ensure logs and artifacts contain no repository, Vercel, Supabase, Stripe, Resend, Printful, or Google secrets.
+- [x] Keep provider/application secrets out of the shell, workflow, logs, and artifact configuration; the desktop contract rejects known secret patterns.
 
 **Complete when:** a clean native Windows runner produces an installer from the recorded commit and the owner can download it for testing.
 
 #### Phase 6 — Automated checks
 
-- [ ] Add `scripts/desktop-contract.mjs`.
-- [ ] Assert the production WebView starts at exactly `https://app.44os.com/`.
-- [ ] Reject `http:` production URLs, origin wildcards, `withGlobalTauri: true`, unexpected capabilities/plugins, embedded secrets, and a changed application identifier.
-- [ ] Assert no Next.js static export or bundled frontend was introduced.
-- [ ] Assert no updater configuration exists in this v1 shell.
+- [x] Add `scripts/desktop-contract.mjs`.
+- [x] Assert the production WebView starts at exactly `https://app.44os.com/`.
+- [x] Reject `http:` production URLs, origin wildcards, `withGlobalTauri: true`, unexpected capabilities/plugins, embedded secrets, and a changed application identifier.
+- [x] Assert no Next.js static export or bundled frontend was introduced.
+- [x] Assert no updater configuration exists in this v1 shell.
 - [ ] Run web lint, strict typecheck, production build, domain contract, smoke tests, and diff integrity.
-- [ ] Run `cargo fmt --check`, Clippy with warnings denied, and Rust tests.
+- [x] Run `cargo fmt --check`, Clippy with warnings denied, and Rust tests.
 - [ ] Confirm both platform build jobs pass from a clean checkout.
 
 **Complete when:** an unsafe origin/capability change, accidental native feature, static-export conversion, or broken platform build fails before an installer is shared.
@@ -334,11 +425,12 @@ For each device:
 #### Phase 8 — Download page and public release
 
 - [ ] Create `https://44os.com/download` only after at least one tested installer exists.
-- [ ] Add **Download App** to the marketing header only after the route and its available installer links pass anonymously.
+- [ ] Add **Download App** directly beside **Open App** in the 44os.com marketing header only after the route and its available installer links pass anonymously.
+- [ ] Design `/download` as a restrained editorial marketing page using the accepted 44os.com typography, spacing, monochrome palette, and navigation rather than application-shell UI.
 - [ ] Show explicit **Download for Mac** and **Download for Windows** actions. OS detection may recommend one but must not hide the other.
 - [ ] Host the approved artifacts in a public GitHub Release because the repository is public.
 - [ ] Use stable first-party routes such as `/download/mac` and `/download/windows` that redirect to the reviewed current artifact.
-- [ ] Show shell version, build date, system requirements, architecture, approximate size, SHA-256 checksum, simple install steps, unsigned-publisher warning, Support, legal links, and **Open Web App**.
+- [ ] Show the shell version, simple system requirements, approximate size, install steps, unsigned-publisher warning, Support, legal links, and **Open Web App**. Keep architecture, build dates, and checksums in internal release evidence rather than the editorial UI.
 - [ ] State clearly that the shell displays the live website and therefore needs an internet connection.
 - [ ] State clearly that website improvements appear automatically; the shell itself has no native auto-updater.
 - [ ] Never expose a local/CI artifact, broken link, placeholder package, or claim of verified publisher status.
@@ -370,6 +462,24 @@ There is no native updater in v1.
 - Retain the affected artifact, checksum, commit, and incident evidence privately until the issue is understood.
 
 #### Session progress log
+
+##### 2026-08-07 — shell scaffold and live-web polish
+
+- Completed: exact Tauri CLI and locked Rust scaffold, icons, capability-free remote configuration, desktop security contract, manual Windows workflow, universal Mac `.app`/DMG build, production dependency patches, shared signed-out Account auth, catalog-query batching, and marketing/application asset isolation.
+- Accepted Mac window treatment: a slim transparent title bar uses the 44OS background, retains native traffic-light controls and dragging, hides the redundant window title, and keeps the web interface below it.
+- Accepted UI direction: remove the former 10px application-frame gutter and redundant inner shell radius/border on desktop web and native shells; the native Mac window supplies its own outer corners.
+- Added to release scope: an editorial `/download` page and a **Download App** action beside **Open App**, gated behind private Mac and Windows acceptance.
+- Local review ready: the uncommitted editorial `/download` page, responsive marketing navigation buttons, production URL gates, fixed development-only Mac download endpoint, simplified platform choices, and Apple/Microsoft security disclosures are implemented. The local Mac response reproduces the internally reviewed DMG checksum exactly; Windows remains disabled because its CI artifact has not yet been produced.
+- Windows release path ready: the private `windows-latest` workflow builds one unsigned x64 NSIS installer, renames it deterministically, records an internal SHA-256, and retains both for 14 days. The local import command validates the MZ/PE signatures and recognized NSIS-compatible PE machine type before copying the installer into the ignored review path; the packaged application target is verified separately as AMD64. Localhost enables **Download** only after validation succeeds.
+- Local Windows test artifact ready: after the GitHub credential rejected workflow-file upload without `workflow` scope, the documented Tauri macOS cross-build path produced the unsigned NSIS `44OS-0.1.0-windows-x64-setup.exe`. The outer NSIS stub is the expected PE32 Intel 80386 self-extractor; the packaged 44OS executable is PE32+ AMD64 and uses the Windows GUI subsystem so launch does not create a separate console window. The 1.7 MB review copy is ignored under `artifacts/` with SHA-256 `c1f10397f91955b353b8671ca669833db3058bfa7fe97ceb738bacf3c27af247`. Cross-compilation remains experimental, so this artifact cannot pass the release gate until real Windows install, launch, behavior, and uninstall acceptance succeeds.
+- Settings polish ready locally: Discover and Community consume one shared open underline-tab primitive, while Settings keeps Appearance, Account, and Notifications visible in one continuous hash-addressable page. Appearance places equal-width circular Theme and Accent pills on separate left-aligned rows with each pill's content centered. System uses a half-light, half-dark circle; Light and Dark use white and black circles.
+- Desktop Account unification is ready locally: the Sidebar replaces Settings with an Account destination that uses the signed-in profile image, and the duplicate signed-in Topbar avatar/menu is removed. The shared Account hub now leads with a centered avatar/name identity, limits its menu to Profile, conditional Studio, conditional Orders, Messages, and Settings, and places Log Out as a separate centered action beneath the menu. Notifications and Support remain in their established shell controls.
+- Owner-profile action polish is ready locally: the large Edit Profile and Open Studio buttons are removed from the identity row, and one circular glass pencil action aligned beneath the Topbar controls opens Edit Profile. Visitor Follow and Message actions remain unchanged; Studio stays available from Account.
+- Desktop-launch onboarding and Discover polish are ready for local review: signup now enters one editorial `/welcome` route with state-driven Member and Creator guidance; Creator profile setup is immediate but publishing remains approval-gated. Web Home shows `Discover` to signed-out viewers and `Welcome, [name]` to signed-in viewers on Featured. Its accepted rail order is Featured, Music, gated Beats, Samples, Merch, Books, Games. The rail begins below the title divider, then docks into the Topbar while scrolling; both states use the same open underline treatment, align to the content edge, and never become pills. Community shares that dockable navigation, and Library shows All plus only the member's populated categories. Every Home category uses a matching `Browse …` title without inline Beats Search. One taller, non-hovering Admin-selected release banner contains only its eyebrow, title, and release action. `New Releases` selects at most one latest non-featured release per creator, then image/name-only New Creators, nonempty Creators You Follow, and a nonduplicating Browse Music shelf precede Browse Beats, Browse Samples, Browse Merch, Browse Books, and Browse Games. The duplicate Recently Added shelf remains omitted. Home Creator links open the first available published-content profile tab and otherwise fall back to Posts. The experimental artist-specific release rows remain omitted. Admin Home is narrowly restored for the single audited banner selection; no production mutation or deployment has been performed for this local pass.
+- Evidence: production npm audit reports zero vulnerabilities; web lint, strict typecheck, production build, focused contracts, Rust formatting, Clippy, and Rust tests pass. A local production-host comparison proves marketing omits the generated application stylesheet and `app-frame` while the app receives both. The ad-hoc-signed `44OS.app` is a valid arm64/x86_64 Mach-O bundle with identifier `com.fortyfour.os44`; it launched the live application successfully, and the integrated transparent title bar passed visual inspection. The rebuilt 6,958,632-byte universal DMG has SHA-256 `b56023c9c2ade3e4dd54edcd57bb32a201171914547673a0e1bc10718ab8d850`.
+- Decisions: keep Tauri rather than Electron, exact `https://app.44os.com/`, no native plugins/capabilities/updater, ad-hoc Mac and unsigned Windows distribution, shared first-party analytics consent, and four `Other` handoff documents.
+- Blockers: DMG install/Gatekeeper/uninstall acceptance, complete Mac behavior and website parity, Windows real-device acceptance, and public artifact hosting remain.
+- Next: move the ignored Windows installer to the owner’s PC, verify SmartScreen disclosure, install/launch/navigation/auth/playback/upload/download/uninstall behavior, and report the exact Windows version plus results. Retain the artifact only if that matrix passes; configure no production URL before acceptance.
 
 Add one concise entry after each desktop-shell session:
 
@@ -411,17 +521,17 @@ Research verified July 20, 2026. Recheck current versions before implementation.
 
 **Complete when:** anonymous users can download the tested Mac or Windows installer from `44os.com/download`, understand the unsigned-publisher warning, install the shell, sign in, and use the live application without a critical wrapper-specific regression.
 
-### 2. Production account and repository hygiene
+### 3. Production account and repository hygiene
 
 **Status: Repository sweep refreshed July 23; production account deletion remains open and requires exact target verification**
 
-- Repository hygiene keeps `Other/` limited to Foundation, UI, and Milestones. The live Team Handbook and Brand Kit sources live under `content/team/`; local Unity exports, design references, source artwork, and retired working notes live only in the ignored `.local-artifacts/` archive. Migrations, security tests, seed data, required local configuration, production assets, and the recovery-test fixture remain preserved.
+- Repository hygiene keeps `Other/` limited to Foundation, UI, iOS, and Milestones. The live Team Handbook and Brand Kit sources live under `content/team/`; local Unity exports, design references, source artwork, and retired working notes live only in the ignored `.local-artifacts/` archive. Migrations, security tests, seed data, required local configuration, production assets, and the recovery-test fixture remain preserved.
 - Verify the exact live identities and dependencies for the owner-named usernames `Adrian` and `Test`; distinguish usernames from content or track titles.
 - Back up current data, delete only the approved accounts through the Auth Admin boundary, and compare preservation of unrelated Items, Community content, messages, Library, entitlements, orders, achievements, Events, and playback.
 
 **Complete when:** the two approved accounts are absent, unrelated production evidence is preserved, only safe reproducible caches are removed, and the repository passes its proportional quality gates.
 
-### 3. Legal and operating facts
+### 4. Legal and operating facts
 
 **Status: Waiting on owner facts/approval**
 
@@ -432,7 +542,7 @@ Research verified July 20, 2026. Recheck current versions before implementation.
 
 **Complete when:** the published legal and operating facts are accurate, owner-approved, internally consistent, and contain no unsupported designation or placeholder business detail.
 
-### 4. External alerts and operational ownership
+### 5. External alerts and operational ownership
 
 **Status: Open**
 
@@ -443,7 +553,7 @@ Research verified July 20, 2026. Recheck current versions before implementation.
 
 **Complete when:** a real production-critical alert reaches the assigned external channel and every operational responsibility has a named owner and backup/escalation path.
 
-### 5. Manual accessibility and device acceptance
+### 6. Manual accessibility and device acceptance
 
 **Status: Partially complete**
 
@@ -456,7 +566,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** the role/device matrix passes without a launch-blocking accessibility, layout, or input failure and any narrow repairs are verified on affected surfaces.
 
-### 6. Recovery and storage safety
+### 7. Recovery and storage safety
 
 **Status: Open**
 
@@ -467,7 +577,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** the separate-project restore is proven and every candidate object is classified as referenced, intentionally retained, or safely removable with recorded evidence.
 
-### 7. Analytics, search, and Merchant discoverability
+### 8. Analytics, search, and Merchant discoverability
 
 **Status: Foundation deployed; external acceptance open**
 
@@ -482,7 +592,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** consented production analytics records representative journeys without direct personal data or duplicate transactions; intended public routes are accepted by search engines; private routes stay excluded; eligible Merch passes Merchant diagnostics; and monitoring/rollback ownership is recorded.
 
-### 8. Final public-launch decision
+### 9. Final public-launch decision
 
 **Status: Owner action; do not execute early**
 
@@ -492,7 +602,7 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** the owner gives the terminal launch instruction, the Creator dates are correctly recorded, and rollback ownership is documented. This action starts the clock and must not be used for closed testing.
 
-### 9. One real physical-commerce lifecycle
+### 10. One real physical-commerce lifecycle
 
 **Status: Waiting for owner-approved funds and timing**
 
@@ -503,15 +613,24 @@ The public foundation and available Admin/Creator structure/contrast checks pass
 
 **Complete when:** the lifecycle ends with zero unexplained payment or fulfillment mismatch and all immutable order/provider evidence is preserved.
 
-### 10. Optional inactive capabilities
+### 11. Optional inactive capabilities
 
 **Status: Mostly deferred; first interactive runtime active**
 
 - Interactive: MASK by ØLSTEN is the first published desktop Unity/WebGL Item. Its isolated compiled export, gzip/MIME headers, user-gesture start, Library entitlement, reviewed manifest, and desktop-only launch boundary are active. Progress events, signed achievements, and publication of additional games remain separate acceptance work.
-- Beat Store: the local implementation now covers Add Beat, edit/recovery, dedicated Discover/Store/Library Beats categories, original Basic/Premium/Trackout terms, exact license acceptance/snapshotting, signed-payment grants, refund/dispute status, and protected Library files. Perform review-environment upload/edit/Store/Cart/Library/device acceptance, record owner approval of the standard terms, and then separately approve the non-exclusive single-owner public pilot. Splits remain a later acceptance; Exclusive licensing is out of scope.
+- Beat Store: version 1.2 promotes the standard single-owner non-exclusive path. The implementation covers Add Beat, edit/recovery, permanent Discover/Store/Library Beats categories, original Basic/Premium/Trackout terms, exact license acceptance/snapshotting, Stripe Checkout, signed-payment grants, refund/dispute status, and protected Library files. Eligible complete offers now activate when their Beat is published; seller, offer, template, file, tax, Stripe, Beat-runtime, and general-commerce gates remain independently authoritative. The first `feel` Beat is published with active Basic and Premium offers. Complete one real low-value lifecycle before broad promotion. Splits remain a later acceptance; Exclusive licensing is out of scope.
+- Beat Store detail is ready for 1.2: Add to Library is replaced by a Buy License anchor; public sections run Preview, Licenses, then Product Details; Product Details owns BPM, key, time signature, moods, instruments, sample data, and tags; aligned license rows expose License Info before the rightmost Add to Cart/View Cart action; the centered reusable focus-managed dialog sits above a full-window dark scrim; the retired Review-only/unavailable copy and Reviews section are absent; and same-creator recommendations contain Beats only with an explicit empty state. Cart and Checkout are exposed for standardized Beat offers, but neither can bypass the existing server-authoritative payment/runtime gates.
 - Radio programming, newsletters, creator Merch, international physical shipping, Wise payout execution, desktop packaging, Services, and other ecosystem expansion require separate owner promotion into this open list.
 
 **Complete when:** each capability receives its own explicit activation decision and required legal, provider, security, failure, accessibility, and rollback acceptance. Until then it remains hidden and fail-closed.
+
+### Current Studio item-type refinement
+
+Distinct Book, Sample Pack, Game, and Beat editors now preserve production's item semantics. Book covers Description, optional Release Date, Novel/Artbook/Zine type, Download, Artwork, full PDF, and Native Reader sample/page/language controls. Sample Pack covers mandatory paid-download pricing, Market, Artwork, full-pack ZIP, dynamic preview count, named preview audio, removal, and save. Game covers Details, the desktop-only/free-review boundary, Artwork, Unity WebGL ZIP, removal, and save without inventing mobile launch or pricing controls. Beat covers its tagged preview, BPM/time-signature/key, metadata, private delivery files, three standardized license offers, and rights attestation. Native navigation titles replace duplicate in-form web headings. Asset selection, removal, submission, and saving remain local-only and fail closed. The focused Book, Sample Pack, and Game journeys each pass with one test, zero failures, and two retained screenshots; the Beat journey passes with one test, zero failures, and three retained screenshots. Studio Radio preserves production's read-only playlist model, passes a focused journey with one retained screenshot, and can switch to the main Radio tab. Earnings, Payouts, and Creator Setup preserve production's ledger, readiness/history, and three-step seller setup concepts; one focused journey passes with four retained screenshots and no sensitive writes. Calendar, Events, and Updates are hidden production pages and remain excluded from native navigation.
+
+### Current native visual acceptance baseline
+
+The visible member-facing production page families now have native SwiftUI counterparts and focused visual evidence. Public Book, Sample Pack, and Merch Item variants pass one focused journey with three retained screenshots. Native Reader contents and chapter reading pass one focused journey with two retained screenshots. Checkout, Cart, Orders, payment processing, Admin operations, and hidden Calendar/Events/Updates remain explicitly outside this baseline. The next acceptance input is owner testing on a physical iPhone; resulting observations become targeted polish work and do not broaden data-write or commerce authorization.
 
 ## Maintenance
 

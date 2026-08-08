@@ -1,0 +1,175 @@
+.page { background: #f5f5f0; color: #1a1a1a; }
+
+.hero {
+  width: min(1040px, calc(100% - 64px));
+  margin: 0 auto;
+  padding: 128px 0 72px;
+  text-align: center;
+}
+
+.eyebrow {
+  margin: 0;
+  color: #6b6b6b;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: .09em;
+}
+
+.hero h1 {
+  max-width: 960px;
+  margin: 18px auto 0;
+  font-size: clamp(56px, 7vw, 88px);
+  font-weight: 700;
+  letter-spacing: -.035em;
+  line-height: .95;
+}
+
+.intro {
+  max-width: 760px;
+  margin: 28px auto 34px;
+  color: #646460;
+  font-size: 20px;
+  font-weight: 300;
+  line-height: 1.5;
+}
+
+.heroAction,
+.downloadButton,
+.webSection a {
+  min-height: 44px;
+  padding: 0 24px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #1a1a1a;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 550;
+  line-height: 1;
+  text-decoration: none;
+  transition: opacity 150ms ease;
+}
+
+.heroAction:hover,
+.downloadButton:hover,
+.webSection a:hover { color: #fff; opacity: .84; }
+
+.requirements {
+  margin: 18px 0 0;
+  color: #858580;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.productVisual {
+  width: min(1120px, calc(100% - 64px));
+  margin: 0 auto 120px;
+  aspect-ratio: 8 / 5;
+}
+
+.productVisual img { width: 100%; height: 100%; object-fit: contain; }
+
+.downloadSection,
+.installSection {
+  width: min(1120px, calc(100% - 64px));
+  margin: 0 auto;
+  padding: 112px 0;
+  border-top: 1px solid #d9d9d3;
+}
+
+.sectionHeader { max-width: 700px; margin-bottom: 52px; }
+.sectionHeader h2,
+.installHeader h2,
+.webSection h2 {
+  margin: 14px 0 18px;
+  font-size: clamp(40px, 5vw, 58px);
+  font-weight: 700;
+  letter-spacing: -.025em;
+  line-height: 1;
+}
+
+.sectionHeader > p:last-child,
+.webSection > p:not(.eyebrow) {
+  margin: 0;
+  color: #6b6b6b;
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+.platformGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.platformCard {
+  min-width: 0;
+  padding: 36px;
+  border: 1px solid #d9d9d3;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+.platformCard h3 { margin: 0; font-size: 24px; letter-spacing: -.015em; }
+.platformCopy { min-height: 54px; margin: 28px 0; color: #646460; font-size: 15px; line-height: 1.55; }
+.downloadButton { width: 100%; box-sizing: border-box; }
+.downloadButtonDisabled { cursor: not-allowed; background: #e6e6e0; color: #888883; }
+.downloadButtonDisabled:hover { color: #888883; opacity: 1; }
+
+.installSection { display: block; }
+.installHeader { max-width: 760px; margin-bottom: 52px; }
+.installColumns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 48px; }
+.installColumns h3 { margin: 0 0 18px; font-size: 21px; }
+.installColumns p,
+.installColumns li { color: #5e5e5a; font-size: 14px; line-height: 1.65; }
+.installColumns ol { margin: 20px 0; padding-left: 20px; }
+.installColumns li + li { margin-top: 8px; }
+.installColumns a { color: #1a1a1a; font-size: 14px; font-weight: 650; text-underline-offset: 4px; }
+
+.webSection {
+  min-height: 460px;
+  padding: 88px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  background: #1a1a1a;
+  color: #fff;
+  text-align: center;
+}
+.webSection .eyebrow { color: rgba(255,255,255,.52); }
+.webSection h2 { margin-bottom: 18px; }
+.webSection > p:not(.eyebrow) { color: rgba(255,255,255,.62); }
+.webSection a { margin-top: 28px; background: #fff; color: #1a1a1a; }
+.webSection a:hover { color: #1a1a1a; }
+
+.page a:focus-visible { outline: 3px solid #496d92; outline-offset: 3px; }
+
+@media (max-width: 767px) {
+  .hero,
+  .productVisual,
+  .downloadSection,
+  .installSection { width: min(100% - 32px, 1120px); }
+  .hero { padding: 82px 0 56px; }
+  .hero h1 { font-size: clamp(28px, 9vw, 38px); line-height: .98; white-space: nowrap; }
+  .intro { margin: 22px auto 28px; font-size: 17px; }
+  .requirements { max-width: 300px; margin-right: auto; margin-left: auto; }
+  .productVisual { margin-bottom: 68px; aspect-ratio: 1 / .82; }
+  .downloadSection,
+  .installSection { padding: 72px 0; }
+  .sectionHeader { margin-bottom: 36px; }
+  .sectionHeader h2,
+  .installHeader h2,
+  .webSection h2 { font-size: 38px; }
+  .platformGrid,
+  .installColumns { grid-template-columns: 1fr; }
+  .platformCard { padding: 26px; border-radius: 20px; }
+  .platformCopy { min-height: 0; }
+  .installColumns { gap: 40px; }
+  .webSection { min-height: 400px; padding: 72px 24px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroAction,
+  .downloadButton,
+  .webSection a { transition: none; }
+}

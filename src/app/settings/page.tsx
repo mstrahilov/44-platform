@@ -30,7 +30,7 @@ import { getAppPathUrl } from '@/lib/siteUrl';
 import { getNotificationPreference, setNotificationPreference, type NotificationPreferenceKind } from '@/lib/notificationPreferences';
 import { WebPushSettingsRow } from '@/components/WebPushNotifications';
 
-type SettingsAnchorId = 'account' | 'notifications' | 'appearance' | 'dock';
+type SettingsSectionId = 'appearance' | 'account' | 'notifications';
 
 const ACCOUNT_KEYS = {
   mentions: 'mentions',
@@ -39,7 +39,7 @@ const ACCOUNT_KEYS = {
   achievements: 'achievements',
 } as const;
 
-function normalizeSettingsAnchor(value: string | null | undefined): SettingsAnchorId | null {
+function normalizeSettingsAnchor(value: string | null | undefined): SettingsSectionId | null {
   if (!value) return null;
   if (value === 'dock') return 'appearance';
   if (value === 'system' || value === 'appearance' || value === 'clock' || value === 'accessibility' || value === 'advanced') return 'appearance';
@@ -137,7 +137,7 @@ function SettingsPageSection({
   action,
   children,
 }: {
-  id: SettingsAnchorId;
+  id: SettingsSectionId;
   title: string;
   description?: string;
   action?: ReactNode;
@@ -197,9 +197,21 @@ function ThemeSettings() {
         <div className="settings-field-head">
           <div className="os-type-field-title">Theme</div>
         </div>
-        <Ui44SelectInput value={mode} onChange={event => chooseMode(event.target.value as ThemeMode)} aria-label="Theme mode">
-          {MODES.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
-        </Ui44SelectInput>
+        <div className="settings-swatches" role="radiogroup" aria-label="Theme mode">
+          {MODES.map(m => (
+            <button
+              key={m.id}
+              type="button"
+              role="radio"
+              className={m.id === mode ? 'settings-swatch settings-swatch-active ui44-swatch ui44-swatch-active' : 'settings-swatch ui44-swatch'}
+              onClick={() => chooseMode(m.id)}
+              aria-checked={m.id === mode}
+            >
+              <span className={`settings-swatch-dot settings-theme-swatch-${m.id}`} />
+              {m.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="settings-field settings-accent-field">
