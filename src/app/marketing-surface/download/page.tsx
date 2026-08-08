@@ -9,7 +9,7 @@ const pageTitle = 'Download 44OS';
 const pageDescription = 'Bring the live 44OS experience to Mac or Windows.';
 const localMacDownload = '/api/desktop/download/mac';
 const localWindowsDownload = '/api/desktop/download/windows';
-const publishedMacDownload = '/downloads/44OS-0.1.0-mac-universal-r2.dmg';
+const publishedMacDownload = '/downloads/44OS-0.1.0-mac-universal.dmg';
 const publishedWindowsDownload = '/downloads/44OS-0.1.0-windows-x64-setup.exe';
 
 export const dynamic = 'force-dynamic';
@@ -102,7 +102,7 @@ export default function MarketingDownloadPage() {
         <div className={styles.platformGrid}>
           <article className={styles.platformCard}>
             <h3>Download for Mac</h3>
-            <p className={styles.platformCopy}>For Macs running macOS 12 or later. Approximately 7 MB.</p>
+            <p className={styles.platformCopy}>For Macs running macOS 12 or later. Approximately 5.3 MB.</p>
             <DownloadAction href={macUrl}>{macUrl ? 'Download' : 'Coming soon'}</DownloadAction>
           </article>
 

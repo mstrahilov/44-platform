@@ -2785,6 +2785,12 @@ body.theme-dark .os-category-icon img {
   margin: 0;
 }
 
+.library-opening {
+  display: grid;
+  min-width: 0;
+  gap: 18px;
+}
+
 /* ── Card (Glass A material, grid- and shelf-friendly) ── */
 
 /* =========================================================
@@ -5321,6 +5327,34 @@ body:is(.theme-dark, .theme-light) .os-topbar .os-topbar-tab.os-topbar-tab-secti
   content: "";
 }
 
+/* Mobile docked rails replace the chrome and remain horizontally reachable. */
+@media (max-width: 768px) {
+  body:is(.theme-dark, .theme-light) .store-app-page .app-header .ui44-type-page-title {
+    max-width: 100%;
+    font-size: clamp(24px, 8vw, 32px);
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  body:is(.theme-dark, .theme-light) .os-topbar.os-topbar-has-section-tabs .os-mobile-brand-logo,
+  body:is(.theme-dark, .theme-light) .os-topbar.os-topbar-has-section-tabs .os-topbar-right {
+    display: none;
+  }
+
+  body:is(.theme-dark, .theme-light) .os-topbar.os-topbar-has-section-tabs .os-topbar-left {
+    width: 100%;
+    min-width: 0;
+    flex: 1 1 auto;
+    gap: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    scroll-padding-inline: var(--os-content-inset);
+    touch-action: pan-x pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 /* Permanent page navigation uses the original rail treatment, never pills. */
 .os-topbar .os-topbar-tab.os-topbar-tab-section {
   position: relative;
@@ -5430,6 +5464,13 @@ body:is(.theme-dark, .theme-light) .os-topbar .os-topbar-tab.os-topbar-tab-secti
   font-weight: 750;
 }
 
+body:is(.theme-dark, .theme-light) .discover-feature .discover-feature-copy,
+body:is(.theme-dark, .theme-light) .discover-feature .discover-feature-eyebrow,
+body:is(.theme-dark, .theme-light) .discover-feature .discover-feature-copy > strong,
+body:is(.theme-dark, .theme-light) .discover-feature .discover-feature-link {
+  color: #fff;
+}
+
 .discover-feature:focus-visible,
 .discover-creator-card:focus-visible {
   outline: 2px solid var(--os-color-accent);
@@ -5531,9 +5572,19 @@ body:is(.theme-dark, .theme-light) .os-topbar .os-topbar-tab.os-topbar-tab-secti
   }
 
   .discover-creator-shelf {
-    width: calc(100% + var(--os-content-inset));
-    grid-auto-columns: min(64vw, 240px);
-    padding-right: var(--os-content-inset);
+    width: calc(100% + (2 * var(--os-content-inset)));
+    margin-inline: calc(-1 * var(--os-content-inset));
+    padding: 0 var(--os-content-inset) 4px;
+    grid-auto-columns: calc((100% - 18px) / 2);
+    gap: 18px;
+    scroll-padding-inline: var(--os-content-inset);
+  }
+}
+
+@media (max-width: 420px) {
+  .discover-creator-shelf {
+    grid-auto-columns: calc((100% - 14px) / 2);
+    gap: 14px;
   }
 }
 
@@ -8783,6 +8834,10 @@ body.accent-violet {
   }
 
   .os-topbar-cart-button {
+    order: 1;
+  }
+
+  .os-topbar-mobile-search-trigger {
     order: 2;
   }
 
@@ -11295,6 +11350,14 @@ body:is(.theme-dark, .theme-light) .store-clear-filters {
 }
 
 @media (max-width: 768px) {
+
+  .library-opening {
+    gap: 14px;
+  }
+
+  .library-opening .library-filter-control {
+    display: none;
+  }
 
   .notifications-page-header .app-header-copy > p {
     display: none;

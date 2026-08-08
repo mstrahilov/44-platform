@@ -22,7 +22,6 @@ import { Ui44SectionArrow } from '@/components/ui44/Controls';
 import { Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
 import { beatReviewSurfacesEnabled } from '@/lib/domain/beats';
 import { SectionTab, SectionTabs } from '@/components/SectionTabs';
-import { loadStudioProfile } from '@/lib/studioProfiles';
 
 const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
   music: 'music',
@@ -135,7 +134,6 @@ function keepNewestProductPerCreator(products: Product[], avoidedProductIds = ne
 export default function StoreApp({ category, frontDoor = false }: { category: StoreCategory; frontDoor?: boolean }) {
   const { user, loading: authLoading } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
-  const [viewerIdentity, setViewerIdentity] = useState({ userId: '', name: '' });
   const [ownedProductIds, setOwnedProductIds] = useState<Set<string>>(new Set());
   const [followedProfileIds, setFollowedProfileIds] = useState<Set<string>>(new Set());
   const [newCreators, setNewCreators] = useState<DiscoveryCreator[]>([]);
@@ -203,30 +201,6 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
         setOwnedProductIds(new Set(itemIds));
         setFollowedProfileIds(new Set(followedIds));
       });
-
-    return () => { alive = false; };
-  }, [authLoading, user]);
-
-  useEffect(() => {
-    let alive = true;
-    if (authLoading) return () => { alive = false; };
-    if (!user) {
-      Promise.resolve().then(() => {
-        if (alive) setViewerIdentity({ userId: '', name: '' });
-      });
-      return () => { alive = false; };
-    }
-
-    const fallbackName = String(user.user_metadata?.display_name || user.user_metadata?.name || user.email?.split('@')[0] || '').trim();
-    void loadStudioProfile(user.id)
-      .then(({ profile }) => {
-        if (!alive) return;
-        setViewerIdentity({
-          userId: user.id,
-          name: profile?.display_name?.trim() || profile?.username?.trim() || fallbackName,
-        });
-      })
-      .catch(() => undefined);
 
     return () => { alive = false; };
   }, [authLoading, user]);
@@ -351,14 +325,8 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   const showStoreFilter = !frontDoor || effectiveFilter !== 'all' || hasActiveFacetFilters;
 
   const copy = CATEGORY_COPY[category];
-  const authenticatedViewerName = user && viewerIdentity.userId === user.id
-    ? viewerIdentity.name
-    : String(user?.user_metadata?.display_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'there').trim();
-  const featuredTitle = user
-    ? `Welcome, ${authenticatedViewerName}`
-    : 'Discover';
   const pageTitle = frontDoor
-    ? effectiveFilter === 'all' ? featuredTitle : browsingBeats ? 'Browse Beats' : STORE_FILTER_TITLES[effectiveFilter]
+    ? effectiveFilter === 'all' ? 'Discover' : browsingBeats ? 'Browse Beats' : STORE_FILTER_TITLES[effectiveFilter]
     : copy.title;
   const surfaceName = frontDoor
     ? effectiveFilter === 'all' ? 'Discover' : browsingBeats ? 'Beats' : STORE_FILTER_LABELS[effectiveFilter]

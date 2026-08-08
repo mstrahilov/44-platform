@@ -68,7 +68,36 @@ export type RadioBundle = {
   status: string;
 };
 
-export async function loadRadioBundle(now = new Date()): Promise<RadioBundle> {
+const RADIO_BUNDLE_TTL_MS = 30_000;
+let radioBundleCache: {
+  dayKey: string;
+  expiresAt: number;
+  promise: Promise<RadioBundle>;
+} | null = null;
+
+export function loadRadioBundle(now = new Date()): Promise<RadioBundle> {
+  const dayKey = radioRotationDayKey(now);
+  if (radioBundleCache?.dayKey === dayKey && radioBundleCache.expiresAt > Date.now()) {
+    return radioBundleCache.promise;
+  }
+
+  const promise = loadRadioBundleUncached(now);
+  radioBundleCache = {
+    dayKey,
+    expiresAt: Date.now() + RADIO_BUNDLE_TTL_MS,
+    promise,
+  };
+  void promise.catch(() => {
+    if (radioBundleCache?.promise === promise) radioBundleCache = null;
+  });
+  return promise;
+}
+
+export function preloadRadioBundle() {
+  void loadRadioBundle().catch(() => undefined);
+}
+
+async function loadRadioBundleUncached(now: Date): Promise<RadioBundle> {
   const dayKey = radioRotationDayKey(now);
   const playlistResult = await supabase
     .from('radio_playlist_entries')

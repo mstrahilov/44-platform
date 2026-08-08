@@ -322,6 +322,7 @@ export function Topbar() {
   const unreadNotificationCount = visibleNotifications.filter(n => !seenIds.has(n.id)).length;
   const backLabel = labelForPath(previousPath?.split('?')[0]) ?? back?.label ?? 'Back';
   const mobileTopbarState = getMobileTopbarState(pathname);
+  const hasSectionTabs = Boolean(tabs?.some(tab => tab.variant === 'section'));
 
   function hideNotification(id: string) {
     const next = new Set(hiddenNotificationIds);
@@ -366,7 +367,7 @@ export function Topbar() {
 
   return (
     <>
-      <div className={`os-topbar os-topbar-mode-${mobileTopbarState.mode}`}>
+      <div className={`os-topbar os-topbar-mode-${mobileTopbarState.mode}${hasSectionTabs ? ' os-topbar-has-section-tabs' : ''}`}>
         <div className="os-topbar-left">
           <Link href="/" className="os-mobile-logo os-mobile-brand-logo" aria-label="44OS Home">
             {/* eslint-disable-next-line @next/next/no-img-element */}

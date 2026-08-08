@@ -191,24 +191,26 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
   return (
     <PageShell>
       <main className="app-page">
-        <HubHero
-          title="Library"
-          actions={(
-            <div className="page-header-tools">
-              <label className="page-search-control library-filter-control ui44-composed-field ui44-composed-field-search">
-                <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
-                <Ui44TextInput surface="bare" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search Library" aria-label="Search Library" />
-              </label>
-            </div>
-          )}
-        />
-        <SectionTabs ariaLabel="Library categories" dockToTopbar topbarTabs={libraryTopbarTabs}>
-          {libraryFilters.map(filter => (
-            <SectionTab key={filter} href={LIBRARY_FILTER_HREFS[filter]} active={activeFilter === filter}>
-              {filter === 'asset' ? 'Samples' : FILTER_LABELS[filter]}
-            </SectionTab>
-          ))}
-        </SectionTabs>
+        <div className="library-opening">
+          <HubHero
+            title="Library"
+            actions={(
+              <div className="page-header-tools">
+                <label className="page-search-control library-filter-control ui44-composed-field ui44-composed-field-search">
+                  <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
+                  <Ui44TextInput surface="bare" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search Library" aria-label="Search Library" />
+                </label>
+              </div>
+            )}
+          />
+          <SectionTabs ariaLabel="Library categories" dockToTopbar topbarTabs={libraryTopbarTabs}>
+            {libraryFilters.map(filter => (
+              <SectionTab key={filter} href={LIBRARY_FILTER_HREFS[filter]} active={activeFilter === filter}>
+                {filter === 'asset' ? 'Samples' : FILTER_LABELS[filter]}
+              </SectionTab>
+            ))}
+          </SectionTabs>
+        </div>
         {error ? (
           <EmptyMessage>{error}</EmptyMessage>
         ) : visibleRows.length === 0 ? (

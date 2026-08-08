@@ -12,7 +12,7 @@
  */
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
@@ -162,6 +162,7 @@ function SidebarSection({
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user } = useAuth();
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const { mode, width, pinnedItems } = useDockPreferences();
@@ -186,6 +187,29 @@ export default function Sidebar() {
   useEffect(() => () => {
     document.body.classList.remove('sidebar-resizing');
   }, []);
+
+  useEffect(() => {
+    router.prefetch('/radio');
+    router.prefetch('/you');
+
+    let cancelled = false;
+    const warmPrimaryDestinations = () => {
+      if (cancelled) return;
+      void import('@/lib/radio').then(module => module.preloadRadioBundle());
+      if (user?.id) {
+        void import('@/lib/domain/accountOverview').then(module => module.preloadAccountOverview(user.id));
+      }
+    };
+    const idleId = window.requestIdleCallback
+      ? window.requestIdleCallback(warmPrimaryDestinations, { timeout: 3_000 })
+      : window.setTimeout(warmPrimaryDestinations, 1_200);
+
+    return () => {
+      cancelled = true;
+      if (window.cancelIdleCallback) window.cancelIdleCallback(idleId);
+      else window.clearTimeout(idleId);
+    };
+  }, [router, user?.id]);
 
   function expandSidebar(nextWidth = width) {
     setSidebarWidth(nextWidth);

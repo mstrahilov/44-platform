@@ -1,6 +1,6 @@
 # Handbook
 
-Updated July 21, 2026
+Updated July 26, 2026
 
 Welcome. This guide is here to make your work easier. It explains the few shared details that keep **forty four** and **44OS** recognizable wherever they appear.
 
@@ -211,6 +211,12 @@ Layouts favor generous spacing, direct hierarchy, simple pill controls, and usef
 The 44OS application keeps its established dark interface, system font stack, spacing, components, accessibility behavior, and Ocean `#60A5FA` interface accent. Ocean belongs to the application interface and is not a logo color.
 
 Existing components and the private 44OS UI reference are the starting point for application work. New screens should feel like part of the product before introducing a new visual pattern.
+
+### Native iOS Application
+
+The iOS application is being rebuilt natively in SwiftUI so it can feel at home on iPhone. The existing 44OS mobile application remains the reference for product structure, visual identity, naming, and interaction intent, while native navigation, accessibility, media, and system behavior follow accepted Apple-platform conventions.
+
+The native app shares the same 44OS accounts, Items, Library, Community, and server-authoritative permissions. It is another client of the platform, not a separate catalog or identity system. Core screens are not presented through an embedded website.
 
 ## Change History
 

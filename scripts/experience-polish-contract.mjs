@@ -42,6 +42,7 @@ const [
   authExperience,
   adminHomeApp,
   publicProfile,
+  accountOverview,
 ] = await Promise.all([
   read('src/components/Topbar.tsx'),
   read('src/components/YouApp.tsx'),
@@ -82,6 +83,7 @@ const [
   read('src/components/AuthExperience.tsx'),
   read('src/components/admin/AdminHomeApp.tsx'),
   read('src/components/PublicProfileApp.tsx'),
+  read('src/lib/domain/accountOverview.ts'),
 ]);
 const informationDialog = await read('src/components/InformationDialog.tsx');
 
@@ -121,6 +123,10 @@ assert.match(youApp, /<\/nav>[\s\S]*className="you-logout-action"[\s\S]*>Log Out
 assert.doesNotMatch(topbar, /os-topbar-account-menu|aria-label="Your account"/, 'desktop Topbar omits the duplicate account avatar and menu');
 assert.doesNotMatch(topbar, /PUBLIC_PURCHASES_AVAILABLE[\s\S]*cartCount/, 'a staged Cart remains reachable even while Checkout activation is fail closed');
 assert.match(topbar, /os-topbar-search[\s\S]*os-topbar-notification-menu[\s\S]*cartCount > 0[\s\S]*os-topbar-cart-button/, 'Topbar orders Search, Notifications, then the wider Cart count control');
+assert.match(globalCss, /@media \(max-width: 768px\)[\s\S]*?\.os-topbar-cart-button \{[\s\S]*?order: 1;[\s\S]*?\.os-topbar-mobile-search-trigger \{[\s\S]*?order: 2;/, 'mobile Cart sits immediately left of the stable Search action');
+assert.match(accountOverview, /ACCOUNT_OVERVIEW_TTL_MS = 30_000[\s\S]*accountOverviewCache[\s\S]*Promise\.all\([\s\S]*loadStudioProfile[\s\S]*hasCustomerOrders[\s\S]*fetchMyTeamAccess/, 'Account shares and briefly caches its parallel overview requests');
+assert.match(radioDomain, /RADIO_BUNDLE_TTL_MS = 30_000[\s\S]*radioBundleCache[\s\S]*loadRadioBundleUncached/, 'Radio briefly reuses its assembled playback bundle');
+assert.match(sidebar, /router\.prefetch\('\/radio'\)[\s\S]*router\.prefetch\('\/you'\)[\s\S]*preloadRadioBundle[\s\S]*preloadAccountOverview[\s\S]*requestIdleCallback/, 'the persistent Sidebar warms primary route code and data during browser idle time');
 assert.match(globalCss, /--os-topbar-right-inset:[^;]*--os-content-inset[\s\S]*\.os-topbar\s*\{[\s\S]*padding:[^;]*var\(--os-topbar-right-inset\)/, 'desktop Topbar actions share the canonical page-action right edge');
 assert.match(sidebar, /SidebarAccountItem[\s\S]*href="\/you"[\s\S]*sidebar-account-avatar[\s\S]*Account/, 'desktop Sidebar replaces Settings with an avatar-backed Account destination');
 assert.match(sidebarPreferences, /SIDEBAR_COMPACT_WIDTH = 76[\s\S]*SIDEBAR_MIN_EXPANDED_WIDTH = 196[\s\S]*SIDEBAR_MAX_WIDTH = 280/, 'Sidebar resizing preserves the accepted compact, label-safe, and original maximum widths');
@@ -133,10 +139,16 @@ assert.doesNotMatch(`${sidebar}\n${libraryApp}`, /Pin (?:Creator )?to Dock|Dock 
 assert.match(sectionTabs, /dockToTopbar[\s\S]*getBoundingClientRect\(\)\.top <= scroller![\s\S]*dataset\.topbarDocked = docked \? 'true' : 'false'[\s\S]*setTabs\(docked \? topbarTabsRef\.current : undefined\)/, 'shared section rails transfer visual ownership to the global Topbar at one scroll threshold without overlapping');
 assert.match(globalCss, /\.section-tab-rail\[data-topbar-docked="true"\] \{[\s\S]*visibility: hidden;/, 'the in-page rail keeps its layout space but disappears while its Topbar counterpart is active');
 assert.match(topbar, /os-topbar-tab-section[\s\S]*os-topbar-tab-section-first/, 'Topbar preserves the open underline-tab variant and exact first-tab alignment');
+assert.match(topbar, /const hasSectionTabs = Boolean\(tabs\?\.some\(tab => tab\.variant === 'section'\)\)[\s\S]*os-topbar-has-section-tabs/, 'Topbar exposes a stable docked-section state for compact layouts');
+assert.match(globalCss, /\.store-app-page \.app-header \.ui44-type-page-title \{[\s\S]*font-size: clamp\(24px, 8vw, 32px\);[\s\S]*white-space: nowrap;/, 'the personalized mobile Home title stays on one responsive line');
+assert.match(globalCss, /\.os-topbar\.os-topbar-has-section-tabs \.os-mobile-brand-logo,[\s\S]*\.os-topbar-right \{[\s\S]*display: none;[\s\S]*\.os-topbar\.os-topbar-has-section-tabs \.os-topbar-left \{[\s\S]*width: 100%;[\s\S]*overflow-x: auto;[\s\S]*touch-action: pan-x pan-y;/, 'a docked mobile section rail replaces the logo and actions with a full-width scrollable list');
 assert.match(storeDiscovery, /<SectionTabs ariaLabel="Discover categories" dockToTopbar topbarTabs=\{discoverTopbarTabs\}>[\s\S]*<SectionTab/, 'Home begins with its shared category rail and docks it into the Topbar while scrolling');
 assert.match(libraryApp, /LIBRARY_FILTER_ORDER\.filter[\s\S]*Library categories" dockToTopbar topbarTabs=\{libraryTopbarTabs\}/, 'Library uses the same dockable categories and omits unavailable content types');
+assert.match(libraryApp, /className="library-opening"[\s\S]*Search Library[\s\S]*Library categories/, 'Library groups its heading and tabs into the shared opening rhythm');
+assert.match(globalCss, /@media \(max-width: 768px\) \{[\s\S]*?\.library-opening \{[\s\S]*?gap: 14px;[\s\S]*?\.library-opening \.library-filter-control \{[\s\S]*?display: none;/, 'mobile Library removes its duplicate Search field and matches the Home tab spacing');
 assert.match(storeDiscovery, /label: 'Featured'[\s\S]*label: 'Music'[\s\S]*label: 'Beats'[\s\S]*label: 'Samples'[\s\S]*label: 'Merch'[\s\S]*label: 'Books'[\s\S]*label: 'Games'/, 'Home tabs use the accepted Music, Beats, Samples, Merch, Books, and Games order');
-assert.match(storeDiscovery, /const featuredTitle = user[\s\S]*`Welcome, \$\{authenticatedViewerName\}`[\s\S]*: 'Discover'/, 'Featured greets signed-in viewers by name and remains Discover for signed-out viewers');
+assert.match(storeDiscovery, /effectiveFilter === 'all' \? 'Discover'/, 'Featured is consistently titled Discover for signed-in and signed-out viewers');
+assert.doesNotMatch(storeDiscovery, /viewerIdentity|authenticatedViewerName|loadStudioProfile/, 'Home does not fetch profile identity solely to personalize its heading');
 assert.match(storeDiscovery, /STORE_FILTER_TITLES[\s\S]*music: 'Browse Music'[\s\S]*physical: 'Browse Merch'[\s\S]*asset: 'Browse Samples'[\s\S]*book: 'Browse Books'[\s\S]*interactive: 'Browse Games'/, 'category selections expose consistent Browse titles');
 assert.match(storeDiscovery, /function browseBeats\(\)[\s\S]*setActiveFilter\('music'\)[\s\S]*setTypeFilter\('Beat'\)[\s\S]*return category === 'all' \?[\s\S]*onClick=\{option\.category === 'beats' \? browseBeats/, 'Beats behaves as a Home tab instead of the differently styled route link');
 assert.match(storeDiscovery, /\{!frontDoor && category !== 'beats' && <label className="page-search-control/, 'the dedicated Beats view also omits the redundant inline Search field');
@@ -230,6 +242,8 @@ assert.ok(storeDiscovery.indexOf('title="Browse Merch"') < storeDiscovery.indexO
 assert.ok(storeDiscovery.indexOf('title="Browse Books"') < storeDiscovery.indexOf('title="Browse Games"'), 'Browse Books precedes Browse Games at the quiet end of Discover');
 assert.match(storeDiscovery, /title="New Creators"[\s\S]*discover-creator-shelf[\s\S]*href=\{profileHref\}[\s\S]*discover-creator-main[\s\S]*<strong>\{name\}<\/strong>/, 'Discover presents image-and-name Creator links that open public profiles');
 assert.doesNotMatch(storeDiscovery, /toggleCreatorFollow|followBusyId|View releases/, 'New Creator cards omit follow and secondary actions');
+assert.match(globalCss, /@media \(max-width: 768px\) \{[\s\S]*?\.discover-creator-shelf \{[\s\S]*?width: calc\(100% \+ \(2 \* var\(--os-content-inset\)\)\);[\s\S]*?grid-auto-columns: calc\(\(100% - 18px\) \/ 2\);[\s\S]*?gap: 18px;/, 'mobile New Creator portraits use the same two-card width and gap as Music shelves');
+assert.match(globalCss, /@media \(max-width: 420px\) \{\s*\.discover-creator-shelf \{[\s\S]*?grid-auto-columns: calc\(\(100% - 14px\) \/ 2\);[\s\S]*?gap: 14px;/, 'narrow mobile New Creator portraits retain the Music shelf sizing');
 assert.match(storeDiscovery, /preferredCreatorContentTab[\s\S]*music[\s\S]*beats[\s\S]*books[\s\S]*sample-packs[\s\S]*games[\s\S]*merch/, 'Home Creator links select the first available published content tab');
 assert.match(storeDiscovery, /preferredTab \? `\$\{profilePath\}\?tab=\$\{preferredTab\}` : profilePath/, 'Home Creator links fall back to the default profile when no published Item exists');
 assert.match(publicProfile, /normalized === 'games'[\s\S]*creatorTabs\.push\(\{ id: 'games', label: 'Games' \}\)[\s\S]*tab === 'games'/, 'public profiles support the Games destination used by Home Creator links');
@@ -239,6 +253,7 @@ assert.match(globalCss, /\.social-profile-owner-tools \{[\s\S]*position: absolut
 assert.doesNotMatch(storeDiscovery, /spotlightCreators|New releases from \$\{spotlight\.creatorName\}/, 'Discover omits the experimental artist-specific release shelves');
 assert.match(globalCss, /\.discover-feature \{[\s\S]*min-height: clamp\(340px, 36vw, 510px\)/, 'the Discover feature uses the accepted taller editorial proportion');
 assert.doesNotMatch(globalCss, /\.discover-feature:hover/, 'the Discover feature has no hover motion');
+assert.match(globalCss, /body:is\(\.theme-dark, \.theme-light\) \.discover-feature \.discover-feature-copy,[\s\S]*\.discover-feature-copy > strong,[\s\S]*\.discover-feature-link \{[\s\S]*color: #fff;/, 'Discover feature copy remains white and legible in both appearance themes');
 assert.match(storeDiscovery, /const showStoreFilter = !frontDoor \|\| effectiveFilter !== 'all' \|\| hasActiveFacetFilters/, 'Featured hides its irrelevant filter until a category or facet is active');
 assert.match(storeDiscovery, /const followingProducts = keepNewestProductPerCreator/, 'Creators You Follow keeps one Item per creator');
 assert.match(libraryApp, /LIBRARY_GROUP_ORDER[\s\S]*Music[\s\S]*Beats[\s\S]*Sample Packs[\s\S]*Books[\s\S]*Games/, 'Library All groups saved Items in the accepted Home-aligned content order');

@@ -51,7 +51,7 @@ Open work, including the detailed desktop-application implementation tracker, be
 
 Primary applications:
 
-- **Home** — the application front door at `https://app.44os.com/`; signed-out Featured is `Discover`, signed-in Featured is `Welcome, [name]`, and category tabs change the title to the corresponding `Browse …` destination without leaving the route.
+- **Home** — the application front door at `https://app.44os.com/`; Featured is always `Discover`, and category tabs change the title to the corresponding `Browse …` destination without leaving the route.
 - **Store** — public discovery and acquisition at `/store`.
 - **Library** — the signed-in user’s saved, owned, purchased, and unlocked Items.
 - **Community** — posts, questions, collaboration, replies, follows, and creator/fan connection.
@@ -129,7 +129,7 @@ Playback rules:
 
 Public application routes below are canonical on `https://app.44os.com`:
 
-- `/` — Home front door; Featured is `Discover` when signed out and `Welcome, [name]` when signed in. Music, Beats, Samples, Merch, Books, and Games use an open underline-tab rail below the title that docks into the global Topbar while scrolling, plus matching `Browse …` titles without redirecting the route. Community uses the same dockable rail, while signed-in Library shows All plus only populated content categories. `New Releases` contains one latest non-featured release per creator; `Browse Music` contains the next nonduplicated releases.
+- `/` — Home front door; Featured is always `Discover`. Music, Beats, Samples, Merch, Books, and Games use an open underline-tab rail below the title that docks into the global Topbar while scrolling, plus matching `Browse …` titles without redirecting the route. Community uses the same dockable rail, while signed-in Library shows All plus only populated content categories. `New Releases` contains one latest non-featured release per creator; `Browse Music` contains the next nonduplicated releases.
 - `/store` and `/store/[category]` — Store and Music, Books, Sample Packs, or Merch categories.
 - `/store/item/[identifier]` — public Item detail, resolving slug first with ID fallback.
 - `/cart`, `/checkout` — acquisition flow.

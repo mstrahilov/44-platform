@@ -6,21 +6,10 @@ import { useRouter } from 'next/navigation';
 import { SocialAvatar } from '@/components/Social';
 import { AuthExperience } from '@/components/AuthExperience';
 import { PageShell } from '@/components/Ui';
-import { hasCustomerOrders } from '@/lib/domain/customerCommerce';
+import { loadAccountOverview, type AccountOverview } from '@/lib/domain/accountOverview';
 import { supabase } from '@/lib/supabase';
-import {
-  isCreatorProfile,
-  loadStudioProfile,
-  type StudioProfile,
-} from '@/lib/studioProfiles';
+import { isCreatorProfile } from '@/lib/studioProfiles';
 import { useAuth } from '@/lib/useAuth';
-import { fetchMyTeamAccess } from '@/lib/domain/team';
-
-type YouState = {
-  profile: StudioProfile | null;
-  hasOrders: boolean;
-  hasTeamAccess: boolean;
-};
 
 type YouLink = {
   href: string;
@@ -29,7 +18,7 @@ type YouLink = {
   iconClass: string;
 };
 
-const INITIAL_STATE: YouState = {
+const INITIAL_STATE: AccountOverview = {
   profile: null,
   hasOrders: false,
   hasTeamAccess: false,
@@ -38,7 +27,7 @@ const INITIAL_STATE: YouState = {
 export function YouApp() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const [state, setState] = useState<YouState>(INITIAL_STATE);
+  const [state, setState] = useState<AccountOverview>(INITIAL_STATE);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -53,13 +42,9 @@ export function YouApp() {
 
     let active = true;
     const userId = user.id;
-    void Promise.all([
-      loadStudioProfile(userId).then(result => result.profile).catch(() => null),
-      hasCustomerOrders(userId).catch(() => false),
-      fetchMyTeamAccess().then(result => result.authorized).catch(() => false),
-    ]).then(([profile, hasOrders, hasTeamAccess]) => {
+    void loadAccountOverview(userId).then(nextState => {
       if (!active) return;
-      setState({ profile, hasOrders, hasTeamAccess });
+      setState(nextState);
       setLoading(false);
     });
 
