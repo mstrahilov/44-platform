@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
-const [configText, packageText, cargoText, rustSource, nextConfig, notificationCapabilityText, notificationClient] = await Promise.all([
+const [configText, packageText, cargoText, rustSource, nextConfig, notificationCapabilityText, notificationClient, macDmgPackager, dmgBackground, dmgVolumeIcon] = await Promise.all([
   read('src-tauri/tauri.conf.json'),
   read('package.json'),
   read('src-tauri/Cargo.toml'),
@@ -10,6 +10,9 @@ const [configText, packageText, cargoText, rustSource, nextConfig, notificationC
   read('next.config.ts'),
   read('src-tauri/capabilities/desktop-notifications.json'),
   read('src/lib/deviceNotifications.ts'),
+  read('scripts/package-branded-mac-dmg.mjs'),
+  stat(new URL('../src-tauri/dmg/background.png', import.meta.url)),
+  stat(new URL('../src-tauri/dmg/volume-icon.icns', import.meta.url)),
 ]);
 const config = JSON.parse(configText);
 const packageJson = JSON.parse(packageText);
@@ -38,11 +41,22 @@ assert.equal(mainWindow.titleBarStyle, 'Transparent', 'Mac controls sit in a sli
 assert.equal(mainWindow.hiddenTitle, true, 'the redundant native window title stays hidden');
 assert.equal(mainWindow.trafficLightPosition, undefined, 'transparent title-bar controls retain native placement');
 assert.equal(config.bundle.macOS.signingIdentity, '-', 'Mac packages use only the approved ad-hoc identity');
+assert.deepEqual(config.bundle.macOS.dmg, {
+  background: './dmg/background.png',
+  windowPosition: { x: 360, y: 180 },
+  windowSize: { width: 720, height: 440 },
+  appPosition: { x: 205, y: 220 },
+  applicationFolderPosition: { x: 515, y: 220 },
+}, 'the Mac DMG uses the reviewed branded layout');
+assert.ok(dmgBackground.size > 0, 'the branded DMG background is present');
+assert.ok(dmgVolumeIcon.size > 0, 'the custom mounted-volume icon is present');
+assert.match(macDmgPackager, /--volicon/, 'the Mac packager applies the custom mounted-volume icon');
+assert.match(macDmgPackager, /--app-drop-link/, 'the Mac packager creates the Applications drag target');
 assert.equal(config.bundle.windows.nsis.installMode, 'currentUser', 'Windows uses a standard-user NSIS install');
 assert.match(packageJson.devDependencies['@tauri-apps/cli'], /^2\.11\.4$/, 'the reviewed Tauri CLI is pinned exactly');
 assert.match(packageJson.dependencies['@tauri-apps/plugin-notification'], /^2\.3\.3$/, 'the reviewed notification JavaScript bridge is pinned exactly');
 assert.match(cargoText, /tauri-plugin-notification = "=2\.3\.3"/, 'the reviewed notification Rust bridge is pinned exactly');
-for (const script of ['desktop:dev', 'desktop:check', 'desktop:build']) {
+for (const script of ['desktop:dev', 'desktop:check', 'desktop:build', 'desktop:package:mac']) {
   assert.equal(typeof packageJson.scripts[script], 'string', `${script} exists`);
 }
 assert.doesNotMatch(nextConfig, /output\s*:\s*['"]export['"]/, 'the hosted Next application is never converted to a static export');

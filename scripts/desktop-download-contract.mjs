@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile, stat } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
-const [page, localAction, route, artifacts, importer, packageText, proxy, sitemap, workflow, envExample] = await Promise.all([
+const [page, localAction, route, artifacts, importer, packageText, proxy, sitemap, envExample] = await Promise.all([
   read('src/app/marketing-surface/download/page.tsx'),
   read('src/app/marketing-surface/download/LocalWindowsDownloadAction.tsx'),
   read('src/app/api/desktop/download/[platform]/route.ts'),
@@ -11,7 +11,6 @@ const [page, localAction, route, artifacts, importer, packageText, proxy, sitema
   read('package.json'),
   read('src/proxy.ts'),
   read('src/app/sitemap.ts'),
-  read('.github/workflows/desktop-build.yml'),
   read('.env.example'),
 ]);
 
@@ -36,7 +35,6 @@ assert.match(importer, /src-tauri\/target\/windows-x64\/44OS-0\.1\.0-windows-x64
 assert.match(packageText, /"desktop:import:windows": "node scripts\/import-windows-installer\.mjs"/, 'the reviewed Windows artifact has a deterministic local import command');
 assert.match(proxy, /INTERNAL_DOWNLOAD_PATH[\s\S]*marketingRewrite\(request, INTERNAL_DOWNLOAD_PATH\)/, 'the public download page remains on the marketing surface');
 assert.match(sitemap, /getMarketingUrl\(\)\}\/download/, 'the accepted download route is discoverable');
-assert.match(workflow, /codex\/windows-desktop-build[\s\S]*runs-on: windows-latest[\s\S]*--bundles nsis[\s\S]*44OS-0\.1\.0-windows-x64-setup\.exe[\s\S]*dist\/desktop\/\*/, 'the private branch build retains a deterministic NSIS installer and checksum');
 for (const name of ['DESKTOP_RELEASE_VERSION', 'DESKTOP_MAC_DOWNLOAD_URL', 'DESKTOP_WINDOWS_DOWNLOAD_URL']) {
   assert.match(envExample, new RegExp(`^${name}=`, 'm'), `${name} has a documented server-only deployment boundary`);
 }

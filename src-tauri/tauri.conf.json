@@ -45,7 +45,26 @@
       "icons/icon.ico"
     ],
     "macOS": {
-      "signingIdentity": "-"
+      "signingIdentity": "-",
+      "dmg": {
+        "background": "./dmg/background.png",
+        "windowPosition": {
+          "x": 360,
+          "y": 180
+        },
+        "windowSize": {
+          "width": 720,
+          "height": 440
+        },
+        "appPosition": {
+          "x": 205,
+          "y": 220
+        },
+        "applicationFolderPosition": {
+          "x": 515,
+          "y": 220
+        }
+      }
     },
     "windows": {
       "webviewInstallMode": {
