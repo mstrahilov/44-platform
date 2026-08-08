@@ -2,7 +2,6 @@ import type { MetadataRoute } from 'next';
 import { headers } from 'next/headers';
 import { absoluteAppUrl } from '@/lib/metadata';
 import { getMarketingUrl } from '@/lib/siteUrl';
-import { supabase } from '@/lib/supabase';
 import { SUPPORT_ARTICLES, supportArticleHref } from '@/lib/supportArticles';
 
 const PUBLIC_ROUTES = [
@@ -59,6 +58,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     changeFrequency: 'monthly',
     priority: 0.6,
   }));
+
+  // Preview deployments may intentionally omit application credentials. Keep
+  // the public static sitemap available instead of instantiating Supabase at
+  // build time and failing the entire deployment.
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return [...staticRoutes, ...supportRoutes];
+  }
+
+  const { supabase } = await import('@/lib/supabase');
 
   const [itemResult, profileResult, discussionResult] = await Promise.all([
     supabase
