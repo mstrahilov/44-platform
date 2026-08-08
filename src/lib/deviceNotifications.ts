@@ -32,11 +32,17 @@ export async function getDesktopNotificationState(): Promise<DesktopNotification
 
 export async function enableDesktopNotifications() {
   if (!desktopNotificationsSupported()) return 'unsupported' as const;
-  const { isPermissionGranted, requestPermission } = await notificationPlugin();
+  const { isPermissionGranted, requestPermission, sendNotification } = await notificationPlugin();
   let granted = await isPermissionGranted();
   if (!granted) granted = await requestPermission() === 'granted';
   window.localStorage.setItem(DENIED_KEY, granted ? 'false' : 'true');
   window.localStorage.setItem(ENABLED_KEY, granted ? 'true' : 'false');
+  if (granted) {
+    sendNotification({
+      title: 'Notifications enabled',
+      body: '44OS can now notify you about replies, mentions, and new messages.',
+    });
+  }
   return granted ? 'enabled' as const : 'denied' as const;
 }
 

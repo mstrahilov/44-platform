@@ -2,13 +2,14 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
-const [configText, packageText, cargoText, rustSource, nextConfig, notificationCapabilityText] = await Promise.all([
+const [configText, packageText, cargoText, rustSource, nextConfig, notificationCapabilityText, notificationClient] = await Promise.all([
   read('src-tauri/tauri.conf.json'),
   read('package.json'),
   read('src-tauri/Cargo.toml'),
   read('src-tauri/src/lib.rs'),
   read('next.config.ts'),
   read('src-tauri/capabilities/desktop-notifications.json'),
+  read('src/lib/deviceNotifications.ts'),
 ]);
 const config = JSON.parse(configText);
 const packageJson = JSON.parse(packageText);
@@ -49,6 +50,7 @@ assert.doesNotMatch(`${configText}\n${cargoText}\n${rustSource}\n${notificationC
 assert.doesNotMatch(JSON.stringify(notificationCapability.permissions), /(?:shell|process|fs|http|upload|dialog|clipboard):/i, 'the desktop capability contains no broad native permissions');
 assert.doesNotMatch(rustSource, /invoke_handler/, 'the Rust entry point exposes no custom commands');
 assert.match(rustSource, /plugin\(tauri_plugin_notification::init\(\)\)/, 'the Rust entry point initializes only native notifications');
+assert.match(notificationClient, /sendNotification\(\{[\s\S]*title: 'Notifications enabled'/, 'granting permission confirms native delivery immediately');
 for (const destination of ['profile', 'studio', 'orders', 'messages', 'settings']) {
   assert.match(rustSource, new RegExp(`MenuItemBuilder::with_id\\("(?:view-)?${destination}"`), `the native Mac menu includes ${destination}`);
 }

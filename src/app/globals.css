@@ -3653,12 +3653,25 @@ body.theme-dark .os-home-panel {
   -webkit-backdrop-filter: none;
 }
 
+body:is(.theme-dark, .theme-light) .web-push-prompt.ui44-paper-menu {
+  width: min(410px, calc(100vw - 48px));
+  max-width: calc(100vw - 48px);
+  padding: 22px;
+}
+
 .web-push-prompt-copy,
 .web-push-prompt-actions { display: grid; gap: 8px; }
 
 .web-push-prompt-actions { grid-template-columns: 1fr auto; }
 
 @media (max-width: 620px) {
+  body:is(.theme-dark, .theme-light) .web-push-prompt.ui44-paper-menu {
+    right: max(14px, env(safe-area-inset-right));
+    width: calc(100vw - 28px);
+    max-width: calc(100vw - 28px);
+    padding: 18px;
+  }
+
   .web-push-prompt-actions { grid-template-columns: 1fr; }
 }
 
