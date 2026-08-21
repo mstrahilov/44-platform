@@ -198,7 +198,10 @@ export async function POST(request: Request) {
       await stripe.checkout.sessions.expire(session.id).catch(() => undefined);
       throw bindResult.error;
     }
-    return Response.json({ url: session.url, orderId: order.order_id }, { status: 201, headers: { 'Cache-Control': 'no-store' } });
+    // `sessionId` is additive. Existing web callers destructure `url` only; the
+    // native client needs the identifier to poll /api/checkout/status after the
+    // buyer returns from the Stripe-hosted page in their default browser.
+    return Response.json({ url: session.url, orderId: order.order_id, sessionId: session.id }, { status: 201, headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
       const diagnostic = error instanceof Error

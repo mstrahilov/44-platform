@@ -32,6 +32,7 @@ export default function CheckoutPage() {
   const [catalogItems, setCatalogItems] = useState<Record<string, Product>>({});
   const [checkoutConfig, setCheckoutConfig] = useState<CheckoutConfig | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [returnedFromStripe, setReturnedFromStripe] = useState(false);
   const idempotencyKey = useRef<string | null>(null);
   const catalogReady = items.length > 0 && items.every(item => Boolean(catalogItems[item.item_id]));
   const hasPhysicalItem = catalogReady && items.some(item => getProductExperience(catalogItems[item.item_id]) === 'physical');
@@ -66,6 +67,21 @@ export default function CheckoutPage() {
     }).catch(() => undefined);
     return () => { active = false; };
   }, [catalogReady, checkoutUiAvailable, hasBeatLicense, hasPhysicalItem, user]);
+
+  // Recorded independently of session state. A buyer returning from the Stripe
+  // page may have no browser session — most often after starting checkout in the
+  // native app, where Stripe opens in the default browser rather than in an
+  // authenticated 44OS tab. Without this they would be told they need an account,
+  // immediately after paying.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('checkout') === 'success' && params.get('session_id')) {
+      // Deferred to match the existing return-handling effects in this file and
+      // avoid a synchronous cascading render.
+      Promise.resolve().then(() => setReturnedFromStripe(true));
+    }
+  }, []);
 
   useEffect(() => {
     if (!checkoutUiAvailable || !user || typeof window === 'undefined') return;
@@ -134,6 +150,32 @@ export default function CheckoutPage() {
   }
 
   if (loading) return <PageShell><CenteredMessage status>Loading…</CenteredMessage></PageShell>;
+
+  // Signed-out return from a completed Stripe payment. The order cannot be read
+  // without a session, so this states only what is certain: Stripe took the
+  // payment, and the signed webhook still owns confirmation and fulfillment.
+  if (!user && returnedFromStripe) {
+    return (
+      <PageShell>
+        <main className="dashboard-page">
+          <HubHero
+            title="Payment Received"
+            copy="Stripe completed your payment. Confirmation and fulfillment follow the signed webhook."
+          />
+          <div className="dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
+            <div className="dashboard-empty" role="status" aria-live="polite">
+              You can close this page. If you started this purchase in the 44OS app, return to it to
+              see your order. Signing in here shows the same order and your Library.
+              <div className="checkout-inline-actions">
+                <Link className="os-button os-button-primary os-button-compact" href="/login">Log In</Link>
+                <Link className="os-button os-button-secondary os-button-compact" href="/">Open Home</Link>
+              </div>
+            </div>
+          </div>
+        </main>
+      </PageShell>
+    );
+  }
 
   if (!user) {
     return (
