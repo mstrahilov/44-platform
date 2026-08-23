@@ -33,6 +33,7 @@ import { ExternalLinkActions } from '@/components/ExternalLinkActions';
 import type { CreatorEvent } from '@/lib/domain/events';
 import { formatEventDate } from '@/lib/eventTime';
 import { beatReviewSurfacesEnabled, hydrateBeatProducts } from '@/lib/domain/beats';
+import { inferItemReferences } from '@/lib/communityV11';
 
 type ProfileTab = 'posts' | 'music' | 'beats' | 'books' | 'sample-packs' | 'games' | 'merch' | 'events';
 type CurrentProfileState = {
@@ -436,6 +437,7 @@ export default function PublicProfilePage() {
                 <SocialPostRow
                   key={post.id}
                   post={post}
+                  references={inferItemReferences(post.body ?? '', products)}
                   replyCount={replyCounts[post.id] ?? 0}
                   likeCount={likeCounts[post.id] ?? 0}
                   likers={likersMap[post.id] ?? []}

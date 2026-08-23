@@ -584,9 +584,7 @@ function ProductStoreDetail({
               const intent = inferCommunityIntent(post);
               const references = post.community_references?.length
                 ? post.community_references
-                : inferItemReferences(post.body ?? '', [product], {
-                  authorHandle: post.creators?.username || post.creators?.slug,
-              });
+                : inferItemReferences(post.body ?? '', [product]);
               return (
                 <div key={post.id} className="social-feed-post">
                   <SocialPostRow

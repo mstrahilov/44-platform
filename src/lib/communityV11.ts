@@ -105,23 +105,23 @@ export function inferCommunityIntent(post: CommunityV11Post): CommunityIntent {
 export function inferItemReferences(
   body: string,
   items: Item[],
-  options?: { authorHandle?: string | null },
 ) {
   const normalizedBody = body.toLocaleLowerCase();
-  const normalizedAuthor = options?.authorHandle?.trim().replace(/^@/, '').toLocaleLowerCase() ?? '';
   return items
     .filter(item => {
       const title = item.title.trim();
-      if (title.length < 3) return false;
-      if (
-        title.toLocaleLowerCase() === 'touch'
-        && (normalizedAuthor === 'callmetellali' || normalizedAuthor === 'tellali')
-      ) return false;
-      const index = normalizedBody.indexOf(title.toLocaleLowerCase());
-      if (index < 0) return false;
-      const before = index > 0 ? normalizedBody[index - 1] : '';
-      const after = normalizedBody[index + title.length] ?? '';
-      return !/[a-z0-9_]/i.test(before) && !/[a-z0-9_]/i.test(after);
+      if (!title) return false;
+      const token = `@${title.toLocaleLowerCase()}`;
+      let searchStart = 0;
+      while (searchStart < normalizedBody.length) {
+        const index = normalizedBody.indexOf(token, searchStart);
+        if (index < 0) return false;
+        const before = index > 0 ? normalizedBody[index - 1] : '';
+        const after = normalizedBody[index + token.length] ?? '';
+        if (!/[a-z0-9_]/i.test(before) && !/[a-z0-9_]/i.test(after)) return true;
+        searchStart = index + 1;
+      }
+      return false;
     })
     .map<CommunityReference>(item => ({
       id: item.id,

@@ -186,9 +186,7 @@ export async function loadCommunityPostsForItem(item: Item): Promise<ItemCommuni
         && (reference.id === item.id || reference.href === itemHref)
       ))) return true;
 
-      return inferItemReferences(post.body ?? '', [item], {
-        authorHandle: post.creators?.username || post.creators?.slug,
-      }).length > 0;
+      return inferItemReferences(post.body ?? '', [item]).length > 0;
     })
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
@@ -435,7 +433,7 @@ export async function loadDiscussionThread(identifier: string) {
       replyLikes: [] as ReplyLikeRow[],
     };
   }
-  const [replyResult, likeResult] = await Promise.all([
+  const [replyResult, likeResult, itemResult] = await Promise.all([
     supabase
       .from('content_replies')
       .select('*, authors:profiles!author_id(id, slug, display_name, username, avatar_url)')
@@ -449,8 +447,15 @@ export async function loadDiscussionThread(identifier: string) {
       .eq('entry_id', post.id)
       .eq('reaction_type', 'like')
       .order('created_at', { ascending: false }),
+    post.item_id
+      ? supabase
+        .from('catalog_items')
+        .select('*, creators:profiles!author_id(*)')
+        .eq('id', post.item_id)
+        .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
   ]);
-  const error = replyResult.error || likeResult.error;
+  const error = replyResult.error || likeResult.error || itemResult.error;
   if (error) throw error;
   const replies = ((replyResult.data ?? []) as unknown as ContentReplyRow[]).map(normalizeContentReply);
   const replyIds = replies.map(reply => reply.id);
@@ -467,7 +472,13 @@ export async function loadDiscussionThread(identifier: string) {
   }
   const likes = ((likeResult.data ?? []) as unknown as Array<Omit<LikeRow, 'post_id'> & { entry_id: string }>)
     .map(row => ({ post_id: row.entry_id, profile_id: row.profile_id, profiles: row.profiles }));
-  return { post, replies, likes, replyLikes };
+  const itemReferences = itemResult.data
+    ? inferItemReferences(post.body ?? '', [itemResult.data as Item])
+    : [];
+  const resolvedPost = itemReferences.length > 0
+    ? { ...post, community_references: itemReferences }
+    : post;
+  return { post: resolvedPost, replies, likes, replyLikes };
 }
 
 export async function setReplyLike(replyId: string, userId: string, liked: boolean) {

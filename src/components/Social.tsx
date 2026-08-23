@@ -47,14 +47,11 @@ export function SocialRichText({ text, references = [] }: { text: string; refere
   if (references.length === 0) return <SocialFallbackRichText text={text} />;
 
   const aliases = references.flatMap(reference => (
-    reference.kind === 'person'
-      ? [`@${reference.label}`]
-      : [`@${reference.label}`, reference.label]
+    [`@${reference.label}`]
   )).sort((a, b) => b.length - a.length);
   const referenceByAlias = new Map<string, CommunityReference>();
   references.forEach(reference => {
     referenceByAlias.set(`@${reference.label}`.toLocaleLowerCase(), reference);
-    if (reference.kind === 'item') referenceByAlias.set(reference.label.toLocaleLowerCase(), reference);
   });
   const pattern = new RegExp(`(${aliases.map(escapeSocialReference).join('|')})`, 'giu');
   const parts = text.split(pattern);

@@ -41,7 +41,6 @@ import { localMaskPreviewEnabled, localMaskProduct } from '@/lib/localMaskPrevie
 import type { Item } from '@/lib/products';
 import {
   countById,
-  authorHandle,
   likersByPost,
   repliersByPost,
   type CountMap,
@@ -453,9 +452,7 @@ function CommunityPageContent() {
   function referencesForPost(post: CommunityV11Post) {
     return post.community_references?.length
       ? post.community_references
-      : inferItemReferences(post.body ?? '', items, {
-        authorHandle: authorHandle(post.creators),
-      });
+      : inferItemReferences(post.body ?? '', items);
   }
 
   const communityTools = (
