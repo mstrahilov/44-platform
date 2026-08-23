@@ -65,40 +65,19 @@ function writeLocalArray<T>(key: string, value: T[]) {
 export function inferCommunityIntent(post: CommunityV11Post): CommunityIntent {
   if (post.community_intent) return post.community_intent;
 
-  const slug = post.slug?.toLocaleLowerCase() ?? '';
-  if (slug.startsWith('assistance-')) return 'help';
-  if (slug.startsWith('showcase-')) return 'showcase';
-
-  const body = `${post.title ?? ''} ${post.body ?? ''}`.trim().replace(/\s+/g, ' ').toLowerCase();
-  const reviewedIntent = [
-    { prefix: 'releasing the @olsten44 remix of night rush by off our ep tomorrow night!', intent: 'update' },
-    { prefix: 'i posted two albums on here if anyone wants to check me out', intent: 'showcase' },
-    { prefix: 'if anyone needs help to get their music on streaming platforms', intent: 'help' },
-    { prefix: 'stay tuned this week!', intent: 'update' },
-    { prefix: 'would you rather get stems, project notes, alternate artwork, or a clean instrumental?', intent: 'question' },
-  ].find(reviewed => body.includes(reviewed.prefix))?.intent as CommunityIntent | undefined;
-  if (reviewedIntent) return reviewedIntent;
-
+  // A Community category is authored metadata. Never derive it from prose or
+  // mentions: tagging a person or Item must not silently turn a General post
+  // into Collaboration, Showcase, Update, or any other category.
   if (post.content_type === 'question') return 'question';
   if (post.content_type === 'collaboration') return 'collaboration';
   if (post.content_type === 'creator_update') return 'update';
 
-  if (
-    /\b(if anyone needs help|happy to help|can help (?:with|you)|available to help|offering help|ask me about|happy to share what i know)\b/.test(body)
-  ) return 'help';
-  if (
-    /\b(showcase|check (?:me|my .*?) out|here(?:'s| is) my (?:album|ep|single|project)|posted (?:an?|two) albums?)\b/.test(body)
-  ) return 'showcase';
-  if (
-    /\b(collaborat|remix(?:er|ers|ing)?|looking for|seeking|vocalists?|musicians?)\b/.test(body)
-  ) return 'collaboration';
-  if (
-    /\?$/.test(body.trim())
-    || /\b(how do|how can|what (?:is|are|do|would)|which|does anyone|any advice|recommend)\b/.test(body)
-  ) return 'question';
-  if (
-    /\b(releas(?:e|ed|es|ing)|available now|out now|coming (?:soon|tomorrow)|drops? tomorrow|new (?:album|ep|single|project)|posted (?:an?|two) album|announcement|progress|news coming|follow .* upcoming)\b/.test(body)
-  ) return 'update';
+  // Assistance and Showcase predate a dedicated database column. Their slug
+  // prefixes are written only when the member explicitly selects that option
+  // in the composer, so preserving them is not content inference.
+  const slug = post.slug?.toLocaleLowerCase() ?? '';
+  if (slug.startsWith('assistance-')) return 'help';
+  if (slug.startsWith('showcase-')) return 'showcase';
   return 'general';
 }
 
