@@ -23,7 +23,8 @@ assert.match(page, /publishedWindowsDownload = '\/downloads\/44OS-0\.1\.0-window
 assert.match(page, /NODE_ENV === 'production' \? publishedMacDownload : localMacDownload/, 'Mac production and local review paths are explicit');
 assert.match(page, /NODE_ENV === 'production' \? publishedWindowsDownload : localWindowsDownload/, 'Windows production and local review paths are explicit');
 assert.match(localAction, /method: 'HEAD'[\s\S]*response\.ok[\s\S]*href=\{href\}>Download/, 'the retired local probe remains safe if reused');
-assert.match(page, /not been notarized by Apple/, 'Mac notarization status is disclosed honestly');
+assert.match(page, /signed with Apple Developer ID and notarized by Apple/, 'Mac notarization status is disclosed accurately');
+assert.match(page, /verified developer/, 'Mac verified-developer result is explained');
 assert.match(page, /support\.apple\.com\/guide\/mac-help/, 'Mac warning links to Apple guidance');
 assert.match(page, /learn\.microsoft\.com\/windows\/apps\/package-and-deploy\/smartscreen-reputation/, 'Windows warning links to Microsoft guidance');
 assert.match(route, /NODE_ENV === 'production'[\s\S]*status: 404/, 'the local artifact route can never serve a production installer');

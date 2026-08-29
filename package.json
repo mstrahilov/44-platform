@@ -53,6 +53,7 @@
     "desktop:check": "node scripts/desktop-contract.mjs && node scripts/desktop-download-contract.mjs && cargo fmt --manifest-path src-tauri/Cargo.toml --check && cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings && cargo test --manifest-path src-tauri/Cargo.toml",
     "desktop:build": "tauri build",
     "desktop:package:mac": "node scripts/package-branded-mac-dmg.mjs",
+    "desktop:release:mac": "node scripts/release-notarized-mac.mjs",
     "desktop:import:windows": "node scripts/import-windows-installer.mjs"
   },
   "dependencies": {

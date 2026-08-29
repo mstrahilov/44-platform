@@ -122,11 +122,11 @@ export default function MarketingDownloadPage() {
         <div className={styles.installColumns}>
           <div>
             <h3>On Mac</h3>
-            <p>This preview is ad-hoc signed and has not been notarized by Apple. macOS may say the developer cannot be verified. Only continue if you downloaded the file from 44os.com.</p>
+            <p>This release is signed with Apple Developer ID and notarized by Apple. macOS should identify 44OS as a verified developer when you download it from 44os.com.</p>
             <ol>
               <li>Open the DMG and drag the app into Applications.</li>
-              <li>Try opening the app once.</li>
-              <li>If macOS blocks it, open System Settings → Privacy &amp; Security, then choose Open Anyway.</li>
+              <li>Open 44OS from Applications.</li>
+              <li>If your Mac still shows a warning, verify that the file came from 44os.com before continuing.</li>
             </ol>
             <a href="https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unknown-developer-mh40616/mac">Read Apple&apos;s safety guidance</a>
           </div>

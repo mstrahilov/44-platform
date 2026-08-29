@@ -163,7 +163,7 @@ The shell will not:
 - Bundle or copy the Next.js frontend.
 - Create a second API or database.
 - Add broad computer access, a tray, launch-at-login, native menus, offline mode, or background services. The only narrow native feature is the approved notification permission/display bridge while the app is running.
-- Use the Mac App Store, Microsoft Store, Apple Developer program, Apple notarization, or paid Windows code signing.
+- Use the Mac App Store, Microsoft Store, or paid Windows code signing.
 - Add a native auto-updater. Website changes already appear on the next page load; a rare shell-only update can use a newly downloaded installer.
 - Attempt to transfer browser/PWA sessions into the desktop WebView.
 
@@ -181,16 +181,14 @@ Consequences:
 - If the permanent app origin, icon, window behavior, or native shell configuration changes, users may need to download a newer installer manually.
 - The wrapper must remain deliberately boring. If a feature already works through the website, do not recreate it in Rust.
 
-#### Unsigned distribution tradeoff
+#### Platform distribution tradeoff
 
-The owner has explicitly chosen not to enroll in Apple Developer or purchase Windows signing for this version.
+The owner has enrolled in Apple Developer and approved a Developer ID release for macOS. Windows code signing remains a separate future decision.
 
-This keeps the build simple, but operating systems will not identify 44OS as a verified publisher:
+- **macOS:** the public DMG is signed with the Developer ID Application certificate, notarized by Apple, stapled, and Gatekeeper-verified. The download page may describe this as a verified developer release.
+- **Windows:** the unsigned installer can run, but Microsoft SmartScreen may warn that the publisher is unknown. The download page must explain that warning honestly.
 
-- **macOS:** use Tauri’s ad-hoc signing identity (`-`) so the downloaded application has a basic signature, especially for Apple Silicon. Gatekeeper may still identify it as unverified and require the user to choose Open from the context menu or approve it in Privacy & Security.
-- **Windows:** the unsigned installer can run, but Microsoft SmartScreen may warn that the publisher is unknown. The download page must explain the warning honestly.
-
-Do not claim the installers are notarized, verified, trusted, or store-approved. Do not instruct users to disable system security globally. If the owner later wants warning-free public installation, code signing becomes a separately approved milestone.
+Do not claim that the Windows installer is verified or store-approved. Do not instruct users to disable system security globally.
 
 #### Time estimate
 
@@ -300,7 +298,7 @@ The production window loads remote web content. That content must not receive ge
 - [x] Generate the complete Tauri PNG, `.icns`, and `.ico` icon set from that source.
 - [ ] Inspect the Mac Dock, Finder, Windows desktop, Start menu, taskbar, installer, and uninstall icon presentation.
 - [x] Configure macOS direct-download targets as `.app` and DMG.
-- [x] Build the universal Mac `.app` and DMG with Tauri’s ad-hoc signing identity (`-`), not an Apple Developer certificate.
+- [x] Build the universal Mac `.app` and branded DMG with the Apple Developer ID Application certificate, Apple notarization, stapling, and Gatekeeper verification.
 - [x] Configure the Windows x64 NSIS setup executable.
 - [x] Use the standard WebView2 download-bootstrapper behavior unless a clean Windows test proves an offline runtime is required.
 - [ ] Record artifact filename, shell version, target, architecture, size, SHA-256 checksum, commit, and build date.
@@ -430,10 +428,10 @@ For each device:
 - [ ] Show explicit **Download for Mac** and **Download for Windows** actions. OS detection may recommend one but must not hide the other.
 - [ ] Host the approved artifacts in a public GitHub Release because the repository is public.
 - [ ] Use stable first-party routes such as `/download/mac` and `/download/windows` that redirect to the reviewed current artifact.
-- [ ] Show the shell version, simple system requirements, approximate size, install steps, unsigned-publisher warning, Support, legal links, and **Open Web App**. Keep architecture, build dates, and checksums in internal release evidence rather than the editorial UI.
+- [ ] Show the shell version, simple system requirements, approximate size, install steps, the Windows unsigned-publisher warning, Support, legal links, and **Open Web App**. Keep architecture, build dates, and checksums in internal release evidence rather than the editorial UI.
 - [ ] State clearly that the shell displays the live website and therefore needs an internet connection.
 - [ ] State clearly that website improvements appear automatically; the shell itself has no native auto-updater.
-- [ ] Never expose a local/CI artifact, broken link, placeholder package, or claim of verified publisher status.
+- [ ] Never expose a local/CI artifact, broken link, placeholder package, or unsupported claim of verified publisher status.
 - [ ] Verify content type, filename, redirect, anonymous access, checksum, and fresh install for both buttons.
 - [ ] Add correct metadata and the Download route to the marketing sitemap.
 
@@ -448,7 +446,7 @@ Release order:
 7. Marketing **Download App** action.
 8. Seven-day support/error observation.
 
-**Complete when:** an anonymous Mac or Windows user can understand the unsigned-app warning, download the correct installer, install it, sign in, and use the live website shell successfully.
+**Complete when:** an anonymous Mac user can download the notarized installer without an unidentified-developer block, and a Windows user can understand its unsigned-app warning, download the correct installer, install it, sign in, and use the live website shell successfully.
 
 #### Manual replacement and rollback
 
@@ -476,9 +474,9 @@ There is no native updater in v1.
 - Desktop Account unification is ready locally: the Sidebar replaces Settings with an Account destination that uses the signed-in profile image, and the duplicate signed-in Topbar avatar/menu is removed. The shared Account hub now leads with a centered avatar/name identity, limits its menu to Profile, conditional Studio, conditional Orders, Messages, and Settings, and places Log Out as a separate centered action beneath the menu. Notifications and Support remain in their established shell controls.
 - Owner-profile action polish is ready locally: the large Edit Profile and Open Studio buttons are removed from the identity row, and one circular glass pencil action aligned beneath the Topbar controls opens Edit Profile. Visitor Follow and Message actions remain unchanged; Studio stays available from Account.
 - Desktop-launch onboarding and Discover polish are ready for release: signup now enters one editorial `/welcome` route with state-driven Member and Creator guidance; Creator profile setup is immediate but publishing remains approval-gated. Web Home uses `Discover` for every viewer and avoids a profile request solely for heading personalization. Its accepted rail order is Featured, Music, gated Beats, Samples, Merch, Books, Games. The rail begins below the title divider, then docks into the Topbar while scrolling; both states use the same open underline treatment, align to the content edge, and never become pills. On mobile, the docked rail replaces the logo/actions and scrolls horizontally. Community shares that dockable navigation, and Library shows All plus only the member's populated categories, omits its duplicate mobile Search field, and matches the Home opening rhythm. Every Home category uses a matching `Browse …` title without inline Beats Search. One taller, non-hovering Admin-selected release banner contains only its eyebrow, title, and release action. `New Releases` selects at most one latest non-featured release per creator, then image/name-only New Creators, nonempty Creators You Follow, and a nonduplicating Browse Music shelf precede Browse Beats, Browse Samples, Browse Merch, Browse Books, and Browse Games. The duplicate Recently Added shelf remains omitted. Home Creator links open the first available published-content profile tab and otherwise fall back to Posts. The experimental artist-specific release rows remain omitted. Admin Home is narrowly restored for the single audited banner selection. Primary Radio and Account destinations are route-prefetched and idle-warmed; their assembled data is shared briefly to avoid repeated navigation queries.
-- Evidence: production npm audit reports zero vulnerabilities; web lint, strict typecheck, production build, focused contracts, Rust formatting, Clippy, and Rust tests pass. A local production-host comparison proves marketing omits the generated application stylesheet and `app-frame` while the app receives both. The ad-hoc-signed `44OS.app` is a valid arm64/x86_64 Mach-O bundle with identifier `com.fortyfour.os44`; it launched the live application successfully, and the integrated transparent title bar passed visual inspection. The rebuilt 6,958,632-byte universal DMG has SHA-256 `b56023c9c2ade3e4dd54edcd57bb32a201171914547673a0e1bc10718ab8d850`.
-- Decisions: keep Tauri rather than Electron, exact `https://app.44os.com/`, no native plugins/capabilities/updater, ad-hoc Mac and unsigned Windows distribution, shared first-party analytics consent, and four `Other` handoff documents.
-- Blockers: DMG install/Gatekeeper/uninstall acceptance, complete Mac behavior and website parity, Windows real-device acceptance, and public artifact hosting remain.
+- Evidence: production npm audit reports zero vulnerabilities; web lint, strict typecheck, production build, focused contracts, Rust formatting, Clippy, and Rust tests pass. A local production-host comparison proves marketing omits the generated application stylesheet and `app-frame` while the app receives both. The Developer ID-signed and Apple-notarized `44OS.app` is a valid arm64/x86_64 Mach-O bundle with identifier `com.fortyfour.os44`; its mounted app and DMG both pass `spctl` with `source=Notarized Developer ID`. The accepted submission is `4955ea20-18fe-4075-a81a-da01ed3cf216`; the published-candidate DMG is 7,202,557 bytes with SHA-256 `ead11288c238eb468d366e8f37ff356968c7c2cb9a8c55036b2361b54cfdae28`.
+- Decisions: keep Tauri rather than Electron, exact `https://app.44os.com/`, no native plugins/capabilities/updater, notarized Developer ID Mac and unsigned Windows distribution, shared first-party analytics consent, and four `Other` handoff documents.
+- Blockers: complete Mac install/uninstall acceptance, Windows real-device acceptance, and public artifact hosting remain.
 - Next: move the ignored Windows installer to the owner’s PC, verify SmartScreen disclosure, install/launch/navigation/auth/playback/upload/download/uninstall behavior, and report the exact Windows version plus results. Retain the artifact only if that matrix passes; configure no production URL before acceptance.
 
 Add one concise entry after each desktop-shell session:

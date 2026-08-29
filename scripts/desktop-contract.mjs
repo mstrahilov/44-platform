@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile, stat } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
-const [configText, packageText, cargoText, rustSource, nextConfig, notificationCapabilityText, notificationClient, macDmgPackager, dmgBackground, dmgVolumeIcon] = await Promise.all([
+const [configText, packageText, cargoText, rustSource, nextConfig, notificationCapabilityText, notificationClient, macDmgPackager, macReleaseScript, dmgBackground, dmgVolumeIcon] = await Promise.all([
   read('src-tauri/tauri.conf.json'),
   read('package.json'),
   read('src-tauri/Cargo.toml'),
@@ -11,6 +11,7 @@ const [configText, packageText, cargoText, rustSource, nextConfig, notificationC
   read('src-tauri/capabilities/desktop-notifications.json'),
   read('src/lib/deviceNotifications.ts'),
   read('scripts/package-branded-mac-dmg.mjs'),
+  read('scripts/release-notarized-mac.mjs'),
   stat(new URL('../src-tauri/dmg/background.png', import.meta.url)),
   stat(new URL('../src-tauri/dmg/volume-icon.icns', import.meta.url)),
 ]);
@@ -40,7 +41,8 @@ assert.equal(mainWindow.decorations, true, 'native Mac traffic-light controls re
 assert.equal(mainWindow.titleBarStyle, 'Transparent', 'Mac controls sit in a slim title bar matching the application background');
 assert.equal(mainWindow.hiddenTitle, true, 'the redundant native window title stays hidden');
 assert.equal(mainWindow.trafficLightPosition, undefined, 'transparent title-bar controls retain native placement');
-assert.equal(config.bundle.macOS.signingIdentity, '-', 'Mac packages use only the approved ad-hoc identity');
+assert.equal(config.bundle.macOS.signingIdentity, null, 'Mac release signing identity is injected securely at build time');
+assert.equal(config.bundle.macOS.hardenedRuntime, true, 'Mac release builds keep the hardened runtime enabled');
 assert.deepEqual(config.bundle.macOS.dmg, {
   background: './dmg/background.png',
   windowPosition: { x: 360, y: 180 },
@@ -52,11 +54,15 @@ assert.ok(dmgBackground.size > 0, 'the branded DMG background is present');
 assert.ok(dmgVolumeIcon.size > 0, 'the custom mounted-volume icon is present');
 assert.match(macDmgPackager, /--volicon/, 'the Mac packager applies the custom mounted-volume icon');
 assert.match(macDmgPackager, /--app-drop-link/, 'the Mac packager creates the Applications drag target');
+assert.match(macReleaseScript, /Developer ID Application:/, 'the Mac release requires an Apple Developer ID Application identity');
+assert.match(macReleaseScript, /notarytool[\s\S]*submit/, 'the Mac release submits the branded DMG to Apple notarization');
+assert.match(macReleaseScript, /stapler[\s\S]*staple[\s\S]*stapler[\s\S]*validate/, 'the Mac release staples and validates the notarization ticket');
+assert.match(macReleaseScript, /spctl[\s\S]*--type[\s\S]*execute/, 'the Mac release verifies the mounted application with Gatekeeper');
 assert.equal(config.bundle.windows.nsis.installMode, 'currentUser', 'Windows uses a standard-user NSIS install');
 assert.match(packageJson.devDependencies['@tauri-apps/cli'], /^2\.11\.4$/, 'the reviewed Tauri CLI is pinned exactly');
 assert.match(packageJson.dependencies['@tauri-apps/plugin-notification'], /^2\.3\.3$/, 'the reviewed notification JavaScript bridge is pinned exactly');
 assert.match(cargoText, /tauri-plugin-notification = "=2\.3\.3"/, 'the reviewed notification Rust bridge is pinned exactly');
-for (const script of ['desktop:dev', 'desktop:check', 'desktop:build', 'desktop:package:mac']) {
+for (const script of ['desktop:dev', 'desktop:check', 'desktop:build', 'desktop:package:mac', 'desktop:release:mac']) {
   assert.equal(typeof packageJson.scripts[script], 'string', `${script} exists`);
 }
 assert.doesNotMatch(nextConfig, /output\s*:\s*['"]export['"]/, 'the hosted Next application is never converted to a static export');

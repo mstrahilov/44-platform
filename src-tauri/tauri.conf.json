@@ -45,7 +45,8 @@
       "icons/icon.ico"
     ],
     "macOS": {
-      "signingIdentity": "-",
+      "signingIdentity": null,
+      "hardenedRuntime": true,
       "dmg": {
         "background": "./dmg/background.png",
         "windowPosition": {

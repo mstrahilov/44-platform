@@ -38,7 +38,7 @@ assert.match(releases, /PUBLIC_RELEASES[\s\S]*Open App/, 'release notes use stru
 assert.match(landing, />Download App</, 'marketing navigation exposes the reviewed download page');
 assert.match(download, /DESKTOP_MAC_DOWNLOAD_URL[\s\S]*DESKTOP_WINDOWS_DOWNLOAD_URL/, 'download URLs retain an optional server override');
 assert.match(download, /publishedMacDownload[\s\S]*publishedWindowsDownload/, 'accepted versioned desktop artifacts are published on the editorial origin');
-assert.match(download, /not been notarized by Apple[\s\S]*Privacy &amp; Security/, 'Mac preview disclosure is explicit and actionable');
+assert.match(download, /signed with Apple Developer ID and notarized by Apple[\s\S]*verified developer/, 'Mac notarization disclosure is explicit and accurate');
 assert.match(download, /Download for Windows[\s\S]*More info and Run anyway/, 'Windows download and unsigned preview guidance are public');
 assert.doesNotMatch(landing, /MusicPlayer|WebPush|AnalyticsConsent|supabase/i);
 assert.match(siteUrl, /DEFAULT_APP_URL = 'https:\/\/app\.44os\.com'/);
