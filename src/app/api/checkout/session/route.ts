@@ -198,7 +198,11 @@ export async function POST(request: Request) {
       await stripe.checkout.sessions.expire(session.id).catch(() => undefined);
       throw bindResult.error;
     }
-    return Response.json({ url: session.url, orderId: order.order_id }, { status: 201, headers: { 'Cache-Control': 'no-store' } });
+    return Response.json({
+      url: session.url,
+      orderId: order.order_id,
+      sessionId: session.id,
+    }, { status: 201, headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
       const diagnostic = error instanceof Error

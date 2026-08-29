@@ -19,7 +19,11 @@ begin
   for update;
 
   if approver_id is null then
-    raise exception 'The approved platform commerce model must be active before Beat sales launch.' using errcode='55000';
+    -- A clean schema replay has no production operator/profile data. Keep the
+    -- launch fail-closed instead of making the schema itself depend on mutable
+    -- production rows. Approved environments still execute the activation
+    -- below exactly as before.
+    return;
   end if;
 
   -- V2 is the exact owner-approved standard text added by the Beat activation
@@ -87,7 +91,17 @@ set review_surfaces_enabled=true,
   split_sales_enabled=false,
   exclusive_sales_enabled=false,
   updated_at=now()
-where singleton;
+where singleton
+  and exists(
+    select 1
+    from public.commerce_runtime_controls controls
+    where controls.singleton
+      and controls.checkout_enabled
+      and controls.stripe_payments_enabled
+      and controls.operating_model_approved_at is not null
+      and controls.terms_version_id is not null
+      and controls.platform_seller_id is not null
+  );
 
 -- Activate only complete, published Beats belonging to a creator who has an
 -- explicit paid-sales approval. Incomplete or ineligible offers remain drafts.
@@ -144,6 +158,6 @@ end;
 $$;
 
 comment on table public.beat_runtime_controls is
-  'Version 1.2 enables reviewed catalog, publishing, and standard non-exclusive Beat checkout. Split and exclusive Beat sales remain fail-closed.';
+  'Version 1.2 enables reviewed catalog, publishing, and standard non-exclusive Beat checkout only after platform commerce approval exists. Split and exclusive Beat sales remain fail-closed.';
 
 commit;
