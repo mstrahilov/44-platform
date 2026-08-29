@@ -9,7 +9,7 @@ const pageTitle = 'Download 44OS';
 const pageDescription = 'Bring the live 44OS experience to Mac or Windows.';
 const localMacDownload = '/api/desktop/download/mac';
 const localWindowsDownload = '/api/desktop/download/windows';
-const publishedMacDownload = '/downloads/44OS-0.1.0-mac-universal.dmg';
+const publishedMacDownload = '/downloads/44OS-0.1.0-mac-universal-notarized.dmg';
 const publishedWindowsDownload = '/downloads/44OS-0.1.0-windows-x64-setup.exe';
 
 export const dynamic = 'force-dynamic';

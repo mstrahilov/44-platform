@@ -18,7 +18,7 @@ const [page, localAction, route, artifacts, importer, packageText, proxy, sitema
 assert.match(page, /DESKTOP_MAC_DOWNLOAD_URL/, 'Mac publication requires an explicit production artifact URL');
 assert.match(page, /DESKTOP_WINDOWS_DOWNLOAD_URL/, 'Windows publication requires an explicit production artifact URL');
 assert.match(page, /url\.protocol === 'https:'/, 'production artifact configuration rejects unsafe URL schemes');
-assert.match(page, /publishedMacDownload = '\/downloads\/44OS-0\.1\.0-mac-universal\.dmg'/, 'production has one immutable Mac artifact path');
+assert.match(page, /publishedMacDownload = '\/downloads\/44OS-0\.1\.0-mac-universal-notarized\.dmg'/, 'production has one immutable notarized Mac artifact path');
 assert.match(page, /publishedWindowsDownload = '\/downloads\/44OS-0\.1\.0-windows-x64-setup\.exe'/, 'production has one immutable Windows artifact path');
 assert.match(page, /NODE_ENV === 'production' \? publishedMacDownload : localMacDownload/, 'Mac production and local review paths are explicit');
 assert.match(page, /NODE_ENV === 'production' \? publishedWindowsDownload : localWindowsDownload/, 'Windows production and local review paths are explicit');
@@ -44,6 +44,7 @@ for (const name of ['DESKTOP_RELEASE_VERSION', 'DESKTOP_MAC_DOWNLOAD_URL', 'DESK
 
 for (const [artifactPath, minimumBytes] of [
   ['public/downloads/44OS-0.1.0-mac-universal.dmg', 5_000_000],
+  ['public/downloads/44OS-0.1.0-mac-universal-notarized.dmg', 5_000_000],
   ['public/downloads/44OS-0.1.0-windows-x64-setup.exe', 1_000_000],
 ]) {
   const artifact = await stat(new URL(`../${artifactPath}`, import.meta.url));
