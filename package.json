@@ -31,6 +31,7 @@
     "test:username-casing": "node scripts/username-casing-contract.mjs && supabase test db --local supabase/tests/m1_case_preserving_usernames_security.sql",
     "test:settings-studio-currency": "tsx scripts/settings-studio-currency-contract.ts",
     "test:commerce-contract": "node scripts/stripe-commerce-contract.mjs",
+    "test:storekit-contract": "node scripts/storekit-contract.mjs",
     "test:stripe-sandbox-preflight": "node scripts/stripe-sandbox-preflight.mjs",
     "test:stripe-sandbox-verify": "node scripts/stripe-sandbox-verify.mjs",
     "test:stripe-live-preflight": "node scripts/stripe-live-preflight.mjs --confirm-read-only-live",
@@ -58,6 +59,7 @@
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
+    "@apple/app-store-server-library": "^3.1.0",
     "@react-email/render": "^2.1.0",
     "@supabase/supabase-js": "^2.108.2",
     "@tauri-apps/plugin-notification": "2.3.3",

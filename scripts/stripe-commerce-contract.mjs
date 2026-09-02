@@ -39,6 +39,7 @@ const requirements = [
   ['Beat license order snapshot is immutable fulfillment evidence', /beat_license_snapshot[\s\S]*termsText[\s\S]*termsSha256[\s\S]*file_manifest/, beatActivation],
   ['physical-only shipping collection', /hasPhysical[\s\S]*shipping_address_collection[\s\S]*shippingRateIds/, session],
   ['Stripe-hosted payment Session', /checkout\.sessions\.create[\s\S]*mode:\s*'payment'/, session],
+  ['native status polling receives the Checkout Session identifier', /sessionId:\s*session\.id/, session],
   ['runtime and operating-model gate', /not controls\.checkout_enabled[\s\S]*operating_model_approved_at/, migration],
   ['exact terms snapshot', /terms_snapshot[\s\S]*'body',terms\.body[\s\S]*'sha256',terms\.body_sha256/, migration],
   ['raw webhook body', /const rawBody = await request\.text\(\)/, webhook],
