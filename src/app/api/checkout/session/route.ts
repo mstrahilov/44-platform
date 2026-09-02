@@ -33,14 +33,25 @@ export async function POST(request: Request) {
     let body: CheckoutRequestBody;
     try { body = await request.json() as CheckoutRequestBody; }
     catch { return Response.json({ error: 'Invalid checkout request.', code: 'invalid_request' }, { status: 400 }); }
-    const lines = body.lines ?? [];
+    const rawLines = body.lines ?? [];
     if (!body.termsAccepted || !body.idempotencyKey || !/^[A-Za-z0-9_-]{16,200}$/.test(body.idempotencyKey)
-      || lines.length < 1 || lines.length > 20
-      || lines.some(line => !line.itemId || !UUID.test(line.itemId)
+      || rawLines.length < 1 || rawLines.length > 20
+      || rawLines.some(line => !line.itemId || !UUID.test(line.itemId)
         || (line.offerId && !UUID.test(line.offerId))
         || (line.merchVariantId != null && !UUID.test(line.merchVariantId)))) {
       return Response.json({ error: 'Checkout details are incomplete.', code: 'invalid_request' }, { status: 400 });
     }
+    // Postgres compares `uuid` columns case-insensitively, but every id below
+    // is also used as a plain-string Map/Set key in this handler. The iOS
+    // client sends `UUID.uuidString`, which is always uppercase, while every
+    // id read back from the database is lowercase — left unnormalized, those
+    // string-keyed lookups silently missed and every checkout looked like an
+    // unavailable offer. Lowercase once, here, before any id is used as a key.
+    const lines = rawLines.map(line => ({
+      itemId: line.itemId!.toLowerCase(),
+      offerId: line.offerId ? line.offerId.toLowerCase() : line.offerId,
+      merchVariantId: line.merchVariantId ? line.merchVariantId.toLowerCase() : line.merchVariantId,
+    }));
     const itemIds = [...new Set(lines.map(line => line.itemId!))];
     if (itemIds.length !== lines.length) {
       return Response.json({ error: 'Each Item can appear only once in checkout.', code: 'duplicate_item' }, { status: 400 });

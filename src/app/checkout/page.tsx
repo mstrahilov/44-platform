@@ -112,6 +112,23 @@ export default function CheckoutPage() {
     return () => { active = false; if (timer) clearTimeout(timer); };
   }, [checkoutUiAvailable, user]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined' || loading || user) return;
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+    if (params.get('checkout') !== 'success' || !sessionId) return;
+    // The native app opens Stripe Checkout in the system browser (required for
+    // Apple's external-purchase-link exemption) and confirms payment itself via
+    // its own authenticated status poll once it regains the foreground — this
+    // page's own poll above never runs here because this Safari session was
+    // never signed in. An unauthenticated visitor landing on a successful
+    // session only happens via that native handoff, so handing back to the
+    // app through its registered URL scheme is safe and is what actually
+    // closes the loop; without it the buyer is stranded on a sign-in prompt
+    // for an order that already succeeded.
+    window.location.href = `os44://checkout-return?session_id=${encodeURIComponent(sessionId)}`;
+  }, [loading, user]);
+
   const canCompleteFreeSave = items.length > 0 && subtotalCents === 0 && !hasPhysicalItem;
   const canStartPaidCheckout = checkoutUiAvailable && items.length > 0 && subtotalCents > 0 && Boolean(checkoutConfig?.available && checkoutConfig.terms);
 
