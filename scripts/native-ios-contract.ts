@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { nativeAppConfiguration } from '../src/lib/server/nativeApp';
 import { GET as capabilities } from '../src/app/api/native/v1/capabilities/route';
 import { GET as health } from '../src/app/api/native/v1/health/route';
+import { POST as resolveProtectedAsset } from '../src/app/api/native/v1/protected-assets/resolve/route';
 
 async function main() {
   const baseline = nativeAppConfiguration({});
@@ -50,6 +51,22 @@ async function main() {
   assert.equal(healthBody.contract_version, 1);
   assert.equal(healthBody.status, 'available');
   assert.equal(typeof healthBody.release, 'string');
+
+  const disabledProtectedAssetResponse = await resolveProtectedAsset(new Request(
+    'https://app.44os.com/api/native/v1/protected-assets/resolve',
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        item_id: '11000000-0000-4000-8000-000000000001',
+        asset_id: '12000000-0000-4000-8000-000000000001',
+        purpose: 'read',
+      }),
+    },
+  ));
+  assert.equal(disabledProtectedAssetResponse.status, 503);
+  assert.match(disabledProtectedAssetResponse.headers.get('cache-control') ?? '', /no-store/);
+  assert.equal((await disabledProtectedAssetResponse.json()).code, 'capability_disabled');
 
   console.log('Native iOS capabilities and health contracts passed.');
 }
