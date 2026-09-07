@@ -8228,8 +8228,10 @@ export type Database = {
           country_code: string | null
           created_at: string
           creator_type: string | null
+          deletion_requested_at: string | null
           display_currency: string | null
           display_name: string | null
+          hero_url: string | null
           home_country_code: string | null
           home_currency: string | null
           id: string
@@ -8249,8 +8251,10 @@ export type Database = {
           country_code?: string | null
           created_at?: string
           creator_type?: string | null
+          deletion_requested_at?: string | null
           display_currency?: string | null
           display_name?: string | null
+          hero_url?: string | null
           home_country_code?: string | null
           home_currency?: string | null
           id: string
@@ -8270,8 +8274,10 @@ export type Database = {
           country_code?: string | null
           created_at?: string
           creator_type?: string | null
+          deletion_requested_at?: string | null
           display_currency?: string | null
           display_name?: string | null
+          hero_url?: string | null
           home_country_code?: string | null
           home_currency?: string | null
           id?: string
