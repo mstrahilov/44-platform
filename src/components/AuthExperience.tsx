@@ -42,6 +42,7 @@ export function AuthExperience({ variant, authenticatedDestination }: AuthExperi
   const [username, setUsername] = useState('');
   const [countryCode, setCountryCode] = useState('');
   const [creatorAccountRequested, setCreatorAccountRequested] = useState(false);
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [accountExists, setAccountExists] = useState<boolean | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -338,13 +339,27 @@ export function AuthExperience({ variant, authenticatedDestination }: AuthExperi
                 }}
               />
             </label>
+            {!isLogin && (
+              <label className="login-creator-request">
+                <Ui44CheckboxInput
+                  checked={ageConfirmed}
+                  onChange={event => {
+                    setAgeConfirmed(event.target.checked);
+                    setStatus(null);
+                  }}
+                />
+                <span>
+                  <strong>I confirm I am at least 13 years old</strong>
+                </span>
+              </label>
+            )}
           </>
         )}
 
         <button
           className="os-button os-button-primary os-button-large login-primary-action"
           type="submit"
-          disabled={submitting || signupComplete}
+          disabled={submitting || signupComplete || (!isLogin && step === 'password' && !ageConfirmed)}
         >
           {submitting
             ? step === 'email' ? 'Checking…' : 'Working…'
