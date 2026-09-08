@@ -13,6 +13,7 @@ type ApnsDelivery = {
   device_token: string;
   environment: 'sandbox' | 'production';
   attempt_count: number;
+  achievement_title: string | null;
 };
 
 function requiredApnsConfiguration() {
@@ -78,6 +79,8 @@ function payloadFor(delivery: ApnsDelivery) {
       return { title: `${actor} liked your post`, body: stringValue(delivery.metadata, 'post_title') || 'Someone liked your Community post.', kind: 'like' };
     case 'message_received':
       return { title: `${actor} sent you a message`, body: stringValue(delivery.metadata, 'message_body') || 'You have a new message.', kind: 'message' };
+    case 'achievement_unlocked':
+      return { title: 'Achievement unlocked', body: delivery.achievement_title || 'You unlocked a new achievement.', kind: 'achievement' };
     default:
       return { title: 'You are now a Creator', body: 'Creator access is ready. Open Studio to add your first release.', kind: 'creator_access_granted' };
   }
