@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/push/apns/process",
-      "schedule": "*/2 * * * *"
+      "schedule": "29 5 * * *"
     }
   ]
 }
