@@ -7,6 +7,10 @@
     {
       "path": "/api/push/process",
       "schedule": "23 5 * * *"
+    },
+    {
+      "path": "/api/push/apns/process",
+      "schedule": "*/2 * * * *"
     }
   ]
 }
