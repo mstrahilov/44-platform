@@ -72,11 +72,11 @@ function payloadFor(delivery: ApnsDelivery) {
   const actor = stringValue(delivery.metadata, 'actor_name') || 'Someone';
   switch (delivery.event_type) {
     case 'reply_received':
-      return { title: `${actor} replied`, body: stringValue(delivery.metadata, 'reply_body') || 'Someone replied to your Community post.', kind: 'reply' };
+      return { title: `${actor} replied to your post`, body: '', kind: 'reply' };
     case 'mention_received':
-      return { title: `${actor} mentioned you`, body: stringValue(delivery.metadata, 'post_body') || 'You were mentioned in Community.', kind: 'mention' };
+      return { title: `${actor} mentioned you in a comment`, body: '', kind: 'mention' };
     case 'like_received':
-      return { title: `${actor} liked your post`, body: stringValue(delivery.metadata, 'post_title') || 'Someone liked your Community post.', kind: 'like' };
+      return { title: `${actor} liked your post`, body: '', kind: 'like' };
     case 'message_received':
       return { title: `${actor} sent you a message`, body: stringValue(delivery.metadata, 'message_body') || 'You have a new message.', kind: 'message' };
     case 'achievement_unlocked':
