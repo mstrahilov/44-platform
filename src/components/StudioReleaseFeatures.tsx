@@ -204,7 +204,7 @@ export function buildAchievementRows(productId: string, state: ReleaseFeatureSta
           final_reward_required: achievement.code === OVERACHIEVER_CODE && bonusItems.length > 0,
           bonus_items: achievement.code === OVERACHIEVER_CODE ? bonusItems : [],
         },
-        points: 0,
+        points: achievement.code === OVERACHIEVER_CODE ? 25 : 10,
         icon: getAchievementIconPath(achievement.code) ?? achievement.iconUrl ?? null,
         sort_order: index,
         is_secret: false,
