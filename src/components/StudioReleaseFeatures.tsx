@@ -88,7 +88,7 @@ export function achievementTemplates(sectionId: StudioCatalogSectionId): DraftAc
       { code: 'joined_the_orbit', title: 'Joined the Orbit', description: 'Follow the creator from this release.', triggerType: 'creator_followed_from_product', enabled: true, iconUrl: getAchievementIconPath('joined_the_orbit') },
       { code: 'left_your_mark', title: 'Left Your Mark', description: 'Write a review for this release.', triggerType: 'review_created', enabled: true, iconUrl: getAchievementIconPath('left_your_mark') },
       { code: 'signal_boost', title: 'Signal Boost', description: 'Get someone to open your shared link.', triggerType: 'shared_link_opened', enabled: true, iconUrl: getAchievementIconPath('signal_boost') },
-      { code: 'overachiever', title: 'Overachiever', description: 'Unlock every other achievement.', triggerType: 'all_achievements_unlocked', enabled: true, iconUrl: getAchievementIconPath('overachiever') },
+      { code: 'overachiever', title: 'Trophy', description: 'Unlock every other achievement.', triggerType: 'all_achievements_unlocked', enabled: true, iconUrl: getAchievementIconPath('overachiever') },
     ];
   }
 

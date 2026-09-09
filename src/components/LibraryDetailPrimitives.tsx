@@ -194,7 +194,7 @@ export function LibraryBonusContentSection({
     <div className="view-section">
       <SectionHeader
         title="Bonus Content"
-        description="Overachiever unlocks creator-selected extras for this item."
+        description="Trophy unlocks creator-selected extras for this item."
       />
       <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
         {bonusAssets.map((asset, index) => {
@@ -205,7 +205,7 @@ export function LibraryBonusContentSection({
               <span className="dashboard-row-copy">
                 <span className="dashboard-row-title">{title}</span>
                 <span className="dashboard-row-subtitle">
-                  {assetUnlocked ? 'Unlocked and ready to download.' : 'Locked until Overachiever is unlocked.'}
+                  {assetUnlocked ? 'Unlocked and ready to download.' : 'Locked until Trophy is unlocked.'}
                 </span>
               </span>
               {assetUnlocked && asset.file_url ? (
