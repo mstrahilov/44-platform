@@ -82,7 +82,6 @@ export function createReleaseFeatureState(sectionId: StudioCatalogSectionId): Re
 export function achievementTemplates(sectionId: StudioCatalogSectionId): DraftAchievement[] {
   if (sectionId === 'music') {
     return [
-      { code: 'front_to_back', title: 'Front to Back', description: 'Listen to every track on this release.', triggerType: 'all_tracks_listened', enabled: true, iconUrl: getAchievementIconPath('front_to_back') },
       { code: 'no_skips', title: 'No Skips', description: 'Listen from the first track to the last without skipping.', triggerType: 'album_no_skips', enabled: true, iconUrl: getAchievementIconPath('no_skips') },
       { code: 'nightbird', title: 'Nightbird', description: 'Listen to the release between 10 PM and 4 AM.', triggerType: 'release_completed_at_night', enabled: true, iconUrl: getAchievementIconPath('nightbird') },
       { code: 'joined_the_orbit', title: 'Joined the Orbit', description: 'Follow the creator from this release.', triggerType: 'creator_followed_from_product', enabled: true, iconUrl: getAchievementIconPath('joined_the_orbit') },
