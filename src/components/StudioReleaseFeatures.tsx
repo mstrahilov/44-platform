@@ -84,6 +84,7 @@ export function achievementTemplates(sectionId: StudioCatalogSectionId): DraftAc
     return [
       { code: 'no_skips', title: 'No Skips', description: 'Listen from the first track to the last without skipping.', triggerType: 'album_no_skips', enabled: true, iconUrl: getAchievementIconPath('no_skips') },
       { code: 'nightbird', title: 'Nightbird', description: 'Listen to the release between 10 PM and 4 AM.', triggerType: 'release_completed_at_night', enabled: true, iconUrl: getAchievementIconPath('nightbird') },
+      { code: 'heavy_rotation', title: 'Heavy Rotation', description: 'Listen to the full release three times.', triggerType: 'release_completed_three_sessions', enabled: true, iconUrl: getAchievementIconPath('heavy_rotation') },
       { code: 'joined_the_orbit', title: 'Joined the Orbit', description: 'Follow the creator from this release.', triggerType: 'creator_followed_from_product', enabled: true, iconUrl: getAchievementIconPath('joined_the_orbit') },
       { code: 'left_your_mark', title: 'Left Your Mark', description: 'Write a review for this release.', triggerType: 'review_created', enabled: true, iconUrl: getAchievementIconPath('left_your_mark') },
       { code: 'signal_boost', title: 'Signal Boost', description: 'Get someone to open this release from your shared link.', triggerType: 'shared_link_opened', enabled: true, iconUrl: getAchievementIconPath('signal_boost') },
