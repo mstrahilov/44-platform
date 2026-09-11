@@ -1,10 +1,11 @@
-// Looks up a YouTube video's real upload date as the creator pastes a URL
-// into the Studio video editor, so "Release Date" can auto-fill live rather
-// than only after Save. The YouTube Data API v3 key is a server-only secret
-// (YOUTUBE_API_KEY) — there is no keyless endpoint that returns
-// snippet.publishedAt (the oEmbed endpoint the app already uses for
-// thumbnails only returns title/author/thumbnail), so this can't happen on
-// the client or inside a plain Postgres RPC.
+// Looks up a YouTube video's real title and upload date as the creator
+// pastes a URL into the Studio video editor, so "Title" and "Release Date"
+// can auto-fill live rather than only after Save. The YouTube Data API v3
+// key is a server-only secret (YOUTUBE_API_KEY) — there is no keyless
+// endpoint that returns snippet.publishedAt (the oEmbed endpoint the app
+// already uses for thumbnails only returns title/author/thumbnail, no
+// publish date), so this can't happen on the client or inside a plain
+// Postgres RPC. Title comes along for free from the same snippet call.
 //
 // This function is a pure lookup — it never touches the database. The
 // actual create/update of a creator_videos row happens through the
@@ -64,7 +65,7 @@ Deno.serve(async (req) => {
 
   const videoID = parseYouTubeVideoID(url);
   if (!videoID) {
-    return new Response(JSON.stringify({ published_at: null }), {
+    return new Response(JSON.stringify({ published_at: null, title: null }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
@@ -72,7 +73,7 @@ Deno.serve(async (req) => {
 
   const apiKey = Deno.env.get("YOUTUBE_API_KEY");
   if (!apiKey) {
-    return new Response(JSON.stringify({ published_at: null }), {
+    return new Response(JSON.stringify({ published_at: null, title: null }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
@@ -83,13 +84,15 @@ Deno.serve(async (req) => {
       `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${encodeURIComponent(videoID)}&key=${apiKey}`,
     );
     const body = response.ok ? await response.json() : null;
-    const publishedAt = body?.items?.[0]?.snippet?.publishedAt ?? null;
-    return new Response(JSON.stringify({ published_at: publishedAt }), {
+    const snippet = body?.items?.[0]?.snippet ?? null;
+    const publishedAt = snippet?.publishedAt ?? null;
+    const title = typeof snippet?.title === "string" ? snippet.title : null;
+    return new Response(JSON.stringify({ published_at: publishedAt, title }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
   } catch {
-    return new Response(JSON.stringify({ published_at: null }), {
+    return new Response(JSON.stringify({ published_at: null, title: null }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
