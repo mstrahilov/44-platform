@@ -568,6 +568,12 @@ body:is(.theme-dark, .theme-light) .information-dialog.ui44-dialog-surface.ui44-
 
 .os-icon-sm { width: 18px; height: 18px; }
 .legal-page { max-width: 980px; margin-inline: auto; }
+/* `.os-paper-panel`'s own max-height/overflow-y:auto is sized for a
+   viewport-bound modal — a long-form legal document isn't one, and once
+   its content outgrows the panel's capped height it silently clips
+   instead of scrolling on some mobile browsers/WebViews. Legal pages flow
+   with the page itself, no internal scroll clamp. */
+.os-paper-panel.legal-document { max-height: none; overflow-y: visible; }
 .legal-document { display: grid; gap: 28px; padding: clamp(24px, 5vw, 52px); }
 .legal-document section { display: grid; gap: 10px; }
 .legal-document p { line-height: 1.75; color: var(--os-color-ink-secondary); }
