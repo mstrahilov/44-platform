@@ -48,7 +48,7 @@ export default function ApplicationShell({
       <head>
         {/* The application-only generated sheet must not be hoisted into marketing by Next. */}
         {/* eslint-disable-next-line @next/next/no-css-tags */}
-        <link rel="stylesheet" href="/_surface/44os-app.css?v=20260807-v12d" />
+        <link rel="stylesheet" href="/_surface/44os-app.css?v=20260915-v13" />
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: SITE_IDENTITY_JSON_LD }} />
       </head>
