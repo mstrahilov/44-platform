@@ -16,14 +16,15 @@ export default function PrivacyPage() {
     title="Privacy Policy"
     summary="How forty four collects, uses, discloses, and safeguards information through 44OS."
   >
-    <p className="os-type-meta">Effective July 17, 2026 · Last updated July 20, 2026</p>
+    <p className="os-type-meta">Effective July 17, 2026 · Last updated September 15, 2026</p>
 
     <LegalSection title="Who we are and what this policy covers">
       <p>
         forty four (&ldquo;forty four,&rdquo; &ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;)
-        operates 44OS. This Privacy Policy applies when you visit 44os.com or app.44os.com, create
-        or use a 44OS account, buy or publish an Item, contact Support, or otherwise use 44OS. It does not govern
-        a third party&apos;s own website, service, or privacy practices.
+        operates 44OS. This Privacy Policy applies when you visit 44os.com or app.44os.com, use the
+        44OS iOS app, create or use a 44OS account, buy or publish an Item, contact Support, or
+        otherwise use 44OS. It does not govern a third party&apos;s own website, service, app, or
+        privacy practices.
       </p>
     </LegalSection>
 
@@ -37,12 +38,19 @@ export default function PrivacyPage() {
         <li><strong>Creator onboarding information:</strong> for an Admin-approved Member becoming a Creator, eligibility and country information and, when paid selling is enabled, tax classification, certifications, tax-form information, signature evidence, review status, and a Wise payout-claim email address. At launch, 44OS does not ask Creators to store bank-account details with us.</li>
         <li><strong>Communications:</strong> support requests, correspondence, notification preferences, consent records, and email delivery or suppression events.</li>
         <li><strong>Device, usage, and security information:</strong> IP address, browser and device information, request and event timestamps, page or feature interactions, error and security events, and similar technical records needed to operate and protect 44OS.</li>
-        <li><strong>Browser storage:</strong> necessary session information and local preferences such as cart contents, interface settings, notification state, and media-player state.</li>
+        <li><strong>Browser and app storage:</strong> necessary session information and local preferences such as cart contents, interface settings, notification state, and media-player state, stored in your browser or on your device.</li>
+        <li><strong>Push notification tokens:</strong> if you allow notifications in the iOS app, Apple issues a device push token that we store and use, through Apple&apos;s Push Notification service, to deliver the notifications described below. Declining notifications does not affect any other 44OS feature.</li>
+        <li><strong>iOS device permissions:</strong> if you choose to use a feature that requests it, the iOS app asks iOS for access to your photo library (to select artwork or images to upload) or your calendar (to add an event you choose to save). These are standard iOS permissions you grant directly to the app through the system prompt; we only receive the specific photo or event you choose to use, not ongoing access to your library or calendar, and you can review or revoke either permission at any time in iOS Settings.</li>
       </ul>
       <p>
-        We receive information directly from you, automatically from your browser or device, from
-        forty four administrators, and from service providers involved in authentication, payment,
-        fulfillment, email, hosting, and support.
+        We receive information directly from you, automatically from your browser, app, or device,
+        from forty four administrators, and from service providers involved in authentication,
+        payment, fulfillment, push notification delivery, email, hosting, and support.
+      </p>
+      <p>
+        The 44OS iOS app does not use advertising identifiers (IDFA), does not include third-party
+        analytics or advertising SDKs, and does not track you across other companies&apos; apps or
+        websites, so it does not present an App Tracking Transparency prompt.
       </p>
     </LegalSection>
 
@@ -53,7 +61,7 @@ export default function PrivacyPage() {
         <li>operate profiles, publishing, Store, Community, Library, playback, and account features;</li>
         <li>price and process purchases, calculate applicable tax and shipping, deliver digital purchases, fulfill physical orders, and administer refunds, disputes, and customer support;</li>
         <li>review Creator eligibility, meet tax and recordkeeping obligations, account for earnings, and initiate approved Creator payouts;</li>
-        <li>send account, purchase, fulfillment, security, and support communications;</li>
+        <li>send account, purchase, fulfillment, security, and support communications, including push notifications if you enable them in the iOS app;</li>
         <li>detect fraud, abuse, infringement, technical failures, and threats to 44OS or its users;</li>
         <li>enforce our terms, preserve evidence, comply with law, and establish or defend legal claims; and</li>
         <li>understand performance and improve the reliability, accessibility, and usefulness of 44OS.</li>
@@ -88,6 +96,7 @@ export default function PrivacyPage() {
         <li><strong>Printful</strong> receives the physical-product selection and delivery information needed to quote, prepare, fulfill, ship, and track an approved merchandise order.</li>
         <li><strong>Wise</strong> receives a Creator&apos;s payout-claim email address and the payment information needed when forty four manually initiates an approved Creator payout. Wise obtains any bank details required to claim that payment through its own process.</li>
         <li><strong>Supabase and Vercel</strong> process information to provide authentication, database, private file storage, application hosting, security, and delivery infrastructure.</li>
+        <li><strong>Apple</strong> receives your device&apos;s push token and the notification content needed to deliver a push notification through Apple&apos;s Push Notification service if you enable notifications in the iOS app. Apple also processes app-distribution and diagnostic information under its own privacy practices for any app installed from the App Store.</li>
         <li><strong>Resend and our mailbox provider</strong> process email addresses, message contents, and delivery information to send account or transactional messages and handle Support correspondence.</li>
         <li><strong>Google Analytics</strong> processes limited device and public usage information only when optional measurement is configured and you affirmatively allow it. Advertising features remain disabled.</li>
         <li><strong>Professional advisers and authorities</strong> may receive information when reasonably necessary for accounting, tax, legal, insurance, security, compliance, or a valid legal request.</li>
