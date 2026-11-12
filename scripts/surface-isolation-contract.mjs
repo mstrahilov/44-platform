@@ -17,7 +17,7 @@ assert.match(rootLayout, /marketing[\s\S]*AnalyticsConsentBoundary/, 'marketing 
 for (const required of ['Sidebar', 'MusicPlayer', 'WebPushNotificationPrompt']) {
   assert.ok(applicationShell.includes(required), `the application-only shell owns ${required}`);
 }
-assert.match(applicationShell, /href="\/_surface\/44os-app\.css\?v=20260807-[a-z0-9-]+"/, 'only the application shell links the cache-busted generated application stylesheet');
+assert.match(applicationShell, /href="\/_surface\/44os-app\.css\?v=\d{8}-[a-z0-9-]+"/, 'only the application shell links the cache-busted generated application stylesheet');
 assert.doesNotMatch(applicationShell, /import ['"].*globals\.css|import ['"].*canonical-system\.css/, 'application CSS is not hoisted through a component import');
 assert.match(preparation, /src\/app\/globals\.css[\s\S]*src\/styles\/44-ui\/canonical-system\.css[\s\S]*public\/_surface\/44os-app\.css/, 'the generated stylesheet preserves the accepted application CSS source order');
 assert.match(analytics, /analytics-consent-button/, 'analytics consent has styling independent of application button CSS');

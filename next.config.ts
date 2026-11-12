@@ -52,6 +52,7 @@ const nextConfig: NextConfig = {
       { source: "/store/:category(music|books|assets|sample-packs|merch|games)/:slug", destination: "/store/item/:slug", permanent: true },
       { source: "/community/following", destination: "/community?filter=following", permanent: false },
       { source: "/community/profile/:username", destination: "/profile/:username", permanent: true },
+      { source: "/calendar/event/:id", destination: "/events/:id", permanent: true },
       { source: "/studio/analytics", destination: "/studio", permanent: false },
       { source: "/product/:id", destination: "/store/item/:id", permanent: true },
       {
@@ -63,6 +64,13 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      {
+        source: "/.well-known/apple-app-site-association",
+        headers: [
+          { key: "Content-Type", value: "application/json" },
+          { key: "Cache-Control", value: "public, max-age=3600" },
+        ],
+      },
       {
         source: "/downloads/:path*",
         headers: [

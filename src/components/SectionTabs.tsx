@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, type MouseEventHandler, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type MouseEventHandler, type ReactNode } from 'react';
 import { useTopbar, type TopbarTab } from '@/components/TopbarContext';
 
 export function SectionTabs({
@@ -22,6 +22,7 @@ export function SectionTabs({
   const railRef = useRef<HTMLElement | null>(null);
   const topbarTabsRef = useRef<TopbarTab[] | undefined>(topbarTabs);
   const dockedRef = useRef(false);
+  const [isOverflowing, setIsOverflowing] = useState(false);
   const { setTabs } = useTopbar();
   const tabsSignature = useMemo(() => JSON.stringify(topbarTabs?.map(tab => ({
     id: tab.id,
@@ -36,6 +37,28 @@ export function SectionTabs({
   });
 
   useEffect(() => {
+    const rail = railRef.current;
+    if (!rail) return;
+
+    let frame = 0;
+    const measure = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        setIsOverflowing(rail.scrollWidth > rail.clientWidth + 1);
+      });
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(rail);
+    Array.from(rail.children).forEach(child => observer.observe(child));
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [children]);
+
+  useEffect(() => {
     if (topbarOnly || dockedRef.current) setTabs(topbarTabsRef.current);
   }, [setTabs, tabsSignature, topbarOnly]);
 
@@ -47,6 +70,10 @@ export function SectionTabs({
 
   useEffect(() => {
     if (topbarOnly || !dockToTopbar || !topbarTabsRef.current?.length) return;
+    if (window.matchMedia('(max-width: 768px)').matches) {
+      setTabs(undefined);
+      return;
+    }
     const rail = railRef.current;
     const scroller = document.querySelector<HTMLElement>('.app-main-content');
     if (!rail || !scroller) return;
@@ -80,7 +107,7 @@ export function SectionTabs({
   if (topbarOnly) return null;
 
   return (
-    <nav ref={railRef} className={`section-tab-rail ${className}`.trim()} aria-label={ariaLabel}>
+    <nav ref={railRef} className={`section-tab-rail${isOverflowing ? ' section-tab-rail-overflow' : ''} ${className}`.trim()} aria-label={ariaLabel}>
       {children}
     </nav>
   );

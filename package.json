@@ -27,6 +27,7 @@
     "test:experience-polish": "node scripts/experience-polish-contract.mjs",
     "test:catalog-query-contract": "node scripts/catalog-query-contract.mjs",
     "test:surface-isolation": "node scripts/surface-isolation-contract.mjs",
+    "test:playlist-contract": "node scripts/playlist-contract.mjs",
     "test:radio-rotation": "tsx scripts/radio-rotation-contract.ts",
     "test:username-casing": "node scripts/username-casing-contract.mjs && supabase test db --local supabase/tests/m1_case_preserving_usernames_security.sql",
     "test:settings-studio-currency": "tsx scripts/settings-studio-currency-contract.ts",

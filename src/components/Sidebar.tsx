@@ -311,9 +311,9 @@ export default function Sidebar() {
   const accountApp = dockApps.find(app => app.id === 'you') ?? null;
   const mobileDockApps = [
     { app: getOSApp('store'), label: 'Home' },
-    { app: getOSApp('library'), label: 'Library' },
-    { app: getOSApp('radio'), label: 'Radio' },
     { app: getOSApp('community'), label: 'Community' },
+    { app: getOSApp('radio'), label: 'Radio' },
+    { app: getOSApp('library'), label: 'Library' },
     { app: getOSApp('you'), label: 'Account' },
   ].filter((entry): entry is { app: OSApp; label: string } => Boolean(entry.app));
 

@@ -102,8 +102,11 @@ export interface CommunityPost {
   id: string;
   slug?: string | null;
   author_id?: string | null;
+  item_id?: string | null;
   title: string;
   body: string | null;
+  image_url?: string | null;
+  link_url?: string | null;
   status: string;
   created_at: string;
   updated_at?: string | null;

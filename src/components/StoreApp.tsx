@@ -92,17 +92,15 @@ const STORE_FILTER_TITLES: Record<StoreFilter, string> = {
   interactive: 'Browse Games',
 };
 const MOBILE_DISCOVER_CATEGORIES: Array<{
-  category: StoreCategory;
+  category: StoreCategory | 'videos';
   filter: StoreFilter;
   label: string;
-  href: string;
+  href?: string;
 }> = [
   { category: 'all', filter: 'all', label: 'Featured', href: '/' },
   { category: 'music', filter: 'music', label: 'Music', href: '/store/music' },
-  ...(beatReviewSurfacesEnabled ? [{ category: 'beats' as const, filter: 'music' as const, label: 'Beats', href: '/store/beats' }] : []),
-  { category: 'sample-packs', filter: 'asset', label: 'Samples', href: '/store/sample-packs' },
-  { category: 'merch', filter: 'physical', label: 'Merch', href: '/store/merch' },
   { category: 'books', filter: 'book', label: 'Books', href: '/store/books' },
+  { category: 'sample-packs', filter: 'asset', label: 'Samples', href: '/store/sample-packs' },
   { category: 'games', filter: 'interactive', label: 'Games', href: '/store/games' },
 ];
 
@@ -442,7 +440,15 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     document.querySelector<HTMLElement>('.app-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  const discoverOptions = MOBILE_DISCOVER_CATEGORIES.filter(option => option.category !== 'beats' || hasBeatProducts);
+  const discoverOptions = MOBILE_DISCOVER_CATEGORIES.filter(option => {
+    if (option.category === 'beats') return hasBeatProducts;
+    if (option.category === 'all') return true;
+    if (option.category === 'music') return products.some(product => getProductExperience(product) === 'music' && !isBeatProduct(product));
+    if (option.category === 'books') return products.some(product => getProductExperience(product) === 'book');
+    if (option.category === 'sample-packs') return products.some(product => getProductExperience(product) === 'asset');
+    if (option.category === 'games') return products.some(product => getProductExperience(product) === 'interactive');
+    return false;
+  });
   function discoverOptionSelected(option: (typeof MOBILE_DISCOVER_CATEGORIES)[number]) {
     return category === 'all'
       ? option.category === 'beats'

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useContextMenu, type ContextMenuEntry } from '@/components/ContextMenu';
 import { PageShell, HubHero, CenteredMessage, EmptyMessage } from '@/components/Ui';
@@ -11,10 +12,9 @@ import type { Product } from '@/lib/products';
 import { creatorHref } from '@/lib/platform';
 import { useAuth } from '@/lib/useAuth';
 import { hideLibraryItem, listVisibleLibraryItems } from '@/lib/domain/library';
-import { Ui44TextInput } from '@/components/ui44/Inputs';
-import { SectionTab, SectionTabs } from '@/components/SectionTabs';
+import { getPlaylist, listPlaylists, type Playlist } from '@/lib/domain/playlists';
 
-type LibraryFilter = 'all' | 'music' | 'book' | 'interactive' | 'beats' | 'asset';
+type LibraryFilter = 'all' | 'music' | 'book' | 'interactive' | 'beats' | 'asset' | 'playlists';
 
 const CATEGORY_FILTER: Record<LibraryCategory, LibraryFilter> = {
   all: 'all',
@@ -32,17 +32,10 @@ const FILTER_LABELS: Record<LibraryFilter, string> = {
   interactive: 'Games',
   beats: 'Beats',
   asset: 'Sample Packs',
+  playlists: 'Playlists',
 };
 
-const LIBRARY_GROUP_ORDER: Array<{ filter: Exclude<LibraryFilter, 'all'>; label: string }> = [
-  { filter: 'music', label: 'Music' },
-  { filter: 'beats', label: 'Beats' },
-  { filter: 'asset', label: 'Sample Packs' },
-  { filter: 'book', label: 'Books' },
-  { filter: 'interactive', label: 'Games' },
-];
-
-const LIBRARY_FILTER_ORDER: LibraryFilter[] = ['all', 'music', 'beats', 'asset', 'book', 'interactive'];
+const LIBRARY_FILTER_ORDER: LibraryFilter[] = ['all', 'music', 'beats', 'asset', 'book', 'interactive', 'playlists'];
 const LIBRARY_FILTER_HREFS: Record<LibraryFilter, string> = {
   all: '/library',
   music: '/library/music',
@@ -50,6 +43,7 @@ const LIBRARY_FILTER_HREFS: Record<LibraryFilter, string> = {
   asset: '/library/sample-packs',
   book: '/library/books',
   interactive: '/library/games',
+  playlists: '/library',
 };
 
 function isBeatProduct(product: Product) {
@@ -66,14 +60,15 @@ interface LibraryRow {
 }
 
 export default function LibraryApp({ category }: { category: LibraryCategory }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const [rows, setRows] = useState<LibraryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [query, setQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<LibraryFilter>(() => (
-    CATEGORY_FILTER[category]
-  ));
+  const [activeFilter, setActiveFilter] = useState<LibraryFilter>(() => CATEGORY_FILTER[category]);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [filterMenuOpen, setFilterMenuOpen] = useState(false);
 
   const availableFilters = useMemo(() => (
     (['music', 'book', 'interactive', 'beats', 'asset'] as LibraryFilter[]).filter(filter => rows.some(row => {
@@ -85,9 +80,16 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
   ), [rows]);
 
   useEffect(() => {
-    const requested = CATEGORY_FILTER[category];
+    const queryFilter = searchParams.get('filter');
+    const requested = queryFilter === 'playlists' ? 'playlists' : CATEGORY_FILTER[category];
     Promise.resolve().then(() => setActiveFilter(requested));
-  }, [category]);
+  }, [category, searchParams]);
+
+  useEffect(() => {
+    function toggleFilterMenu() { setFilterMenuOpen(current => !current); }
+    window.addEventListener('44:toggle-filter-popover', toggleFilterMenu);
+    return () => window.removeEventListener('44:toggle-filter-popover', toggleFilterMenu);
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
@@ -100,9 +102,18 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
       setError('');
 
       try {
-        const data = await listVisibleLibraryItems(userId);
+        const [data, playlistData] = await Promise.all([listVisibleLibraryItems(userId), listPlaylists(userId)]);
+        const playlistsWithArtwork = await Promise.all(playlistData.map(async playlist => {
+          if (playlist.artwork_url) return playlist;
+          const detail = await getPlaylist(userId, playlist.id);
+          return {
+            ...playlist,
+            artwork_url: detail?.tracks?.find(track => track.track?.item?.cover_url)?.track?.item?.cover_url || null,
+          };
+        }));
         if (!alive) return;
         setRows(data as LibraryRow[]);
+        setPlaylists(playlistsWithArtwork);
       } catch (fetchError) {
         if (!alive) return;
         setError(fetchError instanceof Error ? fetchError.message : 'Could not load your Library.');
@@ -117,44 +128,26 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
 
   const visibleRows = useMemo(() => {
     const productRows = rows.filter(row => row.products);
-    const normalizedQuery = query.trim().toLowerCase();
     return productRows.filter(row => {
       const product = row.products!;
+      if (activeFilter === 'playlists') return false;
       const experience = getProductExperience(product);
       if (!['music', 'book', 'asset', 'interactive'].includes(experience)) return false;
       if (activeFilter === 'beats' && !isBeatProduct(product)) return false;
       if (activeFilter === 'music' && (experience !== 'music' || isBeatProduct(product))) return false;
       if (!['all', 'beats', 'music'].includes(activeFilter) && experience !== activeFilter) return false;
-      if (!normalizedQuery) return true;
-      const creator = product.creators?.display_name || product.creator || '';
-      return `${product.title} ${creator}`.toLowerCase().includes(normalizedQuery);
+      return true;
     });
-  }, [activeFilter, query, rows]);
+  }, [activeFilter, rows]);
 
-  const visibleRowGroups = useMemo(() => {
-    if (activeFilter !== 'all') return [{ filter: activeFilter, label: null, rows: visibleRows }];
-    return LIBRARY_GROUP_ORDER
-      .map(group => ({
-        ...group,
-        rows: visibleRows.filter(row => group.filter === 'beats'
-          ? isBeatProduct(row.products!)
-          : group.filter === 'music'
-            ? getProductExperience(row.products!) === 'music' && !isBeatProduct(row.products!)
-            : getProductExperience(row.products!) === group.filter),
-      }))
-      .filter(group => group.rows.length > 0);
-  }, [activeFilter, visibleRows]);
+  const libraryEntries = useMemo(() => [
+    ...(activeFilter === 'all' || activeFilter === 'playlists' ? playlists : [])
+      .map(playlist => ({ kind: 'playlist' as const, date: playlist.updated_at, playlist })),
+    ...(activeFilter === 'playlists' ? [] : visibleRows.map(row => ({ kind: 'item' as const, date: row.acquired_at, row }))),
+  ].sort((left, right) => right.date.localeCompare(left.date)), [activeFilter, playlists, visibleRows]);
   const libraryFilters = LIBRARY_FILTER_ORDER.filter(filter => (
-    filter === 'all' || filter === activeFilter || availableFilters.includes(filter)
+    filter === 'all' || filter === activeFilter || availableFilters.includes(filter) || (filter === 'playlists' && playlists.length > 0)
   ));
-  const libraryTopbarTabs = libraryFilters.map(filter => ({
-    id: filter,
-    label: filter === 'asset' ? 'Samples' : FILTER_LABELS[filter],
-    href: LIBRARY_FILTER_HREFS[filter],
-    active: activeFilter === filter,
-    variant: 'section' as const,
-  }));
-
   if (authLoading) {
     return <PageShell><CenteredMessage status>Loading...</CenteredMessage></PageShell>;
   }
@@ -192,46 +185,52 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
     <PageShell>
       <main className="app-page">
         <div className="library-opening">
-          <HubHero
-            title="Library"
-            actions={(
-              <div className="page-header-tools">
-                <label className="page-search-control library-filter-control ui44-composed-field ui44-composed-field-search">
-                  <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
-                  <Ui44TextInput surface="bare" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search Library" aria-label="Search Library" />
-                </label>
-              </div>
-            )}
-          />
-          <SectionTabs ariaLabel="Library categories" dockToTopbar topbarTabs={libraryTopbarTabs}>
-            {libraryFilters.map(filter => (
-              <SectionTab key={filter} href={LIBRARY_FILTER_HREFS[filter]} active={activeFilter === filter}>
-                {filter === 'asset' ? 'Samples' : FILTER_LABELS[filter]}
-              </SectionTab>
-            ))}
-          </SectionTabs>
+          <HubHero title="Library" />
         </div>
+        {filterMenuOpen ? <div className="library-filter-menu ui44-paper-menu" role="menu" aria-label="Filter Library">
+          {libraryFilters.map(filter => {
+            const label = filter === 'asset' ? 'Samples' : FILTER_LABELS[filter];
+            return <button key={filter} type="button" role="menuitem" className={activeFilter === filter ? 'ui44-paper-menu-item ui44-paper-menu-item-selected' : 'ui44-paper-menu-item'} onClick={() => { setFilterMenuOpen(false); router.push(filter === 'playlists' ? '/library?filter=playlists' : LIBRARY_FILTER_HREFS[filter]); }}>{label}</button>;
+          })}
+        </div> : null}
         {error ? (
           <EmptyMessage>{error}</EmptyMessage>
-        ) : visibleRows.length === 0 ? (
-          <EmptyMessage>{query ? 'No Library items match your search.' : activeFilter === 'all' ? 'Your library is empty.' : `No ${FILTER_LABELS[activeFilter].toLowerCase()} in your Library.`}</EmptyMessage>
+        ) : libraryEntries.length === 0 ? (
+          <EmptyMessage>{activeFilter === 'all' ? 'Your library is empty.' : `No ${FILTER_LABELS[activeFilter].toLowerCase()} in your Library.`}</EmptyMessage>
         ) : (
           <div className="library-item-groups">
-            {visibleRowGroups.map(group => (
-              <section className="library-item-group" key={group.filter}>
-                {group.label && <h2 className="view-section-title library-group-title">{group.label}</h2>}
-                <div className="app-grid ui44-catalog-grid">
-                  {group.rows.map(row => (
-                    <LibraryCard key={row.id} row={row} onRemove={removeLibraryRow} />
-                  ))}
-                </div>
-              </section>
-            ))}
+            <div className="app-grid ui44-catalog-grid">
+              {libraryEntries.map(entry => entry.kind === 'playlist'
+                ? <LibraryPlaylistCard key={`playlist-${entry.playlist.id}`} playlist={entry.playlist} />
+                : <LibraryCard key={entry.row.id} row={entry.row} onRemove={removeLibraryRow} />)}
+            </div>
           </div>
         )}
       </main>
     </PageShell>
   );
+}
+
+function LibraryPlaylistCard({ playlist }: { playlist: Playlist }) {
+  const [artwork, setArtwork] = useState(playlist.artwork_url || playlist.cover_url || null);
+
+  useEffect(() => {
+    if (artwork) return;
+    let alive = true;
+    void getPlaylist(playlist.user_id, playlist.id).then(detail => {
+      if (!alive) return;
+      setArtwork(detail?.tracks?.find(track => track.track?.item?.cover_url)?.track?.item?.cover_url || null);
+    }).catch(() => undefined);
+    return () => { alive = false; };
+  }, [artwork, playlist.id, playlist.user_id]);
+
+  return <Link className="product-tile ui44-catalog-card library-playlist-card" href={`/library/playlists/${playlist.id}`}>
+    <span className="product-tile-art product-tile-art-square ui44-catalog-art library-playlist-art">{artwork ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={artwork} alt="" />
+    ) : null}</span>
+    <span className="product-tile-info ui44-catalog-copy"><span className="product-tile-title ui44-catalog-title">{playlist.title}</span><span className="product-tile-subtitle ui44-catalog-subheadline">Playlist</span></span>
+  </Link>;
 }
 
 function LibraryCard({ row, onRemove }: { row: LibraryRow; onRemove: (row: LibraryRow) => void }) {

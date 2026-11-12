@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useContextMenu, COPY_TO_CLIPBOARD_TOAST_EVENT } from '@/components/ContextMenu';
 import { useAuth } from '@/lib/useAuth';
@@ -10,12 +11,12 @@ import { isFreeLibraryClaim } from '@/lib/libraryContent';
 import { browseIndexHref, getProductExperience, productBrowseHref, productLibraryHref } from '@/lib/experience';
 import { creatorHref } from '@/lib/platform';
 import { ProductGrid, ProductCard, SectionHeader } from '@/components/Ui';
-import { ProductReviewsSection } from '@/components/ProductReviewsSection';
 import { InformationDialog } from '@/components/InformationDialog';
 import { SocialPostRow } from '@/components/Social';
 import { LibraryVideoEmbedsSection, ProductDetailHeader, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
 import { useTopbarBack } from '@/components/TopbarContext';
+import { useTopbarOverflow } from '@/components/TopbarContext';
 import { addToCart, useCart } from '@/lib/cart';
 import { resolvePrice } from '@/lib/pricing';
 import { useExchangeRates } from '@/lib/exchangeRates';
@@ -32,10 +33,11 @@ import {
 import { loadCommunityPostsForItem, type ItemCommunityFeed } from '@/lib/domain/community';
 import {
   COMMUNITY_INTENT_LABELS,
+  communityItemReference,
   inferCommunityIntent,
   inferItemReferences,
 } from '@/lib/communityV11';
-import { getPublicNativeContent, type BookContent, type SamplePackFile } from '@/lib/domain/nativeContent';
+import { getPublicNativeContent, type SamplePackFile } from '@/lib/domain/nativeContent';
 import { SamplePackExperience } from '@/components/SamplePackExperience';
 import { Ui44OverflowTrackTitle } from '@/components/ui44/OverflowTrackTitle';
 import { Ui44SectionArrow } from '@/components/ui44/Controls';
@@ -44,6 +46,8 @@ import { listActiveMerchVariants, type MerchVariant } from '@/lib/domain/merchVa
 import { listPublicMerchImages, type MerchProductImage } from '@/lib/domain/merchImages';
 import { listReleaseVideoEmbeds, type ReleaseVideoEmbed } from '@/lib/domain/releaseFeatures';
 import { listVisibleLibraryItemIds } from '@/lib/domain/library';
+import { removeLibraryItem } from '@/lib/domain/library';
+import { PlaylistPicker } from '@/components/PlaylistPicker';
 
 type ProductTrack = {
   id: string;
@@ -99,9 +103,10 @@ function ProductStoreDetail({
   const [ownedAcquisitionType, setOwnedAcquisitionType] = useState<string | null>(null);
   const [hasActiveDownload, setHasActiveDownload] = useState(false);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(() => searchParams.get('track'));
+  const [trackMenuId, setTrackMenuId] = useState<string | null>(null);
+  const [playlistTrackId, setPlaylistTrackId] = useState<string | null>(null);
   const [inferredTrackDurations, setInferredTrackDurations] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
-  const [bookContent, setBookContent] = useState<BookContent | null>(null);
   const [sampleFiles, setSampleFiles] = useState<SamplePackFile[]>([]);
   const [videoEmbeds, setVideoEmbeds] = useState<ReleaseVideoEmbed[]>([]);
   const [merchVariants, setMerchVariants] = useState<MerchVariant[]>([]);
@@ -121,7 +126,6 @@ function ProductStoreDetail({
       setTracks([]);
       setRelated([]);
       setItemCommunity(EMPTY_ITEM_COMMUNITY);
-      setBookContent(null);
       setSampleFiles([]);
       setVideoEmbeds([]);
       setMerchVariants([]);
@@ -178,7 +182,6 @@ function ProductStoreDetail({
         setItemCommunity(communityFeed);
         if (['book', 'asset'].includes(getProductExperience(data))) {
           const nativeContent = await getPublicNativeContent(data.id);
-          setBookContent(nativeContent.book);
           setSampleFiles(nativeContent.samples);
         }
       }
@@ -232,7 +235,7 @@ function ProductStoreDetail({
     recordSharedVisit();
   }, [product, searchParams, user]);
 
-  async function addToLibrary() {
+  const addToLibrary = useCallback(async () => {
     if (!product) return;
     if (!user) { alert('Sign in first, then add this to your library.'); return; }
     if (!canSaveProductToLibrary(product)) return;
@@ -245,6 +248,26 @@ function ProductStoreDetail({
     } catch (saveError) {
       alert(saveError instanceof Error ? saveError.message : 'Could not add this Item to your Library.');
     }
+  }, [product, user]);
+
+  const removeFromLibrary = useCallback(async () => {
+    if (!product || !user || !ownedLibraryItemId) return;
+    try {
+      await removeLibraryItem(user.id, ownedLibraryItemId);
+      setOwned(false);
+      setOwnedLibraryItemId(null);
+      setOwnedAcquisitionType(null);
+      setHasActiveDownload(false);
+    } catch (removeError) {
+      alert(removeError instanceof Error ? removeError.message : 'Could not remove this Item from your Library.');
+    }
+  }, [ownedLibraryItemId, product, user]);
+
+  function shareItemLink() {
+    if (typeof window === 'undefined') return;
+    const link = window.location.href;
+    void navigator.clipboard?.writeText(link);
+    window.dispatchEvent(new CustomEvent(COPY_TO_CLIPBOARD_TOAST_EVENT, { detail: { message: 'Link copied to clipboard' } }));
   }
 
   function addProductToCart() {
@@ -316,12 +339,30 @@ function ProductStoreDetail({
     };
   }, [tracks]);
 
+  const overflowIsReleasePage = releasePage || (product ? getProductExperience(product) === 'music' : false);
+  const openPlaylistPicker = useCallback((trackId?: string) => {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    const fallbackTrackId = trackId ?? selectedTrackId ?? tracks[0]?.id;
+    if (fallbackTrackId) setPlaylistTrackId(fallbackTrackId);
+  }, [router, selectedTrackId, tracks, user]);
+  useTopbarOverflow(useMemo(() => product && overflowIsReleasePage ? [
+    ...(owned ? [{ id: 'library', label: 'Remove from Library', onSelect: () => { void removeFromLibrary(); } }] : [{ id: 'library', label: 'Add to Library', onSelect: () => { void addToLibrary(); } }]),
+    { id: 'playlist', label: 'Add to Playlist', onSelect: () => openPlaylistPicker() },
+    { id: 'share', label: 'Share', onSelect: shareItemLink },
+  ] : undefined, [addToLibrary, openPlaylistPicker, product, overflowIsReleasePage, owned, removeFromLibrary]));
+
+  const routeArtwork = product ? product.hero_url || product.cover_url : null;
+
   if (loading) return <div className="ui44-loading-shell" role="status" aria-label="Loading Item" />;
   if (!product) return <div className="ui44-route-state">Item not found</div>;
 
   const productExperience = getProductExperience(product);
   const isBeat = beatReviewSurfacesEnabled && Boolean(product.beat);
   const isReleasePage = releasePage || productExperience === 'music';
+
   const canClaimToLibrary = canSaveProductToLibrary(product);
   const hasDownloadUnlock = ownedAcquisitionType === 'purchase' && hasActiveDownload;
   const isMerch = productExperience === 'physical';
@@ -417,24 +458,21 @@ function ProductStoreDetail({
   const releaseMeta = isMerch
     ? [merchTag.toUpperCase(), merchPriceLabel]
     : [(product.item_type || productMeta(product)).toUpperCase(), ...(product.year ? [String(product.year)] : [])];
-  const productDetails = buildProductDetails({
-    product,
-    experience: productExperience,
-    tracks,
-    inferredTrackDurations,
-    bookContent,
-    sampleFiles,
-  });
-
+  const pageArtwork = routeArtwork;
   return (
-    <div className="view-detail-single">
+    <>
+    {playlistTrackId && user ? <PlaylistPicker userId={user.id} trackId={playlistTrackId} onClose={() => setPlaylistTrackId(null)} /> : null}
+    <div
+      className="view-detail-single store-item-detail-page"
+      style={pageArtwork ? { '--release-artwork': `url(${pageArtwork})` } as CSSProperties : undefined}
+    >
 
       <ProductDetailHeader
         product={product}
         creatorName={creatorDisplayName}
         creatorHrefValue={creatorTabLink}
         meta={releaseMeta}
-        actions={primaryActions}
+        actions={isReleasePage && !isBeat ? [] : primaryActions}
         externalLinks={product.external_links ?? []}
         coverClassName={`view-album-cover-${productExperience}`}
         showCreatorAvatar={false}
@@ -483,7 +521,7 @@ function ProductStoreDetail({
       ) : null}
 
       {!isMerch && productExperience !== 'book' ? <div className="view-section view-tracklist-section">
-        {productExperience !== 'asset' ? <div className="item-community-header item-community-section-header">
+        {productExperience !== 'asset' && !isReleasePage ? <div className="item-community-header item-community-section-header">
           <h2 className="view-section-title item-community-section-title">{contentHeading}</h2>
         </div> : null}
         {isReleasePage ? (
@@ -537,6 +575,25 @@ function ProductStoreDetail({
                     </div>
                     <Ui44OverflowTrackTitle title={track.title} active={active && isPlaying} className="ui44-track-title" />
                     <div className="view-track-duration ui44-track-duration">{formatTrackDuration(getTrackDurationSeconds(track, inferredTrackDurations))}</div>
+                    <button
+                      type="button"
+                      className="view-track-more"
+                      aria-label={`More actions for ${track.title}`}
+                      aria-expanded={trackMenuId === track.id}
+                      onClick={event => {
+                        event.stopPropagation();
+                        setTrackMenuId(current => current === track.id ? null : track.id);
+                      }}
+                    >
+                      <span aria-hidden="true">•••</span>
+                    </button>
+                    {trackMenuId === track.id ? (
+                      <div className="ui44-paper-menu view-track-more-menu" role="menu" aria-label={`${track.title} actions`}>
+                        <button className="ui44-paper-menu-item" type="button" role="menuitem" disabled={!track.audio_url} onClick={event => { event.stopPropagation(); setTrackMenuId(null); queueReleaseTrackNext(track); }}>Add to Queue</button>
+                        <button className="ui44-paper-menu-item" type="button" role="menuitem" onClick={event => { event.stopPropagation(); setTrackMenuId(null); openPlaylistPicker(track.id); }}>Add to Playlist</button>
+                        <button className="ui44-paper-menu-item" type="button" role="menuitem" onClick={event => { event.stopPropagation(); setTrackMenuId(null); shareTrackLink(track); }}>Share Track</button>
+                      </div>
+                    ) : null}
                   </div>
                 );
               })}
@@ -558,9 +615,43 @@ function ProductStoreDetail({
 
       {isReleasePage && !isBeat ? <LibraryVideoEmbedsSection embeds={videoEmbeds} /> : null}
 
-      <ProductDetailsSection details={productDetails} />
-
       {isReleasePage && isBeat ? <LibraryVideoEmbedsSection embeds={videoEmbeds} /> : null}
+
+      {itemCommunity.posts.length > 0 && (
+        <div className="view-section">
+          <SectionHeader
+            title="Community"
+            action={<Link className="item-community-new-post" href="/community/new">New Post</Link>}
+          />
+          <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip social-feed social-feed-list social-feed-panel item-community-surface item-community-posts">
+            {itemCommunity.posts.map(post => {
+              const intent = inferCommunityIntent(post);
+              const references = post.community_references?.length
+                ? post.community_references
+                : [
+                    ...(post.item_id === product.id ? [communityItemReference(product)] : []),
+                    ...inferItemReferences(post.body ?? '', [product]),
+                  ].filter((reference, index, all) => all.findIndex(candidate => candidate.kind === reference.kind && candidate.id === reference.id) === index);
+              return (
+                <div key={post.id} className="social-feed-post">
+                  <SocialPostRow
+                    post={post}
+                    likeCount={itemCommunity.likeCounts[post.id] ?? 0}
+                    replyCount={itemCommunity.replyCounts[post.id] ?? 0}
+                    meta={intent === 'general' ? undefined : (
+                      <span className="community-intent-label">{COMMUNITY_INTENT_LABELS[intent]}</span>
+                    )}
+                    metaPlacement="actions"
+                    references={references}
+                    showAuthorHandle={false}
+                    showAttachedItemCard={false}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {(related.length > 0 || isBeat) && (
         <div className="view-section">
@@ -574,37 +665,9 @@ function ProductStoreDetail({
         </div>
       )}
 
-      {!isBeat ? <ProductReviewsSection productId={product.id} canPost={owned} /> : null}
-
-      {itemCommunity.posts.length > 0 && (
-        <div className="view-section">
-          <SectionHeader title="Community" />
-          <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip social-feed social-feed-list social-feed-panel item-community-surface item-community-posts">
-            {itemCommunity.posts.map(post => {
-              const intent = inferCommunityIntent(post);
-              const references = post.community_references?.length
-                ? post.community_references
-                : inferItemReferences(post.body ?? '', [product]);
-              return (
-                <div key={post.id} className="social-feed-post">
-                  <SocialPostRow
-                    post={post}
-                    likeCount={itemCommunity.likeCounts[post.id] ?? 0}
-                    replyCount={itemCommunity.replyCounts[post.id] ?? 0}
-                    meta={intent === 'general' ? undefined : (
-                      <span className="community-intent-label">{COMMUNITY_INTENT_LABELS[intent]}</span>
-                    )}
-                    references={references}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       <AchievementToast toast={toast} onDone={() => setToast(null)} />
     </div>
+    </>
   );
 }
 
@@ -819,91 +882,6 @@ function getContentHeading(product: Product) {
   if (experience === 'book') return 'Book Sample';
   if (experience === 'asset') return product.item_type?.toLowerCase().includes('stem') ? 'Original Track' : 'Preview Samples';
   return 'Content';
-}
-
-type ProductDetail = { label: string; value: string };
-
-function buildProductDetails({
-  product,
-  experience,
-  tracks,
-  inferredTrackDurations,
-  bookContent,
-  sampleFiles,
-}: {
-  product: Product;
-  experience: ReturnType<typeof getProductExperience>;
-  tracks: ProductTrack[];
-  inferredTrackDurations: Record<string, number>;
-  bookContent: BookContent | null;
-  sampleFiles: SamplePackFile[];
-}) {
-  const releaseDate = formatProductReleaseDate(product.release_date, product.year);
-  const totalTrackSeconds = tracks.reduce((total, track) => total + (getTrackDurationSeconds(track, inferredTrackDurations) ?? 0), 0);
-  const tags = (product.browse_tags ?? []).map(tag => tag.label).filter(Boolean).join(', ');
-  if (product.beat) {
-    const beat = product.beat;
-    const key = beat.keyNotApplicable
-      ? 'Atonal / N/A'
-      : [beat.keyRoot, humanizeBeatValue(beat.keyMode)].filter(Boolean).join(' ');
-    return [
-      releaseDate ? { label: 'Release date', value: releaseDate } : null,
-      { label: 'BPM', value: String(beat.bpm) },
-      { label: 'Key', value: key },
-      { label: 'Time signature', value: beat.timeSignature },
-      beat.moods.length ? { label: 'Moods', value: beat.moods.join(', ') } : null,
-      beat.instruments.length ? { label: 'Instruments', value: beat.instruments.join(', ') } : null,
-      beat.sampleStatus ? { label: 'Sample status', value: humanizeBeatValue(beat.sampleStatus) } : null,
-      beat.sampleDisclosure ? { label: 'Sample disclosure', value: beat.sampleDisclosure } : null,
-      tags ? { label: 'Tags', value: tags } : null,
-    ].filter((detail): detail is ProductDetail => Boolean(detail?.value));
-  }
-  return [
-    releaseDate ? { label: 'Release date', value: releaseDate } : null,
-    product.browse_category?.label ? { label: 'Category', value: product.browse_category.label } : null,
-    { label: 'Type', value: product.browse_type?.label || product.item_type || productMeta(product) },
-    tags ? { label: 'Tags', value: tags } : null,
-    experience === 'music' ? { label: 'Tracks', value: String(tracks.length) } : null,
-    experience === 'music' && totalTrackSeconds > 0 ? { label: 'Total length', value: formatTotalDuration(totalTrackSeconds) } : null,
-    experience === 'book' && bookContent?.total_pages ? { label: 'Pages', value: String(bookContent.total_pages) } : null,
-    experience === 'asset' ? { label: 'Samples', value: String(sampleFiles.length) } : null,
-  ].filter((detail): detail is ProductDetail => Boolean(detail?.value));
-}
-
-function humanizeBeatValue(value: string | null | undefined) {
-  return (value ?? '')
-    .replaceAll('_', ' ')
-    .replace(/\b\w/g, character => character.toUpperCase());
-}
-
-function ProductDetailsSection({ details }: { details: ProductDetail[] }) {
-  if (!details.length) return null;
-  return <section className="view-section product-details-section" aria-labelledby="product-details-title">
-    <h2 className="view-section-title" id="product-details-title">Product Details</h2>
-    <dl className="ui44-detail-list ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
-      {details.map(detail => <div className="view-row ui44-list-row ui44-list-row-detail" key={detail.label}>
-        <dt className="view-row-label ui44-detail-label">{detail.label}</dt>
-        <dd className="view-row-value ui44-detail-value">{detail.value}</dd>
-      </div>)}
-    </dl>
-  </section>;
-}
-
-function formatProductReleaseDate(releaseDate: string | null | undefined, year: number | null | undefined) {
-  if (!releaseDate) return year ? String(year) : '';
-  const parsed = new Date(`${releaseDate}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return year ? String(year) : '';
-  return parsed.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
-}
-
-function formatTotalDuration(seconds: number) {
-  const totalSeconds = Math.max(0, Math.round(seconds));
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const remainingSeconds = totalSeconds % 60;
-  if (hours > 0) return `${hours} hr ${minutes} min`;
-  if (minutes > 0) return `${minutes} min${remainingSeconds ? ` ${remainingSeconds} sec` : ''}`;
-  return `${remainingSeconds} sec`;
 }
 
 function BeatLicensePanel({ product }: { product: Product }) {

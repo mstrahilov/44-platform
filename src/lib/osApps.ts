@@ -366,6 +366,36 @@ export type MobileTopbarState =
   | { mode: 'back'; fallbackHref: string }
   | { mode: 'quiet' };
 
+export function getMobileTopbarTitle(pathname: string): string {
+  if (pathname === '/library/playlists/new') return 'New Playlist';
+  if (pathname.match(/^\/library\/playlists\/[^/]+\/add$/)) return 'Add Track';
+  if (pathname.match(/^\/library\/playlists\/[^/]+$/)) return 'Playlist';
+  if (pathname === '/library/playlists') return 'Playlists';
+  if (pathname.startsWith('/store/item/')) return '';
+  if (pathname === '/' || pathname.startsWith('/store')) return 'Discover';
+  if (pathname === '/radio' || pathname.startsWith('/radio/')) return 'Radio';
+  if (pathname === '/community' || pathname.startsWith('/community/')) return 'Community';
+  if (pathname === '/library' || pathname.startsWith('/library/')) return 'Library';
+  if (
+    pathname.startsWith('/you') ||
+    pathname.startsWith('/profile') ||
+    pathname.startsWith('/inbox') ||
+    pathname.startsWith('/notifications') ||
+    pathname.startsWith('/orders') ||
+    pathname.startsWith('/studio') ||
+    pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/team') ||
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/settings') ||
+    pathname.startsWith('/account') ||
+    pathname.startsWith('/support') ||
+    pathname.startsWith('/login')
+  ) return 'Account';
+  if (pathname === '/search') return 'Search';
+  if (pathname.startsWith('/calendar')) return 'Calendar';
+  return '44OS';
+}
+
 const MOBILE_STORE_SEARCH_ROUTES = new Set([
   '/',
   '/store',
@@ -377,35 +407,17 @@ const MOBILE_STORE_SEARCH_ROUTES = new Set([
   '/store/merch',
 ]);
 
-const MOBILE_COMMUNITY_SEARCH_ROUTES = new Set([
-  '/community',
-  '/community/general',
-  '/community/questions',
-  '/community/help',
-  '/community/collaboration',
-  '/community/showcase',
-  '/community/updates',
-]);
-
-const MOBILE_LIBRARY_SEARCH_ROUTES = new Set([
-  '/library',
-  '/library/all',
-  '/library/music',
-  '/library/books',
-  '/library/beats',
-  '/library/sample-packs',
-  '/library/games',
-]);
-
 export function getMobileTopbarState(pathname: string): MobileTopbarState {
-  if (
-    MOBILE_STORE_SEARCH_ROUTES.has(pathname) ||
-    MOBILE_COMMUNITY_SEARCH_ROUTES.has(pathname) ||
-    MOBILE_LIBRARY_SEARCH_ROUTES.has(pathname) ||
-    pathname === '/radio' ||
-    pathname === '/you'
-  ) {
+  if (MOBILE_STORE_SEARCH_ROUTES.has(pathname)) {
     return { mode: 'search' };
+  }
+
+  if (
+    pathname === '/community' || pathname.startsWith('/community/') ||
+    pathname === '/library' || pathname.startsWith('/library/') ||
+    pathname === '/radio' || pathname === '/you'
+  ) {
+    return { mode: 'quiet' };
   }
 
   if (pathname === '/search') {

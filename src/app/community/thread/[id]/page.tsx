@@ -584,6 +584,7 @@ export default function CommunityThreadPage() {
               meta={intent === 'general' ? undefined : (
                 <span className="community-intent-label">{COMMUNITY_INTENT_LABELS[intent]}</span>
               )}
+              metaPlacement="actions"
               references={thread.community_references}
               editing={editingThread}
               editBody={threadEditBody}

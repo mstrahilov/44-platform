@@ -66,7 +66,7 @@ export function countById<T extends object>(rows: T[], key: keyof T) {
 }
 
 export function authorDisplayName(author?: Partial<SocialAuthor> | null) {
-  return author?.display_name || author?.name || author?.username || '44 Member';
+  return author?.name || author?.display_name || author?.username || '44 Member';
 }
 
 export function authorHandle(author?: Partial<SocialAuthor> | null) {

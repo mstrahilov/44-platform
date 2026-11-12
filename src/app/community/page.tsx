@@ -14,6 +14,7 @@ import { hasCommunityIdentity } from '@/lib/communityProfile';
 import {
   COMMUNITY_INTENT_LABELS,
   COMMUNITY_INTENT_PLACEHOLDERS,
+  communityItemReference,
   communityV11LocalPreviewEnabled,
   createLocalCommunityPost,
   inferCommunityIntent,
@@ -65,12 +66,10 @@ type IntentView = 'all' | CommunityIntent;
 
 const INTENT_TABS: Array<{ id: IntentView; label: string; href: string }> = [
   { id: 'all', label: 'All', href: '/community' },
-  { id: 'general', label: 'General', href: '/community/general' },
   { id: 'update', label: 'Updates', href: '/community/updates' },
   { id: 'question', label: 'Questions', href: '/community/questions' },
-  { id: 'collaboration', label: 'Collaborations', href: '/community/collaboration' },
   { id: 'showcase', label: 'Showcase', href: '/community/showcase' },
-  { id: 'help', label: 'Assistance', href: '/community/help' },
+  { id: 'collaboration', label: 'Collaboration', href: '/community/collaboration' },
 ];
 
 const COMPOSER_INTENTS: CommunityIntent[] = [
@@ -157,7 +156,9 @@ function CommunityPageContent() {
   const [mentionOptions, setMentionOptions] = useState<CommunityReferenceOption[]>([]);
   const [mentionAnchor, setMentionAnchor] = useState<{ left: number; top: number; width: number } | null>(null);
   const [selectedReferences, setSelectedReferences] = useState<CommunityReference[]>([]);
-  const [expandedPostIds, setExpandedPostIds] = useState<Set<string>>(new Set());
+  const [composerPicker, setComposerPicker] = useState<'mention' | 'tag' | null>(null);
+  const [mentionPickerQuery, setMentionPickerQuery] = useState('');
+  const [mentionPickerOptions, setMentionPickerOptions] = useState<CommunityReferenceOption[]>([]);
   const [editingPostId, setEditingPostId] = useState('');
   const [editBody, setEditBody] = useState('');
   const [editSaving, setEditSaving] = useState(false);
@@ -181,6 +182,24 @@ function CommunityPageContent() {
               : 'all';
   const postFilter = searchParams.get('filter') === 'following' ? 'following' : 'all';
   const activeMentionQuery = composerOpen ? extractMentionQuery(postBody) : '';
+  const localMentionOptions = useMemo(() => items.slice(0, 30).map(item => {
+    const reference = communityItemReference(item);
+    return {
+      ...reference,
+      displayLabel: reference.label,
+      insertText: reference.label,
+    };
+  }), [items]);
+
+  useEffect(() => {
+    if (!composerOpen || composerPicker !== 'mention') return;
+    if (!mentionPickerQuery.trim()) return;
+    let alive = true;
+    void searchCommunityReferences(mentionPickerQuery.trim())
+      .then(options => { if (alive) setMentionPickerOptions(options); })
+      .catch(() => { if (alive) setMentionPickerOptions([]); });
+    return () => { alive = false; };
+  }, [composerOpen, composerPicker, mentionPickerQuery]);
 
   useEffect(() => {
     let alive = true;
@@ -289,8 +308,7 @@ function CommunityPageContent() {
 
   function openComposer() {
     requireCommunityAction(() => {
-      setComposerIntent(activeIntent === 'all' || (activeIntent === 'update' && !canPostUpdate) ? 'general' : activeIntent);
-      setComposerOpen(true);
+      router.push('/community/new');
     });
   }
 
@@ -301,6 +319,9 @@ function CommunityPageContent() {
     setMentionOptions([]);
     setMentionAnchor(null);
     setSelectedReferences([]);
+    setComposerPicker(null);
+    setMentionPickerQuery('');
+    setMentionPickerOptions([]);
   }
 
   function applyReference(option: CommunityReferenceOption) {
@@ -318,6 +339,15 @@ function CommunityPageContent() {
       textarea.focus();
       textarea.setSelectionRange(textarea.value.length, textarea.value.length);
     });
+  }
+
+  function selectMentionReference(option: CommunityReferenceOption) {
+    setSelectedReferences(current => [
+      ...current.filter(reference => reference.kind !== 'item'),
+      option,
+    ]);
+    setComposerPicker(null);
+    setMentionPickerQuery('');
   }
 
   async function submitPost(event: React.FormEvent<HTMLFormElement>) {
@@ -452,7 +482,12 @@ function CommunityPageContent() {
   function referencesForPost(post: CommunityV11Post) {
     return post.community_references?.length
       ? post.community_references
-      : inferItemReferences(post.body ?? '', items);
+      : [
+          ...(post.item_id
+            ? items.filter(item => item.id === post.item_id).map(communityItemReference)
+            : []),
+          ...inferItemReferences(post.body ?? '', items),
+        ].filter((reference, index, all) => all.findIndex(candidate => candidate.kind === reference.kind && candidate.id === reference.id) === index);
   }
 
   const communityTools = (
@@ -521,12 +556,19 @@ function CommunityPageContent() {
         {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div>}
 
         {composerOpen && (
-          <form className="community-v11-composer ui44-panel ui44-panel-glass" onSubmit={submitPost}>
+          <div className="community-v11-composer-layer" role="presentation" onClick={resetComposer}>
+          <form className="community-v11-composer ui44-panel ui44-panel-glass" onSubmit={submitPost} role="dialog" aria-modal="true" aria-labelledby="community-composer-title" onClick={event => event.stopPropagation()}>
             <div className="community-v11-composer-heading">
-              <h2>New Post</h2>
-              <button type="button" className="community-v11-composer-close" aria-label="Close composer" onClick={resetComposer}>×</button>
+              <button type="button" className="community-v11-composer-cancel" onClick={resetComposer}>Cancel</button>
+              <h2 id="community-composer-title">New Post</h2>
+              <button type="submit" className="community-v11-composer-post" disabled={posting || !postBody.trim()}>{posting ? 'Posting…' : 'Post'}</button>
+            </div>
+            <div className="community-v11-composer-field-label">
+              <label htmlFor="community-composer-body">What&apos;s on your mind?</label>
+              <button type="button" className="community-v11-composer-photo" aria-label="Attach Photo" title="Attach Photo">▧</button>
             </div>
             <textarea
+              id="community-composer-body"
               ref={composerTextareaRef}
               className="ui44-input ui44-textarea ui44-input-bare"
               value={postBody}
@@ -555,35 +597,39 @@ function CommunityPageContent() {
                 <ReferenceOptionList options={mentionOptions} onSelect={applyReference} />
               </div>
             )}
-            <div className="community-composer-intents" role="radiogroup" aria-label="Post type">
-              {COMPOSER_INTENTS.map(intent => {
-                const disabled = intent === 'update' && !canPostUpdate;
-                return (
-                  <button
-                    key={intent}
-                    type="button"
-                    className="community-composer-intent"
-                    role="radio"
-                    aria-checked={composerIntent === intent}
-                    disabled={disabled}
-                    title={disabled ? 'Updates are available to Creators.' : undefined}
-                    onClick={() => setComposerIntent(intent)}
-                  >
-                    {COMMUNITY_INTENT_LABELS[intent]}
-                  </button>
-                );
-              })}
-            </div>
-            {composerIntent === 'update' && (
-              <p className="community-composer-helper">Type @ to mention one of your published Items.</p>
-            )}
-            <div className="community-v11-composer-actions">
-              <span className="community-composer-audience">Posting to the 44OS Community</span>
-              <button type="submit" className="os-button os-button-primary os-button-compact" disabled={posting || !postBody.trim()}>
-                {posting ? 'Posting...' : 'Post'}
+            <div className="community-v11-composer-picker-field">
+              <span className="community-v11-composer-label">Mention</span>
+              <button type="button" className="community-v11-composer-picker" onClick={() => setComposerPicker(current => current === 'mention' ? null : 'mention')} aria-expanded={composerPicker === 'mention'}>
+                <span className="community-v11-composer-picker-icon">@</span>
+                <span className={selectedReferences.some(reference => reference.kind === 'item') ? 'is-selected' : ''}>{selectedReferences.find(reference => reference.kind === 'item')?.label ?? 'Tap to mention a release'}</span>
+                <span className="community-v11-composer-chevron">⌃⌄</span>
               </button>
+              {composerPicker === 'mention' && (
+                <div className="community-v11-composer-picker-menu" role="listbox" aria-label="Mention a release">
+                  <input value={mentionPickerQuery} onChange={event => setMentionPickerQuery(event.target.value)} placeholder="Search releases" autoFocus />
+                  {(mentionPickerQuery.trim() ? mentionPickerOptions : localMentionOptions).length ? <ReferenceOptionList options={mentionPickerQuery.trim() ? mentionPickerOptions : localMentionOptions} onSelect={selectMentionReference} /> : <div className="community-v11-composer-picker-empty">No releases found.</div>}
+                </div>
+              )}
             </div>
+            <div className="community-v11-composer-picker-field">
+              <span className="community-v11-composer-label">Post Tag</span>
+              <button type="button" className="community-v11-composer-picker" onClick={() => setComposerPicker(current => current === 'tag' ? null : 'tag')} aria-expanded={composerPicker === 'tag'}>
+                <span className="community-v11-composer-picker-icon">☷</span>
+                <span className={composerIntent !== 'general' ? 'is-selected' : ''}>{composerIntent === 'general' ? 'Select a post tag' : COMMUNITY_INTENT_LABELS[composerIntent]}</span>
+                <span className="community-v11-composer-chevron">⌃⌄</span>
+              </button>
+              {composerPicker === 'tag' && (
+                <div className="community-v11-composer-picker-menu" role="listbox" aria-label="Select a post tag">
+                  {COMPOSER_INTENTS.map(intent => {
+                    const disabled = intent === 'update' && !canPostUpdate;
+                    return <button key={intent} type="button" role="option" aria-selected={composerIntent === intent} disabled={disabled} onClick={() => { setComposerIntent(intent); setComposerPicker(null); }}>{COMMUNITY_INTENT_LABELS[intent]}</button>;
+                  })}
+                </div>
+              )}
+            </div>
+            {composerIntent === 'update' && <p className="community-composer-helper">Type @ to mention one of your published Items.</p>}
           </form>
+          </div>
         )}
 
         <section className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip social-feed social-feed-list social-feed-panel" aria-label="Community feed">
@@ -613,16 +659,11 @@ function CommunityPageContent() {
                     canEdit={Boolean(user && post.author_id === user.id)}
                     disabled={likingId === post.id}
                     meta={intent === 'general' ? undefined : <span className="community-intent-label">{COMMUNITY_INTENT_LABELS[intent]}</span>}
+                    metaPlacement="actions"
                     references={referencesForPost(post)}
-                    bodyClamp
-                    bodyExpanded={expandedPostIds.has(post.id)}
-                    onToggleBody={() => setExpandedPostIds(current => {
-                      const next = new Set(current);
-                      if (next.has(post.id)) next.delete(post.id);
-                      else next.add(post.id);
-                      return next;
-                    })}
                     editing={editingPostId === post.id}
+                    rowClassName="community-post-card"
+                    showAuthorHandle={false}
                     editBody={editingPostId === post.id ? editBody : post.body ?? ''}
                     editSaving={editSaving && editingPostId === post.id}
                     onEditBodyChange={setEditBody}

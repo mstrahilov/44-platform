@@ -262,6 +262,13 @@ Application email uses a separate durable outbox and Resend adapter as `support@
 - Newsletter consent is explicit, independently revocable, and locally authoritative. Newsletter synchronization and delivery remain disabled.
 - Newly generated application and Admin email actions use `https://app.44os.com`. Previously generated links remain valid through permanent apex deep-link redirects.
 
+The app origin publishes `/.well-known/apple-app-site-association` for the
+canonical store-item, video, event, Community thread, profile, radio, and home
+routes. Installed iOS clients claim those HTTPS paths through Associated
+Domains; the same URLs remain server-rendered browser routes when the app is
+not installed. Legacy `/calendar/event/:id` links permanently redirect to the
+canonical `/events/:id` route so both clients share one destination contract.
+
 ## Buyer payments and physical fulfillment
 
 Stripe receives all customer money. Checkout is authenticated, Stripe-hosted, and webhook-authoritative:

@@ -5,6 +5,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { PageShell, HubSection, EmptyMessage } from '@/components/Ui';
 import { Ui44Panel } from '@/components/ui44/Spacing';
 import { useMusicPlayer, type MusicQueueTrack } from '@/components/MusicPlayer';
+import { useTopbarOverflow } from '@/components/TopbarContext';
+import { PlaylistPicker } from '@/components/PlaylistPicker';
+import { useAuth } from '@/lib/useAuth';
 import {
   getSyncedRadioPlayback,
   loadRadioBundle,
@@ -18,6 +21,8 @@ const REFRESH_MS = 15000;
 
 export default function RadioPage() {
   const { playQueue, currentTrack, isPlaying, toggleRadioPlayback } = useMusicPlayer();
+  const { user } = useAuth();
+  const [playlistTrackId, setPlaylistTrackId] = useState<string | null>(null);
   const [bundle, setBundle] = useState<RadioBundle | null>(null);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(() => new Date());
@@ -72,6 +77,11 @@ export default function RadioPage() {
   const isCurrentSyncedTrack = currentTrack?.id === syncedTrack?.trackId;
   const isSyncedTrackLive = isCurrentSyncedTrack && isPlaying;
 
+  useTopbarOverflow(useMemo(() => [
+    { id: 'share', label: 'Share', onSelect: () => { void navigator.clipboard?.writeText(window.location.href); } },
+    { id: 'playlist', label: 'Add to Playlist', onSelect: () => { if (currentTrack?.id) setPlaylistTrackId(currentTrack.id); } },
+  ], [currentTrack]));
+
   function handlePlayLive() {
     if (!queue.length || playback.index < 0) return;
     playQueue(queue, playback.index, playback.offsetSeconds);
@@ -87,6 +97,7 @@ export default function RadioPage() {
 
   return (
     <PageShell>
+      {playlistTrackId && user ? <PlaylistPicker userId={user.id} trackId={playlistTrackId} onClose={() => setPlaylistTrackId(null)} /> : null}
       <main className="radio-page">
         {loading ? (
           <div className="radio-loading-state" role="status" aria-live="polite">

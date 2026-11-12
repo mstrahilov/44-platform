@@ -24,6 +24,30 @@ body.theme-light {
   --44ui-interactive-hover: rgba(21, 21, 21, 0.08);
 }
 
+/* New Post owns only its individual controls; the page-level composer must
+   remain transparent, and the body editor must retain its field surface when
+   focused instead of falling back to the generic bare-input rules. */
+body:is(.theme-dark, .theme-light) .community-new-page-layer .community-new-composer.ui44-panel.ui44-panel-glass {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+body:is(.theme-dark, .theme-light)
+  .community-new-page-layer
+  .community-new-composer
+  > textarea.ui44-input.ui44-input-bare:is(:focus, :focus-visible) {
+  border: 1px solid color-mix(in srgb, var(--os-color-ink) 16%, transparent) !important;
+  border-radius: 16px !important;
+  outline: 0 !important;
+  background: var(--44ui-input-background) !important;
+  box-shadow: none !important;
+  color: var(--os-color-ink) !important;
+}
+
 body.theme-dark {
   --44ui-material-paper: #1c1e1b;
   --44ui-material-glass: var(--os-sidebar-tint);
@@ -105,6 +129,360 @@ body.theme-dark {
     --44ui-paper-panel-radius: 16px;
   }
 }
+
+/* The Library search is one continuous pill; the native focus ring belongs on
+   the pill itself, never as a second rectangle inside it. */
+.library-search-field input:focus,
+.library-search-field input:focus-visible {
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Playlist surfaces mirror the iOS playlist/detail/add-track flow. */
+.playlist-index-page,
+.playlist-detail-page,
+.playlist-add-page {
+  min-height: 100%;
+  padding: 24px var(--os-content-inset) calc(var(--os-mobile-shell-bottom) + 32px);
+}
+
+.playlist-index-heading,
+.playlist-add-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.playlist-index-heading h1,
+.playlist-add-heading h1 {
+  margin: 0;
+  font-size: clamp(1.5rem, 5vw, 2rem);
+}
+
+.playlist-create-row,
+.playlist-picker-create {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.playlist-create-row input,
+.playlist-picker-create input,
+.playlist-track-search {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid var(--44ui-panel-border);
+  border-radius: 999px;
+  padding: 12px 16px;
+  color: var(--os-text-primary);
+  background: var(--44ui-material-glass);
+}
+
+.playlist-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.playlist-tile {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.playlist-tile-art,
+.playlist-detail-art,
+.playlist-catalog-art {
+  display: block;
+  background: linear-gradient(145deg, #181818, #ad4b2b 48%, #091225);
+  background-size: cover;
+  background-position: center;
+}
+
+.playlist-tile-art {
+  aspect-ratio: 1;
+  border-radius: 16px;
+}
+
+.playlist-tile small,
+.playlist-track-copy small {
+  color: var(--os-text-secondary);
+}
+
+.playlist-detail-page {
+  position: relative;
+  overflow: hidden;
+  background: transparent;
+}
+
+body.playlist-detail-route .app-shell {
+  background-image: none;
+}
+
+body.playlist-detail-route .os-topbar {
+  background: transparent !important;
+}
+
+.library-search-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 20px;
+  padding: 10px 16px;
+  border: 1px solid var(--44ui-panel-border);
+  border-radius: 999px;
+  background: var(--44ui-material-glass);
+  color: var(--os-text-secondary);
+}
+
+.library-search-field input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+  appearance: none;
+  color: inherit;
+  background: transparent;
+}
+
+.library-search-field input:focus,
+.library-search-field input:focus-visible {
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+}
+
+.library-search-field input::placeholder { color: var(--os-text-secondary); }
+.library-playlists-inline { margin-bottom: 24px; }
+.library-playlist-art { background: linear-gradient(145deg, #080808, #a34b2a 48%, #0c1831); background-size: cover; background-position: center; }
+.library-playlist-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.library-item-groups .product-tile-art-book { aspect-ratio: 1 / 1; }
+.library-filter-menu { position: fixed; z-index: 40; top: calc(var(--os-topbar-height) + 8px); right: 16px; min-width: 180px; }
+
+@media (max-width: 768px) {
+  .library-opening > .app-header { display: none; }
+  .library-search-field { margin-top: 18px; margin-bottom: 14px; }
+  .library-item-groups,
+  .library-playlists-inline { margin-inline: 0; }
+  .library-item-groups { margin-top: 18px; }
+}
+
+.playlist-create-page {
+  min-height: 100%;
+  padding: 28px var(--os-content-inset) calc(var(--os-mobile-shell-bottom) + 32px);
+}
+
+.playlist-create-art {
+  display: grid;
+  place-items: center;
+  width: min(100%, 420px);
+  aspect-ratio: 1;
+  margin: 0 auto 28px;
+  border: 1px solid var(--44ui-panel-border);
+  border-radius: 28px;
+  background: var(--44ui-material-glass);
+  background-position: center;
+  background-size: cover;
+  color: var(--os-text-secondary);
+  cursor: pointer;
+}
+
+.playlist-create-art-icon {
+  width: 42px;
+  height: 42px;
+  color: var(--os-text-secondary);
+}
+
+.playlist-create-title-field {
+  width: min(100%, 420px);
+  margin: 0 auto;
+}
+
+.playlist-create-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--os-text-secondary);
+}
+
+.playlist-create-title {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--44ui-panel-border);
+  padding: 10px 0;
+  color: var(--os-text-primary);
+  background: transparent;
+  font-size: 1.5rem;
+  outline: 0;
+}
+
+.playlist-detail-hero {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 8px 0 24px;
+  text-align: center;
+}
+
+.playlist-detail-art {
+  width: min(100%, 480px);
+  aspect-ratio: 1;
+  border-radius: 28px;
+  border: 1px solid var(--44ui-panel-border);
+  box-shadow: 0 20px 60px rgb(0 0 0 / 22%);
+}
+
+.playlist-detail-hero h1,
+.playlist-detail-hero p {
+  margin: 0;
+}
+
+.playlist-detail-hero h1 { font-size: clamp(1.5rem, 5vw, 2rem); }
+.playlist-detail-hero p { color: var(--os-text-secondary); }
+.playlist-edit-helper { margin-top: 18px !important; text-align: left; width: 100%; }
+
+.playlist-track-list,
+.playlist-edit-list,
+.playlist-catalog-track-list {
+  display: grid;
+}
+
+.playlist-track-row,
+.playlist-edit-row,
+.playlist-catalog-track {
+  display: grid;
+  align-items: center;
+  gap: 14px;
+  min-height: 72px;
+  border-bottom: 1px solid color-mix(in srgb, var(--os-text-primary) 12%, transparent);
+}
+
+.playlist-track-row { grid-template-columns: 42px minmax(0, 1fr) auto; }
+.playlist-edit-row { grid-template-columns: 38px minmax(0, 1fr) auto auto; }
+.playlist-catalog-track { grid-template-columns: 66px minmax(0, 1fr) 40px; }
+
+.playlist-track-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.playlist-track-copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playlist-track-more { letter-spacing: 2px; }
+
+.playlist-detail-page .playlist-track-list {
+  width: 100%;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.playlist-detail-page .playlist-track-row {
+  grid-template-columns: 28px minmax(0, 1fr) 40px;
+  gap: 4px;
+  min-height: 54px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.playlist-detail-page .playlist-track-row + .playlist-track-row {
+  border-top: 1px solid color-mix(in srgb, var(--os-text-primary) 12%, transparent);
+}
+
+.playlist-detail-page .playlist-track-row .view-track-number {
+  color: var(--os-text-secondary);
+  text-align: left;
+}
+
+.playlist-detail-page .playlist-track-row .playlist-track-copy {
+  min-width: 0;
+}
+
+.playlist-detail-page .playlist-track-row .playlist-track-copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playlist-detail-page .playlist-track-more {
+  color: var(--os-text-primary);
+  text-align: right;
+}
+.playlist-remove-button,
+.playlist-reorder-button,
+.playlist-catalog-track > button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.playlist-remove-button {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: white;
+  background: #ff375f;
+  font-size: 1.25rem;
+}
+
+.playlist-catalog-art { width: 66px; height: 66px; border-radius: 10px; }
+.playlist-catalog-track > button { color: var(--os-accent, #4da3ff); font-size: 2rem; }
+.playlist-catalog-track > button:disabled { color: var(--os-text-secondary); }
+
+.playlist-add-track-link,
+.playlist-edit-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.playlist-add-track-link { color: var(--os-accent, #4da3ff); font-weight: 700; text-decoration: none; }
+
+.playlist-picker-backdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(0 0 0 / 30%);
+}
+
+.playlist-picker {
+  width: min(100%, 420px);
+  padding: 18px;
+}
+
+.playlist-picker-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.playlist-picker-heading h2 { margin: 0; font-size: 1.25rem; }
+.playlist-picker-heading button { border: 0; background: transparent; color: inherit; font-size: 1.6rem; cursor: pointer; }
+.playlist-picker-list { display: grid; gap: 8px; margin: 18px 0; }
+.playlist-picker-list button { padding: 12px 14px; border: 1px solid var(--44ui-panel-border); border-radius: 12px; color: inherit; background: transparent; text-align: left; cursor: pointer; }
+
+@media (max-width: 768px) {
+  .playlist-index-page,
+  .playlist-detail-page,
+  .playlist-add-page { padding-inline: 16px; }
+
+  .playlist-add-page { padding-bottom: calc(var(--os-mobile-shell-bottom) + 96px); }
+  .playlist-track-search { position: sticky; bottom: calc(var(--os-mobile-shell-bottom) + 10px); z-index: 3; margin-top: 16px; box-shadow: 0 8px 26px rgb(0 0 0 / 30%); }
+}
+
 
 /* =========================================================
    CANONICAL INPUTS
@@ -2265,6 +2643,857 @@ body:is(.theme-dark, .theme-light)
     :is(.ui44-loading-shell, .ui44-state-loading)::after {
     animation: none;
     border-top-color: var(--44ui-panel-border);
+  }
+}
+
+/* Community card polish: keep the iOS metadata sequence and compact reaction
+   spacing after all shared list rules have been emitted. */
+@media (max-width: 768px) {
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-row.ui44-list-row-community .social-author-name {
+    flex: 0 1 auto !important;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-row.ui44-list-row-community .social-time-dot {
+    display: inline-block !important;
+    order: initial !important;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-row.ui44-list-row-community .social-time {
+    order: initial !important;
+    margin-left: 0 !important;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-row.ui44-list-row-community .social-actions .social-action-like {
+    width: auto !important;
+    min-width: 44px !important;
+    flex-basis: auto !important;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-row.ui44-list-row-community .social-actions {
+    gap: 24px !important;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-row.ui44-list-row-community .social-actions .ui44-row-action {
+    gap: 4px !important;
+  }
+}
+
+/* New Post follows the iOS bottom-sheet composition: scrim, centered title,
+   Cancel/Post toolbar actions, one large editor, and two recessed pickers. */
+.community-v11-composer-layer {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: color-mix(in srgb, #000 48%, transparent);
+}
+
+body:is(.theme-dark, .theme-light) .community-v11-composer {
+  position: relative;
+  width: min(720px, 100%);
+  max-height: min(820px, calc(100dvh - var(--os-safe-area-top)));
+  gap: 20px;
+  padding: 24px 16px calc(24px + var(--os-safe-area-bottom));
+  overflow-y: auto;
+  border: 1px solid color-mix(in srgb, var(--os-color-ink) 14%, transparent);
+  border-bottom: 0;
+  border-radius: 28px 28px 0 0;
+  background: color-mix(in srgb, var(--os-paper-bg) 92%, transparent);
+  box-shadow: 0 -18px 50px color-mix(in srgb, #000 32%, transparent);
+  backdrop-filter: blur(28px) saturate(135%);
+  -webkit-backdrop-filter: blur(28px) saturate(135%);
+}
+
+body:is(.theme-dark, .theme-light) .community-v11-composer-heading {
+  position: sticky;
+  z-index: 2;
+  top: -24px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  margin: -24px -16px 0;
+  padding: 24px 16px 12px;
+  background: color-mix(in srgb, var(--os-paper-bg) 84%, transparent);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+}
+
+body:is(.theme-dark, .theme-light) .community-v11-composer-heading h2 {
+  grid-column: 2;
+  grid-row: 1;
+  margin: 0;
+  color: var(--os-color-ink);
+  font: 700 20px/24px var(--44ui-font-app);
+  text-align: center;
+}
+
+body:is(.theme-dark, .theme-light) :is(.community-v11-composer-cancel, .community-v11-composer-post) {
+  min-height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--os-color-ink) 10%, transparent);
+  color: var(--os-color-ink);
+  font: 600 16px/20px var(--44ui-font-app);
+}
+
+body:is(.theme-dark, .theme-light) .community-v11-composer-cancel {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+}
+
+body:is(.theme-dark, .theme-light) .community-v11-composer-post {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+}
+
+body:is(.theme-dark, .theme-light) .community-v11-composer-post:disabled {
+  opacity: .45;
+}
+
+body:is(.theme-dark, .theme-light) .community-v11-composer-field-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--os-color-ink);
+  font: 700 18px/24px var(--44ui-font-app);
+}
+
+body:is(.theme-dark, .theme-light) .community-v11-composer-photo {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--os-color-accent);
+  cursor: pointer;
+}
+
+body:is(.theme-dark, .theme-light) .community-v11-composer-photo svg {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+body:is(.theme-dark, .theme-light) .community-v11-composer > textarea {
+  min-height: 180px;
+  padding: 16px;
+  resize: none;
+  border: 1px solid color-mix(in srgb, var(--os-color-ink) 16%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--os-color-ink) 9%, transparent);
+  box-shadow: none;
+  font: 400 17px/24px var(--44ui-font-app);
+}
+
+body:is(.theme-dark, .theme-light) .community-v11-composer-picker-field {
+  position: relative;
+  display: grid;
+  gap: 8px;
+}
+
+body:is(.theme-dark, .theme-light) .community-v11-composer-label {
+  color: var(--os-color-ink);
+  font: 700 18px/24px var(--44ui-font-app);
+}
+
+body:is(.theme-dark, .theme-light) .community-v11-composer-picker {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 56px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--os-color-ink) 16%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--os-color-ink) 9%, transparent);
+  color: var(--os-color-ink-secondary);
+  font: 400 17px/22px var(--44ui-font-app);
+  text-align: left;
+}
+
+body:is(.theme-dark, .theme-light) .community-v11-composer-picker span:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:is(.theme-dark, .theme-light) .community-v11-composer-picker .is-selected {
+  color: var(--os-color-accent);
+}
+
+body:is(.theme-dark, .theme-light) .community-v11-composer-picker-icon {
+  color: var(--os-color-ink-secondary);
+  font-size: 22px;
+  text-align: center;
+}
+
+body:is(.theme-dark, .theme-light) .community-v11-composer-chevron {
+  color: var(--os-color-ink-secondary);
+  font-size: 18px;
+  letter-spacing: -5px;
+}
+
+body:is(.theme-dark, .theme-light) .community-v11-composer-picker-menu {
+  position: absolute;
+  z-index: 5;
+  right: 0;
+  bottom: calc(100% + 8px);
+  left: 0;
+  display: grid;
+  max-height: 280px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--44ui-panel-border);
+  border-radius: 16px;
+  background: var(--os-paper-bg);
+  box-shadow: var(--os-elevation-floating);
+}
+
+body:is(.theme-dark, .theme-light) .community-v11-composer-picker-menu input,
+body:is(.theme-dark, .theme-light) .community-v11-composer-picker-menu button {
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--os-color-ink);
+  font: 400 16px/20px var(--44ui-font-app);
+  text-align: left;
+}
+
+body:is(.theme-dark, .theme-light) .community-v11-composer-picker-menu input {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  background: var(--os-paper-bg);
+}
+
+body:is(.theme-dark, .theme-light) .community-v11-composer-picker-menu button:hover,
+body:is(.theme-dark, .theme-light) .community-v11-composer-picker-menu button[aria-selected="true"] {
+  background: color-mix(in srgb, var(--os-color-accent) 12%, transparent);
+}
+
+/* The route uses the shell's shared toolbar; the composer itself is a normal
+   full-page surface until the iOS-style drawer is intentionally revisited. */
+body:is(.theme-dark, .theme-light) .community-new-page-layer {
+  position: static;
+  inset: auto;
+  display: block;
+  min-height: 100%;
+  background: transparent;
+}
+
+body:is(.theme-dark, .theme-light) .community-new-page-layer .community-new-composer {
+  width: min(720px, 100%);
+  max-height: none;
+  margin: 0 auto;
+  padding: 36px 16px calc(32px + var(--os-safe-area-bottom));
+  overflow: visible;
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none !important;
+  outline: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+body:is(.theme-dark, .theme-light) .community-new-page-layer .community-new-composer > textarea {
+  display: block;
+  width: 100%;
+  min-height: 240px;
+  height: 240px;
+  margin: 0;
+  box-sizing: border-box;
+  padding: 16px;
+  resize: none;
+  border: 1px solid color-mix(in srgb, var(--os-color-ink) 16%, transparent);
+  border-radius: 16px;
+  background: var(--44ui-input-background);
+  color: var(--os-color-ink);
+  box-shadow: none;
+  font: 400 17px/24px var(--44ui-font-app);
+}
+
+body:is(.theme-dark, .theme-light) .community-new-page-layer .community-v11-composer-picker {
+  background: var(--44ui-input-background);
+}
+
+body:is(.theme-dark, .theme-light) .community-new-page-layer .community-v11-composer-picker {
+  position: relative;
+  padding-right: 48px;
+}
+
+body:is(.theme-dark, .theme-light) .community-new-page-layer .community-v11-composer-clear-wrap {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-50%);
+}
+
+body:is(.theme-dark, .theme-light) .community-new-page-layer .community-v11-composer-clear {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--os-color-ink-secondary);
+  font: 400 24px/24px var(--44ui-font-app);
+  cursor: pointer;
+}
+
+body:is(.theme-dark, .theme-light) .community-new-page-layer .community-v11-composer-clear:hover {
+  background: var(--44ui-interactive-hover);
+  color: var(--os-color-ink);
+}
+
+body:is(.theme-dark, .theme-light) .community-new-page-layer .community-v11-composer-image-preview {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--os-color-ink) 16%, transparent);
+  border-radius: 16px;
+  background: var(--44ui-input-background);
+}
+
+body:is(.theme-dark, .theme-light) .community-new-page-layer .community-v11-composer-image-preview img {
+  display: block;
+  width: 100%;
+  max-height: 280px;
+  object-fit: contain;
+}
+
+body:is(.theme-dark, .theme-light) .community-new-page-layer .community-v11-composer-image-preview button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, #000 58%, transparent);
+  color: #fff;
+  font: 400 24px/28px var(--44ui-font-app);
+  cursor: pointer;
+}
+
+body:is(.theme-dark, .theme-light) .community-new-page-layer .community-v11-composer-upload-status {
+  color: var(--os-color-ink-secondary);
+  font: 400 14px/20px var(--44ui-font-app);
+}
+
+body:is(.theme-dark, .theme-light) .community-new-page-layer .community-v11-composer-chevron {
+  display: inline-flex;
+  width: 20px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: normal;
+}
+
+body:is(.theme-dark, .theme-light) .community-new-page-layer .community-v11-composer-chevron svg {
+  width: 20px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+body:is(.theme-dark, .theme-light) .community-new-page-layer .community-v11-composer-heading {
+  display: none;
+}
+
+@media (min-width: 769px) {
+  body:is(.theme-dark, .theme-light) .community-new-page-layer .community-new-composer {
+    padding: 32px 24px calc(32px + var(--os-safe-area-bottom));
+  }
+}
+
+body:is(.theme-dark, .theme-light) .community-v11-composer-picker-empty {
+  padding: 14px 12px;
+  color: var(--os-color-ink-muted);
+  font: 400 14px/20px var(--44ui-font-app);
+}
+
+@media (min-width: 769px) {
+  .community-v11-composer-layer {
+    align-items: center;
+    padding: 24px;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-v11-composer {
+    border-bottom: 1px solid color-mix(in srgb, var(--os-color-ink) 14%, transparent);
+    border-radius: 28px;
+  }
+}
+
+/* Profile Posts intentionally uses the same feed/card grammar as Community.
+   Only the item page opts out of the attached-item card via a component prop. */
+@media (max-width: 768px) {
+  body:is(.theme-dark, .theme-light) .social-profile-page .social-profile-posts.social-feed-panel.ui44-panel {
+    display: grid !important;
+    width: calc(100% + (2 * var(--os-content-inset))) !important;
+    min-width: 0;
+    row-gap: 8px !important;
+    margin-inline: calc(-1 * var(--os-content-inset)) !important;
+    padding: 0 16px !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-profile-page .social-profile-posts.social-feed-panel > .social-feed-post {
+    min-width: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 1px solid var(--44ui-panel-border) !important;
+    border-radius: 22px !important;
+    background: var(--44ui-material-glass) !important;
+    box-shadow: var(--44ui-elevation-flat) !important;
+    overflow: hidden !important;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-profile-page .social-profile-posts.social-feed-panel > .social-feed-post > .social-post-row {
+    display: grid !important;
+    grid-template-columns: 32px minmax(0, 1fr);
+    column-gap: 10px;
+    row-gap: 10px;
+    min-height: 0 !important;
+    padding: 18px 16px 16px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-profile-page .social-profile-posts.social-feed-panel > .social-feed-post > .social-post-row > .ui44-community-avatar-link {
+    grid-column: 1;
+    grid-row: 1;
+    width: 32px;
+    height: 32px;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-profile-page .social-profile-posts.social-feed-panel > .social-feed-post > .social-post-row > .ui44-community-copy {
+    display: contents;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-profile-page .social-profile-posts.social-feed-panel > .social-feed-post > .social-post-row .ui44-community-author-line {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-profile-page .social-profile-posts.social-feed-panel > .social-feed-post > .social-post-row :is(.ui44-community-content, .ui44-community-actions) {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-profile-page .social-attached-item-card {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) 20px;
+    align-items: center;
+    column-gap: 12px;
+    min-width: 0;
+    margin-top: 4px;
+    padding: 8px;
+    border: 1px solid var(--44ui-panel-border);
+    border-radius: 14px;
+    background: var(--44ui-material-glass);
+    color: var(--os-color-ink);
+    text-decoration: none;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-profile-page .social-attached-item-art {
+    display: block;
+    width: 48px;
+    height: 48px;
+    overflow: hidden;
+    border-radius: 8px;
+    background: var(--os-color-paper);
+  }
+
+  body:is(.theme-dark, .theme-light) .social-profile-page .social-attached-item-art img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-profile-page .social-attached-item-copy {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-profile-page :is(.social-attached-item-title, .social-attached-item-type) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-profile-page .social-attached-item-title {
+    color: var(--os-color-ink);
+    font: 600 15px/19px var(--44ui-font-app);
+  }
+
+  body:is(.theme-dark, .theme-light) .social-profile-page .social-attached-item-type {
+    color: var(--os-color-ink-muted);
+    font: 400 13px/17px var(--44ui-font-app);
+  }
+
+  body:is(.theme-dark, .theme-light) .social-profile-page .social-attached-item-chevron {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: var(--os-color-ink-muted);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
+  }
+}
+
+/* Keep item-page Community cards on the same screen-edge rail as the main
+   Community feed and profile Posts. */
+@media (max-width: 768px) {
+  body:is(.theme-dark, .theme-light) .item-community-surface.ui44-panel {
+    width: calc(100% + (2 * var(--os-content-inset))) !important;
+    margin-inline: calc(-1 * var(--os-content-inset)) !important;
+    padding-inline: 16px !important;
+  }
+}
+
+/* Profile and item Community sections use the same independent card surface
+   as the main Community feed. The item page only changes the content variant
+   by suppressing its redundant attached-item card in the component props. */
+@media (max-width: 768px) {
+  body:is(.theme-dark, .theme-light) :is(.social-profile-posts.ui44-panel, .item-community-surface.ui44-panel) {
+    display: grid !important;
+    width: auto !important;
+    min-width: 0;
+    row-gap: 8px !important;
+    margin-inline: 0 !important;
+    padding: 0 16px !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-profile-posts.ui44-panel > .social-post-row,
+  body:is(.theme-dark, .theme-light) .item-community-surface.ui44-panel > .social-feed-post {
+    min-width: 0;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 1px solid var(--44ui-panel-border) !important;
+    border-radius: 22px !important;
+    background: var(--44ui-material-glass) !important;
+    box-shadow: var(--44ui-elevation-flat) !important;
+    overflow: hidden !important;
+  }
+
+  body:is(.theme-dark, .theme-light) .social-profile-posts.ui44-panel > .social-post-row,
+  body:is(.theme-dark, .theme-light) .item-community-surface.ui44-panel > .social-feed-post > .social-post-row {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr);
+    column-gap: 10px;
+    row-gap: 10px;
+    min-height: 0 !important;
+    padding: 18px 16px 16px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+
+  body:is(.theme-dark, .theme-light) :is(.social-profile-posts.ui44-panel > .social-post-row, .item-community-surface.ui44-panel > .social-feed-post > .social-post-row) > .ui44-community-avatar-link {
+    grid-column: 1;
+    grid-row: 1;
+    width: 32px;
+    height: 32px;
+  }
+
+  body:is(.theme-dark, .theme-light) :is(.social-profile-posts.ui44-panel > .social-post-row, .item-community-surface.ui44-panel > .social-feed-post > .social-post-row) > .ui44-community-copy {
+    display: contents;
+  }
+
+  body:is(.theme-dark, .theme-light) :is(.social-profile-posts.ui44-panel > .social-post-row, .item-community-surface.ui44-panel > .social-feed-post > .social-post-row) .ui44-community-author-line {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  body:is(.theme-dark, .theme-light) :is(.social-profile-posts.ui44-panel > .social-post-row, .item-community-surface.ui44-panel > .social-feed-post > .social-post-row) :is(.ui44-community-content, .ui44-community-actions) {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+}
+
+/* Final Community card parity overrides. Keep these last so the feed does not
+   inherit the connected-list treatment used by Account and Studio. */
+@media (max-width: 768px) {
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-feed-panel.ui44-panel {
+    display: grid !important;
+    row-gap: 8px !important;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-feed-panel.ui44-panel > .social-feed-post {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 1px solid var(--44ui-panel-border) !important;
+    border-radius: 22px !important;
+    background: var(--44ui-material-glass) !important;
+    box-shadow: var(--44ui-elevation-flat) !important;
+    overflow: hidden !important;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-feed-panel.ui44-panel > .social-feed-post > .social-row.community-post-card {
+    min-height: 0 !important;
+    padding: 18px 16px 16px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-row.ui44-list-row-community .social-row-meta {
+    gap: 4px !important;
+    flex-wrap: nowrap !important;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-row.ui44-list-row-community .social-time {
+    margin-left: 0 !important;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-row.ui44-list-row-community .social-row-meta-trailing {
+    display: inline-flex !important;
+    margin-left: auto !important;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-row.ui44-list-row-community .social-more-button {
+    display: grid !important;
+    width: 32px !important;
+    min-width: 32px !important;
+    height: 32px !important;
+    padding: 0 !important;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-row.ui44-list-row-community .social-row-body {
+    display: block !important;
+    max-height: none !important;
+    overflow: visible !important;
+    -webkit-line-clamp: unset !important;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-row-show-more {
+    display: none !important;
+  }
+}
+
+/* Final Community card ownership pass: these selectors intentionally follow
+   the shared connected-feed rules above. */
+@media (max-width: 768px) {
+  body:is(.theme-dark, .theme-light) .community-app-page .social-feed-panel.ui44-panel > .social-feed-post {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 1px solid var(--44ui-panel-border) !important;
+    border-radius: 22px !important;
+    background: var(--44ui-material-glass) !important;
+    box-shadow: var(--44ui-elevation-flat) !important;
+    overflow: hidden;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page .social-feed-panel.ui44-panel > .social-feed-post + .social-feed-post {
+    border-top: 1px solid var(--44ui-panel-border) !important;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page .social-feed-panel.ui44-panel {
+    display: grid;
+    row-gap: 8px;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page .social-feed-panel.ui44-panel > .social-feed-post > .social-row.community-post-card {
+    min-height: 0;
+    padding: 18px 16px 16px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+
+  body:is(.theme-dark, .theme-light)
+    .community-app-page.community-v11-page
+    .social-row.ui44-list-row-community
+    .social-row-meta {
+    gap: 4px;
+  }
+
+  body:is(.theme-dark, .theme-light)
+    .community-app-page.community-v11-page
+    .social-row.ui44-list-row-community
+    .social-time {
+    margin-left: 0;
+  }
+
+  body:is(.theme-dark, .theme-light)
+    .community-app-page.community-v11-page
+    .social-row.ui44-list-row-community
+    .social-row-meta-trailing {
+    display: inline-flex;
+    margin-left: auto;
+  }
+
+  body:is(.theme-dark, .theme-light)
+    .community-app-page.community-v11-page
+    .social-row.ui44-list-row-community
+    .social-more-button {
+    display: grid;
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    padding: 0;
+  }
+
+  body:is(.theme-dark, .theme-light)
+    .community-app-page.community-v11-page
+    .social-row.ui44-list-row-community
+    .social-more-button svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  body:is(.theme-dark, .theme-light)
+    .community-app-page.community-v11-page
+    .social-row.ui44-list-row-community
+    .social-row-body {
+    display: block;
+    max-height: none;
+    overflow: visible;
+    -webkit-line-clamp: unset;
+  }
+}
+
+/* Community feed cards are a distinct reusable surface from Account's
+   settings/list rows. Each post owns its own rounded iOS-style card. */
+@media (max-width: 768px) {
+  body:is(.theme-dark, .theme-light) .community-app-page .social-feed-panel .social-feed-post {
+    margin: 12px 0;
+    padding: 0;
+    border: 1px solid var(--44ui-panel-border);
+    border-radius: 22px;
+    background: var(--44ui-material-glass);
+    box-shadow: var(--44ui-elevation-flat);
+    overflow: hidden;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page .social-feed-panel .social-feed-post + .social-feed-post {
+    border-top: 1px solid var(--44ui-panel-border);
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page .social-feed-panel .social-feed-post > .social-row.community-post-card {
+    min-height: 0;
+    padding: 18px 16px 16px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+}
+
+/* Public mobile release tracks intentionally use the native iOS-style list
+   grammar: no panel, no row cards, no inset padding, and overflow actions in
+   the trailing column. This is scoped to Store release details so Library and
+   other list surfaces retain their existing materials until migrated. */
+@media (max-width: 768px) {
+  body:is(.theme-dark, .theme-light)
+    .store-item-detail-page
+    .view-tracklist-section
+    > .view-tracklist.ui44-track-list.ui44-panel-glass {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    overflow: visible;
+  }
+
+  body:is(.theme-dark, .theme-light)
+    .store-item-detail-page
+    .view-tracklist-section
+    .view-track-row {
+    grid-template-columns: 28px minmax(0, 1fr) 40px;
+    gap: 4px;
+    min-height: 54px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  body:is(.theme-dark, .theme-light)
+    .store-item-detail-page
+    .view-tracklist-section
+    .view-track-row + .view-track-row {
+    border-top: 0;
+  }
+
+  body:is(.theme-dark, .theme-light)
+    .store-item-detail-page
+    .view-tracklist-section
+    .view-track-leading {
+    width: 28px;
+    height: 54px;
+    place-items: center;
+    justify-items: start;
+  }
+
+  body:is(.theme-dark, .theme-light)
+    .store-item-detail-page
+    .view-tracklist-section
+    .view-track-title,
+  body:is(.theme-dark, .theme-light)
+    .store-item-detail-page
+    .view-tracklist-section
+    .ui44-overflow-track-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  body:is(.theme-dark, .theme-light)
+    .store-item-detail-page
+    .view-tracklist-section
+    .view-track-duration {
+    display: none;
   }
 }
 
@@ -8101,8 +9330,9 @@ body:is(.theme-dark, .theme-light)
   margin-left: 0;
 }
 
-/* Mobile top-level destinations use the 44 brand mark and one Search action.
-   Detail destinations replace the mark with Back while retaining Search. */
+/* Mobile top-level destinations use the centered route title and existing
+   circular controls. Detail destinations replace the title-side space with
+   Back; the compact brand mark is not repeated in the mobile toolbar. */
 body:is(.theme-dark, .theme-light) .os-topbar-mobile-search-trigger,
 body:is(.theme-dark, .theme-light) .os-mobile-search-overlay {
   display: none;
@@ -8113,29 +9343,8 @@ body:is(.theme-dark, .theme-light) .os-mobile-search-overlay {
     padding-inline: var(--os-content-inset);
   }
 
-  body:is(.theme-dark, .theme-light) .os-topbar-mode-search .os-topbar-left {
-    display: flex;
-  }
-
   body:is(.theme-dark, .theme-light) .os-mobile-logo.os-mobile-brand-logo {
-    display: flex;
-    width: var(--os-topbar-control-size);
-    height: var(--os-topbar-control-size);
-    flex: 0 0 var(--os-topbar-control-size);
-    align-items: center;
-    justify-content: center;
-  }
-
-  body:is(.theme-dark, .theme-light) .os-mobile-brand-logo img {
-    display: block;
-    width: var(--os-topbar-control-size);
-    height: var(--os-topbar-control-size);
-    object-fit: contain;
-    object-position: center;
-  }
-
-  body.theme-light .os-mobile-brand-logo img {
-    filter: invert(1);
+    display: none;
   }
 
   body:is(.theme-dark, .theme-light)
@@ -8144,19 +9353,11 @@ body:is(.theme-dark, .theme-light) .os-mobile-search-overlay {
     display: none;
   }
 
-  body:is(.theme-dark, .theme-light) .os-topbar-mobile-search-trigger {
-    display: grid;
-    width: var(--os-topbar-control-size);
-    min-width: var(--os-topbar-control-size);
-    height: var(--os-topbar-control-size);
-    flex: 0 0 var(--os-topbar-control-size);
-  }
-
   /* Back and Search are paired top-bar controls. Keep their material recipe
      explicit here so route state cannot make Back appear unfilled. */
   body:is(.theme-dark, .theme-light)
     .os-topbar
-    :is(.os-topbar-back, .os-topbar-mobile-search-trigger) {
+    .os-topbar-back {
     border: 1px solid var(--44ui-panel-border);
     background: var(--44ui-material-glass);
     box-shadow: none;
@@ -9415,5 +10616,162 @@ body:is(.theme-dark, .theme-light) .community-thread-composer-gate {
     .sidebar-nav-mobile {
     scroll-behavior: auto;
     transition-duration: 0.01ms;
+  }
+}
+
+/* Community references and attached release cards mirror the native iOS
+   presentation: accent mentions and a compact 48pt artwork card. */
+@media (max-width: 768px) {
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-rich-link {
+    color: var(--os-color-accent) !important;
+    font-weight: 700;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-attached-item-card {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) 20px;
+    align-items: center;
+    column-gap: 12px;
+    min-width: 0;
+    margin-top: 4px;
+    padding: 8px;
+    border: 1px solid var(--44ui-panel-border);
+    border-radius: 14px;
+    background: var(--44ui-material-glass);
+    color: var(--os-color-ink);
+    text-decoration: none;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-attached-item-art {
+    display: block;
+    width: 48px;
+    height: 48px;
+    overflow: hidden;
+    border-radius: 8px;
+    background: var(--os-color-paper);
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-attached-item-art img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-attached-item-copy {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-attached-item-title,
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-attached-item-type {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-attached-item-title {
+    color: var(--os-color-ink);
+    font: 600 15px/19px var(--44ui-font-app);
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-attached-item-type {
+    color: var(--os-color-ink-muted);
+    font: 400 13px/17px var(--44ui-font-app);
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-attached-item-chevron {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: var(--os-color-ink-muted);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-row.ui44-list-row-community .social-more-button {
+    color: var(--os-color-ink) !important;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .community-post-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    margin-left: auto;
+    color: var(--os-color-ink-muted);
+    font: 400 15px/20px var(--44ui-font-app);
+    white-space: nowrap;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .community-post-tag .community-intent-label {
+    color: var(--os-color-ink-muted) !important;
+    font: 400 15px/20px var(--44ui-font-app);
+  }
+}
+
+/* Last mobile Community action-row override: iOS uses 24pt between metric
+   groups and 4pt between each icon and its count. */
+@media (max-width: 768px) {
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-row.ui44-list-row-community .social-actions {
+    gap: 24px !important;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-row.ui44-list-row-community .social-actions .ui44-row-action {
+    gap: 4px !important;
+  }
+}
+
+/* Community card polish: keep the iOS metadata sequence and compact reaction
+   spacing after all shared list rules have been emitted. */
+@media (max-width: 768px) {
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-row.ui44-list-row-community .social-author-name {
+    flex: 0 1 auto !important;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-row.ui44-list-row-community .social-time-dot {
+    display: inline-block !important;
+    order: initial !important;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-row.ui44-list-row-community .social-time {
+    order: initial !important;
+    margin-left: 0 !important;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page .social-row.ui44-list-row-community .social-actions .social-action-like {
+    width: auto !important;
+    min-width: 44px !important;
+    flex-basis: auto !important;
+  }
+}
+
+/* Final release/profile rail parity. These must follow the shared surface
+   rules so both routes use Community's 16px mobile card edge. */
+@media (max-width: 768px) {
+  body:is(.theme-dark, .theme-light) .item-community-surface.ui44-panel {
+    display: grid !important;
+    width: calc(100% + (2 * var(--os-content-inset))) !important;
+    margin-inline: calc(-1 * var(--os-content-inset)) !important;
+    padding: 0 16px !important;
+    row-gap: 8px !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  body:is(.theme-dark, .theme-light) .item-community-surface.ui44-panel > .social-feed-post {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 1px solid var(--44ui-panel-border) !important;
+    border-radius: 22px !important;
+    background: var(--44ui-material-glass) !important;
+    box-shadow: var(--44ui-elevation-flat) !important;
+    overflow: hidden !important;
   }
 }

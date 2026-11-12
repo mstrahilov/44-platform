@@ -1,26 +1,22 @@
 'use client';
 
-import Link from 'next/link';
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useId, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageShell } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
 import { useAuth } from '@/lib/useAuth';
-import { normalizeTaxonomyValue } from '@/lib/taxonomy';
 import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
-import { createDiscussion } from '@/lib/domain/community';
-import { Ui44Textarea } from '@/components/ui44/Inputs';
-
-function buildPostTitle(body: string) {
-  const cleanBody = body.trim().replace(/\s+/g, ' ');
-  return cleanBody.slice(0, 72) || 'New post';
-}
-
-function buildSlug(body: string) {
-  const base = normalizeTaxonomyValue(buildPostTitle(body)) || 'thread';
-  return `${base}-${crypto.randomUUID().slice(0, 8)}`;
-}
+import {
+  COMMUNITY_INTENT_LABELS,
+  communityItemReference,
+  type CommunityIntent,
+  type CommunityReference,
+} from '@/lib/communityV11';
+import { createCommunityPost } from '@/lib/domain/community';
+import { listPublishedCatalogItems } from '@/lib/domain/catalog';
+import { getUploadErrorMessage, uploadPublicFile } from '@/lib/uploads';
+import type { Item } from '@/lib/products';
 
 export default function NewCommunityThreadPage() {
   return (
@@ -35,9 +31,18 @@ function NewCommunityThreadContent() {
   const { user, loading } = useAuth();
   const [body, setBody] = useState('');
   const [profile, setProfile] = useState<StudioProfile | null>(null);
+  const [items, setItems] = useState<Item[]>([]);
+  const [intent, setIntent] = useState<CommunityIntent>('general');
+  const [selectedReferences, setSelectedReferences] = useState<CommunityReference[]>([]);
+  const [picker, setPicker] = useState<'mention' | 'tag' | null>(null);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [imageUploading, setImageUploading] = useState(false);
+  const [imageError, setImageError] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [setupGateOpen, setSetupGateOpen] = useState(false);
+  const imageInputId = useId();
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
@@ -48,10 +53,42 @@ function NewCommunityThreadContent() {
     loadStudioProfile(user.id).then(result => setProfile(result.profile));
   }, [user]);
 
-  const bodyHint = useMemo(
-    () => 'Use @username in the message when you want to mention someone.',
-    [],
-  );
+  useEffect(() => {
+    function submitFromToolbar() {
+      (document.getElementById('community-new-form') as HTMLFormElement | null)?.requestSubmit();
+    }
+    window.addEventListener('community:new-post-submit', submitFromToolbar);
+    return () => window.removeEventListener('community:new-post-submit', submitFromToolbar);
+  }, []);
+
+  useEffect(() => {
+    void listPublishedCatalogItems(200).then(setItems).catch(() => setItems([]));
+  }, []);
+
+  const canPostUpdate = profile?.role === 'creator' || profile?.role === 'admin';
+  const mentionOptions = useMemo(() => items
+    .filter(item => item.title.toLocaleLowerCase().includes(mentionQuery.toLocaleLowerCase().trim()))
+    .slice(0, 30), [items, mentionQuery]);
+
+  async function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !user) return;
+    setImageUploading(true);
+    setImageError('');
+    try {
+      const uploaded = await uploadPublicFile({
+        file,
+        folder: 'community-posts',
+        userId: user.id,
+      });
+      setImageUrl(uploaded.publicUrl);
+    } catch (uploadError) {
+      setImageError(getUploadErrorMessage(uploadError));
+    } finally {
+      setImageUploading(false);
+    }
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -68,9 +105,13 @@ function NewCommunityThreadContent() {
     setSaving(true);
     setError('');
 
-    const slug = buildSlug(body);
     try {
-      const created = await createDiscussion({ title: buildPostTitle(body), body: body.trim(), slug });
+      const created = await createCommunityPost({
+        body: body.trim(),
+        intent,
+        references: selectedReferences,
+        imageUrl: imageUrl || null,
+      });
       setSaving(false);
       router.push(`/community/thread/${created.slug || created.id}`);
     } catch (insertError) {
@@ -86,44 +127,103 @@ function NewCommunityThreadContent() {
 
   return (
     <PageShell>
-      <div className="community-new-layout">
-        <div className="dashboard-header ui44-page-header">
-          <div className="dashboard-header-copy ui44-page-header-copy">
-            <h1 className="os-type-display ui44-type ui44-type-page-title">New Post</h1>
+      <div className="community-v11-composer-layer community-new-page-layer">
+        <form id="community-new-form" className="community-v11-composer community-new-composer ui44-panel ui44-panel-glass" onSubmit={handleSubmit} aria-labelledby="community-new-title">
+          <div className="community-v11-composer-heading">
+            <button type="button" className="community-v11-composer-cancel" onClick={() => router.push('/community')}>Cancel</button>
+            <h1 id="community-new-title">New Post</h1>
+            <button type="submit" className="community-v11-composer-post" disabled={saving || !body.trim() || (intent === 'update' && !canPostUpdate)}>{saving ? 'Posting…' : 'Post'}</button>
           </div>
-          <Link href="/community" className="os-button os-button-secondary os-button-compact">Back</Link>
-        </div>
 
-        <div className="dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip community-new-surface">
-          <form className="ui44-form-stack" onSubmit={handleSubmit}>
-            <label>
-              <div className="os-type-card-title ui44-form-label">Message</div>
-              <Ui44Textarea
-                className="os-input-textarea ui44-form-textarea-tall"
-                rows={10}
-                value={body}
-                onChange={event => setBody(event.target.value)}
-                placeholder="Write your post"
-              />
+          <div className="community-v11-composer-field-label">
+            <label htmlFor="community-new-body">What&apos;s on your mind?</label>
+            <label className="community-v11-composer-photo" htmlFor={imageInputId} aria-label="Attach Photo" title="Attach Photo">
+              <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="14" rx="2" />
+                <circle cx="8" cy="10" r="1.4" />
+                <path d="m5.5 17 4.2-4.2 3.2 3.1 2.2-2.2 3.4 3.3" />
+              </svg>
             </label>
-            <div className="os-type-body-small ui44-form-help">
-              {bodyHint}
+            <input id={imageInputId} className="ui44-file-input-hidden" type="file" accept="image/*" onChange={handleImageChange} disabled={imageUploading || saving} />
+          </div>
+          {imageUrl ? (
+            <div className="community-v11-composer-image-preview">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={imageUrl} alt="Attached to this post" />
+              <button type="button" aria-label="Remove attached image" onClick={() => setImageUrl('')}>×</button>
             </div>
+          ) : null}
+          {imageUploading ? <div className="community-v11-composer-upload-status" role="status">Uploading image…</div> : null}
+          {imageError ? <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{imageError}</div> : null}
+          <textarea
+            id="community-new-body"
+            className="ui44-input ui44-textarea ui44-input-bare"
+            value={body}
+            onChange={event => setBody(event.target.value)}
+            placeholder=""
+            rows={6}
+            autoFocus
+            disabled={saving}
+          />
 
-            {error && (
-              <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">
-                {error}
+          <div className="community-v11-composer-picker-field">
+            <span className="community-v11-composer-label">Mention</span>
+            <button type="button" className="community-v11-composer-picker" onClick={() => setPicker(current => current === 'mention' ? null : 'mention')} aria-expanded={picker === 'mention'}>
+              <span className="community-v11-composer-picker-icon">@</span>
+              <span className={selectedReferences.length ? 'is-selected' : ''}>{selectedReferences.find(reference => reference.kind === 'item')?.label ?? 'Tap to mention a release'}</span>
+              {selectedReferences.length ? (
+                <span className="community-v11-composer-clear-wrap">
+                  <button type="button" className="community-v11-composer-clear" aria-label="Remove mentioned release" onClick={event => { event.stopPropagation(); setSelectedReferences([]); setMentionQuery(''); }}>
+                    ×
+                  </button>
+                </span>
+              ) : <span className="community-v11-composer-chevron" aria-hidden="true">
+                <svg viewBox="0 0 20 24" focusable="false">
+                  <path d="m4 9 6-6 6 6" />
+                  <path d="m4 15 6 6 6-6" />
+                </svg>
+              </span>}
+            </button>
+            {picker === 'mention' && (
+              <div className="community-v11-composer-picker-menu" role="listbox" aria-label="Mention a release">
+                <input value={mentionQuery} onChange={event => setMentionQuery(event.target.value)} placeholder="Search releases" autoFocus />
+                {mentionOptions.length ? mentionOptions.map(item => {
+                  const reference = communityItemReference(item);
+                  return (
+                    <button key={item.id} type="button" role="option" aria-selected={selectedReferences.some(selected => selected.id === item.id)} onClick={() => { setSelectedReferences([reference]); setMentionQuery(''); setPicker(null); }}>
+                      <span>{item.title}</span>
+                      <small>{reference.secondary}</small>
+                    </button>
+                  );
+                }) : <div className="community-v11-composer-picker-empty">No releases found.</div>}
               </div>
             )}
+          </div>
 
-            <div className="ui44-form-actions">
-              <button className="os-button os-button-primary" type="submit" disabled={saving}>
-                {saving ? 'Posting…' : 'Publish Post'}
-              </button>
-              <Link className="os-button os-button-ghost" href="/community">Cancel</Link>
-            </div>
-          </form>
-        </div>
+          <div className="community-v11-composer-picker-field">
+            <span className="community-v11-composer-label">Post Tag</span>
+            <button type="button" className="community-v11-composer-picker" onClick={() => setPicker(current => current === 'tag' ? null : 'tag')} aria-expanded={picker === 'tag'}>
+              <span className="community-v11-composer-picker-icon">☷</span>
+              <span className={intent !== 'general' ? 'is-selected' : ''}>{intent === 'general' ? 'Select a post tag' : COMMUNITY_INTENT_LABELS[intent]}</span>
+              <span className="community-v11-composer-chevron" aria-hidden="true">
+                <svg viewBox="0 0 20 24" focusable="false">
+                  <path d="m4 9 6-6 6 6" />
+                  <path d="m4 15 6 6 6-6" />
+                </svg>
+              </span>
+            </button>
+            {picker === 'tag' && (
+              <div className="community-v11-composer-picker-menu" role="listbox" aria-label="Select a post tag">
+                {(['general', 'update', 'question', 'collaboration', 'showcase', 'help'] as CommunityIntent[]).map(option => {
+                  const disabled = option === 'update' && !canPostUpdate;
+                  return <button key={option} type="button" role="option" aria-selected={intent === option} disabled={disabled} onClick={() => { setIntent(option); setPicker(null); }}>{COMMUNITY_INTENT_LABELS[option]}</button>;
+                })}
+              </div>
+            )}
+          </div>
+
+          {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div>}
+        </form>
       </div>
       <CommunitySetupGate open={setupGateOpen} onClose={() => setSetupGateOpen(false)} />
     </PageShell>

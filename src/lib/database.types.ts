@@ -2180,7 +2180,9 @@ export type Database = {
           content_type: string
           created_at: string
           id: string
+          image_url: string | null
           item_id: string | null
+          link_url: string | null
           moderation_status: string
           publication_status: string
           slug: string | null
@@ -2193,7 +2195,9 @@ export type Database = {
           content_type: string
           created_at?: string
           id?: string
+          image_url?: string | null
           item_id?: string | null
+          link_url?: string | null
           moderation_status?: string
           publication_status?: string
           slug?: string | null
@@ -2206,7 +2210,9 @@ export type Database = {
           content_type?: string
           created_at?: string
           id?: string
+          image_url?: string | null
           item_id?: string | null
+          link_url?: string | null
           moderation_status?: string
           publication_status?: string
           slug?: string | null

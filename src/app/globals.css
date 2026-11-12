@@ -3233,6 +3233,14 @@ body.theme-dark .os-home-panel {
   scrollbar-width: none;
 }
 
+.os-mobile-topbar-title {
+  display: none;
+}
+
+.os-mobile-toolbar {
+  display: none;
+}
+
 .os-topbar-left::-webkit-scrollbar {
   display: none;
 }
@@ -5331,6 +5339,34 @@ body:is(.theme-dark, .theme-light) .os-topbar .os-topbar-tab.os-topbar-tab-secti
   border-radius: 999px;
   background: currentColor;
   content: "";
+}
+
+@media (max-width: 768px) {
+  /* Release pages keep the sharp cover tile, but use the same app-shell field
+     as Community instead of painting the artwork across the page. */
+  :is(.store-item-detail-page, .library-detail-page) .view-album-header {
+    background: transparent !important;
+    background-image: none !important;
+  }
+
+  :is(.store-item-detail-page, .library-detail-page) .view-album-header::before,
+  :is(.store-item-detail-page, .library-detail-page) .view-album-header::after {
+    display: none !important;
+    background: none !important;
+  }
+
+  .store-item-detail-page .view-album-header {
+    padding-bottom: 12px;
+    margin-bottom: 0;
+  }
+
+  .store-item-detail-page .view-album-header .view-album-actions {
+    margin-bottom: 0;
+  }
+
+  .store-item-detail-page .view-tracklist-section {
+    padding-top: 0;
+  }
 }
 
 /* Mobile docked rails replace the chrome and remain horizontally reachable. */
@@ -7988,6 +8024,112 @@ body.accent-violet {
     flex: 0 0 auto;
   }
 
+  .os-mobile-topbar-title {
+    display: none;
+  }
+
+  .os-mobile-toolbar {
+    position: absolute;
+    top: var(--os-safe-area-top);
+    left: 0;
+    right: 0;
+    height: var(--os-topbar-content-height);
+    display: grid;
+    grid-template-columns: var(--os-topbar-control-size) minmax(0, 1fr) var(--os-topbar-control-size);
+    align-items: center;
+    padding: 0 var(--os-content-inset);
+    pointer-events: none;
+    z-index: 24;
+  }
+
+  .os-mobile-toolbar-slot {
+    display: flex;
+    width: var(--os-topbar-control-size);
+    min-width: var(--os-topbar-control-size);
+    height: var(--os-topbar-control-size);
+    align-items: center;
+    pointer-events: auto;
+  }
+
+  .os-mobile-toolbar-slot-leading {
+    justify-content: flex-start;
+  }
+
+  .os-mobile-toolbar-slot-trailing {
+    justify-content: flex-end;
+  }
+
+  .os-mobile-toolbar-overflow {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .os-mobile-toolbar-menu {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 80;
+    display: grid;
+    width: max-content;
+    min-width: 190px;
+    padding: 7px;
+    border: 1px solid color-mix(in srgb, var(--os-color-ink) 14%, transparent);
+    border-radius: 18px;
+    background: color-mix(in srgb, var(--os-color-app-environment) 88%, transparent);
+    box-shadow: var(--os-shadow-3);
+    backdrop-filter: blur(22px) saturate(1.12);
+    -webkit-backdrop-filter: blur(22px) saturate(1.12);
+  }
+
+  .os-mobile-toolbar-menu button {
+    min-height: 42px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 11px;
+    background: transparent;
+    color: var(--os-color-ink);
+    font: 600 15px/20px var(--os-font-app);
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .os-mobile-toolbar-menu button:disabled {
+    color: var(--os-color-ink-muted);
+    cursor: not-allowed;
+  }
+
+  .os-mobile-toolbar-menu button:not(:disabled):active {
+    background: color-mix(in srgb, var(--os-color-ink) 12%, transparent);
+  }
+
+  .os-mobile-toolbar-title {
+    margin: 0;
+    min-width: 0;
+    max-width: min(48vw, 220px);
+    overflow: hidden;
+    color: var(--os-color-ink);
+    font: 700 16px/20px var(--os-font-app);
+    letter-spacing: -0.01em;
+    justify-self: center;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .os-mobile-toolbar-slot > :is(.ui44-symbol-button, .os-topbar-icon-button, .os-topbar-back, .os-icon-button) {
+    width: var(--os-topbar-control-size);
+    min-width: var(--os-topbar-control-size);
+    height: var(--os-topbar-control-size);
+    min-height: var(--os-topbar-control-size);
+    flex: 0 0 var(--os-topbar-control-size);
+  }
+
+  .os-mobile-toolbar-action {
+    flex: 0 0 var(--os-topbar-control-size);
+  }
+
   .os-topbar-right {
     min-width: 0;
     flex: 1 1 auto;
@@ -8065,6 +8207,18 @@ body.accent-violet {
     align-items: flex-start;
     flex-direction: column;
     gap: 16px;
+  }
+
+  .app-header {
+    padding-top: 14px;
+    padding-bottom: 8px;
+    border-bottom: 0;
+  }
+
+  .app-header .ui44-type-page-title {
+    font-size: 22px;
+    line-height: 28px;
+    letter-spacing: 0;
   }
 
   .app-header:has(.page-filter-menu) {
@@ -8145,6 +8299,57 @@ body.accent-violet {
     align-items: center;
     justify-items: center;
     text-align: center;
+  }
+
+  /* Public release details use the artwork atmosphere as the mobile page
+     field. The toolbar overlays that field instead of reserving a separate
+     opaque row above it. */
+  .app-shell:has(.store-item-detail-page) .os-topbar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    background: transparent;
+    z-index: 40;
+  }
+
+  .app-shell:has(.store-item-detail-page) .os-mobile-toolbar-title {
+    /* Keep the middle grid track alive when the detail title is intentionally
+       empty, so the trailing overflow action remains pinned to the right. */
+    visibility: hidden;
+  }
+
+  .store-item-detail-page .view-album-header {
+    padding-top: calc(var(--os-topbar-height) + 22px);
+    padding-bottom: 72px;
+    margin-bottom: -48px;
+    background-color: transparent;
+    overflow: hidden;
+    z-index: 1;
+  }
+
+  .store-item-detail-page .view-album-header::before {
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 72%, transparent 100%);
+    mask-image: linear-gradient(to bottom, #000 0%, #000 72%, transparent 100%);
+  }
+
+  .store-item-detail-page .view-album-header::after {
+    background:
+      radial-gradient(circle at 50% 24%, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.26) 58%, transparent 82%),
+      linear-gradient(to bottom, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.06) 58%, transparent 100%);
+  }
+
+  .store-item-detail-page .view-album-atmosphere-handoff {
+    display: none;
+  }
+
+  .store-item-detail-page .view-tracklist-section {
+    position: relative;
+    z-index: 3;
+  }
+
+  .store-item-detail-page .os-topbar-left .os-topbar-back {
+    display: none;
   }
 
   .view-album-cover,
@@ -8785,6 +8990,13 @@ body.accent-violet {
     text-decoration: none;
   }
 
+  /* Mobile uses the centered route title as the page identity. The 44 mark
+     remains available in the desktop Sidebar and is not repeated in this
+     compact toolbar. */
+  .os-mobile-brand-logo {
+    display: none;
+  }
+
   .os-topbar-search-desktop {
     display: none;
   }
@@ -8808,6 +9020,13 @@ body.accent-violet {
 
   .os-topbar-mode-search .os-topbar-left {
     display: none;
+  }
+
+  .os-topbar-mode-search .os-topbar-mobile-search-trigger {
+    position: absolute;
+    top: var(--os-safe-area-top);
+    left: 10px;
+    z-index: 1;
   }
 
   .os-topbar-search-mobile-input {
@@ -9446,6 +9665,28 @@ body.theme-dark :is(
     box-shadow: none;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
+  }
+
+  .community-app-page .social-feed-panel {
+    width: auto;
+    margin-left: 0;
+    margin-right: 0;
+    padding: 0 16px;
+  }
+
+  .community-post-image {
+    width: 100%;
+    margin: 0 0 12px;
+    overflow: hidden;
+    border-radius: 16px;
+    background: var(--os-color-paper);
+  }
+
+  .community-post-image img {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
   }
 
   .library-achievements-section .library-achievement-list {
@@ -11331,6 +11572,35 @@ body:is(.theme-dark, .theme-light) .store-clear-filters {
     outline-offset: -2px;
   }
 
+  /* Match iOS OSPillTabRail: short rails stretch and center their labels;
+     rails that cannot fit switch to natural-width horizontal scrolling. */
+  .section-tab-rail:not(.section-tab-rail-overflow) {
+    justify-content: center;
+  }
+
+  .section-tab-rail:not(.section-tab-rail-overflow) .section-tab {
+    flex: 1 1 0;
+    min-width: max-content;
+    padding-inline: 14px;
+  }
+
+  .section-tab-rail:not(.section-tab-rail-overflow) .section-tab:first-child {
+    padding-left: 14px;
+  }
+
+  .section-tab-rail:not(.section-tab-rail-overflow) .section-tab[aria-current="page"]::after {
+    right: 14px;
+    left: 14px;
+  }
+
+  .section-tab-rail.section-tab-rail-overflow {
+    justify-content: flex-start;
+  }
+
+  .section-tab-rail.section-tab-rail-overflow .section-tab {
+    flex: 0 0 auto;
+  }
+
   body:is(.theme-dark, .theme-light) .store-mobile-shelf.app-grid {
     display: grid;
     width: 100%;
@@ -11359,6 +11629,68 @@ body:is(.theme-dark, .theme-light) .store-clear-filters {
 
   .library-opening {
     gap: 14px;
+  }
+
+  /* Discover/category headings move into the shared centered toolbar. Keep
+     the existing filter control and button treatment, but anchor it to the
+     toolbar's trailing action slot instead of rendering a second page header. */
+  .store-app-page .store-browse-header .app-header {
+    min-height: 0;
+    padding: 0;
+    border-bottom: 0;
+  }
+
+  .store-app-page .store-browse-header .app-header-copy {
+    display: none;
+  }
+
+  .store-app-page .store-browse-header .page-header-tools {
+    position: fixed;
+    top: calc(var(--os-safe-area-top) + 7px);
+    right: var(--os-content-inset);
+    z-index: 25;
+    min-width: 0;
+    height: var(--os-topbar-control-size);
+    pointer-events: none;
+  }
+
+  .store-app-page .store-browse-header .page-header-tools > * {
+    pointer-events: auto;
+  }
+
+  .library-opening > .app-header,
+  .community-v11-opening > .app-header {
+    min-height: 0;
+    padding: 0;
+    border-bottom: 0;
+  }
+
+  .library-opening > .app-header .app-header-copy,
+  .community-v11-opening > .app-header .app-header-copy {
+    display: none;
+  }
+
+  .library-opening > .app-header .page-header-tools {
+    position: fixed;
+    top: calc(var(--os-safe-area-top) + 7px);
+    left: var(--os-content-inset);
+    right: var(--os-content-inset);
+    z-index: 25;
+    min-width: 0;
+    height: var(--os-topbar-control-size);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0;
+    pointer-events: none;
+  }
+
+  .library-opening > .app-header .page-header-tools > * {
+    pointer-events: auto;
+  }
+
+  .community-v11-opening > .app-header .page-header-tools {
+    display: none;
   }
 
   .library-opening .library-filter-control {
@@ -11440,13 +11772,42 @@ body:is(.theme-dark, .theme-light) .store-clear-filters {
     outline-offset: -2px;
   }
 
+  /* Match iOS OSPillTabRail: short rails stretch and center their labels;
+     rails that cannot fit switch to natural-width horizontal scrolling. */
+  .section-tab-rail:not(.section-tab-rail-overflow) {
+    justify-content: center;
+  }
+
+  .section-tab-rail:not(.section-tab-rail-overflow) .section-tab {
+    flex: 1 1 0;
+    min-width: max-content;
+    padding-inline: 14px;
+  }
+
+  .section-tab-rail:not(.section-tab-rail-overflow) .section-tab:first-child {
+    padding-left: 14px;
+  }
+
+  .section-tab-rail:not(.section-tab-rail-overflow) .section-tab[aria-current="page"]::after {
+    right: 14px;
+    left: 14px;
+  }
+
+  .section-tab-rail.section-tab-rail-overflow {
+    justify-content: flex-start;
+  }
+
+  .section-tab-rail.section-tab-rail-overflow .section-tab {
+    flex: 0 0 auto;
+  }
+
   .store-app-page > .app-section {
     gap: 14px;
   }
 
   body:is(.theme-dark, .theme-light) .store-app-page .app-header .ui44-type-page-title {
-    font: 700 32px/36px var(--os-font-app);
-    letter-spacing: -0.025em;
+    font: 700 22px/28px var(--os-font-app);
+    letter-spacing: 0;
   }
 
   body:is(.theme-dark, .theme-light) .store-app-page > .app-section .hub-section-title {
@@ -11647,8 +12008,8 @@ body:is(.theme-dark, .theme-light) .store-clear-filters {
    route-responsive layers so every app shares one predictable viewport. */
 @media (max-width: 768px) {
   :is(.hub-section-title, .view-section-title) {
-    font-size: 32px;
-    line-height: 1.12;
+    font-size: 24px;
+    line-height: 29px;
     letter-spacing: -0.02em;
   }
 
@@ -11656,8 +12017,71 @@ body:is(.theme-dark, .theme-light) .store-clear-filters {
   .admin-section-panel .hub-section-title,
   .view-detail-single .hub-section-title,
   .view-detail-single .view-section-title {
-    font-size: 32px;
-    line-height: 1.12;
+    font-size: 24px;
+    line-height: 29px;
+  }
+
+  .store-item-detail-page .view-album-actions:empty {
+    display: none;
+  }
+
+  .store-item-detail-page .view-tracklist {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .store-item-detail-page .view-track-row {
+    grid-template-columns: 38px minmax(0, 1fr) 40px;
+    padding-right: var(--os-content-inset);
+    padding-left: var(--os-content-inset);
+  }
+
+  .store-item-detail-page .view-track-row .view-track-duration {
+    display: none;
+  }
+
+  .store-item-detail-page .view-track-row .view-track-more {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    width: 40px;
+    min-width: 40px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--os-color-ink);
+    font: 700 16px/1 var(--os-font-app);
+    letter-spacing: 2px;
+    cursor: pointer;
+  }
+
+  .store-item-detail-page .view-track-row {
+    position: relative;
+  }
+
+  .store-item-detail-page .view-track-more-menu {
+    position: absolute;
+    right: var(--os-content-inset);
+    top: calc(100% + 8px);
+    bottom: auto;
+    z-index: 70;
+    display: grid;
+    min-width: 170px;
+    padding: 7px;
+  }
+
+  .store-item-detail-page .library-creator-chip {
+    color: var(--os-color-accent);
+  }
+
+  .store-item-detail-page .item-community-new-post {
+    color: var(--os-color-accent);
+    font: 600 17px/22px var(--os-font-app);
+    text-decoration: none;
+    white-space: nowrap;
   }
 
   .dashboard-form-section > .hub-section-head {

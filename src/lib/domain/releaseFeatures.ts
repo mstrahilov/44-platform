@@ -8,6 +8,24 @@ export type ReleaseVideoEmbed = {
   sort_order: number;
 };
 
+export type CreatorVideoPage = {
+  id: string;
+  creator_id: string;
+  title: string;
+  youtube_video_id: string;
+  youtube_published_at: string | null;
+};
+
+export async function getCreatorVideo(id: string) {
+  const result = await supabase
+    .from('creator_videos' as never)
+    .select('id,creator_id,title,youtube_video_id,youtube_published_at')
+    .eq('id', id)
+    .maybeSingle();
+  if (result.error) throw result.error;
+  return (result.data as CreatorVideoPage | null) ?? null;
+}
+
 export async function listReleaseVideoEmbeds(itemId: string) {
   const result = await supabase
     .from('item_video_embeds' as never)

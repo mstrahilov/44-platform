@@ -1,0 +1,19 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["LTAJQF5B2M.com.fortyfour.os44"],
+        "components": [
+          { "/": "/store/item/*" },
+          { "/": "/videos/*" },
+          { "/": "/events/*" },
+          { "/": "/calendar/event/*" },
+          { "/": "/community/thread/*" },
+          { "/": "/profile/*" },
+          { "/": "/radio" },
+          { "/": "/" }
+        ]
+      }
+    ]
+  }
+}

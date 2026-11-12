@@ -33,6 +33,15 @@ export function FilterPopover({
     };
   }, [open]);
 
+  useEffect(() => {
+    function toggleFromToolbar(event: Event) {
+      const detail = (event as CustomEvent<{ label?: string }>).detail;
+      if (detail?.label === label) setOpen(current => !current);
+    }
+    window.addEventListener('44:toggle-filter-popover', toggleFromToolbar);
+    return () => window.removeEventListener('44:toggle-filter-popover', toggleFromToolbar);
+  }, [label]);
+
   return (
     <div ref={rootRef} className={open ? 'page-filter-menu page-filter-menu-open' : 'page-filter-menu'}>
       <button

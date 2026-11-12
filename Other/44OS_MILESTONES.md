@@ -1,5 +1,12 @@
 # 44OS Current Milestones
 
+The temporary cross-client parity baseline is maintained in the primary iOS
+repository at
+[`44OS_TRANSITION.md`](https://github.com/mstrahilov/44ios/blob/main/Other/44OS_TRANSITION.md).
+Use it to reconcile live web/Vercel/Supabase behavior, unreleased platform
+work, the App Store iOS release, and the iOS simulator/WIP lane. This file
+remains the authority for platform work and deployment gates.
+
 This file contains only current work. It deliberately does not preserve retired milestone numbering, the implementation diary, deployment chronology, or completed checkbox history.
 
 Current system behavior belongs in `44OS_FOUNDATION.md`. Current visual behavior belongs in `44OS_UI.md`. Git history retains implementation detail. Do not repeat accepted work unless relevant code, configuration, provider state, or production evidence changed.
@@ -20,6 +27,62 @@ Recorded July 26, 2026:
 - The broad-launch audit was paused by the owner to preserve time and credits for user-facing improvements.
 - No milestone below authorizes destructive cleanup, a Creator-clock re-base, a paid physical test, provider expansion, payout activation, or optional feature activation without its stated approval.
 - A fully native SwiftUI iOS client is the next active product build. The existing mobile web application is its product and visual reference, but core iOS screens will be rebuilt natively and will share the existing server-authoritative 44OS platform rather than embed the website.
+
+### Cross-client transition implementation log
+
+- **2026-11-10 — M1A navigation order:** The local platform dev server is
+  running at `http://localhost:3000`. The mobile dock now orders the five
+  destinations as `Home`, `Community`, `Radio`, `Library`, `Account` to match
+  iOS. Existing navigation styling and toolbar/search behavior were left
+  unchanged by owner direction. Lint, typecheck, the mobile safe-area
+  contract, and `git diff --check` pass. Nothing was deployed or written to
+  production.
+- **2026-11-10 — M1A centered title:** The local mobile shell now places a
+  concise route-family title in the existing topbar while preserving the
+  established circular control sizes/materials. Route-specific left/right
+  actions remain open; nothing was deployed or written to production.
+- **2026-11-10 — M1A heading/tab rhythm:** Mobile page headings now use the
+  smaller iOS-informed scale and the divider beneath the heading is removed
+  before the existing tab rail. The tab component and active underline remain
+  unchanged.
+- **2026-11-10 — M1A Discover toolbar:** The local Home/category shell now
+  removes the repeated mobile 44 mark, anchors the existing Search circle on
+  the left, centers `Discover`, anchors the existing Filter circle on the
+  right when applicable, and removes the redundant `Browse Music` mobile
+  heading. No button material or dimension was redesigned.
+- **2026-11-10 — M1A contextual actions:** Community now uses the existing
+  circular controls for Calendar/New Post, and Account uses Notifications/
+  Settings. Library and Radio actions remain open until their working routes
+  and acceptance behavior are available.
+- **2026-11-10 — M1A toolbar alignment/placeholders:** Mobile section rails no
+  longer dock into the toolbar and collide with the centered title. Library
+  now shows plus and Filter slots, and Radio shows Schedule and overflow
+  placeholders using the existing circular controls; functionality remains
+  explicitly pending.
+- **2026-11-10 — M1A universal toolbar component:** `MobileToolbar.tsx` now
+  owns the mobile toolbar grid and its leading/title/trailing slots. `Topbar.tsx`
+  supplies Home, Community, Radio, and Account actions through that shared
+  structure, preserving existing button materials and dimensions. This closes
+  the reusable layout checkpoint locally; route functionality, nested Back/
+  overflow mapping, and deployment remain open. Lint, typecheck, the mobile
+  safe-area contract, and `git diff --check` pass.
+- **2026-11-10 — M1A tab-rail order:** The local mobile rails now mirror the
+  requested iOS label/order contract: Discover `Featured`, `Music`, `Videos`,
+  `Books`, `Samples`, `Games`; Community `All`, `Updates`, `Questions`,
+  `Showcase`, `Collaboration`; and creator profiles use the iOS ordering with
+  a Videos placeholder. Existing rail visuals and underlines were preserved;
+  missing content behavior remains open. Lint, typecheck, the mobile safe-area
+  contract, and `git diff --check` pass.
+- **2026-11-10 — M1A conditional tab rails:** Discover now filters its rail to
+  categories with active catalog content, and creator profiles omit empty
+  content tabs. Profiles with only one content type render directly without a
+  rail; empty profiles retain the empty state. The web Videos tab remains
+  intentionally absent until video content exists. Existing rail visuals and
+  centered/overflow behavior are preserved.
+- **2026-11-10 — M1A profile tab selection:** Profile tab clicks now update
+  both local content state and the route query state, including clearing
+  `tab` when Posts is selected. This prevents URL synchronization from
+  restoring the previous tab after a click.
 
 ## Completed baseline — do not re-audit by default
 

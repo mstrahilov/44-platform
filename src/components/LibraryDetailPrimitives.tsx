@@ -125,6 +125,7 @@ export function ProductDetailHeader({
           )}
         </div>
         {afterActions}
+        <div className="view-album-atmosphere-handoff" aria-hidden="true" />
       </div>
     </div>
   );

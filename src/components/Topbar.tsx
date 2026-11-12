@@ -11,7 +11,7 @@ import {
 } from '@/lib/achievementNotifications';
 import { notificationIsEnabled } from '@/lib/notificationPreferences';
 import { usePathname, useRouter } from 'next/navigation';
-import { useTopbar } from './TopbarContext';
+import { useTopbar, type TopbarOverflowAction } from './TopbarContext';
 import { useCart } from '@/lib/cart';
 import { Ui44TextInput } from '@/components/ui44/Inputs';
 import {
@@ -19,8 +19,9 @@ import {
   NOTIFICATION_STATE_UPDATED,
   saveNotificationReadState,
 } from '@/lib/notificationState';
-import { getMobileTopbarState } from '@/lib/osApps';
+import { getMobileTopbarState, getMobileTopbarTitle } from '@/lib/osApps';
 import { MobileSearchOverlay } from '@/components/MobileSearchOverlay';
+import { MobileToolbar } from '@/components/MobileToolbar';
 import {
   deliverNewDesktopNotifications,
   primeDesktopNotificationRows,
@@ -34,6 +35,39 @@ const IconCart = () => (
     <path d="M3 4h2.4l2.2 10.2a1.6 1.6 0 0 0 1.6 1.3h7.2a1.6 1.6 0 0 0 1.6-1.2L19.5 7H6.2" />
     <circle cx="9.2" cy="18.4" r="1.2" />
     <circle cx="16.8" cy="18.4" r="1.2" />
+  </svg>
+);
+
+const IconCalendar = () => (
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="3.5" y="5" width="17" height="15.5" rx="2" />
+    <path d="M7.5 3.5v3M16.5 3.5v3M3.5 9.5h17" />
+  </svg>
+);
+
+const IconPlus = () => (
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+);
+
+const IconMore = () => (
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <circle cx="5" cy="12" r="1.7" />
+    <circle cx="12" cy="12" r="1.7" />
+    <circle cx="19" cy="12" r="1.7" />
+  </svg>
+);
+
+const IconClose = () => (
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+    <path d="M6 6l12 12M18 6L6 18" />
+  </svg>
+);
+
+const IconCheck = () => (
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M5 12.5l4.2 4.2L19 7" />
   </svg>
 );
 
@@ -66,7 +100,8 @@ export function Topbar() {
   const router = useRouter();
   const { user } = useAuth();
   const userId = user?.id ?? null;
-  const { tabs, back } = useTopbar();
+  const { tabs, back, overflowActions } = useTopbar();
+  const [overflowOpen, setOverflowOpen] = useState(false);
   const { count: cartCount } = useCart();
   const [notificationState, setNotificationState] = useState<NotificationState | null>(null);
   const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
@@ -322,7 +357,36 @@ export function Topbar() {
   const unreadNotificationCount = visibleNotifications.filter(n => !seenIds.has(n.id)).length;
   const backLabel = labelForPath(previousPath?.split('?')[0]) ?? back?.label ?? 'Back';
   const mobileTopbarState = getMobileTopbarState(pathname);
+  const isNewCommunityPost = pathname === '/community/new';
+  const isNewPlaylist = pathname === '/library/playlists/new';
+  const mobileTopbarTitle = isNewCommunityPost ? 'New Post' : isNewPlaylist ? 'New Playlist' : getMobileTopbarTitle(pathname);
+  const isCommunityRoot = pathname === '/community';
+  const isAccountRoot = pathname === '/you';
+  const isRadioRoot = pathname === '/radio';
+  const isLibraryRoot = pathname === '/library' || (pathname.startsWith('/library/') && !pathname.startsWith('/library/item/') && !pathname.startsWith('/library/playlists/'));
+  const isDiscoverSurface = pathname === '/' || (pathname.startsWith('/store') && !pathname.startsWith('/store/item/'));
+  const isDetailRoute = mobileTopbarState.mode === 'back' || Boolean(back);
   const hasSectionTabs = Boolean(tabs?.some(tab => tab.variant === 'section'));
+
+  const mobileBackAction = isDetailRoute ? (
+    <button
+      type="button"
+      className="ui44-symbol-button ui44-symbol-button-back os-topbar-back"
+      aria-label={backLabel}
+      title={backLabel}
+      onClick={() => {
+        if (typeof window !== 'undefined' && window.history.length > 1) {
+          router.back();
+          return;
+        }
+        router.push(back?.href ?? (mobileTopbarState.mode === 'back' ? mobileTopbarState.fallbackHref : '/'));
+      }}
+    >
+      <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M13 5l-6 6 6 6" />
+      </svg>
+    </button>
+  ) : null;
 
   function hideNotification(id: string) {
     const next = new Set(hiddenNotificationIds);
@@ -364,6 +428,74 @@ export function Topbar() {
     setSearchKey(query ? `q=${encodeURIComponent(query)}` : '');
     router.push(query ? `/search?q=${encodeURIComponent(query)}` : '/search');
   }, [router]);
+
+  const mobileSearchAction = isDiscoverSurface ? (
+    <button
+      type="button"
+      className="ui44-symbol-button ui44-symbol-button-search os-topbar-icon-button"
+      aria-label="Search"
+      aria-expanded={mobileSearchOpen}
+      onClick={openMobileSearch}
+    >
+      <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
+    </button>
+  ) : null;
+
+  const mobileLeadingAction = isNewCommunityPost ? (
+    <button type="button" className="ui44-symbol-button" aria-label="Cancel new post" title="Cancel" onClick={() => router.push('/community')}>
+      <IconClose />
+    </button>
+  ) : isNewPlaylist ? (
+    <button type="button" className="ui44-symbol-button" aria-label="Cancel new playlist" title="Cancel" onClick={() => router.push('/library')}>
+      <IconClose />
+    </button>
+  ) : isDetailRoute ? mobileBackAction : isCommunityRoot ? (
+    <Link href="/calendar" className="ui44-symbol-button" aria-label="Calendar" title="Calendar">
+      <IconCalendar />
+    </Link>
+  ) : isAccountRoot ? (
+    <Link href="/notifications" className="ui44-symbol-button" aria-label="Notifications" title="Notifications">
+      <IconBell />
+    </Link>
+  ) : isRadioRoot ? (
+    <Link href="/calendar" className="ui44-symbol-button" aria-label="Radio Schedule" title="Radio Schedule">
+      <IconCalendar />
+    </Link>
+  ) : isLibraryRoot ? (
+    <Link href="/library/playlists/new" className="ui44-symbol-button" aria-label="New Playlist" title="New Playlist">
+      <IconPlus />
+    </Link>
+  ) : mobileSearchAction;
+
+  const mobileTrailingAction = isNewCommunityPost ? (
+    <button type="button" className="ui44-symbol-button" aria-label="Post" title="Post" onClick={() => window.dispatchEvent(new CustomEvent('community:new-post-submit'))}>
+      <IconCheck />
+    </button>
+  ) : isNewPlaylist ? (
+    <button type="button" className="ui44-symbol-button" aria-label="Save playlist" title="Save playlist" onClick={() => window.dispatchEvent(new CustomEvent('playlist:create-submit'))}>
+      <IconCheck />
+    </button>
+  ) : isCommunityRoot ? (
+    <Link href="/community/new" className="ui44-symbol-button" aria-label="New Post" title="New Post">
+      <IconPlus />
+    </Link>
+  ) : isAccountRoot ? (
+    <Link href="/settings" className="ui44-symbol-button" aria-label="Settings" title="Settings">
+      <span className="os-icon os-icon-settings os-icon-sm" aria-hidden="true" />
+    </Link>
+  ) : isLibraryRoot ? (
+    <button type="button" className="ui44-symbol-button" aria-label="Filter Library" title="Filter Library" onClick={() => window.dispatchEvent(new CustomEvent('44:toggle-filter-popover', { detail: { label: 'Filter Library' } }))}>
+      <span className="page-filter-icon" aria-hidden="true"><i /><i /><i /></span>
+    </button>
+  ) : isRadioRoot ? (
+    <button type="button" className="ui44-symbol-button" aria-label="More Radio actions" title="More Radio actions" aria-expanded={overflowOpen} onClick={() => setOverflowOpen(open => !open)}>
+      <IconMore />
+    </button>
+  ) : isDetailRoute ? (
+    <button type="button" className="ui44-symbol-button" aria-label="More actions" title="More actions" aria-expanded={overflowOpen} onClick={() => setOverflowOpen(open => !open)}>
+      <IconMore />
+    </button>
+  ) : null;
 
   return (
     <>
@@ -426,6 +558,8 @@ export function Topbar() {
         })}
         </div>
 
+        <MobileToolbar title={mobileTopbarTitle} leading={mobileLeadingAction} trailing={<div className="os-mobile-toolbar-overflow">{mobileTrailingAction}{overflowOpen && overflowActions?.length ? <div className="ui44-paper-menu os-mobile-toolbar-menu" role="menu">{overflowActions.map((action: TopbarOverflowAction) => <button key={action.id} className="ui44-paper-menu-item" type="button" role="menuitem" disabled={action.disabled} onClick={() => { setOverflowOpen(false); action.onSelect?.(); }}>{action.label}</button>)}</div> : null}</div>} />
+
         <div className="os-topbar-right">
         <div className="os-topbar-search os-topbar-search-desktop" ref={searchWrapRef}>
           {searchOpen ? (
@@ -451,17 +585,6 @@ export function Topbar() {
             </button>
           )}
         </div>
-        {mobileTopbarState.mode !== 'search-back' && (
-          <button
-            type="button"
-            className="ui44-symbol-button ui44-symbol-button-search os-topbar-icon-button os-topbar-mobile-search-trigger"
-            aria-label="Search"
-            aria-expanded={mobileSearchOpen}
-            onClick={openMobileSearch}
-          >
-            <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
-          </button>
-        )}
         {mobileTopbarState.mode === 'search-back' && <form
           className="os-topbar-search-mobile"
           role="search"

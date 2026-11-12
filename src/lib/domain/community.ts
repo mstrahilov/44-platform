@@ -42,6 +42,8 @@ type ContentEntryRow = {
   item_id: string | null;
   title: string | null;
   body: string | null;
+  image_url?: string | null;
+  link_url?: string | null;
   slug: string | null;
   content_type: 'discussion' | 'question' | 'collaboration' | 'creator_update';
   publication_status: string;
@@ -71,6 +73,8 @@ function normalizeContentEntry(row: ContentEntryRow): CommunityV11Post {
     item_id: row.item_id,
     title: row.title || row.body?.trim().replace(/\s+/g, ' ').slice(0, 72) || 'Post',
     body: row.body,
+    image_url: row.image_url ?? null,
+    link_url: row.link_url ?? null,
     slug: row.slug,
     status: row.moderation_status === 'visible' ? row.publication_status : row.moderation_status,
     created_at: row.created_at,
@@ -336,6 +340,7 @@ export async function createCommunityPost(input: {
   body: string;
   intent: CommunityIntent;
   references: CommunityReference[];
+  imageUrl?: string | null;
 }) {
   const body = input.body.trim();
   const title = body.replace(/\s+/g, ' ').slice(0, 72) || 'New post';
@@ -381,6 +386,14 @@ export async function createCommunityPost(input: {
     });
     if (created.error) throw created.error;
     entryId = created.data;
+  }
+
+  if (input.imageUrl) {
+    const mediaUpdate = await supabase
+      .from('content_entries')
+      .update({ image_url: input.imageUrl })
+      .eq('id', entryId);
+    if (mediaUpdate.error) throw mediaUpdate.error;
   }
 
   const result = await supabase

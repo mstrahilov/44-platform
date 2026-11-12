@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/useAuth';
 import type { Profile } from '@/lib/platform';
 import { comparePublicCatalogProducts, type Product } from '@/lib/products';
@@ -21,6 +21,7 @@ import { isMissingRelationError } from '@/lib/schemaCompat';
 import { createOrOpenConversation } from '@/lib/messages';
 import { trackProductAchievementTrigger } from '@/lib/achievementTracking';
 import { deleteCommunityDiscussion } from '@/lib/communityStructured';
+import { communityItemReference, inferItemReferences } from '@/lib/communityV11';
 import {
   followProfile,
   getPublicProfile,
@@ -33,9 +34,9 @@ import { ExternalLinkActions } from '@/components/ExternalLinkActions';
 import type { CreatorEvent } from '@/lib/domain/events';
 import { formatEventDate } from '@/lib/eventTime';
 import { beatReviewSurfacesEnabled, hydrateBeatProducts } from '@/lib/domain/beats';
-import { inferItemReferences } from '@/lib/communityV11';
+import { SectionTab, SectionTabs } from '@/components/SectionTabs';
 
-type ProfileTab = 'posts' | 'music' | 'beats' | 'books' | 'sample-packs' | 'games' | 'merch' | 'events';
+type ProfileTab = 'posts' | 'music' | 'videos' | 'beats' | 'books' | 'sample-packs' | 'games' | 'merch' | 'events';
 type CurrentProfileState = {
   userId: string;
   profile: StudioProfile | null;
@@ -54,6 +55,7 @@ function parseProfileTab(value: string | null, isCreator: boolean): ProfileTab |
   if (normalized === 'posts') return 'posts';
   if (!isCreator) return null;
   if (normalized === 'music' || normalized === 'releases' || normalized === 'products') return 'music';
+  if (normalized === 'videos') return 'videos';
   if (normalized === 'beats' && beatReviewSurfacesEnabled) return 'beats';
   if (normalized === 'books') return 'books';
   if (normalized === 'sample-packs' || normalized === 'assets') return 'sample-packs';
@@ -66,6 +68,7 @@ function parseProfileTab(value: string | null, isCreator: boolean): ProfileTab |
 export default function PublicProfilePage() {
   const { username } = useParams<{ username: string }>();
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { user } = useAuth();
   const userId = user?.id ?? null;
@@ -85,7 +88,6 @@ export default function PublicProfilePage() {
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [setupGateOpen, setSetupGateOpen] = useState(false);
-  const profileTabsRef = useRef<HTMLElement>(null);
   const { openContextMenu } = useContextMenu();
 
   useEffect(() => {
@@ -306,19 +308,17 @@ export default function PublicProfilePage() {
     () => {
       if (isCreator) {
         const creatorTabs: Array<{ id: ProfileTab; label: string }> = [];
-        if (generalPosts.length > 0) creatorTabs.push({ id: 'posts', label: 'Posts' });
         if (musicProducts.length > 0) creatorTabs.push({ id: 'music', label: 'Music' });
-        if (beatProducts.length > 0) creatorTabs.push({ id: 'beats', label: 'Beats' });
         if (bookProducts.length > 0) creatorTabs.push({ id: 'books', label: 'Books' });
+        if (beatProducts.length > 0) creatorTabs.push({ id: 'beats', label: 'Beats' });
         if (assetProducts.length > 0) creatorTabs.push({ id: 'sample-packs', label: 'Sample Packs' });
-        if (gameProducts.length > 0) creatorTabs.push({ id: 'games', label: 'Games' });
-        if (merchProducts.length > 0) creatorTabs.push({ id: 'merch', label: 'Merch' });
         if (events.length > 0) creatorTabs.push({ id: 'events', label: 'Events' });
+        if (generalPosts.length > 0) creatorTabs.push({ id: 'posts', label: 'Posts' });
         return creatorTabs;
       }
       return generalPosts.length > 0 ? [{ id: 'posts' as const, label: 'Posts' }] : [];
     },
-    [assetProducts.length, beatProducts.length, bookProducts.length, events.length, gameProducts.length, generalPosts.length, isCreator, merchProducts.length, musicProducts.length],
+    [assetProducts.length, beatProducts.length, bookProducts.length, events.length, generalPosts.length, isCreator, musicProducts.length],
   );
 
   useEffect(() => {
@@ -334,13 +334,17 @@ export default function PublicProfilePage() {
     }
   }, [isCreator, searchParams, tab, tabs]);
 
-  useEffect(() => {
-    if (tabs[0]?.id === tab && profileTabsRef.current) profileTabsRef.current.scrollLeft = 0;
-  }, [tab, tabs]);
-
   const displayName = profile?.display_name ?? profile?.username ?? 'Member';
   const handle = authorHandle(profile ?? undefined);
   const profileHref = profile ? `/profile/${profile.slug || profile.username || profile.id}` : '/community';
+  function selectProfileTab(nextTab: ProfileTab) {
+    setTab(nextTab);
+    const nextParams = new URLSearchParams(searchParams.toString());
+    if (nextTab === 'posts') nextParams.delete('tab');
+    else nextParams.set('tab', nextTab);
+    const query = nextParams.toString();
+    router.replace(`${pathname}${query ? `?${query}` : ''}`, { scroll: false });
+  }
   if (loading) {
     return <PageShell><CenteredMessage status>Loading...</CenteredMessage></PageShell>;
   }
@@ -406,22 +410,18 @@ export default function PublicProfilePage() {
 
           {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div>}
 
-          {tabs.length > 0 && (
-            <div className="social-profile-toolbar">
-              <nav ref={profileTabsRef} className="social-profile-tabs" aria-label="Profile sections" role="tablist">
-                {tabs.map(item => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={tab === item.id}
-                    onClick={() => setTab(item.id)}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </nav>
-            </div>
+          {tabs.length > 1 && (
+            <SectionTabs ariaLabel="Profile sections" className="profile-section-tabs">
+              {tabs.map(item => (
+                <SectionTab
+                  key={item.id}
+                  active={tab === item.id}
+                  onClick={() => selectProfileTab(item.id)}
+                >
+                  {item.label}
+                </SectionTab>
+              ))}
+            </SectionTabs>
           )}
 
         </section>
@@ -431,29 +431,36 @@ export default function PublicProfilePage() {
         )}
 
         {tab === 'posts' && tabs.some(item => item.id === 'posts') && (
-          <section className="social-feed social-profile-posts ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip" aria-label="Posts">
+          <section className="social-feed social-feed-list social-feed-panel social-profile-posts ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip" aria-label="Posts">
             {generalPosts.length ? (
               generalPosts.map(post => (
-                <SocialPostRow
-                  key={post.id}
-                  post={post}
-                  references={inferItemReferences(post.body ?? '', products)}
-                  replyCount={replyCounts[post.id] ?? 0}
-                  likeCount={likeCounts[post.id] ?? 0}
-                  likers={likersMap[post.id] ?? []}
-                  repliers={repliersMap[post.id] ?? []}
-                  liked={likedIds.has(post.id)}
-                  onLike={() => { void toggleLike(post); }}
-                  disabled={likingId === post.id}
-                  onDelete={async () => {
-                    if (!user || post.author_id !== user.id) return;
-                    if (!window.confirm('Delete this post? This cannot be undone.')) return;
-                    const { error: deleteError } = await deleteCommunityDiscussion({ discussionId: post.id, ownerId: user.id });
-                    if (deleteError) { setError(deleteError.message); return; }
-                    setPosts(current => current.filter(p => p.id !== post.id));
-                  }}
-                  canDelete={Boolean(user && post.author_id === user.id)}
-                />
+                <div key={post.id} className="social-feed-post">
+                  <SocialPostRow
+                    post={post}
+                    references={[
+                      ...(post.item_id
+                        ? products.filter(product => product.id === post.item_id).map(communityItemReference)
+                        : []),
+                      ...inferItemReferences(post.body ?? '', products),
+                    ].filter((reference, index, all) => all.findIndex(candidate => candidate.kind === reference.kind && candidate.id === reference.id) === index)}
+                    replyCount={replyCounts[post.id] ?? 0}
+                    likeCount={likeCounts[post.id] ?? 0}
+                    likers={likersMap[post.id] ?? []}
+                    repliers={repliersMap[post.id] ?? []}
+                    liked={likedIds.has(post.id)}
+                    onLike={() => { void toggleLike(post); }}
+                    disabled={likingId === post.id}
+                    onDelete={async () => {
+                      if (!user || post.author_id !== user.id) return;
+                      if (!window.confirm('Delete this post? This cannot be undone.')) return;
+                      const { error: deleteError } = await deleteCommunityDiscussion({ discussionId: post.id, ownerId: user.id });
+                      if (deleteError) { setError(deleteError.message); return; }
+                      setPosts(current => current.filter(p => p.id !== post.id));
+                    }}
+                    canDelete={Boolean(user && post.author_id === user.id)}
+                    showAuthorHandle={false}
+                  />
+                </div>
               ))
             ) : (
               <div className="app-empty-text">No posts yet.</div>
@@ -473,6 +480,10 @@ export default function PublicProfilePage() {
               />
             ))}
           </ArtifactGrid>
+        )}
+
+        {tab === 'videos' && (
+          <div className="app-empty-text" aria-label="Videos">Videos are coming soon.</div>
         )}
 
         {tab === 'beats' && (

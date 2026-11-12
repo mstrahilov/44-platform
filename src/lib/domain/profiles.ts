@@ -73,10 +73,12 @@ export async function getPublicProfileContent(profile: Profile) {
       .eq('author_id', profile.id)
       .order('created_at', { ascending: false }),
     supabase
-      .from('community_discussions')
-      .select('*, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type)')
+      .from('content_entries')
+      .select('*, status:publication_status, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type)')
       .in('author_id', ids)
-      .eq('status', 'published')
+      .eq('content_type', 'discussion')
+      .eq('publication_status', 'published')
+      .eq('moderation_status', 'visible')
       .order('created_at', { ascending: false }),
     supabase
       .from('profile_external_links')

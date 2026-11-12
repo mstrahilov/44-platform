@@ -81,6 +81,17 @@ export function inferCommunityIntent(post: CommunityV11Post): CommunityIntent {
   return 'general';
 }
 
+export function communityItemReference(item: Item): CommunityReference {
+  return {
+    id: item.id,
+    kind: 'item',
+    label: item.title,
+    href: `/store/item/${item.slug || item.id}`,
+    imageUrl: item.cover_url || item.hero_url,
+    secondary: [item.item_type, item.creators?.display_name || item.creator].filter(Boolean).join(' · '),
+  };
+}
+
 export function inferItemReferences(
   body: string,
   items: Item[],
@@ -102,14 +113,7 @@ export function inferItemReferences(
       }
       return false;
     })
-    .map<CommunityReference>(item => ({
-      id: item.id,
-      kind: 'item',
-      label: item.title,
-      href: `/store/item/${item.slug || item.id}`,
-      imageUrl: item.cover_url || item.hero_url,
-      secondary: [item.item_type, item.creators?.display_name || item.creator].filter(Boolean).join(' · '),
-    }));
+    .map(communityItemReference);
 }
 
 export function listLocalCommunityPosts() {

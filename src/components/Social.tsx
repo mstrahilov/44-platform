@@ -20,24 +20,44 @@ function escapeSocialReference(value: string) {
 }
 
 function SocialFallbackRichText({ text, keyPrefix = '' }: { text: string; keyPrefix?: string }) {
-  const parts = text.split(/([@#][a-zA-Z0-9_]+)/g);
+  const parts = text.split(/((?:https?:\/\/|www\.)[^\s]+)/g);
   return (
     <>
       {parts.map((part, index) => {
         if (!part) return null;
-        const href = socialTokenHref(part);
-        return href ? (
-          <Link
-            key={`${keyPrefix}${part}-${index}`}
-            href={href}
-            className="social-rich-link"
-            onClick={event => event.stopPropagation()}
-          >
-            {part}
-          </Link>
-        ) : (
-          <span key={`${keyPrefix}${part}-${index}`}>{part}</span>
-        );
+        if (/^(?:https?:\/\/|www\.)/i.test(part)) {
+          const href = part.startsWith('www.') ? `https://${part}` : part;
+          return (
+            <a
+              key={`${keyPrefix}url-${index}`}
+              href={href}
+              className="social-rich-link social-rich-external"
+              target="_blank"
+              rel="noreferrer"
+              onClick={event => event.stopPropagation()}
+            >
+              {part}
+            </a>
+          );
+        }
+        const tokenParts = part.split(/([@#][a-zA-Z0-9_]+)/g);
+        if (tokenParts.length === 1) return <span key={`${keyPrefix}${part}-${index}`}>{part}</span>;
+        return tokenParts.map((tokenPart, tokenIndex) => {
+          if (!tokenPart) return null;
+          const tokenHref = socialTokenHref(tokenPart);
+          return tokenHref ? (
+            <Link
+              key={`${keyPrefix}${tokenPart}-${index}-${tokenIndex}`}
+              href={tokenHref}
+              className="social-rich-link social-rich-person"
+              onClick={event => event.stopPropagation()}
+            >
+              {tokenPart}
+            </Link>
+          ) : (
+            <span key={`${keyPrefix}${part}-${index}-${tokenIndex}`}>{tokenPart}</span>
+          );
+        });
       })}
     </>
   );
@@ -62,11 +82,14 @@ export function SocialRichText({ text, references = [] }: { text: string; refere
         if (!part) return null;
         const reference = referenceByAlias.get(part.toLocaleLowerCase());
         if (!reference) return <SocialFallbackRichText key={`plain-${index}`} text={part} keyPrefix={`${index}-`} />;
+        if (reference.kind === 'item') {
+          return <span key={`${reference.kind}-${reference.id}-${index}`}>{reference.label}</span>;
+        }
         return (
           <Link
             key={`${reference.kind}-${reference.id}-${index}`}
             href={reference.href}
-            className="social-rich-link social-rich-reference"
+            className="social-rich-link social-rich-reference social-rich-person"
             data-reference-kind={reference.kind}
             onClick={event => event.stopPropagation()}
           >
@@ -75,6 +98,31 @@ export function SocialRichText({ text, references = [] }: { text: string; refere
         );
       })}
     </>
+  );
+}
+
+function SocialAttachedItemCard({ reference }: { reference: CommunityReference }) {
+  const itemType = reference.secondary?.split(' · ')[0]?.trim() || 'Release';
+  return (
+    <Link
+      href={reference.href}
+      className="social-attached-item-card"
+      onClick={event => event.stopPropagation()}
+    >
+      <span className="social-attached-item-art" aria-hidden="true">
+        {reference.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={reference.imageUrl} alt="" />
+        ) : null}
+      </span>
+      <span className="social-attached-item-copy">
+        <span className="social-attached-item-title">{reference.label}</span>
+        <span className="social-attached-item-type">{itemType}</span>
+      </span>
+      <svg className="social-attached-item-chevron" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="m9 18 6-6-6-6" />
+      </svg>
+    </Link>
   );
 }
 
@@ -106,12 +154,14 @@ export function SocialAuthorLine({
   meta,
   trailing,
   handleOnly = false,
+  showHandle = true,
 }: {
   author?: Partial<SocialAuthor> | null;
   createdAt?: string | null;
   meta?: ReactNode;
   trailing?: ReactNode;
   handleOnly?: boolean;
+  showHandle?: boolean;
 }) {
   const handle = authorHandle(author);
   const href = authorHref(author);
@@ -127,7 +177,7 @@ export function SocialAuthorLine({
           <Link className="social-author-name" href={href} onClick={event => event.stopPropagation()}>
             {nameContent}
           </Link>
-          {handle && <span className="social-handle">@{handle}</span>}
+          {showHandle && handle && <span className="social-handle">@{handle}</span>}
         </>
       )}
       {createdAt && (
@@ -223,16 +273,10 @@ export function SocialMoreButton({
   );
 }
 
-export function wasSocialContentEdited(createdAt?: string | null, updatedAt?: string | null) {
-  if (!createdAt || !updatedAt) return false;
-  const created = new Date(createdAt).getTime();
-  const updated = new Date(updatedAt).getTime();
-  return Number.isFinite(created) && Number.isFinite(updated) && updated - created > 1_000;
-}
-
 export function SocialPostRow({
   post,
   replyCount = 0,
+  likeCount = 0,
   liked = false,
   onLike,
   onDelete,
@@ -265,6 +309,9 @@ export function SocialPostRow({
   replyId,
   rowClassName,
   contentLabel = 'Post',
+  showAuthorHandle = true,
+  metaPlacement = 'header',
+  showAttachedItemCard = true,
 }: {
   post: SocialPost | SocialReply;
   replyCount?: number;
@@ -303,6 +350,9 @@ export function SocialPostRow({
   replyId?: string;
   rowClassName?: string;
   contentLabel?: 'Post' | 'Reply';
+  showAuthorHandle?: boolean;
+  metaPlacement?: 'header' | 'actions';
+  showAttachedItemCard?: boolean;
 }) {
   const router = useRouter();
   const { openContextMenu, showCopiedToast } = useContextMenu();
@@ -314,6 +364,9 @@ export function SocialPostRow({
     : communityThreadHref(post));
   const authorLink = authorHref(author);
   const authorName = authorDisplayName(author);
+  const attachedItem = showAttachedItemCard && !isReply
+    ? references.find(reference => reference.kind === 'item')
+    : undefined;
   const bodyRef = useRef<HTMLParagraphElement>(null);
   const [bodyOverflowing, setBodyOverflowing] = useState(false);
 
@@ -391,10 +444,10 @@ export function SocialPostRow({
 
   const publicMenuEntries: ContextMenuEntry[] = [
     { id: 'copy-link', label: 'Copy Link', onSelect: copyPostLink },
+    ...(canEdit && onEdit ? [{ id: 'edit', label: `Edit ${contentLabel}`, onSelect: onEdit }] as ContextMenuEntry[] : []),
+    ...(canDelete && onDelete ? [{ id: 'delete', label: `Delete ${contentLabel}`, onSelect: onDelete, danger: true }] as ContextMenuEntry[] : []),
     ...(onReport ? [{ id: 'report', label: 'Report', onSelect: onReport }] as ContextMenuEntry[] : []),
   ];
-  const edited = wasSocialContentEdited(post.created_at, post.updated_at);
-
   return (
     <article
       id={articleId}
@@ -426,12 +479,19 @@ export function SocialPostRow({
           <SocialAuthorLine
             author={author}
             createdAt={post.created_at}
-            handleOnly={handleOnly}
-            meta={meta}
+            handleOnly={handleOnly && showAuthorHandle}
+            showHandle={showAuthorHandle}
+            meta={metaPlacement === 'header' ? meta : undefined}
             trailing={<SocialMoreButton label={`${contentLabel} options`} entries={publicMenuEntries} />}
           />
         </div>
         <div className="ui44-community-content">
+          {!isReply && post.image_url ? (
+            <div className="community-post-image">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={post.image_url} alt="" loading="lazy" />
+            </div>
+          ) : null}
           {showTitle && (
             <h2 className={titleSize === 'lg' ? 'social-row-title social-row-title-lg' : 'social-row-title'}>
               {'title' in post ? post.title : ''}
@@ -487,6 +547,7 @@ export function SocialPostRow({
               ) : null}
             </>
           )}
+          {attachedItem && <SocialAttachedItemCard reference={attachedItem} />}
         </div>
         <div className="social-actions ui44-community-actions" onClick={stopRowNavigation}>
           {onLike ? (
@@ -499,10 +560,12 @@ export function SocialPostRow({
               aria-label={liked ? 'Unlike' : 'Like'}
             >
               <LikeActionContent filled={liked} />
+              {likeCount > 0 && <span className="social-action-count">{likeCount}</span>}
             </button>
           ) : (
             <span className="social-action social-action-like ui44-row-action" data-liked={liked ? 'true' : 'false'} aria-label={liked ? 'Liked' : 'Like'}>
               <LikeActionContent filled={liked} />
+              {likeCount > 0 && <span className="social-action-count">{likeCount}</span>}
             </span>
           )}
           {onReplyClick ? (
@@ -524,30 +587,10 @@ export function SocialPostRow({
               {replyCount > 0 && <span className="social-action-count">{replyCount}</span>}
             </Link>
           )}
-          {!editing && canEdit && onEdit && (
-            <button
-              type="button"
-              className="social-action social-action-flush ui44-row-action ui44-row-action-edit"
-              onClick={onEdit}
-              aria-label={`Edit ${contentLabel.toLowerCase()}`}
-            >
-              <SocialPencilIcon />
-            </button>
-          )}
-          {!editing && canDelete && onDelete && (
-            <button
-              type="button"
-              className="social-action social-action-danger ui44-row-action ui44-row-action-delete"
-              onClick={onDelete}
-              aria-label={`Delete ${contentLabel.toLowerCase()}`}
-            >
-              <TrashIcon />
-            </button>
-          )}
-          {!canEdit && edited && <span className="community-edited-label">Edited</span>}
-          {!canEdit && !canDelete && (
-            <span className="social-action-more-mobile">
-              <SocialMoreButton label={`${contentLabel} options`} entries={publicMenuEntries} />
+          {metaPlacement === 'actions' && meta && (
+            <span className="community-post-tag">
+              <span aria-hidden="true">#</span>
+              {meta}
             </span>
           )}
         </div>
