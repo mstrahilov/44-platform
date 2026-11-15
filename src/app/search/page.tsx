@@ -54,6 +54,7 @@ function SearchContent() {
   const router = useRouter();
   const { user } = useAuth();
   const query = searchParams.get('q')?.trim() ?? '';
+  const memberScope = searchParams.get('scope') === 'members';
   const [draft, setDraft] = useState(query);
   const [products, setProducts] = useState<Product[]>([]);
   const [posts, setPosts] = useState<SocialPost[]>([]);
@@ -61,12 +62,12 @@ function SearchContent() {
   const [replies, setReplies] = useState<ReplyEngagerRow[]>([]);
   const [likes, setLikes] = useState<LikeRow[]>([]);
   const [likingId, setLikingId] = useState('');
-  const [loading, setLoading] = useState(Boolean(query));
+  const [loading, setLoading] = useState(Boolean(query || memberScope));
   const [ownedProductIds, setOwnedProductIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let alive = true;
-    if (!query) {
+    if (!query && !memberScope) {
       Promise.resolve().then(() => {
         if (alive) setLoading(false);
       });
@@ -86,7 +87,7 @@ function SearchContent() {
       setLoading(false);
     });
     return () => { alive = false; };
-  }, [query]);
+  }, [memberScope, query]);
 
   useEffect(() => {
     Promise.resolve().then(() => setDraft(query));
@@ -125,8 +126,10 @@ function SearchContent() {
     [posts, query],
   );
   const profileMatches = useMemo(
-    () => profiles.filter(profile => profileMatchesQuery(profile, query)).slice(0, 8),
-    [profiles, query],
+    () => profiles
+      .filter(profile => (!memberScope || Boolean(profile.avatar_url)) && profileMatchesQuery(profile, query))
+      .slice(0, memberScope ? 100 : 8),
+    [memberScope, profiles, query],
   );
   const supportMatches = useMemo(() => searchSupportArticles(query, 8), [query]);
   const hasResults = productMatches.length + postMatches.length + profileMatches.length + supportMatches.length > 0;
@@ -159,7 +162,7 @@ function SearchContent() {
       <main className="app-page search-page">
         <HubHero
           title="Search"
-          copy={query ? `Results for "${query}".` : 'Find items, creators, posts, questions, and collaborations.'}
+          copy={memberScope ? 'Browse members with profile photos.' : query ? `Results for "${query}".` : 'Find items, creators, posts, questions, and collaborations.'}
         />
 
         <form className="page-search-control search-page-form ui44-composed-field ui44-composed-field-search" onSubmit={submitSearch} role="search">
@@ -175,13 +178,27 @@ function SearchContent() {
 
         {loading ? (
           <EmptyMessage status>Searching...</EmptyMessage>
-        ) : !query ? (
+        ) : !query && !memberScope ? (
           <EmptyMessage>Enter any term to start a search.</EmptyMessage>
         ) : !hasResults ? (
           <EmptyMessage>No results found.</EmptyMessage>
         ) : (
           <>
-            {productMatches.length > 0 && (
+            {memberScope ? (
+              <HubSection title="Members">
+                <div className="search-profile-list ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
+                  {profileMatches.map(profile => (
+                    <Link key={profile.id} href={creatorHref(profile)} className="search-profile-row ui44-list-row ui44-list-row-profile ui44-list-row-interactive">
+                      <SocialAvatar profile={profile} />
+                      <span className="search-profile-copy">
+                        <span className="social-author-name">{profile.display_name || profile.username || '44 Member'}</span>
+                        {profile.username && <span className="social-handle">@{profile.username}</span>}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </HubSection>
+            ) : productMatches.length > 0 && (
               <HubSection title="Items">
                 <ProductGrid>
                   {productMatches.map(product => (
@@ -191,7 +208,7 @@ function SearchContent() {
               </HubSection>
             )}
 
-            {profileMatches.length > 0 && (
+            {!memberScope && profileMatches.length > 0 && (
               <HubSection title="Creators">
                 <div className="search-profile-list ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
                   {profileMatches.map(profile => (

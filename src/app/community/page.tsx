@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
@@ -38,6 +39,7 @@ import {
   type CommunityReferenceOption,
 } from '@/lib/domain/community';
 import { listPublishedCatalogItems } from '@/lib/domain/catalog';
+import { listRecentCommunityMembers } from '@/lib/domain/profiles';
 import { localMaskPreviewEnabled, localMaskProduct } from '@/lib/localMaskPreview';
 import type { Item } from '@/lib/products';
 import {
@@ -142,6 +144,7 @@ function CommunityPageContent() {
   const userId = user?.id ?? null;
   const [posts, setPosts] = useState<CommunityV11Post[]>([]);
   const [items, setItems] = useState<Item[]>([]);
+  const [recentMembers, setRecentMembers] = useState<Awaited<ReturnType<typeof listRecentCommunityMembers>>>([]);
   const [postsLoading, setPostsLoading] = useState(true);
   const [replyCounts, setReplyCounts] = useState<CountMap>({});
   const [repliersMap, setRepliersMap] = useState<LikersMap>({});
@@ -223,6 +226,7 @@ function CommunityPageContent() {
         }))).filter(reply => Boolean(reply.author_id));
         setPosts(sortPosts([...localPosts, ...feed.posts]));
         setItems(nextItems);
+        void listRecentCommunityMembers().then(setRecentMembers).catch(() => setRecentMembers([]));
         setReplyCounts({
           ...countById(feed.replies, 'post_id'),
           ...countById(localReplyRows, 'post_id'),
@@ -632,49 +636,72 @@ function CommunityPageContent() {
           </div>
         )}
 
-        <section className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip social-feed social-feed-list social-feed-panel" aria-label="Community feed">
-          {postsLoading ? (
-            <div className="dashboard-empty ui44-state ui44-state-loading" role="status" aria-live="polite">Loading posts...</div>
-          ) : visiblePosts.length === 0 ? (
-            <div className="dashboard-empty">
-              {postFilter === 'following' ? 'No posts from people you follow yet.' : `No ${activeIntent === 'all' ? 'posts' : INTENT_TABS.find(tab => tab.id === activeIntent)?.label.toLocaleLowerCase()} yet.`}
-            </div>
-          ) : (
-            visiblePosts.map(post => {
-              const intent = inferCommunityIntent(post);
-              return (
-                <div key={post.id} className="social-feed-post" data-community-intent={intent}>
-                  <SocialPostRow
-                    post={post}
-                    replyCount={replyCounts[post.id] ?? 0}
-                    likeCount={likeCounts[post.id] ?? 0}
-                    likers={likersMap[post.id] ?? []}
-                    repliers={repliersMap[post.id] ?? []}
-                    liked={likedIds.has(post.id)}
-                    onLike={() => { void toggleLike(post); }}
-                    onDelete={() => { void deletePost(post); }}
-                    onEdit={() => beginEditingPost(post)}
-                    onReport={() => openPostReport(post)}
-                    canDelete={Boolean(user && post.author_id === user.id)}
-                    canEdit={Boolean(user && post.author_id === user.id)}
-                    disabled={likingId === post.id}
-                    meta={intent === 'general' ? undefined : <span className="community-intent-label">{COMMUNITY_INTENT_LABELS[intent]}</span>}
-                    metaPlacement="actions"
-                    references={referencesForPost(post)}
-                    editing={editingPostId === post.id}
-                    rowClassName="community-post-card"
-                    showAuthorHandle={false}
-                    editBody={editingPostId === post.id ? editBody : post.body ?? ''}
-                    editSaving={editSaving && editingPostId === post.id}
-                    onEditBodyChange={setEditBody}
-                    onSaveEdit={() => { void savePostEdit(post); }}
-                    onCancelEdit={cancelEditingPost}
-                  />
-                </div>
-              );
-            })
-          )}
-        </section>
+        <div className="community-v11-content-grid">
+          <section className="community-v11-main-column dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip social-feed social-feed-list social-feed-panel" aria-label="Community feed">
+            {postsLoading ? (
+              <div className="dashboard-empty ui44-state ui44-state-loading" role="status" aria-live="polite">Loading posts...</div>
+            ) : visiblePosts.length === 0 ? (
+              <div className="dashboard-empty">
+                {postFilter === 'following' ? 'No posts from people you follow yet.' : `No ${activeIntent === 'all' ? 'posts' : INTENT_TABS.find(tab => tab.id === activeIntent)?.label.toLocaleLowerCase()} yet.`}
+              </div>
+            ) : (
+              visiblePosts.map(post => {
+                const intent = inferCommunityIntent(post);
+                return (
+                  <div key={post.id} className="social-feed-post" data-community-intent={intent}>
+                    <SocialPostRow
+                      post={post}
+                      replyCount={replyCounts[post.id] ?? 0}
+                      likeCount={likeCounts[post.id] ?? 0}
+                      likers={likersMap[post.id] ?? []}
+                      repliers={repliersMap[post.id] ?? []}
+                      liked={likedIds.has(post.id)}
+                      onLike={() => { void toggleLike(post); }}
+                      onDelete={() => { void deletePost(post); }}
+                      onEdit={() => beginEditingPost(post)}
+                      onReport={() => openPostReport(post)}
+                      canDelete={Boolean(user && post.author_id === user.id)}
+                      canEdit={Boolean(user && post.author_id === user.id)}
+                      disabled={likingId === post.id}
+                      meta={intent === 'general' ? undefined : <span className="community-intent-label">{COMMUNITY_INTENT_LABELS[intent]}</span>}
+                      metaPlacement="actions"
+                      references={referencesForPost(post)}
+                      editing={editingPostId === post.id}
+                      rowClassName="community-post-card"
+                      showAuthorHandle={false}
+                      editBody={editingPostId === post.id ? editBody : post.body ?? ''}
+                      editSaving={editSaving && editingPostId === post.id}
+                      onEditBodyChange={setEditBody}
+                      onSaveEdit={() => { void savePostEdit(post); }}
+                      onCancelEdit={cancelEditingPost}
+                    />
+                  </div>
+                );
+              })
+            )}
+          </section>
+          <aside className="community-v11-aside" aria-label="New members">
+            <section className="community-v11-members-panel ui44-panel ui44-panel-glass">
+              <h2>New members</h2>
+              <div className="community-v11-member-list">
+                {recentMembers.map(member => {
+                  const profilePath = `/profile/${member.username || member.slug || member.id}`;
+                  return (
+                    <Link key={member.id} href={profilePath} className="community-v11-member">
+                      <SocialAvatar profile={member} />
+                      <span className="community-v11-member-copy">
+                        <strong>{member.display_name || member.username || '44 member'}</strong>
+                        <small>@{member.username || member.slug || 'member'}</small>
+                      </span>
+                    </Link>
+                  );
+                })}
+                {recentMembers.length === 0 && <p className="community-v11-members-empty">New members will appear here.</p>}
+              </div>
+              <Link href="/search?scope=members" className="community-v11-members-view-all">View all</Link>
+            </section>
+          </aside>
+        </div>
       </main>
       <CommunitySetupGate open={setupGateOpen} onClose={() => setSetupGateOpen(false)} />
       <CommunityReportDialog target={reportTarget} onClose={() => setReportTarget(null)} />

@@ -32,6 +32,17 @@ export async function getOwnProfile(userId: string) {
   return result.data as Profile | null;
 }
 
+export async function listRecentCommunityMembers(limit = 8) {
+  const result = await supabase
+    .from('profiles')
+    .select('id,slug,username,display_name,avatar_url,created_at')
+    .not('avatar_url', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (result.error) throw result.error;
+  return (result.data ?? []) as Array<Pick<Profile, 'id' | 'slug' | 'username' | 'display_name' | 'avatar_url'> & { created_at: string }>;
+}
+
 export async function updateOwnProfile(userId: string, payload: Database['public']['Tables']['profiles']['Update']) {
   const result = await supabase.from('profiles').update(payload).eq('id', userId);
   if (result.error) throw result.error;

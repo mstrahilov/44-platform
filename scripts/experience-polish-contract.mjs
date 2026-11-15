@@ -113,10 +113,10 @@ assert.ok(
     && accountMessagesIndex < accountAdminIndex
     && accountAdminIndex < accountTeamIndex
     && accountTeamIndex < accountSettingsIndex,
-  'Account orders role-gated Admin or Team between Messages and Settings',
+  'Account orders role-gated Admin and Team destinations between Messages and Settings',
 );
 assert.doesNotMatch(youApp, /href: '\/(?:notifications|support)'/, 'Account omits Notifications and Support from its focused destination list');
-assert.match(youApp, /profile\?\.role === 'admin'[\s\S]*href: '\/admin'[\s\S]*hasTeamAccess[\s\S]*href: '\/team'/, 'Account exposes Admin or Team only after the matching capability check');
+assert.match(youApp, /profile\?\.role === 'admin'[\s\S]*href: '\/admin'[\s\S]*href: '\/team'/, 'Account exposes both Admin and inherited Team destinations for administrators');
 assert.doesNotMatch(youApp, /HubHero title=\{`Welcome,/, 'Account no longer duplicates the personalized Home greeting');
 assert.match(youApp, /you-mobile-identity[\s\S]*<SocialAvatar[\s\S]*<h1>\{displayName\}<\/h1>/, 'Account leads with the centered avatar and name identity');
 assert.match(youApp, /<\/nav>[\s\S]*className="you-logout-action"[\s\S]*>Log Out<\/button>/, 'Log Out sits separately beneath the Account menu');
@@ -270,6 +270,9 @@ assert.match(welcomeApp, /Creator setup is open\. Publishing remains locked unti
 assert.match(welcomeApp, /MEMBER_GUIDE[\s\S]*CREATOR_GUIDE[\s\S]*Right-click/, 'Welcome provides concise Member and Creator guidance plus the desktop interaction hint');
 assert.match(canonicalCss, /:is\(\.ui44-section-header, \.hub-section-head\) \{[\s\S]*align-items: center;/, 'shared section actions center on the title row');
 assert.match(canonicalCss, /\.store-app-page \.page-filter-menu \{\s*margin-right: 0;/, 'desktop Store filters align with the Topbar action column');
+assert.match(canonicalCss, /@media \(min-width: 769px\) \{[\s\S]*\.community-app-page\.community-v11-page[\s\S]*\.community-post-image \{[\s\S]*width: fit-content;[\s\S]*max-width: min\(100%, 720px\)[\s\S]*overflow: hidden;/, 'desktop Community images use a shrink-wrapped bounded post surface');
+assert.match(canonicalCss, /\.community-post-image img \{[\s\S]*width: auto;[\s\S]*max-width: 100%;[\s\S]*height: auto;[\s\S]*object-fit: contain;/, 'desktop Community images preserve their intrinsic aspect ratio');
+assert.match(canonicalCss, /\.community-app-page\.community-v11-page[\s\S]*\.social-attached-item-card \{[\s\S]*grid-template-columns: 64px minmax\(0, 1fr\) 24px;[\s\S]*text-decoration: none;/, 'desktop Community release mentions use a bounded attachment card');
 assert.match(legacyTrackRepairMigration, /62277a2a-f9cf-4e3b-9a29-09deb03bb512[\s\S]*1783191107348-01-touch-feat\.-kholor-\.mp3/, 'the legacy touch track repair targets the verified replacement object');
 assert.match(legacyTrackRepairMigration, /ad7f8882-b3e2-55ab-8359-d11fedb83f42[\s\S]*07\.%20Where%20You%20At'/, 'the legacy Where You At track repair removes the URL-breaking question mark');
 assert.match(legacyTrackRepairMigration, /0025cb74-5e4b-4f36-9dc6-fea8f09759ba[\s\S]*duration_seconds = 155/, 'GET OUT receives its measured source-file duration');

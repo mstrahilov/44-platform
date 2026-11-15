@@ -4396,6 +4396,117 @@ body:is(.theme-dark, .theme-light) .social-feed-panel.ui44-panel > .social-feed-
   border-top: 1px solid var(--44ui-panel-border);
 }
 
+/* Desktop Community media stays inside the post content instead of allowing
+   an intrinsic image size to expand the feed. The 720px cap follows the
+   existing readable-form convention while narrower desktop windows remain
+   fluid. Mobile keeps its reviewed full-width treatment below. */
+@media (min-width: 769px) {
+  body:is(.theme-dark, .theme-light)
+    .community-app-page.community-v11-page
+    .community-post-image {
+    display: block;
+    width: fit-content;
+    max-width: min(100%, 720px);
+    margin: 0 0 12px;
+    overflow: hidden;
+    border: 1px solid var(--44ui-panel-border);
+    border-radius: 18px;
+    background: var(--44ui-material-glass);
+  }
+
+  body:is(.theme-dark, .theme-light)
+    .community-app-page.community-v11-page
+    .community-post-image img {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+  }
+
+  body:is(.theme-dark, .theme-light)
+    .community-app-page.community-v11-page
+    .social-attached-item-card {
+    display: grid;
+    width: min(100%, 720px);
+    max-width: 100%;
+    grid-template-columns: 64px minmax(0, 1fr) 24px;
+    align-items: center;
+    column-gap: 14px;
+    min-width: 0;
+    margin-top: 4px;
+    padding: 10px;
+    border: 1px solid var(--44ui-panel-border);
+    border-radius: 16px;
+    background: var(--44ui-material-glass);
+    color: var(--os-color-ink);
+    text-decoration: none;
+  }
+
+  body:is(.theme-dark, .theme-light)
+    .community-app-page.community-v11-page
+    .social-attached-item-art {
+    display: block;
+    width: 64px;
+    height: 64px;
+    overflow: hidden;
+    border-radius: 10px;
+    background: var(--os-color-paper);
+  }
+
+  body:is(.theme-dark, .theme-light)
+    .community-app-page.community-v11-page
+    .social-attached-item-art img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  body:is(.theme-dark, .theme-light)
+    .community-app-page.community-v11-page
+    .social-attached-item-copy {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+  }
+
+  body:is(.theme-dark, .theme-light)
+    .community-app-page.community-v11-page
+    :is(.social-attached-item-title, .social-attached-item-type) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  body:is(.theme-dark, .theme-light)
+    .community-app-page.community-v11-page
+    .social-attached-item-title {
+    color: var(--os-color-ink);
+    font: 650 16px/21px var(--44ui-font-app);
+  }
+
+  body:is(.theme-dark, .theme-light)
+    .community-app-page.community-v11-page
+    .social-attached-item-type {
+    color: var(--os-color-ink-muted);
+    font: 400 14px/19px var(--44ui-font-app);
+  }
+
+  body:is(.theme-dark, .theme-light)
+    .community-app-page.community-v11-page
+    .social-attached-item-chevron {
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: var(--os-color-ink-muted);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
+  }
+}
+
 @media (max-width: 768px) {
   body:is(.theme-dark, .theme-light) .social-row.ui44-list-row-community {
     padding: 16px;
@@ -8815,6 +8926,108 @@ body:is(.theme-dark, .theme-light)
 /* 44OS 1.1 Community root: one audience, four intent lenses, one composer. */
 body:is(.theme-dark, .theme-light) .community-v11-page {
   gap: 24px;
+}
+
+@media (max-width: 1099px) {
+  body:is(.theme-dark, .theme-light) .community-v11-aside {
+    display: none;
+  }
+}
+
+@media (min-width: 1100px) {
+  body:is(.theme-dark, .theme-light) .community-app-page.community-v11-page {
+    width: min(100%, 1420px);
+    max-width: 1420px;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-v11-content-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    align-items: start;
+    gap: 32px;
+    min-width: 0;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-v11-main-column {
+    min-width: 0;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-v11-aside {
+    position: sticky;
+    top: 24px;
+    min-width: 0;
+    align-self: start;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-v11-members-panel {
+    padding: 22px 20px;
+    max-height: calc(100vh - 48px);
+    overflow: auto;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-v11-members-panel h2 {
+    margin: 0 0 18px;
+    color: var(--os-color-ink);
+    font: 700 18px/24px var(--44ui-font-app);
+  }
+
+  body:is(.theme-dark, .theme-light) .community-v11-member-list {
+    display: grid;
+    gap: 16px;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-v11-member {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-v11-member .social-avatar {
+    width: 40px;
+    height: 40px;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-v11-member-copy {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-v11-member-copy strong,
+  body:is(.theme-dark, .theme-light) .community-v11-member-copy small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-v11-member-copy strong {
+    color: var(--os-color-ink);
+    font: 650 14px/18px var(--44ui-font-app);
+  }
+
+  body:is(.theme-dark, .theme-light) .community-v11-member-copy small,
+  body:is(.theme-dark, .theme-light) .community-v11-members-empty {
+    margin: 0;
+    color: var(--os-color-ink-muted);
+    font: 400 13px/17px var(--44ui-font-app);
+  }
+
+  body:is(.theme-dark, .theme-light) .community-v11-members-view-all {
+    display: inline-flex;
+    margin-top: 20px;
+    padding-bottom: 4px;
+    color: var(--os-color-accent);
+    font: 700 14px/20px var(--44ui-font-app);
+    text-decoration: none;
+  }
+
+  body:is(.theme-dark, .theme-light) .community-v11-members-view-all:hover {
+    text-decoration: underline;
+  }
 }
 
 body:is(.theme-dark, .theme-light) .community-v11-opening {
