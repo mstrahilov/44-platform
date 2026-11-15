@@ -102,10 +102,10 @@ export function YouApp() {
       description: 'Manage people, content, and operations',
       iconClass: 'os-icon-dashboard',
     }] : hasTeamAccess ? [{
-      href: '/team',
-      label: 'Team',
-      description: 'Open the private Team workspace',
-      iconClass: 'os-icon-friends',
+      href: '/team/brand',
+      label: 'Handbook',
+      description: 'Open the private Team handbook',
+      iconClass: 'os-icon-document',
     }] : []),
     {
       href: '/settings',

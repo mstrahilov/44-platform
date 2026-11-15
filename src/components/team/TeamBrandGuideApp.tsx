@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { PageShell } from '@/components/Ui';
 import { TeamAccessBoundary } from '@/components/team/TeamPrimitives';
 import { teamBearerToken } from '@/lib/domain/team';
@@ -122,6 +123,7 @@ function DeveloperSystemShowcase() {
 }
 
 function BrandGuide() {
+  const searchParams = useSearchParams();
   const [markdown, setMarkdown] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -170,6 +172,12 @@ function BrandGuide() {
       setKitMessage(downloadError instanceof Error ? downloadError.message : 'The Brand Kit could not be downloaded.');
     } finally { setDownloading(false); }
   }
+
+  useEffect(() => {
+    if (loading || searchParams.get('download') !== '1') return;
+    const timer = window.setTimeout(() => { void downloadKit(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [loading, searchParams]);
 
   if (loading) return <div className="team-brand-loading"><div className="ui44-loading-shell" role="status" aria-label="Loading Handbook" /></div>;
   if (error) return <div className="team-brand-error" role="alert">{error}</div>;

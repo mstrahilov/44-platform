@@ -38,6 +38,14 @@ function AdminDashboard() {
     </div>
 
     <section className="dashboard-section">
+      <SectionHeader title="Team" description="Private reference material and brand resources for the 44OS team." />
+      <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
+        <AdminNavRow href="/team/brand" title="Handbook" description="How forty four and 44OS work, including identity, support, and developer guidance." meta="" />
+        <AdminNavRow href="/team/brand?download=1" title="Download Brand Kit" description="Download the approved 44OS marks, type, palette, and interface reference." meta="" />
+      </div>
+    </section>
+
+    <section className="dashboard-section">
       <SectionHeader title="Administration" description="Open a section to inspect records and use its approved controls." />
       <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
         <AdminNavRow href="/admin/home" title="Home editorial" description="Choose the release that leads Discover's editorial feature." />
@@ -70,10 +78,10 @@ function AdminStat({ label, value, detail, attention = false }: { label: string;
   </Ui44Panel>;
 }
 
-function AdminNavRow({ href, title, description, count }: { href: string; title: string; description: string; count?: number }) {
+function AdminNavRow({ href, title, description, count, meta }: { href: string; title: string; description: string; count?: number; meta?: string }) {
   return <Link href={href} className="dashboard-list-row admin-hub-row ui44-list-row ui44-list-row-dashboard ui44-list-row-interactive">
     <span className="dashboard-row-copy"><strong className="dashboard-row-title">{title}</strong><span className="dashboard-row-subtitle">{description}</span></span>
-    <span className="admin-hub-row-meta">{typeof count === 'number' ? count : '—'} <span aria-hidden="true">›</span></span>
+    <span className="admin-hub-row-meta">{meta ?? (typeof count === 'number' ? count : '—')} <span aria-hidden="true">›</span></span>
   </Link>;
 }
 
