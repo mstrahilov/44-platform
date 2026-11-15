@@ -110,6 +110,14 @@ async function main() {
   assert.match(creatorRequestMigration, /'admin-release\/'\|\|new\.id/, 'release notifications are idempotent per release');
   assert.match(creatorRequestMigration, /perform public\.set_admin_creator_access\(target_profile_id,'creator',normalized_reason\)/, 'request approval uses the existing Creator-access workflow');
 
+  const adminFanoutMigration = await readFile(path.join(process.cwd(), 'supabase', 'migrations', '20261115010000_admin_notification_fanout.sql'), 'utf8');
+  assert.match(adminFanoutMigration, /queue_admin_notification_emails/, 'admin notifications use a shared recipient fan-out helper');
+  assert.match(adminFanoutMigration, /profile\.role='admin'/, 'admin notification fan-out targets current administrators');
+  assert.match(adminFanoutMigration, /'support@44os\.com'/, 'admin fan-out preserves the monitored Support mailbox');
+  assert.match(adminFanoutMigration, /target_event_key\|\|'\/admin\/'\|\|admin_row\.profile_id/, 'each administrator receives an independently idempotent outbox event');
+  assert.match(adminFanoutMigration, /handle_new_user_profile\(\)[\s\S]*perform public\.queue_admin_notification_emails/, 'new signup notifications use admin fan-out');
+  assert.match(adminFanoutMigration, /queue_admin_music_release_notification\(\)[\s\S]*perform public\.queue_admin_notification_emails/, 'release notifications use admin fan-out');
+
   const signupRoute = await readFile(path.join(process.cwd(), 'src', 'app', 'api', 'auth', 'signup', 'route.ts'), 'utf8');
   assert.match(signupRoute, /creator_account_requested: creatorAccountRequested/, 'the server signup boundary passes the explicit Creator choice to Auth');
   assert.match(signupRoute, /await processEmailOutbox\(5\)\.catch\(\(\) => undefined\)/, 'successful signup gives the durable notification a best-effort delivery pass');

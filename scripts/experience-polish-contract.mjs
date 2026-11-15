@@ -265,12 +265,14 @@ assert.match(adminHomeApp, /setAdminHomeFeaturedItem[\s\S]*Featured release[\s\S
 assert.doesNotMatch(nextConfig, /source: "\/admin\/home", destination: "\/admin"/, 'Admin Home is no longer redirected away');
 assert.match(storeDiscovery, />Sort by<[\s\S]*value="release-date">Release date<[\s\S]*value="recently-added">Recently added</, 'Browse exposes release-date and recently-added sorting first in the filter');
 assert.match(storeDiscovery, /title="New Releases"[\s\S]*browseCategory\('music', 'release-date'\)/, 'New Releases opens release-date Browse Music');
-assert.match(authExperience, /creatorAccountRequested[\s\S]*router\.replace\('\/welcome'\)/, 'new accounts enter the welcome journey after an immediate session is established');
+assert.match(authExperience, /creatorAccountRequested[\s\S]*router\.replace\('\/profile\/edit'\)/, 'new accounts enter Profile Edit after an immediate session is established');
+assert.match(authExperience, /fetch\('\/api\/auth\/signup'[\s\S]*router\.replace\('\/account\/confirmation'\)/, 'email-gated signup enters a dedicated confirmation page instead of leaving the form editable');
 assert.match(welcomeApp, /Creator setup is open\. Publishing remains locked until 44 completes its review\./, 'Creator onboarding separates profile setup from publishing approval');
 assert.match(welcomeApp, /MEMBER_GUIDE[\s\S]*CREATOR_GUIDE[\s\S]*Right-click/, 'Welcome provides concise Member and Creator guidance plus the desktop interaction hint');
 assert.match(canonicalCss, /:is\(\.ui44-section-header, \.hub-section-head\) \{[\s\S]*align-items: center;/, 'shared section actions center on the title row');
 assert.match(canonicalCss, /\.store-app-page \.page-filter-menu \{\s*margin-right: 0;/, 'desktop Store filters align with the Topbar action column');
 assert.match(canonicalCss, /@media \(min-width: 769px\) \{[\s\S]*\.community-app-page\.community-v11-page[\s\S]*\.community-post-image \{[\s\S]*width: fit-content;[\s\S]*max-width: min\(100%, 720px\)[\s\S]*overflow: hidden;/, 'desktop Community images use a shrink-wrapped bounded post surface');
+assert.match(canonicalCss, /:is\(\.community-app-page\.community-v11-page, \.social-profile-page\)[\s\S]*\.community-post-image \{/, 'desktop profile Posts reuse the bounded Community image surface');
 assert.match(canonicalCss, /\.community-post-image img \{[\s\S]*width: auto;[\s\S]*max-width: 100%;[\s\S]*height: auto;[\s\S]*object-fit: contain;/, 'desktop Community images preserve their intrinsic aspect ratio');
 assert.match(canonicalCss, /\.community-app-page\.community-v11-page[\s\S]*\.social-attached-item-card \{[\s\S]*grid-template-columns: 64px minmax\(0, 1fr\) 24px;[\s\S]*text-decoration: none;/, 'desktop Community release mentions use a bounded attachment card');
 assert.match(legacyTrackRepairMigration, /62277a2a-f9cf-4e3b-9a29-09deb03bb512[\s\S]*1783191107348-01-touch-feat\.-kholor-\.mp3/, 'the legacy touch track repair targets the verified replacement object');

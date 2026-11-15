@@ -4402,7 +4402,7 @@ body:is(.theme-dark, .theme-light) .social-feed-panel.ui44-panel > .social-feed-
    fluid. Mobile keeps its reviewed full-width treatment below. */
 @media (min-width: 769px) {
   body:is(.theme-dark, .theme-light)
-    .community-app-page.community-v11-page
+    :is(.community-app-page.community-v11-page, .social-profile-page)
     .community-post-image {
     display: block;
     width: fit-content;
@@ -4415,7 +4415,7 @@ body:is(.theme-dark, .theme-light) .social-feed-panel.ui44-panel > .social-feed-
   }
 
   body:is(.theme-dark, .theme-light)
-    .community-app-page.community-v11-page
+    :is(.community-app-page.community-v11-page, .social-profile-page)
     .community-post-image img {
     display: block;
     width: auto;

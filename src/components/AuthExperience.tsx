@@ -47,8 +47,6 @@ export function AuthExperience({ variant, authenticatedDestination }: AuthExperi
   const [status, setStatus] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [linkSubmitting, setLinkSubmitting] = useState(false);
-  const [resendingConfirmation, setResendingConfirmation] = useState(false);
-  const [signupComplete, setSignupComplete] = useState(false);
 
   useEffect(() => {
     if (!loading && user && authenticatedDestination) router.replace(authenticatedDestination);
@@ -161,13 +159,10 @@ export function AuthExperience({ variant, authenticatedDestination }: AuthExperi
         setStatus(authMessage(sessionResult.error.message));
         return;
       }
-      router.replace('/welcome');
+      router.replace('/profile/edit');
       return;
     }
-    setSignupComplete(true);
-    setStatus(creatorAccountRequested
-      ? 'Check your email to verify your address. The link opens Creator setup; publishing remains locked until 44 completes its review.'
-      : 'Check your email to verify your address. The link opens your welcome page.');
+    router.replace('/account/confirmation');
   }
 
   async function sendEmailLink() {
@@ -182,19 +177,6 @@ export function AuthExperience({ variant, authenticatedDestination }: AuthExperi
     setStatus(error ? authMessage(error.message) : 'Check your email for your login link.');
   }
 
-  async function resendConfirmation() {
-    if (resendingConfirmation) return;
-    setResendingConfirmation(true);
-    setStatus(null);
-    const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email,
-      options: { emailRedirectTo: getAppPathUrl('/welcome') },
-    });
-    setResendingConfirmation(false);
-    setStatus(error ? authMessage(error.message) : 'Verification email resent. Check your inbox and spam folder.');
-  }
-
   function changeEmail() {
     setStep('email');
     setPassword('');
@@ -203,7 +185,6 @@ export function AuthExperience({ variant, authenticatedDestination }: AuthExperi
     setCountryCode('');
     setCreatorAccountRequested(false);
     setAccountExists(null);
-    setSignupComplete(false);
     setStatus(null);
   }
 
@@ -349,7 +330,7 @@ export function AuthExperience({ variant, authenticatedDestination }: AuthExperi
                   }}
                 />
                 <span>
-                  <strong>I confirm I am at least 13 years old</strong>
+                  <strong>I confirm I am at least 18 years old</strong>
                 </span>
               </label>
             )}
@@ -359,11 +340,11 @@ export function AuthExperience({ variant, authenticatedDestination }: AuthExperi
         <button
           className="os-button os-button-primary os-button-large login-primary-action"
           type="submit"
-          disabled={submitting || signupComplete || (!isLogin && step === 'password' && !ageConfirmed)}
+          disabled={submitting || (!isLogin && step === 'password' && !ageConfirmed)}
         >
           {submitting
             ? step === 'email' ? 'Checking…' : 'Working…'
-            : step === 'email' ? 'Continue' : isLogin ? 'Log in' : signupComplete ? 'Account created' : 'Create account'}
+            : step === 'email' ? 'Continue' : isLogin ? 'Log in' : 'Create account'}
         </button>
 
         {step === 'password' && isLogin && (
@@ -384,17 +365,6 @@ export function AuthExperience({ variant, authenticatedDestination }: AuthExperi
       </form>
 
       {status && <p className="login-status os-type-body-small" role="status" aria-live="polite">{status}</p>}
-
-      {signupComplete && (
-        <button
-          className="os-button os-button-ghost os-button-compact login-link-action"
-          type="button"
-          onClick={() => void resendConfirmation()}
-          disabled={resendingConfirmation}
-        >
-          {resendingConfirmation ? 'Resending…' : 'Resend verification email'}
-        </button>
-      )}
     </section>
   );
 }
