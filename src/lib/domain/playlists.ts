@@ -31,9 +31,30 @@ export type CatalogTrack = {
   id: string;
   item_id: string;
   title: string;
-  number: number;
   duration_seconds: number | null;
+  audio_url: string | null;
+  has_access: boolean;
   item?: { id: string; title: string; cover_url: string | null; creator?: string | null } | null;
+};
+
+export type CatalogTrackCursor = { offset: number };
+export type CatalogTrackBrowsePage = {
+  contract_version: 1;
+  items: CatalogTrack[];
+  next_cursor: CatalogTrackCursor | null;
+};
+
+type CatalogTrackBrowseRow = {
+  track_id: string;
+  item_id: string;
+  title: string;
+  duration_seconds: number | null;
+  audio_url: string | null;
+  item_title: string;
+  creator: string;
+  cover_url: string | null;
+  hero_url: string | null;
+  has_access: boolean;
 };
 
 const PLAYLIST_SELECT = 'id,user_id,title,cover_url,created_at,updated_at';
@@ -94,6 +115,12 @@ export async function addTrackToPlaylist(trackId: string, playlistId?: string, n
   return result.data as string;
 }
 
+export async function addReleaseToPlaylist(itemId: string, playlistId: string) {
+  const result = await supabase.rpc('add_release_to_playlist' as never, { target_item_id: itemId, target_playlist_id: playlistId } as never);
+  if (result.error) throw result.error;
+  return Number(result.data ?? 0);
+}
+
 export async function replacePlaylistTracks(playlistId: string, trackIds: string[]) {
   const result = await supabase.rpc('replace_playlist_tracks' as never, {
     target_playlist_id: playlistId,
@@ -106,12 +133,32 @@ export async function removeTrackFromPlaylist(playlist: Playlist, trackId: strin
   await replacePlaylistTracks(playlist.id, (playlist.tracks ?? []).filter(row => row.track_id !== trackId).map(row => row.track_id));
 }
 
-export async function listCatalogTracks() {
-  const result = await supabase
-    .from('tracks' as never)
-    .select('id,item_id,title,number,duration_seconds,item:catalog_items(id,title,cover_url,creator)')
-    .order('title')
-    .limit(500);
+export async function browseCatalogTracks(searchQuery: string, cursor: CatalogTrackCursor | null = null, limit = 30) {
+  const result = await supabase.rpc('browse_all_tracks_v1' as never, {
+    search_query: searchQuery,
+    cursor,
+    limit,
+  } as never);
   if (result.error) throw result.error;
-  return (result.data ?? []) as unknown as CatalogTrack[];
+  const page = result.data as unknown as {
+    contract_version?: number;
+    items?: CatalogTrackBrowseRow[];
+    next_cursor?: CatalogTrackCursor | null;
+  } | null;
+  if (!page || page.contract_version !== 1 || !Array.isArray(page.items)) {
+    throw new Error('The catalog returned an unsupported track page.');
+  }
+  return {
+    contract_version: 1 as const,
+    items: page.items.map((row): CatalogTrack => ({
+      id: row.track_id,
+      item_id: row.item_id,
+      title: row.title,
+      duration_seconds: row.duration_seconds,
+      audio_url: row.audio_url,
+      has_access: row.has_access,
+      item: { id: row.item_id, title: row.item_title, cover_url: row.cover_url, creator: row.creator },
+    })),
+    next_cursor: page.next_cursor ?? null,
+  } satisfies CatalogTrackBrowsePage;
 }

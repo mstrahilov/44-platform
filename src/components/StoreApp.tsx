@@ -99,9 +99,11 @@ const MOBILE_DISCOVER_CATEGORIES: Array<{
 }> = [
   { category: 'all', filter: 'all', label: 'Featured', href: '/' },
   { category: 'music', filter: 'music', label: 'Music', href: '/store/music' },
+  { category: 'videos', filter: 'all', label: 'Videos', href: '/videos' },
   { category: 'books', filter: 'book', label: 'Books', href: '/store/books' },
   { category: 'sample-packs', filter: 'asset', label: 'Samples', href: '/store/sample-packs' },
   { category: 'games', filter: 'interactive', label: 'Games', href: '/store/games' },
+  { category: 'beats', filter: 'music', label: 'Beats', href: '/store/beats' },
 ];
 
 function creatorFilterKey(product: Product) {
@@ -442,6 +444,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
 
   const discoverOptions = MOBILE_DISCOVER_CATEGORIES.filter(option => {
     if (option.category === 'beats') return hasBeatProducts;
+    if (option.category === 'videos') return true;
     if (option.category === 'all') return true;
     if (option.category === 'music') return products.some(product => getProductExperience(product) === 'music' && !isBeatProduct(product));
     if (option.category === 'books') return products.some(product => getProductExperience(product) === 'book');
@@ -450,6 +453,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     return false;
   });
   function discoverOptionSelected(option: (typeof MOBILE_DISCOVER_CATEGORIES)[number]) {
+    if (option.category === 'videos') return false;
     return category === 'all'
       ? option.category === 'beats'
         ? browsingBeats
@@ -461,20 +465,30 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   const discoverTopbarTabs = discoverOptions.map(option => ({
     id: option.category,
     label: option.label,
-    href: category === 'all' ? undefined : option.href,
-    onClick: category === 'all' ? (option.category === 'beats' ? browseBeats : () => browseCategory(option.filter)) : undefined,
+    href: category === 'all' && option.category !== 'videos' && option.category !== 'beats' ? undefined : option.href,
+    onClick: category === 'all' && option.category !== 'videos' && option.category !== 'beats'
+      ? () => browseCategory(option.filter)
+      : category === 'all' && option.category === 'beats' ? browseBeats : undefined,
     active: discoverOptionSelected(option),
     variant: 'section' as const,
   }));
-  const mobileDiscoverRail = (
-    <SectionTabs ariaLabel="Discover categories" dockToTopbar topbarTabs={discoverTopbarTabs}>
+  // Do not expose a partial Featured tab while Home is still showing its
+  // loading state. Register the shared rail only after discovery is ready.
+  const mobileDiscoverRail = !loading && !authLoading && !error ? (
+    <SectionTabs ariaLabel="Discover categories" dockToTopbar toolbarSpacing topbarTabs={discoverTopbarTabs}>
       {discoverOptions.map(option => {
         const selected = discoverOptionSelected(option);
+        if (option.category === 'videos') {
+          return <SectionTab key={option.category} href={option.href} active={selected}>{option.label}</SectionTab>;
+        }
+        if (option.category === 'beats') {
+          return <SectionTab key={option.category} active={selected} onClick={browseBeats}>{option.label}</SectionTab>;
+        }
         return category === 'all' ? (
           <SectionTab
             key={option.category}
             active={selected}
-            onClick={option.category === 'beats' ? browseBeats : () => browseCategory(option.filter)}
+            onClick={() => browseCategory(option.filter)}
           >
             {option.label}
           </SectionTab>
@@ -489,10 +503,10 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
         );
       })}
     </SectionTabs>
-  );
+  ) : null;
 
   const storeOpening = (
-    <div className="store-discover-opening">
+    <div className="store-discover-opening section-tab-page-opening">
       {storeHeader}
       {mobileDiscoverRail}
     </div>

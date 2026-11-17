@@ -20,7 +20,7 @@ const [migration, manualFulfillmentMigration, variantCommerceMigration, merchIma
   readFile('src/app/admin/fulfillment/page.tsx', 'utf8'),
   readFile('src/components/admin/AdminMerchDetailApp.tsx', 'utf8'),
   readFile('.env.example', 'utf8'),
-  readFile('Other/44OS_FOUNDATION.md', 'utf8'),
+  readFile('Other/44OS_SYSTEM.md', 'utf8'),
 ]);
 
 const source = `${adapter}\n${adminRoute}\n${merchImagesRoute}\n${estimateRoute}\n${draftRoute}\n${webhookRoute}`;

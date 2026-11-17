@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminAccessBoundary, AdminStatusBadge, formatAdminDate } from '@/components/admin/AdminPrimitives';
 import { EmptyMessage, HubHero, PageShell, SectionHeader } from '@/components/Ui';
 import { supabase } from '@/lib/supabase';
+import { OS44Button } from '@/components/OS44Button';
 
 type SupportCase = {
   id: string;
@@ -127,10 +128,10 @@ function AdminSupport() {
     {selected ? <section className="dashboard-section">
       <SectionHeader title={selected.subject} description={`${selected.requester_email} · opened ${formatAdminDate(selected.created_at, true)}`}
         action={!ownsReply
-          ? <button type="button" className="os-button os-button-secondary os-button-compact" disabled={working || Boolean(selected.reply_owner)}
+          ? <OS44Button type="button" className="os-button os-button-secondary os-button-compact" disabled={working || Boolean(selected.reply_owner)}
             onClick={() => { void act({ action: 'claim', caseId: selected.id }, 'Reply ownership claimed.'); }}>
             {selected.reply_owner ? 'Owned by another admin' : 'Claim reply ownership'}
-          </button>
+          </OS44Button>
           : <AdminStatusBadge tone="success">You own replies</AdminStatusBadge>} />
 
       <div className="ui44-panel ui44-panel-glass admin-dialog-field">
@@ -146,10 +147,10 @@ function AdminSupport() {
         <p>Send the reply from iCloud as <strong>44OS Support &lt;support@44os.com&gt;</strong>, then paste the exact reply here to preserve case history.</p>
         <textarea value={replyBody} maxLength={10000} disabled={!ownsReply || working}
           onChange={event => setReplyBody(event.target.value)} placeholder="Paste the reply sent from iCloud" />
-        <button type="button" className="os-button os-button-primary" disabled={!ownsReply || working || !replyBody.trim()}
+        <OS44Button type="button" className="os-button os-button-primary" disabled={!ownsReply || working || !replyBody.trim()}
           onClick={() => { void act({ action: 'record_reply', caseId: selected.id, replyBody }, 'Human reply recorded; case is waiting on the requester.'); }}>
           Record sent reply
-        </button>
+        </OS44Button>
       </div>
 
       <div className="ui44-panel ui44-panel-glass admin-dialog-field">
@@ -160,10 +161,10 @@ function AdminSupport() {
           {Object.entries(STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
         </select>
         <textarea value={note} maxLength={10000} disabled={working} onChange={event => setNote(event.target.value)} placeholder="Internal note (not emailed)" />
-        <button type="button" className="os-button os-button-secondary" disabled={working || !note.trim()}
+        <OS44Button type="button" className="os-button os-button-secondary" disabled={working || !note.trim()}
           onClick={() => { void act({ action: 'update', caseId: selected.id, status: selected.status, note }, 'Internal note added.'); }}>
           Add internal note
-        </button>
+        </OS44Button>
       </div>
     </section> : null}
   </main></PageShell>;

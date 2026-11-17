@@ -6,6 +6,7 @@ import { PageShell } from '@/components/Ui';
 import { supabase } from '@/lib/supabase';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { useAuth } from '@/lib/useAuth';
+import { OS44Button } from '@/components/OS44Button';
 
 type CreatorRequestStatus = 'pending' | 'approved' | 'rejected' | null;
 
@@ -91,7 +92,7 @@ export default function WelcomeApp() {
           <p className="welcome-eyebrow">WELCOME</p>
           <h1>Start with an account.</h1>
           <p>Log in or create an account to set up your profile and personal 44 experience.</p>
-          <Link className="os-button os-button-primary" href="/login">Get started</Link>
+          <OS44Button className="os-button os-button-primary" href="/login">Get started</OS44Button>
         </main>
       </PageShell>
     );
@@ -120,10 +121,10 @@ export default function WelcomeApp() {
           </p>
           {creatorJourney && <p className="welcome-status">{creatorStatus}</p>}
           <div className="welcome-actions">
-            <Link className="os-button os-button-primary" href="/profile/edit">Update profile</Link>
+            <OS44Button className="os-button os-button-primary" href="/profile/edit">Update profile</OS44Button>
             {approvedCreator
-              ? <Link className="os-button os-button-secondary" href="/studio">Open Studio</Link>
-              : <Link className="os-button os-button-secondary" href="/">Explore Discover</Link>}
+              ? <OS44Button className="os-button os-button-secondary" href="/studio">Open Studio</OS44Button>
+              : <OS44Button className="os-button os-button-secondary" href="/">Explore Discover</OS44Button>}
           </div>
         </header>
 

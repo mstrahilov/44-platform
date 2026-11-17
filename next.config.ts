@@ -45,7 +45,6 @@ const nextConfig: NextConfig = {
       { source: "/assets/library", destination: "/library/sample-packs", permanent: true },
       { source: "/assets/library/:id", destination: "/library/item/:id", permanent: true },
       { source: "/merch/store/:slug", destination: "/store/item/:slug", permanent: true },
-      { source: "/library/music/:id", destination: "/library/item/:id", permanent: true },
       { source: "/library/books/:id", destination: "/library/item/:id", permanent: true },
       { source: "/library/assets/:id", destination: "/library/item/:id", permanent: true },
       { source: "/library/item/:kind/:id", destination: "/library/item/:id", permanent: true },

@@ -13,6 +13,7 @@ import { isFreeLibraryClaim } from '@/lib/libraryContent';
 import { saveItemToLibrary } from '@/lib/domain/itemDetails';
 import { Ui44SectionArrow } from '@/components/ui44/Controls';
 import { Ui44Text } from '@/components/ui44/Typography';
+import { useTopbarTitle } from '@/components/TopbarContext';
 
 export function PageShell({ children }: { children: ReactNode }) {
   return <div className="view-hub">{children}</div>;
@@ -207,8 +208,9 @@ export function HubHero({
   actions?: ReactNode;
   className?: string;
 }) {
+  useTopbarTitle(title);
   return (
-    <header className={`app-header ui44-page-header ${className}`.trim()}>
+    <header className={`app-header ui44-page-header ui44-page-header-mobile-title${!copy && !actions ? ' ui44-page-header-title-only' : ''} ${className}`.trim()}>
       <div className="app-header-copy ui44-page-header-copy">
         <Ui44Text as="h1" variant="page-title">{title}</Ui44Text>
         {copy ? <p>{copy}</p> : null}

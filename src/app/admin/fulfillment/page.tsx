@@ -1,10 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { AdminAccessBoundary } from '@/components/admin/AdminPrimitives';
 import { HubHero, PageShell, SectionHeader } from '@/components/Ui';
 import { supabase } from '@/lib/supabase';
+import { OS44Button } from '@/components/OS44Button';
 
 type FulfillmentData = {
   environment: Record<string, boolean>;
@@ -234,7 +234,7 @@ function AdminFulfillment() {
     {status ? <div className="dashboard-status ui44-status" role="status">{status}</div> : null}
 
     <section className="dashboard-section">
-      <SectionHeader title="Connection guard" description="The server verifies the exact API store. Order confirmation and charging are structurally unavailable in this phase." action={<button type="button" className="os-button os-button-secondary os-button-compact" disabled={working} onClick={() => { void act({ action: 'verify_connection' }, 'Printful API store verified. Draft-only controls are ready.'); }}>Verify safe connection</button>} />
+      <SectionHeader title="Connection guard" description="The server verifies the exact API store. Order confirmation and charging are structurally unavailable in this phase." action={<OS44Button type="button" className="os-button os-button-secondary os-button-compact" disabled={working} onClick={() => { void act({ action: 'verify_connection' }, 'Printful API store verified. Draft-only controls are ready.'); }}>Verify safe connection</OS44Button>} />
       <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
         <StatusRow label="Server configuration" value={data ? (missingEnvironment.length ? `Missing: ${missingEnvironment.join(', ')}` : 'Present') : 'Loading…'} />
         <StatusRow label="API store" value={data?.controls.provider_connected ? `Verified · ${data.controls.store_id}` : 'Not verified'} />
@@ -249,7 +249,7 @@ function AdminFulfillment() {
       <SectionHeader
         title="Sync with Printful"
         description="Reconcile the complete verified store. New products become permanent drafts; provider names, retail prices, variants, costs, SKUs, and availability update automatically. Nothing publishes automatically."
-        action={<button type="button" className="os-button os-button-primary os-button-compact" disabled={working || !data?.controls.catalog_import_enabled} onClick={() => { void act({ action: 'sync_catalog' }, 'Printful catalog sync completed. Review staged colors and draft products before publication.'); }}>Sync with Printful</button>}
+        action={<OS44Button type="button" className="os-button os-button-primary os-button-compact" disabled={working || !data?.controls.catalog_import_enabled} onClick={() => { void act({ action: 'sync_catalog' }, 'Printful catalog sync completed. Review staged colors and draft products before publication.'); }}>Sync with Printful</OS44Button>}
       />
       {data?.providerCatalogError ? <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{data.providerCatalogError}</div> : null}
       <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
@@ -267,20 +267,20 @@ function AdminFulfillment() {
     </section>
 
     <section className="dashboard-section">
-      <SectionHeader title="Provider products" description="Provider facts are read-only in 44OS. Review and publish remain separate owner actions." action={<div className="admin-dialog-actions"><button type="button" className="os-button os-button-secondary os-button-compact" aria-pressed={productFilter === 'active'} onClick={() => setProductFilter('active')}>Active</button><button type="button" className="os-button os-button-secondary os-button-compact" aria-pressed={productFilter === 'archived'} onClick={() => setProductFilter('archived')}>Archived</button></div>} />
+      <SectionHeader title="Provider products" description="Provider facts are read-only in 44OS. Review and publish remain separate owner actions." action={<div className="admin-dialog-actions"><OS44Button type="button" className="os-button os-button-secondary os-button-compact" aria-pressed={productFilter === 'active'} onClick={() => setProductFilter('active')}>Active</OS44Button><OS44Button type="button" className="os-button os-button-secondary os-button-compact" aria-pressed={productFilter === 'archived'} onClick={() => setProductFilter('archived')}>Archived</OS44Button></div>} />
       <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
         {data?.products.filter(product => productFilter === 'archived' ? product.item_status === 'archived' : product.item_status !== 'archived').length ? data.products.filter(product => productFilter === 'archived' ? product.item_status === 'archived' : product.item_status !== 'archived').map(product => <div className="dashboard-list-row ui44-list-row ui44-list-row-dashboard" key={product.id}>
           <span className="dashboard-row-copy"><strong className="dashboard-row-title">{product.provider_name}</strong><span className="dashboard-row-subtitle">44 Item {product.item_id} · Sync Product {product.sync_product_id}</span></span>
           <span className="dashboard-row-meta">
             Printful retail from {product.retail_price_cents === null ? 'unset' : formatMoney(product.retail_price_cents, 'USD')} · production-cost ceiling {formatMoney(product.maximum_provider_cost_cents, 'USD')} · {product.status}
           </span>
-          <button type="button" className="os-button os-button-secondary os-button-compact" disabled={working} onClick={() => { void act({ action: 'review_product', itemId: product.item_id }, 'Printful name, retail prices, costs, availability, and variants pulled and reviewed.'); }}>
+          <OS44Button type="button" className="os-button os-button-secondary os-button-compact" disabled={working} onClick={() => { void act({ action: 'review_product', itemId: product.item_id }, 'Printful name, retail prices, costs, availability, and variants pulled and reviewed.'); }}>
             Pull and review
-          </button>
-          <button type="button" className="os-button os-button-primary os-button-compact" disabled={working || product.status !== 'reviewed'} onClick={() => { void act({ action: 'publish_product', itemId: product.item_id }, 'Product published with reviewed Printful variants and 44OS-owned images.'); }}>
+          </OS44Button>
+          <OS44Button type="button" className="os-button os-button-primary os-button-compact" disabled={working || product.status !== 'reviewed'} onClick={() => { void act({ action: 'publish_product', itemId: product.item_id }, 'Product published with reviewed Printful variants and 44OS-owned images.'); }}>
             Publish to 44OS
-          </button>
-          <Link className="os-button os-button-secondary os-button-compact" href={`/admin/fulfillment/${product.item_id}`}>Open product</Link>
+          </OS44Button>
+          <OS44Button className="os-button os-button-secondary os-button-compact" href={`/admin/fulfillment/${product.item_id}`}>Open product</OS44Button>
         </div>) : <div className="dashboard-empty">No {productFilter} Printful product mapping has been imported.</div>}
       </div>
     </section>
@@ -306,7 +306,7 @@ function AdminFulfillment() {
               {productImages.length ? productImages.map(image => <div className="merch-image-admin-card" key={image.id}>
                 <span className="merch-image-admin-preview" style={{ backgroundImage: `url(${image.file_url})` }} role="img" aria-label={image.title} />
                 <span><strong>{image.is_featured ? 'featured · ' : ''}{image.role === 'color' ? image.color_value : image.role}</strong><small>{image.title}</small></span>
-                <button type="button" className="os-button os-button-secondary os-button-compact" disabled={working} onClick={() => { void deleteMerchImage(image.id); }}>Remove</button>
+                <OS44Button type="button" className="os-button os-button-secondary os-button-compact" disabled={working} onClick={() => { void deleteMerchImage(image.id); }}>Remove</OS44Button>
               </div>) : <span className="dashboard-row-meta">No 44OS images uploaded yet.</span>}
             </div>
             <div className="merch-image-admin-form">
@@ -338,14 +338,14 @@ function AdminFulfillment() {
                   onChange={event => setImageFiles(current => ({ ...current, [product.item_id]: event.target.files?.[0] ?? null }))}
                 />
               </label>
-              <button
+              <OS44Button
                 type="button"
                 className="os-button os-button-primary os-button-compact"
                 disabled={working || !imageFiles[product.item_id] || (role === 'color' && !imageColors[product.item_id])}
                 onClick={() => { void uploadMerchImage(product.item_id); }}
               >
                 {role === 'color' ? 'Assign color image' : 'Add bonus image'}
-              </button>
+              </OS44Button>
             </div>
           </div>;
         }) : <div className="dashboard-empty">Import a Printful product before assigning 44OS images.</div>}
@@ -377,20 +377,20 @@ function AdminFulfillment() {
               </span>
             ) : (
               <div className="admin-dialog-actions">
-                <button type="button" className="os-button os-button-secondary os-button-compact" disabled={working} onClick={() => { void quoteOrder(order.id); }}>
+                <OS44Button type="button" className="os-button os-button-secondary os-button-compact" disabled={working} onClick={() => { void quoteOrder(order.id); }}>
                   Get current quote
-                </button>
+                </OS44Button>
                 {quote ? <>
                   <select value={selectedRates[order.id] ?? ''} onChange={event => setSelectedRates(current => ({ ...current, [order.id]: event.target.value }))}>
                     {quote.rates.map(rate => <option key={rate.id} value={rate.id}>{rate.name} · {formatMoney(rate.rateCents, rate.currency)}</option>)}
                   </select>
-                  <button type="button" className="os-button os-button-primary os-button-compact" disabled={working || !selectedRates[order.id]} onClick={() => { void createDraft(order.id); }}>
+                  <OS44Button type="button" className="os-button os-button-primary os-button-compact" disabled={working || !selectedRates[order.id]} onClick={() => { void createDraft(order.id); }}>
                     Create Printful draft
-                  </button>
+                  </OS44Button>
                 </> : null}
-                <a className="os-button os-button-secondary os-button-compact" href="https://dashboard.stripe.com/payments" target="_blank" rel="noreferrer">
+                <OS44Button className="os-button os-button-secondary os-button-compact" href="https://dashboard.stripe.com/payments" target="_blank" rel="noreferrer">
                   Refund in Stripe
-                </a>
+                </OS44Button>
               </div>
             )}
           </div>;

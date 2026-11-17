@@ -10,6 +10,7 @@ import {
   useCart,
 } from '@/lib/cart';
 import { cartCheckoutUiAvailable } from '@/lib/commerceAvailability';
+import { OS44Button } from '@/components/OS44Button';
 
 function formatMoney(cents: number, currency: string) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100);
@@ -47,7 +48,7 @@ export default function CartPage() {
             <div className="dashboard-empty">
               Your cart is safe. Please return later to complete checkout.
               <div className="ui44-section-gap-before">
-                <Link className="os-button os-button-primary os-button-compact" href="/">Keep Exploring</Link>
+                <OS44Button className="os-button os-button-primary os-button-compact" href="/">Keep Exploring</OS44Button>
               </div>
             </div>
           </div>
@@ -65,7 +66,7 @@ export default function CartPage() {
             <div className="dashboard-empty">
               Your cart is empty. Browse merch or creator items to add something.
               <div className="ui44-section-gap-before">
-                <Link className="os-button os-button-primary os-button-compact" href="/">Open Home</Link>
+                <OS44Button className="os-button os-button-primary os-button-compact" href="/">Open Home</OS44Button>
               </div>
             </div>
           </div>
@@ -135,12 +136,12 @@ export default function CartPage() {
             </span>
           </div>
           <div className="cart-summary-actions">
-            <Link className="os-button os-button-secondary" href="/">
+            <OS44Button className="os-button os-button-secondary" href="/">
               Keep Shopping
-            </Link>
-            <Link className="os-button os-button-primary" href="/checkout">
+            </OS44Button>
+            <OS44Button className="os-button os-button-primary" href="/checkout">
               Checkout
-            </Link>
+            </OS44Button>
           </div>
         </div>
       </main>

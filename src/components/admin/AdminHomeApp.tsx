@@ -10,6 +10,7 @@ import {
   setAdminHomeFeaturedItem,
   type AdminHomeFeaturedState,
 } from '@/lib/domain/homeEditorial';
+import { OS44Button } from '@/components/OS44Button';
 
 export default function AdminHomeApp() {
   return <AdminAccessBoundary><AdminHomeWorkspace /></AdminAccessBoundary>;
@@ -81,7 +82,7 @@ function AdminHomeWorkspace() {
             <span>Reason</span>
             <Ui44TextInput value={reason} onChange={event => setReason(event.target.value)} maxLength={500} placeholder="Required for the administrator audit" />
           </label>
-          <div className="dashboard-form-actions"><button className="os-button os-button-primary" type="button" disabled={!canSave} onClick={() => { void save(); }}>{saving ? 'Saving…' : unchanged ? 'Already featured' : 'Update feature'}</button></div>
+          <div className="dashboard-form-actions"><OS44Button className="os-button os-button-primary" type="button" disabled={!canSave} onClick={() => { void save(); }}>{saving ? 'Saving…' : unchanged ? 'Already featured' : 'Update feature'}</OS44Button></div>
         </div>
       </section>
       <section className="dashboard-section">

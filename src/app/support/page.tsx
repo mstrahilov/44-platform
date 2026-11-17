@@ -10,6 +10,7 @@ import {
   searchSupportArticles,
   supportArticleHref,
 } from '@/lib/supportArticles';
+import { OS44Button } from '@/components/OS44Button';
 
 export default function SupportPage() {
   const [query, setQuery] = useState('');
@@ -57,7 +58,7 @@ export default function SupportPage() {
               <div className="support-empty ui44-panel ui44-panel-glass">
                 <h3>No matching article yet</h3>
                 <p>Try fewer words or email Support with the page, account, Item, or order involved.</p>
-                <a className="os-button os-button-primary" href="mailto:support@44os.com?subject=44OS%20support%20request">Email Support</a>
+                <OS44Button className="os-button os-button-primary" href="mailto:support@44os.com?subject=44OS%20support%20request">Email Support</OS44Button>
               </div>
             )}
           </section>
@@ -110,7 +111,7 @@ export default function SupportPage() {
             <h2 id="support-contact-title" className="os-type-section-title">Still need help?</h2>
             <p className="os-type-body">Email the monitored 44OS Support mailbox. Include useful context, but never send a password, authentication link, or full payment-card details.</p>
           </div>
-          <a className="os-button os-button-primary" href="mailto:support@44os.com?subject=44OS%20support%20request">Email Support</a>
+          <OS44Button className="os-button os-button-primary" href="mailto:support@44os.com?subject=44OS%20support%20request">Email Support</OS44Button>
         </section>
       </main>
     </PageShell>

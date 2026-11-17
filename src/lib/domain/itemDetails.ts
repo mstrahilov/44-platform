@@ -21,6 +21,26 @@ export type DetailedLibraryItemRow = {
 
 export type ItemAssetManifestRow = Database['public']['Functions']['list_item_asset_manifest']['Returns'][number];
 
+export async function getMusicAchievementBundle(userId: string, itemId: string) {
+  const [achievementResult, unlockedResult] = await Promise.all([
+    supabase
+      .from('item_achievements')
+      .select('id,item_id,code,title,description,trigger_type,trigger_config,reward_item_id,reward_config,points,icon,sort_order,is_secret')
+      .eq('item_id', itemId)
+      .order('sort_order'),
+    supabase
+      .from('user_achievements')
+      .select('id,user_id,achievement_id,item_id,unlocked_at')
+      .eq('user_id', userId)
+      .eq('item_id', itemId),
+  ]);
+  if (achievementResult.error || unlockedResult.error) throw achievementResult.error || unlockedResult.error;
+  return {
+    achievements: ((achievementResult.data ?? []) as ProductAchievement[]).filter(item => isV1AchievementCode(item.code)),
+    unlockedAchievements: (unlockedResult.data ?? []) as UserAchievement[],
+  };
+}
+
 export async function getDetailedLibraryItem(userId: string, libraryEntryId: string) {
   if (libraryEntryId === LOCAL_MASK_LIBRARY_ID && localMaskIsSaved()) return {
     id: LOCAL_MASK_LIBRARY_ID,
@@ -49,22 +69,14 @@ export async function getLibraryItemBundle(userId: string, libraryEntryId: strin
     nativeContent: { book: null, samples: [] }, beatLicenses: [], hasActiveDownload: false,
   };
 
-  const [trackResult, achievementResult, unlockedResult, assetResult, downloadEntitlementResult, videoResult, nativeContent, beatLicenses] = await Promise.all([
+  const isMusic = getProductExperience(row.products) === 'music';
+  const [trackResult, achievementBundle, assetResult, downloadEntitlementResult, videoResult, nativeContent, beatLicenses] = await Promise.all([
     supabase
       .from('tracks')
       .select('id,item_id,number,title,duration_seconds,audio_url,download_url')
       .eq('item_id', row.item_id)
       .order('number'),
-    supabase
-      .from('item_achievements')
-      .select('id,item_id,code,title,description,trigger_type,trigger_config,reward_item_id,reward_config,points,icon,sort_order,is_secret')
-      .eq('item_id', row.item_id)
-      .order('sort_order'),
-    supabase
-      .from('user_achievements')
-      .select('id,user_id,achievement_id,item_id,unlocked_at')
-      .eq('user_id', userId)
-      .eq('item_id', row.item_id),
+    isMusic ? getMusicAchievementBundle(userId, row.item_id) : Promise.resolve({ achievements: [], unlockedAchievements: [] }),
     supabase.rpc('list_item_asset_manifest', { target_item_id: row.item_id }),
     supabase
       .from('entitlements')
@@ -79,7 +91,7 @@ export async function getLibraryItemBundle(userId: string, libraryEntryId: strin
     beatReviewSurfacesEnabled ? listBuyerBeatLicenses(row.item_id) : Promise.resolve([]),
   ]);
 
-  const error = trackResult.error || achievementResult.error || unlockedResult.error || assetResult.error || downloadEntitlementResult.error;
+  const error = trackResult.error || assetResult.error || downloadEntitlementResult.error;
   if (error) throw error;
 
   const authorizedAssets = await Promise.all(((assetResult.data ?? []) as ItemAssetManifestRow[]).map(async asset => {
@@ -89,14 +101,11 @@ export async function getLibraryItemBundle(userId: string, libraryEntryId: strin
     return { ...asset, file_url: signed.data.signedUrl };
   }));
 
-  const isMusic = getProductExperience(row.products) === 'music';
   return {
     row,
     tracks: (trackResult.data ?? []) as Track[],
-    achievements: isMusic
-      ? ((achievementResult.data ?? []) as ProductAchievement[]).filter(item => isV1AchievementCode(item.code))
-      : [],
-    unlockedAchievements: (unlockedResult.data ?? []) as UserAchievement[],
+    achievements: achievementBundle.achievements,
+    unlockedAchievements: achievementBundle.unlockedAchievements,
     assets: authorizedAssets,
     videoEmbeds: (videoResult.data as ReleaseVideoEmbed[] | null) ?? [],
     nativeContent,
@@ -160,7 +169,7 @@ export async function listRelatedCatalogItems(item: Product, limit = 8) {
     .filter(candidate => (
       getProductExperience(candidate) === experience
       && (!item.beat || Boolean(candidate.beat))
-      && (!categoryId || candidate.item_category_id === categoryId)
+      && (experience === 'music' || !categoryId || candidate.item_category_id === categoryId)
     ))
     .sort(comparePublicCatalogProducts)
     .slice(0, limit);

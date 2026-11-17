@@ -2,12 +2,13 @@
 
 import type { AchievementNotification } from '@/lib/achievementNotifications';
 
-export type NotificationPreferenceKind = 'mentions' | 'replies' | 'likes' | 'achievements';
+export type NotificationPreferenceKind = 'mentions' | 'replies' | 'likes' | 'messages' | 'achievements';
 
 export const NOTIFICATION_PREFERENCE_KEYS: Record<NotificationPreferenceKind, string> = {
   mentions: '44-setting-notification-mentions',
   replies: '44-setting-notification-replies',
   likes: '44-setting-notification-likes',
+  messages: '44-setting-notification-messages',
   achievements: '44-setting-notification-achievements',
 };
 
@@ -32,8 +33,8 @@ export function notificationIsEnabled(notification: Pick<AchievementNotification
   if (notification.kind === 'mention') return getNotificationPreference('mentions');
   if (notification.kind === 'reply') return getNotificationPreference('replies');
   if (notification.kind === 'like') return getNotificationPreference('likes');
+  if (notification.kind === 'message') return getNotificationPreference('messages');
   if (notification.kind === 'achievement') return getNotificationPreference('achievements');
-  if (notification.kind === 'message') return true;
   if (notification.kind === 'system') return true;
   return false;
 }

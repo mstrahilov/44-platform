@@ -6,6 +6,7 @@ import { EmptyMessage, HubHero, PageShell, SectionHeader } from '@/components/Ui
 import { Ui44Panel } from '@/components/ui44/Spacing';
 import { AdminAccessBoundary, AdminActionDialog, AdminAvatar, AdminStatusBadge, formatAdminDate } from '@/components/admin/AdminPrimitives';
 import { getAdminPersonDetail, reviewAdminCreatorAccessRequest, setAdminCreatorAccess, setAdminCreatorPaidSales, setAdminTeamAccess, type AdminPersonDetail } from '@/lib/domain/adminOperations';
+import { OS44Button } from '@/components/OS44Button';
 
 export default function AdminPersonDetailApp({ profileId }: { profileId: string }) {
   return <AdminAccessBoundary><PersonDetail profileId={profileId} /></AdminAccessBoundary>;
@@ -105,7 +106,7 @@ function PersonDetail({ profileId }: { profileId: string }) {
         <div><dt>Joined</dt><dd>{formatAdminDate(detail.account.created_at, true)}</dd></div>
         <div><dt>Creator type</dt><dd>{profile?.creator_type || 'Not specified'}</dd></div>
       </dl>
-      {role !== 'admin' && creatorRequest?.status !== 'pending' ? <div className="admin-detail-actions"><button className={nextRole === 'member' ? 'os-button os-button-danger' : 'os-button os-button-primary'} type="button" onClick={() => setDialogOpen(true)}>{nextRole === 'creator' ? 'Grant Creator Access' : 'Return to Member'}</button></div> : role === 'admin' ? <p className="admin-detail-note">Administrator access is visible here but cannot be changed from the web control center.</p> : <p className="admin-detail-note">This account has a pending Creator request. Review it below.</p>}
+      {role !== 'admin' && creatorRequest?.status !== 'pending' ? <div className="admin-detail-actions"><OS44Button className={nextRole === 'member' ? 'os-button os-button-danger' : 'os-button os-button-primary'} type="button" onClick={() => setDialogOpen(true)}>{nextRole === 'creator' ? 'Grant Creator Access' : 'Return to Member'}</OS44Button></div> : role === 'admin' ? <p className="admin-detail-note">Administrator access is visible here but cannot be changed from the web control center.</p> : <p className="admin-detail-note">This account has a pending Creator request. Review it below.</p>}
     </Ui44Panel>
 
     <section className="dashboard-section">
@@ -116,7 +117,7 @@ function PersonDetail({ profileId }: { profileId: string }) {
           <AdminStatusBadge tone={detail.team.authorized ? 'success' : 'quiet'}>{detail.team.authorized ? 'Team' : 'Not granted'}</AdminStatusBadge>
         </div>
         {role === 'admin' ? <p className="admin-detail-note">Administrators inherit Team access. No grant row is needed and inherited access cannot be disabled here.</p> : <>
-          <div className="admin-detail-actions"><button className={detail.team.authorized ? 'os-button os-button-danger' : 'os-button os-button-primary'} type="button" onClick={() => setTeamDialogOpen(true)}>{detail.team.authorized ? 'Revoke Team Access' : 'Grant Team Access'}</button></div>
+          <div className="admin-detail-actions"><OS44Button className={detail.team.authorized ? 'os-button os-button-danger' : 'os-button os-button-primary'} type="button" onClick={() => setTeamDialogOpen(true)}>{detail.team.authorized ? 'Revoke Team Access' : 'Grant Team Access'}</OS44Button></div>
           <p className="admin-detail-note">This permission does not change Creator publishing, seller setup, payouts, or public profile behavior. Every change requires an audit reason.</p>
         </>}
       </Ui44Panel>
@@ -140,8 +141,8 @@ function PersonDetail({ profileId }: { profileId: string }) {
         </dl> : null}
         {creatorRequest.status === 'pending' ? <>
           <div className="admin-detail-actions">
-            <button className="os-button os-button-primary" type="button" onClick={() => setRequestDialog('approved')}>Approve Creator Request</button>
-            <button className="os-button os-button-danger" type="button" onClick={() => setRequestDialog('rejected')}>Reject Request</button>
+            <OS44Button className="os-button os-button-primary" type="button" onClick={() => setRequestDialog('approved')}>Approve Creator Request</OS44Button>
+            <OS44Button className="os-button os-button-danger" type="button" onClick={() => setRequestDialog('rejected')}>Reject Request</OS44Button>
           </div>
           <p className="admin-detail-note">Approval follows the existing verified Creator-access workflow. Rejection keeps the account as a member.</p>
         </> : null}
@@ -167,10 +168,10 @@ function PersonDetail({ profileId }: { profileId: string }) {
         {commerce.requirements_due.length ? <p className="admin-detail-note">Setup state: {commerce.requirements_due.join(', ')}</p> : null}
         {!commerce.is_platform_seller ? <>
           <div className="admin-detail-actions">
-            <button className={commerce.admin_status === 'disabled' ? 'os-button os-button-primary' : 'os-button os-button-danger'} type="button" onClick={() => setPaidSalesDialog(commerce.admin_status === 'disabled' ? 'approved' : 'disabled')}>
+            <OS44Button className={commerce.admin_status === 'disabled' ? 'os-button os-button-primary' : 'os-button os-button-danger'} type="button" onClick={() => setPaidSalesDialog(commerce.admin_status === 'disabled' ? 'approved' : 'disabled')}>
               {commerce.admin_status === 'disabled' ? 'Restore Paid Digital Sales' : 'Pause Paid Digital Sales'}
-            </button>
-            {commerce.admin_status === 'approved' ? <button className="os-button os-button-secondary" type="button" onClick={() => setPaidSalesDialog('rebase')}>Restart 30-Day Paperwork Window</button> : null}
+            </OS44Button>
+            {commerce.admin_status === 'approved' ? <OS44Button className="os-button os-button-secondary" type="button" onClick={() => setPaidSalesDialog('rebase')}>Restart 30-Day Paperwork Window</OS44Button> : null}
           </div>
           <p className="admin-detail-note">The follow-up date is an Admin-only reminder, never an automatic sales switch. Pausing or restoring paid digital sales requires a recorded reason and does not change purchase, entitlement, earnings, tax, or payout history.</p>
         </> : <p className="admin-detail-note">44-owned catalog items use the platform Stripe account and do not require creator payout onboarding.</p>}

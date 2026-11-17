@@ -1,11 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
 import { useMusicPlayer, type MusicQueueTrack } from '@/components/MusicPlayer';
 import type { SamplePackFile, SamplePlaybackProgress } from '@/lib/domain/nativeContent';
 import { listSampleProgress, saveSampleProgress } from '@/lib/domain/nativeContent';
-import { Ui44OverflowTrackTitle } from '@/components/ui44/OverflowTrackTitle';
+import { ItemTrackList } from '@/components/ItemTrackList';
 
 export function SamplePackExperience({
   itemId,
@@ -77,61 +76,25 @@ export function SamplePackExperience({
     playQueue(queue, index, Number(progress[sample.id]?.position_seconds ?? 0));
   }
 
-  return (
-    <div className={library ? 'view-section view-tracklist-section sample-pack-experience' : 'sample-pack-experience'}>
-      <div className="sample-pack-heading">
-        <h2 className="view-section-title">{library ? 'Pack Contents' : 'Preview Samples'}</h2>
-      </div>
-      {samples.length === 0 ? (
-        <p className="app-empty-text">No sample previews have been added yet.{library && fullPackUrl ? ' The full pack is ready to download.' : ''}</p>
-      ) : (
-        <div className="view-tracklist ui44-track-list ui44-panel ui44-panel-glass ui44-panel-overflow-clip sample-preview-list">
-          {samples.map((sample, index) => {
-            const active = currentTrack?.id === sample.id;
-            const downloadUrl = sample.source_asset_id ? signedDownloads[sample.source_asset_id] : undefined;
-            return (
-              <div
-                className={`view-track-row sample-preview-row ui44-track-row ui44-track-row-sample ui44-track-row-interactive${active ? ' ui44-track-row-selected' : ''}`}
-                key={sample.id}
-                role="button"
-                tabIndex={sample.preview_url ? 0 : -1}
-                aria-disabled={!sample.preview_url}
-                aria-pressed={active}
-                onClick={() => toggleSample(sample)}
-                onKeyDown={event => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    toggleSample(sample);
-                  }
-                }}
-              >
-                <div className={active ? 'view-track-leading view-track-leading-current ui44-track-leading' : 'view-track-leading ui44-track-leading'}>
-                  <span className="view-track-number ui44-track-index">{index + 1}</span>
-                  <button
-                    className="view-track-play ui44-track-play-action"
-                    type="button"
-                    disabled={!sample.preview_url}
-                    aria-label={`${active && isPlaying ? 'Pause' : 'Play'} ${sample.title}`}
-                    onClick={event => { event.stopPropagation(); toggleSample(sample); }}
-                  >
-                    <span className={active ? `view-track-icon view-track-icon-equalizer${isPlaying ? ' view-track-icon-equalizer-playing' : ''}` : 'view-track-icon view-track-icon-play'} aria-hidden="true" />
-                  </button>
-                </div>
-                <Ui44OverflowTrackTitle title={sample.title} active={active && isPlaying} className="ui44-track-title" />
-                <div className="sample-track-actions ui44-track-trailing">
-                  <span className="view-track-duration ui44-track-duration">{formatTime(Number(sample.duration_seconds ?? 0))}</span>
-                  {downloadUrl ? <Link className="sample-download-action ui44-track-download-action" href={downloadUrl} target="_blank" rel="noreferrer" download aria-label={`Download ${sample.title}`} onClick={event => event.stopPropagation()}>↓</Link> : null}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function formatTime(seconds: number) {
-  if (!Number.isFinite(seconds) || seconds <= 0) return '0:00';
-  return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+  return <div className={library ? 'view-section view-tracklist-section sample-pack-experience' : 'sample-pack-experience'}>
+    {samples.length === 0 ? (
+      <p className="app-empty-text">No sample previews have been added yet.{library && fullPackUrl ? ' The full pack is ready to download.' : ''}</p>
+    ) : <ItemTrackList label="Sample tracks" rows={samples.map((sample, index) => {
+      const active = currentTrack?.id === sample.id;
+      const downloadUrl = sample.source_asset_id ? signedDownloads[sample.source_asset_id] : undefined;
+      return {
+        id: sample.id,
+        number: index + 1,
+        title: sample.title,
+        playable: Boolean(sample.preview_url),
+        active,
+        playing: active && isPlaying,
+        onPlay: () => toggleSample(sample),
+        actions: [
+          ...(downloadUrl ? [{ id: 'download', label: 'Download', href: downloadUrl, download: true }] : []),
+          { id: 'preview', label: active && isPlaying ? 'Pause' : 'Play', onSelect: () => toggleSample(sample), disabled: !sample.preview_url },
+        ],
+      };
+    })} />}
+  </div>;
 }

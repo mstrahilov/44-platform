@@ -7,6 +7,7 @@ import { getAchievementIconPath } from '@/lib/achievementIcons';
 import { replaceStudioReleaseFeatures } from '@/lib/domain/studioPublishing';
 import { replaceStudioReleaseVideoEmbeds, type ReleaseVideoEmbed } from '@/lib/domain/releaseFeatures';
 import { Ui44CheckboxInput, Ui44TextInput } from '@/components/ui44/Inputs';
+import { OS44Button } from '@/components/OS44Button';
 
 export type DraftAchievement = {
   code: string;
@@ -416,10 +417,10 @@ export function StudioReleaseFeatures({
                     <span className="dashboard-field-label">YouTube Video URL</span>
                     <Ui44TextInput className="os-input-field" type="url" value={embed.url} placeholder="Enter YouTube video URL" onChange={event => updateVideoEmbed(index, { url: event.target.value })} />
                   </label>
-                  {state.videoEmbeds.length > 1 && <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => removeVideoEmbed(index)}>Remove</button>}
+                  {state.videoEmbeds.length > 1 && <OS44Button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => removeVideoEmbed(index)}>Remove</OS44Button>}
                 </div>
               ))}
-              {state.videoEmbeds.length < MAX_RELEASE_VIDEOS && <button type="button" className="os-button os-button-secondary os-button-compact" onClick={addVideoEmbed}>Add another video</button>}
+              {state.videoEmbeds.length < MAX_RELEASE_VIDEOS && <OS44Button type="button" className="os-button os-button-secondary os-button-compact" onClick={addVideoEmbed}>Add another video</OS44Button>}
             </div></div>
           )}
         </section>

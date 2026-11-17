@@ -126,12 +126,14 @@ export function MobileSearchOverlay({
   onValueChange,
   onClose,
   onSubmit,
+  libraryScope = false,
 }: {
   open: boolean;
   value: string;
   onValueChange: (value: string) => void;
   onClose: () => void;
   onSubmit: (value: string, href?: string) => void;
+  libraryScope?: boolean;
 }) {
   const [suggestionIndex, setSuggestionIndex] = useState<SearchSuggestion[]>(
     createTextSuggestions(BASE_SEARCH_SUGGESTIONS),
@@ -142,16 +144,10 @@ export function MobileSearchOverlay({
     if (!open) return;
     let alive = true;
     document.body.classList.add('os-mobile-search-active');
-    void loadSuggestionIndex()
-      .then(suggestions => {
-        if (alive) setSuggestionIndex(suggestions);
-      })
-      .catch(() => {
-        if (alive) setSuggestionIndex(createTextSuggestions(BASE_SEARCH_SUGGESTIONS));
-      })
-      .finally(() => {
-        if (alive) setLoading(false);
-      });
+    if (!libraryScope) void loadSuggestionIndex()
+      .then(suggestions => { if (alive) setSuggestionIndex(suggestions); })
+      .catch(() => { if (alive) setSuggestionIndex(createTextSuggestions(BASE_SEARCH_SUGGESTIONS)); })
+      .finally(() => { if (alive) setLoading(false); });
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') onClose();
@@ -163,11 +159,11 @@ export function MobileSearchOverlay({
       document.body.classList.remove('os-mobile-search-active');
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [onClose, open]);
+  }, [libraryScope, onClose, open]);
 
   const query = value.trim();
   const suggestions = useMemo(() => {
-    if (!query) return [];
+    if (!query || libraryScope) return [];
     const supportSuggestions = createTextSuggestions(
       searchSupportArticles(query, 6).map(article => article.title),
     );
@@ -186,7 +182,7 @@ export function MobileSearchOverlay({
         || a.primary.localeCompare(b.primary)
       ))
       .slice(0, 8);
-  }, [query, suggestionIndex]);
+  }, [libraryScope, query, suggestionIndex]);
 
   if (!open) return null;
 
@@ -196,7 +192,7 @@ export function MobileSearchOverlay({
   }
 
   return (
-    <div className="os-mobile-search-overlay" role="dialog" aria-modal="true" aria-label="Search 44OS">
+    <div className="os-mobile-search-overlay" role="dialog" aria-modal="true" aria-label={libraryScope ? 'Search Library' : 'Search 44OS'}>
       <form className="os-mobile-search-overlay-bar" role="search" onSubmit={submitSearch}>
         <button
           type="button"
@@ -223,8 +219,8 @@ export function MobileSearchOverlay({
               event.preventDefault();
               onSubmit(value);
             }}
-            placeholder="Search"
-            aria-label="Search 44OS"
+            placeholder={libraryScope ? 'Search saved items' : 'Search'}
+            aria-label={libraryScope ? 'Search saved items' : 'Search 44OS'}
           />
           {value && (
             <button

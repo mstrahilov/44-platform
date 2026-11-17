@@ -34,7 +34,9 @@ import { ExternalLinkActions } from '@/components/ExternalLinkActions';
 import type { CreatorEvent } from '@/lib/domain/events';
 import { formatEventDate } from '@/lib/eventTime';
 import { beatReviewSurfacesEnabled, hydrateBeatProducts } from '@/lib/domain/beats';
+import type { CreatorVideoPage } from '@/lib/domain/releaseFeatures';
 import { SectionTab, SectionTabs } from '@/components/SectionTabs';
+import { OS44Button } from '@/components/OS44Button';
 
 type ProfileTab = 'posts' | 'music' | 'videos' | 'beats' | 'books' | 'sample-packs' | 'games' | 'merch' | 'events';
 type CurrentProfileState = {
@@ -76,6 +78,7 @@ export default function PublicProfilePage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [externalLinks, setExternalLinks] = useState<Array<{ id: string; label: string; platform: string; url: string }>>([]);
   const [posts, setPosts] = useState<SocialPost[]>([]);
+  const [creatorVideos, setCreatorVideos] = useState<CreatorVideoPage[]>([]);
   const [events, setEvents] = useState<CreatorEvent[]>([]);
   const [replyCounts, setReplyCounts] = useState<CountMap>({});
   const [repliersMap, setRepliersMap] = useState<LikersMap>({});
@@ -85,44 +88,68 @@ export default function PublicProfilePage() {
   const [currentProfileState, setCurrentProfileState] = useState<CurrentProfileState | null>(null);
   const [tab, setTab] = useState<ProfileTab>('posts');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [setupGateOpen, setSetupGateOpen] = useState(false);
   const { openContextMenu } = useContextMenu();
 
   useEffect(() => {
+    let alive = true;
     async function loadProfilePage() {
       setLoading(true);
+      setLoadError('');
       setError('');
+      setProfile(null);
+      setProducts([]);
+      setExternalLinks([]);
+      setPosts([]);
+      setCreatorVideos([]);
+      setEvents([]);
+      setReplyCounts({});
+      setRepliersMap({});
+      setLikes([]);
 
-      const resolvedProfile = await getPublicProfile(username);
-      setProfile(resolvedProfile);
+      try {
+        const resolvedProfile = await getPublicProfile(username);
+        if (!alive) return;
+        setProfile(resolvedProfile);
 
-      if (!resolvedProfile) {
+        if (!resolvedProfile) {
+          setIsFollowing(false);
+          setLoading(false);
+          return;
+        }
+
+        const content = await getPublicProfileContent(resolvedProfile);
+        const hydratedProducts = await hydrateBeatProducts(content.items.filter(Boolean));
+        if (!alive) return;
+        setProducts(hydratedProducts);
+        setExternalLinks(content.links);
+        setPosts(content.posts);
+        setCreatorVideos(content.videos);
+        setEvents((content.events ?? []) as CreatorEvent[]);
+        setReplyCounts(countById(content.replies, 'post_id'));
+        setRepliersMap(repliersByPost(content.replies));
+        setLikes(content.likes);
+      } catch {
+        if (!alive) return;
+        setProfile(null);
         setProducts([]);
-        setExternalLinks([]);
         setPosts([]);
-        setIsFollowing(false);
-        setLoading(false);
-        return;
+        setCreatorVideos([]);
+        setExternalLinks([]);
+        setEvents([]);
+        setLoadError('Could not load this profile. Check your connection and try again.');
+      } finally {
+        if (alive) setLoading(false);
       }
-
-      const content = await getPublicProfileContent(resolvedProfile);
-      setProducts(await hydrateBeatProducts(content.items.filter(Boolean)));
-      setExternalLinks(content.links);
-      const nextPosts = content.posts;
-      setPosts(nextPosts);
-      setEvents((content.events ?? []) as CreatorEvent[]);
-      const replyRowsData = content.replies;
-      setReplyCounts(countById(replyRowsData, 'post_id'));
-      setRepliersMap(repliersByPost(replyRowsData));
-      const likeRows = content.likes;
-      setLikes(likeRows);
-      setLoading(false);
     }
 
-    loadProfilePage();
-  }, [username]);
+    void loadProfilePage();
+    return () => { alive = false; };
+  }, [loadAttempt, username]);
 
   useEffect(() => {
     if (!userId) return;
@@ -299,6 +326,7 @@ export default function PublicProfilePage() {
     [publishedProducts],
   );
   const generalPosts = posts;
+  const videos = creatorVideos;
   const likeCounts = useMemo(() => countById(likes, 'post_id'), [likes]);
   const likersMap = useMemo(() => likersByPost(likes), [likes]);
   const likedIds = useMemo(() => new Set(
@@ -309,16 +337,17 @@ export default function PublicProfilePage() {
       if (isCreator) {
         const creatorTabs: Array<{ id: ProfileTab; label: string }> = [];
         if (musicProducts.length > 0) creatorTabs.push({ id: 'music', label: 'Music' });
+        if (videos.length > 0) creatorTabs.push({ id: 'videos', label: 'Videos' });
         if (bookProducts.length > 0) creatorTabs.push({ id: 'books', label: 'Books' });
         if (beatProducts.length > 0) creatorTabs.push({ id: 'beats', label: 'Beats' });
         if (assetProducts.length > 0) creatorTabs.push({ id: 'sample-packs', label: 'Sample Packs' });
         if (events.length > 0) creatorTabs.push({ id: 'events', label: 'Events' });
-        if (generalPosts.length > 0) creatorTabs.push({ id: 'posts', label: 'Posts' });
+        creatorTabs.push({ id: 'posts', label: 'Posts' });
         return creatorTabs;
       }
-      return generalPosts.length > 0 ? [{ id: 'posts' as const, label: 'Posts' }] : [];
+      return [{ id: 'posts' as const, label: 'Posts' }];
     },
-    [assetProducts.length, beatProducts.length, bookProducts.length, events.length, generalPosts.length, isCreator, musicProducts.length],
+    [assetProducts.length, beatProducts.length, bookProducts.length, events.length, isCreator, musicProducts.length, videos.length],
   );
 
   useEffect(() => {
@@ -347,6 +376,13 @@ export default function PublicProfilePage() {
   }
   if (loading) {
     return <PageShell><CenteredMessage status>Loading...</CenteredMessage></PageShell>;
+  }
+
+  if (loadError) {
+    return <PageShell><div className="app-empty-text ui44-state" role="alert">
+      <p>{loadError}</p>
+      <OS44Button type="button" className="os-button os-button-secondary" onClick={() => setLoadAttempt(value => value + 1)}>Try Again</OS44Button>
+    </div></PageShell>;
   }
 
   if (!profile) {
@@ -394,12 +430,12 @@ export default function PublicProfilePage() {
                   <ExternalLinkActions links={externalLinks} context="profile" label={`${displayName} around the web`} />
                   {!isOwn && <div className="social-profile-actions">
                       <>
-                        <button type="button" className="os-button os-button-primary" onClick={handleFollowAction} disabled={busy === 'follow'}>
+                        <OS44Button className="social-profile-action-button" onClick={handleFollowAction} disabled={busy === 'follow'}>
                           {isFollowing ? 'Following' : 'Follow'}
-                        </button>
-                        <button type="button" className="os-button os-button-secondary" onClick={openMessage} disabled={busy === 'message'}>
+                        </OS44Button>
+                        <OS44Button className="social-profile-action-button" onClick={openMessage} disabled={busy === 'message'}>
                           Message
-                        </button>
+                        </OS44Button>
                       </>
                   </div>}
                 </div>
@@ -483,7 +519,15 @@ export default function PublicProfilePage() {
         )}
 
         {tab === 'videos' && (
-          <div className="app-empty-text" aria-label="Videos">Videos are coming soon.</div>
+          <ArtifactGrid empty="No videos published yet." ariaLabel="Videos">
+            {videos.map(video => <SocialArtifactCard
+              key={video.id}
+              href={`/videos/${video.id}`}
+              title={video.title}
+              meta="Video"
+              image={`https://i.ytimg.com/vi/${video.youtube_video_id}/hqdefault.jpg`}
+            />)}
+          </ArtifactGrid>
         )}
 
         {tab === 'beats' && (
@@ -579,10 +623,10 @@ function profileProductYear(product: Product) {
   return year ? String(year) : '';
 }
 
-function ArtifactGrid({ children, empty }: { children: ReactNode; empty: string }) {
+function ArtifactGrid({ children, empty, ariaLabel = 'Published work' }: { children: ReactNode; empty: string; ariaLabel?: string }) {
   const count = Array.isArray(children) ? children.length : 1;
   return count ? (
-    <section className="social-card-grid ui44-catalog-grid">{children}</section>
+    <section className="social-card-grid ui44-catalog-grid" aria-label={ariaLabel}>{children}</section>
   ) : (
     <div className="app-empty-text">{empty}</div>
   );

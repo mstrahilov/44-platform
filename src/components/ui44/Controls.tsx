@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { Ui44TextInput } from '@/components/ui44/Inputs';
+import { OS44Button } from '@/components/OS44Button';
 
 type ButtonVariant = 'default' | 'destructive' | 'unavailable';
 
@@ -11,9 +12,9 @@ export function Ui44Button({
   className = '',
   disabled,
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant }) {
+}: Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> & { children: string; variant?: ButtonVariant }) {
   const unavailable = variant === 'unavailable';
-  return <button
+  return <OS44Button
     className={`ui44-button ui44-button-${variant} ${className}`.trim()}
     disabled={disabled || unavailable}
     {...props}

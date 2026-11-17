@@ -1,11 +1,11 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { PageShell, HubHero, EmptyMessage } from '@/components/Ui';
 import { useAuth } from '@/lib/useAuth';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { listCreatorOrders, updateCreatorOrderFulfillment, type CreatorOrderLine } from '@/lib/domain/studioCommerce';
+import { OS44Button } from '@/components/OS44Button';
 
 function formatMoney(cents: number, currency: string) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100);
@@ -102,7 +102,7 @@ export default function StudioOrdersPage() {
             <div className="dashboard-empty">
               No merch orders yet.
               <div className="ui44-section-gap-before">
-                <Link className="os-button os-button-primary os-button-compact" href="/studio#merch">Open Merch</Link>
+                <OS44Button className="os-button os-button-primary os-button-compact" href="/studio#merch">Open Merch</OS44Button>
               </div>
             </div>
           ) : (
@@ -123,14 +123,14 @@ export default function StudioOrdersPage() {
                 </div>
                 <div className="dashboard-row-actions">
                   {order.fulfillment_status === 'pending' ? (
-                    <button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => updateOrderStatus(order, 'in_progress')}>
+                    <OS44Button type="button" className="os-button os-button-ghost os-button-compact" onClick={() => updateOrderStatus(order, 'in_progress')}>
                       Mark In Progress
-                    </button>
+                    </OS44Button>
                   ) : null}
                   {(order.fulfillment_status === 'pending' || order.fulfillment_status === 'in_progress') ? (
-                    <button type="button" className="os-button os-button-secondary os-button-compact" onClick={() => updateOrderStatus(order, 'fulfilled')}>
+                    <OS44Button type="button" className="os-button os-button-secondary os-button-compact" onClick={() => updateOrderStatus(order, 'fulfilled')}>
                       Mark Fulfilled
-                    </button>
+                    </OS44Button>
                   ) : null}
                 </div>
               </div>

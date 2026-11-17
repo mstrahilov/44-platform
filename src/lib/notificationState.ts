@@ -53,11 +53,12 @@ function broadcastState(state: NotificationReadState) {
 export async function loadNotificationReadState(userId: string): Promise<NotificationReadState> {
   const localSeen = readLocalIds(LEGACY_SEEN_KEY, userId);
   const localHidden = readLocalIds(LEGACY_HIDDEN_KEY, userId);
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('user_notification_state')
     .select('seen_notification_ids,hidden_notification_ids')
     .eq('user_id', userId)
     .maybeSingle();
+  if (error) throw error;
 
   const row = data as { seen_notification_ids?: string[] | null; hidden_notification_ids?: string[] | null } | null;
   const state = {
@@ -69,12 +70,13 @@ export async function loadNotificationReadState(userId: string): Promise<Notific
 }
 
 export async function saveNotificationReadState(userId: string, state: NotificationReadState) {
-  writeLocalState(userId, state);
-  await supabase.from('user_notification_state').upsert({
+  const { error } = await supabase.from('user_notification_state').upsert({
     user_id: userId,
     seen_notification_ids: [...state.seenIds],
     hidden_notification_ids: [...state.hiddenIds],
     updated_at: new Date().toISOString(),
   }, { onConflict: 'user_id' });
+  if (error) throw error;
+  writeLocalState(userId, state);
   broadcastState(state);
 }

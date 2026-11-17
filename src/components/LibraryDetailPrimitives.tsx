@@ -2,12 +2,12 @@
 
 import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
-import { AchievementIconGlyph } from '@/components/AchievementIconGlyph';
 import { SectionHeader } from '@/components/Ui';
 import type { ProductAchievement } from '@/lib/platform';
 import type { Product } from '@/lib/products';
 import { ExternalLinkActions } from '@/components/ExternalLinkActions';
 import type { ReleaseVideoEmbed } from '@/lib/domain/releaseFeatures';
+import { OS44Button } from '@/components/OS44Button';
 
 export type ProductDetailAction = {
   label: string;
@@ -39,7 +39,7 @@ export function ProductDetailHeader({
   actions,
   externalLinks = [],
   coverClassName = '',
-  showCreatorAvatar = true,
+  showCreatorAvatar = false,
   showCreatorIdentity = true,
   imageUrlOverride,
   className = '',
@@ -81,7 +81,7 @@ export function ProductDetailHeader({
       </div>
       <div className="view-album-copy">
         <h1 className="view-album-title">{product.title}</h1>
-        {showCreatorIdentity ? <Link className="library-creator-chip" href={creatorHrefValue} aria-label={`View ${creatorName}`}>
+        {showCreatorIdentity ? <Link className="library-creator-chip" href={creatorHrefValue} aria-label={`View ${creatorName}`} style={{ color: 'var(--os-color-accent)' }}>
           {showCreatorAvatar ? <span className="library-creator-avatar ui44-identity-avatar ui44-identity-avatar-inline">
             {product.creators?.avatar_url ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -105,22 +105,21 @@ export function ProductDetailHeader({
         <ExternalLinkActions links={externalLinks ?? []} context="item" variant="icons" label={`Open ${product.title} on other platforms`} />
         {beforeActions}
         <div className="view-album-actions">
-          {actions.map(action =>
+          {actions.map((action, index) =>
             action.href ? (
-              <Link
-                key={action.label}
-                className={`${action.secondary ? 'os-button os-button-secondary' : 'os-button os-button-primary'}${action.active ? ' os-button-active' : ''}`}
+              <OS44Button
+                key={`${action.label}-${index}`}
                 href={action.href}
                 target={action.opensInNewWindow ? '_blank' : undefined}
                 rel={action.opensInNewWindow ? 'noopener noreferrer' : undefined}
                 aria-label={action.opensInNewWindow ? `${action.label} (opens in a new window)` : undefined}
               >
                 {action.label}
-              </Link>
+              </OS44Button>
             ) : (
-              <button key={action.label} className={`${action.secondary ? 'os-button os-button-secondary' : 'os-button os-button-primary'}${action.active && action.label !== 'Shuffle' ? ' os-button-active' : ''}`} type="button" onClick={action.onClick} disabled={action.disabled} aria-pressed={action.label === 'Shuffle' ? action.active : undefined}>
+              <OS44Button key={`${action.label}-${index}`} onClick={action.onClick} disabled={action.disabled} aria-pressed={action.label === 'Shuffle' ? action.active : undefined}>
                 {action.label}
-              </button>
+              </OS44Button>
             ),
           )}
         </div>
@@ -137,6 +136,16 @@ export function withSourceProduct(href: string, productId?: string | null) {
   return `${href}${separator}fromProduct=${encodeURIComponent(productId)}`;
 }
 
+const MUSIC_ACHIEVEMENT_DESCRIPTIONS: Record<string, string> = {
+  front_to_back: 'Listen to every track on this release.',
+  no_skips: 'Listen from the first track to the last without skipping.',
+  nightbird: 'Listen to the release between 10 PM and 4 AM.',
+  heavy_rotation: 'Listen to the full release three times.',
+  joined_the_orbit: 'Follow the creator from this release.',
+  signal_boost: 'Get someone to open this release from your shared link.',
+  overachiever: 'Unlock every other achievement.',
+};
+
 export function LibraryAchievementsSection({
   achievements,
   unlockedAchievementIds,
@@ -146,9 +155,14 @@ export function LibraryAchievementsSection({
   unlockedAchievementIds: Set<string>;
   emptyMessage?: string;
 }) {
-  const unlocked = achievements.filter(item => unlockedAchievementIds.has(item.id));
-  const locked = achievements.filter(item => !unlockedAchievementIds.has(item.id));
-  const orderedAchievements = [...unlocked, ...locked];
+  const trophy = achievements.find(item => item.code === 'overachiever');
+  const trackedAchievements = achievements.filter(item => item.code !== 'overachiever');
+  const unlockedCount = trackedAchievements.filter(item => unlockedAchievementIds.has(item.id)).length;
+  const progress = trackedAchievements.length ? unlockedCount / trackedAchievements.length : 0;
+  const orderedAchievements = [
+    ...trackedAchievements.filter(item => unlockedAchievementIds.has(item.id)),
+    ...trackedAchievements.filter(item => !unlockedAchievementIds.has(item.id)),
+  ];
 
   return (
     <div className="view-section library-achievements-section">
@@ -158,6 +172,16 @@ export function LibraryAchievementsSection({
         <p className="app-empty-text library-empty-text">{emptyMessage}</p>
       ) : (
         <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip library-achievement-list ui44-achievement-list">
+          {trophy && <div className="library-achievement-trophy">
+            <div className="library-achievement-trophy-heading">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10v3h4v3c0 3.1-2.1 5.6-5.1 6.4A5.5 5.5 0 0 1 13 17v2h4v2H7v-2h4v-2a5.5 5.5 0 0 1-2.9-1.6C5.1 14.6 3 12.1 3 9V6h4V3Zm-2 5v1c0 1.8 1.1 3.4 2.7 4.1A8 8 0 0 1 7 9V8H5Zm14 0h-2v1a8 8 0 0 1-.7 4.1A4.5 4.5 0 0 0 19 9V8Z" /></svg>
+              <strong>{trophy.title}</strong>
+              <span>{Math.round(progress * 100)}%</span>
+            </div>
+            <div className="library-achievement-progress" role="progressbar" aria-label="Trophy progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}>
+              <span style={{ width: `${Math.round(progress * 100)}%` }} />
+            </div>
+          </div>}
           {orderedAchievements.map(achievement => {
             const isUnlocked = unlockedAchievementIds.has(achievement.id);
             return (
@@ -165,14 +189,13 @@ export function LibraryAchievementsSection({
                 key={achievement.id}
                 className={isUnlocked ? 'dashboard-list-row library-achievement-row library-achievement-row-unlocked ui44-list-row ui44-list-row-achievement ui44-achievement-row ui44-achievement-row-unlocked' : 'dashboard-list-row library-achievement-row ui44-list-row ui44-list-row-achievement ui44-achievement-row ui44-achievement-row-locked'}
               >
-                <span className="library-achievement-icon ui44-achievement-icon" aria-hidden="true">
-                  <AchievementIconGlyph code={achievement.code} label={achievement.title} />
+                <span className="library-achievement-status" aria-label={isUnlocked ? 'Completed' : 'Not completed'}>
+                  {isUnlocked ? <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" /><path d="m7.5 12.3 3 3 6-6.3" /></svg> : <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" /></svg>}
                 </span>
                 <span className="dashboard-row-copy ui44-achievement-copy">
                   <span className="dashboard-row-title ui44-achievement-title">{achievement.title}</span>
-                  {achievement.description && <span className="dashboard-row-subtitle ui44-achievement-secondary">{achievement.description}</span>}
+                  {(MUSIC_ACHIEVEMENT_DESCRIPTIONS[achievement.code] || achievement.description) && <span className="dashboard-row-subtitle ui44-achievement-secondary">{MUSIC_ACHIEVEMENT_DESCRIPTIONS[achievement.code] || achievement.description}</span>}
                 </span>
-                {isUnlocked ? <span className="ui44-achievement-check" aria-label="Unlocked">✓</span> : null}
               </div>
             );
           })}
@@ -210,9 +233,9 @@ export function LibraryBonusContentSection({
                 </span>
               </span>
               {assetUnlocked && asset.file_url ? (
-                <Link className="os-button os-button-secondary os-button-compact" href={asset.file_url} target="_blank" rel="noreferrer">
+                <OS44Button href={asset.file_url} target="_blank" rel="noreferrer">
                   Download
-                </Link>
+                </OS44Button>
               ) : (
                 <span className="project-status-pill library-achievement-status-locked ui44-badge">Locked</span>
               )}
@@ -224,12 +247,12 @@ export function LibraryBonusContentSection({
   );
 }
 
-export function LibraryVideoEmbedsSection({ embeds }: { embeds: ReleaseVideoEmbed[] }) {
+export function LibraryVideoEmbedsSection({ embeds, title = 'Videos' }: { embeds: ReleaseVideoEmbed[]; title?: string }) {
   if (embeds.length === 0) return null;
 
   return (
     <div className="view-section library-video-embeds-section">
-      <SectionHeader title="Videos" />
+      <SectionHeader title={title} />
       <div className="library-video-embed-list">
         {embeds.map((embed, index) => (
           <article className="library-video-embed" key={embed.id}>
@@ -266,9 +289,9 @@ export function LibraryFilesSection({ assets }: { assets: LibraryFileAsset[] }) 
               </span>
             </span>
             {asset.file_url ? (
-              <Link className="os-button os-button-secondary os-button-compact" href={asset.file_url} target="_blank" rel="noreferrer">
+              <OS44Button href={asset.file_url} target="_blank" rel="noreferrer">
                 {asset.asset_type === 'book' ? 'Open' : 'Download'}
-              </Link>
+              </OS44Button>
             ) : (
               <span className="project-status-pill library-achievement-status-locked ui44-badge">Unavailable</span>
             )}

@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { HubHero, PageShell, SectionHeader } from '@/components/Ui';
@@ -10,6 +9,7 @@ import { browserTimeZone, instantFromLocalInput, localInputFromInstant } from '@
 import { getCreatorEvent, saveCreatorEvent, type EventFormat } from '@/lib/domain/events';
 import { clearStudioFormRecovery, readStudioFormRecovery, writeStudioFormRecovery } from '@/lib/studioFormRecovery';
 import { Ui44SelectInput, Ui44TextInput, Ui44Textarea } from '@/components/ui44/Inputs';
+import { OS44Button } from '@/components/OS44Button';
 
 type Draft = { title:string;shortDescription:string;format:EventFormat | '';startLocal:string;endLocal:string;timezone:string;venueName:string;address1:string;address2:string;locality:string;region:string;postalCode:string;countryCode:string;onlineUrl:string;infoUrl:string };
 const blank = (): Draft => ({ title:'',shortDescription:'',format:'',startLocal:'',endLocal:'',timezone:browserTimeZone(),venueName:'',address1:'',address2:'',locality:'',region:'',postalCode:'',countryCode:'',onlineUrl:'',infoUrl:'' });
@@ -107,8 +107,8 @@ export default function StudioEventEditor() {
 
             {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div>}
             <div className="dashboard-form-actions">
-              <Link className="os-button os-button-secondary" href={returnHref} onClick={() => clearStudioFormRecovery(recoveryKey)}>Cancel</Link>
-              <button disabled={saving} className="os-button os-button-primary">{saving ? 'Saving...' : 'Save Event'}</button>
+              <OS44Button className="os-button os-button-secondary" href={returnHref} onClick={() => clearStudioFormRecovery(recoveryKey)}>Cancel</OS44Button>
+              <OS44Button disabled={saving} className="os-button os-button-primary">{saving ? 'Saving...' : 'Save Event'}</OS44Button>
             </div>
           </form>
         </div>

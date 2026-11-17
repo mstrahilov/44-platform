@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { AdminAccessBoundary } from '@/components/admin/AdminPrimitives';
 import { HubHero, PageShell, SectionHeader } from '@/components/Ui';
 import { supabase } from '@/lib/supabase';
+import { OS44Button } from '@/components/OS44Button';
 
 type Diagnostics = {
   ready: boolean;
@@ -93,7 +94,7 @@ function AdminPayments() {
     </section>
 
     <section className="dashboard-section">
-      <SectionHeader title="Reconciliation" action={<button type="button" className="os-button os-button-secondary os-button-compact" disabled={reconciling || !data?.ready} onClick={() => { void runReconciliation(); }}>{reconciling ? 'Checking…' : 'Run 24-hour check'}</button>} />
+      <SectionHeader title="Reconciliation" action={<OS44Button type="button" className="os-button os-button-secondary os-button-compact" disabled={reconciling || !data?.ready} onClick={() => { void runReconciliation(); }}>{reconciling ? 'Checking…' : 'Run 24-hour check'}</OS44Button>} />
       {reconciliationStatus ? <div className="dashboard-status ui44-status" role="status">{reconciliationStatus}</div> : null}
       <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
         {data && data.reconciliation.length === 0 ? <div className="dashboard-empty">No Stripe reconciliation run has been recorded.</div> : data?.reconciliation.map(run => <div key={run.id} className="dashboard-list-row ui44-list-row ui44-list-row-dashboard">

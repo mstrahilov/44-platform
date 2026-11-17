@@ -1,12 +1,12 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { PageShell, HubHero, EmptyMessage } from '@/components/Ui';
 import { Ui44Panel } from '@/components/ui44/Spacing';
 import { loadRadioBundle, type RadioPlayableTrack } from '@/lib/radio';
 import { useAuth } from '@/lib/useAuth';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
+import { OS44Button } from '@/components/OS44Button';
 
 export default function StudioRadioPage() {
   const { user, loading } = useAuth();
@@ -68,7 +68,7 @@ export default function StudioRadioPage() {
         <HubHero
           title="Radio"
           copy="44 Radio is one looping playlist built from existing uploaded music."
-          actions={<Link href="/radio" className="os-button os-button-ghost">Open Radio</Link>}
+          actions={<OS44Button href="/radio" className="os-button os-button-ghost">Open Radio</OS44Button>}
         />
 
         {status ? (

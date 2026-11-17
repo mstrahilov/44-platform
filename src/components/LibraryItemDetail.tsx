@@ -2,22 +2,26 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useContextMenu } from '@/components/ContextMenu';
+import { useContextMenu, COPY_TO_CLIPBOARD_TOAST_EVENT } from '@/components/ContextMenu';
 import { useAuth } from '@/lib/useAuth';
-import { productLibraryHref } from '@/lib/experience';
+import { productBrowseHref, productLibraryHref } from '@/lib/experience';
 import { getProductLibraryContent, getProductLibraryPrimaryAction, getProductRuntimeKind } from '@/lib/libraryContent';
 import { creatorHref, type ProductAchievement, type Track } from '@/lib/platform';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
 import { LibraryAchievementsSection, LibraryBonusContentSection, LibraryFilesSection, LibraryVideoEmbedsSection, ProductDetailHeader, withSourceProduct, type LibraryBonusAsset, type LibraryFileAsset, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
 import { ProductUpdatesSection } from '@/components/ProductUpdatesSection';
 import { recordAchievementPlaybackSignal, trackProductAchievementTrigger } from '@/lib/achievementTracking';
-import { useTopbarBack } from '@/components/TopbarContext';
+import { useTopbarBack, useTopbarOverflow } from '@/components/TopbarContext';
 import { MUSIC_TRACK_COMPLETED_EVENT, MUSIC_TRACK_STARTED_EVENT, useMusicPlayer, type MusicQueueTrack, type MusicTrackPlaybackEventDetail } from '@/components/MusicPlayer';
+import { OS44Button } from '@/components/OS44Button';
+import { ItemCommunitySection, MoreFromCreatorSection } from '@/components/ItemDetailSections';
 import { getLibraryItemBundle, type DetailedLibraryItemRow } from '@/lib/domain/itemDetails';
 import type { ReleaseVideoEmbed } from '@/lib/domain/releaseFeatures';
 import type { BookContent, SamplePackFile } from '@/lib/domain/nativeContent';
 import { SamplePackExperience } from '@/components/SamplePackExperience';
-import { Ui44OverflowTrackTitle } from '@/components/ui44/OverflowTrackTitle';
+import { ItemTrackList } from '@/components/ItemTrackList';
+import { PlaylistPicker } from '@/components/PlaylistPicker';
+import { hideLibraryItem } from '@/lib/domain/library';
 import type { BeatLicenseGrant } from '@/lib/domain/beats';
 import { supabase } from '@/lib/supabase';
 
@@ -158,12 +162,15 @@ function ProductLibraryDetail({
     label: includedFile.asset_type === 'book' ? 'Open' : 'Download',
     href: includedFile.file_url,
   } : baseAction;
+  const downloadHref = action.href;
+  const downloadUnavailableMessage = action.missingMessage;
   const runtimeKind = getProductRuntimeKind(product);
   const isMusic = runtimeKind === 'music';
   const isBook = runtimeKind === 'book';
   const isAsset = runtimeKind === 'sample_pack';
-  const { currentTrack, isPlaying, playQueue, toggleTrack: togglePlayerTrack, queueNext } = useMusicPlayer();
+  const { currentTrack, isPlaying, toggleTrack: togglePlayerTrack, queueNext, queueReleaseNext } = useMusicPlayer();
   const { openContextMenu } = useContextMenu();
+  const router = useRouter();
   const [localUnlockedAchievementIds, setLocalUnlockedAchievementIds] = useState(unlockedAchievementIds);
   const [completedTrackIds, setCompletedTrackIds] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<AchievementToastData | null>(null);
@@ -173,6 +180,8 @@ function ProductLibraryDetail({
   const [fullReleaseHandled, setFullReleaseHandled] = useState(false);
   const playbackSessionIdRef = useRef('');
   const [downloadingTrackId, setDownloadingTrackId] = useState<string | null>(null);
+  const [playlistTrackId, setPlaylistTrackId] = useState<string | null>(null);
+  const [playlistReleaseOpen, setPlaylistReleaseOpen] = useState(false);
 
   function currentPlaybackSessionId() {
     if (!playbackSessionIdRef.current) playbackSessionIdRef.current = crypto.randomUUID();
@@ -224,12 +233,30 @@ function ProductLibraryDetail({
         releaseTitle: product.title,
         artworkUrl: product.cover_url || product.hero_url,
         audioUrl: track.audio_url!,
-        durationSeconds: track.duration_seconds,
+        durationSeconds: getTrackDurationSeconds(track, inferredTrackDurations),
         productId: product.id,
         artistHref: creatorHref(product.creators ?? product.creator),
         releaseHref: productLibraryHref(product, row.id),
       }))
-  ), [product, row.id, tracks]);
+  ), [inferredTrackDurations, product, row.id, tracks]);
+  useTopbarOverflow(useMemo(() => [
+    ...(isMusic ? [
+      { id: 'playlist', label: 'Add to Playlist', onSelect: () => setPlaylistReleaseOpen(true) },
+      { id: 'queue', label: 'Add to Queue', onSelect: () => queueReleaseNext(musicQueue), disabled: !musicQueue.length },
+    ] : []),
+    { id: 'share', label: 'Share', onSelect: () => {
+      const url = new URL(productBrowseHref(product), window.location.origin).toString();
+      void navigator.clipboard?.writeText(url);
+      window.dispatchEvent(new CustomEvent(COPY_TO_CLIPBOARD_TOAST_EVENT, { detail: { message: 'Link copied to clipboard' } }));
+    } },
+    ...(isAsset ? [{ id: 'download', label: 'Download', onSelect: () => {
+      if (downloadHref) window.open(downloadHref, '_blank', 'noopener,noreferrer');
+      else alert(downloadUnavailableMessage);
+    } }] : []),
+    { id: 'remove', label: 'Remove from Library', onSelect: () => {
+      void hideLibraryItem(userId, row.id).then(() => router.push('/library')).catch(error => alert(error instanceof Error ? error.message : 'Could not remove this item.'));
+    } },
+  ], [downloadHref, downloadUnavailableMessage, isAsset, isMusic, musicQueue, product, queueReleaseNext, row.id, router, userId]));
   const overachieverAchievement = achievements.find(achievement => achievement.code === 'overachiever');
   const hasOverachieverUnlocked = Boolean(overachieverAchievement && localUnlockedAchievementIds.has(overachieverAchievement.id));
 
@@ -253,24 +280,6 @@ function ProductLibraryDetail({
     const trackIndex = musicQueue.findIndex(item => item.id === track.id);
     if (trackIndex < 0) return;
     queueNext(musicQueue[trackIndex]);
-  }
-
-  function playRelease() {
-    if (!musicQueue.length) {
-      runProductAction(action);
-      return;
-    }
-
-    beginPlaybackSession();
-    playQueue(musicQueue, 0);
-    setSelectedTrackId(musicQueue[0]?.id ?? null);
-    setCompletedTrackIds(new Set());
-    setNoSkipsEligible(true);
-    setFullReleaseHandled(false);
-  }
-
-  function openDownloads() {
-    document.getElementById('downloads')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   async function downloadTrack(track: Track) {
@@ -388,24 +397,17 @@ function ProductLibraryDetail({
   ];
   const readerHref = `/reader/${product.id}?returnTo=${encodeURIComponent(`/library/item/${row.id}`)}`;
   const interactiveHref = `/launch/${product.id}?returnTo=${encodeURIComponent(`/library/item/${row.id}`)}`;
-  const primaryActions: ProductDetailAction[] = [
-    {
-      label: isMusic ? 'Play' : isBook ? 'Read' : isAsset ? 'Download' : action.label,
-      href: isBook && bookContent ? readerHref : runtimeKind === 'interactive' ? interactiveHref : undefined,
-      opensInNewWindow: runtimeKind === 'interactive',
-      onClick: isMusic ? playRelease : (isBook && bookContent) || runtimeKind === 'interactive' ? undefined : () => runProductAction(action),
-    },
-    ...(hasActiveDownload && ((isMusic && tracks.some(track => Boolean(track.audio_url))) || includedFile?.file_url) ? [{
-      label: 'Download',
-      href: !isMusic ? includedFile?.file_url ?? undefined : undefined,
-      opensInNewWindow: !isMusic,
-      onClick: isMusic ? openDownloads : undefined,
-      secondary: true,
-    } satisfies ProductDetailAction] : []),
-    ...(!isMusic && !isBook && !isAsset ? [{ label: 'View Creator', href: creatorLink, secondary: true } satisfies ProductDetailAction] : []),
-  ];
+  const primaryActions: ProductDetailAction[] = isMusic || isAsset ? [] : [{
+    label: isMusic || runtimeKind === 'interactive' ? 'Play' : isBook ? 'Read' : isAsset ? 'Download' : action.label,
+    href: isBook && bookContent ? readerHref : runtimeKind === 'interactive' ? interactiveHref : undefined,
+    opensInNewWindow: runtimeKind === 'interactive',
+    onClick: (isBook && bookContent) || runtimeKind === 'interactive' ? undefined : () => runProductAction(action),
+  }];
 
   return (
+    <>
+    {playlistTrackId ? <PlaylistPicker userId={userId} trackId={playlistTrackId} onClose={() => setPlaylistTrackId(null)} /> : null}
+    {playlistReleaseOpen ? <PlaylistPicker userId={userId} releaseItemId={product.id} onClose={() => setPlaylistReleaseOpen(false)} /> : null}
     <div className="view-detail-single library-detail-page">
 
       <ProductDetailHeader
@@ -415,78 +417,40 @@ function ProductLibraryDetail({
         meta={releaseMeta}
         actions={primaryActions}
         externalLinks={product.external_links ?? []}
+        showCreatorAvatar={false}
       />
 
-      {/* Tracklist (music) */}
-      {isMusic && tracks.length > 0 && (
-        <div className="view-section view-tracklist-section">
-          <h2 className="view-section-title">Tracklist</h2>
-          <div className="view-tracklist ui44-track-list ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
-            {tracks.map((track, index) => (
-              <div
-                className={selectedTrackId === track.id || currentTrack?.id === track.id ? 'view-track-row view-track-row-selected ui44-track-row ui44-track-row-interactive ui44-track-row-selected' : 'view-track-row ui44-track-row ui44-track-row-interactive'}
-                key={track.id}
-                onClick={() => {
-                  setSelectedTrackId(track.id);
-                  void toggleTrack(track);
-                }}
-                onContextMenu={event => openContextMenu(event, [
-                  { id: 'play', label: 'Play', onSelect: () => { void toggleTrack(track); } },
-                  { id: 'play-next', label: 'Play Next', onSelect: () => queueTrackNext(track), disabled: !track.audio_url },
-                ])}
-                role="button"
-                tabIndex={0}
-                aria-pressed={selectedTrackId === track.id || currentTrack?.id === track.id}
-                onKeyDown={event => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    setSelectedTrackId(track.id);
-                    void toggleTrack(track);
-                  }
-                }}
-              >
-                <div className={currentTrack?.id === track.id ? 'view-track-leading view-track-leading-current ui44-track-leading' : 'view-track-leading ui44-track-leading'}>
-                  <span className="view-track-number ui44-track-index">{trackNumbers.get(track.id) ?? index + 1}</span>
-                  <button
-                    type="button"
-                    className="view-track-play ui44-track-play-action"
-                    aria-label={`${currentTrack?.id === track.id && isPlaying ? 'Pause' : 'Play'} ${track.title}`}
-                    onClick={event => {
-                      event.stopPropagation();
-                      setSelectedTrackId(track.id);
-                      void toggleTrack(track);
-                    }}
-                    disabled={!track.audio_url}
-                  >
-                    <span className={currentTrack?.id === track.id ? (isPlaying ? 'view-track-icon view-track-icon-equalizer view-track-icon-equalizer-playing' : 'view-track-icon view-track-icon-pause') : 'view-track-icon view-track-icon-play'} aria-hidden="true" />
-                  </button>
-                </div>
-                <Ui44OverflowTrackTitle title={track.title} active={currentTrack?.id === track.id && isPlaying} className="ui44-track-title" />
-                <span className="view-track-duration ui44-track-duration">{formatDuration(getTrackDurationSeconds(track, inferredTrackDurations))}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {isMusic && tracks.length > 0 && <div className="view-section view-tracklist-section">
+        <ItemTrackList label="Release tracks" rows={tracks.map((track, index) => {
+          const active = currentTrack?.id === track.id;
+          return {
+            id: track.id,
+            number: trackNumbers.get(track.id) ?? index + 1,
+            title: track.title,
+            playable: Boolean(track.audio_url),
+            active: selectedTrackId === track.id || active,
+            playing: active && isPlaying,
+            onPlay: () => { setSelectedTrackId(track.id); void toggleTrack(track); },
+            actions: [
+              { id: 'playlist', label: 'Add to Playlist', onSelect: () => setPlaylistTrackId(track.id) },
+              { id: 'queue', label: 'Add to Queue', onSelect: () => queueTrackNext(track), disabled: !track.audio_url },
+              { id: 'share', label: 'Share', onSelect: () => {
+                const url = new URL(productBrowseHref(product), window.location.origin);
+                url.searchParams.set('track', track.id);
+                void navigator.clipboard?.writeText(url.toString());
+                window.dispatchEvent(new CustomEvent(COPY_TO_CLIPBOARD_TOAST_EVENT, { detail: { message: 'Link copied to clipboard' } }));
+              } },
+            ],
+            onContextMenu: event => openContextMenu(event, [
+              { id: 'play', label: 'Play', onSelect: () => { void toggleTrack(track); }, disabled: !track.audio_url },
+              { id: 'play-next', label: 'Play Next', onSelect: () => queueTrackNext(track), disabled: !track.audio_url },
+            ]),
+          };
+        })} />
+      </div>}
 
-      {isMusic && hasActiveDownload && tracks.some(track => Boolean(track.audio_url)) && (
-        <div className="view-section" id="downloads">
-          <h2 className="view-section-title">Downloads</h2>
-          <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
-            {tracks.filter(track => Boolean(track.audio_url)).map(track => (
-              <div className="dashboard-list-row ui44-list-row ui44-list-row-dashboard" key={`download-${track.id}`}>
-                <span className="dashboard-row-copy">
-                  <span className="dashboard-row-title">{track.title}</span>
-                  <span className="dashboard-row-subtitle">Included with your purchase.</span>
-                </span>
-                <button className="os-button os-button-secondary os-button-compact" type="button" disabled={downloadingTrackId === track.id} onClick={() => void downloadTrack(track)}>
-                  {downloadingTrackId === track.id ? 'Preparing…' : 'Download'}
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {isMusic && <LibraryVideoEmbedsSection embeds={videoEmbeds} title="Visuals" />}
+      {isMusic && achievements.length > 0 && <LibraryAchievementsSection achievements={achievements} unlockedAchievementIds={localUnlockedAchievementIds} />}
 
       {isBook && (
         <div className="view-section">
@@ -513,15 +477,36 @@ function ProductLibraryDetail({
         <div className="view-section"><h2 className="view-section-title">{content.contentTitle}</h2><p className="os-type-body view-description">{content.emptyCopy}</p></div>
       )}
 
-      {isMusic && <LibraryAchievementsSection achievements={achievements} unlockedAchievementIds={localUnlockedAchievementIds} />}
+      {isMusic && hasActiveDownload && tracks.some(track => Boolean(track.audio_url)) && (
+        <div className="view-section" id="downloads">
+          <h2 className="view-section-title">Downloads</h2>
+          <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
+            {tracks.filter(track => Boolean(track.audio_url)).map(track => (
+              <div className="dashboard-list-row ui44-list-row ui44-list-row-dashboard" key={`download-${track.id}`}>
+                <span className="dashboard-row-copy">
+                  <span className="dashboard-row-title">{track.title}</span>
+                  <span className="dashboard-row-subtitle">Included with your purchase.</span>
+                </span>
+                <OS44Button disabled={downloadingTrackId === track.id} onClick={() => void downloadTrack(track)}>
+                  {downloadingTrackId === track.id ? 'Preparing…' : 'Download'}
+                </OS44Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {beatLicenses.length > 0 && <LibraryBeatLicensesSection licenses={beatLicenses} assets={assets} />}
-      {isMusic && <LibraryVideoEmbedsSection embeds={videoEmbeds} />}
       {isMusic && <LibraryBonusContentSection bonusAssets={bonusAssets} unlocked={hasOverachieverUnlocked} />}
       {!isMusic && !isBook && !isAsset && <LibraryFilesSection assets={assets} />}
       <ProductUpdatesSection productId={product.id} emptyMessage="No updates from this creator yet." />
 
+      {isMusic && <MoreFromCreatorSection key={`more-${product.id}`} item={product} />}
+      <ItemCommunitySection key={`community-${product.id}`} item={product} />
+
       <AchievementToast toast={toast} onDone={() => setToast(null)} />
     </div>
+    </>
   );
 }
 
@@ -549,7 +534,7 @@ function LibraryBeatLicensesSection({ licenses, assets }: { licenses: BeatLicens
               const assetId = typeof entry.assetId === 'string' ? entry.assetId : '';
               const kind = typeof entry.kind === 'string' ? entry.kind : 'file';
               const asset = assetsById.get(assetId);
-              return asset?.file_url ? [<button key={beatFileId} type="button" className="os-button os-button-secondary os-button-compact" disabled={license.status !== 'active'} onClick={() => void download(license.id, beatFileId, assetId)}>Download {kind.replaceAll('_', ' ')}</button>] : [];
+              return asset?.file_url ? [<OS44Button key={beatFileId} disabled={license.status !== 'active'} onClick={() => void download(license.id, beatFileId, assetId)}>{`Download ${kind.replaceAll('_', ' ')}`}</OS44Button>] : [];
             })}</div>
           </div>
         </details>;
@@ -561,13 +546,6 @@ function LibraryBeatLicensesSection({ licenses, assets }: { licenses: BeatLicens
 function runProductAction(action: ReturnType<typeof getProductLibraryPrimaryAction>) {
   if (action.href) { window.open(action.href, '_blank', 'noopener,noreferrer'); return; }
   alert(action.missingMessage);
-}
-
-function formatDuration(seconds: number | null) {
-  if (!seconds) return '--:--';
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
 }
 
 function getTrackDurationSeconds(track: Track, inferredTrackDurations: Record<string, number>) {

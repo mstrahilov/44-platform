@@ -10,6 +10,7 @@ import { SectionHeader } from '@/components/Ui';
 import { SocialTrashIcon } from '@/components/Social';
 import { deleteItemReview, listItemReviews, saveItemReview, type ItemReview } from '@/lib/domain/itemCommunity';
 import { Ui44Textarea } from '@/components/ui44/Inputs';
+import { OS44Button } from '@/components/OS44Button';
 
 type ProductReview = ItemReview;
 
@@ -147,9 +148,9 @@ export function ProductReviewsSection({
               <div className="os-type-meta ui44-text-muted">
                 Reviews help people decide if this item is right for them.
               </div>
-              <button className="os-button os-button-primary os-button-compact" type="submit" disabled={saving || !body.trim()}>
+              <OS44Button className="os-button os-button-primary os-button-compact" type="submit" disabled={saving || !body.trim()}>
                 {saving ? 'Saving...' : 'Save Review'}
-              </button>
+              </OS44Button>
             </div>
           </form>
         </div>

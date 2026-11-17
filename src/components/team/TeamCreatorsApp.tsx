@@ -7,6 +7,7 @@ import { EmptyMessage, HubHero, PageShell } from '@/components/Ui';
 import { Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
 import { TeamAccessBoundary } from '@/components/team/TeamPrimitives';
 import { listTeamCreators, type TeamCreator } from '@/lib/domain/team';
+import { OS44Button } from '@/components/OS44Button';
 
 function CreatorDirectory() {
   const [query, setQuery] = useState('');
@@ -34,7 +35,7 @@ function CreatorDirectory() {
     <form className="team-filter-bar team-filter-bar-compact ui44-panel" onSubmit={submit}>
       <label><span>Search</span><Ui44TextInput value={query} onChange={event => setQuery(event.target.value)} placeholder="Name, username, or bio" /></label>
       <label><span>Sort</span><Ui44SelectInput value={sort} onChange={event => setSort(event.target.value as typeof sort)}><option value="joined_desc">Newest joined</option><option value="name">Name</option><option value="releases_desc">Most releases</option></Ui44SelectInput></label>
-      <button className="os-button os-button-secondary" type="submit">Search</button>
+      <OS44Button className="os-button os-button-secondary" type="submit">Search</OS44Button>
     </form>
     {error ? <div className="ui44-status ui44-status-error" role="alert">{error}</div> : null}
     {loading ? <div className="ui44-loading-shell" role="status" aria-label="Loading Creators" /> : rows.length === 0 ? <EmptyMessage>No published Creators match this view.</EmptyMessage> : <div className="team-directory-grid">

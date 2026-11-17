@@ -8,6 +8,7 @@ import { authorDisplayName, authorHandle, authorHref, compactDate, initials, typ
 import { communityThreadHref } from '@/lib/platform';
 import { pinDockItem } from '@/lib/dockPreferences';
 import type { CommunityReference } from '@/lib/communityV11';
+import { OS44Button } from '@/components/OS44Button';
 
 function socialTokenHref(token: string) {
   if (token.startsWith('@')) return `/profile/${token.slice(1)}`;
@@ -516,12 +517,12 @@ export function SocialPostRow({
                 aria-label={`Edit ${contentLabel.toLowerCase()}`}
               />
               <div className="community-inline-editor-actions">
-                <button type="button" className="os-button os-button-secondary os-button-compact" onClick={onCancelEdit} disabled={editSaving}>
+                <OS44Button type="button" className="os-button os-button-secondary os-button-compact" onClick={onCancelEdit} disabled={editSaving}>
                   Cancel
-                </button>
-                <button type="submit" className="os-button os-button-primary os-button-compact" disabled={editSaving || !editBody.trim()}>
+                </OS44Button>
+                <OS44Button type="submit" className="os-button os-button-primary os-button-compact" disabled={editSaving || !editBody.trim()}>
                   {editSaving ? 'Saving…' : 'Save'}
-                </button>
+                </OS44Button>
               </div>
             </form>
           ) : body && (

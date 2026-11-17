@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/useAuth';
 import { isCreatorProfile, loadStudioProfile } from '@/lib/studioProfiles';
 import { formatEventDate } from '@/lib/eventTime';
 import { listCreatorEvents, setCreatorEventState, type CreatorEvent } from '@/lib/domain/events';
+import { OS44Button } from '@/components/OS44Button';
 
 export default function StudioEventsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -36,7 +37,7 @@ export default function StudioEventsPage() {
   if (!user) return <PageShell><div className="dashboard-page"><HubHero title="Events" /><EmptyMessage>Log in to manage creator events.</EmptyMessage></div></PageShell>;
   return <PageShell><main className="dashboard-page">
     <HubHero title="Events" />
-    <SectionHeader title="Your Events" action={<Link href="/studio/events/new" className="os-button os-button-primary os-button-compact">New Event</Link>} />
+    <SectionHeader title="Your Events" action={<OS44Button href="/studio/events/new" className="os-button os-button-primary os-button-compact">New Event</OS44Button>} />
     <p className="os-type-body event-ticket-note">44OS lists events but does not sell or fulfill tickets.</p>
     {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div>}
     {loading ? <div className="dashboard-empty ui44-state ui44-state-loading" role="status" aria-live="polite">Loading events...</div> : events.length === 0 ? <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip"><div className="dashboard-empty studio-events-empty">No events yet.</div></div> :
@@ -47,8 +48,8 @@ export default function StudioEventsPage() {
         </Link>
         <div className="dashboard-row-actions">
           <span className={`dashboard-status-pill ui44-badge ${event.lifecycle_state === 'cancelled' ? 'studio-status-pill-draft' : ''}`}>{event.lifecycle_state}</span>
-          <button className="os-button os-button-ghost os-button-compact" onClick={() => void changeState(event, event.lifecycle_state === 'cancelled' ? 'scheduled' : 'cancelled')}>{event.lifecycle_state === 'cancelled' ? 'Restore' : 'Cancel'}</button>
-          <button className="os-button os-button-destructive os-button-compact" onClick={() => void changeState(event, 'removed')}>Remove</button>
+          <OS44Button className="os-button os-button-ghost os-button-compact" onClick={() => void changeState(event, event.lifecycle_state === 'cancelled' ? 'scheduled' : 'cancelled')}>{event.lifecycle_state === 'cancelled' ? 'Restore' : 'Cancel'}</OS44Button>
+          <OS44Button className="os-button os-button-destructive os-button-compact" onClick={() => void changeState(event, 'removed')}>Remove</OS44Button>
         </div>
       </div>)}</div>}
   </main></PageShell>;

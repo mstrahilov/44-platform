@@ -6,6 +6,7 @@ import { EmptyMessage, HubHero, PageShell } from '@/components/Ui';
 import { Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
 import { AdminAccessBoundary, AdminPager, AdminStatusBadge, formatAdminDate } from '@/components/admin/AdminPrimitives';
 import { listAdminErrorEvents, type AdminErrorEvent } from '@/lib/domain/adminOperations';
+import { OS44Button } from '@/components/OS44Button';
 
 export default function AdminErrorsApp() {
   return <AdminAccessBoundary><ErrorsDirectory /></AdminAccessBoundary>;
@@ -59,7 +60,7 @@ function ErrorsDirectory() {
     <form className="admin-filter-bar ui44-panel" onSubmit={submit}>
       <label><span>Route</span><Ui44TextInput value={search} onChange={event => setSearch(event.target.value)} placeholder="/store, /studio…" /></label>
       <label><span>Time</span><Ui44SelectInput value={range} onChange={event => router.push(buildHref(1, search.trim(), event.target.value))}><option value="24h">Last 24 hours</option><option value="7d">Last 7 days</option><option value="all">All time</option></Ui44SelectInput></label>
-      <button className="os-button os-button-secondary" type="submit">Filter</button>
+      <OS44Button className="os-button os-button-secondary" type="submit">Filter</OS44Button>
     </form>
     {error ? <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div> : null}
     {loading ? <div className="ui44-loading-shell" role="status" aria-label="Loading errors" /> : rows.length === 0 ? <EmptyMessage>No operational errors match this view.</EmptyMessage> : <>

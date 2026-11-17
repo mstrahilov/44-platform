@@ -59,6 +59,12 @@ const IconMore = () => (
   </svg>
 );
 
+const IconSort = () => (
+  <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M7 3v16m0 0-4-4m4 4 4-4M15 19V3m0 0 4 4m-4-4-4 4" />
+  </svg>
+);
+
 const IconClose = () => (
   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
     <path d="M6 6l12 12M18 6L6 18" />
@@ -100,15 +106,19 @@ export function Topbar() {
   const router = useRouter();
   const { user } = useAuth();
   const userId = user?.id ?? null;
-  const { tabs, back, overflowActions } = useTopbar();
+  const { tabs, back, overflowActions, toolbarTitle } = useTopbar();
   const [overflowOpen, setOverflowOpen] = useState(false);
   const { count: cartCount } = useCart();
   const [notificationState, setNotificationState] = useState<NotificationState | null>(null);
+  const [notificationLoadError, setNotificationLoadError] = useState(false);
+  const [notificationLoadAttempt, setNotificationLoadAttempt] = useState(0);
   const [seenIds, setSeenIds] = useState<Set<string>>(new Set());
   const [hiddenNotificationIds, setHiddenNotificationIds] = useState<Set<string>>(new Set());
   const [notifMenuOpen, setNotifMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [librarySortActive, setLibrarySortActive] = useState(false);
+  const [notificationFilterActive, setNotificationFilterActive] = useState(false);
   const [searchDraft, setSearchDraft] = useState('');
   const [previousPath, setPreviousPath] = useState<string | null>(null);
   const [searchKey, setSearchKey] = useState(() => (
@@ -127,6 +137,22 @@ export function Topbar() {
   }, [pathname]);
 
   useEffect(() => {
+    function updateLibrarySort(event: Event) {
+      setLibrarySortActive(Boolean((event as CustomEvent<{ active?: boolean }>).detail?.active));
+    }
+    window.addEventListener('44:library-sort-state', updateLibrarySort);
+    return () => window.removeEventListener('44:library-sort-state', updateLibrarySort);
+  }, []);
+
+  useEffect(() => {
+    function updateNotificationsFilter(event: Event) {
+      setNotificationFilterActive(Boolean((event as CustomEvent<{ active?: boolean }>).detail?.active));
+    }
+    window.addEventListener('44:notifications-filter-state', updateNotificationsFilter);
+    return () => window.removeEventListener('44:notifications-filter-state', updateNotificationsFilter);
+  }, []);
+
+  useEffect(() => {
     if (!userId) {
       Promise.resolve().then(() => {
         setSeenIds(new Set());
@@ -138,10 +164,15 @@ export function Topbar() {
     const activeUserId = userId;
 
     async function refreshReadState() {
-      const state = await loadNotificationReadState(activeUserId);
-      if (!alive) return;
-      setSeenIds(state.seenIds);
-      setHiddenNotificationIds(state.hiddenIds);
+      try {
+        const state = await loadNotificationReadState(activeUserId);
+        if (!alive) return;
+        setSeenIds(state.seenIds);
+        setHiddenNotificationIds(state.hiddenIds);
+      } catch {
+        // Keep the current badge state visible; the Notifications page offers
+        // an explicit error when the cross-device read state cannot load.
+      }
     }
 
     void refreshReadState();
@@ -161,20 +192,26 @@ export function Topbar() {
         const visibleRows = rows.slice(0, 24);
         primeDesktopNotificationRows(activeUserId, visibleRows);
         setNotificationState({ userId: activeUserId, rows: visibleRows });
+        setNotificationLoadError(false);
       }
-    });
+    }).catch(() => { if (alive) setNotificationLoadError(true); });
     return () => { alive = false; };
-  }, [userId]);
+  }, [notificationLoadAttempt, userId]);
 
   useEffect(() => {
     if (!userId) return;
     const activeUserId = userId;
 
     async function refreshNotifications() {
-      const rows = await loadAchievementNotifications(activeUserId);
-      const visibleRows = rows.slice(0, 24);
-      void deliverNewDesktopNotifications(activeUserId, visibleRows);
-      setNotificationState({ userId: activeUserId, rows: visibleRows });
+      try {
+        const rows = await loadAchievementNotifications(activeUserId);
+        const visibleRows = rows.slice(0, 24);
+        void deliverNewDesktopNotifications(activeUserId, visibleRows);
+        setNotificationState({ userId: activeUserId, rows: visibleRows });
+        setNotificationLoadError(false);
+      } catch {
+        setNotificationLoadError(true);
+      }
     }
 
     function onAchievementUpdate() {
@@ -192,7 +229,7 @@ export function Topbar() {
       window.removeEventListener(ACHIEVEMENT_NOTIFICATIONS_UPDATED, onAchievementUpdate);
       void supabase.removeChannel(channel);
     };
-  }, [userId]);
+  }, [notificationLoadAttempt, userId]);
 
   useEffect(() => {
     Promise.resolve().then(() => {
@@ -224,8 +261,8 @@ export function Topbar() {
   }, [pathname, searchKey]);
 
   useEffect(() => {
-    if (pathname !== '/search') return;
-    const query = new URLSearchParams(searchKey).get('q') ?? '';
+    if (pathname !== '/search' && !pathname.startsWith('/library')) return;
+    const query = pathname === '/search' || pathname === '/library/search' ? new URLSearchParams(searchKey).get('q') ?? '' : '';
     Promise.resolve().then(() => setSearchDraft(query));
   }, [pathname, searchKey]);
 
@@ -318,14 +355,7 @@ export function Topbar() {
   }, [pathname, searchKey]);
 
   function openNotifMenu() {
-    const nextOpen = !notifMenuOpen;
-    setNotifMenuOpen(nextOpen);
-    if (nextOpen && visibleNotifications.length > 0) {
-      const merged = new Set(seenIds);
-      visibleNotifications.forEach(n => merged.add(n.id));
-      setSeenIds(merged);
-      if (userId) void saveNotificationReadState(userId, { seenIds: merged, hiddenIds: hiddenNotificationIds });
-    }
+    setNotifMenuOpen(value => !value);
   }
 
   useEffect(() => {
@@ -359,11 +389,17 @@ export function Topbar() {
   const mobileTopbarState = getMobileTopbarState(pathname);
   const isNewCommunityPost = pathname === '/community/new';
   const isNewPlaylist = pathname === '/library/playlists/new';
-  const mobileTopbarTitle = isNewCommunityPost ? 'New Post' : isNewPlaylist ? 'New Playlist' : getMobileTopbarTitle(pathname);
+  const isPlaylistTrackPicker = /^\/library\/playlists\/[^/]+\/add$/.test(pathname);
+  const playlistTrackPickerHref = back?.href ?? '/library';
+  const mobileTopbarTitle = toolbarTitle ?? (isNewCommunityPost ? 'New Post' : isNewPlaylist ? 'New Playlist' : isPlaylistTrackPicker ? 'Add Track' : getMobileTopbarTitle(pathname));
   const isCommunityRoot = pathname === '/community';
   const isAccountRoot = pathname === '/you';
+  const isNotificationsPage = pathname === '/notifications';
+  const isInboxRoot = pathname === '/inbox';
+  const isStudioRoot = pathname === '/studio';
   const isRadioRoot = pathname === '/radio';
-  const isLibraryRoot = pathname === '/library' || (pathname.startsWith('/library/') && !pathname.startsWith('/library/item/') && !pathname.startsWith('/library/playlists/'));
+  const isLibraryRoot = pathname === '/library' || (pathname.startsWith('/library/') && !pathname.startsWith('/library/item/') && !pathname.startsWith('/library/playlists/') && !pathname.startsWith('/library/music/') && pathname !== '/library/search');
+  const isPlaylistLibrary = pathname === '/library/playlists';
   const isDiscoverSurface = pathname === '/' || (pathname.startsWith('/store') && !pathname.startsWith('/store/item/'));
   const isDetailRoute = mobileTopbarState.mode === 'back' || Boolean(back);
   const hasSectionTabs = Boolean(tabs?.some(tab => tab.variant === 'section'));
@@ -392,21 +428,42 @@ export function Topbar() {
     const next = new Set(hiddenNotificationIds);
     next.add(id);
     setHiddenNotificationIds(next);
-    if (userId) void saveNotificationReadState(userId, { seenIds, hiddenIds: next });
+    if (userId) void saveNotificationReadState(userId, { seenIds, hiddenIds: next }).catch(() => {});
   }
 
   function clearNotifications() {
     const next = new Set(hiddenNotificationIds);
     visibleNotifications.forEach(notification => next.add(notification.id));
     setHiddenNotificationIds(next);
-    if (userId) void saveNotificationReadState(userId, { seenIds, hiddenIds: next });
+    if (userId) void saveNotificationReadState(userId, { seenIds, hiddenIds: next }).catch(() => {});
+  }
+
+  function markNotificationRead(id: string) {
+    const wasSeen = seenIds.has(id);
+    const next = new Set(seenIds);
+    next.add(id);
+    setSeenIds(next);
+    if (userId) void saveNotificationReadState(userId, { seenIds: next, hiddenIds: hiddenNotificationIds }).catch(() => {
+      if (wasSeen) return;
+      setSeenIds(current => { const reverted = new Set(current); reverted.delete(id); return reverted; });
+    });
+  }
+
+  function markAllNotificationsRead() {
+    const next = new Set(seenIds);
+    visibleNotifications.forEach(notification => next.add(notification.id));
+    setSeenIds(next);
+    if (userId) void saveNotificationReadState(userId, { seenIds: next, hiddenIds: hiddenNotificationIds }).catch(() => {
+      setSeenIds(seenIds);
+    });
   }
 
   function submitSearch(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const query = searchDraft.trim();
     setSearchKey(query ? `q=${encodeURIComponent(query)}` : '');
-    router.push(query ? `/search?q=${encodeURIComponent(query)}` : '/search');
+    const librarySearch = pathname.startsWith('/library');
+    router.push(query ? `${librarySearch ? '/library/search' : '/search'}?q=${encodeURIComponent(query)}` : librarySearch ? '/library/search' : '/search');
   }
 
   const closeMobileSearch = useCallback(() => {
@@ -421,15 +478,20 @@ export function Topbar() {
   const submitMobileSearch = useCallback((value: string, href?: string) => {
     const query = value.trim();
     setMobileSearchOpen(false);
-    if (href) {
+    const librarySearch = pathname.startsWith('/library');
+    if (href && !librarySearch) {
       router.push(href);
       return;
     }
     setSearchKey(query ? `q=${encodeURIComponent(query)}` : '');
-    router.push(query ? `/search?q=${encodeURIComponent(query)}` : '/search');
-  }, [router]);
+    router.push(query ? `${librarySearch ? '/library/search' : '/search'}?q=${encodeURIComponent(query)}` : librarySearch ? '/library/search' : '/search');
+  }, [pathname, router]);
 
-  const mobileSearchAction = isDiscoverSurface ? (
+  const mobileSearchAction = isLibraryRoot ? (
+    <button type="button" className="ui44-symbol-button ui44-symbol-button-search os-topbar-icon-button" aria-label="Search Library" aria-expanded={mobileSearchOpen} onClick={openMobileSearch}>
+      <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
+    </button>
+  ) : isDiscoverSurface ? (
     <button
       type="button"
       className="ui44-symbol-button ui44-symbol-button-search os-topbar-icon-button"
@@ -446,7 +508,11 @@ export function Topbar() {
       <IconClose />
     </button>
   ) : isNewPlaylist ? (
-    <button type="button" className="ui44-symbol-button" aria-label="Cancel new playlist" title="Cancel" onClick={() => router.push('/library')}>
+    <button type="button" className="ui44-symbol-button" aria-label="Cancel new playlist" title="Cancel" onClick={() => router.push('/library/playlists')}>
+      <IconClose />
+    </button>
+  ) : isPlaylistTrackPicker ? (
+    <button type="button" className="ui44-symbol-button" aria-label="Close Add Track" title="Close" onClick={() => router.push(playlistTrackPickerHref)}>
       <IconClose />
     </button>
   ) : isDetailRoute ? mobileBackAction : isCommunityRoot ? (
@@ -462,9 +528,9 @@ export function Topbar() {
       <IconCalendar />
     </Link>
   ) : isLibraryRoot ? (
-    <Link href="/library/playlists/new" className="ui44-symbol-button" aria-label="New Playlist" title="New Playlist">
-      <IconPlus />
-    </Link>
+    <button type="button" className="ui44-symbol-button" aria-label="Search Library" title="Search Library" onClick={openMobileSearch}>
+      <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
+    </button>
   ) : mobileSearchAction;
 
   const mobileTrailingAction = isNewCommunityPost ? (
@@ -475,23 +541,38 @@ export function Topbar() {
     <button type="button" className="ui44-symbol-button" aria-label="Save playlist" title="Save playlist" onClick={() => window.dispatchEvent(new CustomEvent('playlist:create-submit'))}>
       <IconCheck />
     </button>
+  ) : isPlaylistTrackPicker ? (
+    <button type="button" className="ui44-symbol-button" aria-label="Done adding tracks" title="Done" onClick={() => router.push(playlistTrackPickerHref)}>
+      <IconCheck />
+    </button>
+  ) : isNotificationsPage ? (
+    <button type="button" data-filter-popover-trigger="true" aria-pressed={notificationFilterActive} className={`ui44-symbol-button ui44-symbol-button-filter page-filter-button${notificationFilterActive ? ' ui44-symbol-button-active page-filter-button-active' : ''}`} aria-label="Filter Notifications" title="Filter Notifications" onClick={() => window.dispatchEvent(new CustomEvent('44:toggle-filter-popover', { detail: { label: 'Filter Notifications' } }))}>
+      <span className="page-filter-icon" aria-hidden="true"><i /><i /><i /></span>
+    </button>
   ) : isCommunityRoot ? (
     <Link href="/community/new" className="ui44-symbol-button" aria-label="New Post" title="New Post">
       <IconPlus />
     </Link>
+  ) : isInboxRoot ? (
+    <button type="button" className="ui44-symbol-button" aria-label="New Message" title="New Message" onClick={() => router.push('/conversation/new')}>
+      <IconPlus />
+    </button>
+  ) : isStudioRoot ? (
+    <button type="button" className="ui44-symbol-button" aria-label="Add Studio content" title="Add Studio content" aria-haspopup="menu" aria-expanded={overflowOpen} disabled={!overflowActions?.length} onClick={() => setOverflowOpen(open => !open)}>
+      <IconPlus />
+    </button>
   ) : isAccountRoot ? (
     <Link href="/settings" className="ui44-symbol-button" aria-label="Settings" title="Settings">
       <span className="os-icon os-icon-settings os-icon-sm" aria-hidden="true" />
     </Link>
   ) : isLibraryRoot ? (
-    <button type="button" className="ui44-symbol-button" aria-label="Filter Library" title="Filter Library" onClick={() => window.dispatchEvent(new CustomEvent('44:toggle-filter-popover', { detail: { label: 'Filter Library' } }))}>
-      <span className="page-filter-icon" aria-hidden="true"><i /><i /><i /></span>
-    </button>
+    isPlaylistLibrary ? <Link href="/library/playlists/new" className="ui44-symbol-button" aria-label="Create Playlist" title="Create Playlist"><IconPlus /></Link>
+      : <button type="button" data-filter-popover-trigger="true" aria-pressed={librarySortActive} className={`ui44-symbol-button${librarySortActive ? ' ui44-symbol-button-active' : ''}`} aria-label="Sort Library" title="Sort Library" onClick={() => window.dispatchEvent(new CustomEvent('44:toggle-filter-popover', { detail: { label: 'Sort Library' } }))}><IconSort /></button>
   ) : isRadioRoot ? (
     <button type="button" className="ui44-symbol-button" aria-label="More Radio actions" title="More Radio actions" aria-expanded={overflowOpen} onClick={() => setOverflowOpen(open => !open)}>
       <IconMore />
     </button>
-  ) : isDetailRoute ? (
+  ) : isDetailRoute && overflowActions?.length ? (
     <button type="button" className="ui44-symbol-button" aria-label="More actions" title="More actions" aria-expanded={overflowOpen} onClick={() => setOverflowOpen(open => !open)}>
       <IconMore />
     </button>
@@ -509,9 +590,13 @@ export function Topbar() {
           <button
             type="button"
             className="ui44-symbol-button ui44-symbol-button-back os-topbar-back"
-            aria-label={backLabel}
-            title={backLabel}
+            aria-label={isPlaylistTrackPicker ? 'Close Add Track' : backLabel}
+            title={isPlaylistTrackPicker ? 'Close' : backLabel}
             onClick={() => {
+              if (isPlaylistTrackPicker) {
+                router.push(playlistTrackPickerHref);
+                return;
+              }
               if (typeof window !== 'undefined' && window.history.length > 1) {
                 router.back();
                 return;
@@ -519,9 +604,9 @@ export function Topbar() {
               router.push(back.href);
             }}
           >
-            <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            {isPlaylistTrackPicker ? <IconClose /> : <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M13 5l-6 6 6 6"/>
-            </svg>
+            </svg>}
           </button>
         )}
         {!back && (mobileTopbarState.mode === 'back' || mobileTopbarState.mode === 'search-back') && (
@@ -561,6 +646,11 @@ export function Topbar() {
         <MobileToolbar title={mobileTopbarTitle} leading={mobileLeadingAction} trailing={<div className="os-mobile-toolbar-overflow">{mobileTrailingAction}{overflowOpen && overflowActions?.length ? <div className="ui44-paper-menu os-mobile-toolbar-menu" role="menu">{overflowActions.map((action: TopbarOverflowAction) => <button key={action.id} className="ui44-paper-menu-item" type="button" role="menuitem" disabled={action.disabled} onClick={() => { setOverflowOpen(false); action.onSelect?.(); }}>{action.label}</button>)}</div> : null}</div>} />
 
         <div className="os-topbar-right">
+        {isPlaylistTrackPicker && (
+          <button type="button" className="ui44-symbol-button os-topbar-icon-button" aria-label="Done adding tracks" title="Done" onClick={() => router.push(playlistTrackPickerHref)}>
+            <IconCheck />
+          </button>
+        )}
         <div className="os-topbar-search os-topbar-search-desktop" ref={searchWrapRef}>
           {searchOpen ? (
             <form className="os-topbar-search-form ui44-composed-field ui44-composed-field-search" role="search" onSubmit={submitSearch}>
@@ -571,13 +661,13 @@ export function Topbar() {
                 className="os-topbar-search-input"
                 value={searchDraft}
                 onChange={event => setSearchDraft(event.target.value)}
-                placeholder="Search"
-                aria-label="Search"
+                placeholder={pathname.startsWith('/library') ? 'Search Library' : 'Search'}
+                aria-label={pathname.startsWith('/library') ? 'Search Library' : 'Search'}
               />
               {searchDraft && <button type="button" className="os-topbar-search-clear" aria-label="Clear search" onClick={() => setSearchDraft('')}>×</button>}
             </form>
           ) : (
-            <button type="button" className="ui44-symbol-button ui44-symbol-button-search os-topbar-icon-button" aria-label="Search" onClick={() => {
+            <button type="button" className="ui44-symbol-button ui44-symbol-button-search os-topbar-icon-button" aria-label={pathname.startsWith('/library') ? 'Search Library' : 'Search'} onClick={() => {
               setSearchOpen(true);
               setNotifMenuOpen(false);
             }}>
@@ -585,6 +675,11 @@ export function Topbar() {
             </button>
           )}
         </div>
+        {isLibraryRoot ? isPlaylistLibrary
+          ? <Link href="/library/playlists/new" className="ui44-symbol-button os-topbar-icon-button" aria-label="Create Playlist" title="Create Playlist"><IconPlus /></Link>
+          : <button type="button" data-filter-popover-trigger="true" aria-pressed={librarySortActive} className={`ui44-symbol-button os-topbar-icon-button${librarySortActive ? ' ui44-symbol-button-active' : ''}`} aria-label="Sort Library" title="Sort Library" onClick={() => window.dispatchEvent(new CustomEvent('44:toggle-filter-popover', { detail: { label: 'Sort Library' } }))}><IconSort /></button>
+          : null}
+        {isNotificationsPage ? <button type="button" data-filter-popover-trigger="true" aria-pressed={notificationFilterActive} className={`ui44-symbol-button os-topbar-icon-button ui44-symbol-button-filter${notificationFilterActive ? ' ui44-symbol-button-active' : ''}`} aria-label="Filter Notifications" title="Filter Notifications" onClick={() => window.dispatchEvent(new CustomEvent('44:toggle-filter-popover', { detail: { label: 'Filter Notifications' } }))}><span className="page-filter-icon" aria-hidden="true"><i /><i /><i /></span></button> : null}
         {mobileTopbarState.mode === 'search-back' && <form
           className="os-topbar-search-mobile"
           role="search"
@@ -648,19 +743,26 @@ export function Topbar() {
               <div className="ui44-paper-menu os-popover os-popover-wide" role="dialog" aria-label="Notifications">
                 <div className="os-popover-header">
                   <span className="os-popover-heading">Notifications</span>
+                  {visibleNotifications.some(item => !seenIds.has(item.id)) && (
+                    <button type="button" className="os-popover-text-button" onClick={markAllNotificationsRead}>
+                      Mark shown read
+                    </button>
+                  )}
                   {visibleNotifications.length > 0 && (
                     <button type="button" className="os-popover-text-button" onClick={clearNotifications}>
                       Clear All
                     </button>
                   )}
                 </div>
-                {visibleNotifications.length === 0 ? (
+                {notificationLoadError ? (
+                  <div className="os-notification-empty" role="alert">Notifications could not be loaded. <button type="button" className="os-popover-text-button" onClick={() => setNotificationLoadAttempt(value => value + 1)}>Try again</button></div>
+                ) : visibleNotifications.length === 0 ? (
                   <div className="os-notification-empty">You&rsquo;re all caught up.</div>
                 ) : (
                   <div className="os-notification-list">
                     {visibleNotifications.map(item => (
                       <div key={item.id} className="os-notification-row">
-                        <Link href={item.href || '/notifications'} className="os-notification-item">
+                        <Link href={item.href || '/notifications'} className="os-notification-item" onClick={() => markNotificationRead(item.id)}>
                           <div className="os-notification-title">{item.title}</div>
                           {item.description && <div className="os-notification-body">{item.description}</div>}
                         </Link>
@@ -699,6 +801,7 @@ export function Topbar() {
         onValueChange={setSearchDraft}
         onClose={closeMobileSearch}
         onSubmit={submitMobileSearch}
+        libraryScope={pathname.startsWith('/library')}
       />
     </>
   );

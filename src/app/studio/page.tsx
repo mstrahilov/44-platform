@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { PageShell, HubHero, EmptyMessage, SectionHeader } from '@/components/Ui';
 import { Ui44Panel } from '@/components/ui44/Spacing';
 import { useAuth } from '@/lib/useAuth';
@@ -15,6 +16,8 @@ import { formatEventDate } from '@/lib/eventTime';
 import { beatReviewSurfacesEnabled } from '@/lib/domain/beats';
 import { listCreatorEvents, type CreatorEvent } from '@/lib/domain/events';
 import { listCreatorUpdates, type CreatorUpdate } from '@/lib/domain/itemCommunity';
+import { useTopbarOverflow } from '@/components/TopbarContext';
+import { OS44Button } from '@/components/OS44Button';
 
 type LibraryMetricRow = StudioLibraryMetric;
 
@@ -30,11 +33,18 @@ type OverviewState = {
 };
 
 export default function StudioPage() {
+  const router = useRouter();
   const { user, loading } = useAuth();
   const [studioStatus, setStudioStatus] = useState<string | null>(() => (
     typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('studioStatus')
   ));
   const [profile, setProfile] = useState<StudioProfile | null>(null);
+  const studioToolbarActions = useMemo(() => STUDIO_CREATE_ACTIONS.map(action => ({
+    id: action.href,
+    label: action.label,
+    onSelect: () => router.push(action.href),
+  })), [router]);
+  useTopbarOverflow(user && profile && isCreatorProfile(profile) ? studioToolbarActions : undefined);
 
   useEffect(() => {
     if (!studioStatus) return;
@@ -125,7 +135,7 @@ export default function StudioPage() {
           />
           <EmptyMessage>Log in to use your creator Studio.</EmptyMessage>
           <div className="ui44-centered-action">
-            <Link href="/login" className="os-button os-button-primary">Log In</Link>
+            <OS44Button href="/login" className="os-button os-button-primary">Log In</OS44Button>
           </div>
         </main>
       </PageShell>
@@ -142,8 +152,8 @@ export default function StudioPage() {
               Studio publishing is available to approved creator accounts. Your fan account, Library, and Community access remain available while approval is pending.
             </p>
             <div className="ui44-creator-gate-actions">
-              <Link href="/profile" className="os-button os-button-primary">Open Public Profile</Link>
-              <Link href="/" className="os-button os-button-ghost">Back to Home</Link>
+              <OS44Button href="/profile" className="os-button os-button-primary">Open Public Profile</OS44Button>
+              <OS44Button href="/" className="os-button os-button-ghost">Back to Home</OS44Button>
             </div>
           </Ui44Panel>
         </main>
@@ -188,8 +198,8 @@ export default function StudioPage() {
       <main className="dashboard-page">
         <HubHero
           title="Studio"
-          copy="Your creator workspace for catalog health, sales signals, and what should go live next."
           actions={<StudioCreateMenu />}
+          className="studio-page-header"
         />
 
         <div className="dashboard-overview-grid">

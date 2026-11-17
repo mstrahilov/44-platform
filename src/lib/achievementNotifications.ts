@@ -51,7 +51,8 @@ export async function requestAchievementEvaluation(
       timezone_offset_minutes: new Date().getTimezoneOffset(),
     },
   });
-  if (error || !data) return [];
+  if (error) throw error;
+  if (!data) return [];
 
   return data.map(row => {
     const notification = {

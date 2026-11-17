@@ -8,6 +8,7 @@ export function SectionTabs({
   ariaLabel,
   className = '',
   dockToTopbar = false,
+  toolbarSpacing = false,
   topbarOnly = false,
   topbarTabs,
   children,
@@ -15,6 +16,7 @@ export function SectionTabs({
   ariaLabel: string;
   className?: string;
   dockToTopbar?: boolean;
+  toolbarSpacing?: boolean;
   topbarOnly?: boolean;
   topbarTabs?: TopbarTab[];
   children: ReactNode;
@@ -107,7 +109,7 @@ export function SectionTabs({
   if (topbarOnly) return null;
 
   return (
-    <nav ref={railRef} className={`section-tab-rail${isOverflowing ? ' section-tab-rail-overflow' : ''} ${className}`.trim()} aria-label={ariaLabel}>
+    <nav ref={railRef} className={`section-tab-rail${isOverflowing ? ' section-tab-rail-overflow' : ''}${toolbarSpacing ? ' section-tab-rail-toolbar-spaced' : ''} ${className}`.trim()} aria-label={ariaLabel}>
       {children}
     </nav>
   );

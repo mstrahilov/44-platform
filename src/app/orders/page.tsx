@@ -1,11 +1,11 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { EmptyMessage, HubHero, PageShell } from '@/components/Ui';
 import { useAuth } from '@/lib/useAuth';
 import { listCustomerOrders, type CustomerOrder } from '@/lib/domain/customerCommerce';
+import { OS44Button } from '@/components/OS44Button';
 
 export default function OrdersPage() {
   const router = useRouter();
@@ -37,7 +37,7 @@ export default function OrdersPage() {
   return (
     <PageShell>
       <main className="dashboard-page">
-        <HubHero title="Orders" copy="Your checkout history and fulfillment status." />
+        <HubHero title="Orders" copy="Your checkout history and fulfillment status." className="orders-page-header" />
 
         {fetching ? (
           <div className="dashboard-empty ui44-state ui44-state-loading" role="status" aria-live="polite">Loading orders…</div>
@@ -46,7 +46,7 @@ export default function OrdersPage() {
         ) : orders.length === 0 ? (
           <EmptyMessage>
             No orders yet.
-            <span className="ui44-section-gap-before"><Link className="os-button os-button-primary os-button-compact" href="/">Open Home</Link></span>
+            <span className="ui44-section-gap-before"><OS44Button className="os-button os-button-primary os-button-compact" href="/">Open Home</OS44Button></span>
           </EmptyMessage>
         ) : (
           <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
@@ -62,7 +62,7 @@ export default function OrdersPage() {
                       </span>
                       {line.offer_type === 'digital_download' && line.has_active_download && line.library_entry_id ? (
                         <span className="ui44-section-gap-before">
-                          <Link className="os-button os-button-secondary os-button-compact" href={`/library/item/${line.library_entry_id}#downloads`}>Download</Link>
+                          <OS44Button className="os-button os-button-secondary os-button-compact" href={`/library/item/${line.library_entry_id}#downloads`}>Download</OS44Button>
                         </span>
                       ) : null}
                     </div>

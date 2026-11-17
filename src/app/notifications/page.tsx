@@ -17,6 +17,7 @@ import {
   loadNotificationReadState,
   saveNotificationReadState,
 } from '@/lib/notificationState';
+import { OS44Button } from '@/components/OS44Button';
 
 type TabId = 'all' | 'mentions' | 'replies' | 'messages' | 'likes' | 'achievements';
 
@@ -35,6 +36,17 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<AchievementNotification[]>([]);
   const [activeTab, setActiveTab] = useState<TabId>('all');
   const [newIds, setNewIds] = useState<Set<string>>(new Set());
+  const [readError, setReadError] = useState('');
+  const [readErrorAction, setReadErrorAction] = useState<'load' | 'item' | 'all'>('load');
+  const [failedReadId, setFailedReadId] = useState('');
+  const [loadAttempt, setLoadAttempt] = useState(0);
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('44:notifications-filter-state', { detail: { active: activeTab !== 'all' } }));
+    return () => {
+      window.dispatchEvent(new CustomEvent('44:notifications-filter-state', { detail: { active: false } }));
+    };
+  }, [activeTab]);
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
@@ -43,42 +55,38 @@ export default function NotificationsPage() {
   useEffect(() => {
     async function load() {
       if (!user) return;
-      const [rows, readState] = await Promise.all([
-        loadAchievementNotifications(user.id, 500),
-        loadNotificationReadState(user.id),
-      ]);
-      const nextSeen = new Set(readState.seenIds);
-      const nextNew = new Set<string>();
-      rows.forEach(item => {
-        if (!notificationIsEnabled(item)) return;
-        if (!readState.seenIds.has(item.id)) nextNew.add(item.id);
-        nextSeen.add(item.id);
-      });
-      setNotifications(rows);
-      setNewIds(nextNew);
-      if (nextSeen.size !== readState.seenIds.size) {
-        await saveNotificationReadState(user.id, { seenIds: nextSeen, hiddenIds: readState.hiddenIds });
+      try {
+        const [rows, readState] = await Promise.all([
+          loadAchievementNotifications(user.id, 500),
+          loadNotificationReadState(user.id),
+        ]);
+        setNotifications(rows);
+        setNewIds(new Set(rows.filter(item => notificationIsEnabled(item) && !readState.seenIds.has(item.id)).map(item => item.id)));
+        setReadError('');
+      } catch {
+        setReadError('Notifications or their read state could not be loaded. Try again.');
+        setReadErrorAction('load');
       }
     }
     void load();
-  }, [user]);
+  }, [loadAttempt, user]);
 
   useEffect(() => {
     if (!user) return;
     const userId = user.id;
 
     async function refresh() {
-      const [rows, readState] = await Promise.all([
-        loadAchievementNotifications(userId, 500),
-        loadNotificationReadState(userId),
-      ]);
-      const nextSeen = new Set(readState.seenIds);
-      const incoming = rows.filter(item => notificationIsEnabled(item) && !readState.seenIds.has(item.id));
-      incoming.forEach(item => nextSeen.add(item.id));
-      setNotifications(rows);
-      setNewIds(current => new Set([...current, ...incoming.map(item => item.id)]));
-      if (incoming.length > 0) {
-        await saveNotificationReadState(userId, { seenIds: nextSeen, hiddenIds: readState.hiddenIds });
+      try {
+        const [rows, readState] = await Promise.all([
+          loadAchievementNotifications(userId, 500),
+          loadNotificationReadState(userId),
+        ]);
+        setNotifications(rows);
+        setNewIds(new Set(rows.filter(item => notificationIsEnabled(item) && !readState.seenIds.has(item.id)).map(item => item.id)));
+        setReadError('');
+      } catch {
+        setReadError('Notifications or their read state could not be refreshed. Try again.');
+        setReadErrorAction('load');
       }
     }
 
@@ -114,8 +122,39 @@ export default function NotificationsPage() {
     if (activeTab === 'likes') return item.kind === 'like';
     return false;
   });
+  async function markRead(id: string) {
+    if (!user) return;
+    setReadError('');
+    setFailedReadId(id);
+    try {
+      const current = await loadNotificationReadState(user.id);
+      const seenIds = new Set(current.seenIds);
+      seenIds.add(id);
+      await saveNotificationReadState(user.id, { ...current, seenIds });
+      setNewIds(ids => { const next = new Set(ids); next.delete(id); return next; });
+    } catch {
+      setReadError('Could not save notification read state. Try again.');
+      setReadErrorAction('item');
+    }
+  }
+
+  async function markAllRead() {
+    if (!user) return;
+    setReadError('');
+    try {
+      const current = await loadNotificationReadState(user.id);
+      const seenIds = new Set(current.seenIds);
+      enabledNotifications.forEach(item => seenIds.add(item.id));
+      await saveNotificationReadState(user.id, { ...current, seenIds });
+      setNewIds(new Set());
+    } catch {
+      setReadError('Could not save notification read state. Try again.');
+      setReadErrorAction('all');
+    }
+  }
+
   const emptyCopyByTab: Record<TabId, string> = {
-    all: 'Unlock achievements, get replies, likes, or mentions to see activity here.',
+    all: 'Messages, mentions, replies, achievements, and other account activity will appear here.',
     achievements: 'Achievements you unlock across the platform will appear here.',
     mentions: 'Posts and replies that mention you will appear here.',
     replies: 'Replies to your posts and comments will appear here.',
@@ -124,8 +163,10 @@ export default function NotificationsPage() {
   };
   const notificationTools = (
     <div className="page-header-tools">
-      <FilterPopover label="Filter Notifications" active={activeTab !== 'all'}>
+      {newIds.size > 0 && <OS44Button type="button" className="os-button os-button-secondary os-button-compact" onClick={() => { void markAllRead(); }}>Mark all read</OS44Button>}
+      <FilterPopover label="Filter Notifications" active={activeTab !== 'all'} hideTrigger popoverClassName="notifications-filter-popover">
         {({ close }) => <>
+          {newIds.size > 0 && <button type="button" className="ui44-paper-menu-item page-filter-option" onClick={() => { void markAllRead(); close(); }}>Mark all read</button>}
           {TABS.map(tab => (
             <button
               key={tab.id}
@@ -142,11 +183,7 @@ export default function NotificationsPage() {
   );
 
   function openNotification(item: AchievementNotification) {
-    setNewIds(current => {
-      const next = new Set(current);
-      next.delete(item.id);
-      return next;
-    });
+    void markRead(item.id);
     if (item.href) router.push(item.href);
   }
 
@@ -155,11 +192,16 @@ export default function NotificationsPage() {
       <main className="dashboard-page">
         <HubHero
           title="Notifications"
-          copy="Mentions, replies, achievements, and other account activity."
+          copy="Messages, mentions, replies, achievements, and other account activity."
           actions={notificationTools}
           className="notifications-page-header"
         />
         <section className="dashboard-section">
+          {readError && <p className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{readError}{' '}<OS44Button type="button" className="os-button os-button-secondary os-button-compact" onClick={() => {
+            if (readErrorAction === 'all') void markAllRead();
+            else if (readErrorAction === 'item' && failedReadId) void markRead(failedReadId);
+            else setLoadAttempt(value => value + 1);
+          }}>Try again</OS44Button></p>}
           {visibleNotifications.length > 0 ? (
             <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
               {visibleNotifications.map(item => (

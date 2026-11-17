@@ -1,6 +1,7 @@
 'use client';
 
 import { useUi44DialogFocus } from '@/components/ui44/Dialog';
+import { OS44Button } from '@/components/OS44Button';
 
 type ConfirmDialogProps = {
   open: boolean;
@@ -50,17 +51,17 @@ export function ConfirmDialog({
           <p className="os-modal-copy">{description}</p>
         </div>
         <div className="os-modal-actions ui44-dialog-actions">
-          <button type="button" className="os-button os-button-secondary" onClick={onCancel} disabled={busy}>
+          <OS44Button type="button" className="os-button os-button-secondary" onClick={onCancel} disabled={busy}>
             {cancelLabel}
-          </button>
-          <button
+          </OS44Button>
+          <OS44Button
             type="button"
             className={destructive ? 'os-button os-button-danger' : 'os-button os-button-primary'}
             onClick={onConfirm}
             disabled={busy}
           >
             {busy ? 'Working…' : confirmLabel}
-          </button>
+          </OS44Button>
         </div>
       </div>
     </div>

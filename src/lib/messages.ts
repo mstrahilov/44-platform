@@ -3,31 +3,136 @@ import type { SocialAuthor } from '@/lib/social';
 import { requestPushDelivery } from '@/lib/webPush';
 
 export type InboxConversation = { id: string; conversation_key: string; updated_at: string };
-export type InboxConversationMember = { conversation_id: string; profile_id: string; profiles?: SocialAuthor | null };
+export type InboxConversationMember = { conversation_id: string; profile_id: string; last_read_at: string | null; archived_at: string | null; profiles?: SocialAuthor | null };
 export type InboxMessage = { id: string; conversation_id: string; sender_id: string | null; body: string; status: string; created_at: string };
+export type MessagePageCursor = { timestamp: string; id: string };
 export type MessageRecipient = Pick<SocialAuthor, 'id' | 'slug' | 'username' | 'display_name' | 'avatar_url' | 'role' | 'creator_type'>;
 
-export async function loadInboxData(userId: string) {
-  const membershipResult = await supabase.from('conversation_members').select('conversation_id').eq('profile_id', userId);
-  if (membershipResult.error) throw membershipResult.error;
-  const ids = Array.from(new Set((membershipResult.data ?? []).map(row => row.conversation_id)));
-  if (ids.length === 0) return { conversations: [] as InboxConversation[], members: [] as InboxConversationMember[], messages: [] as InboxMessage[] };
+export type InboxPage = {
+  conversations: InboxConversation[];
+  members: InboxConversationMember[];
+  messages: InboxMessage[];
+  nextCursor: MessagePageCursor | null;
+};
 
-  const [conversationResult, memberResult, messageResult] = await Promise.all([
-    supabase.from('conversations').select('*').in('id', ids).order('updated_at', { ascending: false }),
-    supabase
-      .from('conversation_members')
-      .select('conversation_id, profile_id, profiles:profiles!conversation_members_profile_id_fkey(id, slug, username, display_name, avatar_url, role, creator_type)')
-      .in('conversation_id', ids),
-    supabase.from('messages').select('*').in('conversation_id', ids).order('created_at', { ascending: true }),
-  ]);
-  const error = conversationResult.error || memberResult.error || messageResult.error;
-  if (error) throw error;
+function applyMessageCursor<T extends { or: (filters: string) => T }>(query: T, cursor: MessagePageCursor | null | undefined, column: 'updated_at' | 'created_at') {
+  if (!cursor) return query;
+  if (!Number.isFinite(Date.parse(cursor.timestamp)) || !/^[0-9a-f-]{36}$/i.test(cursor.id)) {
+    throw new Error('The message page cursor is invalid.');
+  }
+  return query.or(`${column}.lt.${cursor.timestamp},and(${column}.eq.${cursor.timestamp},id.lt.${cursor.id})`);
+}
+
+export async function loadInboxData(userId: string, cursor?: MessagePageCursor | null, limit = 40): Promise<InboxPage> {
+  const boundedLimit = Math.max(1, Math.min(limit, 100));
+  const pageQuery = supabase
+    .from('conversations')
+    .select('id,conversation_key,updated_at,conversation_members!inner(profile_id,archived_at),messages(id,conversation_id,sender_id,body,status,created_at)')
+    .eq('conversation_members.profile_id', userId)
+    .is('conversation_members.archived_at', null);
+  const pageResult = await applyMessageCursor(pageQuery, cursor, 'updated_at')
+    .eq('messages.status', 'sent')
+    .order('updated_at', { ascending: false })
+    .order('id', { ascending: false })
+    .order('created_at', { ascending: false, referencedTable: 'messages' })
+    .order('id', { ascending: false, referencedTable: 'messages' })
+    .limit(1, { referencedTable: 'messages' })
+    .limit(boundedLimit);
+  if (pageResult.error) throw pageResult.error;
+  const pageRows = (pageResult.data ?? []) as unknown as Array<InboxConversation & {
+    messages?: InboxMessage[];
+  }>;
+  const conversations: InboxConversation[] = pageRows.map(({ id, conversation_key, updated_at }) => ({ id, conversation_key, updated_at }));
+  const ids = conversations.map(row => row.id);
+  if (ids.length === 0) return { conversations, members: [], messages: [], nextCursor: null };
+
+  const memberResult = await supabase
+    .from('conversation_members')
+    .select('conversation_id,profile_id,last_read_at,archived_at,profiles:profiles!conversation_members_profile_id_fkey(id, slug, username, display_name, avatar_url, role, creator_type)')
+    .in('conversation_id', ids);
+  if (memberResult.error) throw memberResult.error;
   return {
-    conversations: (conversationResult.data as InboxConversation[] | null) ?? [],
+    conversations,
     members: (memberResult.data as unknown as InboxConversationMember[] | null) ?? [],
-    messages: (messageResult.data as InboxMessage[] | null) ?? [],
+    // The embedded relation is limited to one latest sent message per conversation.
+    messages: pageRows.flatMap(row => row.messages ?? []),
+    nextCursor: pageRows.length === boundedLimit
+      ? { timestamp: pageRows.at(-1)!.updated_at, id: pageRows.at(-1)!.id }
+      : null,
   };
+}
+
+export async function loadInboxConversation(userId: string, conversationId: string) {
+  const conversationResult = await supabase
+    .from('conversations')
+    .select('id,conversation_key,updated_at,conversation_members!inner(profile_id,archived_at),messages(id,conversation_id,sender_id,body,status,created_at)')
+    .eq('id', conversationId)
+    .eq('conversation_members.profile_id', userId)
+    .is('conversation_members.archived_at', null)
+    .eq('messages.status', 'sent')
+    .order('created_at', { ascending: false, referencedTable: 'messages' })
+    .order('id', { ascending: false, referencedTable: 'messages' })
+    .limit(1, { referencedTable: 'messages' })
+    .maybeSingle();
+  if (conversationResult.error) throw conversationResult.error;
+  if (!conversationResult.data) return null;
+  const row = conversationResult.data as unknown as InboxConversation & { messages?: InboxMessage[] };
+  const memberResult = await supabase
+    .from('conversation_members')
+    .select('conversation_id,profile_id,last_read_at,archived_at,profiles:profiles!conversation_members_profile_id_fkey(id, slug, username, display_name, avatar_url, role, creator_type)')
+    .eq('conversation_id', conversationId);
+  if (memberResult.error) throw memberResult.error;
+  return {
+    conversation: { id: row.id, conversation_key: row.conversation_key, updated_at: row.updated_at } as InboxConversation,
+    members: (memberResult.data as unknown as InboxConversationMember[] | null) ?? [],
+    messages: row.messages ?? [],
+  };
+}
+
+export async function loadConversationMessages(conversationId: string, cursor?: MessagePageCursor | null, limit = 50) {
+  const boundedLimit = Math.max(1, Math.min(limit, 100));
+  const query = supabase
+    .from('messages')
+    .select('id,conversation_id,sender_id,body,status,created_at')
+    .eq('conversation_id', conversationId)
+    .eq('status', 'sent');
+  const result = await applyMessageCursor(query, cursor, 'created_at')
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(boundedLimit);
+  if (result.error) throw result.error;
+  const descendingRows = (result.data as InboxMessage[] | null) ?? [];
+  const rows = descendingRows.slice().reverse();
+  return {
+    messages: rows,
+    nextCursor: descendingRows.length === boundedLimit && rows[0]
+      ? { timestamp: rows[0].created_at, id: rows[0].id }
+      : null,
+  };
+}
+
+export async function markConversationRead(conversationId: string, userId: string, timestamp: string) {
+  const result = await supabase
+    .from('conversation_members')
+    .update({ last_read_at: timestamp })
+    .eq('conversation_id', conversationId)
+    .eq('profile_id', userId)
+    .select('conversation_id,profile_id')
+    .single();
+  if (result.error) throw result.error;
+  if (result.data.conversation_id !== conversationId || result.data.profile_id !== userId) throw new Error('The conversation read state could not be saved.');
+}
+
+export async function archiveConversation(conversationId: string, userId: string) {
+  const result = await supabase
+    .from('conversation_members')
+    .update({ archived_at: new Date().toISOString() })
+    .eq('conversation_id', conversationId)
+    .eq('profile_id', userId)
+    .select('conversation_id,profile_id')
+    .single();
+  if (result.error) throw result.error;
+  if (result.data.conversation_id !== conversationId || result.data.profile_id !== userId) throw new Error('The conversation could not be archived.');
 }
 
 export async function searchMessageRecipients(userId: string, query: string) {

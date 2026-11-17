@@ -21,6 +21,8 @@ export type TopbarOverflowAction = {
 type TopbarContextValue = {
   tabs: TopbarTab[] | undefined;
   setTabs: (tabs: TopbarTab[] | undefined) => void;
+  toolbarTitle: string | undefined;
+  setToolbarTitle: (title: string | undefined) => void;
   back: { href: string; label?: string } | undefined;
   setBack: (back: { href: string; label?: string } | undefined) => void;
   overflowActions: TopbarOverflowAction[] | undefined;
@@ -30,6 +32,8 @@ type TopbarContextValue = {
 const TopbarContext = createContext<TopbarContextValue>({
   tabs: undefined,
   setTabs: () => {},
+  toolbarTitle: undefined,
+  setToolbarTitle: () => {},
   back: undefined,
   setBack: () => {},
   overflowActions: undefined,
@@ -38,14 +42,24 @@ const TopbarContext = createContext<TopbarContextValue>({
 
 export function TopbarProvider({ children }: { children: ReactNode }) {
   const [tabs, setTabs] = useState<TopbarTab[] | undefined>(undefined);
+  const [toolbarTitle, setToolbarTitle] = useState<string | undefined>(undefined);
   const [back, setBack] = useState<{ href: string; label?: string } | undefined>(undefined);
   const [overflowActions, setOverflowActions] = useState<TopbarOverflowAction[] | undefined>(undefined);
-  const value = useMemo(() => ({ tabs, setTabs, back, setBack, overflowActions, setOverflowActions }), [tabs, back, overflowActions]);
+  const value = useMemo(() => ({ tabs, setTabs, toolbarTitle, setToolbarTitle, back, setBack, overflowActions, setOverflowActions }), [tabs, toolbarTitle, back, overflowActions]);
   return <TopbarContext.Provider value={value}>{children}</TopbarContext.Provider>;
 }
 
 export function useTopbar(): TopbarContextValue {
   return useContext(TopbarContext);
+}
+
+/** Register the current page name in the shared mobile toolbar. */
+export function useTopbarTitle(title: string | undefined) {
+  const { setToolbarTitle } = useContext(TopbarContext);
+  useEffect(() => {
+    setToolbarTitle(title);
+    return () => setToolbarTitle(undefined);
+  }, [title, setToolbarTitle]);
 }
 
 /**
@@ -64,10 +78,8 @@ export function useTopbarBack(back: { href: string; label?: string } | undefined
 
 export function useTopbarOverflow(actions: TopbarOverflowAction[] | undefined) {
   const { setOverflowActions } = useContext(TopbarContext);
-  const key = useMemo(() => JSON.stringify(actions?.map(action => ({ id: action.id, label: action.label, disabled: action.disabled })) ?? null), [actions]);
   useEffect(() => {
     setOverflowActions(actions);
-    return () => setOverflowActions(undefined);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key, setOverflowActions]);
+  }, [actions, setOverflowActions]);
+  useEffect(() => () => setOverflowActions(undefined), [setOverflowActions]);
 }

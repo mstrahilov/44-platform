@@ -7,6 +7,7 @@ import { Ui44Panel } from '@/components/ui44/Spacing';
 import { Ui44TextInput } from '@/components/ui44/Inputs';
 import { AdminAccessBoundary, AdminActionDialog, AdminStatusBadge, formatAdminDate } from '@/components/admin/AdminPrimitives';
 import { decideAdminSubmission, getAdminContentDetail, setAdminItemLifecycle, setAdminItemReleaseDate, setAdminOfferLifecycle, type AdminContentDetail } from '@/lib/domain/adminOperations';
+import { OS44Button } from '@/components/OS44Button';
 
 type AdminContentAction = 'approve' | 'reject' | 'publish' | 'unpublish' | 'archive';
 type AdminOfferAction = { action: 'pause' | 'restore'; offerId: string };
@@ -100,8 +101,8 @@ function ContentDetail({ itemId }: { itemId: string }) {
         <div><dt>Public URL</dt><dd><Link href={`/store/item/${item.slug}`}>/store/item/{item.slug}</Link></dd></div>
       </dl>
       {!pending && item.status !== 'archived' ? <div className="admin-detail-actions">
-        {item.status === 'draft' ? <button className="os-button os-button-primary" type="button" onClick={() => setAction('publish')}>Publish</button> : <button className="os-button os-button-secondary" type="button" onClick={() => setAction('unpublish')}>Unpublish</button>}
-        <button className="os-button os-button-danger" type="button" onClick={() => setAction('archive')}>Archive</button>
+        {item.status === 'draft' ? <OS44Button className="os-button os-button-primary" type="button" onClick={() => setAction('publish')}>Publish</OS44Button> : <OS44Button className="os-button os-button-secondary" type="button" onClick={() => setAction('unpublish')}>Unpublish</OS44Button>}
+        <OS44Button className="os-button os-button-danger" type="button" onClick={() => setAction('archive')}>Archive</OS44Button>
       </div> : pending ? <p className="admin-detail-note">Resolve the pending review before changing publication state.</p> : <p className="admin-detail-note">Archived content is permanent. Historical Library access and entitlements remain preserved.</p>}
     </Ui44Panel>
 
@@ -113,7 +114,7 @@ function ContentDetail({ itemId }: { itemId: string }) {
             <Ui44TextInput className="os-input-field release-date-input" type="date" value={releaseDate} onChange={event => setReleaseDate(event.target.value)} />
           </label>
           <div className="admin-detail-actions">
-            <button className="os-button os-button-primary" type="button" disabled={!releaseDate || releaseDate === item.release_date} onClick={() => setReleaseDateAction(true)}>Save date</button>
+            <OS44Button className="os-button os-button-primary" type="button" disabled={!releaseDate || releaseDate === item.release_date} onClick={() => setReleaseDateAction(true)}>Save date</OS44Button>
           </div>
         </div>
       </Ui44Panel>
@@ -123,7 +124,7 @@ function ContentDetail({ itemId }: { itemId: string }) {
       <Ui44Panel overflow="visible" className="admin-review-card">
         <dl className="admin-fact-grid"><div><dt>Submitted</dt><dd>{formatAdminDate(pending.submitted_at, true)}</dd></div><div><dt>Proposed title</dt><dd>{String(pending.proposed_item?.title || item.title)}</dd></div><div><dt>Proposed creator</dt><dd>{String(pending.proposed_item?.creator || item.creator)}</dd></div><div><dt>Policy</dt><dd>{String(pending.proposed_item?.experience_type || item.experience_type)}</dd></div></dl>
         {pending.proposed_item?.short_description ? <p className="admin-review-description">{String(pending.proposed_item.short_description)}</p> : null}
-        <div className="admin-detail-actions"><button className="os-button os-button-primary" type="button" onClick={() => setAction('approve')}>Approve</button><button className="os-button os-button-danger" type="button" onClick={() => setAction('reject')}>Reject</button></div>
+        <div className="admin-detail-actions"><OS44Button className="os-button os-button-primary" type="button" onClick={() => setAction('approve')}>Approve</OS44Button><OS44Button className="os-button os-button-danger" type="button" onClick={() => setAction('reject')}>Reject</OS44Button></div>
       </Ui44Panel>
     </section> : null}
 
@@ -187,8 +188,8 @@ function OfferDetailGroup({ offers, onAction }: {
     const canRestore = offer.offer_type === 'digital_download' && offer.price_cents > 0 && offer.fulfillment_type === 'entitlement' && offer.status === 'draft';
     return <div className="admin-detail-group-row" key={offer.id}>
       <div><strong>{offer.title}</strong><span>{offer.status} · {formatCurrency(offer.price_cents, offer.currency)}</span></div>
-      {canPause ? <button className="os-button os-button-danger os-button-compact" type="button" onClick={() => onAction(offer.id, 'pause')}>Pause</button> : null}
-      {canRestore ? <button className="os-button os-button-primary os-button-compact" type="button" onClick={() => onAction(offer.id, 'restore')}>Restore</button> : null}
+      {canPause ? <OS44Button className="os-button os-button-danger os-button-compact" type="button" onClick={() => onAction(offer.id, 'pause')}>Pause</OS44Button> : null}
+      {canRestore ? <OS44Button className="os-button os-button-primary os-button-compact" type="button" onClick={() => onAction(offer.id, 'restore')}>Restore</OS44Button> : null}
     </div>;
   }) : <p>No offers</p>}</Ui44Panel>;
 }

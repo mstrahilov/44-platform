@@ -16,6 +16,7 @@ import {
   type RadioPlayableTrack,
 } from '@/lib/radio';
 import { radioRotationDayKey } from '@/lib/radioRotation';
+import { OS44Button } from '@/components/OS44Button';
 
 const REFRESH_MS = 15000;
 
@@ -79,8 +80,13 @@ export default function RadioPage() {
 
   useTopbarOverflow(useMemo(() => [
     { id: 'share', label: 'Share', onSelect: () => { void navigator.clipboard?.writeText(window.location.href); } },
-    { id: 'playlist', label: 'Add to Playlist', onSelect: () => { if (currentTrack?.id) setPlaylistTrackId(currentTrack.id); } },
-  ], [currentTrack]));
+    ...(syncedTrack?.trackId ? [{
+      id: 'playlist',
+      label: 'Add to Playlist',
+      disabled: !user,
+      onSelect: () => setPlaylistTrackId(syncedTrack.trackId),
+    }] : []),
+  ], [syncedTrack, user]));
 
   function handlePlayLive() {
     if (!queue.length || playback.index < 0) return;
@@ -114,7 +120,7 @@ export default function RadioPage() {
                 {bundle.status ? <p className="os-type-body-small">{bundle.status}</p> : null}
               </div>
               <div className="radio-setup-actions">
-                <Link href="/studio/radio" className="os-button os-button-primary">Open Radio Studio</Link>
+                <OS44Button href="/studio/radio" className="os-button os-button-primary">Open Radio Studio</OS44Button>
               </div>
             </Ui44Panel>
           </HubSection>
@@ -160,14 +166,24 @@ export default function RadioPage() {
                 ) : null}
 
                 <div className="view-album-actions radio-hero-actions">
-                  <button
+                  <OS44Button
                     type="button"
                     className="os-button os-button-primary"
                     onClick={handleRadioAction}
                     disabled={!queue.length || playback.index < 0}
                   >
                     {isSyncedTrackLive ? 'Stop Radio' : 'Play Radio'}
-                  </button>
+                  </OS44Button>
+                  {syncedTrack ? (
+                    <OS44Button
+                      type="button"
+                      className="os-button radio-desktop-playlist-action"
+                      onClick={() => setPlaylistTrackId(syncedTrack.trackId)}
+                      disabled={!user}
+                    >
+                      Add to Playlist
+                    </OS44Button>
+                  ) : null}
                 </div>
               </div>
             </section>

@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageShell, HubHero } from '@/components/Ui';
@@ -8,6 +7,7 @@ import { Ui44Panel } from '@/components/ui44/Spacing';
 import { Ui44CheckboxInput, Ui44FileInput, Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
 import { useAuth } from '@/lib/useAuth';
 import { supabase } from '@/lib/supabase';
+import { OS44Button } from '@/components/OS44Button';
 
 type SellerState = {
   state: string;
@@ -152,7 +152,7 @@ export default function CreatorOnboardingPage() {
       {state?.can_create_items ? <Ui44Panel overflow="visible">
         <h2 className="os-type-panel-title">Creator setup complete</h2>
         <p className="os-type-body">Your tax review and Wise email-to-claim destination are accepted.</p>
-        <Link className="os-button os-button-primary" href="/studio/products/new">Upload an Item</Link>
+        <OS44Button className="os-button os-button-primary" href="/studio/products/new">Upload an Item</OS44Button>
       </Ui44Panel> : null}
       {state && !state.country_eligible ? <Ui44Panel overflow="visible">
         <h2 className="os-type-panel-title">Country route awaiting verification</h2>
@@ -188,9 +188,9 @@ export default function CreatorOnboardingPage() {
                 <option value="uncertain">I am uncertain</option>
               </Ui44SelectInput>
             </label>
-            <button className="os-button os-button-primary" disabled={busy !== ''}>
+            <OS44Button className="os-button os-button-primary" disabled={busy !== ''}>
               {busy === 'classification' ? 'Saving…' : 'Save certification'}
-            </button>
+            </OS44Button>
           </form>
         </Ui44Panel>
         {state.expected_tax_form ? <Ui44Panel overflow="visible">
@@ -199,7 +199,7 @@ export default function CreatorOnboardingPage() {
             Complete and sign the official {state.expected_tax_form === 'w9' ? 'Form W-9 (March 2024)' : 'Form W-8BEN (October 2021)'}.
             The encrypted PDF is restricted from ordinary Admin screens, logs, email, analytics, and support history.
           </p>
-          <p><a className="os-button os-button-secondary" href={formLink} target="_blank" rel="noreferrer">Open official IRS form</a></p>
+          <p><OS44Button className="os-button os-button-secondary" href={formLink} target="_blank" rel="noreferrer">Open official IRS form</OS44Button></p>
           <form className="dashboard-form" onSubmit={uploadTaxForm}>
             <label className="dashboard-field"><span className="dashboard-field-label">Signed PDF</span>
               <Ui44FileInput accept="application/pdf" required onChange={event => setTaxFile(event.target.files?.[0] ?? null)} />
@@ -211,9 +211,9 @@ export default function CreatorOnboardingPage() {
               <Ui44CheckboxInput checked={signatureConfirmed} required onChange={event => setSignatureConfirmed(event.target.checked)} />
               <span>I certify this is my completed form and that I signed it under the certification shown on the form.</span>
             </label>
-            <button className="os-button os-button-primary" disabled={busy !== '' || !taxFile || !signatureConfirmed}>
+            <OS44Button className="os-button os-button-primary" disabled={busy !== '' || !taxFile || !signatureConfirmed}>
               {busy === 'tax' ? 'Encrypting…' : 'Submit for restricted review'}
-            </button>
+            </OS44Button>
           </form>
         </Ui44Panel> : null}
         <Ui44Panel overflow="visible">
@@ -227,9 +227,9 @@ export default function CreatorOnboardingPage() {
               <Ui44TextInput type="email" autoComplete="email" required value={payoutEmail} onChange={event => setPayoutEmail(event.target.value)} />
             </label>
             {state.destination_masked ? <p className="os-type-meta">Current destination: {state.destination_masked}</p> : null}
-            <button className="os-button os-button-primary" disabled={busy !== '' || !state.payout_route_id}>
+            <OS44Button className="os-button os-button-primary" disabled={busy !== '' || !state.payout_route_id}>
               {busy === 'destination' ? 'Saving…' : state.destination_status ? 'Replace payout email' : 'Save payout email'}
-            </button>
+            </OS44Button>
           </form>
         </Ui44Panel>
       </> : null}

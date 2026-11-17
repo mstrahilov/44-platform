@@ -14,18 +14,24 @@ import { useAuth } from '@/lib/useAuth';
 import {
   createOrOpenConversation,
   directMessageError,
+  archiveConversation,
+  loadConversationMessages,
+  loadInboxConversation,
   loadInboxData,
+  markConversationRead,
   searchMessageRecipients,
   sendDirectMessage,
   type InboxConversation,
   type InboxConversationMember,
   type InboxMessage,
+  type MessagePageCursor,
   type MessageRecipient,
 } from '@/lib/messages';
 import { hasCommunityIdentity, communityIdentityMessage } from '@/lib/communityProfile';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { isMissingRelationError } from '@/lib/schemaCompat';
 import { authorDisplayName, authorHref, compactDate } from '@/lib/social';
+import { OS44Button } from '@/components/OS44Button';
 
 type Conversation = InboxConversation;
 type ConversationMember = InboxConversationMember;
@@ -35,29 +41,6 @@ type InboxProfileState = {
   userId: string;
   profile: StudioProfile | null;
 };
-
-const INBOX_READ_STORAGE_KEY = '44-inbox-read-at';
-
-function getReadMap(): Record<string, string> {
-  if (typeof window === 'undefined') return {};
-  try {
-    const raw = window.localStorage.getItem(INBOX_READ_STORAGE_KEY);
-    const parsed = raw ? (JSON.parse(raw) as unknown) : {};
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-      ? parsed as Record<string, string>
-      : {};
-  } catch {
-    return {};
-  }
-}
-
-function setConversationReadAt(conversationId: string, value: string) {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(INBOX_READ_STORAGE_KEY, JSON.stringify({
-    ...getReadMap(),
-    [conversationId]: value,
-  }));
-}
 
 function MessageSendGlyph() {
   return (
@@ -84,12 +67,18 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [members, setMembers] = useState<ConversationMember[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [threadMessages, setThreadMessages] = useState<Message[]>([]);
+  const [threadConversationId, setThreadConversationId] = useState('');
   const [activeId, setActiveId] = useState('');
+  const [inboxNextCursor, setInboxNextCursor] = useState<MessagePageCursor | null>(null);
+  const [loadingMoreInbox, setLoadingMoreInbox] = useState(false);
+  const [inboxLoading, setInboxLoading] = useState(true);
+  const [threadNextCursor, setThreadNextCursor] = useState<MessagePageCursor | null>(null);
+  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [body, setBody] = useState('');
   const [schemaReady, setSchemaReady] = useState(true);
   const [sending, setSending] = useState(false);
   const [setupGateOpen, setSetupGateOpen] = useState(false);
-  const [readMap, setReadMap] = useState<Record<string, string>>(() => getReadMap());
   const composeRoute = routeConversationId === 'new';
   const [composing, setComposing] = useState(composeRoute);
   const [recipientQuery, setRecipientQuery] = useState('');
@@ -143,6 +132,7 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
   const loadInbox = useCallback(async () => {
     if (!user) return;
     const userId = user.id;
+    setInboxLoading(true);
 
     let result;
     try {
@@ -150,12 +140,14 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
     } catch (loadError) {
       if (isMissingRelationError(loadError as { message?: string | null; code?: string | null })) setSchemaReady(false);
       setInboxError(directMessageError(loadError as { message?: string }));
+      setInboxLoading(false);
       return;
     }
     const rows = result.conversations;
     setConversations(rows);
     setMembers(result.members);
     setMessages(result.messages);
+    setInboxNextCursor(result.nextCursor);
     setSchemaReady(true);
     setInboxError('');
 
@@ -163,16 +155,49 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
     if (requested && rows.some(row => row.id === requested)) {
       setActiveId(requested);
       setMobileListOpen(false);
+    } else if (requested && requested !== 'new') {
+      try {
+        const direct = await loadInboxConversation(userId, requested);
+        if (direct) {
+          setConversations(current => current.some(row => row.id === direct.conversation.id) ? current : [direct.conversation, ...current]);
+          setMembers(current => [...current.filter(member => member.conversation_id !== requested), ...direct.members]);
+          setMessages(current => [...current.filter(message => message.conversation_id !== requested), ...direct.messages]);
+          setActiveId(requested);
+          setMobileListOpen(false);
+        } else {
+          setInboxError('Conversation unavailable. It may have been archived or removed.');
+        }
+      } catch (loadError) {
+        setInboxError(directMessageError(loadError as { message?: string }));
+      }
     } else if (!activeId || !rows.some(row => row.id === activeId)) {
       setActiveId(rows[0]?.id ?? '');
     }
+    setInboxLoading(false);
   }, [activeId, routeConversationId, searchParams, user]);
+
+  const loadMoreInbox = useCallback(async () => {
+    if (!user || inboxNextCursor === null || loadingMoreInbox) return;
+    setLoadingMoreInbox(true);
+    setInboxError('');
+    try {
+      const page = await loadInboxData(user.id, inboxNextCursor);
+      setConversations(current => [...current, ...page.conversations.filter(row => !current.some(existing => existing.id === row.id))]);
+      setMembers(current => [...current.filter(member => !page.members.some(next => next.conversation_id === member.conversation_id && next.profile_id === member.profile_id)), ...page.members]);
+      setMessages(current => [...current.filter(message => !page.messages.some(next => next.conversation_id === message.conversation_id)), ...page.messages]);
+      setInboxNextCursor(page.nextCursor);
+    } catch (loadError) {
+      setInboxError(directMessageError(loadError as { message?: string }));
+    } finally {
+      setLoadingMoreInbox(false);
+    }
+  }, [inboxNextCursor, loadingMoreInbox, user]);
 
   useEffect(() => {
     if (!user) return;
 
     function refreshInbox() {
-      loadInbox();
+      if (document.visibilityState === 'visible') void loadInbox();
     }
 
     window.addEventListener('focus', refreshInbox);
@@ -232,7 +257,7 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
   const activeConversation = routeConversationId
     ? conversations.find(row => row.id === routeConversationId) ?? null
     : conversations.find(row => row.id === activeId) ?? conversations[0] ?? null;
-  const activeMessages = activeConversation ? messages.filter(message => message.conversation_id === activeConversation.id) : [];
+  const activeMessages = threadConversationId === activeConversation?.id ? threadMessages : [];
   const activeConversationId = activeConversation?.id ?? '';
   const latestActiveMessageAt = activeMessages.at(-1)?.created_at ?? '';
   const activeMembers = activeConversation ? members.filter(member => member.conversation_id === activeConversation.id) : [];
@@ -242,22 +267,72 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
     return conversations.map(conversation => {
       const other = members.find(member => member.conversation_id === conversation.id && member.profile_id !== user?.id)?.profiles ?? null;
       const last = [...messages].reverse().find(message => message.conversation_id === conversation.id);
-      const readAt = readMap[conversation.id] ? new Date(readMap[conversation.id]).getTime() : 0;
-      const unread = messages.some(message => (
-        message.conversation_id === conversation.id &&
-        message.sender_id !== user?.id &&
-        new Date(message.created_at).getTime() > readAt
-      ));
+      const lastReadAt = members.find(member => member.conversation_id === conversation.id && member.profile_id === user?.id)?.last_read_at;
+      const unread = Boolean(last && last.sender_id !== user?.id && (!lastReadAt || new Date(last.created_at).getTime() > new Date(lastReadAt).getTime()));
       return { conversation, other, last, unread };
     });
-  }, [conversations, members, messages, readMap, user]);
+  }, [conversations, members, messages, user]);
 
   useEffect(() => {
     if (!activeConversationId) return;
-    const latest = latestActiveMessageAt || new Date().toISOString();
-    setConversationReadAt(activeConversationId, latest);
-    Promise.resolve().then(() => setReadMap(getReadMap()));
-  }, [activeConversationId, latestActiveMessageAt]);
+    let alive = true;
+    void loadConversationMessages(activeConversationId).then(async page => {
+      if (!alive) return;
+      setThreadMessages(page.messages);
+      setThreadConversationId(activeConversationId);
+      setThreadNextCursor(page.nextCursor);
+      const latest = page.messages.at(-1)?.created_at;
+      if (latest && user?.id) {
+        try {
+          await markConversationRead(activeConversationId, user.id, latest);
+          if (alive) setMembers(current => current.map(member => (
+            member.conversation_id === activeConversationId && member.profile_id === user.id
+              ? { ...member, last_read_at: latest }
+              : member
+          )));
+        } catch (readError) {
+          if (alive) setInboxError(directMessageError(readError as { message?: string }));
+        }
+      }
+    }).catch(threadError => {
+      if (alive) setInboxError(directMessageError(threadError as { message?: string }));
+    });
+    return () => { alive = false; };
+  }, [activeConversationId, user?.id]);
+
+  const loadOlderMessages = useCallback(async () => {
+    if (!activeConversationId || threadNextCursor === null || loadingOlderMessages) return;
+    setLoadingOlderMessages(true);
+    setInboxError('');
+    try {
+      const page = await loadConversationMessages(activeConversationId, threadNextCursor);
+      setThreadMessages(current => [...page.messages, ...current.filter(message => !page.messages.some(older => older.id === message.id))]);
+      setThreadNextCursor(page.nextCursor);
+    } catch (threadError) {
+      setInboxError(directMessageError(threadError as { message?: string }));
+    } finally {
+      setLoadingOlderMessages(false);
+    }
+  }, [activeConversationId, loadingOlderMessages, threadNextCursor]);
+
+  async function archiveOneConversation(id: string) {
+    if (!user) return;
+    setInboxError('');
+    try {
+      await archiveConversation(id, user.id);
+      setConversations(current => current.filter(conversation => conversation.id !== id));
+      setMembers(current => current.filter(member => member.conversation_id !== id));
+      setMessages(current => current.filter(message => message.conversation_id !== id));
+      if (activeId === id) {
+        setActiveId('');
+        setThreadMessages([]);
+        setMobileListOpen(true);
+        router.replace('/inbox');
+      }
+    } catch (archiveError) {
+      setInboxError(directMessageError(archiveError as { message?: string }));
+    }
+  }
 
   useEffect(() => {
     if (!standaloneConversation || !messageListRef.current) return;
@@ -317,7 +392,9 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
     } else if (insertError) {
       setInboxError(directMessageError(insertError));
     } else if (data) {
-      setMessages(current => [...current, data as unknown as Message]);
+        const sentMessage = data as unknown as Message;
+        setThreadMessages(current => [...current, sentMessage]);
+        setMessages(current => [...current.filter(message => message.conversation_id !== activeConversation.id), sentMessage]);
       setConversations(current => {
         const updatedAt = new Date().toISOString();
         const next = current.map(conversation => (
@@ -349,7 +426,7 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
           <div className="app-empty-text">
             Sign in to read and send direct messages.
             <div className="social-inbox-results-offset">
-              <Link href="/login" className="os-button os-button-primary os-button-compact">Sign In</Link>
+              <OS44Button href="/login" className="os-button os-button-primary os-button-compact">Sign In</OS44Button>
             </div>
           </div>
         </main>
@@ -360,7 +437,7 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
   return (
     <PageShell>
       <main className={`social-shell social-shell-wide social-messages-shell${standaloneConversation ? ' social-conversation-page' : ''}${composing ? ' social-messages-composing' : ''}${mobileListOpen ? '' : ' social-messages-thread-open'}`}>
-        {!standaloneConversation && <header className="social-header">
+        {!standaloneConversation && <header className="social-header social-inbox-mobile-header">
           <div className="social-title-row">
             <div>
               <h1 className="os-type-display ui44-type ui44-type-page-title">Messages</h1>
@@ -400,38 +477,39 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
                 </button>
               )}
               {conversationSummaries.length === 0 ? (
-                !composing ? <div className="app-empty-text">No messages yet.</div> : null
+                !composing ? <div className="app-empty-text" role={inboxLoading ? 'status' : undefined}>{inboxLoading ? 'Loading messages…' : 'No messages yet.'}</div> : null
               ) : (
                 conversationSummaries.map(({ conversation, other, last, unread }) => (
-                  <button
-                    key={conversation.id}
-                    type="button"
-                    className={unread
-                      ? 'social-action social-inbox-unread ui44-list-row ui44-list-row-inbox ui44-list-row-interactive ui44-list-row-selected'
-                      : 'social-action ui44-list-row ui44-list-row-inbox ui44-list-row-interactive'}
-                    onClick={() => {
-                      setActiveId(conversation.id);
-                      setMobileListOpen(false);
-                      router.push(`/conversation/${conversation.id}`);
-                      if (last?.created_at) {
-                        setConversationReadAt(conversation.id, last.created_at);
-                        setReadMap(getReadMap());
-                      }
-                    }}
-                  >
-                    <SocialProfileRow
-                      profile={other ?? { display_name: '44 Member' }}
-                      subtitle={last?.body || 'No messages yet'}
-                      aside={(
-                        <span className="social-inbox-row-aside">
-                          {last && <span>{compactDate(last.created_at)}</span>}
-                          <span className="social-inbox-chevron" aria-hidden="true">›</span>
-                        </span>
-                      )}
-                    />
-                  </button>
+                  <div key={conversation.id} className="social-inbox-row-wrap">
+                    <button
+                      type="button"
+                      className={unread
+                        ? 'social-action social-inbox-unread ui44-list-row ui44-list-row-inbox ui44-list-row-interactive ui44-list-row-selected'
+                        : 'social-action ui44-list-row ui44-list-row-inbox ui44-list-row-interactive'}
+                      onClick={() => {
+                        setActiveId(conversation.id);
+                        setMobileListOpen(false);
+                        router.push(`/conversation/${conversation.id}`);
+                      }}
+                    >
+                      <SocialProfileRow
+                        profile={other ?? { display_name: '44 Member' }}
+                        subtitle={last?.body || 'No messages yet'}
+                        aside={(
+                          <span className="social-inbox-row-aside">
+                            {last && <span>{compactDate(last.created_at)}</span>}
+                            <span className="social-inbox-chevron" aria-hidden="true">›</span>
+                          </span>
+                        )}
+                      />
+                    </button>
+                    <OS44Button type="button" className="social-inbox-archive os-button os-button-secondary os-button-compact" onClick={() => { void archiveOneConversation(conversation.id); }} aria-label={`Archive conversation with ${authorDisplayName(other)}`}>
+                      Archive
+                    </OS44Button>
+                  </div>
                 ))
               )}
+              {inboxNextCursor !== null && <OS44Button type="button" className="os-button os-button-secondary os-button-compact social-inbox-load-more" onClick={() => { void loadMoreInbox(); }} disabled={loadingMoreInbox}>{loadingMoreInbox ? 'Loading…' : 'Load more conversations'}</OS44Button>}
             </aside>
             )}
 
@@ -508,7 +586,10 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
                   </div>
 
                   <div className="social-message-list" ref={messageListRef}>
-                    {activeMessages.length === 0 ? (
+                    {threadConversationId === activeConversation.id && threadNextCursor !== null && <OS44Button type="button" className="os-button os-button-secondary os-button-compact social-message-load-older" onClick={() => { void loadOlderMessages(); }} disabled={loadingOlderMessages}>{loadingOlderMessages ? 'Loading…' : 'Load older messages'}</OS44Button>}
+                    {threadConversationId !== activeConversation.id ? (
+                      <div className="app-empty-text" role="status">Loading conversation…</div>
+                    ) : activeMessages.length === 0 ? (
                       <div className="app-empty-text">Start the conversation.</div>
                     ) : (
                       activeMessages.map(message => (

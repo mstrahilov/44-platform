@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { AdminAccessBoundary, AdminStatusBadge, formatAdminDate } from '@/components/admin/AdminPrimitives';
 import { EmptyMessage, HubHero, PageShell, SectionHeader } from '@/components/Ui';
 import { supabase } from '@/lib/supabase';
+import { OS44Button } from '@/components/OS44Button';
 
 type EmailControlName = 'delivery_enabled' | 'support_intake_enabled' | 'newsletter_sync_enabled';
 type ReconciliationResolution = 'provider_sent' | 'retry_approved' | 'event_suppressed';
@@ -231,10 +232,10 @@ function AdminEmailOperations() {
               <span><strong>{CONTROL_COPY[control].label}</strong><small>{CONTROL_COPY[control].warning}</small></span>
               <AdminStatusBadge tone={enabled ? 'success' : 'quiet'}>{enabled ? 'Enabled' : 'Off'}</AdminStatusBadge>
             </div>
-            {!open ? <button type="button" className={enabled ? 'os-button os-button-danger' : 'os-button os-button-primary'}
+            {!open ? <OS44Button type="button" className={enabled ? 'os-button os-button-danger' : 'os-button os-button-primary'}
               onClick={() => { setSelected(control); setReason(''); setConfirmation(''); setError(''); setStatus(''); }}>
               {enabled ? 'Review disable' : 'Review enable'}
-            </button> : <>
+            </OS44Button> : <>
               <p><strong>This changes live application behavior after deployment.</strong> Confirm the matching runbook gate before continuing.</p>
               <label className="settings-field">
                 <span className="os-type-field-title">Operational reason</span>
@@ -247,13 +248,13 @@ function AdminEmailOperations() {
                   onChange={event => setConfirmation(event.target.value)} />
               </label>
               <div className="admin-detail-actions">
-                <button type="button" className="os-button os-button-secondary" disabled={working}
-                  onClick={() => { setSelected(null); setReason(''); setConfirmation(''); }}>Cancel</button>
-                <button type="button" className={enabled ? 'os-button os-button-danger' : 'os-button os-button-primary'}
+                <OS44Button type="button" className="os-button os-button-secondary" disabled={working}
+                  onClick={() => { setSelected(null); setReason(''); setConfirmation(''); }}>Cancel</OS44Button>
+                <OS44Button type="button" className={enabled ? 'os-button os-button-danger' : 'os-button os-button-primary'}
                   disabled={working || reason.trim().length < 8 || confirmation !== expected}
                   onClick={() => { void applyControl(control); }}>
                   {nextEnabled ? 'Enable control' : 'Disable control'}
-                </button>
+                </OS44Button>
               </div>
             </>}
           </article>;
@@ -294,7 +295,7 @@ function AdminEmailOperations() {
               </span>
               <AdminStatusBadge tone="warning">{knownRejection ? 'Provider rejected' : 'Delivery ambiguous'}</AdminStatusBadge>
             </div>
-            {!open ? <button type="button" className="os-button os-button-danger"
+            {!open ? <OS44Button type="button" className="os-button os-button-danger"
               onClick={() => {
                 setSelectedReconciliation(event.id);
                 setSelected(null);
@@ -306,7 +307,7 @@ function AdminEmailOperations() {
                 setStatus('');
               }}>
               Inspect and reconcile
-            </button> : <>
+            </OS44Button> : <>
               <label className="settings-field">
                 <span className="os-type-field-title">Verified outcome</span>
                 <select className="os-input-field" value={resolution} disabled={working}
@@ -341,14 +342,14 @@ function AdminEmailOperations() {
                   onChange={changeEvent => setConfirmation(changeEvent.target.value)} />
               </label> : null}
               <div className="admin-detail-actions">
-                <button type="button" className="os-button os-button-secondary" disabled={working}
-                  onClick={resetReconciliation}>Cancel</button>
-                <button type="button" className="os-button os-button-danger"
+                <OS44Button type="button" className="os-button os-button-secondary" disabled={working}
+                  onClick={resetReconciliation}>Cancel</OS44Button>
+                <OS44Button type="button" className="os-button os-button-danger"
                   disabled={working || !resolution || reason.trim().length < 8
                     || confirmation !== expected || (resolution === 'provider_sent' && !providerMessageId.trim())}
                   onClick={() => { void reconcileEmail(event.id); }}>
                   Record audited outcome
-                </button>
+                </OS44Button>
               </div>
             </>}
           </article>;

@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/useAuth';
 import { loadStudioProfile } from '@/lib/studioProfiles';
 import { listModerationReports, resolveContentReport } from '@/lib/domain/moderation';
 import { notFound } from 'next/navigation';
+import { OS44Button } from '@/components/OS44Button';
 
 type ModerationReport = Awaited<ReturnType<typeof listModerationReports>>[number];
 
@@ -70,9 +71,9 @@ export default function CommunityModerationPage() {
               </div>
               {report.status === 'pending' ? (
                 <div className="dashboard-row-actions">
-                  <button className="os-button os-button-ghost os-button-compact" type="button" onClick={() => { void resolve(report, 'dismissed'); }}>Dismiss</button>
-                  <button className="os-button os-button-secondary os-button-compact" type="button" onClick={() => { void resolve(report, 'hidden'); }}>Hide</button>
-                  <button className="os-button os-button-danger os-button-compact" type="button" onClick={() => { void resolve(report, 'removed'); }}>Remove</button>
+                  <OS44Button className="os-button os-button-ghost os-button-compact" type="button" onClick={() => { void resolve(report, 'dismissed'); }}>Dismiss</OS44Button>
+                  <OS44Button className="os-button os-button-secondary os-button-compact" type="button" onClick={() => { void resolve(report, 'hidden'); }}>Hide</OS44Button>
+                  <OS44Button className="os-button os-button-danger os-button-compact" type="button" onClick={() => { void resolve(report, 'removed'); }}>Remove</OS44Button>
                 </div>
               ) : null}
             </div>

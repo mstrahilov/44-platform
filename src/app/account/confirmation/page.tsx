@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { buildPageMetadata } from '@/lib/metadata';
+import { OS44Button } from '@/components/OS44Button';
 
 export const metadata: Metadata = {
   ...buildPageMetadata({
@@ -25,9 +25,9 @@ export default function AccountConfirmationPage() {
           </p>
         </div>
 
-        <Link className="os-button os-button-primary os-button-large login-primary-action" href="/login">
+        <OS44Button className="os-button os-button-primary os-button-large login-primary-action" href="/login">
           Return to Log In
-        </Link>
+        </OS44Button>
       </section>
     </main>
   );

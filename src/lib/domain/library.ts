@@ -65,3 +65,72 @@ export async function hideLibraryItem(userId: string, libraryEntryId: string) {
 
   if (result.error) throw result.error;
 }
+
+export type SavedMusicTrack = {
+  track_id: string;
+  item_id: string;
+  title: string;
+  number: number;
+  audio_url: string | null;
+  duration_seconds: number | null;
+  saved_at: string;
+  product: Product;
+};
+
+export function isSavedMusicContractMissing(error: unknown) {
+  const code = typeof error === 'object' && error !== null && 'code' in error ? String(error.code) : '';
+  const message = error instanceof Error ? error.message.toLowerCase() : '';
+  return ['PGRST205', '42P01'].includes(code) || message.includes('saved_music_tracks');
+}
+
+export async function listSavedMusicTracks(userId: string, itemId?: string) {
+  let releaseTrackIds: string[] | null = null;
+  if (itemId) {
+    const tracks = await supabase.from('tracks').select('id').eq('item_id', itemId);
+    if (tracks.error) throw tracks.error;
+    releaseTrackIds = (tracks.data ?? []).map(track => track.id);
+    if (!releaseTrackIds.length) return [];
+  }
+
+  let query = supabase.from('saved_music_tracks' as never)
+    .select('track_id,saved_at,track:tracks!inner(id,item_id,title,number,audio_url,duration_seconds,item:catalog_items!inner(*,creators:profiles!author_id(*)))')
+    .eq('user_id', userId);
+  if (releaseTrackIds) query = query.in('track_id', releaseTrackIds) as typeof query;
+  const result = await query.order('saved_at', { ascending: false });
+  if (result.error) throw result.error;
+  return ((result.data ?? []) as unknown as Array<{ track_id: string; saved_at: string; track: { id: string; item_id: string; title: string; number: number; audio_url: string | null; duration_seconds: number | null; item: Product } }> )
+    .filter(row => row.track?.item?.experience_type === 'music' && row.track.item.status === 'published')
+    .map(row => ({ track_id: row.track_id, item_id: row.track.item_id, title: row.track.title, number: row.track.number, audio_url: row.track.audio_url, duration_seconds: row.track.duration_seconds, saved_at: row.saved_at, product: row.track.item } satisfies SavedMusicTrack));
+}
+
+export async function listSavedMusicTrackIds(userId: string, itemId?: string) {
+  return (await listSavedMusicTracks(userId, itemId)).map(track => track.track_id);
+}
+
+export async function setSavedMusicTrack(trackId: string, saved: boolean) {
+  const result = await supabase.rpc('set_saved_music_track' as never, { target_track_id: trackId, should_save: saved } as never);
+  if (result.error) throw result.error;
+}
+
+export async function setSavedMusicRelease(itemId: string, saved: boolean) {
+  const result = await supabase.rpc('set_saved_music_release' as never, { target_item_id: itemId, should_save: saved } as never);
+  if (result.error) throw result.error;
+}
+
+export async function listSavedMusicReleaseIds(userId: string) {
+  const tracks = await listSavedMusicTracks(userId);
+  return [...new Set(tracks.map(track => track.item_id))];
+}
+
+export async function listSavedMusicAlbums(userId: string) {
+  const tracks = await listSavedMusicTracks(userId);
+  const albums = new Map<string, { item_id: string; product: Product; track_count: number; saved_at: string }>();
+  for (const row of tracks) {
+    const album = albums.get(row.item_id);
+    if (album) {
+      album.track_count += 1;
+      if (row.saved_at > album.saved_at) album.saved_at = row.saved_at;
+    } else albums.set(row.item_id, { item_id: row.item_id, product: row.product, track_count: 1, saved_at: row.saved_at });
+  }
+  return [...albums.values()].sort((left, right) => right.saved_at.localeCompare(left.saved_at));
+}

@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import type { Database } from '@/lib/database.types';
 import { usernameKey } from '@/lib/usernames';
 import { currencyForCountry } from '@/lib/marketPreferences';
+import type { CreatorVideoPage } from '@/lib/domain/releaseFeatures';
 
 export async function getPublicProfile(identifier: string) {
   const usernameResult = await supabase
@@ -77,7 +78,7 @@ export async function getPublicProfileContent(profile: Profile) {
     creator_type: profile.creator_type ?? null,
   }, profile.id);
 
-  const [itemResult, postResult, linkResult, eventResult] = await Promise.all([
+  const [itemResult, postResult, linkResult, videoResult, eventResult] = await Promise.all([
     supabase
       .from('catalog_items')
       .select('*, creators:profiles!author_id(*)')
@@ -87,26 +88,35 @@ export async function getPublicProfileContent(profile: Profile) {
       .from('content_entries')
       .select('*, status:publication_status, creators:profiles!author_id(id, slug, username, display_name, name:display_name, avatar_url, role, creator_type)')
       .in('author_id', ids)
-      .eq('content_type', 'discussion')
+      .in('content_type', ['discussion', 'question', 'collaboration', 'creator_update'])
       .eq('publication_status', 'published')
       .eq('moderation_status', 'visible')
-      .order('created_at', { ascending: false }),
+      .order('created_at', { ascending: false })
+      .limit(60),
     supabase
       .from('profile_external_links')
       .select('id,label,platform,url,sort_order')
       .eq('profile_id', profile.id)
       .order('sort_order'),
+    supabase
+      .from('creator_videos' as never)
+      .select('id,creator_id,title,youtube_video_id,youtube_published_at,created_at')
+      .eq('creator_id', profile.id)
+      .order('youtube_published_at', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false }),
     supabase.from('creator_events').select('*').eq('creator_id', profile.id).order('starts_at', { ascending: true }),
   ]);
   if (itemResult.error) throw itemResult.error;
   if (postResult.error) throw postResult.error;
   if (linkResult.error) throw linkResult.error;
+  if (videoResult.error) throw videoResult.error;
   if (eventResult.error) throw eventResult.error;
 
   const posts = ((postResult.data as SocialPost[] | null) ?? []).filter(Boolean);
+  const videos = (videoResult.data as CreatorVideoPage[] | null) ?? [];
   const postIds = posts.map(post => post.id);
   if (postIds.length === 0) {
-    return { items: (itemResult.data as Product[] | null) ?? [], posts, replies: [], likes: [], links: linkResult.data ?? [], events: eventResult.data ?? [] };
+    return { items: (itemResult.data as Product[] | null) ?? [], posts, videos, replies: [], likes: [], links: linkResult.data ?? [], events: eventResult.data ?? [] };
   }
 
   const [replyResult, likeResult] = await Promise.all([
@@ -128,6 +138,7 @@ export async function getPublicProfileContent(profile: Profile) {
   return {
     items: (itemResult.data as Product[] | null) ?? [],
     posts,
+    videos,
     replies: (replyResult.data as ReplyEngagerRow[] | null) ?? [],
     likes: (likeResult.data as LikeRow[] | null) ?? [],
     links: linkResult.data ?? [],

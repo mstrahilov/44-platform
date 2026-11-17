@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { accountExistsForEmail, usernameIsTaken } from '@/lib/domain/accounts';
@@ -10,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { isValidUsername, sanitizeUsernameInput } from '@/lib/usernames';
 import { Ui44CheckboxInput, Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
+import { OS44Button } from '@/components/OS44Button';
 
 type AuthStep = 'email' | 'password';
 
@@ -337,7 +337,7 @@ export function AuthExperience({ variant, authenticatedDestination }: AuthExperi
           </>
         )}
 
-        <button
+        <OS44Button
           className="os-button os-button-primary os-button-large login-primary-action"
           type="submit"
           disabled={submitting || (!isLogin && step === 'password' && !ageConfirmed)}
@@ -345,22 +345,22 @@ export function AuthExperience({ variant, authenticatedDestination }: AuthExperi
           {submitting
             ? step === 'email' ? 'Checking…' : 'Working…'
             : step === 'email' ? 'Continue' : isLogin ? 'Log in' : 'Create account'}
-        </button>
+        </OS44Button>
 
         {step === 'password' && isLogin && (
-          <button
+          <OS44Button
             className="os-button os-button-primary os-button-large login-primary-action"
             type="button"
             onClick={() => void sendEmailLink()}
             disabled={linkSubmitting || submitting}
           >
             {linkSubmitting ? 'Sending…' : 'Send login link'}
-          </button>
+          </OS44Button>
         )}
         {step === 'password' && isLogin && (
-          <Link className="os-button os-button-ghost os-button-compact login-link-action" href="/account/recovery">
+          <OS44Button className="os-button os-button-ghost os-button-compact login-link-action" href="/account/recovery">
             Forgot password?
-          </Link>
+          </OS44Button>
         )}
       </form>
 

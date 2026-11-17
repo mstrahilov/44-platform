@@ -54,6 +54,7 @@ import {
   visibleDirectReplies,
   type CommunityThreadBranch,
 } from '@/lib/communityThreadModel';
+import { OS44Button } from '@/components/OS44Button';
 
 type ThreadProfileState = {
   userId: string;
@@ -653,17 +654,17 @@ export default function CommunityThreadPage() {
           {directReplies.length > COMMUNITY_THREAD_PAGE_SIZE && (
             <div className="community-thread-pagination">
               {visibleReplies.length < directReplies.length && (
-                <button
+                <OS44Button
                   type="button"
                   className="os-button os-button-secondary os-button-compact"
                   onClick={() => setDirectLimit(current => current + COMMUNITY_THREAD_PAGE_SIZE)}
                 >
                   Load {Math.min(COMMUNITY_THREAD_PAGE_SIZE, directReplies.length - visibleReplies.length)} more
-                </button>
+                </OS44Button>
               )}
-              <button type="button" className="os-button os-button-ghost os-button-compact" onClick={jumpToLatest}>
+              <OS44Button type="button" className="os-button os-button-ghost os-button-compact" onClick={jumpToLatest}>
                 Jump to latest
-              </button>
+              </OS44Button>
             </div>
           )}
         </section>
@@ -693,13 +694,13 @@ export default function CommunityThreadPage() {
                 placeholder="Type your reply"
                 aria-label="Write a reply"
               />
-              <button
+              <OS44Button
                 className="os-button os-button-primary os-button-compact community-thread-composer-submit"
                 type="submit"
                 disabled={submitting || !replyBody.trim()}
               >
                 {submitting ? 'Posting…' : error && replyBody.trim() ? 'Retry' : 'Reply'}
-              </button>
+              </OS44Button>
             </div>
           </form>
         </div>

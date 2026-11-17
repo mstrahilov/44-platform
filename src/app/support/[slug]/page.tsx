@@ -9,6 +9,7 @@ import {
   getSupportCategory,
   supportArticleHref,
 } from '@/lib/supportArticles';
+import { OS44Button } from '@/components/OS44Button';
 
 type SupportArticlePageProps = {
   params: Promise<{ slug: string }>;
@@ -71,8 +72,8 @@ export default async function SupportArticlePage({ params }: SupportArticlePageP
               <div className="support-reader-actions">
                 {article.actions.map(action => (
                   action.href.startsWith('mailto:')
-                    ? <a key={action.href} href={action.href} className="os-button os-button-primary">{action.label}</a>
-                    : <Link key={action.href} href={action.href} className="os-button os-button-primary">{action.label}</Link>
+                    ? <OS44Button key={action.href} href={action.href} className="os-button os-button-primary">{action.label}</OS44Button>
+                    : <OS44Button key={action.href} href={action.href} className="os-button os-button-primary">{action.label}</OS44Button>
                 ))}
               </div>
             ) : null}
@@ -88,7 +89,7 @@ export default async function SupportArticlePage({ params }: SupportArticlePageP
                 </Link>
               ))}
             </nav>
-            <Link href="/support" className="os-button os-button-secondary os-button-compact">All help topics</Link>
+            <OS44Button href="/support" className="os-button os-button-secondary os-button-compact">All help topics</OS44Button>
           </aside>
         </div>
       </main>

@@ -1,12 +1,12 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { HubHero, PageShell } from '@/components/Ui';
 import { useAuth } from '@/lib/useAuth';
 import { deleteItemUpdate, updateItemUpdate, type ItemUpdate } from '@/lib/domain/itemCommunity';
 import { supabase } from '@/lib/supabase';
 import { Ui44TextInput, Ui44Textarea } from '@/components/ui44/Inputs';
+import { OS44Button } from '@/components/OS44Button';
 
 export default function EditUpdatePage({ params }: { params: Promise<{ id: string }> }) {
   const { user, loading } = useAuth();
@@ -47,7 +47,7 @@ export default function EditUpdatePage({ params }: { params: Promise<{ id: strin
     catch (deleteError) { setError(deleteError instanceof Error ? deleteError.message : 'Could not delete this update.'); setDeleting(false); }
   }
 
-  if (loading || !user || !update) return <PageShell><div className="dashboard-page"><HubHero title="Edit Update" copy={error || undefined} />{error ? <Link href="/studio" className="os-button os-button-secondary">Back to Studio</Link> : <div className="ui44-loading-shell" role="status" aria-label="Loading update" />}</div></PageShell>;
+  if (loading || !user || !update) return <PageShell><div className="dashboard-page"><HubHero title="Edit Update" copy={error || undefined} />{error ? <OS44Button href="/studio" className="os-button os-button-secondary">Back to Studio</OS44Button> : <div className="ui44-loading-shell" role="status" aria-label="Loading update" />}</div></PageShell>;
 
   return <PageShell><div className="dashboard-page"><HubHero title="Edit Update" copy="Update this creator announcement." />
     <form className="dashboard-form" onSubmit={save}><section className="dashboard-form-section"><div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible">
@@ -55,6 +55,6 @@ export default function EditUpdatePage({ params }: { params: Promise<{ id: strin
       <label className="dashboard-field"><span className="dashboard-field-label">Update</span><Ui44Textarea className="os-input-textarea" value={body} onChange={event => setBody(event.target.value)} maxLength={10000} placeholder="Write update" /></label>
     </div></section>
     {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div>}
-    <div className="dashboard-form-actions"><div className="dashboard-form-actions-left"><button className="os-button os-button-danger" type="button" onClick={remove} disabled={deleting}>{deleting ? 'Deleting…' : 'Delete Update'}</button></div><div className="dashboard-form-actions-right"><Link className="os-button os-button-secondary" href="/studio">Cancel</Link><button className="os-button os-button-primary" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</button></div></div>
+    <div className="dashboard-form-actions"><div className="dashboard-form-actions-left"><OS44Button className="os-button os-button-danger" type="button" onClick={remove} disabled={deleting}>{deleting ? 'Deleting…' : 'Delete Update'}</OS44Button></div><div className="dashboard-form-actions-right"><OS44Button className="os-button os-button-secondary" href="/studio">Cancel</OS44Button><OS44Button className="os-button os-button-primary" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</OS44Button></div></div>
     </form></div></PageShell>;
 }

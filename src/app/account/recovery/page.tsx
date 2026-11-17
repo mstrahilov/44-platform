@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
-import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { getAppPathUrl } from '@/lib/siteUrl';
 import { Ui44TextInput } from '@/components/ui44/Inputs';
+import { OS44Button } from '@/components/OS44Button';
 
 type RecoveryMode = 'request' | 'reset' | 'complete';
 
@@ -91,20 +91,20 @@ export default function AccountRecoveryPage() {
               <span className="os-type-field-title">Email</span>
               <Ui44TextInput className="os-input-field os-input-large" type="email" value={email} autoComplete="email" required onChange={event => setEmail(event.target.value)} />
             </label>
-            <button className="os-button os-button-primary os-button-large login-primary-action" type="submit" disabled={submitting}>
+            <OS44Button className="os-button os-button-primary os-button-large login-primary-action" type="submit" disabled={submitting}>
               {submitting ? 'Sending…' : 'Send recovery link'}
-            </button>
+            </OS44Button>
           </form>
         ) : mode === 'reset' ? (
           <form className="login-form" onSubmit={savePassword}>
             <label className="login-field"><span className="os-type-field-title">New password</span><Ui44TextInput className="os-input-field os-input-large" type="password" value={password} autoComplete="new-password" minLength={8} required onChange={event => setPassword(event.target.value)} /></label>
             <label className="login-field"><span className="os-type-field-title">Confirm password</span><Ui44TextInput className="os-input-field os-input-large" type="password" value={confirmation} autoComplete="new-password" minLength={8} required onChange={event => setConfirmation(event.target.value)} /></label>
-            <button className="os-button os-button-primary os-button-large login-primary-action" type="submit" disabled={submitting}>{submitting ? 'Saving…' : 'Update password'}</button>
+            <OS44Button className="os-button os-button-primary os-button-large login-primary-action" type="submit" disabled={submitting}>{submitting ? 'Saving…' : 'Update password'}</OS44Button>
           </form>
-        ) : <Link className="os-button os-button-primary os-button-large login-primary-action" href="/login">Return to Log In</Link>}
+        ) : <OS44Button className="os-button os-button-primary os-button-large login-primary-action" href="/login">Return to Log In</OS44Button>}
 
         {status && <p className="login-status os-type-body-small" role="status" aria-live="polite">{status}</p>}
-        {mode === 'request' && <Link className="os-button os-button-ghost os-button-compact login-link-action" href="/login">Back to Log In</Link>}
+        {mode === 'request' && <OS44Button className="os-button os-button-ghost os-button-compact login-link-action" href="/login">Back to Log In</OS44Button>}
       </section>
     </main>
   );

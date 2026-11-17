@@ -2,15 +2,14 @@
 
 44OS is a Next.js and Supabase creative platform for discovering, collecting, publishing, listening to, reading, and discussing independent work.
 
-## Active Documentation
+## Start here
 
-The project has three active handoff documents:
+Read these two documents before changing product behavior:
 
-- [`Other/44OS_FOUNDATION.md`](Other/44OS_FOUNDATION.md) — product, architecture, data, operations, payments, and interactive contracts.
-- [`Other/44OS_UI.md`](Other/44OS_UI.md) — approved visual and interaction system.
-- [`Other/44OS_MILESTONES.md`](Other/44OS_MILESTONES.md) — the single ordered list of current work and acceptance criteria.
+- [`Other/44OS_SYSTEM.md`](Other/44OS_SYSTEM.md) — shared product, architecture, data, authorization, UI, client-boundary, and release rules.
+- [`Other/44OS_PLAN.md`](Other/44OS_PLAN.md) — the single active cross-client work list and acceptance gates.
 
-Other historical plans and audit ledgers are intentionally retired. Use Git history if implementation chronology is required.
+The native iOS repository is maintained separately at `/Users/miro/Developer/44OS-iOS` and [`github.com/mstrahilov/44ios`](https://github.com/mstrahilov/44ios). Its workflow instructions point back to these canonical documents. Do not create another Foundation, UI, transition, audit, proposal, or roadmap file.
 
 ## Local Development
 
@@ -33,7 +32,7 @@ npm run test:hardening-contract
 npm run build
 ```
 
-See Foundation’s **Security, release, and recovery** section for the complete release, migration, smoke-test, restoration, and deployment procedure.
+See `Other/44OS_SYSTEM.md` for the security, release, migration, smoke-test, restoration, and deployment rules.
 
 ## Audio Processing Operations
 

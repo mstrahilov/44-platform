@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageShell, HubHero, CenteredMessage, SectionHeader } from '@/components/Ui';
@@ -26,6 +25,7 @@ import {
 } from '@/lib/domain/beats';
 import { clearStudioFormRecovery, readStudioFormRecovery, writeStudioFormRecovery } from '@/lib/studioFormRecovery';
 import type { Database } from '@/lib/database.types';
+import { OS44Button } from '@/components/OS44Button';
 
 type TierCode = 'basic' | 'premium' | 'trackout';
 type BeatFormState = {
@@ -252,9 +252,9 @@ export function BeatStudioForm({ itemId = null }: { itemId?: string | null }) {
 
         <label className="dashboard-check-row"><Ui44CheckboxInput checked={form.rightsConfirmed} onChange={event => update('rightsConfirmed', event.target.checked)} /><span>I own or control this Beat, every upload, all samples and loops, and the rights needed to offer these licenses.</span></label>
         <div className="dashboard-form-actions">
-          <button type="submit" name="intent" value="draft" className="os-button os-button-secondary" disabled={saving || !databaseEnabled}>{saving ? 'Saving…' : 'Save Draft'}</button>
-          <button type="submit" name="intent" value="submit" className="os-button os-button-primary" disabled={saving || !databaseEnabled}>{saving ? 'Saving…' : 'Save & Submit for Review'}</button>
-          <Link href="/studio" className="os-button os-button-ghost">Cancel</Link>
+          <OS44Button type="submit" name="intent" value="draft" className="os-button os-button-secondary" disabled={saving || !databaseEnabled}>{saving ? 'Saving…' : 'Save Draft'}</OS44Button>
+          <OS44Button type="submit" name="intent" value="submit" className="os-button os-button-primary" disabled={saving || !databaseEnabled}>{saving ? 'Saving…' : 'Save & Submit for Review'}</OS44Button>
+          <OS44Button href="/studio" className="os-button os-button-ghost">Cancel</OS44Button>
         </div>
       </form>
     </main>

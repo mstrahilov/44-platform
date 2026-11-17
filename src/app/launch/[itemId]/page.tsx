@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/useAuth';
 import { beginInteractiveLaunch, endInteractiveLaunch, getInteractiveBuild, recordInteractiveProgress, type InteractiveBuild, type InteractiveLaunch } from '@/lib/domain/interactive';
 import { INTERACTIVE_PROTOCOL, interactiveEntryOrigin, parseInteractiveBridgeMessage } from '@/lib/interactiveBridge';
 import { LOCAL_MASK_ITEM_ID, localMaskPreviewEnabled } from '@/lib/localMaskPreview';
+import { OS44Button } from '@/components/OS44Button';
 
 type LaunchState = 'loading' | 'signed-out' | 'unavailable' | 'unsupported' | 'starting' | 'running' | 'failed' | 'expired' | 'exited';
 type Compatibility = { browser: string; mobile: boolean; webgl2: boolean; wasm: boolean; deviceMemoryMb: number | null; reasons: string[] };
@@ -165,12 +166,12 @@ export default function InteractiveLaunchPage() {
         <p className="os-type-label">44OS Interactive</p>
         <h1>{title}</h1>
         {state === 'loading' || state === 'starting' ? <><span className="interactive-launch-spinner" aria-hidden="true" /><p>{message || 'Checking this device…'}</p></> : null}
-        {state === 'signed-out' ? <><p>Sign in and open this experience from your Library.</p><Link className="os-button os-button-primary" href="/login">Sign In</Link></> : null}
+        {state === 'signed-out' ? <><p>Sign in and open this experience from your Library.</p><OS44Button className="os-button os-button-primary" href="/login">Sign In</OS44Button></> : null}
         {state === 'unavailable' ? <p>No approved WebGL build is attached to this Item yet.</p> : null}
         {state === 'unsupported' ? <><p>This build cannot run reliably on the current device.</p><ul>{compatibility?.reasons.map(reason => <li key={reason}>{reason}</li>)}</ul></> : null}
-        {state === 'failed' ? <><p role="alert">{message}</p>{build && compatibility && <button className="os-button os-button-primary" type="button" onClick={start}>Try Again</button>}</> : null}
-        {state === 'expired' ? <><p>Your launch session ended. Progress already accepted by 44OS remains saved.</p><button className="os-button os-button-primary" type="button" onClick={start}>Start New Session</button></> : null}
-        {state === 'exited' ? <><p>The experience closed normally.</p><Link className="os-button os-button-primary" href={returnTo}>Return to Library</Link></> : null}
+        {state === 'failed' ? <><p role="alert">{message}</p>{build && compatibility && <OS44Button className="os-button os-button-primary" type="button" onClick={start}>Try Again</OS44Button>}</> : null}
+        {state === 'expired' ? <><p>Your launch session ended. Progress already accepted by 44OS remains saved.</p><OS44Button className="os-button os-button-primary" type="button" onClick={start}>Start New Session</OS44Button></> : null}
+        {state === 'exited' ? <><p>The experience closed normally.</p><OS44Button className="os-button os-button-primary" href={returnTo}>Return to Library</OS44Button></> : null}
       </div>}
     </div>
   </section>;

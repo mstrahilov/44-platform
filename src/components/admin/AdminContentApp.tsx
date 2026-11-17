@@ -7,6 +7,7 @@ import { EmptyMessage, HubHero, PageShell } from '@/components/Ui';
 import { Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
 import { AdminAccessBoundary, AdminPager, AdminStatusBadge, formatAdminDate } from '@/components/admin/AdminPrimitives';
 import { listAdminContent, type AdminContentRow } from '@/lib/domain/adminOperations';
+import { OS44Button } from '@/components/OS44Button';
 
 export default function AdminContentApp() {
   return <AdminAccessBoundary><ContentDirectory /></AdminAccessBoundary>;
@@ -65,7 +66,7 @@ function ContentDirectory() {
       <label><span>Sort</span><Ui44SelectInput value={sort} onChange={event => router.push(buildHref(1, search.trim(), status, type, event.target.value))}>
         <option value="created">Recently created</option><option value="release_date">Newest release date</option>
       </Ui44SelectInput></label>
-      <button className="os-button os-button-secondary" type="submit">Search</button>
+      <OS44Button className="os-button os-button-secondary" type="submit">Search</OS44Button>
     </form>
     {error ? <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div> : null}
     {loading ? <div className="ui44-loading-shell" role="status" aria-label="Loading content" /> : rows.length === 0 ? <EmptyMessage>No content matches this view.</EmptyMessage> : <>

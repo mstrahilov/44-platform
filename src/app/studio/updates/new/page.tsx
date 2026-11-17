@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { HubHero, PageShell } from '@/components/Ui';
 import { useAuth } from '@/lib/useAuth';
@@ -9,6 +8,7 @@ import { createItemUpdate } from '@/lib/domain/itemCommunity';
 import type { Product } from '@/lib/products';
 import { loadStudioProfile } from '@/lib/studioProfiles';
 import { Ui44SelectInput, Ui44TextInput, Ui44Textarea } from '@/components/ui44/Inputs';
+import { OS44Button } from '@/components/OS44Button';
 
 export default function NewUpdatePage() {
   const { user, loading } = useAuth();
@@ -41,7 +41,7 @@ export default function NewUpdatePage() {
   }
 
   if (loading) return <PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>;
-  if (!user) return <PageShell><div className="dashboard-page"><HubHero title="New Update" copy="Log in to publish an update." /><Link href="/login" className="os-button os-button-primary">Log In</Link></div></PageShell>;
+  if (!user) return <PageShell><div className="dashboard-page"><HubHero title="New Update" copy="Log in to publish an update." /><OS44Button href="/login" className="os-button os-button-primary">Log In</OS44Button></div></PageShell>;
 
   return <PageShell><div className="dashboard-page"><HubHero title="New Update" copy="Share an update about one of your releases." />
     <form className="dashboard-form" onSubmit={submit}>
@@ -51,7 +51,7 @@ export default function NewUpdatePage() {
         <label className="dashboard-field"><span className="dashboard-field-label">Update</span><Ui44Textarea className="os-input-textarea" value={body} onChange={event => setBody(event.target.value)} maxLength={10000} placeholder="Write update" /></label>
       </div></section>
       {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div>}
-      <div className="dashboard-form-actions"><div className="dashboard-form-actions-right"><Link className="os-button os-button-secondary" href="/studio">Cancel</Link><button className="os-button os-button-primary" type="submit" disabled={saving}>{saving ? 'Publishing…' : 'Publish Update'}</button></div></div>
+      <div className="dashboard-form-actions"><div className="dashboard-form-actions-right"><OS44Button className="os-button os-button-secondary" href="/studio">Cancel</OS44Button><OS44Button className="os-button os-button-primary" type="submit" disabled={saving}>{saving ? 'Publishing…' : 'Publish Update'}</OS44Button></div></div>
     </form>
   </div></PageShell>;
 }

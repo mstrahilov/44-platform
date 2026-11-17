@@ -1,12 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist';
 import { getCatalogItem } from '@/lib/domain/itemDetails';
 import { getReadingSession, listReadingBookmarks, saveReadingProgress, toggleReadingBookmark, type ReadingBookmark } from '@/lib/domain/nativeContent';
 import { useAuth } from '@/lib/useAuth';
+import { OS44Button } from '@/components/OS44Button';
 
 type ReaderAppearance = { theme: 'system'; fit: 'width'; zoom: number };
 const DEFAULT_APPEARANCE: ReaderAppearance = { theme: 'system', fit: 'width', zoom: 1 };
@@ -155,8 +155,8 @@ export function BookReader({ itemId, mode, returnTo }: { itemId: string; mode: '
   }
 
   if (authLoading || loading) return <div className="ui44-loading-shell" role="status" aria-label={`Opening ${mode === 'sample' ? 'sample' : 'book'}`} />;
-  if (mode === 'full' && !user) return <div className="native-reader-state"><p>Sign in to read this Library book.</p><Link className="os-button os-button-primary" href="/login">Sign In</Link></div>;
-  if (error) return <div className="native-reader-state"><p>{error}</p><button className="os-button os-button-primary" type="button" onClick={() => void loadBook()} disabled={!online}>{online ? 'Refresh Access' : 'Offline'}</button></div>;
+  if (mode === 'full' && !user) return <div className="native-reader-state"><p>Sign in to read this Library book.</p><OS44Button className="os-button os-button-primary" href="/login">Sign In</OS44Button></div>;
+  if (error) return <div className="native-reader-state"><p>{error}</p><OS44Button className="os-button os-button-primary" type="button" onClick={() => void loadBook()} disabled={!online}>{online ? 'Refresh Access' : 'Offline'}</OS44Button></div>;
 
   return (
     <section className="native-reader" aria-label={`${title} reader`} onKeyDown={handleKeyDown} tabIndex={-1}>

@@ -19,7 +19,16 @@ select is((select role from public.profiles where id='99100000-0000-0000-0000-00
 select is((select count(*)::integer from public.creator_access_requests where profile_id='99100000-0000-0000-0000-000000000001'),0,'ordinary signup does not create a Creator request');
 select is((select role from public.profiles where id='99100000-0000-0000-0000-000000000002'),'member','Creator request signup still begins as a member');
 select is((select status from public.creator_access_requests where profile_id='99100000-0000-0000-0000-000000000002'),'pending','checked signup creates one pending request');
-select is((select count(*)::integer from public.email_outbox_events where event_key like 'admin-signup/%'),4,'every new signup queues one Admin notification');
+select is((
+  select count(*)::integer
+  from public.email_outbox_events
+  where event_key in (
+    'admin-signup/99100000-0000-0000-0000-000000000001',
+    'admin-signup/99100000-0000-0000-0000-000000000002',
+    'admin-signup/99100000-0000-0000-0000-000000000003',
+    'admin-signup/99100000-0000-0000-0000-000000000004'
+  )
+),4,'every new signup queues one Admin notification');
 select is((select payload->>'creatorRequested' from public.email_outbox_events where event_key='admin-signup/99100000-0000-0000-0000-000000000002'),'true','Creator intent is present in the Admin signup notification');
 select is((select recipient_email from public.email_outbox_events where event_key='admin-signup/99100000-0000-0000-0000-000000000001'),'support@44os.com','signup notifications use the monitored Support mailbox');
 

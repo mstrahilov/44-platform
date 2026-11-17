@@ -7,6 +7,7 @@ import { EmptyMessage, HubHero, PageShell } from '@/components/Ui';
 import { Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
 import { TeamAccessBoundary } from '@/components/team/TeamPrimitives';
 import { listTeamReleases, type TeamRelease } from '@/lib/domain/team';
+import { OS44Button } from '@/components/OS44Button';
 
 function dateLabel(value: string | null) {
   if (!value) return 'Release date not recorded';
@@ -41,7 +42,7 @@ function ReleaseDirectory() {
       <label><span>Search</span><Ui44TextInput value={query} onChange={event => setQuery(event.target.value)} placeholder="Release or Creator" /></label>
       <label><span>Category</span><Ui44SelectInput value={category} onChange={event => setCategory(event.target.value)}><option value="">All categories</option><option value="music">Music</option><option value="book">Books</option><option value="asset">Sample packs</option><option value="merch">Merch</option><option value="game">Games</option></Ui44SelectInput></label>
       <label><span>Sort</span><Ui44SelectInput value={sort} onChange={event => setSort(event.target.value as typeof sort)}><option value="added_desc">Recently added</option><option value="release_date_desc">Release date</option><option value="title">Title</option></Ui44SelectInput></label>
-      <button className="os-button os-button-secondary" type="submit">Search</button>
+      <OS44Button className="os-button os-button-secondary" type="submit">Search</OS44Button>
     </form>
     {error ? <div className="ui44-status ui44-status-error" role="alert">{error}</div> : null}
     {loading ? <div className="ui44-loading-shell" role="status" aria-label="Loading releases" /> : rows.length === 0 ? <EmptyMessage>No published releases match this view.</EmptyMessage> : <div className="team-release-grid">

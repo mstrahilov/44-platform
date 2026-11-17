@@ -1,8 +1,9 @@
 'use client';
 
 import { Suspense, useEffect, useId, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { PageShell } from '@/components/Ui';
+import { OS44Button } from '@/components/OS44Button';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
 import { useAuth } from '@/lib/useAuth';
 import { hasCommunityIdentity } from '@/lib/communityProfile';
@@ -15,6 +16,7 @@ import {
 } from '@/lib/communityV11';
 import { createCommunityPost } from '@/lib/domain/community';
 import { listPublishedCatalogItems } from '@/lib/domain/catalog';
+import { getCatalogItem } from '@/lib/domain/itemDetails';
 import { getUploadErrorMessage, uploadPublicFile } from '@/lib/uploads';
 import type { Item } from '@/lib/products';
 
@@ -28,12 +30,19 @@ export default function NewCommunityThreadPage() {
 
 function NewCommunityThreadContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const contextItemId = searchParams.get('itemId');
+  const returnToParam = searchParams.get('returnTo');
+  const returnTo = returnToParam?.startsWith('/') && !returnToParam.startsWith('//') ? returnToParam : '/community';
   const { user, loading } = useAuth();
   const [body, setBody] = useState('');
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [intent, setIntent] = useState<CommunityIntent>('general');
   const [selectedReferences, setSelectedReferences] = useState<CommunityReference[]>([]);
+  const [lockedItem, setLockedItem] = useState<Item | null>(null);
+  const [contextLoading, setContextLoading] = useState(Boolean(contextItemId));
+  const [contextError, setContextError] = useState('');
   const [picker, setPicker] = useState<'mention' | 'tag' | null>(null);
   const [mentionQuery, setMentionQuery] = useState('');
   const [imageUrl, setImageUrl] = useState('');
@@ -65,6 +74,22 @@ function NewCommunityThreadContent() {
     void listPublishedCatalogItems(200).then(setItems).catch(() => setItems([]));
   }, []);
 
+  useEffect(() => {
+    if (!contextItemId) return;
+    let live = true;
+    void getCatalogItem(contextItemId)
+      .then(item => {
+        if (!item || item.status !== 'published') throw new Error('This item is not available for a new post.');
+        if (!live) return;
+        setLockedItem(item);
+        setSelectedReferences([communityItemReference(item)]);
+        setContextError('');
+      })
+      .catch(reason => { if (live) setContextError(reason instanceof Error ? reason.message : 'Could not load this item.'); })
+      .finally(() => { if (live) setContextLoading(false); });
+    return () => { live = false; };
+  }, [contextItemId]);
+
   const canPostUpdate = profile?.role === 'creator' || profile?.role === 'admin';
   const mentionOptions = useMemo(() => items
     .filter(item => item.title.toLocaleLowerCase().includes(mentionQuery.toLocaleLowerCase().trim()))
@@ -93,6 +118,7 @@ function NewCommunityThreadContent() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!user) return;
+    if (contextLoading || contextError || (contextItemId && !lockedItem)) return;
     if (!hasCommunityIdentity(profile)) {
       setSetupGateOpen(true);
       return;
@@ -109,7 +135,7 @@ function NewCommunityThreadContent() {
       const created = await createCommunityPost({
         body: body.trim(),
         intent,
-        references: selectedReferences,
+        references: lockedItem ? [communityItemReference(lockedItem)] : selectedReferences,
         imageUrl: imageUrl || null,
       });
       setSaving(false);
@@ -121,7 +147,7 @@ function NewCommunityThreadContent() {
     }
   }
 
-  if (loading || !user) {
+  if (loading || !user || contextLoading) {
     return <PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>;
   }
 
@@ -130,9 +156,9 @@ function NewCommunityThreadContent() {
       <div className="community-v11-composer-layer community-new-page-layer">
         <form id="community-new-form" className="community-v11-composer community-new-composer ui44-panel ui44-panel-glass" onSubmit={handleSubmit} aria-labelledby="community-new-title">
           <div className="community-v11-composer-heading">
-            <button type="button" className="community-v11-composer-cancel" onClick={() => router.push('/community')}>Cancel</button>
+            <OS44Button className="community-v11-composer-cancel" onClick={() => router.push(returnTo)}>Cancel</OS44Button>
             <h1 id="community-new-title">New Post</h1>
-            <button type="submit" className="community-v11-composer-post" disabled={saving || !body.trim() || (intent === 'update' && !canPostUpdate)}>{saving ? 'Posting…' : 'Post'}</button>
+            <OS44Button type="submit" className="community-v11-composer-post" disabled={saving || Boolean(contextError) || !body.trim() || (intent === 'update' && !canPostUpdate)}>{saving ? 'Posting…' : 'Post'}</OS44Button>
           </div>
 
           <div className="community-v11-composer-field-label">
@@ -168,21 +194,21 @@ function NewCommunityThreadContent() {
 
           <div className="community-v11-composer-picker-field">
             <span className="community-v11-composer-label">Mention</span>
-            <button type="button" className="community-v11-composer-picker" onClick={() => setPicker(current => current === 'mention' ? null : 'mention')} aria-expanded={picker === 'mention'}>
+            <button type="button" className="community-v11-composer-picker" onClick={() => setPicker(current => current === 'mention' ? null : 'mention')} aria-expanded={picker === 'mention'} disabled={Boolean(lockedItem)}>
               <span className="community-v11-composer-picker-icon">@</span>
               <span className={selectedReferences.length ? 'is-selected' : ''}>{selectedReferences.find(reference => reference.kind === 'item')?.label ?? 'Tap to mention a release'}</span>
-              {selectedReferences.length ? (
+              {selectedReferences.length && !lockedItem ? (
                 <span className="community-v11-composer-clear-wrap">
                   <button type="button" className="community-v11-composer-clear" aria-label="Remove mentioned release" onClick={event => { event.stopPropagation(); setSelectedReferences([]); setMentionQuery(''); }}>
                     ×
                   </button>
                 </span>
-              ) : <span className="community-v11-composer-chevron" aria-hidden="true">
+              ) : !lockedItem ? <span className="community-v11-composer-chevron" aria-hidden="true">
                 <svg viewBox="0 0 20 24" focusable="false">
                   <path d="m4 9 6-6 6 6" />
                   <path d="m4 15 6 6 6-6" />
                 </svg>
-              </span>}
+              </span> : null}
             </button>
             {picker === 'mention' && (
               <div className="community-v11-composer-picker-menu" role="listbox" aria-label="Mention a release">
@@ -222,7 +248,7 @@ function NewCommunityThreadContent() {
             )}
           </div>
 
-          {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div>}
+          {(error || contextError) && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error || contextError}</div>}
         </form>
       </div>
       <CommunitySetupGate open={setupGateOpen} onClose={() => setSetupGateOpen(false)} />

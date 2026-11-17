@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageShell, HubHero } from '@/components/Ui';
@@ -9,6 +8,7 @@ import { useAuth } from '@/lib/useAuth';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { listCreatorPayouts, type CreatorPayoutItem } from '@/lib/domain/studioCommerce';
 import { creatorPaidSalesMessage, loadCreatorPaidSalesState, type CreatorPaidSalesState } from '@/lib/domain/creatorCommerce';
+import { OS44Button } from '@/components/OS44Button';
 
 export default function StudioPayoutsPage() {
   const router = useRouter();
@@ -53,7 +53,7 @@ export default function StudioPayoutsPage() {
             <p className="os-type-body ui44-creator-gate-copy">
               Studio is for creator accounts.
             </p>
-            <Link href="/profile" className="os-button os-button-primary">Open Public Profile</Link>
+            <OS44Button href="/profile" className="os-button os-button-primary">Open Public Profile</OS44Button>
           </Ui44Panel>
         </div>
       </PageShell>
@@ -74,7 +74,7 @@ export default function StudioPayoutsPage() {
           <h2 className="os-type-panel-title">Creator setup required</h2>
           <p className="os-type-body">Complete your individual tax form and Wise email-to-claim destination before selling paid Items. Free publishing remains available.</p>
           {paidSales.requirements_due.length ? <p className="os-type-meta">Information needed: {paidSales.requirements_due.join(', ')}</p> : null}
-          <div className="ui44-section-gap-before"><Link className="os-button os-button-primary" href="/studio/onboarding">Open Creator Setup</Link></div>
+          <div className="ui44-section-gap-before"><OS44Button className="os-button os-button-primary" href="/studio/onboarding">Open Creator Setup</OS44Button></div>
         </Ui44Panel> : null}
         <div className="dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
           <div className="dashboard-empty">

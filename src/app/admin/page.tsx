@@ -26,7 +26,7 @@ function AdminDashboard() {
   }, []);
 
   return <PageShell><main className="admin-page" aria-label="Administrator workspace">
-    <HubHero title="Admin" copy="Manage people, publishing, and operational health across 44OS." />
+    <HubHero title="Admin" copy="Manage people, publishing, and operational health across 44OS." className="admin-page-header" />
     {error ? <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div> : null}
 
     <div className="admin-stat-grid" aria-label="Administrator summary">

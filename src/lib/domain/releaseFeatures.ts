@@ -14,7 +14,19 @@ export type CreatorVideoPage = {
   title: string;
   youtube_video_id: string;
   youtube_published_at: string | null;
+  created_at?: string;
 };
+
+export async function listCreatorVideos(limit = 200) {
+  const result = await supabase
+    .from('creator_videos' as never)
+    .select('id,creator_id,title,youtube_video_id,youtube_published_at,created_at')
+    .order('youtube_published_at', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (result.error) throw result.error;
+  return (result.data as CreatorVideoPage[] | null) ?? [];
+}
 
 export async function getCreatorVideo(id: string) {
   const result = await supabase

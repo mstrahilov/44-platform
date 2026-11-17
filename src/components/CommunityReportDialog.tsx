@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useUi44DialogFocus } from '@/components/ui44/Dialog';
 import { reportContent, type ReportReason } from '@/lib/domain/moderation';
+import { OS44Button } from '@/components/OS44Button';
 
 export type CommunityReportTarget =
   | { kind: 'post'; id: string }
@@ -99,12 +100,12 @@ export function CommunityReportDialog({
             {error && <div className="ui44-status ui44-status-error" role="alert">{error}</div>}
           </div>
           <div className="ui44-dialog-actions community-report-actions">
-            <button type="button" className="os-button os-button-secondary" onClick={onClose} disabled={submitting}>
+            <OS44Button type="button" className="os-button os-button-secondary" onClick={onClose} disabled={submitting}>
               Cancel
-            </button>
-            <button type="submit" className="os-button os-button-primary" disabled={submitting}>
+            </OS44Button>
+            <OS44Button type="submit" className="os-button os-button-primary" disabled={submitting}>
               {submitting ? 'Submitting…' : 'Submit Report'}
-            </button>
+            </OS44Button>
           </div>
         </form>
       </section>

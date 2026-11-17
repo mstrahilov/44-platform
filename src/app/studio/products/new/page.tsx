@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageShell, HubHero, CenteredMessage, SectionHeader } from '@/components/Ui';
@@ -31,6 +30,7 @@ import { clearStudioFormRecovery, readStudioFormRecovery, writeStudioFormRecover
 import { loadCreatorPaidSalesState, type CreatorPaidSalesState } from '@/lib/domain/creatorCommerce';
 import { normalizeOptionalReleaseDate, releaseYear } from '@/lib/releaseDates';
 import { StudioDigitalPricingFields, StudioPriceInput } from '@/components/StudioPricingFields';
+import { OS44Button } from '@/components/OS44Button';
 
 function buildSlug(title: string) {
   const base = normalizeTaxonomyValue(title) || 'item';
@@ -896,12 +896,12 @@ function NewProductContent() {
 
             <div className="dashboard-form-actions">
               <div className="dashboard-form-actions-right">
-                <Link className="os-button os-button-secondary" href={section.href} onClick={() => clearStudioFormRecovery(recoveryKey)}>
+                <OS44Button className="os-button os-button-secondary" href={section.href} onClick={() => clearStudioFormRecovery(recoveryKey)}>
                   Cancel
-                </Link>
-                <button className="os-button os-button-primary" type="submit" disabled={saving || activeUploadCount > 0}>
+                </OS44Button>
+                <OS44Button className="os-button os-button-primary" type="submit" disabled={saving || activeUploadCount > 0}>
                   {activeUploadCount > 0 ? 'Uploading files…' : saving ? (isGameProduct ? 'Submitting…' : 'Publishing…') : (isGameProduct ? 'Submit Game' : 'Publish')}
-                </button>
+                </OS44Button>
               </div>
             </div>
           </form>

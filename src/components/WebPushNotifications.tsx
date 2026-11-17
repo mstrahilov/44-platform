@@ -19,6 +19,7 @@ import {
   enableDesktopNotifications,
   getDesktopNotificationState,
 } from '@/lib/deviceNotifications';
+import { OS44Button } from '@/components/OS44Button';
 
 function useWebPushState() {
   const [state, setState] = useState<WebPushState>('unsupported');
@@ -97,10 +98,10 @@ export function WebPushNotificationPrompt() {
         <div className="os-type-body-small">Get notified about Community replies, mentions, and new messages.</div>
       </div>
       <div className="web-push-prompt-actions">
-        <button type="button" className="os-button os-button-primary os-button-compact" disabled={busy} onClick={() => void enable(() => dismiss())}>
+        <OS44Button type="button" className="os-button os-button-primary os-button-compact" disabled={busy} onClick={() => void enable(() => dismiss())}>
           {busy ? 'Enabling…' : 'Enable Notifications'}
-        </button>
-        <button type="button" className="os-button os-button-secondary os-button-compact" onClick={dismiss}>Not now</button>
+        </OS44Button>
+        <OS44Button type="button" className="os-button os-button-secondary os-button-compact" onClick={dismiss}>Not now</OS44Button>
       </div>
     </aside>
   );

@@ -10,6 +10,7 @@ import { loadAccountOverview, type AccountOverview } from '@/lib/domain/accountO
 import { supabase } from '@/lib/supabase';
 import { isCreatorProfile } from '@/lib/studioProfiles';
 import { useAuth } from '@/lib/useAuth';
+import { OS44Button } from '@/components/OS44Button';
 
 type YouLink = {
   href: string;
@@ -101,10 +102,11 @@ export function YouApp() {
       label: 'Admin',
       description: 'Manage people, content, and operations',
       iconClass: 'os-icon-dashboard',
-    }] : hasTeamAccess ? [{
-      href: '/team/brand',
-      label: 'Handbook',
-      description: 'Open the private Team handbook',
+    }] : []),
+    ...(hasTeamAccess ? [{
+      href: '/team',
+      label: 'Team',
+      description: 'Open the private Team workspace',
       iconClass: 'os-icon-document',
     }] : []),
     {
@@ -143,7 +145,7 @@ export function YouApp() {
           ))}
         </nav>
         <div className="you-logout-action">
-          <button type="button" className="os-button os-button-ghost" onClick={() => void handleSignOut()}>Log Out</button>
+          <OS44Button type="button" className="os-button os-button-ghost" onClick={() => void handleSignOut()}>Log Out</OS44Button>
         </div>
       </main>
     </PageShell>

@@ -1,7 +1,7 @@
-'use client';
+import LibraryApp from '@/components/LibraryApp';
 
-import { PlaylistIndexApp } from '@/components/PlaylistApp';
+export const dynamic = 'force-dynamic';
 
-export default function PlaylistsPage() {
-  return <PlaylistIndexApp />;
+export default function LibraryPlaylistsPage() {
+  return <LibraryApp category="playlists" />;
 }

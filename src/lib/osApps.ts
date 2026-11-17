@@ -369,10 +369,20 @@ export type MobileTopbarState =
 export function getMobileTopbarTitle(pathname: string): string {
   if (pathname === '/library/playlists/new') return 'New Playlist';
   if (pathname.match(/^\/library\/playlists\/[^/]+\/add$/)) return 'Add Track';
-  if (pathname.match(/^\/library\/playlists\/[^/]+$/)) return 'Playlist';
-  if (pathname === '/library/playlists') return 'Playlists';
+  if (pathname.match(/^\/library\/playlists\/[^/]+$/)) return '';
+  if (pathname.startsWith('/library/item/') || pathname.startsWith('/library/music/')) return '';
   if (pathname.startsWith('/store/item/')) return '';
   if (pathname === '/' || pathname.startsWith('/store')) return 'Discover';
+  if (pathname === '/notifications') return 'Notifications';
+  if (pathname === '/inbox' || pathname.startsWith('/conversation/')) return 'Messages';
+  if (pathname === '/settings') return 'Settings';
+  if (pathname === '/orders') return 'Orders';
+  if (pathname === '/cart') return 'Cart';
+  if (pathname === '/checkout') return 'Checkout';
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) return 'Admin';
+  if (pathname === '/studio' || pathname.startsWith('/studio/')) return 'Studio';
+  if (pathname === '/team' || pathname.startsWith('/team/')) return 'Team';
+  if (pathname === '/support' || pathname.startsWith('/support/')) return 'Support';
   if (pathname === '/radio' || pathname.startsWith('/radio/')) return 'Radio';
   if (pathname === '/community' || pathname.startsWith('/community/')) return 'Community';
   if (pathname === '/library' || pathname.startsWith('/library/')) return 'Library';

@@ -11,6 +11,7 @@ import type { Product } from '@/lib/products';
 import { cartCheckoutUiAvailable } from '@/lib/commerceAvailability';
 import { getCartCatalogItems, saveFreeCartToLibrary } from '@/lib/domain/acquisition';
 import { supabase } from '@/lib/supabase';
+import { OS44Button } from '@/components/OS44Button';
 
 type PlaceState = 'idle' | 'placing' | 'placed' | 'confirming' | 'paid' | 'canceled' | 'error';
 type CheckoutConfig = {
@@ -141,7 +142,7 @@ export default function CheckoutPage() {
             <div className="dashboard-empty">
               Your cart is safe. Please return later to complete checkout.
               <div className="checkout-inline-actions">
-                <Link className="os-button os-button-primary os-button-compact" href="/">Open Home</Link>
+                <OS44Button className="os-button os-button-primary os-button-compact" href="/">Open Home</OS44Button>
               </div>
             </div>
           </div>
@@ -161,8 +162,8 @@ export default function CheckoutPage() {
             <div className="dashboard-empty">
               You need an account to continue to checkout and track your order.
               <div className="checkout-inline-actions">
-                <Link className="os-button os-button-primary os-button-compact" href="/login">Log In</Link>
-                <Link className="os-button os-button-secondary os-button-compact" href="/cart">Back to Cart</Link>
+                <OS44Button className="os-button os-button-primary os-button-compact" href="/login">Log In</OS44Button>
+                <OS44Button className="os-button os-button-secondary os-button-compact" href="/cart">Back to Cart</OS44Button>
               </div>
             </div>
           </div>
@@ -180,8 +181,8 @@ export default function CheckoutPage() {
             <div className="dashboard-empty" role="status" aria-live="polite">
               {state === 'paid' ? 'Your order is ready for fulfillment.' : 'Do not close this page while payment confirmation is checked.'}
               <div className="checkout-inline-actions">
-                {state === 'paid' ? <Link className="os-button os-button-primary os-button-compact" href="/library">Open Library</Link> : null}
-                <Link className="os-button os-button-secondary os-button-compact" href="/">Open Home</Link>
+                {state === 'paid' ? <OS44Button className="os-button os-button-primary os-button-compact" href="/library">Open Library</OS44Button> : null}
+                <OS44Button className="os-button os-button-secondary os-button-compact" href="/">Open Home</OS44Button>
               </div>
             </div>
           </div>
@@ -199,7 +200,7 @@ export default function CheckoutPage() {
             <div className="dashboard-empty">
               Add an Item from Store when you are ready.
               <div className="ui44-section-gap-before">
-                <Link className="os-button os-button-primary os-button-compact" href="/">Go Home</Link>
+                <OS44Button className="os-button os-button-primary os-button-compact" href="/">Go Home</OS44Button>
               </div>
             </div>
           </div>
@@ -275,8 +276,8 @@ export default function CheckoutPage() {
             <div className="dashboard-empty">
               No payment was required. Library keeps the Items you want to return to; public listening remains free where enabled.
               <div className="checkout-inline-actions">
-                <Link className="os-button os-button-primary os-button-compact" href="/library">Open Library</Link>
-                <Link className="os-button os-button-secondary os-button-compact" href="/">Keep Exploring</Link>
+                <OS44Button className="os-button os-button-primary os-button-compact" href="/library">Open Library</OS44Button>
+                <OS44Button className="os-button os-button-secondary os-button-compact" href="/">Keep Exploring</OS44Button>
               </div>
             </div>
           </div>
@@ -318,10 +319,10 @@ export default function CheckoutPage() {
             {errorMessage && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{errorMessage}</div>}
 
             <div className="cart-summary-actions">
-              <Link className="os-button os-button-secondary" href="/cart">Back to Cart</Link>
-              <button type="submit" className="os-button os-button-primary" disabled={state === 'placing' || (!canCompleteFreeSave && (!canStartPaidCheckout || !termsAccepted))}>
+              <OS44Button className="os-button os-button-secondary" href="/cart">Back to Cart</OS44Button>
+              <OS44Button type="submit" className="os-button os-button-primary" disabled={state === 'placing' || (!canCompleteFreeSave && (!canStartPaidCheckout || !termsAccepted))}>
                 {state === 'placing' ? (canCompleteFreeSave ? 'Adding…' : 'Opening Stripe…') : canCompleteFreeSave ? 'Add to Library · Free' : canStartPaidCheckout ? 'Continue to Stripe' : 'Paid Checkout Unavailable'}
-              </button>
+              </OS44Button>
             </div>
           </section>
 

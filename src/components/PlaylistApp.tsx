@@ -1,47 +1,14 @@
 'use client';
 
-import Link from 'next/link';
-import { useCallback, useEffect, useId, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageShell, CenteredMessage, EmptyMessage } from '@/components/Ui';
+import { OS44Button } from '@/components/OS44Button';
 import { useAuth } from '@/lib/useAuth';
 import { loadStudioProfile } from '@/lib/studioProfiles';
 import { getUploadErrorMessage, uploadPublicFile } from '@/lib/uploads';
 import { useTopbarBack, useTopbarOverflow } from '@/components/TopbarContext';
-import { addTrackToPlaylist, createPlaylist, deletePlaylist, getPlaylist, listCatalogTracks, listPlaylists, replacePlaylistTracks, renamePlaylist, type CatalogTrack, type Playlist } from '@/lib/domain/playlists';
-
-export function PlaylistIndexApp() {
-  const { user, loading } = useAuth();
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const [title, setTitle] = useState('');
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    if (!user) return;
-    void listPlaylists(user.id).then(setPlaylists).catch(errorValue => setError(errorValue instanceof Error ? errorValue.message : 'Could not load playlists.'));
-  }, [user]);
-
-  async function create() {
-    if (!user || !title.trim()) return;
-    try {
-      const playlist = await createPlaylist(user.id, title);
-      setPlaylists(current => [playlist, ...current]);
-      setTitle('');
-    } catch (errorValue) {
-      setError(errorValue instanceof Error ? errorValue.message : 'Could not create playlist.');
-    }
-  }
-
-  if (loading) return <PageShell><CenteredMessage status>Loading playlists…</CenteredMessage></PageShell>;
-  if (!user) return <PageShell><EmptyMessage>Sign in to create playlists.</EmptyMessage></PageShell>;
-
-  return <PageShell><main className="app-page playlist-index-page">
-    <div className="playlist-index-heading"><h1>Playlists</h1><Link className="os-button os-button-secondary os-button-compact" href="/library">Library</Link></div>
-    <div className="playlist-create-row"><input value={title} onChange={event => setTitle(event.target.value)} placeholder="New playlist name" aria-label="New playlist name" /><button type="button" className="os-button os-button-primary os-button-compact" disabled={!title.trim()} onClick={() => void create()}>Create Playlist</button></div>
-    {playlists.length ? <div className="playlist-grid">{playlists.map(playlist => <Link key={playlist.id} href={`/library/playlists/${playlist.id}`} className="playlist-tile ui44-panel ui44-panel-glass"><span className="playlist-tile-art" style={playlist.artwork_url ? { backgroundImage: `url(${playlist.artwork_url})` } : undefined} /><strong>{playlist.title}</strong><small>Playlist</small></Link>)}</div> : <EmptyMessage>No playlists yet.</EmptyMessage>}
-    {error ? <p className="ui44-status ui44-status-error" role="alert">{error}</p> : null}
-  </main></PageShell>;
-}
+import { addTrackToPlaylist, browseCatalogTracks, createPlaylist, deletePlaylist, getPlaylist, replacePlaylistTracks, renamePlaylist, type CatalogTrack, type CatalogTrackCursor, type Playlist } from '@/lib/domain/playlists';
 
 export function PlaylistCreateApp() {
   const router = useRouter();
@@ -113,7 +80,7 @@ export function PlaylistDetailApp({ playlistId }: { playlistId: string }) {
   const removePlaylist = useCallback(async () => {
     if (!user) return;
     await deletePlaylist(user.id, playlistId);
-    router.push('/library/playlists');
+    router.push('/library');
   }, [playlistId, router, user]);
 
   const sharePlaylist = useCallback(() => {
@@ -121,7 +88,7 @@ export function PlaylistDetailApp({ playlistId }: { playlistId: string }) {
     void navigator.clipboard?.writeText(window.location.href);
   }, []);
 
-  useTopbarBack({ href: '/library/playlists', label: 'Playlists' });
+  useTopbarBack({ href: '/library', label: 'Library' });
   useTopbarOverflow(useMemo(() => playlist && !editing ? [
     { id: 'share', label: 'Share', onSelect: sharePlaylist },
     { id: 'edit', label: 'Edit Playlist', onSelect: () => setEditing(true) },
@@ -170,7 +137,7 @@ export function PlaylistDetailApp({ playlistId }: { playlistId: string }) {
   return <PageShell><main className={`playlist-detail-page${editing ? ' playlist-detail-page-editing' : ''}`}>
     <section className="playlist-detail-hero"><div className="playlist-detail-art" style={artwork ? { backgroundImage: `url(${artwork})` } : undefined} /><h1>{playlist.title}</h1><p>{ownerName || '44OS'}</p>{editing ? <p className="playlist-edit-helper">Drag to reorder, swipe to remove.</p> : null}</section>
     {editing ? <PlaylistEditList playlist={playlist} onSave={saveTracks} /> : <div className="playlist-track-list">{tracks.map((row, index) => <PlaylistTrackRow key={row.id} row={row} index={index} />)}</div>}
-    {editing ? <div className="playlist-edit-actions"><button type="button" className="os-button os-button-secondary" onClick={() => setEditing(false)}>Done</button><Link className="playlist-add-track-link" href={`/library/playlists/${playlist.id}/add`}>Add Track</Link><button type="button" className="os-button os-button-ghost" onClick={saveTitle}>Rename Playlist</button></div> : null}
+    {editing ? <div className="playlist-edit-actions"><OS44Button onClick={() => setEditing(false)}>Done</OS44Button><OS44Button href={`/library/playlists/${playlist.id}/add`}>Add Track</OS44Button><OS44Button onClick={saveTitle}>Rename Playlist</OS44Button></div> : null}
     {error ? <p className="ui44-status ui44-status-error" role="alert">{error}</p> : null}
   </main></PageShell>;
 }
@@ -187,27 +154,116 @@ function PlaylistEditList({ playlist, onSave }: { playlist: Playlist; onSave: (t
 }
 
 export function PlaylistAddTrackApp({ playlistId }: { playlistId: string }) {
-  const router = useRouter();
   const { user, loading } = useAuth();
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const [tracks, setTracks] = useState<CatalogTrack[]>([]);
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState<CatalogTrackCursor | null>(null);
+  const [loadedPlaylistKey, setLoadedPlaylistKey] = useState('');
+  const [loadedBrowseKey, setLoadedBrowseKey] = useState('');
   const [error, setError] = useState('');
+  const browseGeneration = useRef(0);
+  const playlistKey = user ? `${user.id}:${playlistId}` : '';
+  const browseKey = user ? `${user.id}:${query.trim()}` : '';
+  const needsSearch = !query.trim();
+  const tracksLoading = !needsSearch && loadedBrowseKey !== browseKey;
+  const playlistLoading = loading || !user || loadedPlaylistKey !== playlistKey;
   useTopbarBack({ href: `/library/playlists/${playlistId}`, label: 'Playlist' });
+
   useEffect(() => {
     if (!user) return;
-    void Promise.all([getPlaylist(user.id, playlistId), listCatalogTracks()]).then(([nextPlaylist, nextTracks]) => { setPlaylist(nextPlaylist); setTracks(nextTracks); }).catch(errorValue => setError(errorValue instanceof Error ? errorValue.message : 'Could not load tracks.'));
+    let cancelled = false;
+    void getPlaylist(user.id, playlistId)
+      .then(nextPlaylist => {
+        if (!cancelled) setPlaylist(nextPlaylist);
+      })
+      .catch(errorValue => {
+        if (!cancelled) setError(errorValue instanceof Error ? errorValue.message : 'Could not load playlist.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoadedPlaylistKey(`${user.id}:${playlistId}`);
+      });
+    return () => { cancelled = true; };
   }, [playlistId, user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const generation = ++browseGeneration.current;
+    let cancelled = false;
+    const searchQuery = query.trim();
+    if (!searchQuery) return;
+    const searchKey = `${user.id}:${searchQuery}`;
+    const timer = window.setTimeout(() => {
+      setError('');
+      void browseCatalogTracks(searchQuery, null, 30)
+        .then(page => {
+          if (cancelled || generation !== browseGeneration.current) return;
+          setTracks(page.items);
+          setNextCursor(page.next_cursor);
+          setLoadedBrowseKey(searchKey);
+        })
+        .catch(errorValue => {
+          if (!cancelled && generation === browseGeneration.current) {
+            setError(errorValue instanceof Error ? errorValue.message : 'Could not load tracks.');
+            setLoadedBrowseKey(searchKey);
+          }
+        });
+    }, 200);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [query, user]);
+
   const existing = new Set((playlist?.tracks ?? []).map(row => row.track_id));
-  const visible = tracks.filter(track => `${track.title} ${track.item?.title ?? ''}`.toLocaleLowerCase().includes(query.toLocaleLowerCase())).slice(0, 200);
+
+  async function loadMore() {
+    if (!nextCursor || loadingMore) return;
+    const generation = browseGeneration.current;
+    setLoadingMore(true);
+    setError('');
+    try {
+      const page = await browseCatalogTracks(query.trim(), nextCursor, 30);
+      if (generation !== browseGeneration.current) return;
+      setTracks(current => [...current, ...page.items]);
+      setNextCursor(page.next_cursor);
+    } catch (errorValue) {
+      if (generation === browseGeneration.current) setError(errorValue instanceof Error ? errorValue.message : 'Could not load more tracks.');
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
   async function add(track: CatalogTrack) {
     if (!playlist || existing.has(track.id)) return;
     setBusy(track.id); setError('');
-    try { await addTrackToPlaylist(track.id, playlist.id); setPlaylist(await getPlaylist(user!.id, playlistId)); }
+    try {
+      await addTrackToPlaylist(track.id, playlist.id);
+      const refreshed = await getPlaylist(user!.id, playlistId);
+      if (!refreshed) throw new Error('Playlist no longer exists.');
+      setPlaylist(refreshed);
+    }
     catch (errorValue) { setError(errorValue instanceof Error ? errorValue.message : 'This track could not be added.'); }
     finally { setBusy(null); }
   }
-  if (loading || !playlist) return <PageShell><CenteredMessage status>{error || 'Loading tracks…'}</CenteredMessage></PageShell>;
-  return <PageShell><main className="playlist-add-page"><div className="playlist-add-heading"><button type="button" className="os-button os-button-secondary os-button-compact" onClick={() => router.push(`/library/playlists/${playlistId}`)}>Done</button><h1>Add Track</h1></div><input className="playlist-track-search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search tracks or creators" aria-label="Search tracks or creators" /><div className="playlist-catalog-track-list">{visible.map(track => <div className="playlist-catalog-track" key={track.id}><span className="playlist-catalog-art" style={track.item?.cover_url ? { backgroundImage: `url(${track.item.cover_url})` } : undefined} /><span className="playlist-track-copy"><strong>{track.title}</strong><small>{track.item?.title ?? '44OS'}</small></span><button type="button" disabled={busy === track.id || existing.has(track.id)} onClick={() => void add(track)}>{existing.has(track.id) ? '✓' : '+'}</button></div>)}</div>{error ? <p className="ui44-status ui44-status-error" role="alert">{error}</p> : null}</main></PageShell>;
+  if (loading) return <PageShell><CenteredMessage status>Loading playlist…</CenteredMessage></PageShell>;
+  if (!user) return <PageShell><EmptyMessage>Sign in to add tracks to a playlist.</EmptyMessage></PageShell>;
+  if (playlistLoading) return <PageShell><CenteredMessage status>{error || 'Loading playlist…'}</CenteredMessage></PageShell>;
+  if (!playlist) return <PageShell><CenteredMessage status>{error || 'Playlist not found.'}</CenteredMessage></PageShell>;
+
+  return <PageShell><main className="playlist-add-page">
+    <input className="playlist-track-search" value={query} onChange={event => { setQuery(event.target.value); setError(''); }} placeholder="Search tracks or creators" aria-label="Search tracks or creators" />
+    {!needsSearch && tracksLoading ? <CenteredMessage status>Searching tracks…</CenteredMessage> : null}
+    {!needsSearch && !tracksLoading && !error && !tracks.length ? <EmptyMessage>No published tracks match your search.</EmptyMessage> : null}
+    {needsSearch ? <EmptyMessage>Search by track or creator to find tracks to add to this playlist.</EmptyMessage> : null}
+    {!needsSearch && !tracksLoading && !error ? <div className="playlist-catalog-track-list">{tracks.map(track => <div className={`playlist-catalog-track${track.has_access ? '' : ' playlist-catalog-track-no-access'}`} key={track.id}>
+      <span className="playlist-catalog-art" style={track.item?.cover_url ? { backgroundImage: `url(${track.item.cover_url})` } : undefined} />
+      <span className="playlist-track-copy"><strong>{track.title}</strong><small>{track.item?.title ?? '44OS'} · <span className={track.has_access ? 'playlist-catalog-access' : 'playlist-catalog-access playlist-catalog-access-missing'}>{track.has_access ? 'Library access' : 'No Library access'}</span></small></span>
+      <button type="button" aria-label={existing.has(track.id) ? `${track.title} is already in this playlist` : `Add ${track.title}${track.has_access ? '' : ' without Library access'}`} disabled={busy === track.id || existing.has(track.id)} onClick={() => void add(track)}>{existing.has(track.id) ? '✓' : busy === track.id ? '…' : '+'}</button>
+    </div>)}</div> : null}
+    {!needsSearch && !tracksLoading && !error && nextCursor ? <OS44Button className="playlist-catalog-load-more" disabled={loadingMore} onClick={() => void loadMore()}>{loadingMore ? 'Loading…' : 'Load more tracks'}</OS44Button> : null}
+    {error ? <p className="ui44-status ui44-status-error" role="alert">{error}</p> : null}
+  </main></PageShell>;
 }

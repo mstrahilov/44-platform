@@ -1,7 +1,6 @@
 'use client';
 
 import { Suspense, useEffect, useState, type ReactNode } from 'react';
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
@@ -29,6 +28,7 @@ import { isMissingColumnError } from '@/lib/schemaCompat';
 import { getAppPathUrl } from '@/lib/siteUrl';
 import { getNotificationPreference, setNotificationPreference, type NotificationPreferenceKind } from '@/lib/notificationPreferences';
 import { WebPushSettingsRow } from '@/components/WebPushNotifications';
+import { OS44Button } from '@/components/OS44Button';
 
 type SettingsSectionId = 'appearance' | 'account' | 'notifications';
 
@@ -36,6 +36,7 @@ const ACCOUNT_KEYS = {
   mentions: 'mentions',
   replies: 'replies',
   likes: 'likes',
+  messages: 'messages',
   achievements: 'achievements',
 } as const;
 
@@ -92,9 +93,9 @@ function SettingsContent() {
           <HubHero title="Settings" />
           <EmptyMessage>Log in to manage your 44OS settings.</EmptyMessage>
           <div className="ui44-centered-action">
-            <Link href="/login" className="os-button os-button-primary">
+            <OS44Button href="/login" className="os-button os-button-primary">
               Log In
-            </Link>
+            </OS44Button>
           </div>
         </main>
       </PageShell>
@@ -312,6 +313,9 @@ function AccountSettings() {
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [status, setStatus] = useState('');
+  const [confirmDeletion, setConfirmDeletion] = useState(false);
+  const [deletionText, setDeletionText] = useState('');
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
     Promise.resolve().then(() => setNewEmail(user?.email ?? ''));
@@ -349,6 +353,39 @@ function AccountSettings() {
     setStatus(error ? error.message : 'Password saved.');
   }
 
+  async function deleteAccount() {
+    if (!user || deletionText.trim() !== 'DELETE' || deletingAccount) return;
+    setDeletingAccount(true);
+    setStatus('');
+    try {
+      const { data, error: sessionError } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
+      if (sessionError || !token) throw new Error('Sign in again before requesting account deletion.');
+      const response = await fetch('/api/native/v1/account/delete', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const payload = await response.json() as { status?: string; error?: string };
+      if (!response.ok) throw new Error(payload.error || 'Your account could not be deleted. Try again.');
+      const result = payload.status === 'deleted'
+        ? 'Your account was deleted.'
+        : payload.status === 'deletion_scheduled'
+          ? 'Your account was anonymized and sign-in disabled. Final record cleanup is pending.'
+          : 'The server returned an unknown account deletion result. Contact Support before trying again.';
+      setStatus(result);
+      setConfirmDeletion(false);
+      setDeletionText('');
+      if (payload.status === 'deleted' || payload.status === 'deletion_scheduled') {
+        const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });
+        if (signOutError) setStatus(`${result} Sign out of this browser manually to clear its saved session.`);
+      }
+    } catch (deletionError) {
+      setStatus(deletionError instanceof Error ? deletionError.message : 'Your account could not be deleted. Try again.');
+    } finally {
+      setDeletingAccount(false);
+    }
+  }
+
   return (
     <div className="settings-section settings-section-wide settings-two-column ui44-form-grid">
       <div className="settings-field">
@@ -364,9 +401,9 @@ function AccountSettings() {
             placeholder="Enter new email"
             autoComplete="email"
           />
-          <button className="os-button os-button-secondary" type="submit" disabled={!user?.email || savingEmail}>
+          <OS44Button className="os-button os-button-secondary" type="submit" disabled={!user?.email || savingEmail}>
             {savingEmail ? 'Saving...' : 'Save'}
-          </button>
+          </OS44Button>
         </form>
       </div>
 
@@ -384,13 +421,30 @@ function AccountSettings() {
             autoComplete="new-password"
             minLength={8}
           />
-          <button className="os-button os-button-secondary" type="submit" disabled={!newPassword || savingPassword}>
+          <OS44Button className="os-button os-button-secondary" type="submit" disabled={!newPassword || savingPassword}>
             {savingPassword ? 'Saving...' : 'Save'}
-          </button>
+          </OS44Button>
         </form>
       </div>
 
       <RegionSettingsFields onStatus={setStatus} />
+
+      <div className="settings-field settings-danger-zone">
+        <div className="settings-field-head">
+          <div className="os-type-field-title">Delete Account</div>
+        </div>
+        <p className="dashboard-form-note">Account deletion removes your sign-in and personal profile. Financial, order, or moderation records may require anonymization and later cleanup.</p>
+        {!confirmDeletion ? (
+          <OS44Button type="button" className="os-button os-button-secondary" onClick={() => { setConfirmDeletion(true); setStatus(''); }}>Request account deletion</OS44Button>
+        ) : (
+          <div className="settings-inline-form" role="group" aria-label="Confirm account deletion">
+            <p className="dashboard-form-note">This action signs you out and cannot be undone. Type <strong>DELETE</strong> to confirm.</p>
+            <Ui44TextInput className="os-input-field" value={deletionText} onChange={event => setDeletionText(event.target.value)} autoComplete="off" aria-label="Type DELETE to confirm" />
+            <OS44Button type="button" className="os-button os-button-danger" onClick={() => { void deleteAccount(); }} disabled={deletionText.trim() !== 'DELETE' || deletingAccount}>{deletingAccount ? 'Deleting…' : 'Delete account'}</OS44Button>
+            <OS44Button type="button" className="os-button os-button-secondary" onClick={() => { setConfirmDeletion(false); setDeletionText(''); }} disabled={deletingAccount}>Cancel</OS44Button>
+          </div>
+        )}
+      </div>
 
       {status && <p className="settings-status os-type-body-small ui44-status" role="status" aria-live="polite">{status}</p>}
     </div>
@@ -400,11 +454,13 @@ function AccountSettings() {
 function NotificationSettings() {
   return (
     <div className="settings-section settings-section-wide">
+      <p className="dashboard-form-note">Activity switches control which kinds appear in this browser&rsquo;s notification menus and history. Web Push settings control device alerts separately.</p>
       <div className="settings-list ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
         <WebPushSettingsRow />
         <ToggleRow preferenceKind={ACCOUNT_KEYS.mentions} title="Mentions" defaultOn />
         <ToggleRow preferenceKind={ACCOUNT_KEYS.replies} title="Replies" defaultOn />
         <ToggleRow preferenceKind={ACCOUNT_KEYS.likes} title="Likes" defaultOn />
+        <ToggleRow preferenceKind={ACCOUNT_KEYS.messages} title="Messages" defaultOn />
         <ToggleRow preferenceKind={ACCOUNT_KEYS.achievements} title="Achievements" defaultOn />
         <NewsletterConsentRow />
       </div>

@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
-import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useContextMenu, COPY_TO_CLIPBOARD_TOAST_EVENT } from '@/components/ContextMenu';
 import { useAuth } from '@/lib/useAuth';
@@ -10,9 +9,8 @@ import { productMeta } from '@/lib/products';
 import { isFreeLibraryClaim } from '@/lib/libraryContent';
 import { browseIndexHref, getProductExperience, productBrowseHref, productLibraryHref } from '@/lib/experience';
 import { creatorHref } from '@/lib/platform';
-import { ProductGrid, ProductCard, SectionHeader } from '@/components/Ui';
+import { ItemCommunitySection, MoreFromCreatorSection } from '@/components/ItemDetailSections';
 import { InformationDialog } from '@/components/InformationDialog';
-import { SocialPostRow } from '@/components/Social';
 import { LibraryVideoEmbedsSection, ProductDetailHeader, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
 import { useTopbarBack } from '@/components/TopbarContext';
@@ -26,28 +24,19 @@ import { listPlayableItemTracks } from '@/lib/domain/catalog';
 import {
   getCatalogItem,
   getItemLibraryOwnership,
-  listRelatedCatalogItems,
   recordItemShareVisit,
   saveItemToLibrary,
 } from '@/lib/domain/itemDetails';
-import { loadCommunityPostsForItem, type ItemCommunityFeed } from '@/lib/domain/community';
-import {
-  COMMUNITY_INTENT_LABELS,
-  communityItemReference,
-  inferCommunityIntent,
-  inferItemReferences,
-} from '@/lib/communityV11';
 import { getPublicNativeContent, type SamplePackFile } from '@/lib/domain/nativeContent';
 import { SamplePackExperience } from '@/components/SamplePackExperience';
-import { Ui44OverflowTrackTitle } from '@/components/ui44/OverflowTrackTitle';
-import { Ui44SectionArrow } from '@/components/ui44/Controls';
+import { ItemTrackList } from '@/components/ItemTrackList';
 import { beatReviewSurfacesEnabled, loadBeatCatalogSummaries } from '@/lib/domain/beats';
 import { listActiveMerchVariants, type MerchVariant } from '@/lib/domain/merchVariants';
 import { listPublicMerchImages, type MerchProductImage } from '@/lib/domain/merchImages';
 import { listReleaseVideoEmbeds, type ReleaseVideoEmbed } from '@/lib/domain/releaseFeatures';
-import { listVisibleLibraryItemIds } from '@/lib/domain/library';
 import { removeLibraryItem } from '@/lib/domain/library';
 import { PlaylistPicker } from '@/components/PlaylistPicker';
+import { OS44Button } from '@/components/OS44Button';
 
 type ProductTrack = {
   id: string;
@@ -56,12 +45,6 @@ type ProductTrack = {
   duration_seconds?: number | null;
   audio_url?: string | null;
   download_url?: string | null;
-};
-
-const EMPTY_ITEM_COMMUNITY: ItemCommunityFeed = {
-  posts: [],
-  replyCounts: {},
-  likeCounts: {},
 };
 
 export default function ProductPage() {
@@ -88,22 +71,18 @@ function ProductStoreDetail({
   const router = useRouter();
   const searchParams = useSearchParams();
   const cart = useCart();
-  const { currentTrack, isPlaying, toggleTrack, queueNext } = useMusicPlayer();
+  const { currentTrack, isPlaying, toggleTrack, queueNext, queueReleaseNext } = useMusicPlayer();
   const exchangeRates = useExchangeRates();
   const viewerMarket = useViewerMarket();
   const { openContextMenu } = useContextMenu();
   const [product, setProduct] = useState<Product | null>(null);
   const [tracks, setTracks] = useState<ProductTrack[]>([]);
-  const [related, setRelated] = useState<Product[]>([]);
-  const [itemCommunity, setItemCommunity] = useState<ItemCommunityFeed>(EMPTY_ITEM_COMMUNITY);
   const [toast, setToast] = useState<AchievementToastData | null>(null);
   const [owned, setOwned] = useState(false);
-  const [ownedProductIds, setOwnedProductIds] = useState<Set<string>>(new Set());
   const [ownedLibraryItemId, setOwnedLibraryItemId] = useState<string | null>(null);
   const [ownedAcquisitionType, setOwnedAcquisitionType] = useState<string | null>(null);
   const [hasActiveDownload, setHasActiveDownload] = useState(false);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(() => searchParams.get('track'));
-  const [trackMenuId, setTrackMenuId] = useState<string | null>(null);
   const [playlistTrackId, setPlaylistTrackId] = useState<string | null>(null);
   const [inferredTrackDurations, setInferredTrackDurations] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -124,8 +103,6 @@ function ProductStoreDetail({
     async function fetchProduct() {
       setLoading(true);
       setTracks([]);
-      setRelated([]);
-      setItemCommunity(EMPTY_ITEM_COMMUNITY);
       setSampleFiles([]);
       setVideoEmbeds([]);
       setMerchVariants([]);
@@ -174,12 +151,6 @@ function ProductStoreDetail({
           setVideoEmbeds(embeds);
         }
 
-        const [relatedItems, communityFeed] = await Promise.all([
-          listRelatedCatalogItems(data),
-          loadCommunityPostsForItem(data).catch(() => EMPTY_ITEM_COMMUNITY),
-        ]);
-        setRelated(relatedItems);
-        setItemCommunity(communityFeed);
         if (['book', 'asset'].includes(getProductExperience(data))) {
           const nativeContent = await getPublicNativeContent(data.id);
           setSampleFiles(nativeContent.samples);
@@ -196,12 +167,8 @@ function ProductStoreDetail({
   useEffect(() => {
     async function fetchOwnership(userId: string) {
       if (!product) return;
-      const [data, visibleItemIds] = await Promise.all([
-        getItemLibraryOwnership(userId, product.id),
-        listVisibleLibraryItemIds(userId),
-      ]);
+      const data = await getItemLibraryOwnership(userId, product.id);
       setOwned(Boolean(data));
-      setOwnedProductIds(new Set(visibleItemIds));
       setOwnedLibraryItemId(data?.id ?? null);
       setOwnedAcquisitionType(data?.acquisition_type ?? null);
       setHasActiveDownload(data?.has_active_download ?? false);
@@ -209,7 +176,6 @@ function ProductStoreDetail({
     if (user) fetchOwnership(user.id);
     else Promise.resolve().then(() => {
       setOwned(false);
-      setOwnedProductIds(new Set());
       setOwnedLibraryItemId(null);
       setOwnedAcquisitionType(null);
       setHasActiveDownload(false);
@@ -300,10 +266,6 @@ function ProductStoreDetail({
     });
   }
 
-  const trackNumbers = useMemo(
-    () => new Map(tracks.map((track, index) => [track.id, trackOrder(track) || index + 1])),
-    [tracks],
-  );
   const selectedMerchVariant = merchVariants.find(variant => variant.id === selectedMerchVariantId) ?? null;
   const merchOptionKeys = [...new Set(merchVariants.flatMap(variant => Object.keys(variant.option_values)))];
   const merchColorValues = [...new Set(merchVariants.map(variant => variant.option_values.color).filter(Boolean))];
@@ -339,7 +301,6 @@ function ProductStoreDetail({
     };
   }, [tracks]);
 
-  const overflowIsReleasePage = releasePage || (product ? getProductExperience(product) === 'music' : false);
   const openPlaylistPicker = useCallback((trackId?: string) => {
     if (!user) {
       router.push('/login');
@@ -348,11 +309,25 @@ function ProductStoreDetail({
     const fallbackTrackId = trackId ?? selectedTrackId ?? tracks[0]?.id;
     if (fallbackTrackId) setPlaylistTrackId(fallbackTrackId);
   }, [router, selectedTrackId, tracks, user]);
-  useTopbarOverflow(useMemo(() => product && overflowIsReleasePage ? [
-    ...(owned ? [{ id: 'library', label: 'Remove from Library', onSelect: () => { void removeFromLibrary(); } }] : [{ id: 'library', label: 'Add to Library', onSelect: () => { void addToLibrary(); } }]),
-    { id: 'playlist', label: 'Add to Playlist', onSelect: () => openPlaylistPicker() },
+  const isMusicRelease = Boolean(product && getProductExperience(product) === 'music');
+  const playableTracks: MusicQueueTrack[] = useMemo(() => product ? tracks.filter(track => track.audio_url).map(track => ({
+    id: track.id,
+    title: track.title,
+    artist: product.creators?.display_name || product.creator || '44 Creator',
+    releaseTitle: product.title,
+    artworkUrl: product.cover_url || product.hero_url || null,
+    audioUrl: track.audio_url as string,
+    durationSeconds: getTrackDurationSeconds(track, inferredTrackDurations),
+    productId: product.id,
+    artistHref: creatorHref(product.creators ?? product.creator),
+    releaseHref: productBrowseHref(product),
+  })) : [], [product, tracks, inferredTrackDurations]);
+  useTopbarOverflow(useMemo(() => product ? [
+    ...(owned ? [{ id: 'library', label: 'Remove from Library', onSelect: () => { void removeFromLibrary(); } }] : canSaveProductToLibrary(product) ? [{ id: 'library', label: 'Add to Library', onSelect: () => { void addToLibrary(); } }] : []),
+    ...(isMusicRelease ? [{ id: 'playlist', label: 'Add to Playlist', onSelect: () => openPlaylistPicker() }] : []),
+    ...(isMusicRelease ? [{ id: 'queue-release', label: 'Add to Queue', onSelect: () => queueReleaseNext(playableTracks) }] : []),
     { id: 'share', label: 'Share', onSelect: shareItemLink },
-  ] : undefined, [addToLibrary, openPlaylistPicker, product, overflowIsReleasePage, owned, removeFromLibrary]));
+  ] : undefined, [addToLibrary, openPlaylistPicker, product, owned, isMusicRelease, removeFromLibrary, queueReleaseNext, playableTracks]));
 
   const routeArtwork = product ? product.hero_url || product.cover_url : null;
 
@@ -368,7 +343,6 @@ function ProductStoreDetail({
   const isMerch = productExperience === 'physical';
   const creatorLink = creatorHref(product.creators ?? product.creator);
   const creatorTabLink = `${creatorLink}${creatorLink.includes('?') ? '&' : '?'}tab=${isBeat ? 'beats' : creatorProfileTab(productExperience)}${product.id ? `&fromProduct=${encodeURIComponent(product.id)}` : ''}`;
-  const creatorMoreLink = `${creatorLink}${creatorLink.includes('?') ? '&' : '?'}tab=${isBeat ? 'beats' : creatorProfileTab(productExperience)}`;
   const libraryHref = ownedLibraryItemId ? productLibraryHref(product, ownedLibraryItemId) : browseIndexHref(product).replace('/store', '/library');
   const merchGallery = [
     ...merchImages,
@@ -385,23 +359,6 @@ function ProductStoreDetail({
     ? cart.items.some(entry => entry.merch_variant_id === selectedMerchVariant.id
       || entry.merch_variant_preview_code === selectedMerchVariant.code)
     : false;
-
-  const playableTracks: MusicQueueTrack[] = (
-    tracks
-      .filter(track => track.audio_url)
-      .map(track => ({
-        id: track.id,
-        title: track.title,
-        artist: product.creators?.display_name || product.creator || '44 Creator',
-        releaseTitle: product.title,
-        artworkUrl: product.cover_url || product.hero_url || null,
-        audioUrl: track.audio_url as string,
-        durationSeconds: getTrackDurationSeconds(track, inferredTrackDurations),
-        productId: product.id,
-        artistHref: creatorLink,
-        releaseHref: productBrowseHref(product),
-      }))
-  );
 
   function toggleReleaseTrack(track: ProductTrack) {
     if (!track.audio_url) return;
@@ -528,76 +485,30 @@ function ProductStoreDetail({
           tracks.length === 0 ? (
             <p className="os-type-body view-description view-content-empty">No tracks are published for this release yet.</p>
           ) : (
-            <div className="view-tracklist ui44-track-list ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
-              {tracks.map((track, index) => {
-                const active = currentTrack?.id === track.id;
-                const selected = selectedTrackId === track.id;
-                return (
-                  <div
-                    className={selected || active ? 'view-track-row view-track-row-selected ui44-track-row ui44-track-row-interactive ui44-track-row-selected' : 'view-track-row ui44-track-row ui44-track-row-interactive'}
-                    key={track.id}
-                    onClick={() => {
-                      setSelectedTrackId(track.id);
-                      toggleReleaseTrack(track);
-                    }}
-                    onContextMenu={event => openContextMenu(event, [
-                      { id: 'play', label: 'Play', onSelect: () => toggleReleaseTrack(track), disabled: !track.audio_url },
-                      { id: 'play-next', label: 'Play Next', onSelect: () => queueReleaseTrackNext(track), disabled: !track.audio_url },
-                      { kind: 'divider', id: 'track-actions' },
-                      { id: 'creator', label: 'View Creator', href: creatorTabLink },
-                      { id: 'share', label: 'Share Link', onSelect: () => shareTrackLink(track) },
-                    ])}
-                    role="button"
-                    tabIndex={0}
-                    aria-pressed={selected || active}
-                    onKeyDown={event => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        setSelectedTrackId(track.id);
-                        toggleReleaseTrack(track);
-                      }
-                    }}
-                  >
-                    <div className={active ? 'view-track-leading view-track-leading-current ui44-track-leading' : 'view-track-leading ui44-track-leading'}>
-                      <span className="view-track-number ui44-track-index">{trackNumbers.get(track.id) ?? index + 1}</span>
-                      <button
-                        className="view-track-play ui44-track-play-action"
-                        type="button"
-                        disabled={!track.audio_url}
-                        aria-label={`${active && isPlaying ? 'Pause' : 'Play'} ${track.title}`}
-                        onClick={event => {
-                          event.stopPropagation();
-                          toggleReleaseTrack(track);
-                        }}
-                      >
-                        <span className={active ? (isPlaying ? 'view-track-icon view-track-icon-equalizer view-track-icon-equalizer-playing' : 'view-track-icon view-track-icon-pause') : 'view-track-icon view-track-icon-play'} aria-hidden="true" />
-                      </button>
-                    </div>
-                    <Ui44OverflowTrackTitle title={track.title} active={active && isPlaying} className="ui44-track-title" />
-                    <div className="view-track-duration ui44-track-duration">{formatTrackDuration(getTrackDurationSeconds(track, inferredTrackDurations))}</div>
-                    <button
-                      type="button"
-                      className="view-track-more"
-                      aria-label={`More actions for ${track.title}`}
-                      aria-expanded={trackMenuId === track.id}
-                      onClick={event => {
-                        event.stopPropagation();
-                        setTrackMenuId(current => current === track.id ? null : track.id);
-                      }}
-                    >
-                      <span aria-hidden="true">•••</span>
-                    </button>
-                    {trackMenuId === track.id ? (
-                      <div className="ui44-paper-menu view-track-more-menu" role="menu" aria-label={`${track.title} actions`}>
-                        <button className="ui44-paper-menu-item" type="button" role="menuitem" disabled={!track.audio_url} onClick={event => { event.stopPropagation(); setTrackMenuId(null); queueReleaseTrackNext(track); }}>Add to Queue</button>
-                        <button className="ui44-paper-menu-item" type="button" role="menuitem" onClick={event => { event.stopPropagation(); setTrackMenuId(null); openPlaylistPicker(track.id); }}>Add to Playlist</button>
-                        <button className="ui44-paper-menu-item" type="button" role="menuitem" onClick={event => { event.stopPropagation(); setTrackMenuId(null); shareTrackLink(track); }}>Share Track</button>
-                      </div>
-                    ) : null}
-                  </div>
-                );
-              })}
-            </div>
+            <ItemTrackList label="Release tracks" rows={tracks.map((track, index) => {
+              const active = currentTrack?.id === track.id;
+              return {
+                id: track.id,
+                number: trackOrder(track) || index + 1,
+                title: track.title,
+                playable: Boolean(track.audio_url),
+                active: selectedTrackId === track.id || active,
+                playing: active && isPlaying,
+                onPlay: () => toggleReleaseTrack(track),
+                actions: [
+                  { id: 'playlist', label: 'Add to Playlist', onSelect: () => openPlaylistPicker(track.id) },
+                  { id: 'queue', label: 'Add to Queue', onSelect: () => queueReleaseTrackNext(track), disabled: !track.audio_url },
+                  { id: 'share', label: 'Share', onSelect: () => shareTrackLink(track) },
+                ],
+                onContextMenu: event => openContextMenu(event, [
+                  { id: 'play', label: 'Play', onSelect: () => toggleReleaseTrack(track), disabled: !track.audio_url },
+                  { id: 'play-next', label: 'Play Next', onSelect: () => queueReleaseTrackNext(track), disabled: !track.audio_url },
+                  { kind: 'divider', id: 'track-actions' },
+                  { id: 'creator', label: 'View Creator', href: creatorTabLink },
+                  { id: 'share', label: 'Share Link', onSelect: () => shareTrackLink(track) },
+                ]),
+              };
+            })} />
           )
         ) : productExperience === 'asset' ? (
           <SamplePackExperience
@@ -613,57 +524,9 @@ function ProductStoreDetail({
 
       {isBeat && product.beat ? <BeatLicensePanel product={product} /> : null}
 
-      {isReleasePage && !isBeat ? <LibraryVideoEmbedsSection embeds={videoEmbeds} /> : null}
-
-      {isReleasePage && isBeat ? <LibraryVideoEmbedsSection embeds={videoEmbeds} /> : null}
-
-      {itemCommunity.posts.length > 0 && (
-        <div className="view-section">
-          <SectionHeader
-            title="Community"
-            action={<Link className="item-community-new-post" href="/community/new">New Post</Link>}
-          />
-          <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip social-feed social-feed-list social-feed-panel item-community-surface item-community-posts">
-            {itemCommunity.posts.map(post => {
-              const intent = inferCommunityIntent(post);
-              const references = post.community_references?.length
-                ? post.community_references
-                : [
-                    ...(post.item_id === product.id ? [communityItemReference(product)] : []),
-                    ...inferItemReferences(post.body ?? '', [product]),
-                  ].filter((reference, index, all) => all.findIndex(candidate => candidate.kind === reference.kind && candidate.id === reference.id) === index);
-              return (
-                <div key={post.id} className="social-feed-post">
-                  <SocialPostRow
-                    post={post}
-                    likeCount={itemCommunity.likeCounts[post.id] ?? 0}
-                    replyCount={itemCommunity.replyCounts[post.id] ?? 0}
-                    meta={intent === 'general' ? undefined : (
-                      <span className="community-intent-label">{COMMUNITY_INTENT_LABELS[intent]}</span>
-                    )}
-                    metaPlacement="actions"
-                    references={references}
-                    showAuthorHandle={false}
-                    showAttachedItemCard={false}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {(related.length > 0 || isBeat) && (
-        <div className="view-section">
-          <SectionHeader
-            title="More from the creator"
-            action={<Ui44SectionArrow href={creatorMoreLink} label={`View more from ${creatorDisplayName}`} />}
-          />
-          {related.length > 0 ? <ProductGrid className="store-mobile-shelf">
-            {related.map(item => <ProductCard key={item.id} product={item} owned={ownedProductIds.has(item.id)} />)}
-          </ProductGrid> : <p className="os-type-body view-description">No other Beats from this creator yet.</p>}
-        </div>
-      )}
+      <ItemCommunitySection key={`community-${product.id}`} item={product} />
+      <MoreFromCreatorSection key={`more-${product.id}`} item={product} />
+      {isReleasePage ? <LibraryVideoEmbedsSection embeds={videoEmbeds} /> : null}
 
       <AchievementToast toast={toast} onDone={() => setToast(null)} />
     </div>
@@ -761,13 +624,6 @@ function canSaveProductToLibrary(product: Product) {
   if (experience === 'physical') return false;
   if (experience === 'music' || experience === 'book') return true;
   return isFreeLibraryClaim(product);
-}
-
-function formatTrackDuration(seconds: number | null | undefined) {
-  if (!seconds || seconds <= 0) return '-:--';
-  const minutes = Math.floor(seconds / 60);
-  const remaining = Math.floor(seconds % 60).toString().padStart(2, '0');
-  return `${minutes}:${remaining}`;
 }
 
 function getTrackDurationSeconds(track: ProductTrack, inferredDurations: Record<string, number>) {
@@ -920,8 +776,8 @@ function BeatLicensePanel({ product }: { product: Product }) {
         <span className="beat-license-copy"><strong>{offer.title}</strong><span>{offer.summary}</span></span>
         <span className="beat-license-actions">
           <strong className="beat-license-price">{new Intl.NumberFormat('en-US', { style: 'currency', currency: offer.currency }).format(offer.priceCents / 100)}</strong>
-          <button type="button" className="os-button os-button-secondary os-button-compact" onClick={() => setSelectedOffer(offer)}>License Info</button>
-          <button type="button" className="os-button os-button-primary os-button-compact" onClick={() => selectOffer(offer)}>{cart.hasOffer(offer.id) ? 'View Cart' : 'Add to Cart'}</button>
+          <OS44Button type="button" className="os-button os-button-secondary os-button-compact" onClick={() => setSelectedOffer(offer)}>License Info</OS44Button>
+          <OS44Button type="button" className="os-button os-button-primary os-button-compact" onClick={() => selectOffer(offer)}>{cart.hasOffer(offer.id) ? 'View Cart' : 'Add to Cart'}</OS44Button>
         </span>
       </article>)}
     </div> : <p className="os-type-body view-description">No license tiers are enabled for this Beat.</p>}

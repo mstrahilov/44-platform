@@ -2,7 +2,6 @@
 
 import { useEffect, useId, useState, type ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useAuth } from '@/lib/useAuth';
 import { PageShell, CenteredMessage } from '@/components/Ui';
 import { SocialAvatar } from '@/components/Social';
@@ -26,6 +25,7 @@ import {
   type ExternalLinkDraft,
   type ExternalLinkPlatform,
 } from '@/lib/domain/externalLinks';
+import { OS44Button } from '@/components/OS44Button';
 
 type PendingImage = { file: File };
 
@@ -159,7 +159,7 @@ export default function EditProfilePage() {
       <PageShell>
         <CenteredMessage>
           Sign in to edit your profile.{' '}
-          <Link href="/login" className="os-button os-button-primary os-button-compact profile-edit-sign-in">Sign In</Link>
+          <OS44Button href="/login" className="os-button os-button-primary os-button-compact profile-edit-sign-in">Sign In</OS44Button>
         </CenteredMessage>
       </PageShell>
     );
@@ -206,17 +206,17 @@ export default function EditProfilePage() {
             </div>
 
             <div className="social-profile-actions profile-edit-actions">
-              <Link href={authorHandle(profile) ? `/profile/${authorHandle(profile)}` : '/profile'} className="os-button os-button-secondary">
+              <OS44Button href={authorHandle(profile) ? `/profile/${authorHandle(profile)}` : '/profile'} className="os-button os-button-secondary">
                 Cancel
-              </Link>
-              <button
+              </OS44Button>
+              <OS44Button
                 type="button"
                 className="os-button os-button-primary"
                 onClick={save}
                 disabled={saving}
               >
                 {saving ? 'Saving...' : 'Save'}
-              </button>
+              </OS44Button>
             </div>
           </div>
 

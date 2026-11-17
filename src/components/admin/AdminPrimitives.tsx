@@ -1,11 +1,11 @@
 'use client';
 
 import Image from 'next/image';
-import Link from 'next/link';
 import { useEffect, useState, type ReactNode } from 'react';
 import { EmptyMessage, PageShell } from '@/components/Ui';
 import { useAuth } from '@/lib/useAuth';
 import { loadStudioProfile } from '@/lib/studioProfiles';
+import { OS44Button } from '@/components/OS44Button';
 
 export function useAdminAccess() {
   const { user, loading: authLoading } = useAuth();
@@ -43,9 +43,9 @@ export function AdminPager({ page, total, pageSize = 8, hrefForPage }: { page: n
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   if (pageCount <= 1) return null;
   return <nav className="admin-pager" aria-label="Pagination">
-    {page > 1 ? <Link className="os-button os-button-ghost os-button-compact" href={hrefForPage(page - 1)}>Previous</Link> : <span />}
+    {page > 1 ? <OS44Button className="os-button os-button-ghost os-button-compact" href={hrefForPage(page - 1)}>Previous</OS44Button> : <span />}
     <span>Page {page} of {pageCount}</span>
-    {page < pageCount ? <Link className="os-button os-button-ghost os-button-compact" href={hrefForPage(page + 1)}>Next</Link> : <span />}
+    {page < pageCount ? <OS44Button className="os-button os-button-ghost os-button-compact" href={hrefForPage(page + 1)}>Next</OS44Button> : <span />}
   </nav>;
 }
 
@@ -106,11 +106,11 @@ export function AdminActionDialog({
       </label> : null}
       {error ? <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div> : null}
       <div className="admin-dialog-actions">
-        <button className="os-button os-button-ghost" type="button" disabled={saving} onClick={onClose}>Cancel</button>
-        <button className={danger ? 'os-button os-button-danger' : 'os-button os-button-primary'} type="button" disabled={!valid || saving} onClick={() => {
+        <OS44Button className="os-button os-button-ghost" type="button" disabled={saving} onClick={onClose}>Cancel</OS44Button>
+        <OS44Button className={danger ? 'os-button os-button-danger' : 'os-button os-button-primary'} type="button" disabled={!valid || saving} onClick={() => {
           setError('');
           void onConfirm(reason.trim()).catch(actionError => setError(actionError instanceof Error ? actionError.message : 'The administrator action failed.'));
-        }}>{saving ? 'Working…' : confirmLabel}</button>
+        }}>{saving ? 'Working…' : confirmLabel}</OS44Button>
       </div>
     </section>
   </div>;

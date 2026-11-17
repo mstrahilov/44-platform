@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { PageShell, HubHero, SectionHeader } from '@/components/Ui';
@@ -49,6 +48,7 @@ import { clearStudioFormRecovery, readStudioFormRecovery, writeStudioFormRecover
 import { loadCreatorPaidSalesState, type CreatorPaidSalesState } from '@/lib/domain/creatorCommerce';
 import { normalizeOptionalReleaseDate, releaseYear } from '@/lib/releaseDates';
 import { StudioDigitalPricingFields, StudioPriceInput, type StudioAvailability } from '@/components/StudioPricingFields';
+import { OS44Button } from '@/components/OS44Button';
 
 type DraftTrack = {
   id?: string;
@@ -660,7 +660,7 @@ export default function EditProductPage() {
       <PageShell>
         <div className="dashboard-page">
           <HubHero title="Merch management unavailable" copy="Creator merch selling is planned for a future version of 44OS." />
-          <div className="ui44-centered-action"><Link className="os-button os-button-primary" href="/studio">Return to Studio</Link></div>
+          <div className="ui44-centered-action"><OS44Button className="os-button os-button-primary" href="/studio">Return to Studio</OS44Button></div>
         </div>
       </PageShell>
     );
@@ -965,13 +965,13 @@ export default function EditProductPage() {
 
             <div className="dashboard-form-actions">
               <div className="dashboard-form-actions-left">
-                <button className="os-button os-button-danger" type="button" onClick={() => setShowDeleteConfirm(true)}>{deleteLabel}</button>
+                <OS44Button className="os-button os-button-danger" type="button" onClick={() => setShowDeleteConfirm(true)}>{deleteLabel}</OS44Button>
               </div>
               <div className="dashboard-form-actions-right">
-                <Link className="os-button os-button-secondary" href={section.href} onClick={() => clearStudioFormRecovery(recoveryKey)}>Cancel</Link>
-                <button className="os-button os-button-primary" type="submit" disabled={saving || activeUploadCount > 0}>
+                <OS44Button className="os-button os-button-secondary" href={section.href} onClick={() => clearStudioFormRecovery(recoveryKey)}>Cancel</OS44Button>
+                <OS44Button className="os-button os-button-primary" type="submit" disabled={saving || activeUploadCount > 0}>
                   {activeUploadCount > 0 ? 'Uploading files…' : saving ? 'Saving…' : 'Save Changes'}
-                </button>
+                </OS44Button>
               </div>
             </div>
           </form>

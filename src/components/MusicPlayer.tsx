@@ -46,6 +46,7 @@ type MusicPlayerContextValue = {
   playQueue: (tracks: MusicQueueTrack[], index?: number, startTimeSeconds?: number) => void;
   toggleTrack: (tracks: MusicQueueTrack[], index: number) => void;
   queueNext: (track: MusicQueueTrack) => void;
+  queueReleaseNext: (tracks: MusicQueueTrack[]) => void;
   shuffleQueue: () => void;
   playQueueIndex: (index: number) => void;
   removeFromQueue: (index: number) => void;
@@ -674,6 +675,23 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     setPlaybackError('');
   }
 
+  function queueReleaseNext(tracks: MusicQueueTrack[]) {
+    const playable = tracks.filter(track => track.audioUrl);
+    if (!playable.length) return;
+    const currentQueue = queueRef.current;
+    if (currentIndexRef.current < 0 || currentQueue.length === 0) {
+      startTrack(playable, 0, 'queue');
+      return;
+    }
+    const releaseIds = new Set(playable.map(track => track.id));
+    const nextQueue = currentQueue.filter((track, index) => index <= currentIndexRef.current || !releaseIds.has(track.id));
+    const insertAt = currentIndexRef.current + 1;
+    nextQueue.splice(insertAt, 0, ...playable.filter(track => !nextQueue.some(existing => existing.id === track.id)));
+    queueRef.current = nextQueue;
+    setQueue(nextQueue);
+    setPlaybackError('');
+  }
+
   function shuffleQueue() {
     const currentQueue = queueRef.current;
     const activeIndex = currentIndexRef.current;
@@ -837,6 +855,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     playQueue,
     toggleTrack,
     queueNext,
+    queueReleaseNext,
     shuffleQueue,
     playQueueIndex,
     removeFromQueue,

@@ -11,6 +11,7 @@ import {
 import { FilterPopover } from '@/components/FilterPopover';
 import { SocialAvatar, SocialPostRow } from '@/components/Social';
 import { HubHero, PageShell } from '@/components/Ui';
+import { OS44Button } from '@/components/OS44Button';
 import { hasCommunityIdentity } from '@/lib/communityProfile';
 import {
   COMMUNITY_INTENT_LABELS,
@@ -532,12 +533,13 @@ function CommunityPageContent() {
   return (
     <PageShell>
       <main className="app-page community-app-page community-v11-page">
-        <div className="community-v11-opening">
+        <div className="community-v11-opening section-tab-page-opening">
           <HubHero title="Community" actions={communityTools} />
           <SectionTabs
             ariaLabel="Community post types"
             className="community-intent-rail"
             dockToTopbar
+            toolbarSpacing
             topbarTabs={INTENT_TABS.map(tab => ({
               ...tab,
               active: activeIntent === tab.id,
@@ -563,9 +565,9 @@ function CommunityPageContent() {
           <div className="community-v11-composer-layer" role="presentation" onClick={resetComposer}>
           <form className="community-v11-composer ui44-panel ui44-panel-glass" onSubmit={submitPost} role="dialog" aria-modal="true" aria-labelledby="community-composer-title" onClick={event => event.stopPropagation()}>
             <div className="community-v11-composer-heading">
-              <button type="button" className="community-v11-composer-cancel" onClick={resetComposer}>Cancel</button>
+              <OS44Button className="community-v11-composer-cancel" onClick={resetComposer}>Cancel</OS44Button>
               <h2 id="community-composer-title">New Post</h2>
-              <button type="submit" className="community-v11-composer-post" disabled={posting || !postBody.trim()}>{posting ? 'Posting…' : 'Post'}</button>
+              <OS44Button type="submit" className="community-v11-composer-post" disabled={posting || !postBody.trim()}>{posting ? 'Posting…' : 'Post'}</OS44Button>
             </div>
             <div className="community-v11-composer-field-label">
               <label htmlFor="community-composer-body">What&apos;s on your mind?</label>

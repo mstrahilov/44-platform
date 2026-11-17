@@ -2794,7 +2794,7 @@ body.theme-dark .os-category-icon img {
 .library-opening {
   display: grid;
   min-width: 0;
-  gap: 18px;
+  gap: 0;
 }
 
 /* ── Card (Glass A material, grid- and shelf-friendly) ── */
@@ -3556,6 +3556,15 @@ body.theme-dark .os-home-panel {
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.14);
 }
 
+.notifications-filter-popover {
+  position: fixed;
+  z-index: 90;
+  top: calc(var(--os-topbar-height) + 8px);
+  right: var(--os-topbar-right-inset);
+  left: auto;
+  width: min(220px, calc(100vw - 24px));
+}
+
 .page-filter-popover:has(.store-filter-group) {
   width: min(260px, calc(100vw - 32px));
   padding: 10px;
@@ -4004,6 +4013,10 @@ body:is(.theme-dark, .theme-light) .web-push-prompt.ui44-paper-menu {
   width: min(240px, 24vw);
   max-width: 240px;
   flex: 0 1 240px;
+}
+
+.app-header.studio-page-header {
+  border-bottom: 0;
 }
 
 .community-app-page .page-header-tools {
@@ -4926,6 +4939,10 @@ body:is(.theme-dark, .theme-light) .web-push-prompt.ui44-paper-menu {
   margin-top: 20px;
 }
 
+.radio-desktop-playlist-action {
+  display: none;
+}
+
 .radio-hero-cover-empty {
   display: grid;
   place-items: center;
@@ -5339,6 +5356,17 @@ body:is(.theme-dark, .theme-light) .os-topbar .os-topbar-tab.os-topbar-tab-secti
   border-radius: 999px;
   background: currentColor;
   content: "";
+}
+
+
+.radio-page .radio-hero-actions .radio-desktop-playlist-action {
+  display: none !important;
+}
+
+@media (min-width: 769px) {
+  .radio-page .radio-hero-actions .radio-desktop-playlist-action {
+    display: inline-flex !important;
+  }
 }
 
 @media (max-width: 768px) {
@@ -6484,6 +6512,28 @@ body.theme-dark .dashboard-status-dot {
 .social-inbox-list {
   border-right: 1px solid var(--os-color-hairline);
   padding: var(--os-space-3);
+}
+
+.social-inbox-row-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--os-space-2);
+}
+
+.social-inbox-row-wrap > .social-action {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.social-inbox-archive {
+  flex: 0 0 auto;
+}
+
+.social-inbox-load-more,
+.social-message-load-older {
+  justify-self: center;
+  align-self: center;
+  margin: var(--os-space-3) auto;
 }
 
 .social-inbox-thread {
@@ -11509,6 +11559,10 @@ body:is(.theme-dark, .theme-light) .store-clear-filters {
 }
 
 @media (min-width: 769px) {
+  .section-tab-page-opening > .app-header {
+    min-height: calc(var(--os-app-header-pad-top) + 44px + var(--os-app-header-pad-bottom) + 1px);
+  }
+
   .radio-page > .radio-hero {
     padding-block: 14px;
     gap: 12px;
@@ -11531,7 +11585,7 @@ body:is(.theme-dark, .theme-light) .store-clear-filters {
 
   .store-discover-opening {
     display: grid;
-    gap: 18px;
+    gap: 0;
     min-width: 0;
   }
 
@@ -11542,6 +11596,10 @@ body:is(.theme-dark, .theme-light) .store-clear-filters {
     overflow-x: auto;
     overscroll-behavior-inline: contain;
     scrollbar-width: none;
+  }
+
+  .section-tab-rail-toolbar-spaced {
+    margin-block-start: 18px;
   }
 
   .section-tab-rail::-webkit-scrollbar {
@@ -11648,8 +11706,16 @@ body:is(.theme-dark, .theme-light) .store-clear-filters {
 
 @media (max-width: 768px) {
 
+  .studio-create-tools {
+    display: none;
+  }
+
   .library-opening {
-    gap: 14px;
+    gap: 0;
+  }
+
+  .library-opening {
+    display: contents;
   }
 
   /* Discover/category headings move into the shared centered toolbar. Keep
@@ -11722,13 +11788,44 @@ body:is(.theme-dark, .theme-light) .store-clear-filters {
     display: none;
   }
 
+  .app-header.ui44-page-header-mobile-title .ui44-type-page-title {
+    display: none;
+  }
+
+  .app-header.ui44-page-header-title-only,
+  .app-header.notifications-page-header,
+  .app-header.studio-page-header,
+  .app-header.orders-page-header,
+  .app-header.admin-page-header,
+  .social-messages-shell > .social-inbox-mobile-header {
+    display: none !important;
+  }
+
+  .dashboard-page:has(> .app-header.ui44-page-header-title-only),
+  .dashboard-page:has(> .app-header.notifications-page-header),
+  .dashboard-page:has(> .app-header.studio-page-header),
+  .dashboard-page:has(> .app-header.orders-page-header),
+  .dashboard-page:has(> .app-header.admin-page-header) {
+    padding-top: 14px;
+  }
+
+  .admin-page:has(> .app-header.admin-page-header),
+  .social-messages-shell:has(> .social-inbox-mobile-header) {
+    padding-top: 14px;
+  }
+
+  .notifications-filter-popover {
+    right: var(--os-content-inset);
+    width: min(220px, calc(100vw - (2 * var(--os-content-inset))));
+  }
+
   .store-browse-header {
     display: grid;
   }
 
   .store-discover-opening {
     display: grid;
-    gap: 14px;
+    gap: 0;
     min-width: 0;
   }
 
@@ -11742,6 +11839,10 @@ body:is(.theme-dark, .theme-light) .store-clear-filters {
     overscroll-behavior-inline: contain;
     scroll-padding-inline: var(--os-content-inset);
     scrollbar-width: none;
+  }
+
+  .section-tab-rail-toolbar-spaced {
+    margin-block-start: 14px;
   }
 
   .section-tab-rail::-webkit-scrollbar {
