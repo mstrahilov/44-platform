@@ -29,7 +29,6 @@ export function LibraryMusicRelease({ itemId }: { itemId: string }) {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [playlistTrackId, setPlaylistTrackId] = useState<string | null>(null);
-  const [playlistReleaseOpen, setPlaylistReleaseOpen] = useState(false);
   const { currentTrack, isPlaying, toggleTrack, queueReleaseNext } = useMusicPlayer();
   useTopbarBack({ href: '/library/music', label: 'Music' });
 
@@ -96,7 +95,6 @@ export function LibraryMusicRelease({ itemId }: { itemId: string }) {
   }, [itemId]);
 
   useTopbarOverflow(useMemo(() => product ? [
-    { id: 'playlist', label: 'Add to Playlist', onSelect: () => setPlaylistReleaseOpen(true) },
     { id: 'queue', label: 'Add to Queue', onSelect: () => queueReleaseNext(queue), disabled: !queue.length },
     { id: 'share', label: 'Share', onSelect: () => { void navigator.clipboard?.writeText(new URL(`/store/item/${product.slug}`, window.location.origin).toString()); } },
     { id: 'public-album', label: 'Open Public Album', onSelect: () => router.push(`/store/item/${product.slug}`) },
@@ -110,7 +108,6 @@ export function LibraryMusicRelease({ itemId }: { itemId: string }) {
 
   return <main className="view-detail-single library-detail-page library-music-release">
     {playlistTrackId ? <PlaylistPicker userId={user.id} trackId={playlistTrackId} onClose={() => setPlaylistTrackId(null)} /> : null}
-    {playlistReleaseOpen ? <PlaylistPicker userId={user.id} releaseItemId={itemId} onClose={() => setPlaylistReleaseOpen(false)} /> : null}
     <ProductDetailHeader
       product={product}
       creatorName={product.creators?.display_name || product.creator || '44 Creator'}

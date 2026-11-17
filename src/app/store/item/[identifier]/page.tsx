@@ -324,10 +324,9 @@ function ProductStoreDetail({
   })) : [], [product, tracks, inferredTrackDurations]);
   useTopbarOverflow(useMemo(() => product ? [
     ...(owned ? [{ id: 'library', label: 'Remove from Library', onSelect: () => { void removeFromLibrary(); } }] : canSaveProductToLibrary(product) ? [{ id: 'library', label: 'Add to Library', onSelect: () => { void addToLibrary(); } }] : []),
-    ...(isMusicRelease ? [{ id: 'playlist', label: 'Add to Playlist', onSelect: () => openPlaylistPicker() }] : []),
     ...(isMusicRelease ? [{ id: 'queue-release', label: 'Add to Queue', onSelect: () => queueReleaseNext(playableTracks) }] : []),
     { id: 'share', label: 'Share', onSelect: shareItemLink },
-  ] : undefined, [addToLibrary, openPlaylistPicker, product, owned, isMusicRelease, removeFromLibrary, queueReleaseNext, playableTracks]));
+  ] : undefined, [addToLibrary, product, owned, isMusicRelease, removeFromLibrary, queueReleaseNext, playableTracks]));
 
   const routeArtwork = product ? product.hero_url || product.cover_url : null;
 

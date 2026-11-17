@@ -181,7 +181,6 @@ function ProductLibraryDetail({
   const playbackSessionIdRef = useRef('');
   const [downloadingTrackId, setDownloadingTrackId] = useState<string | null>(null);
   const [playlistTrackId, setPlaylistTrackId] = useState<string | null>(null);
-  const [playlistReleaseOpen, setPlaylistReleaseOpen] = useState(false);
 
   function currentPlaybackSessionId() {
     if (!playbackSessionIdRef.current) playbackSessionIdRef.current = crypto.randomUUID();
@@ -241,7 +240,6 @@ function ProductLibraryDetail({
   ), [inferredTrackDurations, product, row.id, tracks]);
   useTopbarOverflow(useMemo(() => [
     ...(isMusic ? [
-      { id: 'playlist', label: 'Add to Playlist', onSelect: () => setPlaylistReleaseOpen(true) },
       { id: 'queue', label: 'Add to Queue', onSelect: () => queueReleaseNext(musicQueue), disabled: !musicQueue.length },
     ] : []),
     { id: 'share', label: 'Share', onSelect: () => {
@@ -407,7 +405,6 @@ function ProductLibraryDetail({
   return (
     <>
     {playlistTrackId ? <PlaylistPicker userId={userId} trackId={playlistTrackId} onClose={() => setPlaylistTrackId(null)} /> : null}
-    {playlistReleaseOpen ? <PlaylistPicker userId={userId} releaseItemId={product.id} onClose={() => setPlaylistReleaseOpen(false)} /> : null}
     <div className="view-detail-single library-detail-page">
 
       <ProductDetailHeader
