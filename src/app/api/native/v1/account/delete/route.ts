@@ -32,6 +32,7 @@ export async function POST(request: Request) {
         display_name: 'Deleted User',
         username: `deleted_${suffix}`,
         avatar_url: null,
+        hero_url: null,
         bio: null,
         deletion_requested_at: new Date().toISOString(),
       })
