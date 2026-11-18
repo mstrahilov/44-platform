@@ -97,35 +97,21 @@ export async function loadAchievementNotifications(userId: string, limit = 24): 
         .filter((value): value is string => Boolean(value)),
     ),
   );
-  const achievementMap = new Map<string, Pick<ProductAchievement, 'id' | 'code' | 'title' | 'description' | 'icon'>>();
-
-  if (achievementIds.length > 0) {
-    const { data: achievements } = await supabase
-      .from('item_achievements')
-      .select('id,code,title,description,icon')
-      .in('id', achievementIds);
-
-    ((achievements as Array<Pick<ProductAchievement, 'id' | 'code' | 'title' | 'description' | 'icon'>> | null) ?? []).forEach(item => {
-      if (!isV1AchievementCode(item.code)) return;
-      achievementMap.set(item.id, item);
-    });
-  }
-
   const actorIds = Array.from(new Set(eventRows
     .map(event => typeof event.metadata?.actor_user_id === 'string' ? event.metadata.actor_user_id : null)
     .filter((value): value is string => Boolean(value))));
-  const actorAvatarMap = new Map<string, string | null>();
-
-  if (actorIds.length > 0) {
-    const { data: actors } = await supabase
-      .from('profiles')
-      .select('id,avatar_url')
-      .in('id', actorIds);
-
-    ((actors as Array<{ id: string; avatar_url: string | null }> | null) ?? []).forEach(actor => {
-      actorAvatarMap.set(actor.id, actor.avatar_url);
-    });
-  }
+  const [{ data: achievements }, { data: actors }] = await Promise.all([
+    achievementIds.length
+      ? supabase.from('item_achievements').select('id,code,title,description,icon').in('id', achievementIds)
+      : { data: [] },
+    actorIds.length
+      ? supabase.from('profiles').select('id,avatar_url').in('id', actorIds)
+      : { data: [] },
+  ]);
+  const achievementMap = new Map((achievements ?? [])
+    .filter(item => isV1AchievementCode(item.code))
+    .map(item => [item.id, item]));
+  const actorAvatarMap = new Map((actors ?? []).map(actor => [actor.id, actor.avatar_url]));
 
   const notifications: AchievementNotification[] = [];
 

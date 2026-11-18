@@ -34,7 +34,7 @@ assert.match(libraryApp, /\['recently-added', 'Recently Added'\][\s\S]*\['creato
 assert.match(libraryApp, /\['release-date', 'Release Date'\]/, 'Library offers one newest-first release-date sort when dates are available');
 assert.doesNotMatch(libraryApp, /Oldest Added|Newest Release|Oldest Release/, 'Library sort omits superseded choices');
 assert.match(libraryApp, /\/library\/music\/\$\{product\.id\}/, 'album card opens its saved-track detail');
-assert.match(albumDetail, /listSavedMusicTracks\(user\.id, itemId\)/, 'Library release detail is scoped to saved tracks');
+assert.match(albumDetail, /listSavedMusicTracks\(userId, itemId\)/, 'Library release detail is scoped to saved tracks');
 assert.match(storeDetail, /saveItemToLibrary\(user\.id, product\.id\)/, 'hosted release saving uses the existing whole-item contract');
 assert.doesNotMatch(storeDetail, /setSavedMusicTrack|setSavedMusicRelease|listSavedMusicTrackIds/, 'hosted release detail does not require the deferred saved-track contract');
 assert.match(storeDetail, /label: 'Add to Library'[\s\S]*label: 'Add to Playlist'[\s\S]*label: 'Add to Queue'[\s\S]*label: 'Share'/, 'release menu keeps the hosted-compatible action order');
@@ -44,8 +44,8 @@ assert.match(player, /nextQueue\.splice\(insertAt, 0/);
 assert.match(topbar, /libraryScope=\{pathname\.startsWith\('\/library'\)\}/);
 assert.match(topbar, /Cancel new playlist[\s\S]*router\.push\('\/library\/playlists'\)/, 'canceling playlist creation returns to the Playlists category');
 assert.match(await read('src/components/PlaylistApp.tsx'), /router\.push\(`\/library\/playlists\/\$\{playlist\.id\}`\)/, 'successful playlist creation opens the new playlist');
-assert.match(search, /listSavedMusicTracks\(user\.id\)/, 'Library search reads the member saved relationship');
-assert.match(search, /isSavedMusicContractMissing\(musicError\)/, 'Library search falls back when the deferred table is absent');
+assert.match(search, /listSavedMusicTracks\(userId\)/, 'Library search reads the member saved relationship');
+assert.match(search, /isSavedMusicContractMissing\(reason\)/, 'Library search falls back when the deferred table is absent');
 assert.match(search, /productLibraryHref\(product, item\.id\)/, 'legacy Library search results open existing whole-item detail');
 assert.match(storeApp, /const mobileDiscoverRail = !loading && !authLoading && !error \?/,
   'Discover tabs stay hidden until the requested content finishes loading');

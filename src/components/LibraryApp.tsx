@@ -15,8 +15,9 @@ import type { LibraryCategory } from '@/lib/libraryRoutes';
 import type { Product } from '@/lib/products';
 import { creatorHref } from '@/lib/platform';
 import { useAuth } from '@/lib/useAuth';
-import { hideLibraryItem, isSavedMusicContractMissing, listSavedMusicAlbums, listVisibleLibraryItems } from '@/lib/domain/library';
-import { getPlaylist, listPlaylists, type Playlist } from '@/lib/domain/playlists';
+import { hideLibraryItem, isSavedMusicContractMissing, listSavedMusicAlbums, listVisibleLibraryItems, type SavedMusicAlbum } from '@/lib/domain/library';
+import { listPlaylists, type Playlist } from '@/lib/domain/playlists';
+import { CATALOG_ARTWORK_SIZES, PublicArtwork } from '@/components/PublicArtwork';
 
 type LibraryFilter = 'all' | 'music' | 'book' | 'interactive' | 'beats' | 'asset' | 'playlists';
 
@@ -58,12 +59,14 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
+  const userId = user?.id;
   const [rows, setRows] = useState<LibraryRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadedUserId, setLoadedUserId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [activeFilter, setActiveFilter] = useState<LibraryFilter>(() => CATEGORY_FILTER[category]);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const [savedAlbums, setSavedAlbums] = useState<Array<{ item_id: string; product: Product; track_count: number; saved_at: string }>>([]);
+  const [savedAlbums, setSavedAlbums] = useState<SavedMusicAlbum[]>([]);
   const [savedMusicContractAvailable, setSavedMusicContractAvailable] = useState(true);
   const [sortMode, setSortMode] = useState<'recently-added' | 'creator' | 'release-date'>('recently-added');
 
@@ -74,51 +77,44 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
   }, [category, searchParams]);
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!user) return;
+    if (authLoading || !userId) return;
 
     let alive = true;
 
-    async function load(userId: string) {
+    async function load(activeUserId: string) {
       setLoading(true);
       setError('');
 
       try {
-        const [data, playlistData] = await Promise.all([listVisibleLibraryItems(userId), listPlaylists(userId)]);
-        let musicAlbums: Awaited<ReturnType<typeof listSavedMusicAlbums>> = [];
-        let musicContractAvailable = true;
-        try {
-          musicAlbums = await listSavedMusicAlbums(userId);
-        } catch (musicError) {
-          if (!isSavedMusicContractMissing(musicError)) throw musicError;
-          // An older database may not have the additive M0 table yet. Keep the
-          // established Library entries visible until that contract is installed.
-          musicContractAvailable = false;
-        }
-        const playlistsWithArtwork = await Promise.all(playlistData.map(async playlist => {
-          if (playlist.artwork_url) return playlist;
-          const detail = await getPlaylist(userId, playlist.id);
-          return {
-            ...playlist,
-            artwork_url: detail?.tracks?.find(track => track.track?.item?.cover_url)?.track?.item?.cover_url || null,
-          };
-        }));
+        const [data, playlistData, musicAlbums] = await Promise.all([
+          listVisibleLibraryItems(activeUserId),
+          listPlaylists(activeUserId),
+          listSavedMusicAlbums(activeUserId).catch(musicError => {
+            if (!isSavedMusicContractMissing(musicError)) throw musicError;
+            return null;
+          }),
+        ]);
         if (!alive) return;
         setRows(data as LibraryRow[]);
-        setPlaylists(playlistsWithArtwork);
-        setSavedAlbums(musicAlbums);
-        setSavedMusicContractAvailable(musicContractAvailable);
+        setPlaylists(playlistData);
+        setSavedAlbums(musicAlbums ?? []);
+        setSavedMusicContractAvailable(musicAlbums !== null);
       } catch (fetchError) {
         if (!alive) return;
         setError(fetchError instanceof Error ? fetchError.message : 'Could not load your Library.');
         setRows([]);
+        setPlaylists([]);
+        setSavedAlbums([]);
       }
+      setLoadedUserId(activeUserId);
       setLoading(false);
     }
 
-    load(user.id);
+    void load(userId);
     return () => { alive = false; };
-  }, [authLoading, user]);
+  }, [authLoading, userId]);
+
+  const collectionLoading = loading || loadedUserId !== userId;
 
   const visibleRows = useMemo(() => {
     const productRows = rows.filter(row => row.products);
@@ -185,15 +181,15 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
     return () => { window.dispatchEvent(new CustomEvent('44:library-sort-state', { detail: { active: false } })); };
   }, [sortMode]);
   useEffect(() => {
-    if (category !== 'all' || loading || !availableCategories.length) return;
+    if (category !== 'all' || collectionLoading || !availableCategories.length) return;
     router.replace(availableCategories[0].href);
-  }, [availableCategories, category, loading, router]);
+  }, [availableCategories, category, collectionLoading, router]);
   useEffect(() => {
-    if (category === 'all' || loading || !availableCategories.length) return;
+    if (category === 'all' || collectionLoading || !availableCategories.length) return;
     const categoryId = category === 'beats' || category === 'sample-packs' ? 'assets' : category;
     if (availableCategories.some(entry => entry.id === categoryId)) return;
     router.replace(availableCategories[0].href);
-  }, [availableCategories, category, loading, router]);
+  }, [availableCategories, category, collectionLoading, router]);
   if (authLoading) {
     return <PageShell><CenteredMessage status>Loading...</CenteredMessage></PageShell>;
   }
@@ -212,7 +208,7 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
     );
   }
 
-  if (loading) {
+  if (collectionLoading) {
     return <PageShell><CenteredMessage status>Loading...</CenteredMessage></PageShell>;
   }
 
@@ -259,30 +255,19 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
   );
 }
 
-function SavedMusicAlbumCard({ product, count }: { product: Product; count: number }) {
+function SavedMusicAlbumCard({ product, count }: { product: SavedMusicAlbum['product']; count: number }) {
+  const artwork = product.cover_url || product.hero_url;
   return <Link className="product-tile ui44-catalog-card" href={`/library/music/${product.id}`}>
-    <span className="product-tile-art product-tile-art-square ui44-catalog-art">{product.cover_url || product.hero_url ? <img src={product.cover_url || product.hero_url || ''} alt="" loading="lazy" /> : null}</span>
+    <span className="product-tile-art product-tile-art-square ui44-catalog-art">{artwork ? <PublicArtwork src={artwork} alt="" sizes={CATALOG_ARTWORK_SIZES} /> : null}</span>
     <span className="product-tile-info ui44-catalog-copy"><span className="product-tile-title ui44-catalog-title">{product.title}</span><span className="product-tile-subtitle ui44-catalog-subheadline">{product.creators?.display_name || product.creator} · {count} saved {count === 1 ? 'track' : 'tracks'}</span></span>
   </Link>;
 }
 
 function LibraryPlaylistCard({ playlist }: { playlist: Playlist }) {
-  const [artwork, setArtwork] = useState(playlist.artwork_url || playlist.cover_url || null);
-
-  useEffect(() => {
-    if (artwork) return;
-    let alive = true;
-    void getPlaylist(playlist.user_id, playlist.id).then(detail => {
-      if (!alive) return;
-      setArtwork(detail?.tracks?.find(track => track.track?.item?.cover_url)?.track?.item?.cover_url || null);
-    }).catch(() => undefined);
-    return () => { alive = false; };
-  }, [artwork, playlist.id, playlist.user_id]);
-
+  const artwork = playlist.artwork_url || playlist.cover_url;
   return <Link className="product-tile ui44-catalog-card library-playlist-card" href={`/library/playlists/${playlist.id}`}>
     <span className="product-tile-art product-tile-art-square ui44-catalog-art library-playlist-art">{artwork ? (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={artwork} alt="" />
+      <PublicArtwork src={artwork} alt="" sizes={CATALOG_ARTWORK_SIZES} />
     ) : null}</span>
     <span className="product-tile-info ui44-catalog-copy"><span className="product-tile-title ui44-catalog-title">{playlist.title}</span><span className="product-tile-subtitle ui44-catalog-subheadline">Playlist</span></span>
   </Link>;
@@ -324,10 +309,7 @@ function LibraryCard({ row, onRemove }: { row: LibraryRow; onRemove: (row: Libra
   return (
     <Link className="product-tile ui44-catalog-card" href={href} onContextMenu={event => openContextMenu(event, entries)}>
       <span className={`product-tile-art product-tile-art-${experience === 'book' ? 'book' : 'square'} ui44-catalog-art`}>
-        {image && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" loading="lazy" decoding="async" />
-        )}
+        {image && <PublicArtwork src={image} alt="" sizes={CATALOG_ARTWORK_SIZES} />}
       </span>
       <span className="product-tile-info ui44-catalog-copy">
         <span className="product-tile-title ui44-catalog-title">{product.title}</span>

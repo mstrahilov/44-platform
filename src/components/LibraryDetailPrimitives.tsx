@@ -9,6 +9,7 @@ import { ExternalLinkActions } from '@/components/ExternalLinkActions';
 import type { ReleaseCreatorVideo } from '@/lib/domain/releaseFeatures';
 import { OS44Button } from '@/components/OS44Button';
 import { CreatorVideoTitle } from '@/components/CreatorVideoTitle';
+import { artworkBackdrop, DETAIL_ARTWORK_SIZES, PublicArtwork } from '@/components/PublicArtwork';
 
 export type ProductDetailAction = {
   label: string;
@@ -69,13 +70,12 @@ export function ProductDetailHeader({
   return (
     <div
       className={`${heroImage ? 'view-album-header' : 'view-album-header view-album-header-fallback'}${className ? ` ${className}` : ''}`}
-      style={heroImage ? { '--release-artwork': `url(${heroImage})` } as CSSProperties : undefined}
+      style={heroImage ? { '--release-artwork': artworkBackdrop(heroImage) } as CSSProperties : undefined}
     >
       <div className="view-album-media">
         <div className={coverClasses}>
           {heroImage && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={heroImage} alt={product.title} />
+            <PublicArtwork src={heroImage} alt={product.title} sizes={DETAIL_ARTWORK_SIZES} loading="eager" fetchPriority="high" />
           )}
         </div>
         {mediaFooter}

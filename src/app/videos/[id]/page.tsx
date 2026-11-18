@@ -1,15 +1,20 @@
 import { notFound } from 'next/navigation';
+import { cache } from 'react';
 import { VideoDetailClient } from '@/components/VideoDetailClient';
 import { getCreatorVideo } from '@/lib/domain/releaseFeatures';
-import { getPublicProfile } from '@/lib/domain/profiles';
 import { buildPageMetadata, conciseDescription } from '@/lib/metadata';
-import type { Profile } from '@/lib/platform';
+import { supabase } from '@/lib/supabase';
+
+const loadVideo = cache((id: string) => getCreatorVideo(id).catch(() => null));
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const video = await getCreatorVideo(id).catch(() => null);
+  const video = await loadVideo(id);
   if (!video) return buildPageMetadata({ title: 'Video', path: `/videos/${id}` });
-  const profile = await getPublicProfile(video.creator_id).catch(() => null) as Profile | null;
+  const { data: profile } = await supabase.from('profiles')
+    .select('display_name,username')
+    .eq('id', video.creator_id)
+    .maybeSingle();
   const creator = profile?.display_name || profile?.username || '44 Creator';
   return buildPageMetadata({
     title: video.title,
@@ -22,7 +27,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function VideoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const video = await getCreatorVideo(id).catch(() => null);
+  const video = await loadVideo(id);
   if (!video) notFound();
   return <VideoDetailClient video={video} />;
 }

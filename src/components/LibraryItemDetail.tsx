@@ -168,7 +168,7 @@ function ProductLibraryDetail({
   const isMusic = runtimeKind === 'music';
   const isBook = runtimeKind === 'book';
   const isAsset = runtimeKind === 'sample_pack';
-  const { currentTrack, isPlaying, toggleTrack: togglePlayerTrack, queueNext, queueReleaseNext } = useMusicPlayer();
+  const { currentTrack, duration, isPlaying, toggleTrack: togglePlayerTrack, queueNext, queueReleaseNext } = useMusicPlayer();
   const { openContextMenu } = useContextMenu();
   const router = useRouter();
   const [localUnlockedAchievementIds, setLocalUnlockedAchievementIds] = useState(unlockedAchievementIds);
@@ -195,32 +195,17 @@ function ProductLibraryDetail({
   useEffect(() => { Promise.resolve().then(() => setCompletedTrackIds(new Set())); }, [product.id]);
   useEffect(() => { Promise.resolve().then(() => setLocalUnlockedAchievementIds(unlockedAchievementIds)); }, [unlockedAchievementIds]);
   useEffect(() => {
-    const missingDurationTracks = tracks.filter(track => track.audio_url && (!track.duration_seconds || track.duration_seconds <= 0));
-    if (missingDurationTracks.length === 0) return;
+    const trackId = currentTrack?.id;
+    if (!trackId || !Number.isFinite(duration) || duration <= 0) return;
+    if (!tracks.some(track => track.id === trackId && !track.duration_seconds)) return;
 
-    let alive = true;
-    const audioElements = missingDurationTracks.map(track => {
-      const audio = new Audio();
-      audio.preload = 'metadata';
-      audio.src = track.audio_url!;
-      audio.addEventListener('loadedmetadata', () => {
-        if (!alive || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
-        setInferredTrackDurations(current => ({
-          ...current,
-          [track.id]: Math.round(audio.duration),
-        }));
-      });
-      return audio;
+    const seconds = Math.round(duration);
+    void Promise.resolve().then(() => {
+      setInferredTrackDurations(current => current[trackId] === seconds
+        ? current
+        : { ...current, [trackId]: seconds });
     });
-
-    return () => {
-      alive = false;
-      audioElements.forEach(audio => {
-        audio.removeAttribute('src');
-        audio.load();
-      });
-    };
-  }, [tracks]);
+  }, [currentTrack?.id, duration, tracks]);
 
   const musicQueue = useMemo<MusicQueueTrack[]>(() => (
     tracks

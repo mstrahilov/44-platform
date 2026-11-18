@@ -25,6 +25,7 @@ import {
   listLocalCommunityReplies,
   removeLocalCommunityPost,
   updateLocalCommunityPost,
+  type CommunityCatalogItem,
   type CommunityIntent,
   type CommunityReference,
   type CommunityV11Post,
@@ -39,10 +40,9 @@ import {
   updateDiscussion,
   type CommunityReferenceOption,
 } from '@/lib/domain/community';
-import { listPublishedCatalogItems } from '@/lib/domain/catalog';
+import { listCommunityReferenceItems } from '@/lib/domain/catalog';
 import { listRecentCommunityMembers } from '@/lib/domain/profiles';
 import { localMaskPreviewEnabled, localMaskProduct } from '@/lib/localMaskPreview';
-import type { Item } from '@/lib/products';
 import {
   countById,
   likersByPost,
@@ -144,7 +144,7 @@ function CommunityPageContent() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
   const [posts, setPosts] = useState<CommunityV11Post[]>([]);
-  const [items, setItems] = useState<Item[]>([]);
+  const [items, setItems] = useState<CommunityCatalogItem[]>([]);
   const [recentMembers, setRecentMembers] = useState<Awaited<ReturnType<typeof listRecentCommunityMembers>>>([]);
   const [postsLoading, setPostsLoading] = useState(true);
   const [replyCounts, setReplyCounts] = useState<CountMap>({});
@@ -207,27 +207,29 @@ function CommunityPageContent() {
 
   useEffect(() => {
     let alive = true;
+    void listCommunityReferenceItems(200).then(catalog => {
+      if (!alive) return;
+      setItems(localMaskPreviewEnabled && !catalog.some(item => item.id === localMaskProduct.id)
+        ? [...catalog, localMaskProduct]
+        : catalog);
+    }).catch(() => { if (alive && localMaskPreviewEnabled) setItems([localMaskProduct]); });
+    void listRecentCommunityMembers().then(members => {
+      if (alive) setRecentMembers(members);
+    }).catch(() => undefined);
+
     async function fetchCommunity() {
       setPostsLoading(true);
       setError('');
       try {
-        const [feed, catalog] = await Promise.all([
-          loadCommunityFeed(),
-          listPublishedCatalogItems(200),
-        ]);
+        const feed = await loadCommunityFeed();
         if (!alive) return;
         const localPosts = communityV11LocalPreviewEnabled ? listLocalCommunityPosts() : [];
-        const nextItems = localMaskPreviewEnabled && !catalog.some(item => item.id === localMaskProduct.id)
-          ? [...catalog, localMaskProduct]
-          : catalog;
         const localReplyRows = localPosts.flatMap(post => listLocalCommunityReplies(post.id).map(reply => ({
           post_id: post.id,
           author_id: reply.author_id ?? '',
           authors: reply.authors ?? null,
         }))).filter(reply => Boolean(reply.author_id));
         setPosts(sortPosts([...localPosts, ...feed.posts]));
-        setItems(nextItems);
-        void listRecentCommunityMembers().then(setRecentMembers).catch(() => setRecentMembers([]));
         setReplyCounts({
           ...countById(feed.replies, 'post_id'),
           ...countById(localReplyRows, 'post_id'),

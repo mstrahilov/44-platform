@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import { PublicArtwork } from '@/components/PublicArtwork';
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -165,7 +165,7 @@ function matchesReleaseType(item: AdminContentRow, type: string) {
 function ReleaseRow({ item }: { item: AdminContentRow }) {
   return <Link href={`/admin/content/${item.item_id}`} className="dashboard-list-row studio-overview-row ui44-list-row ui44-list-row-dashboard ui44-list-row-interactive admin-release-row" role="listitem">
     <span className={`studio-overview-artwork${item.cover_url ? '' : ' admin-release-artwork-empty'}`} aria-hidden="true">
-      {item.cover_url ? <Image className="studio-overview-artwork-image" src={item.cover_url} alt="" width={56} height={56} unoptimized /> : '44'}
+      {item.cover_url ? <PublicArtwork className="studio-overview-artwork-image" src={item.cover_url} alt="" width={56} height={56} sizes="56px" /> : '44'}
     </span>
     <span className="studio-overview-copy">
       <span className="studio-overview-title">{item.title}</span>

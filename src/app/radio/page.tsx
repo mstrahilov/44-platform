@@ -17,6 +17,7 @@ import {
 } from '@/lib/radio';
 import { radioRotationDayKey } from '@/lib/radioRotation';
 import { OS44Button } from '@/components/OS44Button';
+import { artworkBackdrop, DETAIL_ARTWORK_SIZES, PublicArtwork } from '@/components/PublicArtwork';
 
 const REFRESH_MS = 15000;
 
@@ -74,7 +75,7 @@ export default function RadioPage() {
 
   const syncedTrack = playback.index >= 0 ? bundle?.tracks[playback.index] ?? null : null;
   const heroImage = syncedTrack?.coverUrl ?? null;
-  const heroStyle = heroImage ? { backgroundImage: `url(${JSON.stringify(heroImage)})` } : undefined;
+  const heroStyle = heroImage ? { backgroundImage: artworkBackdrop(heroImage) } : undefined;
   const isCurrentSyncedTrack = currentTrack?.id === syncedTrack?.trackId;
   const isSyncedTrackLive = isCurrentSyncedTrack && isPlaying;
 
@@ -141,8 +142,7 @@ export default function RadioPage() {
               {syncedTrack ? (
                 <Link href={withRadioSource(syncedTrack.releaseHref)} className="view-album-cover radio-hero-cover" aria-label={`Open ${syncedTrack.releaseTitle}`}>
                   {syncedTrack.coverUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={syncedTrack.coverUrl} alt="" />
+                    <PublicArtwork src={syncedTrack.coverUrl} alt="" sizes={DETAIL_ARTWORK_SIZES} loading="eager" fetchPriority="high" />
                   ) : null}
                 </Link>
               ) : (

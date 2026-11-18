@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
+import { PublicArtwork } from '@/components/PublicArtwork';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { PageShell, HubHero, EmptyMessage, SectionHeader } from '@/components/Ui';
@@ -37,6 +37,7 @@ type OverviewState = {
 export default function StudioPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  const userId = user?.id;
   const [studioStatus, setStudioStatus] = useState<string | null>(() => (
     typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('studioStatus')
   ));
@@ -66,71 +67,51 @@ export default function StudioPage() {
   });
 
   useEffect(() => {
-    async function fetchOverview() {
-      if (!user) return;
+    if (!userId) return;
+    let active = true;
 
-      const profileResult = await loadStudioProfile(user.id);
+    async function fetchOverview(activeUserId: string) {
+      const profileResult = await loadStudioProfile(activeUserId);
+      if (!active) return;
       setProfile(profileResult.profile);
-      const profileId = profileResult.profile?.id ?? user.id;
+      if (profileResult.profile && !isCreatorProfile(profileResult.profile)) return;
+      const profileId = profileResult.profile?.id ?? activeUserId;
+      const results = await Promise.allSettled([
+        getCreatorCatalogOverview(profileId),
+        listCreatorEvents(activeUserId),
+        listCreatorSubmissionStatuses(profileId),
+        listCreatorUpdates([profileId, activeUserId]),
+        listCreatorVideos(200, profileId),
+      ] as const);
+      if (!active) return;
 
-      let productRows: Product[] = [];
-      let libraryItems: LibraryMetricRow[] = [];
-      let totalPlays = 0;
-      let catalogHealth: StudioCatalogHealth[] = [];
-      let events: CreatorEvent[] = [];
-      let submissions: StudioSubmissionStatus[] = [];
-      let updates: CreatorUpdate[] = [];
-      let videos: CreatorVideoPage[] = [];
-      let metricsError = '';
-      try {
-        const result = await getCreatorCatalogOverview(profileId);
-        productRows = result.items;
-        libraryItems = result.libraryItems;
-        totalPlays = result.totalPlays;
-        catalogHealth = result.catalogHealth;
-      } catch (overviewError) {
-        metricsError = overviewError instanceof Error ? overviewError.message : 'Could not load Studio metrics.';
-      }
-      try {
-        events = (await listCreatorEvents(user.id)).filter(event => event.lifecycle_state !== 'removed');
-      } catch (eventsError) {
-        const eventMessage = eventsError instanceof Error ? eventsError.message : 'Could not load Studio events.';
-        metricsError = metricsError ? `${metricsError} ${eventMessage}` : eventMessage;
-      }
-      try {
-        submissions = await listCreatorSubmissionStatuses(profileId);
-      } catch (submissionError) {
-        const submissionMessage = submissionError instanceof Error ? submissionError.message : 'Could not load submission statuses.';
-        metricsError = metricsError ? `${metricsError} ${submissionMessage}` : submissionMessage;
-      }
-      try {
-        updates = await listCreatorUpdates([profileId, user.id]);
-      } catch (updatesError) {
-        const updatesMessage = updatesError instanceof Error ? updatesError.message : 'Could not load creator updates.';
-        metricsError = metricsError ? `${metricsError} ${updatesMessage}` : updatesMessage;
-      }
-      try {
-        videos = await listCreatorVideos(200, profileId);
-      } catch (videosError) {
-        const videosMessage = videosError instanceof Error ? videosError.message : 'Could not load creator videos.';
-        metricsError = metricsError ? `${metricsError} ${videosMessage}` : videosMessage;
-      }
-
+      const [catalog, events, submissions, updates, videos] = results;
+      const catalogValue = catalog.status === 'fulfilled' ? catalog.value : null;
+      const errorMessages = [
+        'Could not load Studio metrics.',
+        'Could not load Studio events.',
+        'Could not load submission statuses.',
+        'Could not load creator updates.',
+        'Could not load creator videos.',
+      ];
       setOverview({
-        products: productRows,
-        libraryItems,
-        totalPlays,
-        catalogHealth,
-        events,
-        submissions,
-        updates,
-        videos,
-        metricsError,
+        products: catalogValue?.items ?? [],
+        libraryItems: catalogValue?.libraryItems ?? [],
+        totalPlays: catalogValue?.totalPlays ?? 0,
+        catalogHealth: catalogValue?.catalogHealth ?? [],
+        events: events.status === 'fulfilled' ? events.value.filter(event => event.lifecycle_state !== 'removed') : [],
+        submissions: submissions.status === 'fulfilled' ? submissions.value : [],
+        updates: updates.status === 'fulfilled' ? updates.value : [],
+        videos: videos.status === 'fulfilled' ? videos.value : [],
+        metricsError: results.map((result, index) => result.status === 'rejected'
+          ? result.reason instanceof Error ? result.reason.message : errorMessages[index]
+          : '').filter(Boolean).join(' '),
       });
     }
 
-    fetchOverview();
-  }, [user]);
+    void fetchOverview(userId);
+    return () => { active = false; };
+  }, [userId]);
 
   if (loading) {
     return <PageShell><main className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>;
@@ -340,7 +321,7 @@ function StudioOverviewRow({
 }) {
   const content = <>
     <span className="studio-overview-artwork" aria-hidden="true">
-      {imageUrl ? <Image className="studio-overview-artwork-image" src={imageUrl} alt="" width={56} height={56} unoptimized /> : <StudioRowIcon name={icon} />}
+      {imageUrl ? <PublicArtwork className="studio-overview-artwork-image" src={imageUrl} alt="" width={56} height={56} sizes="56px" /> : <StudioRowIcon name={icon} />}
     </span>
     <span className="studio-overview-copy">
       <span className="studio-overview-title">{title}</span>

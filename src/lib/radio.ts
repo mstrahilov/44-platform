@@ -93,10 +93,6 @@ export function loadRadioBundle(now = new Date()): Promise<RadioBundle> {
   return promise;
 }
 
-export function preloadRadioBundle() {
-  void loadRadioBundle().catch(() => undefined);
-}
-
 async function loadRadioBundleUncached(now: Date): Promise<RadioBundle> {
   const dayKey = radioRotationDayKey(now);
   const playlistResult = await supabase
@@ -148,8 +144,11 @@ async function loadRadioBundleUncached(now: Date): Promise<RadioBundle> {
     };
   }
 
-  const trackRows = await hydrateMissingTrackDurations((tracksResult.data as RadioTrackRow[] | null) ?? []);
-  const productIds = Array.from(new Set(trackRows.map(track => track.item_id).filter(Boolean)));
+  const trackRows = (tracksResult.data as RadioTrackRow[] | null) ?? [];
+  const productIds = Array.from(new Set(trackRows.filter(track => track.audio_url).map(track => track.item_id).filter(Boolean)));
+  if (!productIds.length) {
+    return { tracks: [], rotationKey: dayKey, requiresSetup: false, status: 'No playable Radio tracks were found in the playlist.' };
+  }
   const productsResult = await supabase
     .from('catalog_items')
     .select('id,title,creator,slug,item_type,experience_type,fulfillment_type,status,streaming_enabled,cover_url,hero_url,author_id,creators:profiles!author_id(display_name,username,slug,avatar_url)')
@@ -164,12 +163,17 @@ async function loadRadioBundleUncached(now: Date): Promise<RadioBundle> {
     };
   }
 
-  const products = new Map(((productsResult.data as RadioProductRow[] | null) ?? []).map(product => [product.id, product]));
+  const products = new Map(((productsResult.data as RadioProductRow[] | null) ?? [])
+    .filter(product => product.status === 'published' && product.experience_type === 'music' && product.streaming_enabled !== false)
+    .map(product => [product.id, product]));
+  const eligibleTracks = trackRows.filter(track => track.audio_url && products.has(track.item_id));
+  const hydratedTracks = await hydrateMissingTrackDurations(eligibleTracks);
+  const tracksById = new Map(hydratedTracks.map(track => [track.id, track]));
   const tracks = playlistEntries.flatMap(entry => {
-    const track = trackRows.find(row => row.id === entry.track_id);
+    const track = tracksById.get(entry.track_id);
     if (!track?.audio_url || !track.duration_seconds || track.duration_seconds <= 0) return [];
     const product = products.get(track.item_id);
-    if (!product || product.status !== 'published' || product.experience_type !== 'music' || product.streaming_enabled === false) return [];
+    if (!product) return [];
     const artistName = product.creators?.display_name || product.creator || '44 Creator';
     return [{
       playlistEntryId: entry.id,

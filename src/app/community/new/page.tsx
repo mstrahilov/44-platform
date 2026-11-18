@@ -11,11 +11,12 @@ import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import {
   COMMUNITY_INTENT_LABELS,
   communityItemReference,
+  type CommunityCatalogItem,
   type CommunityIntent,
   type CommunityReference,
 } from '@/lib/communityV11';
 import { createCommunityPost } from '@/lib/domain/community';
-import { listPublishedCatalogItems } from '@/lib/domain/catalog';
+import { listCommunityReferenceItems } from '@/lib/domain/catalog';
 import { getCatalogItem } from '@/lib/domain/itemDetails';
 import { getCreatorVideo, type CreatorVideoPage } from '@/lib/domain/releaseFeatures';
 import { getUploadErrorMessage, uploadPublicFile } from '@/lib/uploads';
@@ -39,7 +40,8 @@ function NewCommunityThreadContent() {
   const { user, loading } = useAuth();
   const [body, setBody] = useState('');
   const [profile, setProfile] = useState<StudioProfile | null>(null);
-  const [items, setItems] = useState<Item[]>([]);
+  const [items, setItems] = useState<CommunityCatalogItem[] | null>(null);
+  const [mentionLoadError, setMentionLoadError] = useState(false);
   const [intent, setIntent] = useState<CommunityIntent>('general');
   const [selectedReferences, setSelectedReferences] = useState<CommunityReference[]>([]);
   const [lockedItem, setLockedItem] = useState<Item | null>(null);
@@ -74,8 +76,15 @@ function NewCommunityThreadContent() {
   }, []);
 
   useEffect(() => {
-    void listPublishedCatalogItems(200).then(setItems).catch(() => setItems([]));
-  }, []);
+    if (picker !== 'mention' || items) return;
+    let active = true;
+    void listCommunityReferenceItems(200).then(nextItems => {
+      if (active) setItems(nextItems);
+    }).catch(() => {
+      if (active) setMentionLoadError(true);
+    });
+    return () => { active = false; };
+  }, [items, picker]);
 
   useEffect(() => {
     if (!contextItemId) return;
@@ -109,7 +118,7 @@ function NewCommunityThreadContent() {
   }, [contextItemId, contextVideoId]);
 
   const canPostUpdate = profile?.role === 'creator' || profile?.role === 'admin';
-  const mentionOptions = useMemo(() => items
+  const mentionOptions = useMemo(() => (items ?? [])
     .filter(item => item.title.toLocaleLowerCase().includes(mentionQuery.toLocaleLowerCase().trim()))
     .slice(0, 30), [items, mentionQuery]);
 
@@ -212,7 +221,7 @@ function NewCommunityThreadContent() {
 
           <div className="community-v11-composer-picker-field">
             <span className="community-v11-composer-label">Mention</span>
-            <button type="button" className="community-v11-composer-picker" onClick={() => setPicker(current => current === 'mention' ? null : 'mention')} aria-expanded={picker === 'mention'} disabled={Boolean(lockedItem || lockedVideo)}>
+            <button type="button" className="community-v11-composer-picker" onClick={() => { setMentionLoadError(false); setPicker(current => current === 'mention' ? null : 'mention'); }} aria-expanded={picker === 'mention'} disabled={Boolean(lockedItem || lockedVideo)}>
               <span className="community-v11-composer-picker-icon">@</span>
               <span className={selectedReferences.length || lockedVideo ? 'is-selected' : ''}>{lockedVideo?.title ?? selectedReferences.find(reference => reference.kind === 'item')?.label ?? 'Tap to mention a release'}</span>
               {selectedReferences.length && !lockedItem && !lockedVideo ? (
@@ -239,7 +248,9 @@ function NewCommunityThreadContent() {
                       <small>{reference.secondary}</small>
                     </button>
                   );
-                }) : <div className="community-v11-composer-picker-empty">No releases found.</div>}
+                }) : <div className="community-v11-composer-picker-empty" role="status">
+                  {mentionLoadError ? 'Could not load releases.' : items ? 'No releases found.' : 'Loading releases…'}
+                </div>}
               </div>
             )}
           </div>

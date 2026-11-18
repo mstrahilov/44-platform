@@ -122,15 +122,36 @@ export async function listSavedMusicReleaseIds(userId: string) {
   return [...new Set(tracks.map(track => track.item_id))];
 }
 
+type SavedMusicAlbumProduct = Pick<Product, 'id' | 'title' | 'creator' | 'cover_url' | 'hero_url' | 'release_date'> & {
+  creators?: Pick<NonNullable<Product['creators']>, 'display_name'> | null;
+};
+
+export type SavedMusicAlbum = {
+  item_id: string;
+  product: SavedMusicAlbumProduct;
+  track_count: number;
+  saved_at: string;
+};
+
 export async function listSavedMusicAlbums(userId: string) {
-  const tracks = await listSavedMusicTracks(userId);
-  const albums = new Map<string, { item_id: string; product: Product; track_count: number; saved_at: string }>();
-  for (const row of tracks) {
-    const album = albums.get(row.item_id);
+  const result = await supabase.from('saved_music_tracks' as never)
+    .select('saved_at,track:tracks!inner(item:catalog_items!inner(id,title,creator,cover_url,hero_url,release_date,experience_type,status,creators:profiles!author_id(display_name)))')
+    .eq('user_id', userId)
+    .order('saved_at', { ascending: false });
+  if (result.error) throw result.error;
+  const rows = (result.data ?? []) as unknown as Array<{
+    saved_at: string;
+    track: { item: SavedMusicAlbumProduct & { experience_type: string; status: string } } | null;
+  }>;
+  const albums = new Map<string, SavedMusicAlbum>();
+  for (const row of rows) {
+    const product = row.track?.item;
+    if (product?.experience_type !== 'music' || product.status !== 'published') continue;
+    const album = albums.get(product.id);
     if (album) {
       album.track_count += 1;
       if (row.saved_at > album.saved_at) album.saved_at = row.saved_at;
-    } else albums.set(row.item_id, { item_id: row.item_id, product: row.product, track_count: 1, saved_at: row.saved_at });
+    } else albums.set(product.id, { item_id: product.id, product, track_count: 1, saved_at: row.saved_at });
   }
   return [...albums.values()].sort((left, right) => right.saved_at.localeCompare(left.saved_at));
 }

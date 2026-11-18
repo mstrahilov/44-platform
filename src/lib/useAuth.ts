@@ -33,8 +33,14 @@ function markSession(signedIn: boolean) {
 async function queueWelcome(userId: string, accessToken: string) {
   if (welcomeQueuedUserId === userId) return;
   welcomeQueuedUserId = userId;
-  const response = await fetch('/api/email/welcome', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } });
-  if (!response.ok) welcomeQueuedUserId = null;
+  try {
+    const response = await fetch('/api/email/welcome', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } });
+    if (response.ok) return;
+  } catch {
+    // A later auth update can retry the queue request.
+  }
+  if (welcomeQueuedUserId === userId) welcomeQueuedUserId = null;
+  throw new Error('Could not queue the welcome email.');
 }
 
 function acceptUser(user: User | null, accessToken?: string) {
@@ -46,12 +52,18 @@ function acceptUser(user: User | null, accessToken?: string) {
   }
   if (user && ensuredUserId !== user.id) {
     ensuredUserId = user.id;
-    void ensureProfileForUser(user)
-      .then(() => accessToken ? queueWelcome(user.id, accessToken) : undefined)
-      .catch(() => {
-        ensuredUserId = null;
-      // Profile repair and welcome enqueue are best effort and must never turn a valid session into a logout.
-      });
+    // Release the Supabase auth callback before making any dependent requests.
+    window.setTimeout(() => {
+      if (authSnapshot.user?.id !== user.id) return;
+      void ensureProfileForUser(user)
+        .then(({ error }) => {
+          if (error) throw error;
+          if (accessToken && authSnapshot.user?.id === user.id) return queueWelcome(user.id, accessToken);
+        })
+        .catch(() => {
+          if (ensuredUserId === user.id) ensuredUserId = null;
+        });
+    }, 0);
   }
 }
 

@@ -97,7 +97,22 @@ async function resolveUniqueField(
 }
 
 export async function ensureProfileForUser(user: Pick<User, 'id' | 'email' | 'user_metadata'>) {
-  const { profile: existingProfile } = await loadStudioProfile(user.id);
+  const { profile: existingProfile, error: profileError } = await loadStudioProfile(user.id);
+  if (profileError) return { profile: null, error: profileError };
+
+  const metadataCountry = typeof user.user_metadata?.country_code === 'string'
+    && /^[A-Z]{2}$/.test(user.user_metadata.country_code.toUpperCase())
+    ? user.user_metadata.country_code.toUpperCase()
+    : null;
+  if (
+    existingProfile?.display_name?.trim()
+    && existingProfile.username && isValidUsername(existingProfile.username)
+    && existingProfile.slug?.trim() && existingProfile.role
+    && (existingProfile.country_code || !metadataCountry)
+  ) {
+    return { profile: existingProfile, error: null };
+  }
+
   const displayName =
     existingProfile?.display_name?.trim() ||
     user.user_metadata?.display_name?.trim() ||
@@ -115,12 +130,10 @@ export async function ensureProfileForUser(user: Pick<User, 'id' | 'email' | 'us
     ? usernameBase
     : usernameify(usernameBase) || `member_${user.id.slice(0, 8)}`;
   const slugSeed = slugify(existingProfile?.slug?.trim() || displayName || usernameSeed) || usernameSeed.replace(/_/g, '-');
-  const username = await resolveUniqueField('username', usernameSeed, user.id);
-  const slug = await resolveUniqueField('slug', slugSeed, user.id);
-  const metadataCountry = typeof user.user_metadata?.country_code === 'string'
-    && /^[A-Z]{2}$/.test(user.user_metadata.country_code.toUpperCase())
-    ? user.user_metadata.country_code.toUpperCase()
-    : null;
+  const [username, slug] = await Promise.all([
+    existingProfile?.username === usernameSeed ? usernameSeed : resolveUniqueField('username', usernameSeed, user.id),
+    existingProfile?.slug || resolveUniqueField('slug', slugSeed, user.id),
+  ]);
 
   const payload: Database['public']['Tables']['profiles']['Insert'] = {
     id: user.id,
@@ -175,7 +188,17 @@ export async function ensureProfileForUser(user: Pick<User, 'id' | 'email' | 'us
   };
 }
 
-export async function loadStudioProfile(userId: string) {
+const pendingProfiles = new Map<string, ReturnType<typeof fetchStudioProfile>>();
+
+export function loadStudioProfile(userId: string) {
+  const pending = pendingProfiles.get(userId);
+  if (pending) return pending;
+  const request = fetchStudioProfile(userId).finally(() => pendingProfiles.delete(userId));
+  pendingProfiles.set(userId, request);
+  return request;
+}
+
+async function fetchStudioProfile(userId: string) {
   const { data, error } = await supabase
     .from('profiles')
     .select(EXTENDED_PROFILE_SELECT)

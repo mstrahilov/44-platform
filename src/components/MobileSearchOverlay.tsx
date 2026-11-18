@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { loadPlatformSearchIndex } from '@/lib/domain/search';
+import { loadPlatformSearchDirectory } from '@/lib/domain/search';
 import { productBrowseHref } from '@/lib/experience';
 import { creatorHref } from '@/lib/platform';
 import { searchSupportArticles } from '@/lib/supportArticles';
@@ -25,9 +25,6 @@ type SearchSuggestion = {
   href?: string;
 };
 
-let suggestionIndexCache: SearchSuggestion[] | null = null;
-let suggestionIndexRequest: Promise<SearchSuggestion[]> | null = null;
-
 function normalizeSuggestion(value: string | null | undefined) {
   return value?.trim().replace(/\s+/g, ' ') ?? '';
 }
@@ -48,11 +45,8 @@ function createTextSuggestions(values: Array<string | null | undefined>): Search
   });
 }
 
-function loadSuggestionIndex() {
-  if (suggestionIndexCache) return Promise.resolve(suggestionIndexCache);
-  if (suggestionIndexRequest) return suggestionIndexRequest;
-
-  suggestionIndexRequest = loadPlatformSearchIndex()
+function loadSuggestionIndex(viewerId: string | null) {
+  return loadPlatformSearchDirectory(viewerId)
     .then(index => {
       const profiles = index.profiles.flatMap<SearchSuggestion>(profile => {
         const displayName = normalizeSuggestion(profile.display_name);
@@ -98,16 +92,7 @@ function loadSuggestionIndex() {
       ));
 
       return [...profiles, ...itemSuggestions, ...textSuggestions];
-    })
-    .then(suggestions => {
-      suggestionIndexCache = suggestions;
-      return suggestions;
-    })
-    .finally(() => {
-      suggestionIndexRequest = null;
     });
-
-  return suggestionIndexRequest;
 }
 
 function rankSuggestion(value: string, query: string) {
@@ -127,6 +112,7 @@ export function MobileSearchOverlay({
   onClose,
   onSubmit,
   libraryScope = false,
+  viewerId,
 }: {
   open: boolean;
   value: string;
@@ -134,32 +120,36 @@ export function MobileSearchOverlay({
   onClose: () => void;
   onSubmit: (value: string, href?: string) => void;
   libraryScope?: boolean;
+  viewerId: string | null;
 }) {
   const [suggestionIndex, setSuggestionIndex] = useState<SearchSuggestion[]>(
     createTextSuggestions(BASE_SEARCH_SUGGESTIONS),
   );
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || libraryScope) return;
     let alive = true;
-    document.body.classList.add('os-mobile-search-active');
-    if (!libraryScope) void loadSuggestionIndex()
+    void loadSuggestionIndex(viewerId)
       .then(suggestions => { if (alive) setSuggestionIndex(suggestions); })
       .catch(() => { if (alive) setSuggestionIndex(createTextSuggestions(BASE_SEARCH_SUGGESTIONS)); })
       .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [libraryScope, open, viewerId]);
 
+  useEffect(() => {
+    if (!open) return;
+    document.body.classList.add('os-mobile-search-active');
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') onClose();
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => {
-      alive = false;
       document.body.classList.remove('os-mobile-search-active');
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [libraryScope, onClose, open]);
+  }, [onClose, open]);
 
   const query = value.trim();
   const suggestions = useMemo(() => {
@@ -236,7 +226,7 @@ export function MobileSearchOverlay({
       </form>
 
       <div className="os-mobile-search-suggestions" aria-live="polite">
-        {query && loading && suggestions.length === 0 ? (
+        {query && !libraryScope && loading && suggestions.length === 0 ? (
           <div className="os-mobile-search-status">Finding suggestions…</div>
         ) : query && suggestions.length === 0 ? (
           <button

@@ -59,21 +59,38 @@ type CatalogTrackBrowseRow = {
 
 const PLAYLIST_SELECT = 'id,user_id,title,cover_url,created_at,updated_at';
 const PLAYLIST_TRACK_SELECT = 'id,playlist_id,track_id,sort_order,added_at,track:tracks(id,item_id,title,number,duration_seconds,audio_url,item:catalog_items(id,title,cover_url))';
+const PLAYLIST_ARTWORK_SELECT = `${PLAYLIST_SELECT},artwork:playlist_tracks(track:tracks!inner(item:catalog_items!inner(cover_url)))`;
 
-export async function listPlaylists(userId: string) {
-  const result = await supabase
+export async function listPlaylists(userId: string, { includeArtwork = true } = {}): Promise<Playlist[]> {
+  const query = supabase
     .from('playlists' as never)
-    .select(PLAYLIST_SELECT)
+    .select(includeArtwork ? PLAYLIST_ARTWORK_SELECT : PLAYLIST_SELECT)
     .eq('user_id', userId)
     .order('updated_at', { ascending: false });
-  if (result.error) throw result.error;
-  const playlists = (result.data ?? []) as unknown as Playlist[];
-  if (!playlists.length) return playlists;
-  return Promise.all(playlists.map(async playlist => {
-    if (playlist.cover_url) return { ...playlist, artwork_url: playlist.cover_url };
-    const detail = await getPlaylist(userId, playlist.id);
-    const fallbackArtwork = detail?.tracks?.find(track => track.track?.item?.cover_url)?.track?.item?.cover_url || null;
-    return { ...playlist, artwork_url: fallbackArtwork };
+  const result = await (includeArtwork ? query
+    .not('artwork.track.item.cover_url', 'is', null)
+    .neq('artwork.track.item.cover_url', '')
+    .order('sort_order', { referencedTable: 'artwork', ascending: true })
+    .limit(1, { referencedTable: 'artwork' })
+    : query);
+  if (result.error) {
+    if (!includeArtwork || !['PGRST108', 'PGRST200', 'PGRST201'].includes(result.error.code)) throw result.error;
+    const playlists = await listPlaylists(userId, { includeArtwork: false });
+    return Promise.all(playlists.map(async playlist => {
+      if (playlist.cover_url) return playlist;
+      const details = await getPlaylist(userId, playlist.id);
+      return {
+        ...playlist,
+        artwork_url: details?.tracks?.find(row => row.track?.item?.cover_url)?.track?.item?.cover_url ?? null,
+      };
+    }));
+  }
+  const playlists = (result.data ?? []) as unknown as Array<Playlist & {
+    artwork?: Array<{ track: { item: { cover_url: string } } }>;
+  }>;
+  return playlists.map(({ artwork, ...playlist }) => ({
+    ...playlist,
+    artwork_url: playlist.cover_url || artwork?.[0]?.track?.item?.cover_url || null,
   }));
 }
 

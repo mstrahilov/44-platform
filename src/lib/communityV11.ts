@@ -12,6 +12,10 @@ export type CommunityReference = {
   secondary?: string | null;
 };
 
+export type CommunityCatalogItem = Pick<Item, 'id' | 'title' | 'slug' | 'creator' | 'item_type' | 'cover_url' | 'hero_url'> & {
+  creators?: Pick<NonNullable<Item['creators']>, 'display_name'> | null;
+};
+
 export type CommunityV11Post = SocialPost & {
   content_type?: 'discussion' | 'question' | 'collaboration' | 'creator_update';
   item_id?: string | null;
@@ -81,7 +85,7 @@ export function inferCommunityIntent(post: CommunityV11Post): CommunityIntent {
   return 'general';
 }
 
-export function communityItemReference(item: Item): CommunityReference {
+export function communityItemReference(item: CommunityCatalogItem): CommunityReference {
   return {
     id: item.id,
     kind: 'item',
@@ -94,7 +98,7 @@ export function communityItemReference(item: Item): CommunityReference {
 
 export function inferItemReferences(
   body: string,
-  items: Item[],
+  items: CommunityCatalogItem[],
 ) {
   const normalizedBody = body.toLocaleLowerCase();
   return items

@@ -1,13 +1,28 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { HubHero, PageShell } from '@/components/Ui';
 import { useTopbarMobileTrailingAction } from '@/components/TopbarContext';
 import { browserTimeZone, formatEventDate } from '@/lib/eventTime';
 import { loadCalendarFeed, loadCalendarReleaseEntries, type CalendarEntry } from '@/lib/domain/events';
 
 const mobileListPageSize = 20;
+const mobileCalendarQuery = '(max-width: 700px)';
+
+function subscribeToCalendarViewport(listener: () => void) {
+  const media = window.matchMedia(mobileCalendarQuery);
+  media.addEventListener('change', listener);
+  return () => media.removeEventListener('change', listener);
+}
+
+function isMobileCalendar() {
+  return window.matchMedia(mobileCalendarQuery).matches;
+}
+
+function serverCalendarViewport() {
+  return false;
+}
 
 function monthBounds(date: Date) {
   return {
@@ -65,7 +80,8 @@ export default function CalendarPage() {
   const [selectedDay, setSelectedDay] = useState(() => localDayKey(now));
   const [isListView, setIsListView] = useState(false);
   const [entries, setEntries] = useState<CalendarEntry[]>([]);
-  const [mobileEntries, setMobileEntries] = useState<CalendarEntry[]>([]);
+  const [monthlyReleases, setMonthlyReleases] = useState<CalendarEntry[]>([]);
+  const mobile = useSyncExternalStore(subscribeToCalendarViewport, isMobileCalendar, serverCalendarViewport);
   const [loading, setLoading] = useState(true);
   const [mobileLoading, setMobileLoading] = useState(true);
   const [error, setError] = useState('');
@@ -76,12 +92,18 @@ export default function CalendarPage() {
   const [visibleListDayCount, setVisibleListDayCount] = useState(mobileListPageSize);
   const listSentinelRef = useRef<HTMLDivElement | null>(null);
   const bounds = useMemo(() => monthBounds(month), [month]);
-  const monthGroups = useMemo(() => entriesByDay(mobileEntries), [mobileEntries]);
+  const desktopMonthGroups = useMemo(() => entriesByDay(entries), [entries]);
+  const monthGroups = useMemo(() => entriesByDay(sortEntries([
+    ...entries.filter(entry => entry.source_type === 'event'),
+    ...monthlyReleases,
+  ])), [entries, monthlyReleases]);
   const listGroups = useMemo(() => entriesByDay(listEntries), [listEntries]);
   const listDays = useMemo(() => Object.keys(listGroups).sort((a, b) => b.localeCompare(a)), [listGroups]);
   const visibleListDays = useMemo(() => listDays.slice(0, visibleListDayCount), [listDays, visibleListDayCount]);
 
   function changeMonth(offset: number) {
+    setLoading(true);
+    setError('');
     setMobileLoading(true);
     setMobileError('');
     setMonth(value => new Date(value.getFullYear(), value.getMonth() + offset, 1));
@@ -100,39 +122,33 @@ export default function CalendarPage() {
   ), [isListView]);
   useTopbarMobileTrailingAction(mobileTrailingAction);
 
-  // Keep the current desktop calendar feed and markup unchanged.
   useEffect(() => {
     let active = true;
-    Promise.resolve()
-      .then(() => {
-        setLoading(true);
-        setError('');
-        return loadCalendarFeed(bounds.start.toISOString(), bounds.end.toISOString());
-      })
-      .then(setEntries)
-      .catch(reason => setError(reason instanceof Error ? reason.message : 'Could not load Calendar.'))
+    void loadCalendarFeed(bounds.start.toISOString(), bounds.end.toISOString())
+      .then(feed => { if (active) setEntries(feed); })
+      .catch(reason => { if (active) setError(reason instanceof Error ? reason.message : 'Could not load Calendar.'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [bounds]);
 
-  // Mobile month view follows iOS: visible events plus published music/book
-  // release_date values, grouped by the user's local calendar day.
+  // The phone view uses actual release dates, so it adds that projection to
+  // the event feed shared by both layouts.
   useEffect(() => {
+    if (!mobile) return;
     let active = true;
-    Promise.all([
-      loadCalendarFeed(bounds.start.toISOString(), bounds.end.toISOString()),
-      loadCalendarReleaseEntries(localDayKey(bounds.start), localDayKey(bounds.end)),
-    ])
-      .then(([feed, releases]) => {
-        if (!active) return;
-        setMobileEntries(sortEntries([...feed.filter(entry => entry.source_type === 'event'), ...releases]));
+    void loadCalendarReleaseEntries(localDayKey(bounds.start), localDayKey(bounds.end))
+      .then(releases => {
+        if (active) {
+          setMonthlyReleases(releases);
+          setMobileError('');
+        }
       })
       .catch(reason => {
         if (active) setMobileError(reason instanceof Error ? reason.message : 'Could not load Calendar.');
       })
       .finally(() => { if (active) setMobileLoading(false); });
     return () => { active = false; };
-  }, [bounds]);
+  }, [bounds, mobile]);
 
   // iOS list mode loads the entire visible event and release history once,
   // then progressively renders 20 date groups at a time.
@@ -217,9 +233,9 @@ export default function CalendarPage() {
                   <span aria-hidden="true">›</span>
                 </button>
               </div>
-              {mobileError ? (
+              {mobileError || error ? (
                 <div className="calendar-state" role="alert">Could not load Calendar.</div>
-              ) : mobileLoading ? (
+              ) : mobileLoading || loading ? (
                 <div className="calendar-state" role="status" aria-live="polite">Loading Calendar...</div>
               ) : (
                 <>
@@ -254,9 +270,7 @@ export default function CalendarPage() {
                   </div>
                   <section className="calendar-mobile-selected-day" aria-label="Selected day events">
                     <h2>{formatDayLabel(selectedDay)}</h2>
-                    {mobileLoading ? (
-                      <div className="calendar-state" role="status">Loading Calendar...</div>
-                    ) : (monthGroups[selectedDay] ?? []).length === 0 ? (
+                    {(monthGroups[selectedDay] ?? []).length === 0 ? (
                       <div className="calendar-state calendar-mobile-day-empty">Nothing on this day.</div>
                     ) : (
                       <div className="calendar-mobile-rows">
@@ -317,8 +331,7 @@ export default function CalendarPage() {
                       {day ? (
                         <>
                           <span className="calendar-day-number">{day.getDate()}</span>
-                          {entries
-                            .filter(entry => new Date(entry.starts_at).getDate() === day.getDate())
+                          {(desktopMonthGroups[localDayKey(day)] ?? [])
                             .map(entry => (
                               <CalendarEntryLink key={`${entry.source_type}-${entry.source_id}`} entry={entry} compact />
                             ))}

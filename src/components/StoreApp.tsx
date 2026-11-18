@@ -22,6 +22,7 @@ import { Ui44SectionArrow } from '@/components/ui44/Controls';
 import { Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
 import { beatReviewSurfacesEnabled } from '@/lib/domain/beats';
 import { SectionTab, SectionTabs } from '@/components/SectionTabs';
+import { PublicArtwork } from '@/components/PublicArtwork';
 
 const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
   music: 'music',
@@ -72,6 +73,8 @@ const CATEGORY_COPY: Record<StoreCategory, { title: string; copy: string; empty:
 
 type StoreFilter = 'all' | 'music' | 'book' | 'interactive' | 'asset' | 'physical';
 type StoreSort = 'release-date' | 'recently-added';
+
+const EMPTY_PRODUCTS: Product[] = [];
 
 const STORE_FILTER_LABELS: Record<StoreFilter, string> = {
   all: 'All Categories',
@@ -138,12 +141,14 @@ function keepNewestProductPerCreator(products: Product[], avoidedProductIds = ne
 
 export default function StoreApp({ category, frontDoor = false }: { category: StoreCategory; frontDoor?: boolean }) {
   const { user, loading: authLoading } = useAuth();
-  const [products, setProducts] = useState<Product[]>([]);
+  const userId = user?.id;
+  const viewerId = userId ?? null;
+  const [catalog, setCatalog] = useState<{ ownerId: string | null; products: Product[] } | null>(null);
   const [ownedProductIds, setOwnedProductIds] = useState<Set<string>>(new Set());
   const [followedProfileIds, setFollowedProfileIds] = useState<Set<string>>(new Set());
   const [newCreators, setNewCreators] = useState<DiscoveryCreator[]>([]);
   const [featuredItemIds, setFeaturedItemIds] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [catalogLoading, setCatalogLoading] = useState(true);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<StoreFilter>('all');
@@ -158,41 +163,50 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   const [beatMood, setBeatMood] = useState('all');
   const [beatInstrument, setBeatInstrument] = useState('all');
   const [beatTier, setBeatTier] = useState('all');
+  const products = catalog?.ownerId === viewerId ? catalog.products : EMPTY_PRODUCTS;
+  const loading = catalogLoading || catalog?.ownerId !== viewerId;
 
   useEffect(() => {
+    if (authLoading) return;
     let alive = true;
 
     async function load() {
-      setLoading(true);
+      setCatalogLoading(true);
       setError('');
 
-      if (authLoading) return;
       try {
-        const [items, creators, featuredIds] = await Promise.all([
-          loadStoreDiscoveryCatalog(200, user?.id),
-          frontDoor ? listNewDiscoveryCreators(10) : Promise.resolve([]),
-          frontDoor ? listHomeFeaturedItemIds() : Promise.resolve([]),
+        const [items, featuredIds] = await Promise.all([
+          loadStoreDiscoveryCatalog(200, viewerId),
+          frontDoor ? listHomeFeaturedItemIds().catch(() => []) : [],
         ]);
         if (!alive) return;
-        setProducts(items);
-        setNewCreators(creators);
+        setCatalog({ ownerId: viewerId, products: items });
         setFeaturedItemIds(featuredIds);
       } catch (loadError) {
         if (!alive) return;
         setError(loadError instanceof Error ? loadError.message : 'Could not load Browse.');
-        setProducts([]);
+        setCatalog({ ownerId: viewerId, products: EMPTY_PRODUCTS });
       }
-      setLoading(false);
+      setCatalogLoading(false);
     }
 
     load();
     return () => { alive = false; };
-  }, [authLoading, frontDoor, user?.id]);
+  }, [authLoading, frontDoor, viewerId]);
+
+  useEffect(() => {
+    if (authLoading || !frontDoor) return;
+    let alive = true;
+    void listNewDiscoveryCreators(10)
+      .then(creators => { if (alive) setNewCreators(creators); })
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, [authLoading, frontDoor]);
 
   useEffect(() => {
     let alive = true;
     if (authLoading) return () => { alive = false; };
-    if (!user) {
+    if (!userId) {
       Promise.resolve().then(() => {
         if (alive) setOwnedProductIds(new Set());
         if (alive) setFollowedProfileIds(new Set());
@@ -200,15 +214,15 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
       return () => { alive = false; };
     }
 
-    void Promise.all([listVisibleLibraryItemIds(user.id), listFollowedProfileIds(user.id)])
-      .then(([itemIds, followedIds]) => {
-        if (!alive) return;
-        setOwnedProductIds(new Set(itemIds));
-        setFollowedProfileIds(new Set(followedIds));
-      });
+    void listVisibleLibraryItemIds(userId)
+      .then(itemIds => { if (alive) setOwnedProductIds(new Set(itemIds)); })
+      .catch(() => { if (alive) setOwnedProductIds(new Set()); });
+    if (frontDoor) void listFollowedProfileIds(userId)
+      .then(followedIds => { if (alive) setFollowedProfileIds(new Set(followedIds)); })
+      .catch(() => { if (alive) setFollowedProfileIds(new Set()); });
 
     return () => { alive = false; };
-  }, [authLoading, user]);
+  }, [authLoading, frontDoor, userId]);
 
   useEffect(() => {
     let alive = true;
@@ -620,7 +634,8 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
 
 function DiscoverFeature({ product }: { product: Product }) {
   const imageUrl = product.hero_url || product.cover_url;
-  return <Link href={`/store/item/${product.slug || product.id}`} className="discover-feature" style={imageUrl ? { backgroundImage: `url(${JSON.stringify(imageUrl).slice(1, -1)})` } : undefined}>
+  return <Link href={`/store/item/${product.slug || product.id}`} className="discover-feature">
+    {imageUrl ? <PublicArtwork src={imageUrl} alt="" sizes="(max-width: 768px) 100vw, (max-width: 1500px) 80vw, 1200px" loading="eager" fetchPriority="high" className="discover-feature-artwork" /> : null}
     <span className="discover-feature-shade" aria-hidden="true" />
     <span className="discover-feature-copy">
       <span className="discover-feature-eyebrow">FEATURED RELEASE</span>

@@ -5,7 +5,6 @@ const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 const [
   topbar,
   youApp,
-  customerCommerce,
   supportArticle,
   supportLayout,
   adminLayout,
@@ -46,7 +45,6 @@ const [
 ] = await Promise.all([
   read('src/components/Topbar.tsx'),
   read('src/components/YouApp.tsx'),
-  read('src/lib/domain/customerCommerce.ts'),
   read('src/app/support/[slug]/page.tsx'),
   read('src/app/support/layout.tsx'),
   read('src/app/admin/layout.tsx'),
@@ -95,38 +93,20 @@ for (const parent of ['/admin/content/', '/admin/fulfillment/', '/admin/people/'
   assert.ok(adminLayout.includes(`prefix: '${parent}'`), `${parent} detail routes return to their owning list`);
 }
 
-assert.match(customerCommerce, /export async function hasCustomerOrders/, 'the Account hub has a focused order-existence query');
-assert.match(customerCommerce, /neq\('status', 'draft'\)[\s\S]*limit\(1\)/, 'only placed orders make Orders visible');
-assert.match(youApp, /\.\.\.\(hasOrders \? \[\{[\s\S]*href: '\/orders'/, 'Orders is hidden in Account until an order exists');
-const accountProfileIndex = youApp.indexOf("href: profileHref");
-const accountStudioIndex = youApp.indexOf("href: '/studio'");
-const accountOrdersIndex = youApp.indexOf("href: '/orders'");
-const accountMessagesIndex = youApp.indexOf("href: '/inbox'");
-const accountAdminIndex = youApp.indexOf("href: '/admin'");
-const accountTeamIndex = youApp.indexOf("href: '/team'");
-const accountSettingsIndex = youApp.indexOf("href: '/settings'");
-assert.ok(
-  accountProfileIndex > 0
-    && accountProfileIndex < accountStudioIndex
-    && accountStudioIndex < accountOrdersIndex
-    && accountOrdersIndex < accountMessagesIndex
-    && accountMessagesIndex < accountAdminIndex
-    && accountAdminIndex < accountTeamIndex
-    && accountTeamIndex < accountSettingsIndex,
-  'Account orders role-gated Admin and Team destinations between Messages and Settings',
-);
-assert.doesNotMatch(youApp, /href: '\/(?:notifications|support)'/, 'Account omits Notifications and Support from its focused destination list');
-assert.match(youApp, /profile\?\.role === 'admin'[\s\S]*href: '\/admin'[\s\S]*href: '\/team'/, 'Account exposes both Admin and inherited Team destinations for administrators');
+assert.doesNotMatch(youApp, /href: '\/(?:orders|notifications|team|settings)'/, 'Account omits destinations handled outside its navigation list');
+assert.match(youApp, /href: profileHref[\s\S]*href: '\/inbox'[\s\S]*href: '\/studio'[\s\S]*profile\?\.role === 'admin'[\s\S]*href: '\/admin'[\s\S]*href: '\/support'/, 'Account keeps the current navigation order and gates Admin by role');
 assert.doesNotMatch(youApp, /HubHero title=\{`Welcome,/, 'Account no longer duplicates the personalized Home greeting');
 assert.match(youApp, /you-mobile-identity[\s\S]*<SocialAvatar[\s\S]*<h1>\{displayName\}<\/h1>/, 'Account leads with the centered avatar and name identity');
-assert.match(youApp, /<\/nav>[\s\S]*className="you-logout-action"[\s\S]*>Log Out<\/button>/, 'Log Out sits separately beneath the Account menu');
+assert.match(youApp, /<\/nav>[\s\S]*className="you-logout-action"[\s\S]*>Log Out<\/OS44Button>/, 'Log Out sits separately beneath the Account menu');
 assert.doesNotMatch(topbar, /os-topbar-account-menu|aria-label="Your account"/, 'desktop Topbar omits the duplicate account avatar and menu');
 assert.doesNotMatch(topbar, /PUBLIC_PURCHASES_AVAILABLE[\s\S]*cartCount/, 'a staged Cart remains reachable even while Checkout activation is fail closed');
 assert.match(topbar, /os-topbar-search[\s\S]*os-topbar-notification-menu[\s\S]*cartCount > 0[\s\S]*os-topbar-cart-button/, 'Topbar orders Search, Notifications, then the wider Cart count control');
 assert.match(globalCss, /@media \(max-width: 768px\)[\s\S]*?\.os-topbar-cart-button \{[\s\S]*?order: 1;[\s\S]*?\.os-topbar-mobile-search-trigger \{[\s\S]*?order: 2;/, 'mobile Cart sits immediately left of the stable Search action');
-assert.match(accountOverview, /ACCOUNT_OVERVIEW_TTL_MS = 30_000[\s\S]*accountOverviewCache[\s\S]*Promise\.all\([\s\S]*loadStudioProfile[\s\S]*hasCustomerOrders[\s\S]*fetchMyTeamAccess/, 'Account shares and briefly caches its parallel overview requests');
+assert.match(accountOverview, /ACCOUNT_OVERVIEW_TTL_MS = 30_000[\s\S]*accountOverviewCache[\s\S]*loadStudioProfile\(userId\)/, 'Account shares and briefly caches its profile request');
+assert.doesNotMatch(accountOverview, /hasCustomerOrders|fetchMyTeamAccess/, 'Account avoids requests for removed navigation rows');
 assert.match(radioDomain, /RADIO_BUNDLE_TTL_MS = 30_000[\s\S]*radioBundleCache[\s\S]*loadRadioBundleUncached/, 'Radio briefly reuses its assembled playback bundle');
-assert.match(sidebar, /router\.prefetch\('\/radio'\)[\s\S]*router\.prefetch\('\/you'\)[\s\S]*preloadRadioBundle[\s\S]*preloadAccountOverview[\s\S]*requestIdleCallback/, 'the persistent Sidebar warms primary route code and data during browser idle time');
+assert.match(sidebar, /router\.prefetch\('\/radio'\)[\s\S]*router\.prefetch\('\/you'\)[\s\S]*requestIdleCallback/, 'the persistent Sidebar warms primary routes during browser idle time');
+assert.doesNotMatch(sidebar, /preloadRadioBundle|preloadAccountOverview/, 'ordinary pages avoid background Radio audio and Account data requests');
 assert.match(globalCss, /--os-topbar-right-inset:[^;]*--os-content-inset[\s\S]*\.os-topbar\s*\{[\s\S]*padding:[^;]*var\(--os-topbar-right-inset\)/, 'desktop Topbar actions share the canonical page-action right edge');
 assert.match(sidebar, /SidebarAccountItem[\s\S]*href="\/you"[\s\S]*sidebar-account-avatar[\s\S]*Account/, 'desktop Sidebar replaces Settings with an avatar-backed Account destination');
 assert.match(sidebarPreferences, /SIDEBAR_COMPACT_WIDTH = 76[\s\S]*SIDEBAR_MIN_EXPANDED_WIDTH = 196[\s\S]*SIDEBAR_MAX_WIDTH = 280/, 'Sidebar resizing preserves the accepted compact, label-safe, and original maximum widths');

@@ -9,6 +9,7 @@ import { communityThreadHref } from '@/lib/platform';
 import { pinDockItem } from '@/lib/dockPreferences';
 import type { CommunityReference } from '@/lib/communityV11';
 import { OS44Button } from '@/components/OS44Button';
+import { CATALOG_ARTWORK_SIZES, PublicArtwork } from '@/components/PublicArtwork';
 
 function socialTokenHref(token: string) {
   if (token.startsWith('@')) return `/profile/${token.slice(1)}`;
@@ -112,8 +113,7 @@ function SocialAttachedItemCard({ reference }: { reference: CommunityReference }
     >
       <span className="social-attached-item-art" aria-hidden="true">
         {reference.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={reference.imageUrl} alt="" />
+          <PublicArtwork src={reference.imageUrl} alt="" sizes="80px" />
         ) : null}
       </span>
       <span className="social-attached-item-copy">
@@ -140,8 +140,7 @@ export function SocialAvatar({
       ? 'social-avatar social-avatar-large ui44-identity-avatar ui44-identity-avatar-specialized'
       : 'social-avatar ui44-identity-avatar ui44-identity-avatar-inline'} aria-hidden="true">
       {profile?.avatar_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={profile.avatar_url} alt="" />
+        <PublicArtwork src={profile.avatar_url} alt="" sizes={size === 'large' ? '120px' : '48px'} />
       ) : (
         initials(name)
       )}
@@ -489,8 +488,7 @@ export function SocialPostRow({
         <div className="ui44-community-content">
           {!isReply && post.image_url ? (
             <div className="community-post-image">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={post.image_url} alt="" loading="lazy" />
+              <PublicArtwork src={post.image_url} alt="" sizes="(max-width: 768px) 96vw, 760px" />
             </div>
           ) : null}
           {showTitle && (
@@ -664,8 +662,7 @@ export function SocialArtifactCard({
     <Link href={href} className="social-artifact-card ui44-catalog-card">
       <div className={shape === 'portrait' ? 'social-artifact-cover social-artifact-cover-portrait ui44-catalog-art' : shape === 'landscape' ? 'social-artifact-cover social-artifact-cover-landscape ui44-catalog-art' : 'social-artifact-cover ui44-catalog-art'}>
         {image && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" />
+          <PublicArtwork src={image} alt="" sizes={CATALOG_ARTWORK_SIZES} />
         )}
       </div>
       <div className="social-artifact-info ui44-catalog-copy">

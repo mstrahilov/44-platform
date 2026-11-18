@@ -5604,6 +5604,14 @@ body:is(.theme-dark, .theme-light) .os-topbar .os-topbar-tab.os-topbar-tab-secti
   box-shadow: 0 22px 70px rgba(0, 0, 0, .16);
 }
 
+.discover-feature-artwork {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .discover-feature-shade {
   position: absolute;
   inset: 0;

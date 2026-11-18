@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useMusicPlayer, type MusicQueueTrack } from '@/components/MusicPlayer';
+import { useMusicPlayer, useMusicPlayerTime, type MusicQueueTrack } from '@/components/MusicPlayer';
 import type { SamplePackFile, SamplePlaybackProgress } from '@/lib/domain/nativeContent';
 import { listSampleProgress, saveSampleProgress } from '@/lib/domain/nativeContent';
 import { ItemTrackList } from '@/components/ItemTrackList';
@@ -27,7 +27,8 @@ export function SamplePackExperience({
   library?: boolean;
   signedIn?: boolean;
 }) {
-  const { currentTrack, isPlaying, currentTime, duration, playQueue, toggleTrack } = useMusicPlayer();
+  const { currentTrack, isPlaying, duration, playQueue, toggleTrack } = useMusicPlayer();
+  const currentTime = useMusicPlayerTime();
   const [progress, setProgress] = useState<Record<string, SamplePlaybackProgress>>({});
   const lastSavedRef = useRef<Record<string, number>>({});
   const wasPlayingRef = useRef(isPlaying);

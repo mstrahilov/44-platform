@@ -13,6 +13,7 @@ import { absoluteAppUrl } from '@/lib/metadata';
 import { getMarketingUrl } from '@/lib/siteUrl';
 import { DesktopMenuNavigation } from '@/components/DesktopMenuNavigation';
 import { UserActivityReporter } from '@/components/UserActivityReporter';
+import { getPublicArtworkOrigin } from '@/lib/publicArtwork';
 
 const THEME_BOOTSTRAP = `(function(){try{
   localStorage.removeItem('44-theme-mode');
@@ -44,12 +45,15 @@ export default function ApplicationShell({
   analyticsMeasurementId: string | null;
   children: ReactNode;
 }) {
+  const storageOrigin = getPublicArtworkOrigin()?.origin;
+
   return (
     <html lang="en">
       <head>
         {/* The application-only generated sheet must not be hoisted into marketing by Next. */}
         {/* eslint-disable-next-line @next/next/no-css-tags */}
-        <link rel="stylesheet" href="/_surface/44os-app.css?v=20261118-admin-content-detail-6" />
+        <link rel="stylesheet" href={process.env.NEXT_PUBLIC_APPLICATION_CSS || '/_surface/44os-app.css'} />
+        {storageOrigin ? <link rel="preconnect" href={storageOrigin} crossOrigin="anonymous" /> : null}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: SITE_IDENTITY_JSON_LD }} />
       </head>

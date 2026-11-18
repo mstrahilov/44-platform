@@ -1,9 +1,21 @@
 import { cache, type ReactNode } from 'react';
 import { absoluteAppUrl, buildPageMetadata, conciseDescription } from '@/lib/metadata';
-import { getCatalogItem } from '@/lib/domain/itemDetails';
 import { getProductExperience } from '@/lib/experience';
+import { supabase } from '@/lib/supabase';
+import { LOCAL_MASK_ITEM_ID, localMaskPreviewEnabled, localMaskProduct } from '@/lib/localMaskPreview';
 
-const loadPublicItem = cache(async (identifier: string) => getCatalogItem(identifier).catch(() => null));
+const loadPublicItem = cache(async (identifier: string) => {
+  if (localMaskPreviewEnabled && (identifier === LOCAL_MASK_ITEM_ID || identifier.toLowerCase() === 'mask')) {
+    return localMaskProduct;
+  }
+  const key = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(identifier) ? 'id' : 'slug';
+  const { data } = await supabase.from('catalog_items')
+    .select('id,slug,title,creator,status,item_type,experience_type,fulfillment_type,cover_url,short_description,long_description,release_date,year,creators:profiles!author_id(display_name,username)')
+    .eq('status', 'published')
+    .eq(key, identifier)
+    .maybeSingle();
+  return data;
+});
 
 function stringifyJsonLd(value: unknown) {
   return JSON.stringify(value).replace(/</g, '\\u003c');

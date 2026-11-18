@@ -1,6 +1,25 @@
 import type { NextConfig } from "next";
+import { getPublicArtworkOrigin, publicArtworkPath } from './src/lib/publicArtwork';
+import { readPreparedApplicationCssHref } from './scripts/application-css.mjs';
+
+const artworkOrigin = getPublicArtworkOrigin();
 
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_APPLICATION_CSS: process.env.NODE_ENV === 'production'
+      ? readPreparedApplicationCssHref()
+      : '/_surface/44os-app.css',
+  },
+  images: {
+    remotePatterns: artworkOrigin ? [{
+      protocol: 'https',
+      hostname: artworkOrigin.hostname,
+      port: artworkOrigin.port,
+      pathname: `${publicArtworkPath}**`,
+      search: '',
+    }] : [],
+    maximumRedirects: 0,
+  },
   poweredByHeader: false,
   devIndicators: false,
   turbopack: {
@@ -63,6 +82,10 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      {
+        source: "/_surface/versioned/:asset",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
       {
         source: "/.well-known/apple-app-site-association",
         headers: [

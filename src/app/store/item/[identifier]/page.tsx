@@ -37,6 +37,7 @@ import { listReleaseCreatorVideos, type ReleaseCreatorVideo } from '@/lib/domain
 import { removeLibraryItem } from '@/lib/domain/library';
 import { PlaylistPicker } from '@/components/PlaylistPicker';
 import { OS44Button } from '@/components/OS44Button';
+import { artworkBackdrop } from '@/components/PublicArtwork';
 
 type ProductTrack = {
   id: string;
@@ -71,7 +72,7 @@ function ProductStoreDetail({
   const router = useRouter();
   const searchParams = useSearchParams();
   const cart = useCart();
-  const { currentTrack, isPlaying, toggleTrack, queueNext, queueReleaseNext } = useMusicPlayer();
+  const { currentTrack, duration, isPlaying, toggleTrack, queueNext, queueReleaseNext } = useMusicPlayer();
   const exchangeRates = useExchangeRates();
   const viewerMarket = useViewerMarket();
   const { openContextMenu } = useContextMenu();
@@ -100,6 +101,7 @@ function ProductStoreDetail({
     : { href: backHref ?? '/', label: backLabel ?? 'Home' });
 
   useEffect(() => {
+    let active = true;
     async function fetchProduct() {
       setLoading(true);
       setTracks([]);
@@ -111,6 +113,7 @@ function ProductStoreDetail({
       setSelectedMerchColor(null);
       setSelectedMerchImageIndex(0);
       const data = await getCatalogItem(identifier);
+      if (!active) return;
 
       setProduct(data);
 
@@ -126,42 +129,40 @@ function ProductStoreDetail({
       }
 
       if (data) {
-        if (getProductExperience(data) === 'physical') {
-          const [variants, images] = await Promise.all([
-            listActiveMerchVariants(data.id, data.title).catch(() => []),
-            listPublicMerchImages(data.id).catch(() => []),
-          ]);
+        const experience = getProductExperience(data);
+        const showTracks = releasePage || experience === 'music';
+        if (showTracks) {
+          void listReleaseCreatorVideos(data.id)
+            .then(rows => { if (active) setVideos(rows); })
+            .catch(() => undefined);
+        }
+        const [variants, images, beatSummaries, trackRows, nativeContent] = await Promise.all([
+          experience === 'physical' ? listActiveMerchVariants(data.id, data.title).catch(() => []) : [],
+          experience === 'physical' ? listPublicMerchImages(data.id).catch(() => []) : [],
+          beatReviewSurfacesEnabled ? loadBeatCatalogSummaries([data.id]) : null,
+          showTracks ? listPlayableItemTracks(data.id) : [],
+          ['book', 'asset'].includes(experience) ? getPublicNativeContent(data.id) : null,
+        ]);
+        if (!active) return;
+        if (experience === 'physical') {
           setMerchVariants(variants);
           setMerchImages(images);
           const firstSelectable = variants.find(variant => variant.selectable) ?? null;
           setSelectedMerchColor(firstSelectable?.option_values.color ?? null);
           setSelectedMerchVariantId(variants.some(variant => variant.option_values.size) ? null : firstSelectable?.id ?? null);
         }
-        if (beatReviewSurfacesEnabled) {
-          const beatSummaries = await loadBeatCatalogSummaries([data.id]);
-          data.beat = beatSummaries.get(data.id);
-          setProduct({ ...data });
-        }
-        if (releasePage || getProductExperience(data) === 'music') {
-          const [trackRows, attachedVideos] = await Promise.all([
-            listPlayableItemTracks(data.id),
-            listReleaseCreatorVideos(data.id),
-          ]);
-          setTracks(trackRows.sort((a, b) => trackOrder(a) - trackOrder(b)));
-          setVideos(attachedVideos);
-        }
-
-        if (['book', 'asset'].includes(getProductExperience(data))) {
-          const nativeContent = await getPublicNativeContent(data.id);
-          setSampleFiles(nativeContent.samples);
-        }
+        if (beatSummaries) setProduct({ ...data, beat: beatSummaries.get(data.id) });
+        setTracks(trackRows.sort((a, b) => trackOrder(a) - trackOrder(b)));
+        if (nativeContent) setSampleFiles(nativeContent.samples);
       }
       setLoading(false);
     }
     void fetchProduct().catch(() => {
+      if (!active) return;
       setProduct(null);
       setLoading(false);
     });
+    return () => { active = false; };
   }, [identifier, legacyRedirect, merchPage, releasePage, router]);
 
   useEffect(() => {
@@ -274,32 +275,17 @@ function ProductStoreDetail({
     : merchVariants;
 
   useEffect(() => {
-    const missingDurationTracks = tracks.filter(track => track.audio_url && (!track.duration_seconds || track.duration_seconds <= 0));
-    if (missingDurationTracks.length === 0) return;
+    const trackId = currentTrack?.id;
+    if (!trackId || !Number.isFinite(duration) || duration <= 0) return;
+    if (!tracks.some(track => track.id === trackId && !track.duration_seconds)) return;
 
-    let alive = true;
-    const audioElements = missingDurationTracks.map(track => {
-      const audio = new Audio();
-      audio.preload = 'metadata';
-      audio.src = track.audio_url!;
-      audio.addEventListener('loadedmetadata', () => {
-        if (!alive || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
-        setInferredTrackDurations(current => ({
-          ...current,
-          [track.id]: Math.round(audio.duration),
-        }));
-      });
-      return audio;
+    const seconds = Math.round(duration);
+    void Promise.resolve().then(() => {
+      setInferredTrackDurations(current => current[trackId] === seconds
+        ? current
+        : { ...current, [trackId]: seconds });
     });
-
-    return () => {
-      alive = false;
-      audioElements.forEach(audio => {
-        audio.removeAttribute('src');
-        audio.load();
-      });
-    };
-  }, [tracks]);
+  }, [currentTrack?.id, duration, tracks]);
 
   const openPlaylistPicker = useCallback((trackId?: string) => {
     if (!user) {
@@ -423,7 +409,7 @@ function ProductStoreDetail({
     {playlistTrackId && user ? <PlaylistPicker userId={user.id} trackId={playlistTrackId} onClose={() => setPlaylistTrackId(null)} /> : null}
     <div
       className="view-detail-single store-item-detail-page"
-      style={pageArtwork ? { '--release-artwork': `url(${pageArtwork})` } as CSSProperties : undefined}
+      style={pageArtwork ? { '--release-artwork': artworkBackdrop(pageArtwork) } as CSSProperties : undefined}
     >
 
       <ProductDetailHeader

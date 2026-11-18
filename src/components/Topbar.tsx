@@ -818,6 +818,8 @@ export function Topbar() {
         </div>
       </div>
       <MobileSearchOverlay
+        key={userId ?? 'guest'}
+        viewerId={userId}
         open={mobileSearchOpen}
         value={searchDraft}
         onValueChange={setSearchDraft}

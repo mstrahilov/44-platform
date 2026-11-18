@@ -18,8 +18,14 @@ import { PlaylistPicker } from '@/components/PlaylistPicker';
 import { ItemCommunitySection, MoreFromCreatorSection } from '@/components/ItemDetailSections';
 
 export function LibraryMusicRelease({ itemId }: { itemId: string }) {
-  const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  if (authLoading) return <CenteredMessage status>Loading saved album…</CenteredMessage>;
+  if (!user) return <CenteredMessage status>Sign in to view your Music Library.</CenteredMessage>;
+  return <SavedAlbum key={`${user.id}:${itemId}`} itemId={itemId} userId={user.id} />;
+}
+
+function SavedAlbum({ itemId, userId }: { itemId: string; userId: string }) {
+  const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
   const [tracks, setTracks] = useState<SavedMusicTrack[]>([]);
   const [achievements, setAchievements] = useState<ProductAchievement[]>([]);
@@ -33,39 +39,37 @@ export function LibraryMusicRelease({ itemId }: { itemId: string }) {
   useTopbarBack({ href: '/library/music', label: 'Music' });
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!user) return;
     let live = true;
     let redirecting = false;
     void (async () => {
-      const release = await getCatalogItem(itemId);
-      let saved: SavedMusicTrack[];
-      try {
-        saved = await listSavedMusicTracks(user.id, itemId);
-      } catch (reason) {
+      const releasePromise = getCatalogItem(itemId);
+      const savedPromise = listSavedMusicTracks(userId, itemId).catch(async reason => {
         if (!isSavedMusicContractMissing(reason)) throw reason;
-        const legacy = (await listVisibleLibraryItems(user.id)).find(row => row.item_id === itemId && row.products);
+        const legacy = (await listVisibleLibraryItems(userId)).find(row => row.item_id === itemId && row.products);
         if (!legacy?.products) throw reason;
-        redirecting = true;
-        router.replace(productLibraryHref(legacy.products, legacy.id));
-        return;
-      }
-      if (!live) return;
-      const [achievementBundle, releaseVisuals] = await Promise.all([
-        getMusicAchievementBundle(user.id, itemId),
-        listReleaseCreatorVideos(itemId),
-      ]);
-      if (!live) return;
+        if (live) {
+          redirecting = true;
+          router.replace(productLibraryHref(legacy.products, legacy.id));
+        }
+        return null;
+      });
+      void getMusicAchievementBundle(userId, itemId).then(achievementBundle => {
+        if (!live) return;
+        setAchievements(achievementBundle.achievements);
+        setUnlockedAchievementIds(new Set(achievementBundle.unlockedAchievements.map(row => row.achievement_id)));
+      }).catch(() => undefined);
+      void listReleaseCreatorVideos(itemId).then(releaseVisuals => {
+        if (live) setVisuals(releaseVisuals);
+      }).catch(() => undefined);
+      const [release, saved] = await Promise.all([releasePromise, savedPromise]);
+      if (!live || !saved) return;
       setProduct(release);
       setTracks(saved.sort((a, b) => a.number - b.number));
-      setAchievements(achievementBundle.achievements);
-      setUnlockedAchievementIds(new Set(achievementBundle.unlockedAchievements.map(row => row.achievement_id)));
-      setVisuals(releaseVisuals);
     })()
       .catch(reason => { if (live) setError(reason instanceof Error ? reason.message : 'Could not load this album.'); })
       .finally(() => { if (live && !redirecting) setLoading(false); });
     return () => { live = false; };
-  }, [authLoading, itemId, router, user]);
+  }, [itemId, router, userId]);
 
   const queue = useMemo<MusicQueueTrack[]>(() => tracks.filter(track => track.audio_url).map(track => ({
     id: track.track_id,
@@ -101,13 +105,12 @@ export function LibraryMusicRelease({ itemId }: { itemId: string }) {
     { id: 'remove-album', label: 'Remove from Library', onSelect: () => { void removeRelease(); }, disabled: saving },
   ] : undefined, [product, queue, queueReleaseNext, removeRelease, router, saving]));
 
-  if (authLoading || (user && loading)) return <CenteredMessage status>Loading saved album…</CenteredMessage>;
-  if (!user) return <CenteredMessage status>Sign in to view your Music Library.</CenteredMessage>;
+  if (loading) return <CenteredMessage status>Loading saved album…</CenteredMessage>;
   if (error && !product) return <CenteredMessage status>{error}</CenteredMessage>;
   if (!product || !tracks.length) return <CenteredMessage status>This album is no longer in your Music Library.</CenteredMessage>;
 
   return <main className="view-detail-single library-detail-page library-music-release">
-    {playlistTrackId ? <PlaylistPicker userId={user.id} trackId={playlistTrackId} onClose={() => setPlaylistTrackId(null)} /> : null}
+    {playlistTrackId ? <PlaylistPicker userId={userId} trackId={playlistTrackId} onClose={() => setPlaylistTrackId(null)} /> : null}
     <ProductDetailHeader
       product={product}
       creatorName={product.creators?.display_name || product.creator || '44 Creator'}

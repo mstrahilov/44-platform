@@ -33,18 +33,18 @@ function AccountIcon({ name }: { name: YouLink['icon'] }) {
 
 const INITIAL_STATE: AccountOverview = {
   profile: null,
-  hasOrders: false,
 };
 
 export function YouApp() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const userId = user?.id;
   const [state, setState] = useState<AccountOverview>(INITIAL_STATE);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) {
+    if (!userId) {
       Promise.resolve().then(() => {
         setState(INITIAL_STATE);
         setLoading(false);
@@ -53,17 +53,20 @@ export function YouApp() {
     }
 
     let active = true;
-    const userId = user.id;
     void loadAccountOverview(userId).then(nextState => {
       if (!active) return;
       setState(nextState);
+      setLoading(false);
+    }).catch(() => {
+      if (!active) return;
+      setState(INITIAL_STATE);
       setLoading(false);
     });
 
     return () => {
       active = false;
     };
-  }, [authLoading, user]);
+  }, [authLoading, userId]);
 
   if (authLoading || loading) {
     return <PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading Account" /></PageShell>;
@@ -79,7 +82,7 @@ export function YouApp() {
     );
   }
 
-  const { profile } = state;
+  const profile = state.profile?.id === userId ? state.profile : null;
   const username = profile?.username || '';
   const displayName = profile?.display_name?.trim() || username || 'there';
   const profileHref = username ? `/profile/${username}` : '/profile';

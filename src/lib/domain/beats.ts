@@ -83,40 +83,23 @@ export async function loadBeatCatalogSummaries(itemIds: string[]) {
   const summaries = new Map<string, BeatCatalogSummary>();
   if (!beatReviewSurfacesEnabled || itemIds.length === 0) return summaries;
 
-  const [detailsResult, attributeResult, termResult, offerResult] = await Promise.all([
-    supabase.from('beat_details').select('*').in('item_id', itemIds),
-    supabase.from('beat_attribute_assignments').select('*').in('item_id', itemIds),
-    supabase.from('beat_attribute_terms').select('*').eq('is_active', true),
-    supabase.from('catalog_offers').select('*').in('item_id', itemIds).eq('offer_type', 'beat_license').neq('status', 'archived'),
+  const [detailsResult, offerResult] = await Promise.all([
+    supabase.from('beat_details')
+      .select('item_id,preview_track_id,bpm,key_root,key_mode,key_not_applicable,time_signature,sample_status,sample_disclosure,sale_status,attributes:beat_attribute_assignments(term:beat_attribute_terms(attribute_kind,label))')
+      .in('item_id', itemIds)
+      .eq('attributes.term.is_active', true),
+    supabase.from('catalog_offers')
+      .select('id,item_id,price_cents,currency,status,license:beat_license_offers(template:beat_license_templates(tier_code,title,short_summary,included_file_kinds,is_exclusive,terms_text,terms_sha256))')
+      .in('item_id', itemIds)
+      .eq('offer_type', 'beat_license')
+      .neq('status', 'archived'),
   ]);
-  const firstError = detailsResult.error || attributeResult.error || termResult.error || offerResult.error;
+  const firstError = detailsResult.error || offerResult.error;
   if (firstError) throw firstError;
 
-  const offers = offerResult.data ?? [];
-  const offerIds = offers.map(offer => offer.id);
-  const mappingResult = offerIds.length
-    ? await supabase.from('beat_license_offers').select('*').in('offer_id', offerIds)
-    : { data: [], error: null };
-  if (mappingResult.error) throw mappingResult.error;
-  const mappings = mappingResult.data ?? [];
-  const templateIds = Array.from(new Set(mappings.map(mapping => mapping.template_id)));
-  const templateResult = templateIds.length
-    ? await supabase.from('beat_license_templates').select('*').in('id', templateIds)
-    : { data: [], error: null };
-  if (templateResult.error) throw templateResult.error;
-
-  const termsById = new Map((termResult.data ?? []).map(term => [term.id, term]));
-  const attributesByItem = new Map<string, BeatAttributeTerm[]>();
-  (attributeResult.data ?? []).forEach(assignment => {
-    const term = termsById.get(assignment.term_id);
-    if (term) attributesByItem.set(assignment.item_id, [...(attributesByItem.get(assignment.item_id) ?? []), term]);
-  });
-  const mappingByOffer = new Map(mappings.map(mapping => [mapping.offer_id, mapping]));
-  const templateById = new Map((templateResult.data ?? []).map(template => [template.id, template]));
   const offersByItem = new Map<string, BeatLicenseOfferSummary[]>();
-  offers.forEach(offer => {
-    const mapping = mappingByOffer.get(offer.id);
-    const template = mapping ? templateById.get(mapping.template_id) : null;
+  (offerResult.data ?? []).forEach(offer => {
+    const template = offer.license?.template;
     if (!template) return;
     const summary: BeatLicenseOfferSummary = {
       id: offer.id,
@@ -135,7 +118,7 @@ export async function loadBeatCatalogSummaries(itemIds: string[]) {
   });
 
   (detailsResult.data ?? []).forEach(details => {
-    const attributes = attributesByItem.get(details.item_id) ?? [];
+    const attributes = details.attributes.flatMap(({ term }) => term ? [term] : []);
     const licenseOffers = (offersByItem.get(details.item_id) ?? []).sort((left, right) => (
       ['basic', 'premium', 'trackout'].indexOf(left.tierCode)
       - ['basic', 'premium', 'trackout'].indexOf(right.tierCode)

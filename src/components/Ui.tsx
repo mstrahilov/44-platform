@@ -14,6 +14,7 @@ import { saveItemToLibrary } from '@/lib/domain/itemDetails';
 import { Ui44SectionArrow } from '@/components/ui44/Controls';
 import { Ui44Text } from '@/components/ui44/Typography';
 import { useTopbarTitle } from '@/components/TopbarContext';
+import { CATALOG_ARTWORK_SIZES, PublicArtwork } from '@/components/PublicArtwork';
 
 export function PageShell({ children }: { children: ReactNode }) {
   return <div className="view-hub">{children}</div>;
@@ -111,10 +112,7 @@ export function ProductCard({ product, owned: ownedProp }: { product: Product; o
       onContextMenu={event => openContextMenu(event, entries)}
     >
       <div className={`product-tile-art product-tile-art-${shape} ui44-catalog-art`}>
-        {image && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" loading="lazy" decoding="async" />
-        )}
+        {image && <PublicArtwork src={image} alt="" sizes={CATALOG_ARTWORK_SIZES} />}
       </div>
       <div className="product-tile-info ui44-catalog-copy">
         <div className="product-tile-title ui44-catalog-title">{product.title}</div>

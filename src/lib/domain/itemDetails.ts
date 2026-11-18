@@ -125,17 +125,17 @@ export async function getCatalogItem(identifier: string) {
   if (result.error) throw result.error;
   const item = result.data as Product | null;
   if (!item) return null;
-  const [categoryResult, typeAssignmentResult, tagAssignmentResult] = await Promise.all([
+  const [categoryResult, typeAssignmentResult, tagAssignmentResult, [hydratedItem]] = await Promise.all([
     item.item_category_id
       ? supabase.from('item_categories').select('id,name,slug').eq('id', item.item_category_id).maybeSingle()
       : Promise.resolve({ data: null, error: null }),
     supabase.from('item_type_assignments').select('item_types(*)').eq('item_id', item.id).maybeSingle(),
     supabase.from('item_tag_assignments').select('item_tags(*)').eq('item_id', item.id),
+    hydratePaidSalesStatus([item]),
   ]);
   const taxonomyError = categoryResult.error || typeAssignmentResult.error || tagAssignmentResult.error;
   if (taxonomyError) throw taxonomyError;
   const typeRow = typeAssignmentResult.data?.item_types;
-  const [hydratedItem] = await hydratePaidSalesStatus([item]);
   return {
     ...hydratedItem,
     browse_category: categoryResult.data ? { id: categoryResult.data.id, label: categoryResult.data.name, slug: categoryResult.data.slug } : null,

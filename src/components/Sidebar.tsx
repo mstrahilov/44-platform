@@ -28,6 +28,7 @@ import {
   type PinnedDockItem,
 } from '@/lib/dockPreferences';
 import { useContextMenu, type ContextMenuEntry } from '@/components/ContextMenu';
+import { PublicArtwork } from '@/components/PublicArtwork';
 
 const RESIZE_STEP = 16;
 const EXPAND_DRAG_DISTANCE = 12;
@@ -101,8 +102,7 @@ function SidebarAccountItem({ profile, active, compact }: { profile: StudioProfi
     >
       <span className="sidebar-account-avatar" aria-hidden="true">
         {profile?.avatar_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={profile.avatar_url} alt="" />
+          <PublicArtwork src={profile.avatar_url} alt="" sizes="40px" />
         ) : <span className="os-icon os-icon-user" />}
       </span>
       <span className="sidebar-item-label">{label}</span>
@@ -189,16 +189,11 @@ export default function Sidebar() {
   }, []);
 
   useEffect(() => {
-    router.prefetch('/radio');
-    router.prefetch('/you');
-
     let cancelled = false;
     const warmPrimaryDestinations = () => {
       if (cancelled) return;
-      void import('@/lib/radio').then(module => module.preloadRadioBundle());
-      if (user?.id) {
-        void import('@/lib/domain/accountOverview').then(module => module.preloadAccountOverview(user.id));
-      }
+      router.prefetch('/radio');
+      router.prefetch('/you');
     };
     const idleId = window.requestIdleCallback
       ? window.requestIdleCallback(warmPrimaryDestinations, { timeout: 3_000 })
@@ -209,7 +204,7 @@ export default function Sidebar() {
       if (window.cancelIdleCallback) window.cancelIdleCallback(idleId);
       else window.clearTimeout(idleId);
     };
-  }, [router, user?.id]);
+  }, [router]);
 
   function expandSidebar(nextWidth = width) {
     setSidebarWidth(nextWidth);
@@ -290,15 +285,23 @@ export default function Sidebar() {
     }
   }
 
+  const userId = user?.id;
   useEffect(() => {
-    if (!user) { Promise.resolve().then(() => setProfile(null)); return; }
-    loadStudioProfile(user.id).then(r => setProfile(r.profile));
-  }, [user]);
+    if (!userId) return;
+    let active = true;
+    void loadStudioProfile(userId).then(result => {
+      if (active) setProfile(result.profile);
+    }).catch(() => {
+      if (active) setProfile(null);
+    });
+    return () => { active = false; };
+  }, [userId]);
 
+  const activeProfile = userId && profile?.id === userId ? profile : null;
   const availableApps = getAvailableDockApps({
     signedIn: Boolean(user),
-    isCreator: isCreatorProfile(profile),
-    isAdmin: profile?.role === 'admin',
+    isCreator: isCreatorProfile(activeProfile),
+    isAdmin: activeProfile?.role === 'admin',
   });
   const dockApps = availableApps;
   const activePinnedItem = pinnedItems.find(item => isPinnedDockItemActive(pathname, item.href));
@@ -359,7 +362,7 @@ export default function Sidebar() {
         {user && accountApp && (
           <>
             <div className="sidebar-divider" />
-            <SidebarAccountItem profile={profile} active={mainActiveAppId === accountApp.id} compact={compact} />
+            <SidebarAccountItem profile={activeProfile} active={mainActiveAppId === accountApp.id} compact={compact} />
           </>
         )}
 

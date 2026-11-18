@@ -16,31 +16,6 @@ import { Ui44TextInput } from '@/components/ui44/Inputs';
 import { searchSupportArticles, supportArticleHref } from '@/lib/supportArticles';
 import { listVisibleLibraryItemIds } from '@/lib/domain/library';
 
-type SearchIndex = {
-  products: Product[];
-  posts: SocialPost[];
-  profiles: SearchProfile[];
-  replies: ReplyEngagerRow[];
-  likes: LikeRow[];
-};
-
-let searchIndexCache: SearchIndex | null = null;
-let searchIndexRequest: Promise<SearchIndex> | null = null;
-
-function loadSearchIndex() {
-  if (searchIndexCache) return Promise.resolve(searchIndexCache);
-  if (searchIndexRequest) return searchIndexRequest;
-
-  searchIndexRequest = loadPlatformSearchIndex().then(index => {
-    searchIndexCache = index;
-    return index;
-  }).finally(() => {
-    searchIndexRequest = null;
-  });
-
-  return searchIndexRequest;
-}
-
 export default function SearchPage() {
   return (
     <Suspense fallback={<PageShell><EmptyMessage status>Searching...</EmptyMessage></PageShell>}>
@@ -50,11 +25,17 @@ export default function SearchPage() {
 }
 
 function SearchContent() {
+  const { user, loading } = useAuth();
+  return <SearchResults key={user?.id ?? 'guest'} user={user} authLoading={loading} />;
+}
+
+function SearchResults({ user, authLoading }: { user: ReturnType<typeof useAuth>['user']; authLoading: boolean }) {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const query = searchParams.get('q')?.trim() ?? '';
   const memberScope = searchParams.get('scope') === 'members';
+  const hasSearch = Boolean(query || memberScope);
   const [draft, setDraft] = useState(query);
   const [products, setProducts] = useState<Product[]>([]);
   const [posts, setPosts] = useState<SocialPost[]>([]);
@@ -62,32 +43,32 @@ function SearchContent() {
   const [replies, setReplies] = useState<ReplyEngagerRow[]>([]);
   const [likes, setLikes] = useState<LikeRow[]>([]);
   const [likingId, setLikingId] = useState('');
-  const [loading, setLoading] = useState(Boolean(query || memberScope));
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [ownedProductIds, setOwnedProductIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
+    if (!hasSearch || authLoading) return;
     let alive = true;
-    if (!query && !memberScope) {
-      Promise.resolve().then(() => {
-        if (alive) setLoading(false);
-      });
-      return () => { alive = false; };
-    }
 
     void Promise.resolve().then(async () => {
       if (!alive) return;
       setLoading(true);
-      const index = await loadSearchIndex();
+      setLoadError(false);
+      const index = await loadPlatformSearchIndex(userId);
       if (!alive) return;
       setProducts(index.products);
       setPosts(index.posts);
       setProfiles(index.profiles);
       setReplies(index.replies);
       setLikes(index.likes);
-      setLoading(false);
+    }).catch(() => {
+      if (alive) setLoadError(true);
+    }).finally(() => {
+      if (alive) setLoading(false);
     });
     return () => { alive = false; };
-  }, [memberScope, query]);
+  }, [authLoading, hasSearch, userId]);
 
   useEffect(() => {
     Promise.resolve().then(() => setDraft(query));
@@ -176,10 +157,12 @@ function SearchContent() {
           />
         </form>
 
-        {loading ? (
-          <EmptyMessage status>Searching...</EmptyMessage>
-        ) : !query && !memberScope ? (
+        {!hasSearch ? (
           <EmptyMessage>Enter any term to start a search.</EmptyMessage>
+        ) : authLoading || loading ? (
+          <EmptyMessage status>Searching...</EmptyMessage>
+        ) : loadError ? (
+          <EmptyMessage>Could not load search results.</EmptyMessage>
         ) : !hasResults ? (
           <EmptyMessage>No results found.</EmptyMessage>
         ) : (

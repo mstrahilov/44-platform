@@ -12,7 +12,7 @@ export function PlaylistPicker({ userId, trackId, releaseItemId, onClose }: { us
   const [error, setError] = useState('');
 
   useEffect(() => {
-    void listPlaylists(userId).then(setPlaylists).catch(errorValue => setError(errorValue instanceof Error ? errorValue.message : 'Could not load playlists.')).finally(() => setLoading(false));
+    void listPlaylists(userId, { includeArtwork: false }).then(setPlaylists).catch(errorValue => setError(errorValue instanceof Error ? errorValue.message : 'Could not load playlists.')).finally(() => setLoading(false));
   }, [userId]);
 
   async function add(playlistId?: string) {

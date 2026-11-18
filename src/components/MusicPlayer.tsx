@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
 import { recordItemPlay } from '@/lib/domain/playAnalytics';
 import { Ui44RangeInput } from '@/components/ui44/Inputs';
+import { DETAIL_ARTWORK_SIZES, PublicArtwork } from '@/components/PublicArtwork';
 
 export type MusicQueueTrack = {
   id: string;
@@ -36,7 +37,8 @@ type MusicPlayerContextValue = {
   currentTrack: MusicQueueTrack | null;
   currentIndex: number;
   isPlaying: boolean;
-  currentTime: number;
+  isBuffering: boolean;
+  position: PlaybackPosition;
   duration: number;
   volume: number;
   muted: boolean;
@@ -79,6 +81,29 @@ type StoredPlayerState = {
 const MusicPlayerContext = createContext<MusicPlayerContextValue | null>(null);
 const MUSIC_PLAYER_STORAGE_KEY = '44-music-player-state';
 const MUSIC_PLAYER_WINDOW_STATE_PREFIX = '44-music-player-state:';
+
+type PlaybackPosition = ReturnType<typeof createPlaybackPosition>;
+
+function createPlaybackPosition() {
+  let currentTime = 0;
+  const listeners = new Set<() => void>();
+  return {
+    getSnapshot: () => currentTime,
+    subscribe(listener: () => void) {
+      listeners.add(listener);
+      return () => { listeners.delete(listener); };
+    },
+    set(seconds: number) {
+      if (currentTime === seconds) return;
+      currentTime = seconds;
+      listeners.forEach(listener => listener());
+    },
+  };
+}
+
+function initialPlaybackTime() {
+  return 0;
+}
 
 function getBrowserStorage(kind: 'sessionStorage' | 'localStorage') {
   if (typeof window === 'undefined') return null;
@@ -189,11 +214,10 @@ function audioHasSource(audio: HTMLAudioElement, url: string) {
   return Boolean(expected && (normalizeMediaUrl(audio.currentSrc) === expected || normalizeMediaUrl(audio.src) === expected));
 }
 
-function resetAudioSource(audio: HTMLAudioElement, url: string) {
+function resetAudioSource(audio: HTMLAudioElement, url: string, preload: 'auto' | 'metadata' = 'metadata') {
   audio.pause();
+  audio.preload = preload;
   audio.src = url;
-  audio.preload = 'metadata';
-  audio.load();
 }
 
 function restoreAudioPosition(audio: HTMLAudioElement, time: number) {
@@ -258,7 +282,8 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
   const [queue, setQueue] = useState<MusicQueueTrack[]>([]);
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
+  const [isBuffering, setIsBuffering] = useState(false);
+  const [position] = useState(createPlaybackPosition);
   const [duration, setDuration] = useState(0);
   const [volume, setVolumeState] = useState(1);
   const [muted, setMuted] = useState(false);
@@ -274,10 +299,14 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     audio.preload = 'metadata';
     audio.volume = 1;
     audio.muted = false;
-    const handleTimeUpdate = () => setCurrentTime(audio.currentTime || 0);
+    const handleTimeUpdate = () => position.set(audio.currentTime || 0);
     const handleDurationChange = () => setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
-    const handlePlay = () => {
-      setIsPlaying(true);
+    const handlePlay = () => setIsPlaying(true);
+    const handleWaiting = () => {
+      if (!audio.paused) setIsBuffering(true);
+    };
+    const handlePlaying = () => {
+      setIsBuffering(false);
       const pendingEvent = pendingStartEventRef.current;
       if (pendingEvent) {
         pendingStartEventRef.current = null;
@@ -301,9 +330,14 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
         }
       }
     };
-    const handlePause = () => setIsPlaying(false);
+    const handlePause = () => {
+      if (!audio.paused) return;
+      setIsPlaying(false);
+      setIsBuffering(false);
+    };
     const handleError = () => {
       setIsPlaying(false);
+      setIsBuffering(false);
       sourceNeedsRefreshRef.current = true;
       setPlaybackError('Playback was interrupted. Tap play to reconnect.');
     };
@@ -322,12 +356,15 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
         return;
       }
       setIsPlaying(false);
+      setIsBuffering(false);
     };
 
     audio.addEventListener('timeupdate', handleTimeUpdate);
     audio.addEventListener('durationchange', handleDurationChange);
     audio.addEventListener('loadedmetadata', handleDurationChange);
     audio.addEventListener('play', handlePlay);
+    audio.addEventListener('waiting', handleWaiting);
+    audio.addEventListener('playing', handlePlaying);
     audio.addEventListener('pause', handlePause);
     audio.addEventListener('error', handleError);
     audio.addEventListener('ended', handleEnded);
@@ -338,11 +375,13 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       audio.removeEventListener('durationchange', handleDurationChange);
       audio.removeEventListener('loadedmetadata', handleDurationChange);
       audio.removeEventListener('play', handlePlay);
+      audio.removeEventListener('waiting', handleWaiting);
+      audio.removeEventListener('playing', handlePlaying);
       audio.removeEventListener('pause', handlePause);
       audio.removeEventListener('error', handleError);
       audio.removeEventListener('ended', handleEnded);
     };
-  }, []);
+  }, [position]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -365,7 +404,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
         restoreTimeRef.current = Math.max(0, parsed.currentTime || 0);
         setQueue(playable);
         setCurrentIndex(nextIndex);
-        setCurrentTime(restoreTimeRef.current);
+        position.set(restoreTimeRef.current);
         setDuration(playable[nextIndex]?.durationSeconds ?? 0);
         setVolumeState(Math.max(0, Math.min(1, parsed.volume)));
         setMuted(parsed.muted);
@@ -378,7 +417,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     }, 0);
 
     return () => window.clearTimeout(restoreTimer);
-  }, []);
+  }, [position]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof document === 'undefined') return;
@@ -438,11 +477,11 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
         restoreAudioPosition(audio, restoredTime);
         restoreTimeRef.current = null;
       } else {
-        setCurrentTime(0);
+        position.set(0);
       }
     }
 
-  }, [currentTrack, muted, volume]);
+  }, [currentTrack, muted, position, volume]);
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -466,18 +505,17 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       lastPersistedAtRef.current = -1;
       return;
     }
-    const state: StoredPlayerState = {
-      queue,
-      currentIndex,
-      currentTime,
-      volume,
-      muted,
-    };
-    const now = Date.now();
-    if (isPlaying && currentTime > 0 && now - lastPersistedAtRef.current < 1000) return;
-    lastPersistedAtRef.current = now;
-    writeStoredPlayerState(state);
-  }, [currentIndex, currentTime, currentTrack, hasRestoredState, isPlaying, muted, queue, volume]);
+    function persistPosition() {
+      if (queueRef.current !== queue || currentIndexRef.current !== currentIndex) return;
+      const currentTime = position.getSnapshot();
+      const now = Date.now();
+      if (isPlaying && currentTime > 0 && now - lastPersistedAtRef.current < 1000) return;
+      lastPersistedAtRef.current = now;
+      writeStoredPlayerState({ queue, currentIndex, currentTime, volume, muted });
+    }
+    persistPosition();
+    return position.subscribe(persistPosition);
+  }, [currentIndex, currentTrack, hasRestoredState, isPlaying, muted, position, queue, volume]);
 
   useEffect(() => {
     if (typeof navigator === 'undefined' || !('mediaSession' in navigator) || !currentTrack) return;
@@ -541,44 +579,47 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       || !currentTrack
     ) return;
 
-    const audio = audioRef.current;
-    const effectiveDuration = audio && Number.isFinite(audio.duration) && audio.duration > 0
-      ? audio.duration
-      : duration || currentTrack.durationSeconds || 0;
-    if (!Number.isFinite(effectiveDuration) || effectiveDuration <= 0) return;
+    const trackDuration = currentTrack.durationSeconds;
+    function updatePosition() {
+      const audio = audioRef.current;
+      const effectiveDuration = audio && Number.isFinite(audio.duration) && audio.duration > 0
+        ? audio.duration
+        : duration || trackDuration || 0;
+      if (!Number.isFinite(effectiveDuration) || effectiveDuration <= 0) return;
 
-    const effectivePosition = Math.max(
-      0,
-      Math.min(audio?.currentTime || currentTime, effectiveDuration),
-    );
-    try {
-      navigator.mediaSession.setPositionState({
-        duration: effectiveDuration,
-        playbackRate: audio?.playbackRate || 1,
-        position: effectivePosition,
-      });
-    } catch {
-      // WebKit can reject position updates while a media source is changing.
+      const effectivePosition = Math.max(0, Math.min(position.getSnapshot(), effectiveDuration));
+      try {
+        navigator.mediaSession.setPositionState({
+          duration: effectiveDuration,
+          playbackRate: audio?.playbackRate || 1,
+          position: effectivePosition,
+        });
+      } catch {
+        // WebKit can reject position updates while a media source is changing.
+      }
     }
-  }, [currentTime, currentTrack, duration]);
+    updatePosition();
+    return position.subscribe(updatePosition);
+  }, [currentTrack, duration, position]);
 
   function setExpanded(nextExpanded: boolean) {
     setExpandedState(Boolean(currentTrack) && nextExpanded);
   }
 
-  async function requestPlayback(audio: HTMLAudioElement, audioUrl: string, forceRefresh = false) {
+  async function requestPlayback(audio: HTMLAudioElement, audioUrl: string, startTimeSeconds?: number) {
     const attempt = ++playAttemptRef.current;
     const alreadyLoaded = audioHasSource(audio, audioUrl);
-    const resumeAt = alreadyLoaded ? audio.currentTime : 0;
-    const needsRefresh = forceRefresh || sourceNeedsRefreshRef.current || !alreadyLoaded || shouldRecoverAudio(audio);
+    const resumeAt = startTimeSeconds ?? (alreadyLoaded ? audio.currentTime : 0);
+    const needsRefresh = startTimeSeconds !== undefined || sourceNeedsRefreshRef.current || !alreadyLoaded || shouldRecoverAudio(audio);
     if (needsRefresh) {
-      resetAudioSource(audio, audioUrl);
+      resetAudioSource(audio, audioUrl, 'auto');
       restoreAudioPosition(audio, resumeAt);
     }
     sourceNeedsRefreshRef.current = false;
     audio.volume = volume;
     audio.muted = muted;
     setPlaybackError('');
+    setIsBuffering(audio.readyState < HTMLMediaElement.HAVE_FUTURE_DATA);
 
     try {
       await audio.play();
@@ -587,18 +628,21 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       if (isInteractionRequiredError(error)) {
         setPlaybackError(getPlaybackErrorMessage(error));
         setIsPlaying(false);
+        setIsBuffering(false);
         return;
       }
       try {
         const retryAt = audio.currentTime || resumeAt;
-        resetAudioSource(audio, audioUrl);
+        resetAudioSource(audio, audioUrl, 'auto');
         restoreAudioPosition(audio, retryAt);
+        setIsBuffering(true);
         await audio.play();
       } catch (retryError) {
         if (attempt !== playAttemptRef.current) return;
         sourceNeedsRefreshRef.current = true;
         setPlaybackError(getPlaybackErrorMessage(retryError));
         setIsPlaying(false);
+        setIsBuffering(false);
       }
     }
   }
@@ -620,15 +664,12 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     const nextTrack = playable[nextIndex];
     const audio = audioRef.current;
     if (!audio) return;
-    resetAudioSource(audio, nextTrack.audioUrl);
-    restoreAudioPosition(audio, startTimeSeconds);
-
     setPlaybackError('');
     queueRef.current = playable;
     currentIndexRef.current = nextIndex;
     setQueue(playable);
     setCurrentIndex(nextIndex);
-    setCurrentTime(startTimeSeconds > 0 ? startTimeSeconds : 0);
+    position.set(startTimeSeconds > 0 ? startTimeSeconds : 0);
     setDuration(nextTrack.durationSeconds ?? 0);
     pendingStartEventRef.current = {
       track: nextTrack,
@@ -637,7 +678,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
       index: nextIndex,
       reason,
     };
-    void requestPlayback(audio, nextTrack.audioUrl);
+    void requestPlayback(audio, nextTrack.audioUrl, startTimeSeconds);
   }
 
   useEffect(() => {
@@ -748,8 +789,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     if (!audio || !currentTrack) return;
 
     if (!audio.paused) {
+      playAttemptRef.current += 1;
       audio.pause();
       setIsPlaying(false);
+      setIsBuffering(false);
       return;
     }
 
@@ -762,8 +805,10 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     if (!activeTrack || activeTrack.playbackMode !== 'radio') return;
 
     if (!audioRef.current?.paused) {
+      playAttemptRef.current += 1;
       audioRef.current?.pause();
       setIsPlaying(false);
+      setIsBuffering(false);
       return;
     }
 
@@ -810,7 +855,7 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     if (!currentQueue.length) return;
     if (audio && audio.currentTime > 3) {
       audio.currentTime = 0;
-      setCurrentTime(0);
+      position.set(0);
       return;
     }
     startTrack(currentQueue, Math.max(0, currentIndexRef.current - 1), 'previous');
@@ -820,11 +865,12 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     const audio = audioRef.current;
     if (!audio) return;
     audio.currentTime = Math.max(0, Math.min(time, duration || 0));
-    setCurrentTime(audio.currentTime);
+    position.set(audio.currentTime);
     setPlaybackError(current => current === 'Tap play to resume.' ? '' : current);
   }
 
   function clear() {
+    playAttemptRef.current += 1;
     const audio = audioRef.current;
     audio?.pause();
     if (audio) removeAudioSource(audio);
@@ -833,7 +879,8 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     setQueue([]);
     setCurrentIndex(-1);
     setIsPlaying(false);
-    setCurrentTime(0);
+    setIsBuffering(false);
+    position.set(0);
     setDuration(0);
     setPlaybackError('');
     setExpandedState(false);
@@ -845,7 +892,8 @@ export function MusicPlayerProvider({ children }: { children: ReactNode }) {
     currentTrack,
     currentIndex,
     isPlaying,
-    currentTime,
+    isBuffering,
+    position,
     duration,
     volume,
     muted,
@@ -911,18 +959,24 @@ export function useMusicPlayer() {
   return context;
 }
 
+export function useMusicPlayerTime() {
+  const { position } = useMusicPlayer();
+  return useSyncExternalStore(position.subscribe, position.getSnapshot, initialPlaybackTime);
+}
+
 function PlayerIcon({ name }: { name: 'play' | 'pause' | 'stop' | 'previous' | 'next' | 'shuffle' | 'queue' | 'volume' | 'muted' | 'chevron' | 'remove' }) {
   return <span className={`music-player-icon music-player-icon-${name}`} aria-hidden="true" />;
 }
 
 export function MusicPlayerBar() {
   const pathname = usePathname();
+  const currentTime = useMusicPlayerTime();
   const {
     currentTrack,
     currentIndex,
     queue,
     isPlaying,
-    currentTime,
+    isBuffering,
     duration,
     volume,
     muted,
@@ -1004,7 +1058,7 @@ export function MusicPlayerBar() {
   const canPlayPrevious = currentIndex > 0;
   const canPlayNext = currentIndex < queue.length - 1;
   const percent = progressPercent(currentTime, effectiveDuration);
-  const compactSubtitle = playbackError || currentTrack.artist;
+  const compactSubtitle = playbackError || (isBuffering ? 'Buffering…' : currentTrack.artist);
   const currentTrackHref = trackHref(currentTrack);
   const showingQueue = queueOpen && !isRadioPlayback;
   const playerClassName = [
@@ -1070,8 +1124,7 @@ export function MusicPlayerBar() {
       >
         <button type="button" className="music-player-art music-player-open-target" onClick={openExpanded} aria-label="Open Now Playing">
           {currentTrack.artworkUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={currentTrack.artworkUrl} alt="" />
+            <PublicArtwork src={currentTrack.artworkUrl} alt="" sizes="56px" fetchPriority="low" />
           ) : (
             <span className="music-player-art-fallback" aria-hidden="true" />
           )}
@@ -1174,14 +1227,12 @@ export function MusicPlayerBar() {
               <div className="music-player-sheet-art">
                 {currentTrack.releaseHref ? <Link href={currentTrack.releaseHref} onClick={minimizeExpanded} aria-label={`Open ${currentTrack.releaseTitle || currentTrack.title}`}>
                   {currentTrack.artworkUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={currentTrack.artworkUrl} alt="" />
+                    <PublicArtwork src={currentTrack.artworkUrl} alt="" sizes={DETAIL_ARTWORK_SIZES} />
                   ) : (
                     <span className="music-player-art-fallback" aria-hidden="true" />
                   )}
                 </Link> : currentTrack.artworkUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={currentTrack.artworkUrl} alt="" />
+                  <PublicArtwork src={currentTrack.artworkUrl} alt="" sizes={DETAIL_ARTWORK_SIZES} />
                 ) : (
                   <span className="music-player-art-fallback" aria-hidden="true" />
                 )}
@@ -1261,8 +1312,7 @@ export function MusicPlayerBar() {
                     <button type="button" className="music-player-queue-play" onClick={() => playQueueIndex(queueIndex)} aria-label={`Play ${track.title}`}>
                       <span className="music-player-queue-art" aria-hidden="true">
                         {track.artworkUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={track.artworkUrl} alt="" />
+                          <PublicArtwork src={track.artworkUrl} alt="" sizes="48px" fetchPriority="low" />
                         ) : null}
                       </span>
                       <span className="music-player-queue-copy">

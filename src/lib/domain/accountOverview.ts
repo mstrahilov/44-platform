@@ -1,9 +1,7 @@
-import { hasCustomerOrders } from '@/lib/domain/customerCommerce';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 
 export type AccountOverview = {
   profile: StudioProfile | null;
-  hasOrders: boolean;
 };
 
 const ACCOUNT_OVERVIEW_TTL_MS = 30_000;
@@ -16,10 +14,10 @@ export function loadAccountOverview(userId: string) {
   const cached = accountOverviewCache.get(userId);
   if (cached && cached.expiresAt > Date.now()) return cached.promise;
 
-  const promise = Promise.all([
-    loadStudioProfile(userId).then(result => result.profile).catch(() => null),
-    hasCustomerOrders(userId).catch(() => false),
-  ]).then(([profile, hasOrders]) => ({ profile, hasOrders }));
+  const promise = loadStudioProfile(userId).then(({ profile, error }) => {
+    if (error) throw error;
+    return { profile };
+  });
 
   accountOverviewCache.set(userId, {
     expiresAt: Date.now() + ACCOUNT_OVERVIEW_TTL_MS,
@@ -29,8 +27,4 @@ export function loadAccountOverview(userId: string) {
     if (accountOverviewCache.get(userId)?.promise === promise) accountOverviewCache.delete(userId);
   });
   return promise;
-}
-
-export function preloadAccountOverview(userId: string) {
-  void loadAccountOverview(userId).catch(() => undefined);
 }
