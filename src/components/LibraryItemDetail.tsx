@@ -8,7 +8,7 @@ import { productBrowseHref, productLibraryHref } from '@/lib/experience';
 import { getProductLibraryContent, getProductLibraryPrimaryAction, getProductRuntimeKind } from '@/lib/libraryContent';
 import { creatorHref, type ProductAchievement, type Track } from '@/lib/platform';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
-import { LibraryAchievementsSection, LibraryBonusContentSection, LibraryFilesSection, LibraryVideoEmbedsSection, ProductDetailHeader, withSourceProduct, type LibraryBonusAsset, type LibraryFileAsset, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
+import { LibraryAchievementsSection, LibraryBonusContentSection, LibraryFilesSection, LibraryVideosSection, ProductDetailHeader, withSourceProduct, type LibraryBonusAsset, type LibraryFileAsset, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
 import { ProductUpdatesSection } from '@/components/ProductUpdatesSection';
 import { recordAchievementPlaybackSignal, trackProductAchievementTrigger } from '@/lib/achievementTracking';
 import { useTopbarBack, useTopbarOverflow } from '@/components/TopbarContext';
@@ -16,7 +16,7 @@ import { MUSIC_TRACK_COMPLETED_EVENT, MUSIC_TRACK_STARTED_EVENT, useMusicPlayer,
 import { OS44Button } from '@/components/OS44Button';
 import { ItemCommunitySection, MoreFromCreatorSection } from '@/components/ItemDetailSections';
 import { getLibraryItemBundle, type DetailedLibraryItemRow } from '@/lib/domain/itemDetails';
-import type { ReleaseVideoEmbed } from '@/lib/domain/releaseFeatures';
+import type { ReleaseCreatorVideo } from '@/lib/domain/releaseFeatures';
 import type { BookContent, SamplePackFile } from '@/lib/domain/nativeContent';
 import { SamplePackExperience } from '@/components/SamplePackExperience';
 import { ItemTrackList } from '@/components/ItemTrackList';
@@ -54,7 +54,7 @@ export function LibraryItemDetail({
   const [bookContent, setBookContent] = useState<BookContent | null>(null);
   const [sampleFiles, setSampleFiles] = useState<SamplePackFile[]>([]);
   const [hasActiveDownload, setHasActiveDownload] = useState(false);
-  const [videoEmbeds, setVideoEmbeds] = useState<ReleaseVideoEmbed[]>([]);
+  const [videos, setVideos] = useState<ReleaseCreatorVideo[]>([]);
   const [beatLicenses, setBeatLicenses] = useState<BeatLicenseGrant[]>([]);
   const [unlockedAchievementIds, setUnlockedAchievementIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -104,7 +104,7 @@ export function LibraryItemDetail({
         setAssets(bundle.assets);
         setBookContent(bundle.nativeContent.book);
         setSampleFiles(bundle.nativeContent.samples);
-        setVideoEmbeds(bundle.videoEmbeds);
+        setVideos(bundle.videos);
         setBeatLicenses(bundle.beatLicenses);
         setHasActiveDownload(bundle.hasActiveDownload);
         setUnlockedAchievementIds(new Set(bundle.unlockedAchievements.map(item => item.achievement_id)));
@@ -121,7 +121,7 @@ export function LibraryItemDetail({
   if (!user) return <div className="ui44-route-state">Sign in to view this library item.</div>;
 
   if (kind === 'product' && productRow?.products) {
-    return <ProductLibraryDetail userId={user.id} row={productRow} tracks={tracks} achievements={achievements} assets={assets} bonusAssets={bonusAssets} videoEmbeds={videoEmbeds} beatLicenses={beatLicenses} unlockedAchievementIds={unlockedAchievementIds} bookContent={bookContent} sampleFiles={sampleFiles} hasActiveDownload={hasActiveDownload} />;
+    return <ProductLibraryDetail userId={user.id} row={productRow} tracks={tracks} achievements={achievements} assets={assets} bonusAssets={bonusAssets} videos={videos} beatLicenses={beatLicenses} unlockedAchievementIds={unlockedAchievementIds} bookContent={bookContent} sampleFiles={sampleFiles} hasActiveDownload={hasActiveDownload} />;
   }
 
   return <div className="ui44-route-state">Library item not found.</div>;
@@ -134,7 +134,7 @@ function ProductLibraryDetail({
   achievements,
   assets,
   bonusAssets,
-  videoEmbeds,
+  videos,
   beatLicenses,
   unlockedAchievementIds,
   bookContent,
@@ -147,7 +147,7 @@ function ProductLibraryDetail({
   achievements: ProductAchievement[];
   assets: LibraryFileAsset[];
   bonusAssets: LibraryBonusAsset[];
-  videoEmbeds: ReleaseVideoEmbed[];
+  videos: ReleaseCreatorVideo[];
   beatLicenses: BeatLicenseGrant[];
   unlockedAchievementIds: Set<string>;
   bookContent: BookContent | null;
@@ -446,7 +446,7 @@ function ProductLibraryDetail({
         })} />
       </div>}
 
-      {isMusic && <LibraryVideoEmbedsSection embeds={videoEmbeds} title="Visuals" />}
+      {isMusic && <LibraryVideosSection videos={videos} title="Visuals" />}
       {isMusic && achievements.length > 0 && <LibraryAchievementsSection achievements={achievements} unlockedAchievementIds={localUnlockedAchievementIds} />}
 
       {isBook && (

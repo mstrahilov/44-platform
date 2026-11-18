@@ -12,6 +12,7 @@ export type BeatLicenseGrant = Database['public']['Tables']['beat_license_grants
 
 export type BeatDraftInput = {
   itemId?: string | null;
+  assetSubtype?: 'beat' | 'vocal-acapella';
   title: string;
   description: string;
   coverUrl: string;
@@ -29,7 +30,7 @@ export type BeatDraftInput = {
   tagIds: string[];
   attributeTermIds: string[];
   privateFiles: Record<'untagged_mp3' | 'untagged_wav' | 'stems_zip', string>;
-  tierPrices: Partial<Record<'basic' | 'premium' | 'trackout', number>>;
+  tierPrices: Partial<Record<'basic' | 'premium' | 'trackout' | 'exclusive' | 'free', number>>;
 };
 
 export async function isBeatDatabaseReviewEnabled() {
@@ -72,6 +73,7 @@ export async function saveOwnedBeatDraft(input: BeatDraftInput) {
     target_attribute_term_ids: input.attributeTermIds,
     target_private_files: input.privateFiles as Json,
     target_tier_prices: input.tierPrices as Json,
+    target_asset_subtype: input.assetSubtype ?? 'beat',
   });
   if (result.error) throw result.error;
   return result.data;

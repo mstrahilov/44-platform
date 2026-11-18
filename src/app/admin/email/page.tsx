@@ -117,7 +117,6 @@ function AdminEmailOperations() {
   const [selectedReconciliation, setSelectedReconciliation] = useState<string | null>(null);
   const [resolution, setResolution] = useState<ReconciliationResolution | ''>('');
   const [providerMessageId, setProviderMessageId] = useState('');
-  const [reason, setReason] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
@@ -155,10 +154,9 @@ function AdminEmailOperations() {
     setError('');
     setStatus('');
     try {
-      await request('POST', { control, enabled, reason, confirmation });
+      await request('POST', { control, enabled, reason: 'Not applicable', confirmation });
       setStatus(`${CONTROL_COPY[control].label} is now ${enabled ? 'enabled' : 'disabled'}.`);
       setSelected(null);
-      setReason('');
       setConfirmation('');
       await load();
     } catch (actionError) {
@@ -172,7 +170,6 @@ function AdminEmailOperations() {
     setSelectedReconciliation(null);
     setResolution('');
     setProviderMessageId('');
-    setReason('');
     setConfirmation('');
   }
 
@@ -187,7 +184,7 @@ function AdminEmailOperations() {
         eventId,
         resolution,
         providerMessageId,
-        reason,
+        reason: 'Not applicable',
         confirmation,
       });
       setStatus(`Email event was reconciled as “${RECONCILIATION_COPY[resolution].label}”.`);
@@ -233,15 +230,10 @@ function AdminEmailOperations() {
               <AdminStatusBadge tone={enabled ? 'success' : 'quiet'}>{enabled ? 'Enabled' : 'Off'}</AdminStatusBadge>
             </div>
             {!open ? <OS44Button type="button" className={enabled ? 'os-button os-button-danger' : 'os-button os-button-primary'}
-              onClick={() => { setSelected(control); setReason(''); setConfirmation(''); setError(''); setStatus(''); }}>
+              onClick={() => { setSelected(control); setConfirmation(''); setError(''); setStatus(''); }}>
               {enabled ? 'Review disable' : 'Review enable'}
             </OS44Button> : <>
               <p><strong>This changes live application behavior after deployment.</strong> Confirm the matching runbook gate before continuing.</p>
-              <label className="settings-field">
-                <span className="os-type-field-title">Operational reason</span>
-                <textarea value={reason} maxLength={500} disabled={working}
-                  onChange={event => setReason(event.target.value)} placeholder="Acceptance evidence or rollback reason" />
-              </label>
               <label className="settings-field">
                 <span className="os-type-field-title">Type “{expected}”</span>
                 <input className="os-input-field" value={confirmation} autoComplete="off" disabled={working}
@@ -249,9 +241,9 @@ function AdminEmailOperations() {
               </label>
               <div className="admin-detail-actions">
                 <OS44Button type="button" className="os-button os-button-secondary" disabled={working}
-                  onClick={() => { setSelected(null); setReason(''); setConfirmation(''); }}>Cancel</OS44Button>
+                  onClick={() => { setSelected(null); setConfirmation(''); }}>Cancel</OS44Button>
                 <OS44Button type="button" className={enabled ? 'os-button os-button-danger' : 'os-button os-button-primary'}
-                  disabled={working || reason.trim().length < 8 || confirmation !== expected}
+                  disabled={working || confirmation !== expected}
                   onClick={() => { void applyControl(control); }}>
                   {nextEnabled ? 'Enable control' : 'Disable control'}
                 </OS44Button>
@@ -301,7 +293,6 @@ function AdminEmailOperations() {
                 setSelected(null);
                 setResolution('');
                 setProviderMessageId('');
-                setReason('');
                 setConfirmation('');
                 setError('');
                 setStatus('');
@@ -330,12 +321,6 @@ function AdminEmailOperations() {
                   onChange={changeEvent => setProviderMessageId(changeEvent.target.value)}
                   placeholder="Provider evidence from the Resend email log" />
               </label> : null}
-              <label className="settings-field">
-                <span className="os-type-field-title">Reconciliation reason</span>
-                <textarea value={reason} maxLength={500} disabled={working}
-                  onChange={changeEvent => setReason(changeEvent.target.value)}
-                  placeholder="What the Resend log proves and why this outcome is safe" />
-              </label>
               {resolution ? <label className="settings-field">
                 <span className="os-type-field-title">Type “{expected}”</span>
                 <input className="os-input-field" value={confirmation} autoComplete="off" disabled={working}
@@ -345,7 +330,7 @@ function AdminEmailOperations() {
                 <OS44Button type="button" className="os-button os-button-secondary" disabled={working}
                   onClick={resetReconciliation}>Cancel</OS44Button>
                 <OS44Button type="button" className="os-button os-button-danger"
-                  disabled={working || !resolution || reason.trim().length < 8
+                  disabled={working || !resolution
                     || confirmation !== expected || (resolution === 'provider_sent' && !providerMessageId.trim())}
                   onClick={() => { void reconcileEmail(event.id); }}>
                   Record audited outcome

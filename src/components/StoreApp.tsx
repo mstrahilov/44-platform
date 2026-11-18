@@ -54,9 +54,9 @@ const CATEGORY_COPY: Record<StoreCategory, { title: string; copy: string; empty:
     empty: 'No books are published yet.',
   },
   'sample-packs': {
-    title: 'Browse Samples',
-    copy: 'Explore downloadable sample packs from independent creators.',
-    empty: 'No sample packs are published yet.',
+    title: 'Browse Assets',
+    copy: 'Explore downloadable Beats and sample packs from independent creators.',
+    empty: 'No assets are published yet.',
   },
   games: {
     title: 'Browse Games',
@@ -77,7 +77,7 @@ const STORE_FILTER_LABELS: Record<StoreFilter, string> = {
   all: 'All Categories',
   music: 'Music',
   book: 'Books',
-  asset: 'Samples',
+  asset: 'Assets',
   physical: 'Merch',
   interactive: 'Games',
 };
@@ -87,7 +87,7 @@ const STORE_FILTER_TITLES: Record<StoreFilter, string> = {
   all: 'Discover',
   music: 'Browse Music',
   physical: 'Browse Merch',
-  asset: 'Browse Samples',
+  asset: 'Browse Assets',
   book: 'Browse Books',
   interactive: 'Browse Games',
 };
@@ -97,14 +97,19 @@ const MOBILE_DISCOVER_CATEGORIES: Array<{
   label: string;
   href?: string;
 }> = [
-  { category: 'all', filter: 'all', label: 'Featured', href: '/' },
+  { category: 'all', filter: 'all', label: 'Home', href: '/' },
   { category: 'music', filter: 'music', label: 'Music', href: '/store/music' },
   { category: 'videos', filter: 'all', label: 'Videos', href: '/videos' },
   { category: 'books', filter: 'book', label: 'Books', href: '/store/books' },
-  { category: 'sample-packs', filter: 'asset', label: 'Samples', href: '/store/sample-packs' },
+  { category: 'sample-packs', filter: 'asset', label: 'Assets', href: '/store/sample-packs' },
   { category: 'games', filter: 'interactive', label: 'Games', href: '/store/games' },
-  { category: 'beats', filter: 'music', label: 'Beats', href: '/store/beats' },
 ];
+
+function matchesStoreExperience(product: Product, experience: StoreFilter | ProductExperience | null) {
+  const productExperience = getProductExperience(product);
+  if (experience === 'asset') return productExperience === 'asset' || isBeatProduct(product);
+  return !experience || productExperience === experience;
+}
 
 function creatorFilterKey(product: Product) {
   return product.author_id || product.creators?.id || product.creator;
@@ -222,7 +227,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   const availableStoreFilters = useMemo(() => {
     const expected = CATEGORY_EXPERIENCE[category] as StoreFilter | undefined;
     return expected ? [expected] : STORE_FILTER_ORDER.filter(filter => (
-      filter === 'all' || products.some(product => getProductExperience(product) === filter)
+      filter === 'all' || products.some(product => matchesStoreExperience(product, filter))
     ));
   }, [category, products]);
   const hasBeatProducts = beatReviewSurfacesEnabled && products.some(isBeatProduct);
@@ -231,7 +236,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   const selectedExperience = CATEGORY_EXPERIENCE[category] ?? (effectiveFilter === 'all' ? null : effectiveFilter);
   const availableTypes = useMemo(() => {
     const types = new Set(products
-      .filter(product => getProductExperience(product) === selectedExperience)
+      .filter(product => matchesStoreExperience(product, selectedExperience))
       .flatMap(product => product.browse_type?.label ? [product.browse_type.label] : []));
     if (hasBeatProducts && selectedExperience === 'music') types.add('Beat');
     return Array.from(types).sort((a, b) => a.localeCompare(b));
@@ -253,7 +258,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   const availableTags = useMemo(() => {
     if (!selectedExperience) return [];
     return Array.from(new Set(products
-      .filter(product => getProductExperience(product) === selectedExperience && (effectiveTypeFilter === 'all' || itemMatchesStoreType(product, effectiveTypeFilter)))
+      .filter(product => matchesStoreExperience(product, selectedExperience) && (effectiveTypeFilter === 'all' || itemMatchesStoreType(product, effectiveTypeFilter)))
       .flatMap(product => (product.browse_tags ?? []).map(tag => tag.label))
     )).sort((a, b) => a.localeCompare(b));
   }, [effectiveTypeFilter, products, selectedExperience]);
@@ -265,8 +270,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     const creators = new Map<string, string>();
     products
       .filter(product => {
-        const experience = getProductExperience(product);
-        if (selectedExperience && experience !== selectedExperience) return false;
+        if (!matchesStoreExperience(product, selectedExperience)) return false;
         if (effectiveTypeFilter !== 'all' && !itemMatchesStoreType(product, effectiveTypeFilter)) return false;
         if (effectiveTagFilter !== 'all' && !(product.browse_tags ?? []).some(tag => tag.label.toLowerCase() === effectiveTagFilter.toLowerCase())) return false;
         return true;
@@ -287,11 +291,11 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     return products.filter(product => {
       const experience = getProductExperience(product);
       if (!['music', 'book', 'interactive', 'asset', 'physical'].includes(experience)) return false;
-      if (expected && experience !== expected) return false;
+      if (expected && !matchesStoreExperience(product, expected)) return false;
       if (category === 'beats' && !isBeatProduct(product)) return false;
       if (category === 'music' && isBeatProduct(product)) return false;
       if (frontDoor && effectiveFilter === 'music' && effectiveTypeFilter === 'all' && isBeatProduct(product)) return false;
-      if (effectiveFilter !== 'all' && experience !== effectiveFilter) return false;
+      if (effectiveFilter !== 'all' && !matchesStoreExperience(product, effectiveFilter)) return false;
       if (effectiveTypeFilter !== 'all' && !itemMatchesStoreType(product, effectiveTypeFilter)) return false;
       if (beatFiltersVisible) {
         if (!product.beat) return false;
@@ -329,8 +333,8 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     ? effectiveFilter === 'all' ? 'Discover' : browsingBeats ? 'Browse Beats' : STORE_FILTER_TITLES[effectiveFilter]
     : copy.title;
   const surfaceName = frontDoor
-    ? effectiveFilter === 'all' ? 'Discover' : browsingBeats ? 'Beats' : STORE_FILTER_LABELS[effectiveFilter]
-    : category === 'sample-packs' ? 'Samples' : category === 'beats' ? 'Beats' : copy.title.replace('Browse ', '');
+    ? effectiveFilter === 'all' ? 'Home' : browsingBeats ? 'Beats' : STORE_FILTER_LABELS[effectiveFilter]
+    : category === 'sample-packs' ? 'Assets' : category === 'beats' ? 'Beats' : copy.title.replace('Browse ', '');
   const storeTools = (
     <div className="page-header-tools">
       {!frontDoor && category !== 'beats' && <label className="page-search-control ui44-composed-field ui44-composed-field-search">
@@ -443,21 +447,18 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   }
 
   const discoverOptions = MOBILE_DISCOVER_CATEGORIES.filter(option => {
-    if (option.category === 'beats') return hasBeatProducts;
     if (option.category === 'videos') return true;
     if (option.category === 'all') return true;
     if (option.category === 'music') return products.some(product => getProductExperience(product) === 'music' && !isBeatProduct(product));
     if (option.category === 'books') return products.some(product => getProductExperience(product) === 'book');
-    if (option.category === 'sample-packs') return products.some(product => getProductExperience(product) === 'asset');
+    if (option.category === 'sample-packs') return products.some(product => matchesStoreExperience(product, 'asset'));
     if (option.category === 'games') return products.some(product => getProductExperience(product) === 'interactive');
     return false;
   });
   function discoverOptionSelected(option: (typeof MOBILE_DISCOVER_CATEGORIES)[number]) {
     if (option.category === 'videos') return false;
     return category === 'all'
-      ? option.category === 'beats'
-        ? browsingBeats
-        : option.category === 'music'
+      ? option.category === 'music'
           ? effectiveFilter === 'music' && !browsingBeats
           : effectiveFilter === option.filter
       : category === option.category;
@@ -465,10 +466,10 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   const discoverTopbarTabs = discoverOptions.map(option => ({
     id: option.category,
     label: option.label,
-    href: category === 'all' && option.category !== 'videos' && option.category !== 'beats' ? undefined : option.href,
-    onClick: category === 'all' && option.category !== 'videos' && option.category !== 'beats'
+    href: category === 'all' && option.category !== 'videos' ? undefined : option.href,
+    onClick: category === 'all' && option.category !== 'videos'
       ? () => browseCategory(option.filter)
-      : category === 'all' && option.category === 'beats' ? browseBeats : undefined,
+      : undefined,
     active: discoverOptionSelected(option),
     variant: 'section' as const,
   }));
@@ -480,9 +481,6 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
         const selected = discoverOptionSelected(option);
         if (option.category === 'videos') {
           return <SectionTab key={option.category} href={option.href} active={selected}>{option.label}</SectionTab>;
-        }
-        if (option.category === 'beats') {
-          return <SectionTab key={option.category} active={selected} onClick={browseBeats}>{option.label}</SectionTab>;
         }
         return category === 'all' ? (
           <SectionTab
@@ -527,8 +525,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     const merchShelf = shelfProducts('physical');
     const gameShelf = shelfProducts('interactive');
     const bookShelf = shelfProducts('book');
-    const beatShelf = beatReviewSurfacesEnabled ? products.filter(isBeatProduct).sort(comparePublicCatalogProducts).slice(0, 8) : [];
-    const samplePackShelf = shelfProducts('asset');
+    const assetShelf = products.filter(product => matchesStoreExperience(product, 'asset')).sort(comparePublicCatalogProducts).slice(0, 8);
     const featuredProduct = featuredItemIds
       .map(itemId => products.find(product => product.id === itemId))
       .find(Boolean) ?? sortedMusicProducts[0] ?? null;
@@ -587,16 +584,10 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
                 </HubSection>
                 )}
                 {browseMusicProducts.length > 0 && <HomeProductShelf title="Browse Music" products={browseMusicProducts} ownedProductIds={ownedProductIds} onBrowse={() => browseCategory('music')} />}
-                {beatShelf.length > 0 && <HubSection
-                  title="Browse Beats"
-                  action={<Ui44SectionArrow label="Open Browse Beats" onClick={browseBeats} />}
-                >
-                  <ProductGrid className="store-mobile-shelf">{beatShelf.map(product => <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />)}</ProductGrid>
-                </HubSection>}
-                {samplePackShelf.length > 0 && <HomeProductShelf title="Browse Samples" products={samplePackShelf} ownedProductIds={ownedProductIds} onBrowse={() => browseCategory('asset')} />}
                 {merchShelf.length > 0 && <HomeProductShelf title="Browse Merch" products={merchShelf} ownedProductIds={ownedProductIds} onBrowse={() => browseCategory('physical')} />}
                 {bookShelf.length > 0 && <HomeProductShelf title="Browse Books" products={bookShelf} ownedProductIds={ownedProductIds} onBrowse={() => browseCategory('book')} />}
                 {gameShelf.length > 0 && <HomeProductShelf title="Browse Games" products={gameShelf} ownedProductIds={ownedProductIds} onBrowse={() => browseCategory('interactive')} />}
+                {assetShelf.length > 0 && <HomeProductShelf title="Browse Assets" products={assetShelf} ownedProductIds={ownedProductIds} onBrowse={() => browseCategory('asset')} />}
               </>}
             </>
           )}

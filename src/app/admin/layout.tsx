@@ -4,7 +4,7 @@ import { TopbarSectionBack } from '@/components/TopbarSectionBack';
 const ADMIN_PARENT_ROUTES = [
   { prefix: '/admin/content/', href: '/admin/content', label: 'Content' },
   { prefix: '/admin/fulfillment/', href: '/admin/fulfillment', label: 'Merch' },
-  { prefix: '/admin/people/', href: '/admin/people', label: 'People' },
+  { prefix: '/admin/people/', href: '/admin/people', label: 'Users' },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {

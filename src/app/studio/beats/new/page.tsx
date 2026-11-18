@@ -1,5 +1,5 @@
-import { BeatStudioForm } from '@/components/BeatStudioForm';
+import { redirect } from 'next/navigation';
 
 export default function NewBeatPage() {
-  return <BeatStudioForm />;
+  redirect('/studio/assets/new');
 }

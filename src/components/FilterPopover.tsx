@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 export function FilterPopover({
@@ -8,12 +8,14 @@ export function FilterPopover({
   active = false,
   hideTrigger = false,
   popoverClassName = '',
+  popoverStyle,
   children,
 }: {
   label: string;
   active?: boolean;
   hideTrigger?: boolean;
   popoverClassName?: string;
+  popoverStyle?: CSSProperties;
   children: (controls: { close: () => void }) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -64,7 +66,7 @@ export function FilterPopover({
         <span className="page-filter-icon" aria-hidden="true"><i /><i /><i /></span>
       </button> : null}
       {open ? (() => {
-        const popover = <div ref={popoverRef} className={`ui44-paper-menu page-filter-popover ${popoverClassName}`.trim()}>{children({ close: () => setOpen(false) })}</div>;
+        const popover = <div ref={popoverRef} className={`ui44-paper-menu page-filter-popover ${popoverClassName}`.trim()} style={popoverStyle}>{children({ close: () => setOpen(false) })}</div>;
         return hideTrigger && typeof document !== 'undefined' ? createPortal(popover, document.body) : popover;
       })() : null}
     </div>

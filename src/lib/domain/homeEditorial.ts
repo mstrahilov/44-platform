@@ -16,6 +16,12 @@ export type AdminHomeHistory = {
   reason: string;
   created_at: string;
   changed_by: string;
+  new_items?: Array<{
+    item_id: string;
+    title: string;
+    creator_name: string;
+    position: number;
+  }>;
 };
 
 export type AdminHomeFeaturedState = {

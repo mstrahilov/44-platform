@@ -66,6 +66,7 @@ export function AdminActionDialog({
   confirmLabel,
   danger = false,
   requireTitle,
+  reasonRequired = false,
   saving,
   onClose,
   onConfirm,
@@ -76,6 +77,7 @@ export function AdminActionDialog({
   confirmLabel: string;
   danger?: boolean;
   requireTitle?: string;
+  reasonRequired?: boolean;
   saving: boolean;
   onClose: () => void;
   onConfirm: (reason: string) => Promise<void>;
@@ -90,16 +92,17 @@ export function AdminActionDialog({
   }, [open]);
 
   if (!open) return null;
-  const valid = reason.trim().length >= 3 && reason.trim().length <= 500 && (!requireTitle || confirmation === requireTitle);
+  const valid = (!reasonRequired || (reason.trim().length >= 3 && reason.trim().length <= 500))
+    && (!requireTitle || confirmation === requireTitle);
   return <div className="admin-dialog-layer" role="presentation">
     <button className="admin-dialog-scrim" type="button" aria-label="Close dialog" onClick={saving ? undefined : onClose} />
     <section className="admin-dialog ui44-panel" role="dialog" aria-modal="true" aria-labelledby="admin-dialog-title">
       <h2 id="admin-dialog-title">{title}</h2>
       <p>{description}</p>
-      <label className="admin-dialog-field">
+      {reasonRequired ? <label className="admin-dialog-field">
         <span>Reason</span>
-        <textarea value={reason} maxLength={500} onChange={event => setReason(event.target.value)} placeholder="Required for the administrator audit" autoFocus />
-      </label>
+        <textarea value={reason} maxLength={500} onChange={event => setReason(event.target.value)} placeholder="Enter a reason" autoFocus />
+      </label> : null}
       {requireTitle ? <label className="admin-dialog-field">
         <span>Type “{requireTitle}” to confirm</span>
         <input value={confirmation} onChange={event => setConfirmation(event.target.value)} />
@@ -109,7 +112,7 @@ export function AdminActionDialog({
         <OS44Button className="os-button os-button-ghost" type="button" disabled={saving} onClick={onClose}>Cancel</OS44Button>
         <OS44Button className={danger ? 'os-button os-button-danger' : 'os-button os-button-primary'} type="button" disabled={!valid || saving} onClick={() => {
           setError('');
-          void onConfirm(reason.trim()).catch(actionError => setError(actionError instanceof Error ? actionError.message : 'The administrator action failed.'));
+          void onConfirm(reasonRequired ? reason.trim() : 'Not applicable').catch(actionError => setError(actionError instanceof Error ? actionError.message : 'The administrator action failed.'));
         }}>{saving ? 'Working…' : confirmLabel}</OS44Button>
       </div>
     </section>

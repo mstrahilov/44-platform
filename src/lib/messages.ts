@@ -136,16 +136,28 @@ export async function archiveConversation(conversationId: string, userId: string
 }
 
 export async function searchMessageRecipients(userId: string, query: string) {
-  let request = supabase
-    .from('profiles')
-    .select('id,slug,username,display_name,avatar_url,role,creator_type')
-    .neq('id', userId)
-    .order('display_name', { ascending: true })
-    .limit(12);
-  if (query) request = request.or(`display_name.ilike.%${query}%,username.ilike.%${query}%,slug.ilike.%${query}%`);
-  const result = await request;
-  if (result.error) throw result.error;
-  return (result.data as MessageRecipient[] | null) ?? [];
+  const normalizedQuery = query.trim();
+  if (!normalizedQuery) return [];
+
+  const fields = ['display_name', 'username', 'slug'] as const;
+  const matches = await Promise.all(fields.map(async field => {
+    const result = await supabase
+      .from('profiles')
+      .select('id,slug,username,display_name,avatar_url,role,creator_type')
+      .neq('id', userId)
+      .ilike(field, `%${normalizedQuery}%`)
+      .order('display_name', { ascending: true })
+      .limit(12);
+    if (result.error) throw result.error;
+    return (result.data as MessageRecipient[] | null) ?? [];
+  }));
+
+  const seen = new Set<string>();
+  return matches.flat().filter(profile => {
+    if (seen.has(profile.id)) return false;
+    seen.add(profile.id);
+    return true;
+  }).slice(0, 12);
 }
 
 export async function createOrOpenConversation(_currentUserId: string, otherProfileId: string) {

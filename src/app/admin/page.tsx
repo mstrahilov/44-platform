@@ -6,6 +6,7 @@ import { HubHero, PageShell, SectionHeader } from '@/components/Ui';
 import { Ui44Panel } from '@/components/ui44/Spacing';
 import { AdminAccessBoundary } from '@/components/admin/AdminPrimitives';
 import { getAdminDashboardSummary, type AdminDashboardSummary } from '@/lib/domain/adminOperations';
+import { useTopbarBack } from '@/components/TopbarContext';
 
 export default function AdminPage() {
   return <AdminAccessBoundary><AdminDashboard /></AdminAccessBoundary>;
@@ -14,6 +15,7 @@ export default function AdminPage() {
 function AdminDashboard() {
   const [summary, setSummary] = useState<AdminDashboardSummary | null>(null);
   const [error, setError] = useState('');
+  useTopbarBack({ href: '/you', label: 'Account', alwaysNavigate: true });
 
   useEffect(() => {
     let alive = true;
@@ -25,66 +27,50 @@ function AdminDashboard() {
     return () => { alive = false; };
   }, []);
 
-  return <PageShell><main className="admin-page" aria-label="Administrator workspace">
-    <HubHero title="Admin" copy="Manage people, publishing, and operational health across 44OS." className="admin-page-header" />
+  return <PageShell><main className="dashboard-page admin-page" aria-label="Administrator workspace">
+    <HubHero title="Admin" className="admin-page-header" />
     {error ? <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div> : null}
 
-    <div className="admin-stat-grid" aria-label="Administrator summary">
-      <AdminStat label="People" value={summary?.people_count ?? '—'} detail="All accounts" />
-      <AdminStat label="Creators" value={summary?.creator_count ?? '—'} detail="Publishing access" />
-      <AdminStat label="Creator requests" value={summary?.pending_creator_request_count ?? '—'} detail="Awaiting review" attention={Boolean(summary?.pending_creator_request_count)} />
-      <AdminStat label="Pending" value={summary?.pending_review_count ?? '—'} detail="Content reviews" attention={Boolean(summary?.pending_review_count)} />
-      <AdminStat label="Errors" value={summary?.recent_error_count ?? '—'} detail="Last 24 hours" attention={Boolean(summary?.recent_error_count)} />
+    <div className="dashboard-overview-grid" aria-label="Administrator summary">
+      <AdminStat href="/admin/people" label="Users" value={summary?.people_count ?? '—'} />
+      <AdminStat href="/admin/people?role=creator" label="Creators" value={summary?.creator_count ?? '—'} />
+      <AdminStat href="/admin/content" label="Releases" value={summary?.content_count ?? '—'} />
+      <AdminStat href="/admin/people" label="Creator Requests" value={summary?.pending_creator_request_count ?? '—'} />
     </div>
 
     <section className="dashboard-section">
-      <SectionHeader title="Team" description="Private reference material and brand resources for the 44OS team." />
+      <SectionHeader title="Administration" />
       <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
-        <AdminNavRow href="/team/brand" title="Handbook" description="How forty four and 44OS work, including identity, support, and developer guidance." meta="" />
-        <AdminNavRow href="/team/brand?download=1" title="Download Brand Kit" description="Download the approved 44OS marks, type, palette, and interface reference." meta="" />
+        <AdminNavRow href="/admin/people" title="Users" />
+        <AdminNavRow href="/admin/content" title="Releases" />
+        <AdminNavRow href="/admin/home" title="Featured Release" />
       </div>
     </section>
 
     <section className="dashboard-section">
-      <SectionHeader title="Administration" description="Open a section to inspect records and use its approved controls." />
+      <SectionHeader title="Resources" />
       <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
-        <AdminNavRow href="/admin/home" title="Home editorial" description="Choose the release that leads Discover's editorial feature." />
-        <AdminNavRow href="/admin/people?role=creator_request" title="Creator requests" description="Review people waiting for Creator publishing access." count={summary?.pending_creator_request_count} />
-        <AdminNavRow href="/admin/people" title="People" description="Find and manage any member, creator, or administrator." count={summary?.people_count} />
-        <AdminNavRow href="/admin/content" title="Content" description="Inspect every Item, review submissions, and manage publication state." count={summary?.content_count} />
-        <AdminNavRow href="/admin/errors" title="Operational errors" description="Read sanitized application error events and safe diagnostic references." count={summary?.recent_error_count} />
-        <AdminNavRow href="/admin/email" title="Email" description="Inspect provider readiness, fail-closed delivery controls, operational counts, and activation history." />
-        <AdminNavRow href="/admin/support" title="Support" description="Claim support cases, inspect durable history, and record replies sent from the monitored mailbox." />
-        <AdminNavRow href="/admin/payments" title="Payments" description="Inspect fail-closed configuration, pending orders, signed webhook failures, and reconciliation." />
-        <AdminNavRow href="/admin/fulfillment" title="Printful fulfillment" description="Verify the API store, import reviewed 44-owned Merch mappings, and inspect draft-only provider orders." />
+        <AdminNavRow href="/team/brand" title="Handbook" meta="" />
+        <AdminNavRow href="/team/brand?download=1" title="Brand Kit" meta="" />
       </div>
-    </section>
-
-    <section className="dashboard-section">
-      <SectionHeader title="System status" description="These launch controls are informational and remain deployment-managed." />
-      <Ui44Panel overflow="visible" className="admin-system-status-list">
-        <SystemStatus label="Creator publishing" status={summary?.publishing.label ?? 'Loading…'} active={Boolean(summary?.publishing.enabled)} />
-        <SystemStatus label="Email delivery" status={summary?.email_delivery.label ?? 'Loading…'} active={Boolean(summary?.email_delivery.enabled)} />
-        <SystemStatus label="Payments" status={summary?.payments.label ?? 'Loading…'} active={Boolean(summary?.payments.enabled)} />
-        <SystemStatus label="Beat Store" status={summary?.beat_store.label ?? 'Loading…'} active={Boolean(summary?.beat_store.enabled)} />
-      </Ui44Panel>
     </section>
   </main></PageShell>;
 }
 
-function AdminStat({ label, value, detail, attention = false }: { label: string; value: string | number; detail: string; attention?: boolean }) {
-  return <Ui44Panel overflow="visible" className={attention ? 'admin-stat-card admin-stat-card-attention' : 'admin-stat-card'}>
-    <span className="admin-stat-label">{label}</span><strong>{value}</strong><span className="admin-stat-detail">{detail}</span>
-  </Ui44Panel>;
-}
-
-function AdminNavRow({ href, title, description, count, meta }: { href: string; title: string; description: string; count?: number; meta?: string }) {
-  return <Link href={href} className="dashboard-list-row admin-hub-row ui44-list-row ui44-list-row-dashboard ui44-list-row-interactive">
-    <span className="dashboard-row-copy"><strong className="dashboard-row-title">{title}</strong><span className="dashboard-row-subtitle">{description}</span></span>
-    <span className="admin-hub-row-meta">{meta ?? (typeof count === 'number' ? count : '—')} <span aria-hidden="true">›</span></span>
+function AdminStat({ href, label, value }: { href: string; label: string; value: string | number }) {
+  return <Link href={href} className="admin-stat-link">
+    <Ui44Panel overflow="visible" className="dashboard-metric-card">
+      <div className="dashboard-overview-card-inner">
+        <div className="os-type-meta">{label}</div>
+        <div className="os-type-page-title">{value}</div>
+      </div>
+    </Ui44Panel>
   </Link>;
 }
 
-function SystemStatus({ label, status, active }: { label: string; status: string; active: boolean }) {
-  return <div className="admin-system-status-row"><span><strong>{label}</strong><small>Read-only</small></span><span className={active ? 'admin-record-status admin-record-status-success ui44-badge' : 'admin-record-status admin-record-status-quiet ui44-badge'}>{status}</span></div>;
+function AdminNavRow({ href, title, count, meta }: { href: string; title: string; count?: number; meta?: string }) {
+  return <Link href={href} className="dashboard-list-row admin-hub-row ui44-list-row ui44-list-row-dashboard ui44-list-row-interactive">
+    <span className="dashboard-row-copy"><strong className="dashboard-row-title">{title}</strong></span>
+    <span className="admin-hub-row-meta">{meta ?? (typeof count === 'number' ? count : null)}<span aria-hidden="true">›</span></span>
+  </Link>;
 }

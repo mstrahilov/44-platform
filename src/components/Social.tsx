@@ -651,24 +651,26 @@ export function SocialArtifactCard({
   meta,
   image,
   shape = 'square',
+  singleLineTitle = false,
 }: {
   href: string;
-  title: string;
-  meta: string;
+  title: ReactNode;
+  meta?: string;
   image?: string | null;
-  shape?: 'square' | 'portrait';
+  shape?: 'square' | 'portrait' | 'landscape';
+  singleLineTitle?: boolean;
 }) {
   return (
     <Link href={href} className="social-artifact-card ui44-catalog-card">
-      <div className={shape === 'portrait' ? 'social-artifact-cover social-artifact-cover-portrait ui44-catalog-art' : 'social-artifact-cover ui44-catalog-art'}>
+      <div className={shape === 'portrait' ? 'social-artifact-cover social-artifact-cover-portrait ui44-catalog-art' : shape === 'landscape' ? 'social-artifact-cover social-artifact-cover-landscape ui44-catalog-art' : 'social-artifact-cover ui44-catalog-art'}>
         {image && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={image} alt="" />
         )}
       </div>
       <div className="social-artifact-info ui44-catalog-copy">
-        <div className="os-type-card-title ui44-catalog-title">{title}</div>
-        <div className="os-type-meta ui44-catalog-meta">{meta}</div>
+        <div className={`os-type-card-title ui44-catalog-title${singleLineTitle ? ' ui44-catalog-title-single-line' : ''}`}>{title}</div>
+        {meta ? <div className="os-type-meta ui44-catalog-meta">{meta}</div> : null}
       </div>
     </Link>
   );

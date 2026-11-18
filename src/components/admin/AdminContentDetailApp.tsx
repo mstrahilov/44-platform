@@ -1,16 +1,14 @@
 'use client';
 
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { EmptyMessage, HubHero, PageShell, SectionHeader } from '@/components/Ui';
 import { Ui44Panel } from '@/components/ui44/Spacing';
-import { Ui44TextInput } from '@/components/ui44/Inputs';
-import { AdminAccessBoundary, AdminActionDialog, AdminStatusBadge, formatAdminDate } from '@/components/admin/AdminPrimitives';
-import { decideAdminSubmission, getAdminContentDetail, setAdminItemLifecycle, setAdminItemReleaseDate, setAdminOfferLifecycle, type AdminContentDetail } from '@/lib/domain/adminOperations';
+import { AdminAccessBoundary, AdminActionDialog, formatAdminDate } from '@/components/admin/AdminPrimitives';
+import { decideAdminSubmission, getAdminContentDetail, setAdminItemLifecycle, type AdminContentDetail } from '@/lib/domain/adminOperations';
 import { OS44Button } from '@/components/OS44Button';
+import { useTopbarBack, useTopbarOverflow } from '@/components/TopbarContext';
 
 type AdminContentAction = 'approve' | 'reject' | 'publish' | 'unpublish' | 'archive';
-type AdminOfferAction = { action: 'pause' | 'restore'; offerId: string };
 
 export default function AdminContentDetailApp({ itemId }: { itemId: string }) {
   return <AdminAccessBoundary><ContentDetail itemId={itemId} /></AdminAccessBoundary>;
@@ -22,25 +20,58 @@ function ContentDetail({ itemId }: { itemId: string }) {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [action, setAction] = useState<AdminContentAction | null>(null);
-  const [offerAction, setOfferAction] = useState<AdminOfferAction | null>(null);
-  const [releaseDateAction, setReleaseDateAction] = useState(false);
-  const [releaseDate, setReleaseDate] = useState('');
   const [saving, setSaving] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+
+  useTopbarBack({ href: '/admin', label: 'Admin', alwaysNavigate: true });
 
   useEffect(() => {
     let alive = true;
     Promise.resolve().then(() => { if (alive) { setLoading(true); setError(''); } });
-    void getAdminContentDetail(itemId).then(data => { if (alive) { setDetail(data); setReleaseDate(data.item.release_date ?? ''); setLoading(false); } }).catch(loadError => {
-      if (alive) { setError(loadError instanceof Error ? loadError.message : 'Could not load this Item.'); setLoading(false); }
+    void getAdminContentDetail(itemId).then(data => {
+      if (alive) { setDetail(data); setLoading(false); }
+    }).catch(loadError => {
+      if (alive) { setError(loadError instanceof Error ? loadError.message : 'Could not load this release.'); setLoading(false); }
     });
     return () => { alive = false; };
   }, [itemId, reloadKey]);
 
-  if (loading) return <PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading content" /></PageShell>;
-  if (!detail) return <PageShell><EmptyMessage>{error || 'Content not found.'}</EmptyMessage></PageShell>;
+  const pending = detail?.submissions.find(submission => submission.status === 'pending') ?? null;
+  const overflowActions = useMemo(() => {
+    if (!detail || pending || detail.item.status === 'archived') return undefined;
+    return [
+      ...(detail.item.status === 'published' ? [{ id: 'unpublish-release', label: 'Unpublish Release', danger: true, onSelect: () => setAction('unpublish') }] : []),
+      ...(detail.item.status === 'draft' ? [{ id: 'publish-release', label: 'Publish Release', onSelect: () => setAction('publish') }] : []),
+      { id: 'archive-release', label: 'Archive Release', danger: true, onSelect: () => setAction('archive') },
+    ];
+  }, [detail, pending]);
+  useTopbarOverflow(overflowActions);
+
+  if (loading) return <PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading release" /></PageShell>;
+  if (!detail) return <PageShell><EmptyMessage>{error || 'Release not found.'}</EmptyMessage></PageShell>;
+
   const item = detail.item;
-  const pending = detail.submissions.find(submission => submission.status === 'pending') ?? null;
+  const releaseType = detail.taxonomy.type?.label || item.item_type;
+  const category = detail.category?.name || humanize(item.experience_type);
+  const itemTypeLabel = `${category} · ${releaseType}`;
+  const creatorName = detail.creator?.display_name || detail.creator?.username || item.creator;
+  const commercialOffers = detail.offers.filter(offer => offer.offer_type !== 'library_access');
+  const downloadableOffer = commercialOffers.find(offer => offer.offer_type === 'digital_download');
+  const hasDownloadPricing = item.download_purchase_enabled || Boolean(downloadableOffer);
+  const genericAssets = detail.assets.filter(asset => !['audio', 'book', 'webgl', 'sample_pack'].includes(asset.asset_type));
+  const globalPriceCents = downloadableOffer?.price_cents ?? item.price_cents;
+  const marketLabel = item.available_locally_only
+    ? 'Local price only'
+    : item.market_mode === 'global_plus_local'
+      ? 'Global + local price'
+      : 'Global price only';
+  const downloadPrice = !hasDownloadPricing || item.is_free
+    ? 'Free'
+    : item.available_locally_only
+      ? item.local_price_cents === null ? 'Not set' : formatCurrency(item.local_price_cents, item.local_currency || downloadableOffer?.currency || 'USD')
+      : item.market_mode === 'global_plus_local'
+        ? `${formatCurrency(globalPriceCents, 'USD')} global${item.local_price_cents === null ? '' : ` · ${formatCurrency(item.local_price_cents, item.local_currency || 'USD')} local`}`
+        : formatCurrency(globalPriceCents, downloadableOffer?.currency || 'USD');
 
   async function completeAction(reason: string) {
     if (!action) return;
@@ -58,67 +89,82 @@ function ContentDetail({ itemId }: { itemId: string }) {
     } finally { setSaving(false); }
   }
 
-  async function completeOfferAction(reason: string) {
-    if (!offerAction) return;
-    setSaving(true); setError(''); setMessage('');
-    try {
-      await setAdminOfferLifecycle(offerAction.offerId, offerAction.action, reason);
-      setOfferAction(null);
-      setMessage(OFFER_ACTION_COPY[offerAction.action].success);
-      setReloadKey(value => value + 1);
-    } finally { setSaving(false); }
-  }
-
-  async function completeReleaseDateAction(reason: string) {
-    if (!releaseDate) return;
-    setSaving(true); setError(''); setMessage('');
-    try {
-      await setAdminItemReleaseDate(item.id, releaseDate, reason);
-      setReleaseDateAction(false);
-      setMessage('Release Date updated.');
-      setReloadKey(value => value + 1);
-    } finally { setSaving(false); }
-  }
-
-  return <PageShell><main className="admin-page">
-    <div className="admin-back-row"><Link href="/admin/content">‹ All content</Link></div>
-    <HubHero title={item.title} copy="Read-only release details, review history, and approved lifecycle controls." />
+  return <PageShell><main className="admin-page admin-person-detail-page admin-content-detail-page">
+    <HubHero title="Release" hideDivider />
     {error ? <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div> : null}
     {message ? <div className="dashboard-status dashboard-status-success ui44-status ui44-status-success" role="status">{message}</div> : null}
 
-    <Ui44Panel overflow="visible" className="admin-detail-card">
-      <div className="admin-content-hero">
-        {item.cover_url ? <span className="admin-detail-art" style={{ backgroundImage: `url(${item.cover_url})` }} /> : <span className="admin-detail-art admin-content-art-empty" aria-hidden="true" />}
-        <div><span className="admin-detail-eyebrow">{detail.taxonomy.type?.label || item.item_type}</span><h2>{item.title}</h2><p>{detail.creator?.display_name || detail.creator?.username || item.creator}</p><div className="admin-inline-status"><AdminStatusBadge tone={item.status === 'published' ? 'success' : item.status === 'archived' ? 'danger' : 'quiet'}>{item.status}</AdminStatusBadge>{pending ? <AdminStatusBadge tone="warning">pending review</AdminStatusBadge> : null}</div></div>
-      </div>
-      <dl className="admin-fact-grid">
-        <div><dt>Created</dt><dd>{formatAdminDate(item.created_at, true)}</dd></div>
-        <div><dt>Updated</dt><dd>{formatAdminDate(item.updated_at, true)}</dd></div>
-        <div><dt>Experience</dt><dd>{item.experience_type}</dd></div>
-        <div><dt>Release Date</dt><dd>{item.release_date || 'Not set'}</dd></div>
-        <div><dt>Fulfillment</dt><dd>{item.fulfillment_type}</dd></div>
-        <div><dt>Price</dt><dd>{item.is_free ? 'Free' : formatCurrency(item.price_cents, 'USD')}</dd></div>
-        <div><dt>Public URL</dt><dd><Link href={`/store/item/${item.slug}`}>/store/item/{item.slug}</Link></dd></div>
-      </dl>
-      {!pending && item.status !== 'archived' ? <div className="admin-detail-actions">
-        {item.status === 'draft' ? <OS44Button className="os-button os-button-primary" type="button" onClick={() => setAction('publish')}>Publish</OS44Button> : <OS44Button className="os-button os-button-secondary" type="button" onClick={() => setAction('unpublish')}>Unpublish</OS44Button>}
-        <OS44Button className="os-button os-button-danger" type="button" onClick={() => setAction('archive')}>Archive</OS44Button>
-      </div> : pending ? <p className="admin-detail-note">Resolve the pending review before changing publication state.</p> : <p className="admin-detail-note">Archived content is permanent. Historical Library access and entitlements remain preserved.</p>}
-    </Ui44Panel>
-
-    {item.experience_type === 'music' ? <section className="dashboard-section"><SectionHeader title="Release Date" description="Correct the public release chronology without changing the creator’s other release data." />
-      <Ui44Panel overflow="visible" className="admin-copy-card">
-        <div className="dashboard-form-grid dashboard-form-grid-2 ui44-form-grid">
-          <label className="dashboard-field">
-            <span className="dashboard-field-label">Release Date</span>
-            <Ui44TextInput className="os-input-field release-date-input" type="date" value={releaseDate} onChange={event => setReleaseDate(event.target.value)} />
-          </label>
-          <div className="admin-detail-actions">
-            <OS44Button className="os-button os-button-primary" type="button" disabled={!releaseDate || releaseDate === item.release_date} onClick={() => setReleaseDateAction(true)}>Save date</OS44Button>
-          </div>
+    <section className="view-album-header library-detail-header admin-content-detail-hero">
+      <div className="view-album-media">
+        <div className="view-album-cover">
+          {item.hero_url || item.cover_url ? <img src={item.hero_url || item.cover_url || ''} alt={item.title} /> : null}
         </div>
-      </Ui44Panel>
-    </section> : null}
+      </div>
+      <div className="view-album-copy">
+        <h1 className="view-album-title">{item.title}</h1>
+        <p className="admin-content-detail-creator">{creatorName}</p>
+      </div>
+    </section>
+
+    <MetadataSection title="Release Details" hideTitle rows={[
+      { label: 'Type', value: itemTypeLabel },
+      { label: 'Created', value: formatAdminDate(item.created_at, true) },
+      { label: 'Updated', value: formatAdminDate(item.updated_at, true) },
+      ...(item.release_date ? [{ label: 'Release Date', value: formatReleaseDate(item.release_date) }] : []),
+      { label: 'Tags', value: detail.taxonomy.tags.length ? detail.taxonomy.tags.map(tag => tag.label).join(', ') : 'None' },
+      { label: 'Market', value: hasDownloadPricing ? marketLabel : '—' },
+      { label: 'Download Price', value: downloadPrice },
+      { label: 'Achievements', value: detail.achievements.length ? 'Enabled' : 'Disabled' },
+    ]} />
+
+    {detail.tracks.length ? <MetadataSection title="Tracks" rows={detail.tracks.map(track => ({
+      label: String(track.number),
+      value: track.title,
+    }))} layout="tracks" /> : null}
+
+    {detail.videos.length ? <MetadataSection title="Visuals" rows={detail.videos.map((video, index) => ({
+      label: `Visual ${index + 1}`,
+      value: video.title,
+    }))} /> : null}
+
+    {detail.external_links.length ? <MetadataSection title="External Links" rows={detail.external_links.map(link => ({
+      label: link.label || humanize(link.platform),
+      value: link.url,
+      detail: humanize(link.platform),
+    }))} /> : null}
+
+    {detail.book ? <MetadataSection title="Book" rows={[
+      { label: 'Format', value: detail.book.format.toUpperCase() },
+      ...(detail.book.total_pages ? [{ label: 'Pages', value: String(detail.book.total_pages) }] : []),
+      ...(detail.book.language_code ? [{ label: 'Language', value: detail.book.language_code }] : []),
+      ...(detail.book.sample_page_limit ? [{ label: 'Sample Pages', value: String(detail.book.sample_page_limit) }] : []),
+      { label: 'PDF', value: detail.book.has_file ? 'Uploaded' : 'Not uploaded' },
+      ...(detail.book.has_preview ? [{ label: 'Preview', value: 'Available' }] : []),
+    ]} /> : null}
+
+    {detail.sample_previews.length ? <MetadataSection title="Sample Previews" rows={detail.sample_previews.map((sample, index) => ({
+      label: `Sample Preview ${index + 1}`,
+      value: sample.title,
+      detail: [sample.duration_seconds ? formatDuration(sample.duration_seconds) : null, sample.has_file ? 'Audio uploaded' : null].filter(Boolean).join(' · ') || undefined,
+    }))} /> : null}
+
+    {detail.interactive_build ? <MetadataSection title="Game Build" rows={[
+      { label: 'Runtime', value: humanize(detail.interactive_build.runtime) },
+      { label: 'Build Version', value: detail.interactive_build.build_version },
+      ...(detail.interactive_build.unity_version ? [{ label: 'Unity Version', value: detail.interactive_build.unity_version }] : []),
+      { label: 'Status', value: humanize(detail.interactive_build.status) },
+      { label: 'Platforms', value: [detail.interactive_build.supports_desktop ? 'Desktop' : null, detail.interactive_build.supports_mobile ? 'Mobile' : null].filter(Boolean).join(', ') || 'None' },
+      { label: 'Orientation', value: humanize(detail.interactive_build.preferred_orientation) },
+      ...(detail.interactive_build.download_size_mb ? [{ label: 'Download Size', value: `${detail.interactive_build.download_size_mb} MB` }] : []),
+      { label: 'Supported Browsers', value: detail.interactive_build.supported_browsers.map(humanize).join(', ') },
+      { label: 'Supported Inputs', value: detail.interactive_build.supported_inputs.map(humanize).join(', ') },
+    ]} /> : null}
+
+    {genericAssets.length ? <MetadataSection title="Files" rows={genericAssets.map(asset => ({
+      label: asset.title || humanize(asset.asset_type),
+      value: asset.has_file ? 'File uploaded' : 'No file uploaded',
+      detail: asset.is_downloadable ? 'Downloadable' : humanize(asset.asset_type),
+    }))} /> : null}
 
     {pending ? <section className="dashboard-section"><SectionHeader title="Pending review" description={pending.submission_kind === 'revision' ? 'Proposed revision' : 'New Item submission'} />
       <Ui44Panel overflow="visible" className="admin-review-card">
@@ -132,68 +178,67 @@ function ContentDetail({ itemId }: { itemId: string }) {
       <div className="admin-health-list ui44-panel">{detail.health.map(issue => <div className="admin-health-row" key={issue.code}><strong>{issue.code.replaceAll('_', ' ')}</strong><span>{issue.message}</span></div>)}</div>
     </section> : null}
 
-    <section className="dashboard-section"><SectionHeader title="Metadata" description="Current approved Item" />
-      <Ui44Panel overflow="visible" className="admin-copy-card">
-        {item.short_description ? <p><strong>Summary</strong>{item.short_description}</p> : null}
-        {item.long_description ? <p><strong>Description</strong>{item.long_description}</p> : null}
-        <p><strong>Tags</strong>{detail.taxonomy.tags.length ? detail.taxonomy.tags.map(tag => tag.label).join(', ') : 'None'}</p>
-      </Ui44Panel>
-    </section>
-
-    <section className="dashboard-section"><SectionHeader title="Files and offers" description="Safe presence summaries; private paths are not exposed" />
-      <div className="admin-detail-groups">
-        <DetailGroup title="Tracks" empty="No tracks" rows={detail.tracks.map(track => ({ id: track.id, title: `${track.number}. ${track.title}`, meta: track.has_audio ? 'Audio present' : 'Audio missing' }))} />
-        <DetailGroup title="Assets" empty="No assets" rows={detail.assets.map(asset => ({ id: asset.id, title: asset.title || asset.asset_type, meta: `${asset.asset_type} · ${asset.has_file ? 'File present' : 'File missing'}` }))} />
-        <OfferDetailGroup offers={detail.offers} onAction={(offerId, offerActionName) => setOfferAction({ offerId, action: offerActionName })} />
-      </div>
-    </section>
-
-    <section className="dashboard-section"><SectionHeader title="Review history" description="Creator submissions and administrator decisions" />
-      {detail.submissions.length === 0 ? <EmptyMessage>No submission history.</EmptyMessage> : <div className="admin-history-list ui44-panel">{detail.submissions.map(submission => <div className="admin-history-row" key={submission.id}><div><strong>{submission.submission_kind} · {submission.status}</strong><p>{submission.decision_reason || 'No decision reason yet.'}</p></div><time dateTime={submission.submitted_at}>{formatAdminDate(submission.submitted_at, true)}</time></div>)}</div>}
-    </section>
-
-    <section className="dashboard-section"><SectionHeader title="Lifecycle history" description="Immutable administrator actions" />
-      {detail.lifecycle_history.length === 0 ? <EmptyMessage>No administrator lifecycle changes.</EmptyMessage> : <div className="admin-history-list ui44-panel">{detail.lifecycle_history.map(event => <div className="admin-history-row" key={event.id}><div><strong>{event.previous_status} → {event.new_status}</strong><p>{event.reason}</p></div><span>{event.changed_by}<time dateTime={event.created_at}>{formatAdminDate(event.created_at, true)}</time></span></div>)}</div>}
-    </section>
-
-    <AdminActionDialog open={Boolean(action)} title={action ? ACTION_COPY[action].title : ''} description={action ? ACTION_COPY[action].description : ''} confirmLabel={action ? ACTION_COPY[action].confirm : ''} danger={action === 'reject' || action === 'archive' || action === 'unpublish'} requireTitle={action === 'archive' ? item.title : undefined} saving={saving} onClose={() => setAction(null)} onConfirm={completeAction} />
-    <AdminActionDialog open={Boolean(offerAction)} title={offerAction ? OFFER_ACTION_COPY[offerAction.action].title : ''} description={offerAction ? OFFER_ACTION_COPY[offerAction.action].description : ''} confirmLabel={offerAction ? OFFER_ACTION_COPY[offerAction.action].confirm : ''} danger={offerAction?.action === 'pause'} saving={saving} onClose={() => setOfferAction(null)} onConfirm={completeOfferAction} />
-    <AdminActionDialog open={releaseDateAction} title="Save Release Date?" description="This changes public release-date sorting and records an immutable administrator audit entry." confirmLabel="Save date" saving={saving} onClose={() => setReleaseDateAction(false)} onConfirm={completeReleaseDateAction} />
+    <AdminActionDialog
+      open={Boolean(action)}
+      title={action ? ACTION_COPY[action].title : ''}
+      description={action ? ACTION_COPY[action].description : ''}
+      confirmLabel={action ? ACTION_COPY[action].confirm : ''}
+      danger={action === 'reject' || action === 'archive' || action === 'unpublish'}
+      requireTitle={action === 'archive' ? item.title : undefined}
+      reasonRequired={action !== 'approve' && action !== 'reject'}
+      saving={saving}
+      onClose={() => setAction(null)}
+      onConfirm={completeAction}
+    />
   </main></PageShell>;
 }
 
 const ACTION_COPY: Record<AdminContentAction, { title: string; description: string; confirm: string; success: string }> = {
-  approve: { title: 'Approve submission', description: 'The proposed version will become the public Item atomically.', confirm: 'Approve', success: 'Submission approved.' },
-  reject: { title: 'Reject submission', description: 'The current approved public version will remain unchanged.', confirm: 'Reject', success: 'Submission rejected.' },
-  publish: { title: 'Publish Item', description: 'Publication health will be checked before this Item becomes public.', confirm: 'Publish', success: 'Item published.' },
-  unpublish: { title: 'Unpublish Item', description: 'This Item will return to draft. Items with purchases or active access must be archived instead.', confirm: 'Unpublish', success: 'Item returned to draft.' },
-  archive: { title: 'Archive Item', description: 'This is permanent. The public Item and offers will close while historical Library access remains preserved.', confirm: 'Archive', success: 'Item archived.' },
+  approve: { title: 'Approve submission', description: 'The proposed version will become the public release atomically.', confirm: 'Approve', success: 'Submission approved.' },
+  reject: { title: 'Reject submission', description: 'The current approved public release will remain unchanged.', confirm: 'Reject', success: 'Submission rejected.' },
+  publish: { title: 'Publish Release?', description: 'Publication health will be checked before this release becomes public.', confirm: 'Proceed', success: 'Release published.' },
+  unpublish: { title: 'Unpublish Release?', description: 'This release will return to draft. Releases with purchases or active access must be archived instead.', confirm: 'Proceed', success: 'Release unpublished.' },
+  archive: { title: 'Archive Release?', description: 'Archiving closes the public release and offers while preserving historical Library access. This cannot be undone.', confirm: 'Proceed', success: 'Release archived.' },
 };
-
-const OFFER_ACTION_COPY: Record<AdminOfferAction['action'], { title: string; description: string; confirm: string; success: string }> = {
-  pause: { title: 'Pause paid offer', description: 'Checkout for this paid digital offer will close. The published Item, prior orders, Library access, entitlements, earnings, and provider evidence remain unchanged.', confirm: 'Pause offer', success: 'Paid offer paused; historical records and buyer access were preserved.' },
-  restore: { title: 'Restore paid offer', description: 'Eligibility will be checked before checkout reopens on this same paid digital offer.', confirm: 'Restore offer', success: 'Paid offer restored.' },
-};
-
-function DetailGroup({ title, rows, empty }: { title: string; rows: Array<{ id: string; title: string; meta: string }>; empty: string }) {
-  return <Ui44Panel overflow="visible" className="admin-detail-group"><h3>{title}</h3>{rows.length ? rows.map(row => <div className="admin-detail-group-row" key={row.id}><strong>{row.title}</strong><span>{row.meta}</span></div>) : <p>{empty}</p>}</Ui44Panel>;
-}
-
-function OfferDetailGroup({ offers, onAction }: {
-  offers: AdminContentDetail['offers'];
-  onAction: (offerId: string, action: AdminOfferAction['action']) => void;
-}) {
-  return <Ui44Panel overflow="visible" className="admin-detail-group"><h3>Offers</h3>{offers.length ? offers.map(offer => {
-    const canPause = offer.offer_type === 'digital_download' && offer.price_cents > 0 && offer.fulfillment_type === 'entitlement' && offer.status === 'active';
-    const canRestore = offer.offer_type === 'digital_download' && offer.price_cents > 0 && offer.fulfillment_type === 'entitlement' && offer.status === 'draft';
-    return <div className="admin-detail-group-row" key={offer.id}>
-      <div><strong>{offer.title}</strong><span>{offer.status} · {formatCurrency(offer.price_cents, offer.currency)}</span></div>
-      {canPause ? <OS44Button className="os-button os-button-danger os-button-compact" type="button" onClick={() => onAction(offer.id, 'pause')}>Pause</OS44Button> : null}
-      {canRestore ? <OS44Button className="os-button os-button-primary os-button-compact" type="button" onClick={() => onAction(offer.id, 'restore')}>Restore</OS44Button> : null}
-    </div>;
-  }) : <p>No offers</p>}</Ui44Panel>;
-}
 
 function formatCurrency(cents: number, currency: string) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100);
+}
+
+function formatDuration(seconds: number) {
+  const rounded = Math.max(0, Math.round(seconds));
+  return `${Math.floor(rounded / 60)}:${String(rounded % 60).padStart(2, '0')}`;
+}
+
+function formatReleaseDate(value: string) {
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  const date = dateOnly
+    ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+    : new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', year: 'numeric' }).format(date);
+}
+
+function humanize(value: string) {
+  return value.replaceAll('_', ' ').replace(/\b\w/g, character => character.toUpperCase());
+}
+
+function MetadataSection({ title, rows, layout = 'facts', hideTitle = false }: {
+  title: string;
+  rows: Array<{ label: string; value: string; detail?: string }>;
+  layout?: 'facts' | 'tracks';
+  hideTitle?: boolean;
+}) {
+  if (!rows.length) return null;
+  return <section className="dashboard-section admin-content-metadata-section">
+    {!hideTitle ? <SectionHeader title={title} /> : null}
+    <Ui44Panel overflow="visible" className="admin-content-metadata-card">
+      <dl className={`admin-content-metadata-rows admin-content-metadata-rows-${layout}`}>
+        {rows.map((row, index) => <div className="admin-content-metadata-row" key={`${row.label}-${index}`}>
+          <dt>{layout === 'tracks' ? `${row.label}.` : row.label}</dt>
+          <dd><span>{row.value}</span>{row.detail ? <small>{row.detail}</small> : null}</dd>
+        </div>)}
+      </dl>
+    </Ui44Panel>
+  </section>;
 }

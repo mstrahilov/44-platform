@@ -6,8 +6,9 @@ import { SectionHeader } from '@/components/Ui';
 import type { ProductAchievement } from '@/lib/platform';
 import type { Product } from '@/lib/products';
 import { ExternalLinkActions } from '@/components/ExternalLinkActions';
-import type { ReleaseVideoEmbed } from '@/lib/domain/releaseFeatures';
+import type { ReleaseCreatorVideo } from '@/lib/domain/releaseFeatures';
 import { OS44Button } from '@/components/OS44Button';
+import { CreatorVideoTitle } from '@/components/CreatorVideoTitle';
 
 export type ProductDetailAction = {
   label: string;
@@ -247,25 +248,21 @@ export function LibraryBonusContentSection({
   );
 }
 
-export function LibraryVideoEmbedsSection({ embeds, title = 'Videos' }: { embeds: ReleaseVideoEmbed[]; title?: string }) {
-  if (embeds.length === 0) return null;
+export function LibraryVideosSection({ videos, title = 'Visuals' }: { videos: ReleaseCreatorVideo[]; title?: string }) {
+  if (videos.length === 0) return null;
 
   return (
-    <div className="view-section library-video-embeds-section">
+    <div className="view-section library-video-embeds-section library-videos-section">
       <SectionHeader title={title} />
-      <div className="library-video-embed-list">
-        {embeds.map((embed, index) => (
-          <article className="library-video-embed" key={embed.id}>
-            <div className="library-video-embed-frame">
-              <iframe
-                src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(embed.youtube_video_id)}?modestbranding=1&rel=0&playsinline=1&iv_load_policy=3`}
-                title={`YouTube video ${index + 1}`}
-                loading="lazy"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              />
-            </div>
-          </article>
+      <div className="library-video-card-list">
+        {videos.map(video => (
+          <Link className="library-video-card" key={video.id} href={`/videos/${video.id}`} aria-label={`Open video: ${video.title}`}>
+            <span className="library-video-card-artwork" aria-hidden="true">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`https://i.ytimg.com/vi/${video.youtube_video_id}/hqdefault.jpg`} alt="" loading="lazy" />
+            </span>
+            <CreatorVideoTitle className="library-video-card-title" videoId={video.youtube_video_id} storedTitle={video.title} />
+          </Link>
         ))}
       </div>
     </div>

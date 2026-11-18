@@ -60,6 +60,7 @@ export function StudioDigitalPricingFields({
   noticeId,
   freeAccessDescription,
   paidDownloadRequired = false,
+  availabilityDisabled,
   onAvailabilityChange,
   onMarketModeChange,
   onGlobalPriceChange,
@@ -74,6 +75,7 @@ export function StudioDigitalPricingFields({
   noticeId: string;
   freeAccessDescription?: string;
   paidDownloadRequired?: boolean;
+  availabilityDisabled?: boolean;
   onAvailabilityChange: (value: StudioAvailability) => void;
   onMarketModeChange: (value: MarketMode) => void;
   onGlobalPriceChange: (value: string) => void;
@@ -114,12 +116,12 @@ export function StudioDigitalPricingFields({
           <div className="dashboard-field-label">Availability</div>
           <Ui44SelectInput
             value={availability}
-            disabled={disabled}
-            aria-describedby={disabled ? noticeId : undefined}
+            disabled={availabilityDisabled ?? disabled}
+            aria-describedby={disabled || availabilityDisabled ? noticeId : undefined}
             onChange={event => onAvailabilityChange(event.target.value as StudioAvailability)}
           >
             <option value="free">Free</option>
-            <option value="paid">Paid download</option>
+            <option value="paid">Paid</option>
           </Ui44SelectInput>
           {disabled ? <span id={noticeId} className="dashboard-form-note">Paid downloads are not available for this account.</span> : null}
         </label>

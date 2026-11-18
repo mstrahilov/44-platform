@@ -12,6 +12,7 @@ import { WebPushNotificationPrompt } from '@/components/WebPushNotifications';
 import { absoluteAppUrl } from '@/lib/metadata';
 import { getMarketingUrl } from '@/lib/siteUrl';
 import { DesktopMenuNavigation } from '@/components/DesktopMenuNavigation';
+import { UserActivityReporter } from '@/components/UserActivityReporter';
 
 const THEME_BOOTSTRAP = `(function(){try{
   localStorage.removeItem('44-theme-mode');
@@ -48,7 +49,7 @@ export default function ApplicationShell({
       <head>
         {/* The application-only generated sheet must not be hoisted into marketing by Next. */}
         {/* eslint-disable-next-line @next/next/no-css-tags */}
-        <link rel="stylesheet" href="/_surface/44os-app.css?v=20261117-achievement-row-spacing" />
+        <link rel="stylesheet" href="/_surface/44os-app.css?v=20261118-admin-content-detail-6" />
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: SITE_IDENTITY_JSON_LD }} />
       </head>
@@ -57,6 +58,7 @@ export default function ApplicationShell({
         <MarketPreferenceSync />
         <AnalyticsConsentBoundary measurementId={analyticsMeasurementId} />
         <WebPushNotificationPrompt />
+        <UserActivityReporter />
         <DesktopMenuNavigation />
 
         <div className="app-environment" aria-hidden="true">

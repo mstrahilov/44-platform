@@ -51,6 +51,13 @@ const IconPlus = () => (
   </svg>
 );
 
+const IconCompose = () => (
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M13 5H5.5A2.5 2.5 0 0 0 3 7.5v11A2.5 2.5 0 0 0 5.5 21h11a2.5 2.5 0 0 0 2.5-2.5V11" />
+    <path d="m10 14 1-4 8.8-8.8a1.8 1.8 0 0 1 2.5 2.5L13.5 12.5 10 14Z" />
+  </svg>
+);
+
 const IconMore = () => (
   <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
     <circle cx="5" cy="12" r="1.7" />
@@ -106,7 +113,7 @@ export function Topbar() {
   const router = useRouter();
   const { user } = useAuth();
   const userId = user?.id ?? null;
-  const { tabs, back, overflowActions, toolbarTitle } = useTopbar();
+  const { tabs, back, overflowActions, toolbarTitle, mobileTrailingAction: registeredMobileTrailingAction } = useTopbar();
   const [overflowOpen, setOverflowOpen] = useState(false);
   const { count: cartCount } = useCart();
   const [notificationState, setNotificationState] = useState<NotificationState | null>(null);
@@ -411,6 +418,10 @@ export function Topbar() {
       aria-label={backLabel}
       title={backLabel}
       onClick={() => {
+        if (back?.alwaysNavigate) {
+          router.push(back.href);
+          return;
+        }
         if (typeof window !== 'undefined' && window.history.length > 1) {
           router.back();
           return;
@@ -520,8 +531,11 @@ export function Topbar() {
       <IconCalendar />
     </Link>
   ) : isAccountRoot ? (
-    <Link href="/notifications" className="ui44-symbol-button" aria-label="Notifications" title="Notifications">
-      <IconBell />
+    <Link href="/notifications" className="ui44-symbol-button" aria-label={unreadNotificationCount > 0 ? `Notifications, ${unreadNotificationCount} unread` : 'Notifications'} title="Notifications">
+      <span className="os-topbar-icon-wrapper">
+        <IconBell />
+        {unreadNotificationCount > 0 && <span className="os-topbar-notification-dot" aria-hidden="true" />}
+      </span>
     </Link>
   ) : isRadioRoot ? (
     <Link href="/calendar" className="ui44-symbol-button" aria-label="Radio Schedule" title="Radio Schedule">
@@ -533,7 +547,7 @@ export function Topbar() {
     </button>
   ) : mobileSearchAction;
 
-  const mobileTrailingAction = isNewCommunityPost ? (
+  const mobileTrailingAction = registeredMobileTrailingAction ?? (isNewCommunityPost ? (
     <button type="button" className="ui44-symbol-button" aria-label="Post" title="Post" onClick={() => window.dispatchEvent(new CustomEvent('community:new-post-submit'))}>
       <IconCheck />
     </button>
@@ -555,7 +569,7 @@ export function Topbar() {
     </Link>
   ) : isInboxRoot ? (
     <button type="button" className="ui44-symbol-button" aria-label="New Message" title="New Message" onClick={() => router.push('/conversation/new')}>
-      <IconPlus />
+      <IconCompose />
     </button>
   ) : isStudioRoot ? (
     <button type="button" className="ui44-symbol-button" aria-label="Add Studio content" title="Add Studio content" aria-haspopup="menu" aria-expanded={overflowOpen} disabled={!overflowActions?.length} onClick={() => setOverflowOpen(open => !open)}>
@@ -576,7 +590,7 @@ export function Topbar() {
     <button type="button" className="ui44-symbol-button" aria-label="More actions" title="More actions" aria-expanded={overflowOpen} onClick={() => setOverflowOpen(open => !open)}>
       <IconMore />
     </button>
-  ) : null;
+  ) : null);
 
   return (
     <>
@@ -643,7 +657,15 @@ export function Topbar() {
         })}
         </div>
 
-        <MobileToolbar title={mobileTopbarTitle} leading={mobileLeadingAction} trailing={<div className="os-mobile-toolbar-overflow">{mobileTrailingAction}{overflowOpen && overflowActions?.length ? <div className="ui44-paper-menu os-mobile-toolbar-menu" role="menu">{overflowActions.map((action: TopbarOverflowAction) => <button key={action.id} className="ui44-paper-menu-item" type="button" role="menuitem" disabled={action.disabled} onClick={() => { setOverflowOpen(false); action.onSelect?.(); }}>{action.label}</button>)}</div> : null}</div>} />
+        <MobileToolbar
+          title={mobileTopbarTitle}
+          hideTitle={isAccountRoot}
+          leading={mobileLeadingAction}
+          trailing={<div className="os-mobile-toolbar-overflow">
+            {mobileTrailingAction}
+            {overflowOpen && overflowActions?.length ? <div className="ui44-paper-menu os-mobile-toolbar-menu" role="menu">{overflowActions.map((action: TopbarOverflowAction) => <button key={action.id} className={`ui44-paper-menu-item${action.danger ? ' os-topbar-overflow-danger' : ''}`} type="button" role="menuitem" disabled={action.disabled} onClick={() => { setOverflowOpen(false); action.onSelect?.(); }}>{action.label}</button>)}</div> : null}
+          </div>}
+        />
 
         <div className="os-topbar-right">
         {isPlaylistTrackPicker && (

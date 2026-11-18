@@ -7,12 +7,12 @@ import { useTopbarBack, useTopbarOverflow } from '@/components/TopbarContext';
 import { useMusicPlayer, type MusicQueueTrack } from '@/components/MusicPlayer';
 import { useAuth } from '@/lib/useAuth';
 import { getCatalogItem, getMusicAchievementBundle } from '@/lib/domain/itemDetails';
-import { listReleaseVideoEmbeds, type ReleaseVideoEmbed } from '@/lib/domain/releaseFeatures';
+import { listReleaseCreatorVideos, type ReleaseCreatorVideo } from '@/lib/domain/releaseFeatures';
 import { isSavedMusicContractMissing, listSavedMusicTracks, listVisibleLibraryItems, setSavedMusicRelease, setSavedMusicTrack, type SavedMusicTrack } from '@/lib/domain/library';
 import { productLibraryHref } from '@/lib/experience';
 import type { Product } from '@/lib/products';
 import { creatorHref, type ProductAchievement } from '@/lib/platform';
-import { LibraryAchievementsSection, LibraryVideoEmbedsSection, ProductDetailHeader } from '@/components/LibraryDetailPrimitives';
+import { LibraryAchievementsSection, LibraryVideosSection, ProductDetailHeader } from '@/components/LibraryDetailPrimitives';
 import { ItemTrackList } from '@/components/ItemTrackList';
 import { PlaylistPicker } from '@/components/PlaylistPicker';
 import { ItemCommunitySection, MoreFromCreatorSection } from '@/components/ItemDetailSections';
@@ -24,7 +24,7 @@ export function LibraryMusicRelease({ itemId }: { itemId: string }) {
   const [tracks, setTracks] = useState<SavedMusicTrack[]>([]);
   const [achievements, setAchievements] = useState<ProductAchievement[]>([]);
   const [unlockedAchievementIds, setUnlockedAchievementIds] = useState<Set<string>>(new Set());
-  const [visuals, setVisuals] = useState<ReleaseVideoEmbed[]>([]);
+  const [visuals, setVisuals] = useState<ReleaseCreatorVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -53,7 +53,7 @@ export function LibraryMusicRelease({ itemId }: { itemId: string }) {
       if (!live) return;
       const [achievementBundle, releaseVisuals] = await Promise.all([
         getMusicAchievementBundle(user.id, itemId),
-        listReleaseVideoEmbeds(itemId),
+        listReleaseCreatorVideos(itemId),
       ]);
       if (!live) return;
       setProduct(release);
@@ -137,7 +137,7 @@ export function LibraryMusicRelease({ itemId }: { itemId: string }) {
         };
       })} />
     </section>
-    <LibraryVideoEmbedsSection embeds={visuals} title="Visuals" />
+    <LibraryVideosSection videos={visuals} title="Visuals" />
     {achievements.length > 0 && <LibraryAchievementsSection achievements={achievements} unlockedAchievementIds={unlockedAchievementIds} />}
     <MoreFromCreatorSection key={`more-${product.id}`} item={product} />
     <ItemCommunitySection key={`community-${product.id}`} item={product} />

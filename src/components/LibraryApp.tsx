@@ -27,7 +27,7 @@ const CATEGORY_FILTER: Record<LibraryCategory, LibraryFilter> = {
   books: 'book',
   games: 'interactive',
   assets: 'asset',
-  beats: 'beats',
+  beats: 'asset',
   'sample-packs': 'asset',
 };
 
@@ -37,7 +37,7 @@ const FILTER_LABELS: Record<LibraryFilter, string> = {
   book: 'Books',
   interactive: 'Games',
   beats: 'Beats',
-  asset: 'Sample Packs',
+  asset: 'Assets',
   playlists: 'Playlists',
 };
 
@@ -129,6 +129,7 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
       if (!['music', 'book', 'asset', 'interactive'].includes(experience)) return false;
       if (activeFilter === 'beats' && !isBeatProduct(product)) return false;
       if (activeFilter === 'music' && (experience !== 'music' || isBeatProduct(product))) return false;
+      if (activeFilter === 'asset' && experience !== 'asset' && !isBeatProduct(product)) return false;
       if (!['all', 'beats', 'music'].includes(activeFilter) && experience !== activeFilter) return false;
       return true;
     });
@@ -172,8 +173,8 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
     ...(savedAlbums.length || (!savedMusicContractAvailable && legacyMusicRows.length) ? [{ id: 'music', label: 'Music', href: '/library/music' }] : []),
     ...(playlists.length ? [{ id: 'playlists', label: 'Playlists', href: '/library/playlists' }] : []),
     ...(rows.some(row => row.products && getProductExperience(row.products) === 'book') ? [{ id: 'books', label: 'Books', href: '/library/books' }] : []),
+    ...(rows.some(row => row.products && (getProductExperience(row.products) === 'asset' || isBeatProduct(row.products))) ? [{ id: 'assets', label: 'Assets', href: '/library/assets' }] : []),
     ...(rows.some(row => row.products && getProductExperience(row.products) === 'interactive') ? [{ id: 'games', label: 'Games', href: '/library/games' }] : []),
-    ...(rows.some(row => row.products && getProductExperience(row.products) === 'asset') ? [{ id: 'assets', label: 'Assets', href: '/library/assets' }] : []),
   ], [legacyMusicRows.length, playlists.length, rows, savedAlbums.length, savedMusicContractAvailable]);
   const topbarTabs = useMemo(() => availableCategories.map(entry => ({
     id: entry.id, label: entry.label, href: entry.href, active: category === entry.id, variant: 'section' as const,

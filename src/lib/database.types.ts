@@ -1105,12 +1105,14 @@ export type Database = {
         Row: {
           author_id: string | null
           available_locally_only: boolean
+          community_enabled: boolean
           cover_url: string | null
           created_at: string
           creator: string
           download_purchase_enabled: boolean
           download_url: string | null
           experience_type: string
+          external_links_enabled: boolean
           feature_description: string | null
           featured: boolean
           fulfillment_type: string
@@ -1126,6 +1128,7 @@ export type Database = {
           market_mode: string
           merch_fulfillment_mode: string | null
           merch_shipping_scope: string | null
+          related_items_enabled: boolean
           price_cents: number
           read_url: string | null
           release_date: string | null
@@ -1139,17 +1142,20 @@ export type Database = {
           upcoming_release_at: string | null
           upcoming_release_timezone: string | null
           updated_at: string
+          visuals_enabled: boolean
           year: number | null
         }
         Insert: {
           author_id?: string | null
           available_locally_only?: boolean
+          community_enabled?: boolean
           cover_url?: string | null
           created_at?: string
           creator: string
           download_purchase_enabled?: boolean
           download_url?: string | null
           experience_type?: string
+          external_links_enabled?: boolean
           feature_description?: string | null
           featured?: boolean
           fulfillment_type?: string
@@ -1165,6 +1171,7 @@ export type Database = {
           market_mode?: string
           merch_fulfillment_mode?: string | null
           merch_shipping_scope?: string | null
+          related_items_enabled?: boolean
           price_cents?: number
           read_url?: string | null
           release_date?: string | null
@@ -1178,17 +1185,20 @@ export type Database = {
           upcoming_release_at?: string | null
           upcoming_release_timezone?: string | null
           updated_at?: string
+          visuals_enabled?: boolean
           year?: number | null
         }
         Update: {
           author_id?: string | null
           available_locally_only?: boolean
+          community_enabled?: boolean
           cover_url?: string | null
           created_at?: string
           creator?: string
           download_purchase_enabled?: boolean
           download_url?: string | null
           experience_type?: string
+          external_links_enabled?: boolean
           feature_description?: string | null
           featured?: boolean
           fulfillment_type?: string
@@ -1204,6 +1214,7 @@ export type Database = {
           market_mode?: string
           merch_fulfillment_mode?: string | null
           merch_shipping_scope?: string | null
+          related_items_enabled?: boolean
           price_cents?: number
           read_url?: string | null
           release_date?: string | null
@@ -1217,6 +1228,7 @@ export type Database = {
           upcoming_release_at?: string | null
           upcoming_release_timezone?: string | null
           updated_at?: string
+          visuals_enabled?: boolean
           year?: number | null
         }
         Relationships: [
@@ -2980,6 +2992,7 @@ export type Database = {
           address_line2: string | null
           country_code: string | null
           created_at: string
+          cover_url: string | null
           creator_id: string
           ends_at: string | null
           format: string
@@ -3006,6 +3019,7 @@ export type Database = {
           address_line2?: string | null
           country_code?: string | null
           created_at?: string
+          cover_url?: string | null
           creator_id: string
           ends_at?: string | null
           format: string
@@ -3032,6 +3046,7 @@ export type Database = {
           address_line2?: string | null
           country_code?: string | null
           created_at?: string
+          cover_url?: string | null
           creator_id?: string
           ends_at?: string | null
           format?: string
@@ -8243,6 +8258,7 @@ export type Database = {
           id: string
           is_official: boolean
           is_published: boolean
+          last_active_at: string | null
           item_market_mode: string
           role: string
           service_market_mode: string
@@ -8266,6 +8282,7 @@ export type Database = {
           id: string
           is_official?: boolean
           is_published?: boolean
+          last_active_at?: string | null
           item_market_mode?: string
           role?: string
           service_market_mode?: string
@@ -8289,6 +8306,7 @@ export type Database = {
           id?: string
           is_official?: boolean
           is_published?: boolean
+          last_active_at?: string | null
           item_market_mode?: string
           role?: string
           service_market_mode?: string
@@ -10285,6 +10303,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      record_current_user_activity: {
+        Args: never
+        Returns: undefined
+      }
       record_beat_file_download: {
         Args: {
           target_beat_file_id: string
@@ -10508,6 +10530,7 @@ export type Database = {
           target_tier_prices: Json
           target_time_signature: string
           target_title: string
+          target_asset_subtype?: string
         }
         Returns: string
       }

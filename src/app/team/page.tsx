@@ -1,2 +1,5 @@
-import TeamHubApp from '@/components/team/TeamHubApp';
-export default function TeamPage() { return <TeamHubApp />; }
+import { redirect } from 'next/navigation';
+
+export default function TeamPage() {
+  redirect('/admin');
+}

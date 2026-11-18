@@ -6,10 +6,10 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageShell } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
-import { OnboardingTip } from '@/components/OnboardingTip';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Ui44TextInput, Ui44Textarea } from '@/components/ui44/Inputs';
 import { SocialAvatar, SocialProfileRow } from '@/components/Social';
-import { useTopbarBack } from '@/components/TopbarContext';
+import { useTopbarBack, useTopbarOverflow, useTopbarTitle, type TopbarOverflowAction } from '@/components/TopbarContext';
 import { useAuth } from '@/lib/useAuth';
 import {
   createOrOpenConversation,
@@ -30,7 +30,7 @@ import {
 import { hasCommunityIdentity, communityIdentityMessage } from '@/lib/communityProfile';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { isMissingRelationError } from '@/lib/schemaCompat';
-import { authorDisplayName, authorHref, compactDate } from '@/lib/social';
+import { authorDisplayName, compactDate } from '@/lib/social';
 import { OS44Button } from '@/components/OS44Button';
 
 type Conversation = InboxConversation;
@@ -78,11 +78,14 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
   const [body, setBody] = useState('');
   const [schemaReady, setSchemaReady] = useState(true);
   const [sending, setSending] = useState(false);
+  const [archiveConfirmationOpen, setArchiveConfirmationOpen] = useState(false);
+  const [archivingConversation, setArchivingConversation] = useState(false);
   const [setupGateOpen, setSetupGateOpen] = useState(false);
   const composeRoute = routeConversationId === 'new';
   const [composing, setComposing] = useState(composeRoute);
   const [recipientQuery, setRecipientQuery] = useState('');
   const [recipientProfiles, setRecipientProfiles] = useState<MessageProfile[]>([]);
+  const [recipientSearchState, setRecipientSearchState] = useState<'idle' | 'searching' | 'results' | 'failed'>('idle');
   const [selectedRecipient, setSelectedRecipient] = useState<MessageProfile | null>(null);
   const [inboxError, setInboxError] = useState('');
   const [mobileListOpen, setMobileListOpen] = useState(!routeConversationId);
@@ -234,21 +237,34 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
   }, [loadInbox, router, searchParams, user]);
 
   useEffect(() => {
-    if (!user || !composing || !recipientQuery.trim()) return;
-
-    let alive = true;
-    async function loadRecipients() {
-      const query = recipientQuery.trim();
-      try {
-        const rows = await searchMessageRecipients(user!.id, query);
-        if (alive) setRecipientProfiles(rows);
-      } catch (recipientError) {
-        if (alive) setInboxError(directMessageError(recipientError as { message?: string }));
-      }
+    const query = recipientQuery.trim();
+    if (!user || !composing || !query) {
+      setRecipientProfiles([]);
+      setRecipientSearchState('idle');
+      return;
     }
 
-    loadRecipients();
-    return () => { alive = false; };
+    let alive = true;
+    setRecipientProfiles([]);
+    setRecipientSearchState('searching');
+    const timeout = window.setTimeout(async () => {
+      try {
+        const rows = await searchMessageRecipients(user.id, query);
+        if (alive) {
+          setRecipientProfiles(rows);
+          setRecipientSearchState('results');
+        }
+      } catch (recipientError) {
+        if (alive) {
+          setInboxError(directMessageError(recipientError as { message?: string }));
+          setRecipientSearchState('failed');
+        }
+      }
+    }, 250);
+    return () => {
+      alive = false;
+      window.clearTimeout(timeout);
+    };
   }, [composing, recipientQuery, user]);
 
   const profile = profileState && profileState.userId === userId ? profileState.profile : null;
@@ -262,6 +278,18 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
   const latestActiveMessageAt = activeMessages.at(-1)?.created_at ?? '';
   const activeMembers = activeConversation ? members.filter(member => member.conversation_id === activeConversation.id) : [];
   const otherMember = activeMembers.find(member => member.profile_id !== user?.id)?.profiles ?? null;
+
+  useTopbarTitle(composing
+    ? 'New Message'
+    : standaloneConversation
+      ? otherMember ? authorDisplayName(otherMember) : 'Conversation'
+      : undefined);
+  const conversationOverflowActions = useMemo<TopbarOverflowAction[] | undefined>(() => (
+    standaloneConversation && !composing && activeConversation
+      ? [{ id: 'archive-conversation', label: 'Archive Conversation', onSelect: () => setArchiveConfirmationOpen(true) }]
+      : undefined
+  ), [activeConversation, composing, standaloneConversation]);
+  useTopbarOverflow(conversationOverflowActions);
 
   const conversationSummaries = useMemo(() => {
     return conversations.map(conversation => {
@@ -314,25 +342,6 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
       setLoadingOlderMessages(false);
     }
   }, [activeConversationId, loadingOlderMessages, threadNextCursor]);
-
-  async function archiveOneConversation(id: string) {
-    if (!user) return;
-    setInboxError('');
-    try {
-      await archiveConversation(id, user.id);
-      setConversations(current => current.filter(conversation => conversation.id !== id));
-      setMembers(current => current.filter(member => member.conversation_id !== id));
-      setMessages(current => current.filter(message => message.conversation_id !== id));
-      if (activeId === id) {
-        setActiveId('');
-        setThreadMessages([]);
-        setMobileListOpen(true);
-        router.replace('/inbox');
-      }
-    } catch (archiveError) {
-      setInboxError(directMessageError(archiveError as { message?: string }));
-    }
-  }
 
   useEffect(() => {
     if (!standaloneConversation || !messageListRef.current) return;
@@ -410,6 +419,29 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
     setSending(false);
   }
 
+  async function archiveActiveConversation() {
+    if (!activeConversation || !user || archivingConversation) return;
+    setArchivingConversation(true);
+    setInboxError('');
+    try {
+      await archiveConversation(activeConversation.id, user.id);
+      setConversations(current => current.filter(conversation => conversation.id !== activeConversation.id));
+      setMembers(current => current.filter(member => member.conversation_id !== activeConversation.id));
+      setMessages(current => current.filter(message => message.conversation_id !== activeConversation.id));
+      setThreadMessages([]);
+      setThreadConversationId('');
+      setActiveId('');
+      setArchiveConfirmationOpen(false);
+      setMobileListOpen(true);
+      router.replace('/inbox');
+    } catch (archiveError) {
+      setArchiveConfirmationOpen(false);
+      setInboxError(directMessageError(archiveError as { message?: string }));
+    } finally {
+      setArchivingConversation(false);
+    }
+  }
+
   if (loading) {
     return (
       <PageShell>
@@ -446,7 +478,10 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
               setInboxError('');
               router.push('/conversation/new');
             }}>
-              <span className="ui44-symbol-plus" aria-hidden="true">+</span>
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M13 5H5.5A2.5 2.5 0 0 0 3 7.5v11A2.5 2.5 0 0 0 5.5 21h11a2.5 2.5 0 0 0 2.5-2.5V11" />
+                <path d="m10 14 1-4 8.8-8.8a1.8 1.8 0 0 1 2.5 2.5L13.5 12.5 10 14Z" />
+              </svg>
             </button>
           </div>
         </header>}
@@ -461,9 +496,6 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
               : 'social-inbox social-inbox-mobile-list social-inbox-index'} aria-label={standaloneConversation ? 'Conversation' : 'Messages'}>
             {!standaloneConversation && (
             <aside className="social-inbox-list ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip">
-              <OnboardingTip id="messages-refresh">
-                Messages refresh when you return to this window. Open a profile to start a new conversation.
-              </OnboardingTip>
               {composing && (
                 <button
                   type="button"
@@ -480,33 +512,26 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
                 !composing ? <div className="app-empty-text" role={inboxLoading ? 'status' : undefined}>{inboxLoading ? 'Loading messages…' : 'No messages yet.'}</div> : null
               ) : (
                 conversationSummaries.map(({ conversation, other, last, unread }) => (
-                  <div key={conversation.id} className="social-inbox-row-wrap">
-                    <button
-                      type="button"
-                      className={unread
-                        ? 'social-action social-inbox-unread ui44-list-row ui44-list-row-inbox ui44-list-row-interactive ui44-list-row-selected'
-                        : 'social-action ui44-list-row ui44-list-row-inbox ui44-list-row-interactive'}
-                      onClick={() => {
-                        setActiveId(conversation.id);
-                        setMobileListOpen(false);
-                        router.push(`/conversation/${conversation.id}`);
-                      }}
-                    >
-                      <SocialProfileRow
-                        profile={other ?? { display_name: '44 Member' }}
-                        subtitle={last?.body || 'No messages yet'}
-                        aside={(
-                          <span className="social-inbox-row-aside">
-                            {last && <span>{compactDate(last.created_at)}</span>}
-                            <span className="social-inbox-chevron" aria-hidden="true">›</span>
-                          </span>
-                        )}
-                      />
-                    </button>
-                    <OS44Button type="button" className="social-inbox-archive os-button os-button-secondary os-button-compact" onClick={() => { void archiveOneConversation(conversation.id); }} aria-label={`Archive conversation with ${authorDisplayName(other)}`}>
-                      Archive
-                    </OS44Button>
-                  </div>
+                  <button
+                    key={conversation.id}
+                    type="button"
+                    className={unread
+                      ? 'social-action social-inbox-conversation-row social-inbox-unread ui44-list-row ui44-list-row-interactive ui44-list-row-selected'
+                      : 'social-action social-inbox-conversation-row ui44-list-row ui44-list-row-interactive'}
+                    aria-label={`Open conversation with ${authorDisplayName(other)}`}
+                    onClick={() => {
+                      setActiveId(conversation.id);
+                      setMobileListOpen(false);
+                      router.push(`/conversation/${conversation.id}`);
+                    }}
+                  >
+                    <SocialAvatar profile={other} />
+                    <span className="social-inbox-row-copy">
+                      <strong>{authorDisplayName(other)}</strong>
+                      <span>{last?.body || 'No messages yet'}</span>
+                    </span>
+                    <span className="social-inbox-chevron" aria-hidden="true">›</span>
+                  </button>
                 ))
               )}
               {inboxNextCursor !== null && <OS44Button type="button" className="os-button os-button-secondary os-button-compact social-inbox-load-more" onClick={() => { void loadMoreInbox(); }} disabled={loadingMoreInbox}>{loadingMoreInbox ? 'Loading…' : 'Load more conversations'}</OS44Button>}
@@ -516,9 +541,6 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
             {(standaloneConversation || composing) && <div className="social-inbox-thread">
               {composing ? (
                 <div className="social-compose-panel">
-                  <div className="social-compose-mobile-header">
-                    <h2>New Message</h2>
-                  </div>
                   <div className="social-compose-to-row ui44-composed-field ui44-composed-field-search">
                     <span className="social-compose-to-label">To:</span>
                     {selectedRecipient ? (
@@ -531,31 +553,47 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
                         className="social-compose-to-input"
                         value={recipientQuery}
                         onChange={event => setRecipientQuery(event.target.value)}
-                        placeholder="Search by name or username"
+                        placeholder="Name or username"
                         autoFocus
                       />
                     )}
                   </div>
-                  {!selectedRecipient && recipientQuery.trim() && (
+                  {!selectedRecipient && (
                     <div className="social-compose-results">
-                    {visibleRecipientProfiles.length === 0 ? (
-                      <div className="app-empty-text">No matching people.</div>
-                    ) : (
-                      visibleRecipientProfiles.map(result => (
-                        <button
-                          key={result.id}
-                          type="button"
-                          className="social-compose-result ui44-list-row ui44-list-row-inbox ui44-list-row-interactive"
-                          onClick={() => {
-                            setSelectedRecipient(result);
-                            setRecipientQuery('');
-                          }}
-                          disabled={false}
-                        >
-                          <SocialProfileRow profile={result} />
-                        </button>
-                      ))
-                    )}
+                      {recipientSearchState === 'idle' ? (
+                        <div className="social-compose-empty">
+                          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <circle cx="13" cy="10" r="5" />
+                            <path d="M3.5 26c.8-5 4.3-8 9.5-8 2.2 0 4 .6 5.4 1.7M24 17v10m-5-5h10" />
+                          </svg>
+                          <strong>Find a member</strong>
+                          <span>Search by display name or username.</span>
+                        </div>
+                      ) : recipientSearchState === 'searching' ? (
+                        <div className="social-compose-empty" role="status">Searching…</div>
+                      ) : recipientSearchState === 'failed' ? (
+                        <div className="social-compose-empty" role="status">Search unavailable</div>
+                      ) : visibleRecipientProfiles.length === 0 ? (
+                        <div className="social-compose-empty" role="status">No matching people.</div>
+                      ) : (
+                        visibleRecipientProfiles.map(result => (
+                          <button
+                            key={result.id}
+                            type="button"
+                            className="social-compose-result"
+                            onClick={() => {
+                              setSelectedRecipient(result);
+                              setRecipientQuery('');
+                            }}
+                          >
+                            <SocialAvatar profile={result} />
+                            <span className="social-compose-result-copy">
+                              <strong>{authorDisplayName(result)}</strong>
+                              {result.username && <span>@{result.username}</span>}
+                            </span>
+                          </button>
+                        ))
+                      )}
                     </div>
                   )}
                   <form className="social-message-form social-message-form-compose" onSubmit={sendMessage}>
@@ -564,27 +602,19 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
                       rows={1}
                       value={body}
                       onChange={event => setBody(event.target.value)}
-                      placeholder="Type message"
+                      placeholder="Message"
                       disabled={sending || !selectedRecipient}
+                      maxLength={4000}
                     />
-                    <button className="social-message-send" type="submit" aria-label="Send message" disabled={!body.trim() || sending || !selectedRecipient}>
-                      <MessageSendGlyph />
-                    </button>
+                    {selectedRecipient && body.trim() && !sending && (
+                      <button className="social-message-send" type="submit" aria-label="Send message">
+                        <MessageSendGlyph />
+                      </button>
+                    )}
                   </form>
                 </div>
               ) : activeConversation ? (
                 <>
-                  <div className="social-row social-message-thread-header ui44-list-row ui44-list-row-profile">
-                    <Link
-                      href={authorHref(otherMember)}
-                      className="social-message-profile-link"
-                      aria-label={`View ${authorDisplayName(otherMember)} profile`}
-                    >
-                      <SocialAvatar profile={otherMember} />
-                      <span className="social-author-name">{authorDisplayName(otherMember)}</span>
-                    </Link>
-                  </div>
-
                   <div className="social-message-list" ref={messageListRef}>
                     {threadConversationId === activeConversation.id && threadNextCursor !== null && <OS44Button type="button" className="os-button os-button-secondary os-button-compact social-message-load-older" onClick={() => { void loadOlderMessages(); }} disabled={loadingOlderMessages}>{loadingOlderMessages ? 'Loading…' : 'Load older messages'}</OS44Button>}
                     {threadConversationId !== activeConversation.id ? (
@@ -607,12 +637,14 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
                       rows={1}
                       value={body}
                       onChange={event => setBody(event.target.value)}
-                      placeholder="Type message"
+                      placeholder="Message"
                       disabled={sending}
                     />
-                    <button className="social-message-send" type="submit" aria-label="Send message" disabled={!body.trim() || sending}>
-                      <MessageSendGlyph />
-                    </button>
+                    {body.trim() && !sending && (
+                      <button className="social-message-send" type="submit" aria-label="Send message">
+                        <MessageSendGlyph />
+                      </button>
+                    )}
                   </form>
                 </>
               ) : (
@@ -622,6 +654,17 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
           </section>
       </main>
       <CommunitySetupGate open={setupGateOpen} onClose={() => setSetupGateOpen(false)} />
+      <ConfirmDialog
+        open={archiveConfirmationOpen}
+        title="Archive this conversation?"
+        description="This removes the conversation from your inbox."
+        confirmLabel="Archive Conversation"
+        cancelLabel="Cancel"
+        destructive
+        busy={archivingConversation}
+        onConfirm={() => { void archiveActiveConversation(); }}
+        onCancel={() => { if (!archivingConversation) setArchiveConfirmationOpen(false); }}
+      />
     </PageShell>
   );
 }

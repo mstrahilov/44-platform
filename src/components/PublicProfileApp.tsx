@@ -11,6 +11,7 @@ import { getProductExperience, productBrowseHref } from '@/lib/experience';
 import { PageShell, CenteredMessage } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
 import { SocialArtifactCard, SocialAvatar, SocialPostRow } from '@/components/Social';
+import { CreatorVideoTitle } from '@/components/CreatorVideoTitle';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { authorHandle, countById, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type SocialPost } from '@/lib/social';
@@ -523,9 +524,10 @@ export default function PublicProfilePage() {
             {videos.map(video => <SocialArtifactCard
               key={video.id}
               href={`/videos/${video.id}`}
-              title={video.title}
-              meta="Video"
+              title={<CreatorVideoTitle videoId={video.youtube_video_id} storedTitle={video.title} />}
               image={`https://i.ytimg.com/vi/${video.youtube_video_id}/hqdefault.jpg`}
+              shape="landscape"
+              singleLineTitle
             />)}
           </ArtifactGrid>
         )}

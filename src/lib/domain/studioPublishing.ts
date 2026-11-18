@@ -2,6 +2,7 @@ import type { Database } from '@/lib/database.types';
 import type { Product } from '@/lib/products';
 import type { ProductCategory, Track } from '@/lib/platform';
 import { supabase } from '@/lib/supabase';
+import { listReleaseCreatorVideos, type ReleaseCreatorVideo } from '@/lib/domain/releaseFeatures';
 
 type ItemInsert = Database['public']['Tables']['catalog_items']['Insert'];
 type ItemUpdate = Database['public']['Tables']['catalog_items']['Update'];
@@ -18,13 +19,6 @@ export type StudioAchievementSummary = Pick<
   Database['public']['Tables']['item_achievements']['Row'],
   'code' | 'title' | 'description' | 'trigger_type' | 'reward_config' | 'is_secret' | 'icon'
 >;
-
-export type StudioVideoEmbedSummary = {
-  id: string;
-  title: string;
-  youtube_video_id: string;
-  sort_order: number;
-};
 
 export type ItemSubmissionStatus = 'pending' | 'withdrawn' | 'approved' | 'rejected';
 export type ItemSubmissionChildType =
@@ -123,7 +117,7 @@ export async function loadStudioItemEditor(itemId: string, ownerId: string) {
   if (itemResult.error) throw itemResult.error;
   if (!itemResult.data) return null;
 
-  const [trackResult, assetResult, achievementResult, typeResult, tagResult, linkResult, bookResult, samplesResult, videoResult, audioAssetResult] = await Promise.all([
+  const [trackResult, assetResult, achievementResult, typeResult, tagResult, linkResult, bookResult, samplesResult, videos, audioAssetResult] = await Promise.all([
     supabase.from('tracks').select('*').eq('item_id', itemId).order('number'),
     supabase.from('item_assets').select('asset_type,title,file_url,storage_path').eq('item_id', itemId).order('sort_order'),
     supabase
@@ -136,11 +130,11 @@ export async function loadStudioItemEditor(itemId: string, ownerId: string) {
     supabase.from('item_external_links').select('platform,url,sort_order').eq('item_id', itemId).order('sort_order'),
     supabase.from('book_contents').select('*').eq('item_id', itemId).maybeSingle(),
     supabase.from('sample_pack_files').select('*').eq('item_id', itemId).order('sort_order'),
-    supabase.from('item_video_embeds' as never).select('id,title,youtube_video_id,sort_order').eq('item_id', itemId).order('sort_order'),
+    listReleaseCreatorVideos(itemId),
     supabase.from('audio_assets' as never).select('id,track_id,status,stream_public_url').in('track_id',
       (await supabase.from('tracks').select('id').eq('item_id', itemId)).data?.map(track => track.id) ?? []),
   ]);
-  const error = trackResult.error || assetResult.error || achievementResult.error || typeResult.error || tagResult.error || linkResult.error || bookResult.error || samplesResult.error || videoResult.error || audioAssetResult.error;
+  const error = trackResult.error || assetResult.error || achievementResult.error || typeResult.error || tagResult.error || linkResult.error || bookResult.error || samplesResult.error || audioAssetResult.error;
   if (error) throw error;
 
   return {
@@ -153,7 +147,7 @@ export async function loadStudioItemEditor(itemId: string, ownerId: string) {
     externalLinks: (linkResult.data ?? []).map(row => ({ platform: row.platform, url: row.url })),
     bookContent: bookResult.data,
     sampleFiles: samplesResult.data ?? [],
-    videoEmbeds: (videoResult.data as StudioVideoEmbedSummary[] | null) ?? [],
+    attachedVideos: videos as ReleaseCreatorVideo[],
     audioAssets: (audioAssetResult.data ?? []) as unknown as Array<{ id: string; track_id: string; status: string; stream_public_url: string | null }>,
   };
 }

@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 
 export const ADMIN_PAGE_SIZE = 8;
+export const ADMIN_CONTENT_PAGE_SIZE = 50;
 
 export type AdminSystemStatus = { enabled: boolean; label: string; phase?: string };
 export type AdminDashboardSummary = {
@@ -74,12 +75,15 @@ export type AdminPersonDetail = {
     display_name: string | null;
     username: string | null;
     avatar_url: string | null;
+    country_code: string | null;
     bio: string | null;
     role: 'member' | 'creator' | 'admin';
     slug: string | null;
     creator_type: string | null;
     is_official: boolean;
     is_published: boolean;
+    last_active_at: string | null;
+    last_community_activity_at: string | null;
     created_at: string;
     updated_at: string;
   };
@@ -172,14 +176,29 @@ export type AdminContentDetail = {
     is_free: boolean;
     featured: boolean;
     fulfillment_type: string;
+    download_purchase_enabled: boolean;
+    market_mode: string;
+    available_locally_only: boolean;
+    local_price_cents: number | null;
+    local_currency: string | null;
+    visuals_enabled: boolean;
+    external_links_enabled: boolean;
+    related_items_enabled: boolean;
     created_at: string;
     updated_at: string;
   };
   creator: null | { id: string; display_name: string | null; username: string | null; avatar_url: string | null; role: string };
+  category: null | { name: string; slug: string };
   taxonomy: { type: null | { id: string; label: string; slug: string }; tags: Array<{ id: string; label: string; slug: string }> };
   tracks: Array<{ id: string; number: number; title: string; duration_seconds: number | null; has_audio: boolean }>;
   assets: Array<{ id: string; asset_type: string; title: string | null; is_downloadable: boolean; has_file: boolean }>;
   offers: Array<{ id: string; code: string; title: string; offer_type: string; status: string; price_cents: number; currency: string; fulfillment_type: string }>;
+  achievements: Array<{ id: string; title: string; description: string | null; is_secret: boolean }>;
+  external_links: Array<{ id: string; label: string; platform: string; url: string }>;
+  videos: Array<{ id: string; title: string; sort_order: number }>;
+  book: null | { format: string; total_pages: number | null; sample_page_limit: number | null; language_code: string | null; has_file: boolean; has_preview: boolean };
+  sample_previews: Array<{ id: string; title: string; duration_seconds: number | null; has_preview: boolean; has_file: boolean }>;
+  interactive_build: null | { runtime: string; build_version: string; unity_version: string | null; status: string; supports_desktop: boolean; supports_mobile: boolean; supported_browsers: string[]; supported_inputs: string[]; preferred_orientation: string; download_size_mb: number | null };
   health: Array<{ code: string; message: string }>;
   submissions: Array<{
     id: string;
@@ -237,42 +256,33 @@ export async function getAdminDashboardSummary() {
   return result.data as unknown as AdminDashboardSummary;
 }
 
-export async function listAdminPeople(input: { query?: string | null; role?: string | null; page?: number } = {}) {
-  const page = Math.max(1, input.page ?? 1);
-  const result = await supabase.rpc('list_admin_people', {
-    target_query: input.query || undefined,
-    target_role: input.role && input.role !== 'all' ? input.role : undefined,
-    target_limit: ADMIN_PAGE_SIZE,
-    target_offset: (page - 1) * ADMIN_PAGE_SIZE,
-  });
-  if (result.error) throw result.error;
-  const rows = (result.data ?? []) as AdminPersonRow[];
-  return { rows, total: Number(rows[0]?.total_count ?? 0), page };
+export async function listAdminPeople(input: { query?: string | null; role?: string | null } = {}) {
+  const pageSize = 100;
+  const rows: AdminPersonRow[] = [];
+  let total = 0;
+  do {
+    const result = await supabase.rpc('list_admin_people', {
+      target_query: input.query || undefined,
+      target_role: input.role && input.role !== 'all' ? input.role : undefined,
+      target_limit: pageSize,
+      target_offset: rows.length,
+    });
+    if (result.error) throw result.error;
+    const batch = (result.data ?? []) as AdminPersonRow[];
+    if (!batch.length) break;
+    rows.push(...batch);
+    total = Number(batch[0]?.total_count ?? rows.length);
+  } while (rows.length < total);
+  return rows;
 }
 
-export async function getAdminPersonDetail(profileId: string) {
-  const [personResult, commerceResult, teamResult] = await Promise.all([
-    supabase.rpc('get_admin_person_detail', { target_profile_id: profileId }),
-    supabase.rpc('get_creator_paid_sales_state' as never, { target_creator_id: profileId } as never),
-    supabase.rpc('get_admin_team_access' as never, { target_profile_id: profileId } as never),
-  ]);
+export type AdminPersonDetailSummary = Pick<AdminPersonDetail, 'account' | 'profile' | 'items' | 'creator_request'>;
+
+export async function getAdminPersonDetail(profileId: string): Promise<AdminPersonDetailSummary> {
+  const personResult = await supabase.rpc('get_admin_person_detail', { target_profile_id: profileId });
   if (personResult.error) throw personResult.error;
-  if (commerceResult.error) throw commerceResult.error;
-  if (teamResult.error && process.env.NODE_ENV === 'production') throw teamResult.error;
-  const person = personResult.data as unknown as Omit<AdminPersonDetail, 'commerce' | 'team'>;
-  const fallbackTeam: AdminTeamAccessState = {
-    authorized: person.profile?.role === 'admin',
-    source: person.profile?.role === 'admin' ? 'admin' : 'none',
-    profileId,
-    grantedAt: null,
-    revokedAt: null,
-    history: [],
-  };
-  return {
-    ...person,
-    commerce: commerceResult.data as unknown as CreatorPaidSalesState,
-    team: teamResult.error ? fallbackTeam : teamResult.data as unknown as AdminTeamAccessState,
-  };
+  const person = personResult.data as unknown as AdminPersonDetailSummary;
+  return person;
 }
 
 export async function setAdminTeamAccess(profileId: string, enabled: boolean, reason: string) {
@@ -294,6 +304,26 @@ export async function setAdminCreatorAccess(profileId: string, role: 'member' | 
   });
   if (result.error) throw result.error;
   if (role === 'creator') void deliverCreatorPromotionNotifications();
+}
+
+export async function setAdminPlatformAccess(profileId: string, reason: string) {
+  const result = await supabase.rpc('set_admin_platform_access' as never, {
+    target_profile_id: profileId,
+    target_reason: reason,
+  } as never);
+  if (result.error) throw result.error;
+}
+
+export async function banAdminUser(profileId: string, reason: string) {
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !session?.access_token) throw new Error('Sign in again to continue.');
+  const response = await fetch('/api/admin/people/ban', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+    body: JSON.stringify({ profileId, reason }),
+  });
+  const result = await response.json().catch(() => ({})) as { error?: string };
+  if (!response.ok) throw new Error(result.error || 'User could not be banned.');
 }
 
 export async function reviewAdminCreatorAccessRequest(
@@ -345,8 +375,8 @@ export async function listAdminContent(input: { query?: string | null; status?: 
     target_status: input.status && input.status !== 'all' ? input.status : undefined,
     target_type: input.type && input.type !== 'all' ? input.type : undefined,
     target_sort: input.sort ?? 'created',
-    target_limit: ADMIN_PAGE_SIZE,
-    target_offset: (page - 1) * ADMIN_PAGE_SIZE,
+    target_limit: ADMIN_CONTENT_PAGE_SIZE,
+    target_offset: (page - 1) * ADMIN_CONTENT_PAGE_SIZE,
   } as never);
   if (result.error) throw result.error;
   const rows = (result.data ?? []) as AdminContentRow[];
@@ -361,7 +391,28 @@ export async function getAdminContentDetail(itemId: string) {
   if (detailResult.error) throw detailResult.error;
   if (releaseDateResult.error) throw releaseDateResult.error;
   const detail = detailResult.data as unknown as AdminContentDetail;
-  return { ...detail, item: { ...detail.item, release_date: releaseDateResult.data } };
+  return {
+    ...detail,
+    item: {
+      ...detail.item,
+      release_date: releaseDateResult.data,
+      download_purchase_enabled: detail.item.download_purchase_enabled ?? false,
+      market_mode: detail.item.market_mode ?? 'global',
+      available_locally_only: detail.item.available_locally_only ?? false,
+      local_price_cents: detail.item.local_price_cents ?? null,
+      local_currency: detail.item.local_currency ?? null,
+      visuals_enabled: detail.item.visuals_enabled ?? false,
+      external_links_enabled: detail.item.external_links_enabled ?? false,
+      related_items_enabled: detail.item.related_items_enabled ?? false,
+    },
+    category: detail.category ?? null,
+    achievements: detail.achievements ?? [],
+    external_links: detail.external_links ?? [],
+    videos: detail.videos ?? [],
+    book: detail.book ?? null,
+    sample_previews: detail.sample_previews ?? [],
+    interactive_build: detail.interactive_build ?? null,
+  };
 }
 
 export async function setAdminItemLifecycle(itemId: string, action: 'publish' | 'unpublish' | 'archive', reason: string) {

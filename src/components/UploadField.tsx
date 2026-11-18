@@ -25,6 +25,8 @@ type UploadFieldProps = {
   audioAssetId?: string;
   onAudioAssetChange?: (assetId: string) => void;
   onUploadingChange?: (uploading: boolean) => void;
+  artworkSurface?: boolean;
+  artworkAspectRatio?: 'square' | 'book';
 };
 
 export function UploadField({
@@ -44,6 +46,8 @@ export function UploadField({
   storage = 'public',
   onAudioAssetChange,
   onUploadingChange,
+  artworkSurface = false,
+  artworkAspectRatio = 'square',
 }: UploadFieldProps) {
   const inputId = useId();
   const [uploading, setUploading] = useState(false);
@@ -94,6 +98,30 @@ export function UploadField({
       onUploadingChange?.(false);
       event.target.value = '';
     }
+  }
+
+  if (artworkSurface) {
+    return (
+      <div className="dashboard-field studio-artwork-upload">
+        <label htmlFor={inputId} className={`studio-artwork-surface${artworkAspectRatio === 'book' ? ' studio-artwork-surface-book' : ''}${value ? ' studio-artwork-surface-filled' : ''}${uploading ? ' studio-artwork-surface-uploading' : ''}`} aria-label={value ? 'Replace artwork' : 'Upload artwork'}>
+          {value ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className="studio-artwork-image" src={value} alt="" />
+            </>
+          ) : null}
+          <span className="studio-artwork-prompt">
+            {uploading ? <span className="studio-artwork-spinner" aria-hidden="true" /> : <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="4" width="22" height="20" rx="3" /><circle cx="10" cy="11" r="2" /><path d="m5 22 7-7 5 5 4-4 4 3M26 23v7M22.5 26.5h7" /></svg>}
+            <strong>Artwork</strong>
+            <small>{uploading ? 'Uploading artwork…' : value ? 'Tap to replace' : 'Tap to upload'}</small>
+          </span>
+          <Ui44FileInput id={inputId} accept={accept} onChange={handleFileChange} disabled={uploading} className="ui44-file-input-hidden" />
+        </label>
+        {message && !(hideSuccessMessage && message === 'Upload complete.') ? (
+          <div className={messageTone === 'error' ? 'dashboard-status dashboard-status-error ui44-status ui44-status-error' : messageTone === 'success' ? 'dashboard-status dashboard-status-success ui44-status ui44-status-success' : 'dashboard-status ui44-status'} role={messageTone === 'error' ? 'alert' : 'status'}>{message}</div>
+        ) : null}
+      </div>
+    );
   }
 
   return (

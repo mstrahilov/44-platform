@@ -5,7 +5,7 @@ import { comparePublicCatalogProducts, type Product } from '@/lib/products';
 import type { ProductAchievement, Track, UserAchievement } from '@/lib/platform';
 import { supabase } from '@/lib/supabase';
 import { getPublicNativeContent } from '@/lib/domain/nativeContent';
-import type { ReleaseVideoEmbed } from '@/lib/domain/releaseFeatures';
+import { listReleaseCreatorVideos, type ReleaseCreatorVideo } from '@/lib/domain/releaseFeatures';
 import { beatReviewSurfacesEnabled, hydrateBeatProducts, listBuyerBeatLicenses } from '@/lib/domain/beats';
 import { hydratePaidSalesStatus } from '@/lib/domain/paidSalesStatus';
 import { LOCAL_MASK_ITEM_ID, LOCAL_MASK_LIBRARY_ID, localMaskIsSaved, localMaskPreviewEnabled, localMaskProduct, saveLocalMask } from '@/lib/localMaskPreview';
@@ -65,12 +65,12 @@ export async function getLibraryItemBundle(userId: string, libraryEntryId: strin
   const row = await getDetailedLibraryItem(userId, libraryEntryId);
   if (!row?.products) return null;
   if (row.item_id === LOCAL_MASK_ITEM_ID) return {
-    row, tracks: [], achievements: [], unlockedAchievements: [], assets: [], videoEmbeds: [],
+    row, tracks: [], achievements: [], unlockedAchievements: [], assets: [], videos: [],
     nativeContent: { book: null, samples: [] }, beatLicenses: [], hasActiveDownload: false,
   };
 
   const isMusic = getProductExperience(row.products) === 'music';
-  const [trackResult, achievementBundle, assetResult, downloadEntitlementResult, videoResult, nativeContent, beatLicenses] = await Promise.all([
+  const [trackResult, achievementBundle, assetResult, downloadEntitlementResult, videos, nativeContent, beatLicenses] = await Promise.all([
     supabase
       .from('tracks')
       .select('id,item_id,number,title,duration_seconds,audio_url,download_url')
@@ -86,7 +86,7 @@ export async function getLibraryItemBundle(userId: string, libraryEntryId: strin
       .eq('entitlement_type', 'download')
       .eq('status', 'active')
       .maybeSingle(),
-    supabase.from('item_video_embeds' as never).select('id,item_id,title,youtube_video_id,sort_order').eq('item_id', row.item_id).order('sort_order'),
+    listReleaseCreatorVideos(row.item_id),
     getPublicNativeContent(row.item_id),
     beatReviewSurfacesEnabled ? listBuyerBeatLicenses(row.item_id) : Promise.resolve([]),
   ]);
@@ -107,7 +107,7 @@ export async function getLibraryItemBundle(userId: string, libraryEntryId: strin
     achievements: achievementBundle.achievements,
     unlockedAchievements: achievementBundle.unlockedAchievements,
     assets: authorizedAssets,
-    videoEmbeds: (videoResult.data as ReleaseVideoEmbed[] | null) ?? [],
+    videos: videos as ReleaseCreatorVideo[],
     nativeContent,
     beatLicenses,
     hasActiveDownload: Boolean(downloadEntitlementResult.data),

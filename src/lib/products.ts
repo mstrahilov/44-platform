@@ -84,6 +84,10 @@ export interface Item {
   fulfillment_type?: string | null;
   streaming_enabled?: boolean | null;
   download_purchase_enabled?: boolean | null;
+  external_links_enabled?: boolean | null;
+  visuals_enabled?: boolean | null;
+  related_items_enabled?: boolean | null;
+  community_enabled?: boolean | null;
   paid_sales_available?: boolean;
   paid_sales_status?: string;
   paid_offer_available?: boolean;

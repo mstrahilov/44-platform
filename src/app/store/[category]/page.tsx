@@ -17,8 +17,8 @@ const CATEGORY_METADATA: Record<Exclude<StoreCategory, 'all'>, { title: string; 
     description: 'Explore Beats with clear non-exclusive Basic, Premium, and Trackout licenses from independent creators on 44OS.',
   },
   'sample-packs': {
-    title: 'Sample Packs',
-    description: 'Explore downloadable sample packs from independent creators on 44OS.',
+    title: 'Assets',
+    description: 'Explore downloadable Beats and sample packs from independent creators on 44OS.',
   },
   games: {
     title: 'Games',

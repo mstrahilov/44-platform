@@ -26,7 +26,7 @@ export const STUDIO_CATALOG_SECTIONS: StudioCatalogSection[] = [
     itemLabelPlural: 'releases',
     newLabel: 'New Release',
     editTitle: 'Edit Release',
-    createTitle: 'New Release',
+    createTitle: 'New Music',
     createCopy: 'Create an album, EP, single, or track release directly from inside the app.',
     typeLabel: 'Release Type',
     typeOptions: ['Album', 'EP', 'Single', 'Mixtape'],

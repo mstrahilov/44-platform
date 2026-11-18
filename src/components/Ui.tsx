@@ -21,16 +21,24 @@ export function PageShell({ children }: { children: ReactNode }) {
 
 export function SectionHeader({
   title,
+  description,
+  showDescription = false,
+  alignActionWithTitle = false,
   action,
 }: {
   title: string;
   description?: string;
+  showDescription?: boolean;
+  alignActionWithTitle?: boolean;
   action?: ReactNode;
 }) {
+  const visibleDescription = showDescription ? description : undefined;
+  const alignAction = Boolean(visibleDescription && action && alignActionWithTitle);
   return (
-    <div className="hub-section-head ui44-section-header">
+    <div className={`hub-section-head ui44-section-header${visibleDescription ? ' hub-section-head-described' : ''}${alignAction ? ' hub-section-head-action-aligned' : ''}`}>
       <div className="hub-section-copy ui44-section-header-copy">
         <Ui44Text as="h2" variant="section-title" className="hub-section-title">{title}</Ui44Text>
+        {visibleDescription ? <Ui44Text as="p" variant="callout" tone="secondary" className="hub-section-description">{visibleDescription}</Ui44Text> : null}
       </div>
       {action}
     </div>
@@ -202,15 +210,17 @@ export function HubHero({
   copy,
   actions,
   className = '',
+  hideDivider = false,
 }: {
   title: string;
   copy?: string;
   actions?: ReactNode;
   className?: string;
+  hideDivider?: boolean;
 }) {
   useTopbarTitle(title);
   return (
-    <header className={`app-header ui44-page-header ui44-page-header-mobile-title${!copy && !actions ? ' ui44-page-header-title-only' : ''} ${className}`.trim()}>
+    <header className={`app-header ui44-page-header ui44-page-header-mobile-title${!copy && !actions ? ' ui44-page-header-title-only' : ''}${hideDivider ? ' ui44-page-header-no-mobile-divider' : ''} ${className}`.trim()}>
       <div className="app-header-copy ui44-page-header-copy">
         <Ui44Text as="h1" variant="page-title">{title}</Ui44Text>
         {copy ? <p>{copy}</p> : null}

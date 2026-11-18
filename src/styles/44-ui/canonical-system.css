@@ -576,6 +576,15 @@ body.theme-dark {
   cursor: pointer;
 }
 
+/* Native option menus can open on an opaque light surface even in dark mode.
+   Set a deliberate high-contrast palette so release names and other choices
+   remain readable in browser and embedded-browser pickers. */
+select option {
+  background-color: #fff;
+  color: #151515;
+  -webkit-text-fill-color: #151515;
+}
+
 .ui44-select-caret {
   position: absolute;
   top: 50%;
@@ -1797,6 +1806,17 @@ body {
   align-items: start;
   padding-block: 24px;
   border-bottom: 1px solid var(--44ui-panel-border);
+}
+
+@media (max-width: 767px) {
+  .ui44-page-header-no-mobile-divider {
+    display: none !important;
+  }
+
+  .dashboard-editor:has(> .ui44-page-header-no-mobile-divider),
+  .dashboard-page:has(> .ui44-page-header-no-mobile-divider) {
+    padding-top: 22px;
+  }
 }
 
 .ui44-page-header-copy {
@@ -4178,6 +4198,12 @@ body:is(.theme-dark, .theme-light) .ui44-catalog-title {
   -webkit-line-clamp: 2;
 }
 
+body:is(.theme-dark, .theme-light) .ui44-catalog-title-single-line {
+  display: block;
+  white-space: nowrap;
+  -webkit-line-clamp: unset;
+}
+
 body:is(.theme-dark, .theme-light) .ui44-catalog-subheadline {
   overflow: hidden;
   color: var(--44ui-text-secondary, var(--os-color-ink-secondary));
@@ -5719,10 +5745,6 @@ body:is(.theme-dark, .theme-light) .music-player-sheet {
   .dashboard-form-section > .hub-section-head .hub-section-title {
     font: 700 28px/34px var(--44ui-font-app);
     letter-spacing: 0;
-  }
-
-  .dashboard-form-section > .hub-section-head .hub-section-description {
-    font: 400 17px/24px var(--44ui-font-app);
   }
 
   .view-section-title {
@@ -8052,8 +8074,9 @@ body:is(.theme-dark, .theme-light)
 body:is(.theme-dark, .theme-light)
   select.ui44-input.ui44-input-empty
   option:not([value=""]) {
-  color: var(--os-color-ink);
-  -webkit-text-fill-color: var(--os-color-ink);
+  background-color: #fff;
+  color: #151515;
+  -webkit-text-fill-color: #151515;
 }
 
 /* Community feed and thread identity rows use one Threads-style alignment:
@@ -11567,4 +11590,290 @@ body:is(.theme-dark, .theme-light) .library-achievement-row .ui44-achievement-se
   font: 400 13px/1.35 var(--44ui-font-app);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Studio overview rows mirror the shared iOS hub row: compact artwork,
+   left-aligned two-line copy, and a trailing open affordance. */
+body:is(.theme-dark, .theme-light) .dashboard-page .studio-overview-row {
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  min-height: 72px;
+  gap: 16px;
+  padding: 8px 16px;
+}
+
+body:is(.theme-dark, .theme-light) .dashboard-page .studio-overview-artwork {
+  position: relative;
+  display: grid;
+  width: 56px;
+  height: 56px;
+  flex: 0 0 56px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--os-color-hairline);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--os-color-ink) 8%, transparent);
+  color: var(--os-color-ink-secondary);
+}
+
+body:is(.theme-dark, .theme-light) .studio-overview-artwork img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+body:is(.theme-dark, .theme-light) .dashboard-page .studio-overview-artwork-image {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  border: 1px solid var(--os-color-hairline);
+  object-fit: cover;
+}
+
+body:is(.theme-dark, .theme-light) .studio-overview-artwork svg {
+  width: 22px;
+  height: 22px;
+}
+
+body:is(.theme-dark, .theme-light) .studio-overview-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  justify-items: start;
+  text-align: left;
+}
+
+body:is(.theme-dark, .theme-light) .studio-overview-title {
+  display: block;
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--os-color-ink);
+  font: 600 16px/20px var(--44ui-font-app);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:is(.theme-dark, .theme-light) .studio-overview-subtitle {
+  display: -webkit-box;
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--os-color-ink-secondary);
+  font: 400 13px/17px var(--44ui-font-app);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+body:is(.theme-dark, .theme-light) .studio-overview-secondary {
+  display: block;
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--os-color-ink-secondary);
+  font: 400 12px/16px var(--44ui-font-app);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:is(.theme-dark, .theme-light) .studio-music-publish-desktop {
+  margin-inline-start: auto;
+}
+
+body:is(.theme-dark, .theme-light) .app-header.ui44-page-header.studio-no-header-divider {
+  border-bottom: 0 !important;
+}
+
+body:is(.theme-dark, .theme-light) .studio-artwork-create-form > .studio-artwork-upload {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  margin: 0 auto 28px;
+}
+
+@media (max-width: 767px) {
+  body:is(.theme-dark, .theme-light) :is(
+    .studio-artwork-create-form,
+    .studio-music-create-form,
+    .studio-video-editor-form,
+    .beat-studio-page .dashboard-form
+  ) {
+    gap: 22px;
+  }
+
+  body:is(.theme-dark, .theme-light) .studio-artwork-create-form > :is(
+    .studio-tracks-section,
+    .studio-achievements-section
+  ) {
+    margin-top: 0;
+  }
+
+  body:is(.theme-dark, .theme-light) :is(.studio-artwork-create-form, .studio-music-create-form) > .studio-artwork-upload {
+    margin-bottom: 0;
+  }
+}
+
+body:is(.theme-dark, .theme-light) .studio-artwork-surface {
+  position: relative;
+  display: grid;
+  width: min(100%, 560px);
+  aspect-ratio: 1;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--os-color-hairline);
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--os-color-ink) 9%, transparent);
+  color: var(--os-color-ink);
+  cursor: pointer;
+}
+
+body:is(.theme-dark, .theme-light) .studio-artwork-surface-book {
+  width: min(100%, 360px);
+  aspect-ratio: 2 / 3;
+}
+
+body:is(.theme-dark, .theme-light) .studio-artwork-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+body:is(.theme-dark, .theme-light) .studio-artwork-prompt {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 9px;
+  padding: 24px;
+  text-align: center;
+}
+
+body:is(.theme-dark, .theme-light) .studio-artwork-surface-filled .studio-artwork-prompt {
+  display: none;
+}
+
+body:is(.theme-dark, .theme-light) .studio-artwork-prompt svg {
+  width: 42px;
+  height: 42px;
+}
+
+body:is(.theme-dark, .theme-light) .studio-artwork-prompt strong {
+  font: 700 22px/1.2 var(--44ui-font-app);
+}
+
+body:is(.theme-dark, .theme-light) .studio-artwork-prompt small {
+  color: var(--os-color-ink-secondary);
+  font: 400 15px/1.3 var(--44ui-font-app);
+}
+
+body:is(.theme-dark, .theme-light) .studio-artwork-surface-filled .studio-artwork-prompt small {
+  color: rgba(255, 255, 255, .82);
+}
+
+body:is(.theme-dark, .theme-light) .studio-artwork-surface-uploading {
+  cursor: wait;
+  opacity: .75;
+}
+
+body:is(.theme-dark, .theme-light) .studio-artwork-spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: studio-artwork-spin .8s linear infinite;
+}
+
+@keyframes studio-artwork-spin { to { transform: rotate(360deg); } }
+
+body:is(.theme-dark, .theme-light) .studio-track-count-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: var(--44ui-row-y) var(--44ui-row-x);
+  border-bottom: 1px solid var(--44ui-panel-border);
+  box-sizing: border-box;
+}
+
+body:is(.theme-dark, .theme-light) .studio-track-count-field .ui44-select-control,
+body:is(.theme-dark, .theme-light) .studio-track-count-field .ui44-input-select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+body:is(.theme-dark, .theme-light) .studio-paid-download-panel,
+body:is(.theme-dark, .theme-light) .studio-feature-action-panel,
+body:is(.theme-dark, .theme-light) .studio-achievement-settings,
+body:is(.theme-dark, .theme-light) .studio-release-management .studio-feature-panel {
+  padding: 16px;
+}
+
+body:is(.theme-dark, .theme-light) .studio-release-management .studio-feature-panel > .os-button {
+  width: 100%;
+  min-height: 52px;
+}
+
+body:is(.theme-dark, .theme-light) .studio-feature-action-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+body:is(.theme-dark, .theme-light) .studio-feature-action-panel > .os-button {
+  width: 100%;
+  min-height: 52px;
+}
+
+body:is(.theme-dark, .theme-light) .studio-achievement-setting-row {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--os-color-hairline);
+}
+
+body:is(.theme-dark, .theme-light) .studio-achievement-setting-row:last-child {
+  border-bottom: 0;
+}
+
+body:is(.theme-dark, .theme-light) .studio-achievement-setting-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+body:is(.theme-dark, .theme-light) .studio-achievement-setting-copy strong {
+  color: var(--os-color-ink);
+  font: 600 15px/20px var(--44ui-font-app);
+}
+
+body:is(.theme-dark, .theme-light) .studio-achievement-setting-copy span {
+  color: var(--os-color-ink-secondary);
+  font: 400 13px/18px var(--44ui-font-app);
+}
+
+@media (max-width: 720px) {
+  body:is(.theme-dark, .theme-light) .studio-music-publish-desktop { display: none; }
+  body:is(.theme-dark, .theme-light) .studio-feature-action-panel { grid-template-columns: 1fr; }
+}
+
+body:is(.theme-dark, .theme-light) .studio-overview-trailing {
+  display: inline-flex;
+  align-items: center;
+  justify-self: end;
+  gap: 9px;
+}
+
+body:is(.theme-dark, .theme-light) .studio-overview-status {
+  color: var(--os-color-ink-secondary);
+  font: 500 12px/16px var(--44ui-font-app);
+  white-space: nowrap;
+}
+
+body:is(.theme-dark, .theme-light) .studio-overview-chevron {
+  display: block;
+  color: var(--os-color-ink-secondary);
 }

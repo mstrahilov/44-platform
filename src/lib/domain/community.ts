@@ -210,6 +210,46 @@ export async function loadCommunityPostsForItem(item: Item): Promise<ItemCommuni
   return { posts, replyCounts, likeCounts };
 }
 
+/** Community posts that explicitly mention a non-catalog YouTube video title. */
+export async function loadCommunityPostsForVideo(video: { id: string; title: string }): Promise<ItemCommunityFeed> {
+  const feed = await loadCommunityFeed();
+  const postsById = new Map<string, CommunityV11Post>();
+  [...listLocalCommunityPosts(), ...feed.posts].forEach(post => postsById.set(post.id, post));
+  const videoHref = `/videos/${video.id}`;
+  const alias = `@${video.title.trim()}`.toLocaleLowerCase();
+  const containsExplicitMention = (body: string) => {
+    if (!alias || alias === '@') return false;
+    const normalized = body.toLocaleLowerCase();
+    let offset = 0;
+    while (offset < normalized.length) {
+      const index = normalized.indexOf(alias, offset);
+      if (index < 0) return false;
+      const before = index > 0 ? normalized[index - 1] : '';
+      const after = normalized[index + alias.length] ?? '';
+      if (!/[a-z0-9_]/i.test(before) && !/[a-z0-9_]/i.test(after)) return true;
+      offset = index + 1;
+    }
+    return false;
+  };
+  const posts = Array.from(postsById.values())
+    .filter(post => post.community_references?.some(reference => reference.kind === 'item' && (reference.id === video.id || reference.href === videoHref))
+      || containsExplicitMention(post.body ?? ''))
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  const postIds = new Set(posts.map(post => post.id));
+  const replyCounts: Record<string, number> = {};
+  [...feed.replies, ...listLocalCommunityReplies()].forEach(reply => {
+    if (!postIds.has(reply.post_id)) return;
+    replyCounts[reply.post_id] = (replyCounts[reply.post_id] ?? 0) + 1;
+  });
+  const likeCounts: Record<string, number> = {};
+  feed.likes.forEach(like => {
+    if (!postIds.has(like.post_id)) return;
+    likeCounts[like.post_id] = (likeCounts[like.post_id] ?? 0) + 1;
+  });
+  return { posts, replyCounts, likeCounts };
+}
+
 export async function listFollowedProfileIds(userId: string) {
   const result = await supabase.from('profile_follows').select('following_id').eq('follower_id', userId);
   if (result.error) throw result.error;

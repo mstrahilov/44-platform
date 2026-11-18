@@ -1,13 +1,24 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { EmptyMessage, HubHero, PageShell } from '@/components/Ui';
-import { Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
-import { AdminAccessBoundary, AdminPager, AdminStatusBadge, formatAdminDate } from '@/components/admin/AdminPrimitives';
+import { Ui44TextInput } from '@/components/ui44/Inputs';
+import { AdminAccessBoundary } from '@/components/admin/AdminPrimitives';
 import { listAdminContent, type AdminContentRow } from '@/lib/domain/adminOperations';
-import { OS44Button } from '@/components/OS44Button';
+import { FilterPopover } from '@/components/FilterPopover';
+import { useTopbarBack, useTopbarMobileTrailingAction } from '@/components/TopbarContext';
+
+const RELEASE_TYPES = [
+  ['all', 'All releases'],
+  ['music', 'Music'],
+  ['book', 'Books'],
+  ['asset', 'Assets'],
+  ['game', 'Games'],
+  ['merch', 'Merch'],
+] as const;
 
 export default function AdminContentApp() {
   return <AdminAccessBoundary><ContentDirectory /></AdminAccessBoundary>;
@@ -17,70 +28,149 @@ function ContentDirectory() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
-  const status = searchParams.get('status') || 'all';
-  const type = searchParams.get('type') || 'all';
-  const sort = searchParams.get('sort') === 'release_date' ? 'release_date' : 'created';
-  const page = Math.max(1, Number(searchParams.get('page') || 1) || 1);
+  const requestedType = searchParams.get('type') || 'all';
+  const type = RELEASE_TYPES.some(([value]) => value === requestedType) ? requestedType : 'all';
   const [search, setSearch] = useState(query);
   const [rows, setRows] = useState<AdminContentRow[]>([]);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState('');
+  const moreRef = useRef<HTMLDivElement>(null);
+  const loadingMoreRef = useRef(false);
+  const requestGenerationRef = useRef(0);
+
+  const visibleRows = useMemo(() => rows.filter(item => matchesReleaseType(item, type)), [rows, type]);
+  useTopbarBack({ href: '/admin', label: 'Admin', alwaysNavigate: true });
+
+  const mobileFilterAction = useMemo(() => <button
+    type="button"
+    data-filter-popover-trigger="true"
+    aria-pressed={type !== 'all'}
+    className={`ui44-symbol-button ui44-symbol-button-filter page-filter-button${type !== 'all' ? ' ui44-symbol-button-active page-filter-button-active' : ''}`}
+    aria-label="Filter Releases"
+    title="Filter Releases"
+    onClick={() => window.dispatchEvent(new CustomEvent('44:toggle-filter-popover', { detail: { label: 'Filter Releases' } }))}
+  ><span className="page-filter-icon" aria-hidden="true"><i /><i /><i /></span></button>, [type]);
+  useTopbarMobileTrailingAction(mobileFilterAction);
 
   useEffect(() => { Promise.resolve().then(() => setSearch(query)); }, [query]);
+
   useEffect(() => {
     let alive = true;
-    Promise.resolve().then(() => { if (alive) { setLoading(true); setError(''); } });
-    void listAdminContent({ query, status, type, sort, page }).then(result => {
+    requestGenerationRef.current += 1;
+    loadingMoreRef.current = false;
+    Promise.resolve().then(() => { if (alive) { setLoading(true); setLoadingMore(false); setRows([]); setTotal(0); setPage(1); setError(''); } });
+    void listAdminContent({ query, page: 1 }).then(result => {
       if (!alive) return;
-      setRows(result.rows); setTotal(result.total); setLoading(false);
+      setRows(result.rows);
+      setTotal(result.total);
+      setLoading(false);
     }).catch(loadError => {
       if (!alive) return;
-      setError(loadError instanceof Error ? loadError.message : 'Could not load content.'); setLoading(false);
+      setError(loadError instanceof Error ? loadError.message : 'Could not load releases.');
+      setLoading(false);
     });
     return () => { alive = false; };
-  }, [page, query, sort, status, type]);
+  }, [query]);
 
-  function buildHref(nextPage: number, nextQuery = query, nextStatus = status, nextType = type, nextSort = sort) {
+  async function loadMore() {
+    if (loading || loadingMoreRef.current || rows.length >= total) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    setError('');
+    const generation = requestGenerationRef.current;
+    const nextPage = page + 1;
+    try {
+      const result = await listAdminContent({ query, page: nextPage });
+      if (generation !== requestGenerationRef.current) return;
+      setRows(current => [...current, ...result.rows]);
+      setTotal(result.total);
+      setPage(nextPage);
+    } catch (loadError) {
+      if (generation === requestGenerationRef.current) setError(loadError instanceof Error ? loadError.message : 'Could not load more releases.');
+    } finally {
+      loadingMoreRef.current = false;
+      if (generation === requestGenerationRef.current) setLoadingMore(false);
+    }
+  }
+
+  useEffect(() => {
+    if (loading || loadingMore || rows.length >= total || !moreRef.current) return;
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) void loadMore();
+    }, { rootMargin: '400px 0px' });
+    observer.observe(moreRef.current);
+    return () => observer.disconnect();
+  }, [loading, loadingMore, page, query, rows.length, total]);
+
+  function buildHref(nextQuery = query, nextType = type) {
     const params = new URLSearchParams();
     if (nextQuery) params.set('q', nextQuery);
-    if (nextStatus !== 'all') params.set('status', nextStatus);
     if (nextType !== 'all') params.set('type', nextType);
-    if (nextSort !== 'created') params.set('sort', nextSort);
-    if (nextPage > 1) params.set('page', String(nextPage));
     return `/admin/content${params.size ? `?${params}` : ''}`;
   }
 
-  function submit(event: FormEvent) { event.preventDefault(); router.push(buildHref(1, search.trim())); }
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      if (window.location.pathname !== '/admin/content') return;
+      router.replace(buildHref(search.trim(), type), { scroll: false });
+    }, 250);
+    return () => window.clearTimeout(timeout);
+  }, [router, search, type]);
 
-  return <PageShell><main className="admin-page">
-    <HubHero title="Content" copy="Inspect every Item, review pending submissions, and manage publication state." />
-    <form className="admin-filter-bar admin-filter-bar-content ui44-panel" onSubmit={submit}>
-      <label><span>Search</span><Ui44TextInput value={search} onChange={event => setSearch(event.target.value)} placeholder="Release or creator" /></label>
-      <label><span>Status</span><Ui44SelectInput value={status} onChange={event => router.push(buildHref(1, search.trim(), event.target.value, type))}>
-        <option value="all">All statuses</option><option value="published">Published</option><option value="draft">Draft</option><option value="archived">Archived</option><option value="pending">Pending review</option><option value="approved">Approved review</option><option value="rejected">Rejected review</option>
-      </Ui44SelectInput></label>
-      <label><span>Type</span><Ui44SelectInput value={type} onChange={event => router.push(buildHref(1, search.trim(), status, event.target.value))}>
-        <option value="all">All types</option><option value="music">Music</option><option value="book">Books</option><option value="asset">Sample Packs</option><option value="merch">Merch</option><option value="game">Games</option><option value="beat">Beats</option>
-      </Ui44SelectInput></label>
-      <label><span>Sort</span><Ui44SelectInput value={sort} onChange={event => router.push(buildHref(1, search.trim(), status, type, event.target.value))}>
-        <option value="created">Recently created</option><option value="release_date">Newest release date</option>
-      </Ui44SelectInput></label>
-      <OS44Button className="os-button os-button-secondary" type="submit">Search</OS44Button>
-    </form>
+  return <PageShell><main className="dashboard-page admin-page admin-users-page">
+    <HubHero title="Releases" hideDivider />
+    <div className="admin-users-search">
+      <span className="os-icon os-icon-search os-icon-sm admin-users-search-icon" aria-hidden="true" />
+      <Ui44TextInput surface="bare" type="search" className="admin-users-search-input" value={search} onChange={event => setSearch(event.target.value)} placeholder="Filter releases" aria-label="Filter releases" />
+    </div>
+    <div className="admin-users-filter-anchor"><FilterPopover
+      label="Filter Releases"
+      active={type !== 'all'}
+      hideTrigger
+      popoverClassName="admin-users-filter-popover"
+      popoverStyle={{ position: 'fixed', zIndex: 1200, top: 'calc(var(--os-topbar-height) + 8px)', right: 'var(--os-content-inset)', left: 'auto', width: 'min(220px, calc(100vw - (var(--os-content-inset) * 2)))' }}
+    >
+      {({ close }) => <div role="menu" aria-label="Filter Releases">{RELEASE_TYPES.map(([value, label]) => <button
+        key={value}
+        type="button"
+        role="menuitemradio"
+        aria-checked={type === value}
+        className={type === value ? 'ui44-paper-menu-item ui44-paper-menu-item-selected page-filter-option page-filter-option-active' : 'ui44-paper-menu-item page-filter-option'}
+        onClick={() => { router.push(buildHref(search.trim(), value)); close(); }}
+      >{label}</button>)}</div>}
+    </FilterPopover></div>
     {error ? <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div> : null}
-    {loading ? <div className="ui44-loading-shell" role="status" aria-label="Loading content" /> : rows.length === 0 ? <EmptyMessage>No content matches this view.</EmptyMessage> : <>
-      <div className="admin-record-list ui44-panel" role="list" aria-label="Content">
-        <div className="admin-record-heading admin-content-grid" aria-hidden="true"><span>Content</span><span>Creator</span><span>Publication</span><span>Review</span><span>{sort === 'release_date' ? 'Release Date' : 'Created'}</span></div>
-        {rows.map(item => <Link key={item.item_id} href={`/admin/content/${item.item_id}`} className="admin-record-row admin-content-grid" role="listitem">
-          <span className="admin-content-cell">{item.cover_url ? <span className="admin-content-art" style={{ backgroundImage: `url(${item.cover_url})` }} /> : <span className="admin-content-art admin-content-art-empty" aria-hidden="true" />}<span><strong>{item.title}</strong><small>{item.assigned_type || item.item_type}</small></span></span>
-          <span className="admin-row-secondary">{item.creator_name || 'Unknown'}{item.creator_username ? <small>@{item.creator_username}</small> : null}</span>
-          <AdminStatusBadge tone={item.publication_status === 'published' ? 'success' : item.publication_status === 'archived' ? 'danger' : 'quiet'}>{item.publication_status}</AdminStatusBadge>
-          <AdminStatusBadge tone={item.review_status === 'pending' ? 'warning' : item.review_status === 'approved' ? 'success' : item.review_status === 'rejected' ? 'danger' : 'quiet'}>{item.review_status}</AdminStatusBadge>
-          <span className="admin-row-count">{sort === 'release_date' ? (item.release_date ? <time dateTime={item.release_date}>{formatAdminDate(item.release_date)}</time> : <span className="admin-row-missing-date">No release date</span>) : <time dateTime={item.created_at}>{formatAdminDate(item.created_at)}</time>}<span aria-hidden="true">›</span></span>
-        </Link>)}
-      </div>
-      <AdminPager page={page} total={total} hrefForPage={nextPage => buildHref(nextPage)} />
-    </>}
+    <section className="dashboard-section admin-users-results">
+      {loading ? <div className="ui44-loading-shell" role="status" aria-label="Loading releases" /> : visibleRows.length ? <div className="dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip admin-users-list admin-releases-list" role="list" aria-label="Releases">
+        {visibleRows.map(item => <ReleaseRow key={item.item_id} item={item} />)}
+      </div> : rows.length >= total ? <EmptyMessage>No releases match this view.</EmptyMessage> : null}
+      {rows.length < total ? <div ref={moreRef} className="admin-releases-load-more" role={loadingMore ? 'status' : undefined} aria-label={loadingMore ? 'Loading more releases' : undefined}>{loadingMore ? 'Loading more releases…' : null}</div> : null}
+    </section>
   </main></PageShell>;
+}
+
+function matchesReleaseType(item: AdminContentRow, type: string) {
+  if (type === 'all') return true;
+  const experience = item.experience_type.toLowerCase();
+  const subtypes = `${item.item_type} ${item.assigned_type ?? ''}`.toLowerCase();
+  const isBeat = experience === 'music' && /(beat|instrumental|acapella)/.test(subtypes);
+  if (type === 'asset') return experience === 'asset' || isBeat;
+  if (type === 'music') return experience === 'music' && !isBeat;
+  return experience === type;
+}
+
+function ReleaseRow({ item }: { item: AdminContentRow }) {
+  return <Link href={`/admin/content/${item.item_id}`} className="dashboard-list-row studio-overview-row ui44-list-row ui44-list-row-dashboard ui44-list-row-interactive admin-release-row" role="listitem">
+    <span className={`studio-overview-artwork${item.cover_url ? '' : ' admin-release-artwork-empty'}`} aria-hidden="true">
+      {item.cover_url ? <Image className="studio-overview-artwork-image" src={item.cover_url} alt="" width={56} height={56} unoptimized /> : '44'}
+    </span>
+    <span className="studio-overview-copy">
+      <span className="studio-overview-title">{item.title}</span>
+      <span className="studio-overview-subtitle">{item.creator_name || 'Unknown creator'}</span>
+    </span>
+    <span className="studio-overview-trailing"><span className="studio-overview-chevron" aria-hidden="true">›</span></span>
+  </Link>;
 }

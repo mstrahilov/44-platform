@@ -85,12 +85,12 @@ export function StudioSamplePreviewFields({ userId, samples, onChange, onUploadi
       <div className="studio-sample-preview-header">
         <SectionHeader
           title="Sample Previews"
-          description="Add short public previews so visitors can hear what is inside the protected full pack. The ZIP remains the owned download."
+          description="Add a title and audio preview for each sample in the pack."
         />
         <label className="dashboard-field studio-native-short-field studio-sample-preview-count-field">
-          <span className="dashboard-field-label">Preview Count</span>
+          <span className="dashboard-field-label">Sample Preview Count</span>
           <Ui44SelectInput value={samples.length || ''} onChange={event => onChange(current => ensureSamplePreviewCount(current, Number(event.target.value)))}>
-            <option value="">Select preview count</option>
+            <option value="">Select number of previews</option>
             {Array.from({ length: 30 }, (_, index) => index + 1).map(count => <option key={count} value={count}>{count}</option>)}
           </Ui44SelectInput>
         </label>
@@ -100,8 +100,8 @@ export function StudioSamplePreviewFields({ userId, samples, onChange, onUploadi
           <div className="dashboard-track-editor-row" key={`sample-${index}`}>
             <div className="dashboard-track-editor-copy">
               <label className="dashboard-field studio-track-title-field">
-                <span className="dashboard-field-label">{index + 1}. Sample Name</span>
-                <Ui44TextInput className="os-input-field" value={sample.title} placeholder="Enter sample title" onChange={event => update(index, { title: event.target.value })} />
+                <span className="dashboard-field-label">Sample Preview {index + 1}</span>
+                <Ui44TextInput className="os-input-field" value={sample.title} placeholder="Enter sample preview title" onChange={event => update(index, { title: event.target.value })} />
               </label>
               <UploadField
                 label="Preview Audio"
@@ -109,7 +109,7 @@ export function StudioSamplePreviewFields({ userId, samples, onChange, onUploadi
                 userId={userId}
                 value={sample.previewUrl}
                 accept={AUDIO_UPLOAD_ACCEPT}
-                buttonLabel="Upload preview"
+                buttonLabel="Upload preview audio"
                 previewKind="none"
                 hideLabel
                 hideSuccessMessage

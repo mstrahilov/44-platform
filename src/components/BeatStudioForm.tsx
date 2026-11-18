@@ -193,7 +193,7 @@ export function BeatStudioForm({ itemId = null }: { itemId?: string | null }) {
 
   return <PageShell>
     <main className="dashboard-page beat-studio-page">
-      <HubHero title={itemId ? 'Edit Beat' : 'Add Beat'} copy="Create one canonical, shareable Beat Item with a tagged preview and standardized license offers." />
+      <HubHero title={itemId ? 'Edit Beat' : 'Add Beat'} copy="Create one canonical, shareable Beat Item with a tagged preview and standardized license offers." hideDivider={!itemId} />
       {!databaseEnabled && <div className="dashboard-status dashboard-status-warning ui44-status ui44-status-warning" role="status">Review UI is visible, but database Beat review writes remain fail-closed.</div>}
       {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div>}
       <form className="dashboard-form" onSubmit={handleSubmit}>

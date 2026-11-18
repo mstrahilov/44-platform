@@ -11,7 +11,7 @@ import { browseIndexHref, getProductExperience, productBrowseHref, productLibrar
 import { creatorHref } from '@/lib/platform';
 import { ItemCommunitySection, MoreFromCreatorSection } from '@/components/ItemDetailSections';
 import { InformationDialog } from '@/components/InformationDialog';
-import { LibraryVideoEmbedsSection, ProductDetailHeader, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
+import { LibraryVideosSection, ProductDetailHeader, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
 import { useTopbarBack } from '@/components/TopbarContext';
 import { useTopbarOverflow } from '@/components/TopbarContext';
@@ -33,7 +33,7 @@ import { ItemTrackList } from '@/components/ItemTrackList';
 import { beatReviewSurfacesEnabled, loadBeatCatalogSummaries } from '@/lib/domain/beats';
 import { listActiveMerchVariants, type MerchVariant } from '@/lib/domain/merchVariants';
 import { listPublicMerchImages, type MerchProductImage } from '@/lib/domain/merchImages';
-import { listReleaseVideoEmbeds, type ReleaseVideoEmbed } from '@/lib/domain/releaseFeatures';
+import { listReleaseCreatorVideos, type ReleaseCreatorVideo } from '@/lib/domain/releaseFeatures';
 import { removeLibraryItem } from '@/lib/domain/library';
 import { PlaylistPicker } from '@/components/PlaylistPicker';
 import { OS44Button } from '@/components/OS44Button';
@@ -87,7 +87,7 @@ function ProductStoreDetail({
   const [inferredTrackDurations, setInferredTrackDurations] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [sampleFiles, setSampleFiles] = useState<SamplePackFile[]>([]);
-  const [videoEmbeds, setVideoEmbeds] = useState<ReleaseVideoEmbed[]>([]);
+  const [videos, setVideos] = useState<ReleaseCreatorVideo[]>([]);
   const [merchVariants, setMerchVariants] = useState<MerchVariant[]>([]);
   const [merchImages, setMerchImages] = useState<MerchProductImage[]>([]);
   const [selectedMerchVariantId, setSelectedMerchVariantId] = useState<string | null>(null);
@@ -104,7 +104,7 @@ function ProductStoreDetail({
       setLoading(true);
       setTracks([]);
       setSampleFiles([]);
-      setVideoEmbeds([]);
+      setVideos([]);
       setMerchVariants([]);
       setMerchImages([]);
       setSelectedMerchVariantId(null);
@@ -143,12 +143,12 @@ function ProductStoreDetail({
           setProduct({ ...data });
         }
         if (releasePage || getProductExperience(data) === 'music') {
-          const [trackRows, embeds] = await Promise.all([
+          const [trackRows, attachedVideos] = await Promise.all([
             listPlayableItemTracks(data.id),
-            listReleaseVideoEmbeds(data.id),
+            listReleaseCreatorVideos(data.id),
           ]);
           setTracks(trackRows.sort((a, b) => trackOrder(a) - trackOrder(b)));
-          setVideoEmbeds(embeds);
+          setVideos(attachedVideos);
         }
 
         if (['book', 'asset'].includes(getProductExperience(data))) {
@@ -386,7 +386,7 @@ function ProductStoreDetail({
     }));
   }
 
-  const primaryActions: ProductDetailAction[] = resolveStoreActions({
+  const resolvedPrimaryActions = resolveStoreActions({
     product,
     userSignedIn: Boolean(user),
     owned,
@@ -399,6 +399,9 @@ function ProductStoreDetail({
     onBuyLicense: () => document.getElementById('beat-licenses')?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
     merchOptionState: isMerch ? !merchVariants.length ? 'unavailable' : selectedMerchVariant ? 'ready' : 'choose' : undefined,
   });
+  const primaryActions: ProductDetailAction[] = ['book', 'asset', 'interactive'].includes(productExperience)
+    ? resolvedPrimaryActions.filter(action => !['View in Library', 'Add to Library'].includes(action.label))
+    : resolvedPrimaryActions;
   const contentHeading = getContentHeading(product);
   const creatorDisplayName = product.creators?.display_name || product.creator || '44 Creator';
   const productDescription = product.long_description?.trim() || product.short_description?.trim();
@@ -469,14 +472,14 @@ function ProductStoreDetail({
         </p>
       ) : null}
 
-      {(((['book', 'asset'].includes(productExperience) || isBeat) && productDescription) || isMerch) ? (
+      {(((productExperience === 'asset' || isBeat) && productDescription) || isMerch) ? (
         <div className="view-section item-description-section">
           <h2 className="view-section-title">Description</h2>
           <p className="os-type-body view-description">{productDescription || 'Description coming soon.'}</p>
         </div>
       ) : null}
 
-      {!isMerch && productExperience !== 'book' ? <div className="view-section view-tracklist-section">
+      {!isMerch && productExperience !== 'book' && productExperience !== 'interactive' ? <div className="view-section view-tracklist-section">
         {productExperience !== 'asset' && !isReleasePage ? <div className="item-community-header item-community-section-header">
           <h2 className="view-section-title item-community-section-title">{contentHeading}</h2>
         </div> : null}
@@ -521,11 +524,13 @@ function ProductStoreDetail({
         ) : null}
       </div> : null}
 
+      {isReleasePage ? <LibraryVideosSection videos={videos} title="Visuals" /> : null}
+
       {isBeat && product.beat ? <BeatLicensePanel product={product} /> : null}
 
+      {isReleasePage || productExperience === 'asset' ? <MoreFromCreatorSection key={`more-${product.id}`} item={product} /> : null}
       <ItemCommunitySection key={`community-${product.id}`} item={product} />
-      <MoreFromCreatorSection key={`more-${product.id}`} item={product} />
-      {isReleasePage ? <LibraryVideoEmbedsSection embeds={videoEmbeds} /> : null}
+      {!isReleasePage && productExperience !== 'asset' ? <MoreFromCreatorSection key={`more-${product.id}`} item={product} /> : null}
 
       <AchievementToast toast={toast} onDone={() => setToast(null)} />
     </div>

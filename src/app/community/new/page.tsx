@@ -17,6 +17,7 @@ import {
 import { createCommunityPost } from '@/lib/domain/community';
 import { listPublishedCatalogItems } from '@/lib/domain/catalog';
 import { getCatalogItem } from '@/lib/domain/itemDetails';
+import { getCreatorVideo, type CreatorVideoPage } from '@/lib/domain/releaseFeatures';
 import { getUploadErrorMessage, uploadPublicFile } from '@/lib/uploads';
 import type { Item } from '@/lib/products';
 
@@ -32,6 +33,7 @@ function NewCommunityThreadContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const contextItemId = searchParams.get('itemId');
+  const contextVideoId = searchParams.get('videoId');
   const returnToParam = searchParams.get('returnTo');
   const returnTo = returnToParam?.startsWith('/') && !returnToParam.startsWith('//') ? returnToParam : '/community';
   const { user, loading } = useAuth();
@@ -41,7 +43,8 @@ function NewCommunityThreadContent() {
   const [intent, setIntent] = useState<CommunityIntent>('general');
   const [selectedReferences, setSelectedReferences] = useState<CommunityReference[]>([]);
   const [lockedItem, setLockedItem] = useState<Item | null>(null);
-  const [contextLoading, setContextLoading] = useState(Boolean(contextItemId));
+  const [lockedVideo, setLockedVideo] = useState<CreatorVideoPage | null>(null);
+  const [contextLoading, setContextLoading] = useState(Boolean(contextItemId || contextVideoId));
   const [contextError, setContextError] = useState('');
   const [picker, setPicker] = useState<'mention' | 'tag' | null>(null);
   const [mentionQuery, setMentionQuery] = useState('');
@@ -90,6 +93,21 @@ function NewCommunityThreadContent() {
     return () => { live = false; };
   }, [contextItemId]);
 
+  useEffect(() => {
+    if (!contextVideoId || contextItemId) return;
+    let live = true;
+    void getCreatorVideo(contextVideoId)
+      .then(video => {
+        if (!video) throw new Error('This video is not available for a new post.');
+        if (!live) return;
+        setLockedVideo(video);
+        setContextError('');
+      })
+      .catch(reason => { if (live) setContextError(reason instanceof Error ? reason.message : 'Could not load this video.'); })
+      .finally(() => { if (live) setContextLoading(false); });
+    return () => { live = false; };
+  }, [contextItemId, contextVideoId]);
+
   const canPostUpdate = profile?.role === 'creator' || profile?.role === 'admin';
   const mentionOptions = useMemo(() => items
     .filter(item => item.title.toLocaleLowerCase().includes(mentionQuery.toLocaleLowerCase().trim()))
@@ -118,7 +136,7 @@ function NewCommunityThreadContent() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!user) return;
-    if (contextLoading || contextError || (contextItemId && !lockedItem)) return;
+    if (contextLoading || contextError || (contextItemId && !lockedItem) || (contextVideoId && !lockedVideo)) return;
     if (!hasCommunityIdentity(profile)) {
       setSetupGateOpen(true);
       return;
@@ -133,7 +151,7 @@ function NewCommunityThreadContent() {
 
     try {
       const created = await createCommunityPost({
-        body: body.trim(),
+        body: lockedVideo ? `@${lockedVideo.title} ${body.trim()}` : body.trim(),
         intent,
         references: lockedItem ? [communityItemReference(lockedItem)] : selectedReferences,
         imageUrl: imageUrl || null,
@@ -194,16 +212,16 @@ function NewCommunityThreadContent() {
 
           <div className="community-v11-composer-picker-field">
             <span className="community-v11-composer-label">Mention</span>
-            <button type="button" className="community-v11-composer-picker" onClick={() => setPicker(current => current === 'mention' ? null : 'mention')} aria-expanded={picker === 'mention'} disabled={Boolean(lockedItem)}>
+            <button type="button" className="community-v11-composer-picker" onClick={() => setPicker(current => current === 'mention' ? null : 'mention')} aria-expanded={picker === 'mention'} disabled={Boolean(lockedItem || lockedVideo)}>
               <span className="community-v11-composer-picker-icon">@</span>
-              <span className={selectedReferences.length ? 'is-selected' : ''}>{selectedReferences.find(reference => reference.kind === 'item')?.label ?? 'Tap to mention a release'}</span>
-              {selectedReferences.length && !lockedItem ? (
+              <span className={selectedReferences.length || lockedVideo ? 'is-selected' : ''}>{lockedVideo?.title ?? selectedReferences.find(reference => reference.kind === 'item')?.label ?? 'Tap to mention a release'}</span>
+              {selectedReferences.length && !lockedItem && !lockedVideo ? (
                 <span className="community-v11-composer-clear-wrap">
                   <button type="button" className="community-v11-composer-clear" aria-label="Remove mentioned release" onClick={event => { event.stopPropagation(); setSelectedReferences([]); setMentionQuery(''); }}>
                     ×
                   </button>
                 </span>
-              ) : !lockedItem ? <span className="community-v11-composer-chevron" aria-hidden="true">
+              ) : !lockedItem && !lockedVideo ? <span className="community-v11-composer-chevron" aria-hidden="true">
                 <svg viewBox="0 0 20 24" focusable="false">
                   <path d="m4 9 6-6 6 6" />
                   <path d="m4 15 6 6 6-6" />
