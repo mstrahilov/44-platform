@@ -46,7 +46,7 @@ export function SectionHeader({
   );
 }
 
-export function ProductCard({ product, owned: ownedProp }: { product: Product; owned: boolean }) {
+export function ProductCard({ product, owned: ownedProp, singleLineTitle = false }: { product: Product; owned: boolean; singleLineTitle?: boolean }) {
   const { openContextMenu } = useContextMenu();
   const { user } = useAuth();
   const cart = useCart();
@@ -115,7 +115,7 @@ export function ProductCard({ product, owned: ownedProp }: { product: Product; o
         {image && <PublicArtwork src={image} alt="" sizes={CATALOG_ARTWORK_SIZES} />}
       </div>
       <div className="product-tile-info ui44-catalog-copy">
-        <div className="product-tile-title ui44-catalog-title">{product.title}</div>
+        <div className={`product-tile-title ui44-catalog-title${singleLineTitle ? ' ui44-catalog-title-single-line' : ''}`}>{product.title}</div>
         <div className="product-tile-subtitle product-tile-creator ui44-catalog-subheadline">{creatorLabel}</div>
       </div>
     </Link>

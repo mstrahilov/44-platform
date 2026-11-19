@@ -26,6 +26,8 @@ type TopbarContextValue = {
   setTabs: (tabs: TopbarTab[] | undefined) => void;
   toolbarTitle: string | undefined;
   setToolbarTitle: (title: string | undefined) => void;
+  overlay: boolean;
+  setOverlay: (overlay: boolean) => void;
   back: TopbarBack | undefined;
   setBack: (back: TopbarBack | undefined) => void;
   overflowActions: TopbarOverflowAction[] | undefined;
@@ -39,6 +41,8 @@ const TopbarContext = createContext<TopbarContextValue>({
   setTabs: () => {},
   toolbarTitle: undefined,
   setToolbarTitle: () => {},
+  overlay: false,
+  setOverlay: () => {},
   back: undefined,
   setBack: () => {},
   overflowActions: undefined,
@@ -50,10 +54,11 @@ const TopbarContext = createContext<TopbarContextValue>({
 export function TopbarProvider({ children }: { children: ReactNode }) {
   const [tabs, setTabs] = useState<TopbarTab[] | undefined>(undefined);
   const [toolbarTitle, setToolbarTitle] = useState<string | undefined>(undefined);
+  const [overlay, setOverlay] = useState(false);
   const [back, setBack] = useState<TopbarBack | undefined>(undefined);
   const [overflowActions, setOverflowActions] = useState<TopbarOverflowAction[] | undefined>(undefined);
   const [mobileTrailingAction, setMobileTrailingAction] = useState<ReactNode | undefined>(undefined);
-  const value = useMemo(() => ({ tabs, setTabs, toolbarTitle, setToolbarTitle, back, setBack, overflowActions, setOverflowActions, mobileTrailingAction, setMobileTrailingAction }), [tabs, toolbarTitle, back, overflowActions, mobileTrailingAction]);
+  const value = useMemo(() => ({ tabs, setTabs, toolbarTitle, setToolbarTitle, overlay, setOverlay, back, setBack, overflowActions, setOverflowActions, mobileTrailingAction, setMobileTrailingAction }), [tabs, toolbarTitle, overlay, back, overflowActions, mobileTrailingAction]);
   return <TopbarContext.Provider value={value}>{children}</TopbarContext.Provider>;
 }
 
@@ -68,6 +73,15 @@ export function useTopbarTitle(title: string | undefined) {
     setToolbarTitle(title);
     return () => setToolbarTitle(undefined);
   }, [title, setToolbarTitle]);
+}
+
+/** Let a page place the shared toolbar over edge-to-edge content. */
+export function useTopbarOverlay(enabled: boolean) {
+  const { setOverlay } = useContext(TopbarContext);
+  useEffect(() => {
+    setOverlay(enabled);
+    return () => setOverlay(false);
+  }, [enabled, setOverlay]);
 }
 
 /**

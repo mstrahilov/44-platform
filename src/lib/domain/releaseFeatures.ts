@@ -9,6 +9,17 @@ export type CreatorVideoPage = {
   created_at?: string;
 };
 
+export type HomeVideoPreview = Pick<CreatorVideoPage, 'id' | 'creator_id' | 'title' | 'youtube_video_id'> & {
+  username: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+  slug: string | null;
+};
+
+export type CreatorVideoBrowseRow = CreatorVideoPage & {
+  creator_profile: { display_name: string | null; username: string | null } | null;
+};
+
 export type ReleaseCreatorVideo = CreatorVideoPage & {
   sort_order: number;
 };
@@ -60,6 +71,28 @@ export async function listCreatorVideos(limit = 200, creatorId?: string) {
   const result = await query;
   if (result.error) throw result.error;
   return (result.data as CreatorVideoPage[] | null) ?? [];
+}
+
+export async function listCreatorVideosForBrowse(limit = 200): Promise<CreatorVideoBrowseRow[]> {
+  const videos = await listCreatorVideos(limit);
+  const creatorIds = Array.from(new Set(videos.map(video => video.creator_id)));
+  if (creatorIds.length === 0) return [];
+
+  const profiles = await supabase
+    .from('profiles')
+    .select('id,display_name,username')
+    .in('id', creatorIds);
+  if (profiles.error) throw profiles.error;
+  const profilesById = new Map((profiles.data ?? []).map(profile => [profile.id, profile]));
+  return videos.map(video => ({ ...video, creator_profile: profilesById.get(video.creator_id) ?? null }));
+}
+
+export async function listHomeVideoPreviews(limit = 4) {
+  const result = await supabase.rpc('browse_videos_v1' as never, { cursor: null, limit } as never);
+  if (result.error) throw result.error;
+  const page = result.data as unknown as { contract_version?: number; items?: HomeVideoPreview[] } | null;
+  if (page?.contract_version !== 1 || !Array.isArray(page.items)) return [];
+  return page.items.slice(0, limit);
 }
 
 export async function listReleaseCreatorVideos(itemId: string) {

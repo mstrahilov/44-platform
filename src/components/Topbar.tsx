@@ -58,6 +58,13 @@ const IconCompose = () => (
   </svg>
 );
 
+const IconNewPost = () => (
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M13 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
+    <path d="m11 13 1-.3L21.5 3.2a1.8 1.8 0 0 0-2.5-2.5L9.5 10.2 9 14l2-.7Z" />
+  </svg>
+);
+
 const IconMore = () => (
   <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
     <circle cx="5" cy="12" r="1.7" />
@@ -113,7 +120,7 @@ export function Topbar() {
   const router = useRouter();
   const { user } = useAuth();
   const userId = user?.id ?? null;
-  const { tabs, back, overflowActions, toolbarTitle, mobileTrailingAction: registeredMobileTrailingAction } = useTopbar();
+  const { tabs, back, overflowActions, toolbarTitle, overlay: topbarOverlay, mobileTrailingAction: registeredMobileTrailingAction } = useTopbar();
   const [overflowOpen, setOverflowOpen] = useState(false);
   const { count: cartCount } = useCart();
   const [notificationState, setNotificationState] = useState<NotificationState | null>(null);
@@ -125,6 +132,9 @@ export function Topbar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [librarySortActive, setLibrarySortActive] = useState(false);
+  const [communityFilterActive, setCommunityFilterActive] = useState(() => (
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('filter') === 'following'
+  ));
   const [notificationFilterActive, setNotificationFilterActive] = useState(false);
   const [searchDraft, setSearchDraft] = useState('');
   const [previousPath, setPreviousPath] = useState<string | null>(null);
@@ -149,6 +159,14 @@ export function Topbar() {
     }
     window.addEventListener('44:library-sort-state', updateLibrarySort);
     return () => window.removeEventListener('44:library-sort-state', updateLibrarySort);
+  }, []);
+
+  useEffect(() => {
+    function updateCommunityFilter(event: Event) {
+      setCommunityFilterActive(Boolean((event as CustomEvent<{ active?: boolean }>).detail?.active));
+    }
+    window.addEventListener('44:community-filter-state', updateCommunityFilter);
+    return () => window.removeEventListener('44:community-filter-state', updateCommunityFilter);
   }, []);
 
   useEffect(() => {
@@ -241,6 +259,7 @@ export function Topbar() {
   useEffect(() => {
     Promise.resolve().then(() => {
       setNotifMenuOpen(false);
+      setOverflowOpen(false);
       setSearchOpen(false);
       setMobileSearchOpen(false);
       if (pathname !== '/search') {
@@ -400,10 +419,12 @@ export function Topbar() {
   const playlistTrackPickerHref = back?.href ?? '/library';
   const mobileTopbarTitle = toolbarTitle ?? (isNewCommunityPost ? 'New Post' : isNewPlaylist ? 'New Playlist' : isPlaylistTrackPicker ? 'Add Track' : getMobileTopbarTitle(pathname));
   const isCommunityRoot = pathname === '/community';
+  const isCommunitySurface = pathname === '/community' || (pathname.startsWith('/community/') && pathname !== '/community/new');
   const isAccountRoot = pathname === '/you';
   const isNotificationsPage = pathname === '/notifications';
   const isInboxRoot = pathname === '/inbox';
   const isStudioRoot = pathname === '/studio';
+  const isProfilePage = /^\/profile\/[^/]+$/.test(pathname);
   const isRadioRoot = pathname === '/radio';
   const isLibraryRoot = pathname === '/library' || (pathname.startsWith('/library/') && !pathname.startsWith('/library/item/') && !pathname.startsWith('/library/playlists/') && !pathname.startsWith('/library/music/') && pathname !== '/library/search');
   const isPlaylistLibrary = pathname === '/library/playlists';
@@ -526,9 +547,9 @@ export function Topbar() {
     <button type="button" className="ui44-symbol-button" aria-label="Close Add Track" title="Close" onClick={() => router.push(playlistTrackPickerHref)}>
       <IconClose />
     </button>
-  ) : isDetailRoute ? mobileBackAction : isCommunityRoot ? (
-    <Link href="/calendar" className="ui44-symbol-button" aria-label="Calendar" title="Calendar">
-      <IconCalendar />
+  ) : isDetailRoute ? mobileBackAction : isCommunitySurface ? (
+    <Link href="/community/new" className="ui44-symbol-button" aria-label="New Post" title="New Post">
+      <IconNewPost />
     </Link>
   ) : isAccountRoot ? (
     <Link href="/notifications" className="ui44-symbol-button" aria-label={unreadNotificationCount > 0 ? `Notifications, ${unreadNotificationCount} unread` : 'Notifications'} title="Notifications">
@@ -547,7 +568,11 @@ export function Topbar() {
     </button>
   ) : mobileSearchAction;
 
-  const mobileTrailingAction = registeredMobileTrailingAction ?? (isNewCommunityPost ? (
+  const mobileTrailingAction = registeredMobileTrailingAction ?? (isProfilePage && overflowActions?.length ? (
+    <button type="button" className="ui44-symbol-button" aria-label="Profile options" title="Profile options" aria-haspopup="menu" aria-expanded={overflowOpen} onClick={() => setOverflowOpen(open => !open)}>
+      <IconMore />
+    </button>
+  ) : isNewCommunityPost ? (
     <button type="button" className="ui44-symbol-button" aria-label="Post" title="Post" onClick={() => window.dispatchEvent(new CustomEvent('community:new-post-submit'))}>
       <IconCheck />
     </button>
@@ -563,6 +588,14 @@ export function Topbar() {
     <button type="button" data-filter-popover-trigger="true" aria-pressed={notificationFilterActive} className={`ui44-symbol-button ui44-symbol-button-filter page-filter-button${notificationFilterActive ? ' ui44-symbol-button-active page-filter-button-active' : ''}`} aria-label="Filter Notifications" title="Filter Notifications" onClick={() => window.dispatchEvent(new CustomEvent('44:toggle-filter-popover', { detail: { label: 'Filter Notifications' } }))}>
       <span className="page-filter-icon" aria-hidden="true"><i /><i /><i /></span>
     </button>
+  ) : isCommunitySurface ? (
+    <button type="button" data-filter-popover-trigger="true" aria-pressed={communityFilterActive} className={`ui44-symbol-button ui44-symbol-button-filter page-filter-button${communityFilterActive ? ' ui44-symbol-button-active page-filter-button-active' : ''}`} aria-label="Filter Community" title="Filter Community" onClick={() => window.dispatchEvent(new CustomEvent('44:toggle-filter-popover', { detail: { label: 'Filter Community' } }))}>
+      <span className="page-filter-icon" aria-hidden="true"><i /><i /><i /></span>
+    </button>
+  ) : pathname === '/' ? (
+    <Link href="/calendar" className="ui44-symbol-button" aria-label="Calendar" title="Calendar">
+      <IconCalendar />
+    </Link>
   ) : isCommunityRoot ? (
     <Link href="/community/new" className="ui44-symbol-button" aria-label="New Post" title="New Post">
       <IconPlus />
@@ -594,7 +627,7 @@ export function Topbar() {
 
   return (
     <>
-      <div className={`os-topbar os-topbar-mode-${mobileTopbarState.mode}${hasSectionTabs ? ' os-topbar-has-section-tabs' : ''}`}>
+      <div className={`os-topbar os-topbar-mode-${mobileTopbarState.mode}${hasSectionTabs ? ' os-topbar-has-section-tabs' : ''}${topbarOverlay ? ' os-topbar-overlay' : ''}`}>
         <div className="os-topbar-left">
           <Link href="/" className="os-mobile-logo os-mobile-brand-logo" aria-label="44OS Home">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -659,7 +692,7 @@ export function Topbar() {
 
         <MobileToolbar
           title={mobileTopbarTitle}
-          hideTitle={isAccountRoot}
+          hideTitle={isAccountRoot || topbarOverlay}
           leading={mobileLeadingAction}
           trailing={<div className="os-mobile-toolbar-overflow">
             {mobileTrailingAction}
@@ -702,6 +735,10 @@ export function Topbar() {
           : <button type="button" data-filter-popover-trigger="true" aria-pressed={librarySortActive} className={`ui44-symbol-button os-topbar-icon-button${librarySortActive ? ' ui44-symbol-button-active' : ''}`} aria-label="Sort Library" title="Sort Library" onClick={() => window.dispatchEvent(new CustomEvent('44:toggle-filter-popover', { detail: { label: 'Sort Library' } }))}><IconSort /></button>
           : null}
         {isNotificationsPage ? <button type="button" data-filter-popover-trigger="true" aria-pressed={notificationFilterActive} className={`ui44-symbol-button os-topbar-icon-button ui44-symbol-button-filter${notificationFilterActive ? ' ui44-symbol-button-active' : ''}`} aria-label="Filter Notifications" title="Filter Notifications" onClick={() => window.dispatchEvent(new CustomEvent('44:toggle-filter-popover', { detail: { label: 'Filter Notifications' } }))}><span className="page-filter-icon" aria-hidden="true"><i /><i /><i /></span></button> : null}
+        {isProfilePage && overflowActions?.length ? <div className="os-topbar-profile-menu">
+          <button type="button" className="ui44-symbol-button os-topbar-icon-button" aria-label="Profile options" title="Profile options" aria-haspopup="menu" aria-expanded={overflowOpen} onClick={() => setOverflowOpen(open => !open)}><IconMore /></button>
+          {overflowOpen ? <div className="ui44-paper-menu os-topbar-profile-menu-popover" role="menu">{overflowActions.map((action: TopbarOverflowAction) => <button key={action.id} className={`ui44-paper-menu-item${action.danger ? ' os-topbar-overflow-danger' : ''}`} type="button" role="menuitem" disabled={action.disabled} onClick={() => { setOverflowOpen(false); action.onSelect?.(); }}>{action.label}</button>)}</div> : null}
+        </div> : null}
         {mobileTopbarState.mode === 'search-back' && <form
           className="os-topbar-search-mobile"
           role="search"

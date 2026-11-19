@@ -116,10 +116,11 @@ export async function getPublicProfileContent(profile: Profile) {
   const videos = (videoResult.data as CreatorVideoPage[] | null) ?? [];
   const postIds = posts.map(post => post.id);
   if (postIds.length === 0) {
-    return { items: (itemResult.data as Product[] | null) ?? [], posts, videos, replies: [], likes: [], links: linkResult.data ?? [], events: eventResult.data ?? [] };
+    return { items: (itemResult.data as Product[] | null) ?? [], referencedItems: [], posts, videos, replies: [], likes: [], links: linkResult.data ?? [], events: eventResult.data ?? [] };
   }
 
-  const [replyResult, likeResult] = await Promise.all([
+  const attachedItemIds = [...new Set(posts.map(post => post.item_id).filter((id): id is string => Boolean(id)))];
+  const [replyResult, likeResult, referencedItemResult] = await Promise.all([
     supabase
       .from('community_discussion_replies')
       .select('post_id, author_id, authors:profiles!author_id(id, display_name, username, avatar_url)')
@@ -131,12 +132,20 @@ export async function getPublicProfileContent(profile: Profile) {
       .select('post_id, profile_id, profiles:profiles!profile_id(id, display_name, username, avatar_url)')
       .in('post_id', postIds)
       .order('created_at', { ascending: false }),
+    attachedItemIds.length > 0
+      ? supabase
+        .from('catalog_items')
+        .select('*, creators:profiles!author_id(*)')
+        .in('id', attachedItemIds)
+      : Promise.resolve({ data: [], error: null }),
   ]);
   if (replyResult.error) throw replyResult.error;
   if (likeResult.error) throw likeResult.error;
+  if (referencedItemResult.error) throw referencedItemResult.error;
 
   return {
     items: (itemResult.data as Product[] | null) ?? [],
+    referencedItems: (referencedItemResult.data as Product[] | null) ?? [],
     posts,
     videos,
     replies: (replyResult.data as ReplyEngagerRow[] | null) ?? [],

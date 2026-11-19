@@ -244,7 +244,7 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
         ) : (
           <div className="library-item-groups">
             <div className="app-grid ui44-catalog-grid">
-              {category === 'music' ? (savedMusicContractAvailable ? sortedAlbums.map(album => <SavedMusicAlbumCard key={album.item_id} product={album.product} count={album.track_count} />) : sortedLibraryEntries.filter((entry): entry is Extract<typeof entry, { kind: 'item' }> => entry.kind === 'item').map(entry => <LibraryCard key={entry.row.id} row={entry.row} onRemove={removeLibraryRow} />)) : category === 'playlists' ? playlists.map(playlist => <LibraryPlaylistCard key={playlist.id} playlist={playlist} />) : sortedLibraryEntries.map(entry => entry.kind === 'playlist'
+              {category === 'music' ? (savedMusicContractAvailable ? sortedAlbums.map(album => <SavedMusicAlbumCard key={album.item_id} product={album.product} />) : sortedLibraryEntries.filter((entry): entry is Extract<typeof entry, { kind: 'item' }> => entry.kind === 'item').map(entry => <LibraryCard key={entry.row.id} row={entry.row} onRemove={removeLibraryRow} />)) : category === 'playlists' ? playlists.map(playlist => <LibraryPlaylistCard key={playlist.id} playlist={playlist} />) : sortedLibraryEntries.map(entry => entry.kind === 'playlist'
                 ? <LibraryPlaylistCard key={`playlist-${entry.playlist.id}`} playlist={entry.playlist} />
                 : <LibraryCard key={entry.row.id} row={entry.row} onRemove={removeLibraryRow} />)}
             </div>
@@ -255,11 +255,11 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
   );
 }
 
-function SavedMusicAlbumCard({ product, count }: { product: SavedMusicAlbum['product']; count: number }) {
+function SavedMusicAlbumCard({ product }: { product: SavedMusicAlbum['product'] }) {
   const artwork = product.cover_url || product.hero_url;
   return <Link className="product-tile ui44-catalog-card" href={`/library/music/${product.id}`}>
     <span className="product-tile-art product-tile-art-square ui44-catalog-art">{artwork ? <PublicArtwork src={artwork} alt="" sizes={CATALOG_ARTWORK_SIZES} /> : null}</span>
-    <span className="product-tile-info ui44-catalog-copy"><span className="product-tile-title ui44-catalog-title">{product.title}</span><span className="product-tile-subtitle ui44-catalog-subheadline">{product.creators?.display_name || product.creator} · {count} saved {count === 1 ? 'track' : 'tracks'}</span></span>
+    <span className="product-tile-info ui44-catalog-copy"><span className="product-tile-title ui44-catalog-title ui44-catalog-title-single-line">{product.title}</span><span className="product-tile-subtitle ui44-catalog-subheadline">{product.creators?.display_name || product.creator}</span></span>
   </Link>;
 }
 
@@ -269,7 +269,7 @@ function LibraryPlaylistCard({ playlist }: { playlist: Playlist }) {
     <span className="product-tile-art product-tile-art-square ui44-catalog-art library-playlist-art">{artwork ? (
       <PublicArtwork src={artwork} alt="" sizes={CATALOG_ARTWORK_SIZES} />
     ) : null}</span>
-    <span className="product-tile-info ui44-catalog-copy"><span className="product-tile-title ui44-catalog-title">{playlist.title}</span><span className="product-tile-subtitle ui44-catalog-subheadline">Playlist</span></span>
+    <span className="product-tile-info ui44-catalog-copy"><span className="product-tile-title ui44-catalog-title ui44-catalog-title-single-line">{playlist.title}</span><span className="product-tile-subtitle ui44-catalog-subheadline">Playlist</span></span>
   </Link>;
 }
 
@@ -312,7 +312,7 @@ function LibraryCard({ row, onRemove }: { row: LibraryRow; onRemove: (row: Libra
         {image && <PublicArtwork src={image} alt="" sizes={CATALOG_ARTWORK_SIZES} />}
       </span>
       <span className="product-tile-info ui44-catalog-copy">
-        <span className="product-tile-title ui44-catalog-title">{product.title}</span>
+        <span className="product-tile-title ui44-catalog-title ui44-catalog-title-single-line">{product.title}</span>
         <span className="product-tile-subtitle ui44-catalog-subheadline">{creatorName}</span>
       </span>
     </Link>

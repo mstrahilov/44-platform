@@ -69,11 +69,21 @@ export function ItemCommunitySection({ item }: { item: Product }) {
 
 /** Community conversation for videos, which are not catalog_items rows. */
 export function VideoCommunitySection({ video }: { video: { id: string; title: string; youtube_video_id: string } }) {
+  return <VideoCommunitySectionContent key={video.id} video={video} />;
+}
+
+function VideoCommunitySectionContent({ video }: { video: { id: string; title: string; youtube_video_id: string } }) {
   const pathname = usePathname();
-  const [feed, setFeed] = useState<ItemCommunityFeed>(EMPTY_FEED);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [feedState, setFeedState] = useState<{ videoId: string; feed: ItemCommunityFeed; loading: boolean; error: string }>({
+    videoId: video.id,
+    feed: EMPTY_FEED,
+    loading: true,
+    error: '',
+  });
   const [reloadKey, setReloadKey] = useState(0);
+  const feed = feedState.videoId === video.id ? feedState.feed : EMPTY_FEED;
+  const loading = feedState.videoId !== video.id || feedState.loading;
+  const error = feedState.videoId === video.id ? feedState.error : '';
   const videoReference: CommunityReference = {
     id: video.id,
     kind: 'item',
@@ -85,19 +95,19 @@ export function VideoCommunitySection({ video }: { video: { id: string; title: s
 
   useEffect(() => {
     let live = true;
-    setLoading(true);
     void loadCommunityPostsForVideo(video)
-      .then(result => { if (live) { setFeed(result); setError(''); } })
-      .catch(reason => { if (live) setError(reason instanceof Error ? reason.message : 'Could not load posts.'); })
-      .finally(() => { if (live) setLoading(false); });
+      .then(result => { if (live) setFeedState({ videoId: video.id, feed: result, loading: false, error: '' }); })
+      .catch(reason => {
+        if (live) setFeedState({ videoId: video.id, feed: EMPTY_FEED, loading: false, error: reason instanceof Error ? reason.message : 'Could not load posts.' });
+      });
     return () => { live = false; };
-  }, [video, reloadKey]);
+  }, [video, video.id, video.title, video.youtube_video_id, reloadKey]);
 
   return <section className="view-section item-community-section video-community-section" aria-label="Community">
     <SectionHeader title="Community" action={<Link className="item-community-new-post" href={`/community/new?videoId=${encodeURIComponent(video.id)}&returnTo=${encodeURIComponent(pathname)}`}>New Post</Link>} />
     {loading ? <p className="ui44-state" role="status">Loading posts…</p> : error ? <div className="item-community-empty-state ui44-panel ui44-panel-glass" role="alert">
       <strong>Could not load posts</strong><p>{error}</p>
-      <OS44Button onClick={() => { setLoading(true); setReloadKey(key => key + 1); }}>Retry</OS44Button>
+      <OS44Button onClick={() => { setFeedState(current => ({ ...current, loading: true, error: '' })); setReloadKey(key => key + 1); }}>Retry</OS44Button>
     </div> : feed.posts.length === 0 ? <div className="item-community-empty-state ui44-panel ui44-panel-glass">
       <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H5l1.7-3.1A7.5 7.5 0 1 1 20 11.5Z" /></svg>
       <strong>No posts yet</strong><p>Be the first to say something about this.</p>

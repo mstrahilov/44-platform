@@ -1,15 +1,15 @@
 'use client';
 
-import { Suspense, useEffect, useId, useMemo, useState } from 'react';
+import { Suspense, useEffect, useId, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageShell } from '@/components/Ui';
 import { OS44Button } from '@/components/OS44Button';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
+import { CommunityMentionSelect, CommunityPostTagSelect } from '@/components/CommunityPostTagSelect';
 import { useAuth } from '@/lib/useAuth';
 import { hasCommunityIdentity } from '@/lib/communityProfile';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import {
-  COMMUNITY_INTENT_LABELS,
   communityItemReference,
   type CommunityCatalogItem,
   type CommunityIntent,
@@ -42,14 +42,12 @@ function NewCommunityThreadContent() {
   const [profile, setProfile] = useState<StudioProfile | null>(null);
   const [items, setItems] = useState<CommunityCatalogItem[] | null>(null);
   const [mentionLoadError, setMentionLoadError] = useState(false);
-  const [intent, setIntent] = useState<CommunityIntent>('general');
+  const [intent, setIntent] = useState<CommunityIntent | ''>('');
   const [selectedReferences, setSelectedReferences] = useState<CommunityReference[]>([]);
   const [lockedItem, setLockedItem] = useState<Item | null>(null);
   const [lockedVideo, setLockedVideo] = useState<CreatorVideoPage | null>(null);
   const [contextLoading, setContextLoading] = useState(Boolean(contextItemId || contextVideoId));
   const [contextError, setContextError] = useState('');
-  const [picker, setPicker] = useState<'mention' | 'tag' | null>(null);
-  const [mentionQuery, setMentionQuery] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [imageUploading, setImageUploading] = useState(false);
   const [imageError, setImageError] = useState('');
@@ -76,7 +74,7 @@ function NewCommunityThreadContent() {
   }, []);
 
   useEffect(() => {
-    if (picker !== 'mention' || items) return;
+    if (items) return;
     let active = true;
     void listCommunityReferenceItems(200).then(nextItems => {
       if (active) setItems(nextItems);
@@ -84,7 +82,7 @@ function NewCommunityThreadContent() {
       if (active) setMentionLoadError(true);
     });
     return () => { active = false; };
-  }, [items, picker]);
+  }, [items]);
 
   useEffect(() => {
     if (!contextItemId) return;
@@ -118,10 +116,6 @@ function NewCommunityThreadContent() {
   }, [contextItemId, contextVideoId]);
 
   const canPostUpdate = profile?.role === 'creator' || profile?.role === 'admin';
-  const mentionOptions = useMemo(() => (items ?? [])
-    .filter(item => item.title.toLocaleLowerCase().includes(mentionQuery.toLocaleLowerCase().trim()))
-    .slice(0, 30), [items, mentionQuery]);
-
   async function handleImageChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -161,7 +155,7 @@ function NewCommunityThreadContent() {
     try {
       const created = await createCommunityPost({
         body: lockedVideo ? `@${lockedVideo.title} ${body.trim()}` : body.trim(),
-        intent,
+        intent: intent || 'general',
         references: lockedItem ? [communityItemReference(lockedItem)] : selectedReferences,
         imageUrl: imageUrl || null,
       });
@@ -219,63 +213,19 @@ function NewCommunityThreadContent() {
             disabled={saving}
           />
 
-          <div className="community-v11-composer-picker-field">
-            <span className="community-v11-composer-label">Mention</span>
-            <button type="button" className="community-v11-composer-picker" onClick={() => { setMentionLoadError(false); setPicker(current => current === 'mention' ? null : 'mention'); }} aria-expanded={picker === 'mention'} disabled={Boolean(lockedItem || lockedVideo)}>
-              <span className="community-v11-composer-picker-icon">@</span>
-              <span className={selectedReferences.length || lockedVideo ? 'is-selected' : ''}>{lockedVideo?.title ?? selectedReferences.find(reference => reference.kind === 'item')?.label ?? 'Tap to mention a release'}</span>
-              {selectedReferences.length && !lockedItem && !lockedVideo ? (
-                <span className="community-v11-composer-clear-wrap">
-                  <button type="button" className="community-v11-composer-clear" aria-label="Remove mentioned release" onClick={event => { event.stopPropagation(); setSelectedReferences([]); setMentionQuery(''); }}>
-                    ×
-                  </button>
-                </span>
-              ) : !lockedItem && !lockedVideo ? <span className="community-v11-composer-chevron" aria-hidden="true">
-                <svg viewBox="0 0 20 24" focusable="false">
-                  <path d="m4 9 6-6 6 6" />
-                  <path d="m4 15 6 6 6-6" />
-                </svg>
-              </span> : null}
-            </button>
-            {picker === 'mention' && (
-              <div className="community-v11-composer-picker-menu" role="listbox" aria-label="Mention a release">
-                <input value={mentionQuery} onChange={event => setMentionQuery(event.target.value)} placeholder="Search releases" autoFocus />
-                {mentionOptions.length ? mentionOptions.map(item => {
-                  const reference = communityItemReference(item);
-                  return (
-                    <button key={item.id} type="button" role="option" aria-selected={selectedReferences.some(selected => selected.id === item.id)} onClick={() => { setSelectedReferences([reference]); setMentionQuery(''); setPicker(null); }}>
-                      <span>{item.title}</span>
-                      <small>{reference.secondary}</small>
-                    </button>
-                  );
-                }) : <div className="community-v11-composer-picker-empty" role="status">
-                  {mentionLoadError ? 'Could not load releases.' : items ? 'No releases found.' : 'Loading releases…'}
-                </div>}
-              </div>
-            )}
-          </div>
+          <CommunityMentionSelect
+            items={items ?? []}
+            value={selectedReferences.find(reference => reference.kind === 'item')?.id ?? ''}
+            disabled={Boolean(lockedItem || lockedVideo)}
+            lockedLabel={lockedItem?.title ?? lockedVideo?.title}
+            onChange={itemId => {
+              const item = items?.find(candidate => candidate.id === itemId);
+              setSelectedReferences(item ? [communityItemReference(item)] : []);
+            }}
+          />
+          {mentionLoadError ? <div className="community-v11-composer-upload-status" role="status">Could not load releases.</div> : null}
 
-          <div className="community-v11-composer-picker-field">
-            <span className="community-v11-composer-label">Post Tag</span>
-            <button type="button" className="community-v11-composer-picker" onClick={() => setPicker(current => current === 'tag' ? null : 'tag')} aria-expanded={picker === 'tag'}>
-              <span className="community-v11-composer-picker-icon">☷</span>
-              <span className={intent !== 'general' ? 'is-selected' : ''}>{intent === 'general' ? 'Select a post tag' : COMMUNITY_INTENT_LABELS[intent]}</span>
-              <span className="community-v11-composer-chevron" aria-hidden="true">
-                <svg viewBox="0 0 20 24" focusable="false">
-                  <path d="m4 9 6-6 6 6" />
-                  <path d="m4 15 6 6 6-6" />
-                </svg>
-              </span>
-            </button>
-            {picker === 'tag' && (
-              <div className="community-v11-composer-picker-menu" role="listbox" aria-label="Select a post tag">
-                {(['general', 'update', 'question', 'collaboration', 'showcase', 'help'] as CommunityIntent[]).map(option => {
-                  const disabled = option === 'update' && !canPostUpdate;
-                  return <button key={option} type="button" role="option" aria-selected={intent === option} disabled={disabled} onClick={() => { setIntent(option); setPicker(null); }}>{COMMUNITY_INTENT_LABELS[option]}</button>;
-                })}
-              </div>
-            )}
-          </div>
+          <CommunityPostTagSelect value={intent} canPostUpdate={canPostUpdate} onChange={setIntent} />
 
           {(error || contextError) && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error || contextError}</div>}
         </form>

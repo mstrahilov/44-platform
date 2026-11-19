@@ -3644,6 +3644,16 @@ body.theme-dark .os-home-panel {
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.14);
 }
 
+.page-filter-popover.community-filter-popover {
+  position: fixed;
+  z-index: 1200;
+  top: calc(var(--os-topbar-height) + 8px);
+  right: var(--os-content-inset);
+  left: auto;
+  width: min(220px, calc(100vw - (var(--os-content-inset) * 2)));
+  max-width: calc(100vw - (var(--os-content-inset) * 2));
+}
+
 .notifications-filter-popover {
   position: fixed;
   z-index: 90;
@@ -4057,6 +4067,54 @@ body:is(.theme-dark, .theme-light) .web-push-prompt.ui44-paper-menu {
 .os-popover-footer-link:hover { color: var(--os-color-ink); } }
 
 /* Shared route wrapper; the global Topbar owns page-level vertical framing. */
+
+/* A route error is a standalone recovery screen, without normal app navigation. */
+.app-shell:has(.route-error-screen) .app-sidebar,
+.app-shell:has(.route-error-screen) > .app-main > .os-topbar,
+.app-shell:has(.route-error-screen) .music-player-bar {
+  display: none !important;
+}
+
+.app-main:has(.route-error-screen) {
+  height: 100dvh;
+  min-height: 100dvh;
+}
+
+.app-main-content:has(.route-error-screen) {
+  padding: 0;
+  overflow: auto;
+}
+
+.route-error-screen {
+  box-sizing: border-box;
+  display: grid;
+  flex: 1;
+  place-items: center;
+  width: 100%;
+  min-height: 100%;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.route-error-content {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  width: min(100%, 440px);
+}
+
+.route-error-content h1,
+.route-error-content p {
+  margin: 0;
+}
+
+.route-error-content p {
+  color: var(--os-color-ink-muted);
+}
+
+.route-error-content .os-button {
+  margin-top: 8px;
+}
 
 /* Hub layout — for Store, Community, Resources, Services */
 .view-hub {
@@ -5467,6 +5525,205 @@ body:is(.theme-dark, .theme-light) .os-topbar .os-topbar-tab.os-topbar-tab-secti
   border-radius: 999px;
   background: currentColor;
   content: "";
+}
+
+/* Profile pages use the same edge-to-edge photo and transparent toolbar as iOS. */
+.app-main:has(> .os-topbar.os-topbar-overlay) {
+  position: relative;
+}
+
+.app-main > .os-topbar.os-topbar-overlay {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 60;
+  background: transparent;
+}
+
+.app-main > .os-topbar.os-topbar-overlay :is(.ui44-symbol-button, .os-topbar-back, .os-topbar-icon-button) {
+  border-color: color-mix(in srgb, var(--os-color-ink) 20%, transparent);
+  background: color-mix(in srgb, var(--os-color-app-environment) 34%, transparent);
+  box-shadow: none;
+  backdrop-filter: blur(14px) saturate(1.12);
+  -webkit-backdrop-filter: blur(14px) saturate(1.12);
+}
+
+.view-hub:has(.social-profile-page) {
+  width: 100%;
+  max-width: none;
+  padding: 0 0 var(--os-space-10);
+  gap: 0;
+}
+
+.social-shell.social-profile-page {
+  display: block;
+  width: 100%;
+  max-width: none;
+  padding: 0 0 var(--os-space-10);
+}
+
+.social-profile-page .social-profile-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+}
+
+.social-profile-hero {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1.15;
+  max-height: 82dvh;
+  overflow: hidden;
+  background: var(--os-color-surface);
+}
+
+.social-profile-hero-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.social-profile-page .social-profile-main {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  margin: -34px auto 0;
+  padding: 0 24px;
+  text-align: center;
+}
+
+.social-profile-page .social-profile-identity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  min-width: 0;
+}
+
+.social-profile-page .social-profile-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  width: 100%;
+}
+
+.social-profile-page .social-profile-name {
+  align-self: center;
+  width: 100%;
+  font-size: clamp(24px, 6vw, 34px);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  text-align: center;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.35);
+}
+
+.social-profile-page .social-profile-text .social-handle {
+  align-self: center;
+  font-size: 16px;
+  line-height: 1.3;
+  text-align: center;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.35);
+}
+
+.social-profile-page .social-profile-bio {
+  width: min(100%, 620px);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.social-profile-page .social-profile-bio-center {
+  text-align: center;
+}
+
+.social-profile-page .social-profile-bio-left {
+  text-align: left;
+}
+
+.social-profile-page .social-profile-link-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+}
+
+body:is(.theme-dark, .theme-light) .social-profile-page .social-profile-link-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+}
+
+.social-profile-page .social-profile-external-links {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.social-profile-page .social-profile-actions {
+  justify-content: center;
+  padding-top: 0;
+}
+
+.social-profile-page .social-profile-identity > .social-avatar-large {
+  width: 78px;
+  height: 78px;
+}
+
+.social-profile-page .profile-section-tabs {
+  width: min(100%, var(--os-content-readable));
+  margin: 30px auto 0;
+  padding-inline: 16px;
+}
+
+.social-profile-page > :not(.social-profile-head) {
+  width: min(100%, var(--os-content-readable));
+  margin-inline: auto;
+}
+
+.os-topbar-profile-menu {
+  position: relative;
+}
+
+.os-topbar-profile-menu-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 80;
+  display: grid;
+  width: max-content;
+  min-width: 190px;
+  padding: 7px;
+  border: 1px solid color-mix(in srgb, var(--os-color-ink) 14%, transparent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--os-color-app-environment) 88%, transparent);
+  box-shadow: var(--os-shadow-3);
+  backdrop-filter: blur(22px) saturate(1.12);
+  -webkit-backdrop-filter: blur(22px) saturate(1.12);
+}
+
+@media (max-width: 768px) {
+  .os-topbar-profile-menu {
+    display: none;
+  }
+}
+
+@media (min-width: 769px) {
+  .os-topbar-overlay .os-mobile-toolbar-title {
+    display: none;
+  }
 }
 
 
@@ -7403,7 +7660,9 @@ body:is(.theme-dark, .theme-light)
   }
 
   .welcome-hero h1 {
-    font-size: clamp(36px, 12vw, 50px);
+    font-size: var(--os-type-display-size);
+    line-height: var(--os-type-display-line);
+    letter-spacing: 0;
   }
 
   .welcome-guide {
@@ -8505,9 +8764,9 @@ body.accent-violet {
   }
 
   .login-copy .os-type-page-title {
-    font-size: clamp(30px, 8.75vw, 34px);
-    line-height: 1.05;
-    letter-spacing: -0.035em;
+    font-size: var(--os-type-display-size);
+    line-height: var(--os-type-display-line);
+    letter-spacing: 0;
     white-space: nowrap;
   }
 }
@@ -8622,7 +8881,7 @@ body.accent-violet {
     border-radius: 11px;
     background: transparent;
     color: var(--os-color-ink);
-    font: 600 15px/20px var(--os-font-app);
+    font: 600 var(--os-type-button-size)/var(--os-type-button-line) var(--os-font-app);
     text-align: left;
     white-space: nowrap;
   }
@@ -8642,8 +8901,8 @@ body.accent-violet {
     max-width: min(48vw, 220px);
     overflow: hidden;
     color: var(--os-color-ink);
-    font: 700 16px/20px var(--os-font-app);
-    letter-spacing: -0.01em;
+    font: 600 var(--os-type-card-title-size)/var(--os-type-card-title-line) var(--os-font-app);
+    letter-spacing: 0;
     justify-self: center;
     text-align: center;
     text-overflow: ellipsis;
@@ -8677,7 +8936,7 @@ body.accent-violet {
     min-width: 0;
     min-height: 36px;
     padding: 0 13px;
-    font-size: 13px;
+    font-size: var(--os-type-body-small-size);
   }
 
   .os-topbar-back {
@@ -8686,7 +8945,7 @@ body.accent-violet {
     min-width: var(--os-topbar-control-size);
     min-height: var(--os-topbar-control-size);
     padding: 0;
-    font-size: 13px;
+    font-size: var(--os-type-button-size);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -8789,7 +9048,7 @@ body.accent-violet {
   .search-page > .app-empty-text {
     padding: 6px 0 0;
     white-space: nowrap;
-    font-size: 14px;
+    font-size: var(--os-type-body-size);
   }
 
   .hub-section-head {
@@ -8816,15 +9075,15 @@ body.accent-violet {
   }
 
   .product-tile-title {
-    font-size: 13px;
-    line-height: 1.3;
-    font-weight: 520;
+    font-size: var(--os-type-card-title-size);
+    line-height: var(--os-type-card-title-line);
+    font-weight: var(--os-type-card-title-weight);
   }
 
   .social-artifact-info .os-type-card-title {
-    font-size: 13px;
-    line-height: 1.3;
-    font-weight: 520;
+    font-size: var(--os-type-card-title-size);
+    line-height: var(--os-type-card-title-line);
+    font-weight: var(--os-type-card-title-weight);
   }
 
   .view-album-header {
@@ -8914,20 +9173,20 @@ body.accent-violet {
     white-space: normal;
     overflow: visible;
     text-overflow: clip;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
-    font-size: 34px;
-    line-height: 41px;
-    font-weight: 800;
+    font-family: var(--os-font-app);
+    font-size: var(--os-type-page-title-size);
+    line-height: var(--os-type-page-title-line);
+    font-weight: 700;
     margin: 2px 0 0;
     text-align: center;
   }
 
   .library-creator-chip {
     gap: 8px;
-    font-size: 22px;
-    line-height: 28px;
-    font-weight: 500;
-    color: rgba(255, 255, 255, 0.7);
+    font-size: var(--os-type-body-size);
+    line-height: var(--os-type-body-line);
+    font-weight: 400;
+    color: var(--os-color-ink);
   }
 
   .library-creator-avatar {
@@ -9036,15 +9295,15 @@ body.accent-violet {
 
   .view-track-title {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
-    font-size: 22px;
-    line-height: 28px;
-    font-weight: 400;
+    font-size: var(--os-type-card-title-size);
+    line-height: var(--os-type-card-title-line);
+    font-weight: 600;
   }
 
   .view-track-duration {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
-    font-size: 15px;
-    line-height: 20px;
+    font-size: var(--os-type-meta-size);
+    line-height: var(--os-type-meta-line);
     font-weight: 400;
     color: rgba(60, 60, 67, 0.64);
   }
@@ -9064,7 +9323,13 @@ body.accent-violet {
 
   .radio-hero-title {
     max-width: min(86vw, 520px);
-    font-size: clamp(24px, 7vw, 31px);
+    font-size: 20px;
+    line-height: 24px;
+  }
+
+  .radio-hero-artist {
+    font-size: 20px;
+    line-height: 24px;
   }
 
   .radio-hero-copy {
@@ -9228,7 +9493,7 @@ body.accent-violet {
   }
 
   .notification-page-row .dashboard-row-title {
-    font: 600 13px/16px var(--os-font-app);
+    font: 600 var(--os-type-card-title-size)/var(--os-type-card-title-line) var(--os-font-app);
     letter-spacing: 0;
   }
 
@@ -9387,7 +9652,8 @@ body.accent-violet {
   }
 
   .music-player-sheet-copy h2 {
-    font-size: clamp(24px, 7vw, 34px);
+    font-size: var(--44ui-type-section-title-size);
+    line-height: var(--44ui-type-section-title-line);
   }
 
   .music-player-sheet-copy p {
@@ -10101,7 +10367,7 @@ body.theme-dark :is(
     min-width: 0;
     flex: 1 1 auto;
     padding: 7px 9px;
-    font-size: 12px;
+    font-size: var(--os-type-body-small-size);
     text-align: center;
   }
 
@@ -10305,7 +10571,7 @@ body.theme-dark :is(
 
   body.theme-dark .community-app-page :is(.social-author-name, .social-row-title),
   body.theme-dark .social-thread-page :is(.social-author-name, .social-row-title) {
-    color: #fff;
+    color: var(--os-color-ink);
   }
 
   body.theme-dark .community-app-page .social-author-name,
@@ -10315,7 +10581,7 @@ body.theme-dark :is(
 
   body.theme-dark .community-app-page .social-row-body,
   body.theme-dark .social-thread-page .social-row-body {
-    color: rgba(255, 255, 255, 0.88);
+    color: var(--os-color-ink);
   }
 
   .social-thread-page .social-inline-composer {
@@ -10790,10 +11056,19 @@ body:is(.theme-light, .theme-dark) .view-album-actions .os-button.os-button-acti
 
   .social-profile-name {
     max-width: 100%;
-    font-size: clamp(30px, 8.7vw, 34px);
-    line-height: 1.1;
-    letter-spacing: -0.025em;
+    font-size: var(--os-type-page-title-size);
+    line-height: var(--os-type-page-title-line);
+    letter-spacing: 0;
     overflow-wrap: anywhere;
+  }
+
+  .social-profile-text {
+    gap: 4px;
+  }
+
+  .social-profile-text .social-handle {
+    font-size: var(--os-type-body-size);
+    line-height: var(--os-type-body-line);
   }
 
   .social-profile-tabs {
@@ -10809,7 +11084,7 @@ body:is(.theme-light, .theme-dark) .view-album-actions .os-button.os-button-acti
     margin: 0;
     border: 0;
     border-radius: 999px;
-    font-size: 14px;
+    font-size: var(--os-type-body-small-size);
   }
 
   .social-profile-tabs button[aria-selected="true"] {
@@ -12091,7 +12366,17 @@ body:is(.theme-dark, .theme-light) .store-clear-filters {
     padding-left: 0;
   }
 
+  /* Global anchor states use `color: inherit`; keep linked tabs in the same
+     neutral/accent palette as button tabs. */
+  .section-tab-rail a.section-tab {
+    color: var(--os-color-ink-secondary);
+  }
+
   .section-tab[aria-current="page"] {
+    color: var(--os-color-accent);
+  }
+
+  .section-tab-rail a.section-tab[aria-current="page"] {
     color: var(--os-color-accent);
   }
 
@@ -12118,21 +12403,17 @@ body:is(.theme-dark, .theme-light) .store-clear-filters {
 
   /* Match iOS OSPillTabRail: short rails stretch and center their labels;
      rails that cannot fit switch to natural-width horizontal scrolling. */
-  .section-tab-rail:not(.section-tab-rail-overflow) {
+  .section-tab-rail.section-tab-rail-stretch:not(.section-tab-rail-overflow) {
     justify-content: center;
   }
 
-  .section-tab-rail:not(.section-tab-rail-overflow) .section-tab {
+  .section-tab-rail.section-tab-rail-stretch:not(.section-tab-rail-overflow) .section-tab {
     flex: 1 1 0;
     min-width: max-content;
     padding-inline: 14px;
   }
 
-  .section-tab-rail:not(.section-tab-rail-overflow) .section-tab:first-child {
-    padding-left: 14px;
-  }
-
-  .section-tab-rail:not(.section-tab-rail-overflow) .section-tab[aria-current="page"]::after {
+  .section-tab-rail.section-tab-rail-stretch:not(.section-tab-rail-overflow) .section-tab[aria-current="page"]::after {
     right: 14px;
     left: 14px;
   }
@@ -12321,11 +12602,11 @@ body:is(.theme-dark, .theme-light) .store-clear-filters {
     min-height: 40px;
     align-items: center;
     justify-content: center;
-    padding: 0 14px;
+    padding: 0 10px;
     border: 0;
     background: transparent;
     color: var(--os-color-ink-secondary);
-    font: 600 13px/16px var(--os-font-app);
+    font: 600 var(--os-type-body-small-size)/var(--os-type-body-small-line) var(--os-font-app);
     text-decoration: none;
     cursor: pointer;
   }
@@ -12334,15 +12615,29 @@ body:is(.theme-dark, .theme-light) .store-clear-filters {
     padding-left: 0;
   }
 
+  /* Global anchor states use `color: inherit`; keep linked tabs in the same
+     neutral/accent palette as button tabs. */
+  .section-tab-rail a.section-tab {
+    color: var(--os-color-ink-secondary);
+  }
+
   .section-tab[aria-current="page"] {
     color: var(--os-color-accent);
   }
 
+  .section-tab-rail a.section-tab[aria-current="page"] {
+    color: var(--os-color-accent);
+  }
+
+  .section-tab:hover:not([aria-current="page"]) {
+    color: var(--os-color-ink-secondary);
+  }
+
   .section-tab[aria-current="page"]::after {
     position: absolute;
-    right: 14px;
+    right: 10px;
     bottom: 0;
-    left: 14px;
+    left: 10px;
     height: 2px;
     border-radius: 999px;
     background: currentColor;
@@ -12361,23 +12656,19 @@ body:is(.theme-dark, .theme-light) .store-clear-filters {
 
   /* Match iOS OSPillTabRail: short rails stretch and center their labels;
      rails that cannot fit switch to natural-width horizontal scrolling. */
-  .section-tab-rail:not(.section-tab-rail-overflow) {
+  .section-tab-rail.section-tab-rail-stretch:not(.section-tab-rail-overflow) {
     justify-content: center;
   }
 
-  .section-tab-rail:not(.section-tab-rail-overflow) .section-tab {
+  .section-tab-rail.section-tab-rail-stretch:not(.section-tab-rail-overflow) .section-tab {
     flex: 1 1 0;
     min-width: max-content;
-    padding-inline: 14px;
+    padding-inline: 10px;
   }
 
-  .section-tab-rail:not(.section-tab-rail-overflow) .section-tab:first-child {
-    padding-left: 14px;
-  }
-
-  .section-tab-rail:not(.section-tab-rail-overflow) .section-tab[aria-current="page"]::after {
-    right: 14px;
-    left: 14px;
+  .section-tab-rail.section-tab-rail-stretch:not(.section-tab-rail-overflow) .section-tab[aria-current="page"]::after {
+    right: 10px;
+    left: 10px;
   }
 
   .section-tab-rail.section-tab-rail-overflow {
@@ -12450,7 +12741,8 @@ body:is(.theme-dark, .theme-light) .store-clear-filters {
   }
 
   .radio-page .radio-hero-title {
-    font-size: clamp(22px, 6vw, 28px);
+    font-size: 20px;
+    line-height: 24px;
   }
 
   .store-shelf-action.os-button {
@@ -12544,14 +12836,15 @@ body:is(.theme-dark, .theme-light) .store-clear-filters {
   }
 
   .dashboard-page :is(.dashboard-overview-card, .dashboard-metric-card) .os-type-meta {
-    font-size: 9px;
-    line-height: 1.1;
-    letter-spacing: 0.04em;
+    font-size: var(--os-type-caption-size);
+    line-height: var(--os-type-caption-line);
+    letter-spacing: 0;
     white-space: nowrap;
   }
 
   .dashboard-page :is(.dashboard-overview-card, .dashboard-metric-card) .os-type-page-title {
-    font-size: clamp(24px, 8vw, 32px);
+    font-size: clamp(28px, 8vw, var(--os-type-display-size));
+    line-height: var(--os-type-display-line);
   }
 
   .studio-item-row .studio-publication-status {
@@ -12562,8 +12855,8 @@ body:is(.theme-dark, .theme-light) .store-clear-filters {
     padding: 0;
     border: 0;
     border-radius: 0;
-    font-size: 13px;
-    line-height: 1.1;
+    font-size: var(--os-type-meta-size);
+    line-height: var(--os-type-meta-line);
     box-shadow: none;
     align-self: start;
     margin-top: 2px;
@@ -12769,8 +13062,8 @@ body:is(.theme-dark, .theme-light) .store-clear-filters {
   }
 
   .dashboard-form-section > .hub-section-head .hub-section-title {
-    font-size: 32px;
-    line-height: 1.12;
+    font-size: var(--44ui-type-section-title-size);
+    line-height: var(--44ui-type-section-title-line);
   }
 
   .studio-achievements-section,
@@ -13211,7 +13504,8 @@ body:is(.theme-light, .theme-dark) .store-shelf-action.os-button:focus-visible {
   body:is(.theme-light, .theme-dark) .studio-create-popover .page-filter-option {
     min-height: 40px;
     padding: 7px 10px;
-    font-size: 14px;
+    font-size: var(--os-type-callout-size);
+    line-height: var(--os-type-callout-line);
   }
 
   /* Mobile sub-navigation sits evenly between full-width dividers and always
@@ -13801,4 +14095,65 @@ body:is(.theme-dark, .theme-light) .os-topbar .os-topbar-tab.os-topbar-tab-secti
   border-radius: 999px;
   background: currentColor;
   content: "";
+}
+
+/* Final profile overrides follow legacy avatar-grid rules kept for other surfaces. */
+body:is(.theme-dark, .theme-light) .social-profile-page .social-profile-identity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+}
+
+body:is(.theme-dark, .theme-light) .social-profile-page .social-profile-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+}
+
+body:is(.theme-dark, .theme-light) .social-profile-page .social-profile-name {
+  grid-column: auto;
+  grid-row: auto;
+  align-self: center;
+  width: 100%;
+}
+
+body:is(.theme-dark, .theme-light) .social-profile-page .social-profile-text > .social-handle {
+  grid-column: auto;
+  grid-row: auto;
+  align-self: center;
+}
+
+body:is(.theme-dark, .theme-light) .social-profile-page .social-profile-link-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+}
+
+body:is(.theme-dark, .theme-light) .social-profile-page .social-profile-bio {
+  margin: 0;
+}
+
+body:is(.theme-dark, .theme-light) .view-hub:has(.social-profile-page) {
+  display: block;
+  min-width: 0;
+}
+
+body:is(.theme-dark, .theme-light) .social-shell.social-profile-page {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (min-width: 769px) {
+  body:is(.theme-dark, .theme-light) .social-profile-page .social-profile-hero {
+    width: min(100%, 640px);
+    max-height: none;
+    margin-inline: auto;
+  }
 }

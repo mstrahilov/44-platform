@@ -109,7 +109,7 @@ export function SectionTabs({
   if (topbarOnly) return null;
 
   return (
-    <nav ref={railRef} className={`section-tab-rail${isOverflowing ? ' section-tab-rail-overflow' : ''}${toolbarSpacing ? ' section-tab-rail-toolbar-spaced' : ''} ${className}`.trim()} aria-label={ariaLabel}>
+    <nav ref={railRef} className={`section-tab-rail section-tab-rail-stretch${isOverflowing ? ' section-tab-rail-overflow' : ''}${toolbarSpacing ? ' section-tab-rail-toolbar-spaced' : ''} ${className}`.trim()} aria-label={ariaLabel}>
       {children}
     </nav>
   );

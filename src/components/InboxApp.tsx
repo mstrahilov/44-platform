@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Suspense } from 'react';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageShell } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
@@ -84,8 +83,7 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
   const composeRoute = routeConversationId === 'new';
   const [composing, setComposing] = useState(composeRoute);
   const [recipientQuery, setRecipientQuery] = useState('');
-  const [recipientProfiles, setRecipientProfiles] = useState<MessageProfile[]>([]);
-  const [recipientSearchState, setRecipientSearchState] = useState<'idle' | 'searching' | 'results' | 'failed'>('idle');
+  const [recipientSearchResult, setRecipientSearchResult] = useState<{ query: string; profiles: MessageProfile[]; failed?: boolean } | null>(null);
   const [selectedRecipient, setSelectedRecipient] = useState<MessageProfile | null>(null);
   const [inboxError, setInboxError] = useState('');
   const [mobileListOpen, setMobileListOpen] = useState(!routeConversationId);
@@ -238,26 +236,17 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
 
   useEffect(() => {
     const query = recipientQuery.trim();
-    if (!user || !composing || !query) {
-      setRecipientProfiles([]);
-      setRecipientSearchState('idle');
-      return;
-    }
+    if (!user || !composing || !query) return;
 
     let alive = true;
-    setRecipientProfiles([]);
-    setRecipientSearchState('searching');
     const timeout = window.setTimeout(async () => {
       try {
         const rows = await searchMessageRecipients(user.id, query);
-        if (alive) {
-          setRecipientProfiles(rows);
-          setRecipientSearchState('results');
-        }
+        if (alive) setRecipientSearchResult({ query, profiles: rows });
       } catch (recipientError) {
         if (alive) {
           setInboxError(directMessageError(recipientError as { message?: string }));
-          setRecipientSearchState('failed');
+          setRecipientSearchResult({ query, profiles: [], failed: true });
         }
       }
     }, 250);
@@ -268,7 +257,12 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
   }, [composing, recipientQuery, user]);
 
   const profile = profileState && profileState.userId === userId ? profileState.profile : null;
-  const visibleRecipientProfiles = user && composing && recipientQuery.trim() ? recipientProfiles : [];
+  const activeRecipientQuery = recipientQuery.trim();
+  const matchingRecipientSearch = recipientSearchResult?.query === activeRecipientQuery ? recipientSearchResult : null;
+  const recipientSearchState = !user || !composing || !activeRecipientQuery
+    ? 'idle'
+    : matchingRecipientSearch?.failed ? 'failed' : matchingRecipientSearch ? 'results' : 'searching';
+  const visibleRecipientProfiles = user && composing && activeRecipientQuery ? matchingRecipientSearch?.profiles ?? [] : [];
   const canInteract = hasCommunityIdentity(profile);
   const activeConversation = routeConversationId
     ? conversations.find(row => row.id === routeConversationId) ?? null

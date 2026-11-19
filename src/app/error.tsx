@@ -5,5 +5,13 @@ import { OS44Button } from '@/components/OS44Button';
 
 export default function GlobalRouteError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => { console.error('44OS route error', { message: error.message, digest: error.digest }); }, [error]);
-  return <main className="centered-message ui44-state ui44-state-error" role="alert"><h1 className="os-type-page-title ui44-type ui44-type-page-title">44OS hit a problem</h1><p className="os-type-body">Your account data is safe. Try this screen again, or return home if the problem continues.</p>{error.digest && <p className="os-type-meta">Reference: {error.digest}</p>}<div className="dashboard-row-actions"><OS44Button className="os-button os-button-primary" type="button" onClick={reset}>Try Again</OS44Button><OS44Button className="os-button os-button-secondary" href="/">Return Home</OS44Button></div></main>;
+  return (
+    <main className="route-error-screen ui44-state ui44-state-error" role="alert">
+      <div className="route-error-content">
+        <h1 className="os-type-page-title ui44-type ui44-type-page-title">44OS hit a problem</h1>
+        <p className="os-type-body">Refresh the page to try again.</p>
+        <OS44Button className="os-button os-button-primary" type="button" onClick={reset}>Try Again</OS44Button>
+      </div>
+    </main>
+  );
 }

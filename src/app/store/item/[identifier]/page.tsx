@@ -327,7 +327,7 @@ function ProductStoreDetail({
   const hasDownloadUnlock = ownedAcquisitionType === 'purchase' && hasActiveDownload;
   const isMerch = productExperience === 'physical';
   const creatorLink = creatorHref(product.creators ?? product.creator);
-  const creatorTabLink = `${creatorLink}${creatorLink.includes('?') ? '&' : '?'}tab=${isBeat ? 'beats' : creatorProfileTab(productExperience)}${product.id ? `&fromProduct=${encodeURIComponent(product.id)}` : ''}`;
+  const creatorTabLink = `${creatorLink}${creatorLink.includes('?') ? '&' : '?'}tab=${isBeat ? 'assets' : creatorProfileTab(productExperience)}${product.id ? `&fromProduct=${encodeURIComponent(product.id)}` : ''}`;
   const libraryHref = ownedLibraryItemId ? productLibraryHref(product, ownedLibraryItemId) : browseIndexHref(product).replace('/store', '/library');
   const merchGallery = [
     ...merchImages,
@@ -783,6 +783,6 @@ function BeatLicensePanel({ product }: { product: Product }) {
 
 function creatorProfileTab(experience: ReturnType<typeof getProductExperience>) {
   if (experience === 'book') return 'books';
-  if (experience === 'asset') return 'sample-packs';
+  if (experience === 'asset') return 'assets';
   return 'music';
 }

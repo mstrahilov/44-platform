@@ -40,6 +40,13 @@ export const COMMUNITY_INTENT_LABELS: Record<CommunityIntent, string> = {
   update: 'Update',
 };
 
+export const COMMUNITY_POST_TAG_OPTIONS: readonly CommunityIntent[] = [
+  'update',
+  'question',
+  'collaboration',
+  'showcase',
+];
+
 export const COMMUNITY_INTENT_PLACEHOLDERS: Record<CommunityIntent, string> = {
   general: 'What’s on your mind?',
   question: 'What would you like to ask?',

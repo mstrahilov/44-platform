@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
+import { CommunityMentionSelect, CommunityPostTagSelect } from '@/components/CommunityPostTagSelect';
 import {
   CommunityReportDialog,
   type CommunityReportTarget,
@@ -73,15 +74,6 @@ const INTENT_TABS: Array<{ id: IntentView; label: string; href: string }> = [
   { id: 'question', label: 'Questions', href: '/community/questions' },
   { id: 'showcase', label: 'Showcase', href: '/community/showcase' },
   { id: 'collaboration', label: 'Collaboration', href: '/community/collaboration' },
-];
-
-const COMPOSER_INTENTS: CommunityIntent[] = [
-  'general',
-  'update',
-  'question',
-  'collaboration',
-  'showcase',
-  'help',
 ];
 
 function extractMentionQuery(value: string) {
@@ -154,15 +146,12 @@ function CommunityPageContent() {
   const [profileState, setProfileState] = useState<CommunityProfileState | null>(null);
   const [likingId, setLikingId] = useState('');
   const [composerOpen, setComposerOpen] = useState(false);
-  const [composerIntent, setComposerIntent] = useState<CommunityIntent>('general');
+  const [composerIntent, setComposerIntent] = useState<CommunityIntent | ''>('');
   const [postBody, setPostBody] = useState('');
   const [posting, setPosting] = useState(false);
   const [mentionOptions, setMentionOptions] = useState<CommunityReferenceOption[]>([]);
   const [mentionAnchor, setMentionAnchor] = useState<{ left: number; top: number; width: number } | null>(null);
   const [selectedReferences, setSelectedReferences] = useState<CommunityReference[]>([]);
-  const [composerPicker, setComposerPicker] = useState<'mention' | 'tag' | null>(null);
-  const [mentionPickerQuery, setMentionPickerQuery] = useState('');
-  const [mentionPickerOptions, setMentionPickerOptions] = useState<CommunityReferenceOption[]>([]);
   const [editingPostId, setEditingPostId] = useState('');
   const [editBody, setEditBody] = useState('');
   const [editSaving, setEditSaving] = useState(false);
@@ -185,26 +174,12 @@ function CommunityPageContent() {
               ? 'update'
               : 'all';
   const postFilter = searchParams.get('filter') === 'following' ? 'following' : 'all';
-  const activeMentionQuery = composerOpen ? extractMentionQuery(postBody) : '';
-  const localMentionOptions = useMemo(() => items.slice(0, 30).map(item => {
-    const reference = communityItemReference(item);
-    return {
-      ...reference,
-      displayLabel: reference.label,
-      insertText: reference.label,
-    };
-  }), [items]);
 
   useEffect(() => {
-    if (!composerOpen || composerPicker !== 'mention') return;
-    if (!mentionPickerQuery.trim()) return;
-    let alive = true;
-    void searchCommunityReferences(mentionPickerQuery.trim())
-      .then(options => { if (alive) setMentionPickerOptions(options); })
-      .catch(() => { if (alive) setMentionPickerOptions([]); });
-    return () => { alive = false; };
-  }, [composerOpen, composerPicker, mentionPickerQuery]);
+    window.dispatchEvent(new CustomEvent('44:community-filter-state', { detail: { active: postFilter === 'following' } }));
+  }, [postFilter]);
 
+  const activeMentionQuery = composerOpen ? extractMentionQuery(postBody) : '';
   useEffect(() => {
     let alive = true;
     void listCommunityReferenceItems(200).then(catalog => {
@@ -321,14 +296,11 @@ function CommunityPageContent() {
 
   function resetComposer() {
     setComposerOpen(false);
-    setComposerIntent('general');
+    setComposerIntent('');
     setPostBody('');
     setMentionOptions([]);
     setMentionAnchor(null);
     setSelectedReferences([]);
-    setComposerPicker(null);
-    setMentionPickerQuery('');
-    setMentionPickerOptions([]);
   }
 
   function applyReference(option: CommunityReferenceOption) {
@@ -348,15 +320,6 @@ function CommunityPageContent() {
     });
   }
 
-  function selectMentionReference(option: CommunityReferenceOption) {
-    setSelectedReferences(current => [
-      ...current.filter(reference => reference.kind !== 'item'),
-      option,
-    ]);
-    setComposerPicker(null);
-    setMentionPickerQuery('');
-  }
-
   async function submitPost(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!user || !profile || posting || !postBody.trim()) return;
@@ -373,12 +336,12 @@ function CommunityPageContent() {
         ? createLocalCommunityPost({
             author: profile,
             body: postBody,
-            intent: composerIntent,
+            intent: composerIntent || 'general',
             references: selectedReferences,
           })
         : await createCommunityPost({
             body: postBody,
-            intent: composerIntent,
+            intent: composerIntent || 'general',
             references: selectedReferences,
           });
       setPosts(current => sortPosts([created, ...current]));
@@ -506,13 +469,40 @@ function CommunityPageContent() {
           aria-label="Create a new post"
           onClick={openComposer}
         >
-          <span className="ui44-symbol-plus" aria-hidden="true">+</span>
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M13 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" />
+            <path d="m11 13 1-.3L21.5 3.2a1.8 1.8 0 0 0-2.5-2.5L9.5 10.2 9 14l2-.7Z" />
+          </svg>
         </button>
       )}
-      <FilterPopover label="Filter Community" active={postFilter !== 'all'}>
+      <button
+        type="button"
+        data-filter-popover-trigger="true"
+        className={`ui44-symbol-button ui44-symbol-button-filter page-filter-button${postFilter !== 'all' ? ' ui44-symbol-button-active page-filter-button-active' : ''}`}
+        aria-label="Filter Community"
+        title="Filter Community"
+        onClick={() => window.dispatchEvent(new CustomEvent('44:toggle-filter-popover', { detail: { label: 'Filter Community' } }))}
+      >
+        <span className="page-filter-icon" aria-hidden="true"><i /><i /><i /></span>
+      </button>
+      <FilterPopover
+        label="Filter Community"
+        active={postFilter !== 'all'}
+        hideTrigger
+        popoverClassName="community-filter-popover"
+        popoverStyle={{
+          position: 'fixed',
+          zIndex: 1200,
+          top: 'calc(var(--os-topbar-height) + 8px)',
+          right: 'var(--os-content-inset)',
+          left: 'auto',
+          width: 'min(220px, calc(100vw - (var(--os-content-inset) * 2)))',
+          maxWidth: 'calc(100vw - (var(--os-content-inset) * 2))',
+        }}
+      >
         {({ close }) => <>
           {[
-            { id: 'all', label: 'Everyone', href: pathname },
+            { id: 'all', label: 'All Posts', href: pathname },
             { id: 'following', label: 'People You Follow', href: `${pathname}?filter=following` },
           ].map(option => (
             <button
@@ -544,6 +534,7 @@ function CommunityPageContent() {
             toolbarSpacing
             topbarTabs={INTENT_TABS.map(tab => ({
               ...tab,
+              href: `${tab.href}${postFilter === 'following' ? '?filter=following' : ''}`,
               active: activeIntent === tab.id,
               variant: 'section' as const,
             }))}
@@ -551,8 +542,7 @@ function CommunityPageContent() {
             {INTENT_TABS.map(tab => (
               <SectionTab
                 key={tab.id}
-                href={tab.href}
-                className="community-intent-tab"
+                  href={`${tab.href}${postFilter === 'following' ? '?filter=following' : ''}`}
                 active={activeIntent === tab.id}
               >
                 {tab.label}
@@ -586,7 +576,7 @@ function CommunityPageContent() {
               }}
               onClick={event => setMentionAnchor(textareaCaretAnchor(event.currentTarget))}
               onKeyUp={event => setMentionAnchor(textareaCaretAnchor(event.currentTarget))}
-              placeholder={COMMUNITY_INTENT_PLACEHOLDERS[composerIntent]}
+              placeholder={COMMUNITY_INTENT_PLACEHOLDERS[composerIntent || 'general']}
               rows={5}
               autoFocus
               disabled={posting}
@@ -605,36 +595,18 @@ function CommunityPageContent() {
                 <ReferenceOptionList options={mentionOptions} onSelect={applyReference} />
               </div>
             )}
-            <div className="community-v11-composer-picker-field">
-              <span className="community-v11-composer-label">Mention</span>
-              <button type="button" className="community-v11-composer-picker" onClick={() => setComposerPicker(current => current === 'mention' ? null : 'mention')} aria-expanded={composerPicker === 'mention'}>
-                <span className="community-v11-composer-picker-icon">@</span>
-                <span className={selectedReferences.some(reference => reference.kind === 'item') ? 'is-selected' : ''}>{selectedReferences.find(reference => reference.kind === 'item')?.label ?? 'Tap to mention a release'}</span>
-                <span className="community-v11-composer-chevron">⌃⌄</span>
-              </button>
-              {composerPicker === 'mention' && (
-                <div className="community-v11-composer-picker-menu" role="listbox" aria-label="Mention a release">
-                  <input value={mentionPickerQuery} onChange={event => setMentionPickerQuery(event.target.value)} placeholder="Search releases" autoFocus />
-                  {(mentionPickerQuery.trim() ? mentionPickerOptions : localMentionOptions).length ? <ReferenceOptionList options={mentionPickerQuery.trim() ? mentionPickerOptions : localMentionOptions} onSelect={selectMentionReference} /> : <div className="community-v11-composer-picker-empty">No releases found.</div>}
-                </div>
-              )}
-            </div>
-            <div className="community-v11-composer-picker-field">
-              <span className="community-v11-composer-label">Post Tag</span>
-              <button type="button" className="community-v11-composer-picker" onClick={() => setComposerPicker(current => current === 'tag' ? null : 'tag')} aria-expanded={composerPicker === 'tag'}>
-                <span className="community-v11-composer-picker-icon">☷</span>
-                <span className={composerIntent !== 'general' ? 'is-selected' : ''}>{composerIntent === 'general' ? 'Select a post tag' : COMMUNITY_INTENT_LABELS[composerIntent]}</span>
-                <span className="community-v11-composer-chevron">⌃⌄</span>
-              </button>
-              {composerPicker === 'tag' && (
-                <div className="community-v11-composer-picker-menu" role="listbox" aria-label="Select a post tag">
-                  {COMPOSER_INTENTS.map(intent => {
-                    const disabled = intent === 'update' && !canPostUpdate;
-                    return <button key={intent} type="button" role="option" aria-selected={composerIntent === intent} disabled={disabled} onClick={() => { setComposerIntent(intent); setComposerPicker(null); }}>{COMMUNITY_INTENT_LABELS[intent]}</button>;
-                  })}
-                </div>
-              )}
-            </div>
+            <CommunityMentionSelect
+              items={items}
+              value={selectedReferences.find(reference => reference.kind === 'item')?.id ?? ''}
+              onChange={itemId => {
+                const item = items.find(candidate => candidate.id === itemId);
+                setSelectedReferences(current => [
+                  ...current.filter(reference => reference.kind !== 'item'),
+                  ...(item ? [communityItemReference(item)] : []),
+                ]);
+              }}
+            />
+            <CommunityPostTagSelect value={composerIntent} canPostUpdate={canPostUpdate} onChange={setComposerIntent} />
             {composerIntent === 'update' && <p className="community-composer-helper">Type @ to mention one of your published Items.</p>}
           </form>
           </div>

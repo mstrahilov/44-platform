@@ -17,12 +17,14 @@ import {
 import { listVisibleLibraryItemIds } from '@/lib/domain/library';
 import { itemMatchesStoreType } from '@/lib/storeTaxonomy';
 import { listFollowedProfileIds } from '@/lib/domain/community';
+import { listHomeVideoPreviews, type HomeVideoPreview } from '@/lib/domain/releaseFeatures';
 import { FilterPopover } from '@/components/FilterPopover';
 import { Ui44SectionArrow } from '@/components/ui44/Controls';
 import { Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
 import { beatReviewSurfacesEnabled } from '@/lib/domain/beats';
 import { SectionTab, SectionTabs } from '@/components/SectionTabs';
 import { PublicArtwork } from '@/components/PublicArtwork';
+import { CreatorVideoTitle } from '@/components/CreatorVideoTitle';
 
 const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
   music: 'music',
@@ -86,21 +88,13 @@ const STORE_FILTER_LABELS: Record<StoreFilter, string> = {
 };
 
 const STORE_FILTER_ORDER: StoreFilter[] = ['all', 'music', 'physical', 'asset', 'book', 'interactive'];
-const STORE_FILTER_TITLES: Record<StoreFilter, string> = {
-  all: 'Discover',
-  music: 'Browse Music',
-  physical: 'Browse Merch',
-  asset: 'Browse Assets',
-  book: 'Browse Books',
-  interactive: 'Browse Games',
-};
 const MOBILE_DISCOVER_CATEGORIES: Array<{
   category: StoreCategory | 'videos';
   filter: StoreFilter;
   label: string;
   href?: string;
 }> = [
-  { category: 'all', filter: 'all', label: 'Home', href: '/' },
+  { category: 'all', filter: 'all', label: 'Featured', href: '/' },
   { category: 'music', filter: 'music', label: 'Music', href: '/store/music' },
   { category: 'videos', filter: 'all', label: 'Videos', href: '/videos' },
   { category: 'books', filter: 'book', label: 'Books', href: '/store/books' },
@@ -147,6 +141,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   const [ownedProductIds, setOwnedProductIds] = useState<Set<string>>(new Set());
   const [followedProfileIds, setFollowedProfileIds] = useState<Set<string>>(new Set());
   const [newCreators, setNewCreators] = useState<DiscoveryCreator[]>([]);
+  const [homeVideos, setHomeVideos] = useState<HomeVideoPreview[]>([]);
   const [featuredItemIds, setFeaturedItemIds] = useState<string[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [error, setError] = useState('');
@@ -199,6 +194,9 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     let alive = true;
     void listNewDiscoveryCreators(10)
       .then(creators => { if (alive) setNewCreators(creators); })
+      .catch(() => undefined);
+    void listHomeVideoPreviews(4)
+      .then(videos => { if (alive) setHomeVideos(videos); })
       .catch(() => undefined);
     return () => { alive = false; };
   }, [authLoading, frontDoor]);
@@ -343,9 +341,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   const showStoreFilter = !frontDoor || effectiveFilter !== 'all' || hasActiveFacetFilters;
 
   const copy = CATEGORY_COPY[category];
-  const pageTitle = frontDoor
-    ? effectiveFilter === 'all' ? 'Discover' : browsingBeats ? 'Browse Beats' : STORE_FILTER_TITLES[effectiveFilter]
-    : copy.title;
+  const pageTitle = 'Discover';
   const surfaceName = frontDoor
     ? effectiveFilter === 'all' ? 'Home' : browsingBeats ? 'Beats' : STORE_FILTER_LABELS[effectiveFilter]
     : category === 'sample-packs' ? 'Assets' : category === 'beats' ? 'Beats' : copy.title.replace('Browse ', '');
@@ -450,16 +446,6 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
   }, [category, effectiveTypeFilter, urlFilterReady]);
 
-  function browseFollowedCreators() {
-    setActiveFilter('all');
-    setSortBy('release-date');
-    setTypeFilter('all');
-    setTagFilter('all');
-    setCreatorFilter('following');
-    setQuery('');
-    document.querySelector<HTMLElement>('.app-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
   const discoverOptions = MOBILE_DISCOVER_CATEGORIES.filter(option => {
     if (option.category === 'videos') return true;
     if (option.category === 'all') return true;
@@ -527,11 +513,6 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   if (category === 'all') {
     const musicProducts = products.filter(product => getProductExperience(product) === 'music' && !isBeatProduct(product));
     const sortedMusicProducts = [...musicProducts].sort(comparePublicCatalogProducts);
-    const followingProducts = keepNewestProductPerCreator(
-      products
-        .filter(product => product.author_id && followedProfileIds.has(product.author_id))
-        .sort(comparePublicCatalogProducts),
-    ).slice(0, 8);
     const shelfProducts = (filter: StoreFilter) => products
       .filter(product => getProductExperience(product) === filter)
       .sort(comparePublicCatalogProducts)
@@ -552,7 +533,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
 
     return (
       <PageShell>
-        <main className="app-page store-app-page">
+        <main className={`app-page store-app-page${frontDoor ? ' store-home-page' : ''}`}>
           {storeOpening}
           {loading ? (
             <EmptyMessage status>Loading...</EmptyMessage>
@@ -565,43 +546,37 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
               {showProductGrid ? (
                 <ProductGrid>
                   {visibleProducts.map(product => (
-                    <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />
+                    <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} singleLineTitle={frontDoor} />
                   ))}
                 </ProductGrid>
               ) : <>
-                {featuredProduct ? <DiscoverFeature product={featuredProduct} /> : null}
-                {newReleaseProducts.length > 0 && (
-                <HubSection title="New Releases" action={<Ui44SectionArrow label="Open Browse Music" onClick={() => browseCategory('music', 'release-date')} />}>
-                  <ProductGrid className="store-mobile-shelf">
-                    {newReleaseProducts.map(product => (
-                      <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />
-                    ))}
-                  </ProductGrid>
-                </HubSection>
-                )}
-                {newCreators.length > 0 && <HubSection title="New Creators">
-                  <div className="discover-creator-shelf">
-                    {newCreators.map(creator => <DiscoveryCreatorCard
-                      key={creator.id}
-                      creator={creator}
-                      preferredTab={preferredCreatorContentTab(creator.id, products)}
-                    />)}
-                  </div>
-                </HubSection>}
-                {followingProducts.length > 0 && (
-                <HubSection title="Creators You Follow" action={<Ui44SectionArrow label="View all from creators you follow" onClick={browseFollowedCreators} />}>
-                  <ProductGrid className="store-mobile-shelf">
-                    {followingProducts.map(product => (
-                      <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />
-                    ))}
-                  </ProductGrid>
-                </HubSection>
-                )}
-                {browseMusicProducts.length > 0 && <HomeProductShelf title="Browse Music" products={browseMusicProducts} ownedProductIds={ownedProductIds} onBrowse={() => browseCategory('music')} />}
-                {merchShelf.length > 0 && <HomeProductShelf title="Browse Merch" products={merchShelf} ownedProductIds={ownedProductIds} onBrowse={() => browseCategory('physical')} />}
-                {bookShelf.length > 0 && <HomeProductShelf title="Browse Books" products={bookShelf} ownedProductIds={ownedProductIds} onBrowse={() => browseCategory('book')} />}
-                {gameShelf.length > 0 && <HomeProductShelf title="Browse Games" products={gameShelf} ownedProductIds={ownedProductIds} onBrowse={() => browseCategory('interactive')} />}
-                {assetShelf.length > 0 && <HomeProductShelf title="Browse Assets" products={assetShelf} ownedProductIds={ownedProductIds} onBrowse={() => browseCategory('asset')} />}
+                <div className="store-home-content">
+                  {featuredProduct ? <DiscoverFeature product={featuredProduct} /> : null}
+                  {newReleaseProducts.length > 0 && (
+                    <HubSection title="New Releases" action={<Ui44SectionArrow label="Open Browse Music" onClick={() => browseCategory('music', 'release-date')} />}>
+                      <ProductGrid className="store-mobile-shelf">
+                        {newReleaseProducts.map(product => (
+                          <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} singleLineTitle={frontDoor} />
+                        ))}
+                      </ProductGrid>
+                    </HubSection>
+                  )}
+                  {newCreators.length > 0 && <HubSection title="New Creators">
+                    <div className="discover-creator-shelf">
+                      {newCreators.map(creator => <DiscoveryCreatorCard
+                        key={creator.id}
+                        creator={creator}
+                        preferredTab={preferredCreatorContentTab(creator.id, products)}
+                      />)}
+                    </div>
+                  </HubSection>}
+                  {browseMusicProducts.length > 0 && <HomeProductShelf title="Browse Music" products={browseMusicProducts} ownedProductIds={ownedProductIds} onBrowse={() => browseCategory('music')} singleLineTitles={frontDoor} />}
+                  {homeVideos.length > 0 && <HomeVideoShelf videos={homeVideos} />}
+                  {bookShelf.length > 0 && <HomeProductShelf title="Browse Books" products={bookShelf} ownedProductIds={ownedProductIds} onBrowse={() => browseCategory('book')} singleLineTitles={frontDoor} />}
+                  {assetShelf.length > 0 && <HomeProductShelf title="Browse Assets" products={assetShelf} ownedProductIds={ownedProductIds} onBrowse={() => browseCategory('asset')} singleLineTitles={frontDoor} />}
+                  {gameShelf.length > 0 && <HomeProductShelf title="Browse Games" products={gameShelf} ownedProductIds={ownedProductIds} onBrowse={() => browseCategory('interactive')} singleLineTitles={frontDoor} />}
+                  {merchShelf.length > 0 && <HomeProductShelf title="Browse Merch" products={merchShelf} ownedProductIds={ownedProductIds} onBrowse={() => browseCategory('physical')} singleLineTitles={frontDoor} />}
+                </div>
               </>}
             </>
           )}
@@ -645,6 +620,29 @@ function DiscoverFeature({ product }: { product: Product }) {
   </Link>;
 }
 
+function HomeVideoShelf({ videos }: { videos: HomeVideoPreview[] }) {
+  return <HubSection title="Browse Videos" action={<Ui44SectionArrow href="/videos" label="Browse all videos" />}>
+    <div className="home-video-shelf">
+      {videos.map(video => {
+        const creator = video.display_name || video.username || 'Creator';
+        return <Link key={video.id} href={`/videos/${video.id}`} className="home-video-card">
+          <Image
+            src={`https://i.ytimg.com/vi/${video.youtube_video_id}/hqdefault.jpg`}
+            alt=""
+            width={960}
+            height={540}
+            sizes="100vw"
+            unoptimized
+          />
+          <span className="home-video-title">
+            {creator} - <CreatorVideoTitle videoId={video.youtube_video_id} storedTitle={video.title} />
+          </span>
+        </Link>;
+      })}
+    </div>
+  </HubSection>;
+}
+
 function preferredCreatorContentTab(creatorId: string, products: Product[]) {
   const creatorProducts = products.filter(product => product.author_id === creatorId && product.status === 'published');
   if (creatorProducts.some(product => getProductExperience(product) === 'music' && !isBeatProduct(product))) return 'music';
@@ -668,13 +666,14 @@ function DiscoveryCreatorCard({ creator, preferredTab }: { creator: DiscoveryCre
   </Link>;
 }
 
-function HomeProductShelf({ title, products, ownedProductIds, onBrowse }: {
+function HomeProductShelf({ title, products, ownedProductIds, onBrowse, singleLineTitles }: {
   title: string;
   products: Product[];
   ownedProductIds: Set<string>;
   onBrowse: () => void;
+  singleLineTitles: boolean;
 }) {
   return <HubSection title={title} action={<Ui44SectionArrow label={`Open ${title}`} onClick={onBrowse} />}>
-    <ProductGrid className="store-mobile-shelf">{products.map(product => <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} />)}</ProductGrid>
+    <ProductGrid className="store-mobile-shelf">{products.map(product => <ProductCard key={product.id} product={product} owned={ownedProductIds.has(product.id)} singleLineTitle={singleLineTitles} />)}</ProductGrid>
   </HubSection>;
 }
