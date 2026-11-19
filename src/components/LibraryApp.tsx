@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { useContextMenu, type ContextMenuEntry } from '@/components/ContextMenu';
 import { FilterPopover } from '@/components/FilterPopover';
@@ -19,12 +19,11 @@ import { hideLibraryItem, isSavedMusicContractMissing, listSavedMusicAlbums, lis
 import { listPlaylists, type Playlist } from '@/lib/domain/playlists';
 import { CATALOG_ARTWORK_SIZES, PublicArtwork } from '@/components/PublicArtwork';
 
-type LibraryFilter = 'all' | 'music' | 'book' | 'interactive' | 'beats' | 'asset' | 'playlists';
+type LibraryFilter = 'all' | 'music' | 'book' | 'interactive' | 'beats' | 'asset';
 
 const CATEGORY_FILTER: Record<LibraryCategory, LibraryFilter> = {
   all: 'all',
   music: 'music',
-  playlists: 'playlists',
   books: 'book',
   games: 'interactive',
   assets: 'asset',
@@ -39,7 +38,6 @@ const FILTER_LABELS: Record<LibraryFilter, string> = {
   interactive: 'Games',
   beats: 'Beats',
   asset: 'Assets',
-  playlists: 'Playlists',
 };
 
 function isBeatProduct(product: Product) {
@@ -57,7 +55,6 @@ interface LibraryRow {
 
 export default function LibraryApp({ category }: { category: LibraryCategory }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const userId = user?.id;
   const [rows, setRows] = useState<LibraryRow[]>([]);
@@ -71,10 +68,8 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
   const [sortMode, setSortMode] = useState<'recently-added' | 'creator' | 'release-date'>('recently-added');
 
   useEffect(() => {
-    const queryFilter = searchParams.get('filter');
-    const requested = queryFilter === 'playlists' ? 'playlists' : CATEGORY_FILTER[category];
-    Promise.resolve().then(() => setActiveFilter(requested));
-  }, [category, searchParams]);
+    Promise.resolve().then(() => setActiveFilter(CATEGORY_FILTER[category]));
+  }, [category]);
 
   useEffect(() => {
     if (authLoading || !userId) return;
@@ -120,7 +115,6 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
     const productRows = rows.filter(row => row.products);
     return productRows.filter(row => {
       const product = row.products!;
-      if (activeFilter === 'playlists') return false;
       const experience = getProductExperience(product);
       if (!['music', 'book', 'asset', 'interactive'].includes(experience)) return false;
       if (activeFilter === 'beats' && !isBeatProduct(product)) return false;
@@ -132,9 +126,9 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
   }, [activeFilter, rows]);
 
   const libraryEntries = useMemo(() => [
-    ...(activeFilter === 'all' || activeFilter === 'playlists' ? playlists : [])
+    ...(activeFilter === 'all' ? playlists : [])
       .map(playlist => ({ kind: 'playlist' as const, date: playlist.updated_at, playlist })),
-    ...(activeFilter === 'playlists' ? [] : visibleRows.map(row => ({ kind: 'item' as const, date: row.acquired_at, row }))),
+    ...visibleRows.map(row => ({ kind: 'item' as const, date: row.acquired_at, row })),
   ].sort((left, right) => right.date.localeCompare(left.date)), [activeFilter, playlists, visibleRows]);
   const legacyMusicRows = useMemo(() => rows.filter(row => row.products && getProductExperience(row.products) === 'music' && !isBeatProduct(row.products)), [rows]);
   const releaseDateAvailable = category === 'music' ? savedAlbums.some(album => album.product.release_date) || legacyMusicRows.some(row => row.products?.release_date) : rows.some(row => row.products?.release_date);
@@ -166,8 +160,7 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
     return right.date.localeCompare(left.date);
   }), [libraryEntries, sortMode, useReleaseSort]);
   const availableCategories = useMemo(() => [
-    ...(savedAlbums.length || (!savedMusicContractAvailable && legacyMusicRows.length) ? [{ id: 'music', label: 'Music', href: '/library/music' }] : []),
-    ...(playlists.length ? [{ id: 'playlists', label: 'Playlists', href: '/library/playlists' }] : []),
+    { id: 'music', label: 'Music', href: '/library/music' },
     ...(rows.some(row => row.products && getProductExperience(row.products) === 'book') ? [{ id: 'books', label: 'Books', href: '/library/books' }] : []),
     ...(rows.some(row => row.products && (getProductExperience(row.products) === 'asset' || isBeatProduct(row.products))) ? [{ id: 'assets', label: 'Assets', href: '/library/assets' }] : []),
     ...(rows.some(row => row.products && getProductExperience(row.products) === 'interactive') ? [{ id: 'games', label: 'Games', href: '/library/games' }] : []),
@@ -223,6 +216,9 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
     setRows(current => current.filter(item => item.id !== row.id));
   }
 
+  const hasMusicItems = savedMusicContractAvailable ? savedAlbums.length > 0 : legacyMusicRows.length > 0;
+  const hasCategoryItems = category === 'music' || libraryEntries.length > 0;
+
   return (
     <PageShell>
       <main className="app-page">
@@ -232,22 +228,34 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
             {availableCategories.map(entry => <SectionTab key={entry.id} href={entry.href} active={category === entry.id}>{entry.label}</SectionTab>)}
           </SectionTabs> : null}
         </div>
-        {category !== 'playlists' ? <div className="library-collection-actions"><FilterPopover label="Sort Library" active={sortMode !== 'recently-added'} hideTrigger popoverClassName="library-sort-popover">
+        <div className="library-collection-actions"><FilterPopover label="Sort Library" active={sortMode !== 'recently-added'} hideTrigger popoverClassName="library-sort-popover">
           {({ close }) => <div role="menu" aria-label="Sort Library" className="library-sort-options">
             {([['recently-added', 'Recently Added'], ['creator', 'Creator (A–Z)'], ...(releaseDateAvailable ? [['release-date', 'Release Date']] : [])] as Array<[typeof sortMode, string]>).map(([value, label]) => <button key={value} type="button" role="menuitemradio" aria-checked={sortMode === value} className={sortMode === value ? 'ui44-paper-menu-item ui44-paper-menu-item-selected' : 'ui44-paper-menu-item'} onClick={() => { setSortMode(value); close(); }}><span aria-hidden="true">{sortMode === value ? '✓' : '◯'}</span>{label}</button>)}
           </div>}
-        </FilterPopover></div> : null}
+        </FilterPopover></div>
         {error ? (
           <EmptyMessage>{error}</EmptyMessage>
-        ) : (category === 'music' ? (savedMusicContractAvailable ? savedAlbums.length === 0 : legacyMusicRows.length === 0) : category === 'playlists' ? playlists.length === 0 : libraryEntries.length === 0) ? (
+        ) : !hasCategoryItems ? (
           <EmptyMessage>{activeFilter === 'all' ? 'Your library is empty.' : `No ${FILTER_LABELS[activeFilter].toLowerCase()} in your Library.`}</EmptyMessage>
         ) : (
           <div className="library-item-groups">
-            <div className="app-grid ui44-catalog-grid">
-              {category === 'music' ? (savedMusicContractAvailable ? sortedAlbums.map(album => <SavedMusicAlbumCard key={album.item_id} product={album.product} />) : sortedLibraryEntries.filter((entry): entry is Extract<typeof entry, { kind: 'item' }> => entry.kind === 'item').map(entry => <LibraryCard key={entry.row.id} row={entry.row} onRemove={removeLibraryRow} />)) : category === 'playlists' ? playlists.map(playlist => <LibraryPlaylistCard key={playlist.id} playlist={playlist} />) : sortedLibraryEntries.map(entry => entry.kind === 'playlist'
+            {category === 'music' ? <section className="library-item-group library-playlists-group">
+              <div className="app-grid store-mobile-shelf library-playlists-shelf">
+                <SavedTracksCard />
+                {playlists.map(playlist => <LibraryPlaylistCard key={playlist.id} playlist={playlist} />)}
+                <NewPlaylistCard />
+              </div>
+            </section> : null}
+            {category === 'music' && hasMusicItems ? <section className="library-item-group">
+              <div className="app-grid ui44-catalog-grid">
+                {savedMusicContractAvailable ? sortedAlbums.map(album => <SavedMusicAlbumCard key={album.item_id} product={album.product} />) : sortedLibraryEntries.filter((entry): entry is Extract<typeof entry, { kind: 'item' }> => entry.kind === 'item').map(entry => <LibraryCard key={entry.row.id} row={entry.row} onRemove={removeLibraryRow} />)}
+              </div>
+            </section> : null}
+            {category !== 'music' ? <div className="app-grid ui44-catalog-grid">
+              {sortedLibraryEntries.map(entry => entry.kind === 'playlist'
                 ? <LibraryPlaylistCard key={`playlist-${entry.playlist.id}`} playlist={entry.playlist} />
                 : <LibraryCard key={entry.row.id} row={entry.row} onRemove={removeLibraryRow} />)}
-            </div>
+            </div> : null}
           </div>
         )}
       </main>
@@ -263,6 +271,15 @@ function SavedMusicAlbumCard({ product }: { product: SavedMusicAlbum['product'] 
   </Link>;
 }
 
+function SavedTracksCard() {
+  return <Link className="product-tile ui44-catalog-card library-playlist-card" href="/library/music/saved-tracks">
+    <span className="product-tile-art product-tile-art-square ui44-catalog-art library-playlist-art library-saved-tracks-art" aria-hidden="true">
+      <span className="playlist-detail-art-fallback library-saved-tracks-artwork-icon" aria-hidden="true">♫</span>
+    </span>
+    <span className="product-tile-info ui44-catalog-copy"><span className="product-tile-title ui44-catalog-title ui44-catalog-title-single-line">Saved Tracks</span><span className="product-tile-subtitle ui44-catalog-subheadline">Playlist</span></span>
+  </Link>;
+}
+
 function LibraryPlaylistCard({ playlist }: { playlist: Playlist }) {
   const artwork = playlist.artwork_url || playlist.cover_url;
   return <Link className="product-tile ui44-catalog-card library-playlist-card" href={`/library/playlists/${playlist.id}`}>
@@ -270,6 +287,17 @@ function LibraryPlaylistCard({ playlist }: { playlist: Playlist }) {
       <PublicArtwork src={artwork} alt="" sizes={CATALOG_ARTWORK_SIZES} />
     ) : null}</span>
     <span className="product-tile-info ui44-catalog-copy"><span className="product-tile-title ui44-catalog-title ui44-catalog-title-single-line">{playlist.title}</span><span className="product-tile-subtitle ui44-catalog-subheadline">Playlist</span></span>
+  </Link>;
+}
+
+function NewPlaylistCard() {
+  return <Link className="product-tile ui44-catalog-card library-playlist-create-card" href="/library/playlists/new" aria-label="Create a new playlist">
+    <span className="product-tile-art product-tile-art-square ui44-catalog-art library-playlist-create-art" aria-hidden="true">
+      <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+        <path d="M24 10v28M10 24h28" />
+      </svg>
+    </span>
+    <span className="product-tile-info ui44-catalog-copy"><span className="product-tile-title ui44-catalog-title ui44-catalog-title-single-line">New Playlist</span></span>
   </Link>;
 }
 

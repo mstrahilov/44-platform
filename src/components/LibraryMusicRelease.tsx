@@ -8,14 +8,16 @@ import { useMusicPlayer, type MusicQueueTrack } from '@/components/MusicPlayer';
 import { useAuth } from '@/lib/useAuth';
 import { getCatalogItem, getMusicAchievementBundle } from '@/lib/domain/itemDetails';
 import { listReleaseCreatorVideos, type ReleaseCreatorVideo } from '@/lib/domain/releaseFeatures';
-import { isSavedMusicContractMissing, listSavedMusicTracks, listVisibleLibraryItems, setSavedMusicRelease, setSavedMusicTrack, type SavedMusicTrack } from '@/lib/domain/library';
-import { productLibraryHref } from '@/lib/experience';
+import { isSavedMusicContractMissing, listSavedMusicTracks, listVisibleLibraryItems, setSavedMusicRelease, type SavedMusicTrack } from '@/lib/domain/library';
+import { productBrowseHref, productLibraryHref } from '@/lib/experience';
 import type { Product } from '@/lib/products';
 import { creatorHref, type ProductAchievement } from '@/lib/platform';
 import { LibraryAchievementsSection, LibraryVideosSection, ProductDetailHeader } from '@/components/LibraryDetailPrimitives';
-import { ItemTrackList } from '@/components/ItemTrackList';
+import { PlaylistTrackList } from '@/components/PlaylistTrackList';
 import { PlaylistPicker } from '@/components/PlaylistPicker';
 import { ItemCommunitySection, MoreFromCreatorSection } from '@/components/ItemDetailSections';
+import { ReleaseArtworkAtmosphere } from '@/components/ReleaseArtworkAtmosphere';
+import { COPY_TO_CLIPBOARD_TOAST_EVENT } from '@/components/ContextMenu';
 
 export function LibraryMusicRelease({ itemId }: { itemId: string }) {
   const { user, loading: authLoading } = useAuth();
@@ -82,15 +84,6 @@ function SavedAlbum({ itemId, userId }: { itemId: string; userId: string }) {
     productId: itemId,
   })), [itemId, product, tracks]);
 
-  async function removeTrack(trackId: string) {
-    setSaving(true); setError('');
-    try {
-      await setSavedMusicTrack(trackId, false);
-      setTracks(current => current.filter(track => track.track_id !== trackId));
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not remove this track.'); }
-    finally { setSaving(false); }
-  }
-
   const removeRelease = useCallback(async () => {
     setSaving(true); setError('');
     try { await setSavedMusicRelease(itemId, false); setTracks([]); }
@@ -105,12 +98,22 @@ function SavedAlbum({ itemId, userId }: { itemId: string; userId: string }) {
     { id: 'remove-album', label: 'Remove from Library', onSelect: () => { void removeRelease(); }, disabled: saving },
   ] : undefined, [product, queue, queueReleaseNext, removeRelease, router, saving]));
 
+  function shareTrack(trackId: string) {
+    if (!product || typeof window === 'undefined') return;
+    const url = new URL(productBrowseHref(product), window.location.origin);
+    url.searchParams.set('track', trackId);
+    url.searchParams.set('ref', userId);
+    void navigator.clipboard?.writeText(url.toString());
+    window.dispatchEvent(new CustomEvent(COPY_TO_CLIPBOARD_TOAST_EVENT, { detail: { message: 'Track link copied to clipboard' } }));
+  }
+
   if (loading) return <CenteredMessage status>Loading saved album…</CenteredMessage>;
   if (error && !product) return <CenteredMessage status>{error}</CenteredMessage>;
   if (!product || !tracks.length) return <CenteredMessage status>This album is no longer in your Music Library.</CenteredMessage>;
 
   return <main className="view-detail-single library-detail-page library-music-release">
     {playlistTrackId ? <PlaylistPicker userId={userId} trackId={playlistTrackId} onClose={() => setPlaylistTrackId(null)} /> : null}
+    <ReleaseArtworkAtmosphere artworkUrl={product.cover_url || product.hero_url} />
     <ProductDetailHeader
       product={product}
       creatorName={product.creators?.display_name || product.creator || '44 Creator'}
@@ -121,13 +124,15 @@ function SavedAlbum({ itemId, userId }: { itemId: string; userId: string }) {
       showCreatorAvatar={false}
     />
     <section className="view-section view-tracklist-section">
-      <ItemTrackList label="Saved tracks" rows={tracks.map((track, index) => {
+      <PlaylistTrackList label="Saved tracks" rows={tracks.map((track, index) => {
         const queueIndex = queue.findIndex(row => row.id === track.track_id);
         const active = currentTrack?.id === track.track_id;
         return {
           id: track.track_id,
           number: track.number || index + 1,
           title: track.title,
+          artist: product.creators?.display_name || product.creator || '44 Creator',
+          artistHref: creatorHref(product.creators ?? product.creator),
           playable: queueIndex >= 0,
           active,
           playing: active && isPlaying,
@@ -135,7 +140,7 @@ function SavedAlbum({ itemId, userId }: { itemId: string; userId: string }) {
           actions: [
             { id: 'playlist', label: 'Add to Playlist', onSelect: () => setPlaylistTrackId(track.track_id) },
             { id: 'queue', label: 'Add to Queue', onSelect: () => queueReleaseNext([queue[queueIndex]]), disabled: queueIndex < 0 },
-            { id: 'remove', label: 'Remove from Library', onSelect: () => { void removeTrack(track.track_id); }, disabled: saving },
+            { id: 'share', label: 'Share', onSelect: () => shareTrack(track.track_id) },
           ],
         };
       })} />

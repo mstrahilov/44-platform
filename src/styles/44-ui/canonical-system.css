@@ -203,7 +203,6 @@ body.theme-dark {
 }
 
 .playlist-tile-art,
-.playlist-detail-art,
 .playlist-catalog-art {
   display: block;
   background: linear-gradient(145deg, #181818, #ad4b2b 48%, #091225);
@@ -233,6 +232,27 @@ body.playlist-detail-route .app-shell {
 
 body.playlist-detail-route .os-topbar {
   background: transparent !important;
+}
+
+body.playlist-detail-route .view-hub {
+  max-width: none;
+  gap: 0;
+  padding: 0;
+}
+
+.playlist-detail-page > .release-artwork-atmosphere {
+  width: 100vw;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+}
+
+.saved-tracks-detail-page .view-album-header-fallback {
+  background: transparent;
+}
+
+.saved-tracks-detail-page {
+  --ui44-item-track-leading: 28px;
 }
 
 .library-search-field {
@@ -268,6 +288,12 @@ body.playlist-detail-route .os-topbar {
 .library-playlists-inline { margin-bottom: 24px; }
 .library-playlist-art { background: linear-gradient(145deg, #080808, #a34b2a 48%, #0c1831); background-size: cover; background-position: center; }
 .library-playlist-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.library-saved-tracks-art { display: grid; place-items: center; }
+.library-saved-tracks-artwork-icon { font-size: 48px; }
+.library-saved-tracks-cover { display: grid; place-items: center; }
+.ui44-track-copy { display: grid; align-content: center; min-width: 0; }
+.ui44-track-subtitle { overflow: hidden; color: var(--os-color-ink-secondary); font-size: var(--44ui-type-footnote-size, 13px); line-height: var(--44ui-type-footnote-line, 18px); text-overflow: ellipsis; white-space: nowrap; }
+.saved-tracks-empty { margin-top: 24px; }
 .library-item-groups .product-tile-art-book { aspect-ratio: 1 / 1; }
 .library-filter-menu { position: fixed; z-index: 40; top: calc(var(--os-topbar-height) + 8px); right: 16px; min-width: 180px; }
 
@@ -327,29 +353,6 @@ body.playlist-detail-route .os-topbar {
   outline: 0;
 }
 
-.playlist-detail-hero {
-  display: grid;
-  justify-items: center;
-  gap: 8px;
-  padding: 8px 0 24px;
-  text-align: center;
-}
-
-.playlist-detail-art {
-  width: min(100%, 480px);
-  aspect-ratio: 1;
-  border-radius: 28px;
-  border: 1px solid var(--44ui-panel-border);
-  box-shadow: 0 20px 60px rgb(0 0 0 / 22%);
-}
-
-.playlist-detail-hero h1,
-.playlist-detail-hero p {
-  margin: 0;
-}
-
-.playlist-detail-hero h1 { font-size: clamp(1.5rem, 5vw, 2rem); }
-.playlist-detail-hero p { color: var(--os-text-secondary); }
 .playlist-edit-helper { margin-top: 18px !important; text-align: left; width: 100%; }
 
 .playlist-track-list,
@@ -412,6 +415,67 @@ body.playlist-detail-route .os-topbar {
 .playlist-detail-page .playlist-track-row .view-track-number {
   color: var(--os-text-secondary);
   text-align: left;
+}
+
+.playlist-shared-track-list {
+  display: grid;
+  overflow: visible;
+}
+
+.playlist-detail-page .playlist-shared-track-list .playlist-track-row {
+  position: relative;
+  grid-template-columns: 28px minmax(0, 1fr) 40px;
+  gap: 4px;
+  min-height: 62px;
+  cursor: default;
+}
+
+.playlist-detail-page .playlist-shared-track-list .playlist-track-row[role="button"] {
+  cursor: pointer;
+}
+
+.playlist-detail-page .playlist-shared-track-list .playlist-track-copy {
+  display: grid;
+  align-content: center;
+  min-width: 0;
+  gap: 2px;
+}
+
+.playlist-detail-page .playlist-shared-track-list .ui44-track-title {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--os-color-ink);
+  font: 600 var(--44ui-type-headline-size, 18px)/var(--44ui-type-headline-line, 24px) var(--44ui-font-app);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playlist-detail-page .playlist-shared-track-list .ui44-track-subtitle {
+  color: var(--os-color-ink-secondary);
+  font: 400 var(--44ui-type-subheadline-size, 15px)/var(--44ui-type-subheadline-line, 20px) var(--44ui-font-app);
+}
+
+.playlist-shared-track-list .playlist-track-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 40px;
+  min-width: 40px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  letter-spacing: 2px;
+}
+
+.playlist-shared-track-list .view-track-more-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 70;
 }
 
 .playlist-detail-page .playlist-track-row .playlist-track-copy {
@@ -3534,80 +3598,6 @@ body:is(.theme-dark, .theme-light) .community-v11-composer-picker-empty {
   }
 }
 
-/* Public mobile release tracks intentionally use the native iOS-style list
-   grammar: no panel, no row cards, no inset padding, and overflow actions in
-   the trailing column. This is scoped to Store release details so Library and
-   other list surfaces retain their existing materials until migrated. */
-@media (max-width: 768px) {
-  body:is(.theme-dark, .theme-light)
-    .store-item-detail-page
-    .view-tracklist-section
-    > .view-tracklist.ui44-track-list.ui44-panel-glass {
-    width: 100%;
-    max-width: none;
-    margin: 0;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    overflow: visible;
-  }
-
-  body:is(.theme-dark, .theme-light)
-    .store-item-detail-page
-    .view-tracklist-section
-    .view-track-row {
-    grid-template-columns: 28px minmax(0, 1fr) 40px;
-    gap: 4px;
-    min-height: 54px;
-    padding: 0;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-
-  body:is(.theme-dark, .theme-light)
-    .store-item-detail-page
-    .view-tracklist-section
-    .view-track-row + .view-track-row {
-    border-top: 0;
-  }
-
-  body:is(.theme-dark, .theme-light)
-    .store-item-detail-page
-    .view-tracklist-section
-    .view-track-leading {
-    width: 28px;
-    height: 54px;
-    place-items: center;
-    justify-items: start;
-  }
-
-  body:is(.theme-dark, .theme-light)
-    .store-item-detail-page
-    .view-tracklist-section
-    .view-track-title,
-  body:is(.theme-dark, .theme-light)
-    .store-item-detail-page
-    .view-tracklist-section
-    .ui44-overflow-track-title {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  body:is(.theme-dark, .theme-light)
-    .store-item-detail-page
-    .view-tracklist-section
-    .view-track-duration {
-    display: none;
-  }
-}
-
 body:is(.theme-dark, .theme-light)
   :is(.ui44-status, .dashboard-status, .login-status, .settings-status) {
   padding: 12px 14px;
@@ -4219,11 +4209,30 @@ body:is(.theme-dark, .theme-light) .ui44-catalog-art {
     outline-color 140ms ease;
 }
 
+body:is(.theme-dark, .theme-light) .ui44-catalog-art.library-saved-tracks-art,
+body:is(.theme-dark, .theme-light) .saved-tracks-detail-page .library-saved-tracks-cover {
+  background: linear-gradient(145deg, #101a29 0%, #334b63 52%, #12161d 100%);
+}
+
 body:is(.theme-dark, .theme-light) .ui44-catalog-art img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+body:is(.theme-dark, .theme-light) .library-playlist-create-art.ui44-catalog-art {
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--os-color-hairline);
+  background: color-mix(in srgb, var(--os-color-ink) 3%, transparent);
+  box-shadow: none;
+  color: var(--os-color-accent);
+}
+
+body:is(.theme-dark, .theme-light) .library-playlist-create-art svg {
+  width: 40px;
+  height: 40px;
 }
 
 body:is(.theme-dark, .theme-light) .ui44-catalog-copy {
@@ -11417,25 +11426,20 @@ body:is(.theme-dark, .theme-light) .library-detail-page .view-album-actions {
   }
 }
 
-/* Item details share one flat track list across catalog, Library music and assets. */
-body:is(.theme-dark, .theme-light) .view-tracklist.ui44-flat-track-list {
+/* All track surfaces use the same row component and layout. */
+body:is(.theme-dark, .theme-light) .playlist-shared-track-list {
   display: grid;
   width: 100%;
   max-width: none;
   margin: 0;
   overflow: visible;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
 }
 
-body:is(.theme-dark, .theme-light) .ui44-flat-track-list .view-track-row {
+body:is(.theme-dark, .theme-light) .playlist-shared-track-list .playlist-track-row {
   position: relative;
-  grid-template-columns: 38px minmax(0, 1fr) 40px;
-  gap: 8px;
-  min-height: 54px;
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  gap: 0;
+  min-height: 62px;
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -11443,16 +11447,56 @@ body:is(.theme-dark, .theme-light) .ui44-flat-track-list .view-track-row {
   box-shadow: none;
 }
 
-body:is(.theme-dark, .theme-light) .ui44-flat-track-list .view-track-row + .view-track-row {
+body:is(.theme-dark, .theme-light) .playlist-shared-track-list .playlist-track-row + .playlist-track-row {
   border-top: 1px solid var(--os-color-hairline);
 }
 
-body:is(.theme-dark, .theme-light) .ui44-flat-track-list .view-track-leading {
-  width: 38px;
-  height: 54px;
+body:is(.theme-dark, .theme-light) .playlist-shared-track-list .playlist-track-row:hover,
+body:is(.theme-dark, .theme-light) .playlist-shared-track-list .playlist-track-row:focus-visible,
+body:is(.theme-dark, .theme-light) .playlist-shared-track-list .playlist-track-row.ui44-track-row-selected,
+body:is(.theme-dark, .theme-light) .playlist-shared-track-list .playlist-track-row.view-track-row-selected {
+  background: color-mix(in srgb, var(--os-color-ink) 8%, var(--os-color-canvas));
 }
 
-body:is(.theme-dark, .theme-light) .ui44-flat-track-list .view-track-more {
+body:is(.theme-dark, .theme-light) .playlist-shared-track-list .ui44-track-copy {
+  display: grid;
+  align-content: center;
+  min-width: 0;
+  gap: 2px;
+}
+
+body:is(.theme-dark, .theme-light) .playlist-shared-track-list .ui44-track-title {
+  color: var(--os-color-ink);
+  font: 600 var(--44ui-type-headline-size, 18px)/var(--44ui-type-headline-line, 24px) var(--44ui-font-app);
+}
+
+body:is(.theme-dark, .theme-light) .playlist-shared-track-list .ui44-track-subtitle {
+  color: var(--os-color-ink-secondary);
+  font: 400 var(--44ui-type-subheadline-size, 15px)/var(--44ui-type-subheadline-line, 20px) var(--44ui-font-app);
+}
+
+body:is(.theme-dark, .theme-light) .playlist-shared-track-list .ui44-track-index {
+  color: var(--os-color-ink-secondary);
+  text-align: center;
+}
+
+body:is(.theme-dark, .theme-light) .playlist-shared-track-list .ui44-track-subtitle a {
+  color: inherit;
+  text-decoration: none;
+}
+
+body:is(.theme-dark, .theme-light) .playlist-shared-track-list .ui44-track-subtitle a:hover,
+body:is(.theme-dark, .theme-light) .playlist-shared-track-list .ui44-track-subtitle a:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+body:is(.theme-dark, .theme-light) .playlist-shared-track-list .view-track-number {
+  color: var(--os-color-ink-secondary);
+  text-align: center;
+}
+
+body:is(.theme-dark, .theme-light) .playlist-shared-track-list .view-track-more {
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
@@ -11468,7 +11512,7 @@ body:is(.theme-dark, .theme-light) .ui44-flat-track-list .view-track-more {
   cursor: pointer;
 }
 
-body:is(.theme-dark, .theme-light) .ui44-flat-track-list .view-track-more-menu {
+body:is(.theme-dark, .theme-light) .playlist-shared-track-list .view-track-more-menu {
   position: absolute;
   right: 0;
   top: calc(100% + 4px);
@@ -11479,27 +11523,25 @@ body:is(.theme-dark, .theme-light) .ui44-flat-track-list .view-track-more-menu {
   padding: 7px;
 }
 
+body:is(.theme-dark, .theme-light) .playlist-shared-track-list .view-track-leading {
+  width: 28px;
+  height: 62px;
+  justify-items: start;
+}
+
 body:is(.theme-dark, .theme-light) .view-album-header .library-creator-chip {
   color: var(--os-color-accent);
 }
 
 @media (max-width: 768px) {
-  body:is(.theme-dark, .theme-light) .ui44-flat-track-list {
-    --ui44-item-track-leading: 28px;
+  body:is(.theme-dark, .theme-light) .playlist-shared-track-list .playlist-track-row {
+    grid-template-columns: 40px minmax(0, 1fr) 40px;
+    gap: 0;
   }
 
-  body:is(.theme-dark, .theme-light) .ui44-flat-track-list .view-track-row {
-    grid-template-columns: 28px minmax(0, 1fr) 40px;
-    gap: 4px;
-  }
-
-  body:is(.theme-dark, .theme-light) .ui44-flat-track-list .view-track-leading {
+  body:is(.theme-dark, .theme-light) .playlist-shared-track-list .view-track-leading {
     width: 28px;
     justify-items: start;
-  }
-
-  body:is(.theme-dark, .theme-light) .ui44-flat-track-list .view-track-row + .view-track-row {
-    border-top: 0;
   }
 }
 

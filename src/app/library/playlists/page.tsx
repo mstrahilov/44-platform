@@ -1,7 +1,7 @@
-import LibraryApp from '@/components/LibraryApp';
+import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
 export default function LibraryPlaylistsPage() {
-  return <LibraryApp category="playlists" />;
+  redirect('/library/music');
 }

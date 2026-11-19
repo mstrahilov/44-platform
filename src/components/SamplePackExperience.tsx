@@ -4,12 +4,13 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMusicPlayer, useMusicPlayerTime, type MusicQueueTrack } from '@/components/MusicPlayer';
 import type { SamplePackFile, SamplePlaybackProgress } from '@/lib/domain/nativeContent';
 import { listSampleProgress, saveSampleProgress } from '@/lib/domain/nativeContent';
-import { ItemTrackList } from '@/components/ItemTrackList';
+import { PlaylistTrackList } from '@/components/PlaylistTrackList';
 
 export function SamplePackExperience({
   itemId,
   title,
   creator,
+  artistHref,
   artworkUrl,
   samples,
   signedDownloads = {},
@@ -20,6 +21,7 @@ export function SamplePackExperience({
   itemId: string;
   title: string;
   creator: string;
+  artistHref?: string;
   artworkUrl?: string | null;
   samples: SamplePackFile[];
   signedDownloads?: Record<string, string>;
@@ -80,13 +82,15 @@ export function SamplePackExperience({
   return <div className={library ? 'view-section view-tracklist-section sample-pack-experience' : 'sample-pack-experience'}>
     {samples.length === 0 ? (
       <p className="app-empty-text">No sample previews have been added yet.{library && fullPackUrl ? ' The full pack is ready to download.' : ''}</p>
-    ) : <ItemTrackList label="Sample tracks" rows={samples.map((sample, index) => {
+    ) : <PlaylistTrackList label="Sample tracks" rows={samples.map((sample, index) => {
       const active = currentTrack?.id === sample.id;
       const downloadUrl = sample.source_asset_id ? signedDownloads[sample.source_asset_id] : undefined;
       return {
         id: sample.id,
         number: index + 1,
         title: sample.title,
+        artist: creator,
+        artistHref,
         playable: Boolean(sample.preview_url),
         active,
         playing: active && isPlaying,

@@ -416,8 +416,10 @@ export function Topbar() {
   const isNewCommunityPost = pathname === '/community/new';
   const isNewPlaylist = pathname === '/library/playlists/new';
   const isPlaylistTrackPicker = /^\/library\/playlists\/[^/]+\/add$/.test(pathname);
+  const isSavedTracksPage = pathname === '/library/music/saved-tracks';
+  const isPlaylistDetailPage = /^\/library\/playlists\/[^/]+$/.test(pathname) && !isNewPlaylist;
   const playlistTrackPickerHref = back?.href ?? '/library';
-  const mobileTopbarTitle = toolbarTitle ?? (isNewCommunityPost ? 'New Post' : isNewPlaylist ? 'New Playlist' : isPlaylistTrackPicker ? 'Add Track' : getMobileTopbarTitle(pathname));
+  const mobileTopbarTitle = isPlaylistDetailPage || isSavedTracksPage ? '' : toolbarTitle ?? (isNewCommunityPost ? 'New Post' : isNewPlaylist ? 'New Playlist' : isPlaylistTrackPicker ? 'Add Track' : getMobileTopbarTitle(pathname));
   const isCommunityRoot = pathname === '/community';
   const isCommunitySurface = pathname === '/community' || (pathname.startsWith('/community/') && pathname !== '/community/new');
   const isAccountRoot = pathname === '/you';
@@ -427,7 +429,6 @@ export function Topbar() {
   const isProfilePage = /^\/profile\/[^/]+$/.test(pathname);
   const isRadioRoot = pathname === '/radio';
   const isLibraryRoot = pathname === '/library' || (pathname.startsWith('/library/') && !pathname.startsWith('/library/item/') && !pathname.startsWith('/library/playlists/') && !pathname.startsWith('/library/music/') && pathname !== '/library/search');
-  const isPlaylistLibrary = pathname === '/library/playlists';
   const isDiscoverSurface = pathname === '/' || (pathname.startsWith('/store') && !pathname.startsWith('/store/item/'));
   const isDetailRoute = mobileTopbarState.mode === 'back' || Boolean(back);
   const hasSectionTabs = Boolean(tabs?.some(tab => tab.variant === 'section'));
@@ -540,7 +541,7 @@ export function Topbar() {
       <IconClose />
     </button>
   ) : isNewPlaylist ? (
-    <button type="button" className="ui44-symbol-button" aria-label="Cancel new playlist" title="Cancel" onClick={() => router.push('/library/playlists')}>
+    <button type="button" className="ui44-symbol-button" aria-label="Cancel new playlist" title="Cancel" onClick={() => router.push('/library/music')}>
       <IconClose />
     </button>
   ) : isPlaylistTrackPicker ? (
@@ -584,6 +585,8 @@ export function Topbar() {
     <button type="button" className="ui44-symbol-button" aria-label="Done adding tracks" title="Done" onClick={() => router.push(playlistTrackPickerHref)}>
       <IconCheck />
     </button>
+  ) : isSavedTracksPage ? (
+    <button type="button" data-filter-popover-trigger="true" aria-pressed={librarySortActive} className={`ui44-symbol-button${librarySortActive ? ' ui44-symbol-button-active' : ''}`} aria-label="Sort Saved Tracks" title="Sort Saved Tracks" onClick={() => window.dispatchEvent(new CustomEvent('44:toggle-filter-popover', { detail: { label: 'Sort Saved Tracks' } }))}><IconSort /></button>
   ) : isNotificationsPage ? (
     <button type="button" data-filter-popover-trigger="true" aria-pressed={notificationFilterActive} className={`ui44-symbol-button ui44-symbol-button-filter page-filter-button${notificationFilterActive ? ' ui44-symbol-button-active page-filter-button-active' : ''}`} aria-label="Filter Notifications" title="Filter Notifications" onClick={() => window.dispatchEvent(new CustomEvent('44:toggle-filter-popover', { detail: { label: 'Filter Notifications' } }))}>
       <span className="page-filter-icon" aria-hidden="true"><i /><i /><i /></span>
@@ -613,8 +616,7 @@ export function Topbar() {
       <span className="os-icon os-icon-settings os-icon-sm" aria-hidden="true" />
     </Link>
   ) : isLibraryRoot ? (
-    isPlaylistLibrary ? <Link href="/library/playlists/new" className="ui44-symbol-button" aria-label="Create Playlist" title="Create Playlist"><IconPlus /></Link>
-      : <button type="button" data-filter-popover-trigger="true" aria-pressed={librarySortActive} className={`ui44-symbol-button${librarySortActive ? ' ui44-symbol-button-active' : ''}`} aria-label="Sort Library" title="Sort Library" onClick={() => window.dispatchEvent(new CustomEvent('44:toggle-filter-popover', { detail: { label: 'Sort Library' } }))}><IconSort /></button>
+    <button type="button" data-filter-popover-trigger="true" aria-pressed={librarySortActive} className={`ui44-symbol-button${librarySortActive ? ' ui44-symbol-button-active' : ''}`} aria-label="Sort Library" title="Sort Library" onClick={() => window.dispatchEvent(new CustomEvent('44:toggle-filter-popover', { detail: { label: 'Sort Library' } }))}><IconSort /></button>
   ) : isRadioRoot ? (
     <button type="button" className="ui44-symbol-button" aria-label="More Radio actions" title="More Radio actions" aria-expanded={overflowOpen} onClick={() => setOverflowOpen(open => !open)}>
       <IconMore />
@@ -642,6 +644,10 @@ export function Topbar() {
             onClick={() => {
               if (isPlaylistTrackPicker) {
                 router.push(playlistTrackPickerHref);
+                return;
+              }
+              if (back.alwaysNavigate) {
+                router.push(back.href);
                 return;
               }
               if (typeof window !== 'undefined' && window.history.length > 1) {
@@ -730,9 +736,8 @@ export function Topbar() {
             </button>
           )}
         </div>
-        {isLibraryRoot ? isPlaylistLibrary
-          ? <Link href="/library/playlists/new" className="ui44-symbol-button os-topbar-icon-button" aria-label="Create Playlist" title="Create Playlist"><IconPlus /></Link>
-          : <button type="button" data-filter-popover-trigger="true" aria-pressed={librarySortActive} className={`ui44-symbol-button os-topbar-icon-button${librarySortActive ? ' ui44-symbol-button-active' : ''}`} aria-label="Sort Library" title="Sort Library" onClick={() => window.dispatchEvent(new CustomEvent('44:toggle-filter-popover', { detail: { label: 'Sort Library' } }))}><IconSort /></button>
+        {isSavedTracksPage ? <button type="button" data-filter-popover-trigger="true" aria-pressed={librarySortActive} className={`ui44-symbol-button os-topbar-icon-button${librarySortActive ? ' ui44-symbol-button-active' : ''}`} aria-label="Sort Saved Tracks" title="Sort Saved Tracks" onClick={() => window.dispatchEvent(new CustomEvent('44:toggle-filter-popover', { detail: { label: 'Sort Saved Tracks' } }))}><IconSort /></button> : null}
+        {isLibraryRoot ? <button type="button" data-filter-popover-trigger="true" aria-pressed={librarySortActive} className={`ui44-symbol-button os-topbar-icon-button${librarySortActive ? ' ui44-symbol-button-active' : ''}`} aria-label="Sort Library" title="Sort Library" onClick={() => window.dispatchEvent(new CustomEvent('44:toggle-filter-popover', { detail: { label: 'Sort Library' } }))}><IconSort /></button>
           : null}
         {isNotificationsPage ? <button type="button" data-filter-popover-trigger="true" aria-pressed={notificationFilterActive} className={`ui44-symbol-button os-topbar-icon-button ui44-symbol-button-filter${notificationFilterActive ? ' ui44-symbol-button-active' : ''}`} aria-label="Filter Notifications" title="Filter Notifications" onClick={() => window.dispatchEvent(new CustomEvent('44:toggle-filter-popover', { detail: { label: 'Filter Notifications' } }))}><span className="page-filter-icon" aria-hidden="true"><i /><i /><i /></span></button> : null}
         {isProfilePage && overflowActions?.length ? <div className="os-topbar-profile-menu">

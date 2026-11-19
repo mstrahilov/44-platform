@@ -22,7 +22,14 @@ export async function listVisibleLibraryItems(userId: string) {
 
   if (result.error) throw result.error;
   const rows = (result.data ?? []) as unknown as LibraryItemRow[];
-  return localMaskIsSaved() ? [...rows, {
+  const hasCatalogMask = rows.some(row => {
+    const product = row.products;
+    if (!product) return false;
+    return product.id === localMaskProduct.id
+      || product.slug?.trim().toLowerCase() === 'mask'
+      || (product.title.trim().toLowerCase() === 'mask' && product.author_id === localMaskProduct.author_id);
+  });
+  return localMaskIsSaved() && !hasCatalogMask ? [...rows, {
     id: LOCAL_MASK_LIBRARY_ID,
     item_id: localMaskProduct.id,
     acquired_at: new Date().toISOString(),
@@ -42,7 +49,7 @@ export async function listVisibleLibraryItemIds(userId: string) {
   const ids = (result.data ?? []).flatMap(row => (
     row.item_id && row.status !== 'hidden' ? [row.item_id] : []
   ));
-  return localMaskIsSaved() ? [...ids, localMaskProduct.id] : ids;
+  return localMaskIsSaved() && !ids.includes(localMaskProduct.id) ? [...ids, localMaskProduct.id] : ids;
 }
 
 export async function removeLibraryItem(userId: string, libraryEntryId: string) {

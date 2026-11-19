@@ -5,10 +5,17 @@ import { useRouter } from 'next/navigation';
 import { PageShell, CenteredMessage, EmptyMessage } from '@/components/Ui';
 import { OS44Button } from '@/components/OS44Button';
 import { useAuth } from '@/lib/useAuth';
-import { loadStudioProfile } from '@/lib/studioProfiles';
 import { getUploadErrorMessage, uploadPublicFile } from '@/lib/uploads';
-import { useTopbarBack, useTopbarOverflow } from '@/components/TopbarContext';
+import { useTopbarBack, useTopbarOverflow, useTopbarTitle } from '@/components/TopbarContext';
 import { addTrackToPlaylist, browseCatalogTracks, createPlaylist, deletePlaylist, getPlaylist, replacePlaylistTracks, renamePlaylist, type CatalogTrack, type CatalogTrackCursor, type Playlist } from '@/lib/domain/playlists';
+import { DetailPageHeader } from '@/components/LibraryDetailPrimitives';
+import { ReleaseArtworkAtmosphere } from '@/components/ReleaseArtworkAtmosphere';
+import { PlaylistTrackList } from '@/components/PlaylistTrackList';
+import { useMusicPlayer, type MusicQueueTrack } from '@/components/MusicPlayer';
+import { COPY_TO_CLIPBOARD_TOAST_EVENT } from '@/components/ContextMenu';
+import { productBrowseHref } from '@/lib/experience';
+import { creatorHref } from '@/lib/platform';
+import { PlaylistPicker } from '@/components/PlaylistPicker';
 
 export function PlaylistCreateApp() {
   const router = useRouter();
@@ -73,9 +80,10 @@ export function PlaylistDetailApp({ playlistId }: { playlistId: string }) {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
-  const [ownerName, setOwnerName] = useState('');
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState('');
+  const [playlistTrackId, setPlaylistTrackId] = useState<string | null>(null);
+  const { currentTrack, isPlaying, queueNext, toggleTrack } = useMusicPlayer();
 
   const removePlaylist = useCallback(async () => {
     if (!user) return;
@@ -89,6 +97,7 @@ export function PlaylistDetailApp({ playlistId }: { playlistId: string }) {
   }, []);
 
   useTopbarBack({ href: '/library', label: 'Library' });
+  useTopbarTitle('');
   useTopbarOverflow(useMemo(() => playlist && !editing ? [
     { id: 'share', label: 'Share', onSelect: sharePlaylist },
     { id: 'edit', label: 'Edit Playlist', onSelect: () => setEditing(true) },
@@ -97,11 +106,8 @@ export function PlaylistDetailApp({ playlistId }: { playlistId: string }) {
 
   useEffect(() => {
     if (!user) return;
-    void Promise.all([getPlaylist(user.id, playlistId), loadStudioProfile(user.id)])
-      .then(([nextPlaylist, profileResult]) => {
-        setPlaylist(nextPlaylist);
-        setOwnerName(profileResult.profile?.display_name?.trim() || profileResult.profile?.username?.trim() || '');
-      })
+    void getPlaylist(user.id, playlistId)
+      .then(setPlaylist)
       .catch(errorValue => setError(errorValue instanceof Error ? errorValue.message : 'Could not load playlist.'));
   }, [playlistId, user]);
 
@@ -131,19 +137,70 @@ export function PlaylistDetailApp({ playlistId }: { playlistId: string }) {
     setPlaylist(current => current ? { ...current, ...updated } : current);
   }
 
-  if (loading || !playlist) return <PageShell><CenteredMessage status>{error || 'Loading playlist…'}</CenteredMessage></PageShell>;
-  const tracks = playlist.tracks ?? [];
+  function shareTrack(trackId: string, itemId: string | undefined) {
+    if (!itemId || typeof window === 'undefined') return;
+    const url = new URL(productBrowseHref({ id: itemId }), window.location.origin);
+    url.searchParams.set('track', trackId);
+    if (user?.id) url.searchParams.set('ref', user.id);
+    void navigator.clipboard?.writeText(url.toString());
+    window.dispatchEvent(new CustomEvent(COPY_TO_CLIPBOARD_TOAST_EVENT, { detail: { message: 'Track link copied to clipboard' } }));
+  }
 
-  return <PageShell><main className={`playlist-detail-page${editing ? ' playlist-detail-page-editing' : ''}`}>
-    <section className="playlist-detail-hero"><div className="playlist-detail-art" style={artwork ? { backgroundImage: `url(${artwork})` } : undefined} /><h1>{playlist.title}</h1><p>{ownerName || '44OS'}</p>{editing ? <p className="playlist-edit-helper">Drag to reorder, swipe to remove.</p> : null}</section>
-    {editing ? <PlaylistEditList playlist={playlist} onSave={saveTracks} /> : <div className="playlist-track-list">{tracks.map((row, index) => <PlaylistTrackRow key={row.id} row={row} index={index} />)}</div>}
+  if (loading) return <PageShell><CenteredMessage status>Loading playlist…</CenteredMessage></PageShell>;
+  if (!user) return <PageShell><CenteredMessage status>Sign in to view this playlist.</CenteredMessage></PageShell>;
+  if (!playlist) return <PageShell><CenteredMessage status>{error || 'Loading playlist…'}</CenteredMessage></PageShell>;
+  const tracks = playlist.tracks ?? [];
+  const queue: MusicQueueTrack[] = tracks.filter(row => row.track?.audio_url).map(row => {
+    const track = row.track!;
+    return {
+      id: track.id,
+      title: track.title,
+      artist: track.item?.creators?.display_name || track.item?.creator || '44OS',
+      releaseTitle: track.item?.title || '',
+      artworkUrl: track.item?.cover_url || null,
+      audioUrl: track.audio_url!,
+      durationSeconds: track.duration_seconds,
+      productId: track.item_id,
+      releaseHref: `/library/music/${track.item_id}`,
+    };
+  });
+
+  return <PageShell><main className={`view-detail-single library-detail-page playlist-detail-page${editing ? ' playlist-detail-page-editing' : ''}`}>
+    {playlistTrackId ? <PlaylistPicker userId={user.id} trackId={playlistTrackId} onClose={() => setPlaylistTrackId(null)} /> : null}
+    <ReleaseArtworkAtmosphere artworkUrl={artwork} />
+    <DetailPageHeader
+      artworkUrl={artwork}
+      artworkTitle={playlist.title}
+      title={playlist.title}
+      creatorName="44OS"
+      creatorTone="secondary"
+      meta={['Playlist']}
+      showCreatorIdentity={false}
+      artworkFallback={<span className="playlist-detail-art-fallback" aria-hidden="true">♫</span>}
+    >
+      {editing ? <p className="playlist-edit-helper">Drag to reorder, swipe to remove.</p> : null}
+    </DetailPageHeader>
+    {editing ? <PlaylistEditList playlist={playlist} onSave={saveTracks} /> : <PlaylistTrackList label={`${playlist.title} tracks`} rows={tracks.map((row, index) => {
+      const queueIndex = queue.findIndex(track => track.id === row.track_id);
+      return {
+        id: row.id,
+        number: index + 1,
+        title: row.track?.title ?? 'Track unavailable',
+        artist: row.track?.item?.creators?.display_name || row.track?.item?.creator || '44OS',
+        artistHref: creatorHref(row.track?.item?.creators ?? row.track?.item?.creator),
+        actions: [
+          { id: 'playlist', label: 'Add to Playlist', onSelect: () => setPlaylistTrackId(row.track_id) },
+          { id: 'queue', label: 'Add to Queue', onSelect: () => { if (queueIndex >= 0) queueNext(queue[queueIndex]); }, disabled: queueIndex < 0 },
+          { id: 'share', label: 'Share', onSelect: () => shareTrack(row.track_id, row.track?.item?.id), disabled: !row.track?.item?.id },
+        ],
+        active: currentTrack?.id === row.track_id,
+        playing: currentTrack?.id === row.track_id && isPlaying,
+        onPlay: queueIndex >= 0 ? () => toggleTrack(queue, queueIndex) : undefined,
+      };
+    })} />}
     {editing ? <div className="playlist-edit-actions"><OS44Button onClick={() => setEditing(false)}>Done</OS44Button><OS44Button href={`/library/playlists/${playlist.id}/add`}>Add Track</OS44Button><OS44Button onClick={saveTitle}>Rename Playlist</OS44Button></div> : null}
     {error ? <p className="ui44-status ui44-status-error" role="alert">{error}</p> : null}
   </main></PageShell>;
-}
-
-function PlaylistTrackRow({ row, index }: { row: NonNullable<Playlist['tracks']>[number]; index: number }) {
-  return <div className="playlist-track-row view-track-row ui44-track-row"><span className="view-track-number ui44-track-index">{index + 1}</span><span className="playlist-track-copy ui44-overflow-track-title"><strong>{row.track?.title ?? 'Track unavailable'}</strong></span><span className="playlist-track-more view-track-more">•••</span></div>;
 }
 
 function PlaylistEditList({ playlist, onSave }: { playlist: Playlist; onSave: (tracks: NonNullable<Playlist['tracks']>) => Promise<void> }) {

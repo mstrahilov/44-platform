@@ -9,15 +9,6 @@ export interface LibraryPrimaryAction {
   missingMessage: string;
 }
 
-export interface ProductLibraryContent {
-  runtimeKind: ProductRuntimeKind;
-  detailsTitle: string;
-  contentTitle: string;
-  accessLabel: string;
-  emptyCopy: string;
-  notes: string[];
-}
-
 export function isFreeLibraryClaim(product: Pick<Product, 'is_free' | 'price_cents'>) {
   return product.is_free || product.price_cents === 0;
 }
@@ -86,61 +77,13 @@ export function getProductLibraryPrimaryAction(product: Product): LibraryPrimary
   };
 }
 
-export function getProductLibraryContent(product: Product): ProductLibraryContent {
+export function getProductLibraryDetailsTitle(product: Product): string {
   const runtimeKind = getProductRuntimeKind(product);
-
-  if (runtimeKind === 'music') {
-    return {
-      runtimeKind,
-      detailsTitle: 'Release',
-      contentTitle: 'Music',
-      accessLabel: 'Playable release',
-      emptyCopy: 'Tracklist, credits, and release notes will live here.',
-      notes: ['Tracklist from Supabase', 'Achievements can unlock from listening', 'Downloads can be enabled per release or track'],
-    };
-  }
-
-  if (runtimeKind === 'book') {
-    return {
-      runtimeKind,
-      detailsTitle: 'Book',
-      contentTitle: 'Reader / Download',
-      accessLabel: 'Owned digital book',
-      emptyCopy: 'Book description, reader notes, and download details will live here.',
-      notes: ['PDF / digital edition', 'In-app reader can be layered in later', 'Downloads keep a copy on the user machine'],
-    };
-  }
-
-  if (runtimeKind === 'sample_pack') {
-    return {
-      runtimeKind,
-      detailsTitle: 'Asset',
-      contentTitle: 'Pack Contents',
-      accessLabel: 'Downloadable files',
-      emptyCopy: 'Asset contents, file types, and usage notes will live here.',
-      notes: ['Samples, presets, stems, or project files', 'Creator usage/license notes', 'Download history can be added later'],
-    };
-  }
-
-  if (runtimeKind === 'interactive') {
-    return {
-      runtimeKind,
-      detailsTitle: 'Interactive',
-      contentTitle: 'Launch Notes',
-      accessLabel: 'Launchable experience',
-      emptyCopy: 'Controls, requirements, and experience details will live here.',
-      notes: ['Unity/WebGL launch target', 'Achievements and bonus unlocks can connect here', 'Save/progress bridge can be added later'],
-    };
-  }
-
-  return {
-    runtimeKind,
-    detailsTitle: 'Product',
-    contentTitle: 'About',
-    accessLabel: 'Library item',
-    emptyCopy: 'No description yet.',
-    notes: ['Owned product', 'Product-specific actions can be configured in Supabase'],
-  };
+  if (runtimeKind === 'music') return 'Release';
+  if (runtimeKind === 'book') return 'Book';
+  if (runtimeKind === 'sample_pack') return 'Asset';
+  if (runtimeKind === 'interactive') return 'Interactive';
+  return 'Product';
 }
 
 export function getProductStoreAccessLabel(product: Pick<Product, 'is_free' | 'price_cents'>) {

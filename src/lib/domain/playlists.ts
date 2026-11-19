@@ -12,7 +12,7 @@ export type PlaylistTrack = {
     number: number;
     duration_seconds: number | null;
     audio_url: string | null;
-    item?: { id: string; title: string; cover_url: string | null } | null;
+    item?: { id: string; title: string; cover_url: string | null; creator?: string | null; creators?: { display_name?: string | null; username: string | null; slug: string | null } | null } | null;
   } | null;
 };
 
@@ -58,7 +58,7 @@ type CatalogTrackBrowseRow = {
 };
 
 const PLAYLIST_SELECT = 'id,user_id,title,cover_url,created_at,updated_at';
-const PLAYLIST_TRACK_SELECT = 'id,playlist_id,track_id,sort_order,added_at,track:tracks(id,item_id,title,number,duration_seconds,audio_url,item:catalog_items(id,title,cover_url))';
+const PLAYLIST_TRACK_SELECT = 'id,playlist_id,track_id,sort_order,added_at,track:tracks(id,item_id,title,number,duration_seconds,audio_url,item:catalog_items(id,title,cover_url,creator,creators:profiles!author_id(display_name,username,slug)))';
 const PLAYLIST_ARTWORK_SELECT = `${PLAYLIST_SELECT},artwork:playlist_tracks(track:tracks!inner(item:catalog_items!inner(cover_url)))`;
 
 export async function listPlaylists(userId: string, { includeArtwork = true } = {}): Promise<Playlist[]> {

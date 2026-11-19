@@ -1,6 +1,6 @@
 'use client';
 
-import type { CSSProperties, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { SectionHeader } from '@/components/Ui';
 import type { ProductAchievement } from '@/lib/platform';
@@ -9,7 +9,7 @@ import { ExternalLinkActions } from '@/components/ExternalLinkActions';
 import type { ReleaseCreatorVideo } from '@/lib/domain/releaseFeatures';
 import { OS44Button } from '@/components/OS44Button';
 import { CreatorVideoTitle } from '@/components/CreatorVideoTitle';
-import { artworkBackdrop, DETAIL_ARTWORK_SIZES, PublicArtwork } from '@/components/PublicArtwork';
+import { DETAIL_ARTWORK_SIZES, PublicArtwork } from '@/components/PublicArtwork';
 
 export type ProductDetailAction = {
   label: string;
@@ -32,6 +32,113 @@ export type LibraryFileAsset = LibraryBonusAsset & {
   id?: string | null;
   is_downloadable?: boolean | null;
 };
+
+export function DetailPageHeader({
+  artworkUrl,
+  artworkTitle,
+  title,
+  creatorName,
+  creatorHrefValue,
+  creatorTone = 'accent',
+  creatorAvatarUrl,
+  meta = [],
+  actions = [],
+  externalLinks = [],
+  coverClassName = '',
+  showCreatorAvatar = false,
+  showCreatorIdentity = true,
+  artworkFallback,
+  className = '',
+  beforeActions,
+  afterActions,
+  mediaFooter,
+  children,
+}: {
+  artworkUrl?: string | null;
+  artworkTitle?: string;
+  title: string;
+  creatorName: string;
+  creatorHrefValue?: string;
+  creatorTone?: 'accent' | 'secondary';
+  creatorAvatarUrl?: string | null;
+  meta?: string[];
+  actions?: ProductDetailAction[];
+  externalLinks?: Product['external_links'];
+  coverClassName?: string;
+  showCreatorAvatar?: boolean;
+  showCreatorIdentity?: boolean;
+  artworkFallback?: ReactNode;
+  className?: string;
+  beforeActions?: ReactNode;
+  afterActions?: ReactNode;
+  mediaFooter?: ReactNode;
+  children?: ReactNode;
+}) {
+  const coverClasses = ['view-album-cover', coverClassName].filter(Boolean).join(' ');
+  const creatorStyle = { color: creatorTone === 'accent' ? 'var(--os-color-accent)' : 'var(--os-color-ink-secondary)' };
+
+  return (
+    <div
+      className={`${artworkUrl ? 'view-album-header' : 'view-album-header view-album-header-fallback'}${className ? ` ${className}` : ''}`}
+    >
+      <div className="view-album-media">
+        <div className={coverClasses}>
+          {artworkUrl ? (
+            <PublicArtwork src={artworkUrl} alt={artworkTitle || title} sizes={DETAIL_ARTWORK_SIZES} loading="eager" fetchPriority="high" />
+          ) : artworkFallback}
+        </div>
+        {mediaFooter}
+      </div>
+      <div className="view-album-copy">
+        <h1 className="view-album-title">{title}</h1>
+        {showCreatorIdentity ? creatorHrefValue ? <Link className="library-creator-chip" href={creatorHrefValue} aria-label={`View ${creatorName}`} style={creatorStyle}>
+          {showCreatorAvatar ? <span className="library-creator-avatar ui44-identity-avatar ui44-identity-avatar-inline">
+            {creatorAvatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={creatorAvatarUrl} alt="" />
+            ) : (
+              <span>{initials(creatorName)}</span>
+            )}
+          </span> : null}
+          <span>{creatorName}</span>
+        </Link> : <span className="library-creator-chip" style={creatorStyle}>{creatorName}</span> : null}
+        {meta.length > 0 && (
+          <div className="view-album-eyebrow view-product-meta-line">
+            {meta.map((item, index) => (
+              <span className="view-album-meta-token" key={`${item}-${index}`}>
+                {index > 0 && <span className="view-album-meta-sep" aria-hidden="true" />}
+                <span>{item}</span>
+              </span>
+            ))}
+          </div>
+        )}
+        {children}
+        <ExternalLinkActions links={externalLinks ?? []} context="item" variant="icons" label={`Open ${title} on other platforms`} />
+        {beforeActions}
+        {actions.length ? <div className="view-album-actions">
+          {actions.map((action, index) =>
+            action.href ? (
+              <OS44Button
+                key={`${action.label}-${index}`}
+                href={action.href}
+                target={action.opensInNewWindow ? '_blank' : undefined}
+                rel={action.opensInNewWindow ? 'noopener noreferrer' : undefined}
+                aria-label={action.opensInNewWindow ? `${action.label} (opens in a new window)` : undefined}
+              >
+                {action.label}
+              </OS44Button>
+            ) : (
+              <OS44Button key={`${action.label}-${index}`} onClick={action.onClick} disabled={action.disabled} aria-pressed={action.label === 'Shuffle' ? action.active : undefined}>
+                {action.label}
+              </OS44Button>
+            ),
+          )}
+        </div> : null}
+        {afterActions}
+      </div>
+    </div>
+  );
+}
 
 export function ProductDetailHeader({
   product,
@@ -64,71 +171,24 @@ export function ProductDetailHeader({
   afterActions?: ReactNode;
   mediaFooter?: ReactNode;
 }) {
-  const heroImage = imageUrlOverride || product.hero_url || product.cover_url;
-  const coverClasses = ['view-album-cover', coverClassName].filter(Boolean).join(' ');
-
-  return (
-    <div
-      className={`${heroImage ? 'view-album-header' : 'view-album-header view-album-header-fallback'}${className ? ` ${className}` : ''}`}
-      style={heroImage ? { '--release-artwork': artworkBackdrop(heroImage) } as CSSProperties : undefined}
-    >
-      <div className="view-album-media">
-        <div className={coverClasses}>
-          {heroImage && (
-            <PublicArtwork src={heroImage} alt={product.title} sizes={DETAIL_ARTWORK_SIZES} loading="eager" fetchPriority="high" />
-          )}
-        </div>
-        {mediaFooter}
-      </div>
-      <div className="view-album-copy">
-        <h1 className="view-album-title">{product.title}</h1>
-        {showCreatorIdentity ? <Link className="library-creator-chip" href={creatorHrefValue} aria-label={`View ${creatorName}`} style={{ color: 'var(--os-color-accent)' }}>
-          {showCreatorAvatar ? <span className="library-creator-avatar ui44-identity-avatar ui44-identity-avatar-inline">
-            {product.creators?.avatar_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={product.creators.avatar_url} alt="" />
-            ) : (
-              <span>{initials(creatorName)}</span>
-            )}
-          </span> : null}
-          <span>{creatorName}</span>
-        </Link> : null}
-        {meta.length > 0 && (
-          <div className="view-album-eyebrow view-product-meta-line">
-            {meta.map((item, index) => (
-              <span className="view-album-meta-token" key={`${item}-${index}`}>
-                {index > 0 && <span className="view-album-meta-sep" aria-hidden="true" />}
-                <span>{item}</span>
-              </span>
-            ))}
-          </div>
-        )}
-        <ExternalLinkActions links={externalLinks ?? []} context="item" variant="icons" label={`Open ${product.title} on other platforms`} />
-        {beforeActions}
-        <div className="view-album-actions">
-          {actions.map((action, index) =>
-            action.href ? (
-              <OS44Button
-                key={`${action.label}-${index}`}
-                href={action.href}
-                target={action.opensInNewWindow ? '_blank' : undefined}
-                rel={action.opensInNewWindow ? 'noopener noreferrer' : undefined}
-                aria-label={action.opensInNewWindow ? `${action.label} (opens in a new window)` : undefined}
-              >
-                {action.label}
-              </OS44Button>
-            ) : (
-              <OS44Button key={`${action.label}-${index}`} onClick={action.onClick} disabled={action.disabled} aria-pressed={action.label === 'Shuffle' ? action.active : undefined}>
-                {action.label}
-              </OS44Button>
-            ),
-          )}
-        </div>
-        {afterActions}
-        <div className="view-album-atmosphere-handoff" aria-hidden="true" />
-      </div>
-    </div>
-  );
+  return <DetailPageHeader
+    artworkUrl={imageUrlOverride || product.hero_url || product.cover_url}
+    artworkTitle={product.title}
+    title={product.title}
+    creatorName={creatorName}
+    creatorHrefValue={creatorHrefValue}
+    creatorAvatarUrl={product.creators?.avatar_url}
+    meta={meta}
+    actions={actions}
+    externalLinks={externalLinks}
+    coverClassName={coverClassName}
+    showCreatorAvatar={showCreatorAvatar}
+    showCreatorIdentity={showCreatorIdentity}
+    className={className}
+    beforeActions={beforeActions}
+    afterActions={afterActions}
+    mediaFooter={mediaFooter}
+  />;
 }
 
 export function withSourceProduct(href: string, productId?: string | null) {

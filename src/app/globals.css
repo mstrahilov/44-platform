@@ -5187,16 +5187,18 @@ body:is(.theme-dark, .theme-light) .web-push-prompt.ui44-paper-menu {
 
 /* Detail page — single column. No rail. */
 .view-detail-single {
+  position: relative;
   display: flex;
   flex-direction: column;
+  isolation: isolate;
 }
 
-/* ── Album-style detail header — Apple Music inspired ──
-   Blurred cover fills the background, sharp cover thumbnail on left,
-   title / creator / meta on the right. Sits in a rounded region. */
+/* ── Item detail header ──
+   The shared artwork atmosphere is a separate page layer; the cover here
+   remains sharp beside the item title and metadata. */
 .view-album-header {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   min-height: clamp(360px, 38vw, 520px);
   padding: clamp(56px, 5.8vw, 96px) var(--os-detail-inset);
   display: grid;
@@ -5206,32 +5208,54 @@ body:is(.theme-dark, .theme-light) .web-push-prompt.ui44-paper-menu {
   justify-content: start;
   color: #fff;
   isolation: isolate;
-  background-image: var(--release-artwork);
-  background-size: cover;
-  background-position: center;
+  background: transparent;
 }
 
-.view-album-header::before {
-  content: '';
+.release-artwork-atmosphere {
+  --release-atmosphere-artwork-side: clamp(240px, 23vw, 368px);
   position: absolute;
-  inset: 0;
-  z-index: -2;
-  background-color: var(--os-glass-recessed-bg);
-  background-image: var(--release-artwork);
-  background-size: cover;
-  background-position: center;
-  filter: blur(52px) saturate(1.35);
-  transform: scale(1.18);
-}
-
-.view-album-header::after {
-  content: '';
-  position: absolute;
-  inset: 0;
   z-index: -1;
-  background:
-    radial-gradient(circle at 28% 50%, rgba(0,0,0,0.08), rgba(0,0,0,0.44) 48%, rgba(0,0,0,0.72) 100%),
-    linear-gradient(90deg, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.22) 38%, rgba(0,0,0,0.62) 100%);
+  top: 0;
+  right: 0;
+  left: 0;
+  height: calc(var(--release-atmosphere-artwork-side) + 260px);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.release-artwork-atmosphere-image {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  isolation: isolate;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 54%, rgba(0, 0, 0, 0.48) 79.76%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 54%, rgba(0, 0, 0, 0.48) 79.76%, transparent 100%);
+}
+
+.release-artwork-atmosphere-image > img {
+  position: absolute;
+  top: -7%;
+  left: -7%;
+  width: 114%;
+  height: 114%;
+  display: block;
+  object-fit: cover;
+  filter: saturate(1.22) contrast(1.04) blur(48px);
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.release-artwork-status-veil {
+  position: absolute;
+  z-index: 1;
+  inset: 0 0 auto;
+  height: calc(var(--os-safe-area-top) + 34px);
+  background: rgba(255, 255, 255, 0.025);
+  backdrop-filter: blur(12px) saturate(1.08);
+  -webkit-backdrop-filter: blur(12px) saturate(1.08);
+  -webkit-mask-image: linear-gradient(to bottom, #000, rgba(0, 0, 0, 0.82), transparent);
+  mask-image: linear-gradient(to bottom, #000, rgba(0, 0, 0, 0.82), transparent);
 }
 
 .view-album-header-fallback {
@@ -5257,9 +5281,9 @@ body:is(.theme-dark, .theme-light) .web-push-prompt.ui44-paper-menu {
 
 .view-album-cover-book {
   position: relative;
-  width: clamp(220px, 19vw, 300px);
-  height: auto;
-  aspect-ratio: 2 / 3;
+  width: clamp(240px, 23vw, 368px);
+  height: clamp(240px, 23vw, 368px);
+  aspect-ratio: 1;
   box-sizing: border-box;
 }
 
@@ -5281,6 +5305,22 @@ body:is(.theme-dark, .theme-light) .web-push-prompt.ui44-paper-menu {
 .view-album-cover-physical img {
   object-fit: contain;
   background: rgba(255, 255, 255, 0.12);
+}
+
+main.view-detail-single.playlist-detail-page {
+  padding: 0 16px calc(var(--os-mobile-shell-bottom) + 32px);
+}
+
+.playlist-detail-page .view-album-header-fallback .view-album-cover {
+  display: grid;
+  place-items: center;
+}
+
+.playlist-detail-art-fallback {
+  color: var(--os-color-accent);
+  font-size: 56px;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .view-album-cover-asset {
@@ -5738,19 +5778,6 @@ body:is(.theme-dark, .theme-light) .social-profile-page .social-profile-link-row
 }
 
 @media (max-width: 768px) {
-  /* Release pages keep the sharp cover tile, but use the same app-shell field
-     as Community instead of painting the artwork across the page. */
-  :is(.store-item-detail-page, .library-detail-page) .view-album-header {
-    background: transparent !important;
-    background-image: none !important;
-  }
-
-  :is(.store-item-detail-page, .library-detail-page) .view-album-header::before,
-  :is(.store-item-detail-page, .library-detail-page) .view-album-header::after {
-    display: none !important;
-    background: none !important;
-  }
-
   .store-item-detail-page .view-album-header {
     padding-bottom: 12px;
     margin-bottom: 0;
@@ -9088,7 +9115,7 @@ body.accent-violet {
 
   .view-album-header {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 32px;
     padding: 22px var(--os-detail-inset) 12px;
     min-height: 0;
     align-items: center;
@@ -9108,6 +9135,15 @@ body.accent-violet {
     z-index: 40;
   }
 
+  .app-shell:has(.library-detail-page) .os-topbar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    background: transparent;
+    z-index: 40;
+  }
+
   .app-shell:has(.store-item-detail-page) .os-mobile-toolbar-title {
     /* Keep the middle grid track alive when the detail title is intentionally
        empty, so the trailing overflow action remains pinned to the right. */
@@ -9115,27 +9151,23 @@ body.accent-violet {
   }
 
   .store-item-detail-page .view-album-header {
-    padding-top: calc(var(--os-topbar-height) + 22px);
-    padding-bottom: 72px;
+    padding-top: var(--os-topbar-height);
+    padding-bottom: 80px;
     margin-bottom: -48px;
     background-color: transparent;
-    overflow: hidden;
+    overflow: visible;
     z-index: 1;
   }
 
-  .store-item-detail-page .view-album-header::before {
-    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 72%, transparent 100%);
-    mask-image: linear-gradient(to bottom, #000 0%, #000 72%, transparent 100%);
+  :is(.store-item-detail-page, .library-detail-page, .playlist-detail-page) .release-artwork-atmosphere {
+    --release-atmosphere-artwork-side: min(calc(100vw - 64px), 320px);
+    height: calc(var(--os-topbar-height) + var(--release-atmosphere-artwork-side) + 260px);
   }
 
-  .store-item-detail-page .view-album-header::after {
-    background:
-      radial-gradient(circle at 50% 24%, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.26) 58%, transparent 82%),
-      linear-gradient(to bottom, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.06) 58%, transparent 100%);
-  }
-
-  .store-item-detail-page .view-album-atmosphere-handoff {
-    display: none;
+  .library-detail-page .view-album-header {
+    padding-top: var(--os-topbar-height);
+    padding-bottom: 32px;
+    overflow: visible;
   }
 
   .store-item-detail-page .view-tracklist-section {
@@ -9149,20 +9181,22 @@ body.accent-violet {
 
   .view-album-cover,
   .library-detail-header .view-album-cover {
-    width: min(70vw, 270px);
-    height: min(70vw, 270px);
-    border-radius: 16px;
+    width: min(calc(100vw - 64px), 320px);
+    height: min(calc(100vw - 64px), 320px);
+    border-radius: 18px;
   }
 
-  .view-album-cover-book {
-    width: min(70vw, 270px);
-    height: auto;
+  .view-album-cover-book,
+  .view-album-cover-physical {
+    width: min(calc(100vw - 64px), 320px);
+    height: min(calc(100vw - 64px), 320px);
+    aspect-ratio: 1;
   }
 
   .view-album-copy,
   .library-detail-header .view-album-copy {
     padding: 0;
-    gap: 6px;
+    gap: 4px;
     align-items: center;
     width: 100%;
   }
@@ -9177,7 +9211,7 @@ body.accent-violet {
     font-size: var(--os-type-page-title-size);
     line-height: var(--os-type-page-title-line);
     font-weight: 700;
-    margin: 2px 0 0;
+    margin: 0;
     text-align: center;
   }
 
@@ -9371,17 +9405,37 @@ body.accent-violet {
   .view-album-header .library-creator-chip {
     font-size: 17px;
     line-height: 22px;
-    font-weight: 500;
+    font-weight: 700;
   }
 
   .view-album-header .view-album-eyebrow {
     font-size: 15px;
     line-height: 20px;
+    font-weight: 400;
   }
 
   .view-album-header .view-album-actions {
     margin-top: 8px;
     margin-bottom: 14px;
+  }
+
+  .library-detail-page .view-album-actions:empty {
+    display: none;
+  }
+
+  .view-album-copy > .external-link-actions-list {
+    gap: 8px;
+    margin-top: 20px;
+  }
+
+  .view-album-copy > .external-link-actions-list .external-profile-icon-link {
+    width: 44px;
+    height: 44px;
+  }
+
+  .view-album-copy > .external-link-actions-list .external-profile-icon-link svg {
+    width: 24px;
+    height: 24px;
   }
 
   .view-tracklist-section.view-section {
@@ -10785,22 +10839,6 @@ body.theme-dark :is(
 .project-status-pill[data-status="accepted"],
 .project-status-pill[data-status="in_progress"] {
     color: var(--os-color-ink);
-  }
-
-  .view-album-header {
-    background-image: none;
-  }
-
-  .view-album-header::before {
-    background-image: var(--release-artwork);
-    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 66%, transparent 100%);
-    mask-image: linear-gradient(to bottom, #000 0%, #000 66%, transparent 100%);
-  }
-
-  .view-album-header::after {
-    background:
-      radial-gradient(circle at 50% 24%, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.26) 64%, transparent 100%),
-      linear-gradient(to bottom, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.12) 62%, transparent 100%);
   }
 
   .search-page .hub-section-title {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useContextMenu, COPY_TO_CLIPBOARD_TOAST_EVENT } from '@/components/ContextMenu';
 import { useAuth } from '@/lib/useAuth';
@@ -29,7 +29,7 @@ import {
 } from '@/lib/domain/itemDetails';
 import { getPublicNativeContent, type SamplePackFile } from '@/lib/domain/nativeContent';
 import { SamplePackExperience } from '@/components/SamplePackExperience';
-import { ItemTrackList } from '@/components/ItemTrackList';
+import { PlaylistTrackList } from '@/components/PlaylistTrackList';
 import { beatReviewSurfacesEnabled, loadBeatCatalogSummaries } from '@/lib/domain/beats';
 import { listActiveMerchVariants, type MerchVariant } from '@/lib/domain/merchVariants';
 import { listPublicMerchImages, type MerchProductImage } from '@/lib/domain/merchImages';
@@ -37,7 +37,7 @@ import { listReleaseCreatorVideos, type ReleaseCreatorVideo } from '@/lib/domain
 import { removeLibraryItem } from '@/lib/domain/library';
 import { PlaylistPicker } from '@/components/PlaylistPicker';
 import { OS44Button } from '@/components/OS44Button';
-import { artworkBackdrop } from '@/components/PublicArtwork';
+import { ReleaseArtworkAtmosphere } from '@/components/ReleaseArtworkAtmosphere';
 
 type ProductTrack = {
   id: string;
@@ -314,7 +314,7 @@ function ProductStoreDetail({
     { id: 'share', label: 'Share', onSelect: shareItemLink },
   ] : undefined, [addToLibrary, product, owned, isMusicRelease, removeFromLibrary, queueReleaseNext, playableTracks]));
 
-  const routeArtwork = product ? product.hero_url || product.cover_url : null;
+  const routeArtwork = product ? product.cover_url || product.hero_url : null;
 
   if (loading) return <div className="ui44-loading-shell" role="status" aria-label="Loading Item" />;
   if (!product) return <div className="ui44-route-state">Item not found</div>;
@@ -322,6 +322,7 @@ function ProductStoreDetail({
   const productExperience = getProductExperience(product);
   const isBeat = beatReviewSurfacesEnabled && Boolean(product.beat);
   const isReleasePage = releasePage || productExperience === 'music';
+  const supportsArtworkAtmosphere = isBeat || ['music', 'book', 'asset', 'interactive'].includes(productExperience);
 
   const canClaimToLibrary = canSaveProductToLibrary(product);
   const hasDownloadUnlock = ownedAcquisitionType === 'purchase' && hasActiveDownload;
@@ -403,14 +404,14 @@ function ProductStoreDetail({
   const releaseMeta = isMerch
     ? [merchTag.toUpperCase(), merchPriceLabel]
     : [(product.item_type || productMeta(product)).toUpperCase(), ...(product.year ? [String(product.year)] : [])];
-  const pageArtwork = routeArtwork;
   return (
     <>
     {playlistTrackId && user ? <PlaylistPicker userId={user.id} trackId={playlistTrackId} onClose={() => setPlaylistTrackId(null)} /> : null}
     <div
       className="view-detail-single store-item-detail-page"
-      style={pageArtwork ? { '--release-artwork': artworkBackdrop(pageArtwork) } as CSSProperties : undefined}
     >
+
+      {supportsArtworkAtmosphere ? <ReleaseArtworkAtmosphere artworkUrl={routeArtwork} /> : null}
 
       <ProductDetailHeader
         product={product}
@@ -473,12 +474,14 @@ function ProductStoreDetail({
           tracks.length === 0 ? (
             <p className="os-type-body view-description view-content-empty">No tracks are published for this release yet.</p>
           ) : (
-            <ItemTrackList label="Release tracks" rows={tracks.map((track, index) => {
+            <PlaylistTrackList label="Release tracks" rows={tracks.map((track, index) => {
               const active = currentTrack?.id === track.id;
               return {
                 id: track.id,
                 number: trackOrder(track) || index + 1,
                 title: track.title,
+                artist: product?.creators?.display_name || product?.creator || '44 Creator',
+                artistHref: creatorHref(product?.creators ?? product?.creator),
                 playable: Boolean(track.audio_url),
                 active: selectedTrackId === track.id || active,
                 playing: active && isPlaying,
@@ -503,6 +506,7 @@ function ProductStoreDetail({
             itemId={product.id}
             title={product.title}
             creator={creatorDisplayName}
+            artistHref={creatorHref(product.creators ?? product.creator)}
             artworkUrl={product.cover_url || product.hero_url}
             samples={sampleFiles}
             signedIn={Boolean(user)}
@@ -515,8 +519,8 @@ function ProductStoreDetail({
       {isBeat && product.beat ? <BeatLicensePanel product={product} /> : null}
 
       {isReleasePage || productExperience === 'asset' ? <MoreFromCreatorSection key={`more-${product.id}`} item={product} /> : null}
-      <ItemCommunitySection key={`community-${product.id}`} item={product} />
       {!isReleasePage && productExperience !== 'asset' ? <MoreFromCreatorSection key={`more-${product.id}`} item={product} /> : null}
+      <ItemCommunitySection key={`community-${product.id}`} item={product} />
 
       <AchievementToast toast={toast} onDone={() => setToast(null)} />
     </div>

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useContextMenu, COPY_TO_CLIPBOARD_TOAST_EVENT } from '@/components/ContextMenu';
 import { useAuth } from '@/lib/useAuth';
 import { productBrowseHref, productLibraryHref } from '@/lib/experience';
-import { getProductLibraryContent, getProductLibraryPrimaryAction, getProductRuntimeKind } from '@/lib/libraryContent';
+import { getProductLibraryDetailsTitle, getProductLibraryPrimaryAction, getProductRuntimeKind } from '@/lib/libraryContent';
 import { creatorHref, type ProductAchievement, type Track } from '@/lib/platform';
 import { AchievementToast, type AchievementToastData } from '@/components/AchievementToast';
 import { LibraryAchievementsSection, LibraryBonusContentSection, LibraryFilesSection, LibraryVideosSection, ProductDetailHeader, withSourceProduct, type LibraryBonusAsset, type LibraryFileAsset, type ProductDetailAction } from '@/components/LibraryDetailPrimitives';
@@ -15,11 +15,12 @@ import { useTopbarBack, useTopbarOverflow } from '@/components/TopbarContext';
 import { MUSIC_TRACK_COMPLETED_EVENT, MUSIC_TRACK_STARTED_EVENT, useMusicPlayer, type MusicQueueTrack, type MusicTrackPlaybackEventDetail } from '@/components/MusicPlayer';
 import { OS44Button } from '@/components/OS44Button';
 import { ItemCommunitySection, MoreFromCreatorSection } from '@/components/ItemDetailSections';
+import { ReleaseArtworkAtmosphere } from '@/components/ReleaseArtworkAtmosphere';
 import { getLibraryItemBundle, type DetailedLibraryItemRow } from '@/lib/domain/itemDetails';
 import type { ReleaseCreatorVideo } from '@/lib/domain/releaseFeatures';
 import type { BookContent, SamplePackFile } from '@/lib/domain/nativeContent';
 import { SamplePackExperience } from '@/components/SamplePackExperience';
-import { ItemTrackList } from '@/components/ItemTrackList';
+import { PlaylistTrackList } from '@/components/PlaylistTrackList';
 import { PlaylistPicker } from '@/components/PlaylistPicker';
 import { hideLibraryItem } from '@/lib/domain/library';
 import type { BeatLicenseGrant } from '@/lib/domain/beats';
@@ -227,6 +228,12 @@ function ProductLibraryDetail({
     ...(isMusic ? [
       { id: 'queue', label: 'Add to Queue', onSelect: () => queueReleaseNext(musicQueue), disabled: !musicQueue.length },
     ] : []),
+    ...(isBook ? [{ id: 'open-book', label: 'Read', onSelect: () => {
+      if (bookContent) router.push(`/reader/${product.id}?returnTo=${encodeURIComponent(`/library/item/${row.id}`)}`);
+      else if (downloadHref) window.open(downloadHref, '_blank', 'noopener,noreferrer');
+      else alert(downloadUnavailableMessage);
+    } }] : []),
+    ...(runtimeKind === 'interactive' ? [{ id: 'launch-item', label: 'Play', onSelect: () => router.push(`/launch/${product.id}?returnTo=${encodeURIComponent(`/library/item/${row.id}`)}`) }] : []),
     { id: 'share', label: 'Share', onSelect: () => {
       const url = new URL(productBrowseHref(product), window.location.origin).toString();
       void navigator.clipboard?.writeText(url);
@@ -239,7 +246,7 @@ function ProductLibraryDetail({
     { id: 'remove', label: 'Remove from Library', onSelect: () => {
       void hideLibraryItem(userId, row.id).then(() => router.push('/library')).catch(error => alert(error instanceof Error ? error.message : 'Could not remove this item.'));
     } },
-  ], [downloadHref, downloadUnavailableMessage, isAsset, isMusic, musicQueue, product, queueReleaseNext, row.id, router, userId]));
+  ], [bookContent, downloadHref, downloadUnavailableMessage, isAsset, isBook, isMusic, musicQueue, product, queueReleaseNext, row.id, router, runtimeKind, userId]));
   const overachieverAchievement = achievements.find(achievement => achievement.code === 'overachiever');
   const hasOverachieverUnlocked = Boolean(overachieverAchievement && localUnlockedAchievementIds.has(overachieverAchievement.id));
 
@@ -367,7 +374,7 @@ function ProductLibraryDetail({
     evaluateCompletedRelease();
   }, [achievements, completedTrackIds, fullReleaseHandled, isMusic, localUnlockedAchievementIds, noSkipsEligible, row.item_id, tracks, userId]);
 
-  const content = getProductLibraryContent(product);
+  const detailsTitle = getProductLibraryDetailsTitle(product);
   const creatorDisplayName = product.creators?.display_name || product.creator || '44 Creator';
   const trackNumbers = useMemo(
     () => new Map(tracks.map((track, index) => [track.id, track.number ?? index + 1])),
@@ -375,7 +382,7 @@ function ProductLibraryDetail({
   );
   const creatorLink = withSourceProduct(creatorHref(product.creators ?? creatorDisplayName), product.id);
   const releaseMeta = [
-    (product.item_type || content.detailsTitle).toUpperCase(),
+    (product.item_type || detailsTitle).toUpperCase(),
     ...(product.year ? [String(product.year)] : []),
   ];
   const readerHref = `/reader/${product.id}?returnTo=${encodeURIComponent(`/library/item/${row.id}`)}`;
@@ -392,23 +399,27 @@ function ProductLibraryDetail({
     {playlistTrackId ? <PlaylistPicker userId={userId} trackId={playlistTrackId} onClose={() => setPlaylistTrackId(null)} /> : null}
     <div className="view-detail-single library-detail-page">
 
+      <ReleaseArtworkAtmosphere artworkUrl={product.cover_url || product.hero_url} />
+
       <ProductDetailHeader
         product={product}
         creatorName={creatorDisplayName}
         creatorHrefValue={creatorLink}
         meta={releaseMeta}
-        actions={primaryActions}
+        actions={primaryActions.filter(primary => !['read', 'play'].includes(primary.label.toLowerCase()))}
         externalLinks={product.external_links ?? []}
         showCreatorAvatar={false}
       />
 
       {isMusic && tracks.length > 0 && <div className="view-section view-tracklist-section">
-        <ItemTrackList label="Release tracks" rows={tracks.map((track, index) => {
+        <PlaylistTrackList label="Release tracks" rows={tracks.map((track, index) => {
           const active = currentTrack?.id === track.id;
           return {
             id: track.id,
             number: trackNumbers.get(track.id) ?? index + 1,
             title: track.title,
+            artist: creatorDisplayName,
+            artistHref: creatorHref(product.creators ?? product.creator),
             playable: Boolean(track.audio_url),
             active: selectedTrackId === track.id || active,
             playing: active && isPlaying,
@@ -434,19 +445,11 @@ function ProductLibraryDetail({
       {isMusic && <LibraryVideosSection videos={videos} title="Visuals" />}
       {isMusic && achievements.length > 0 && <LibraryAchievementsSection achievements={achievements} unlockedAchievementIds={localUnlockedAchievementIds} />}
 
-      {isBook && (
-        <div className="view-section">
-          <h2 className="view-section-title">Description</h2>
-          <p className="os-type-body view-description">
-            {product.long_description || product.short_description || content.emptyCopy}
-          </p>
-        </div>
-      )}
-
       {isAsset && <SamplePackExperience
         itemId={product.id}
         title={product.title}
         creator={product.creators?.display_name || product.creator || '44 Creator'}
+        artistHref={creatorHref(product.creators ?? product.creator)}
         artworkUrl={product.cover_url || product.hero_url}
         samples={sampleFiles}
         library
@@ -454,10 +457,6 @@ function ProductLibraryDetail({
         fullPackUrl={assets.find(asset => asset.asset_type === 'sample_pack')?.file_url ?? null}
         signedDownloads={Object.fromEntries(assets.filter(asset => asset.asset_type === 'sample' && asset.id && asset.file_url).map(asset => [asset.id!, asset.file_url!]))}
       />}
-
-      {!isMusic && !isBook && !isAsset && (
-        <div className="view-section"><h2 className="view-section-title">{content.contentTitle}</h2><p className="os-type-body view-description">{content.emptyCopy}</p></div>
-      )}
 
       {isMusic && hasActiveDownload && tracks.some(track => Boolean(track.audio_url)) && (
         <div className="view-section" id="downloads">
