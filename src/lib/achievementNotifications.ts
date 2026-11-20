@@ -14,6 +14,7 @@ export interface AchievementNotification extends AchievementToastData {
   actorAvatarUrl?: string | null;
   achievementCode?: string | null;
   achievementIcon?: string | null;
+  achievementArtworkUrl?: string | null;
 }
 
 function broadcastAchievementNotification(notification: AchievementNotification) {
@@ -100,20 +101,28 @@ export async function loadAchievementNotifications(userId: string, limit = 24): 
   const actorIds = Array.from(new Set(eventRows
     .map(event => typeof event.metadata?.actor_user_id === 'string' ? event.metadata.actor_user_id : null)
     .filter((value): value is string => Boolean(value))));
-  const [{ data: achievements }, { data: actors }] = await Promise.all([
+  const achievementItemIds = Array.from(new Set(eventRows
+    .filter(event => event.event_type === 'achievement_unlocked' && event.item_id)
+    .map(event => event.item_id as string)));
+  const [{ data: achievements }, { data: actors }, { data: achievementItems }] = await Promise.all([
     achievementIds.length
       ? supabase.from('item_achievements').select('id,code,title,description,icon').in('id', achievementIds)
       : { data: [] },
     actorIds.length
       ? supabase.from('profiles').select('id,avatar_url').in('id', actorIds)
       : { data: [] },
+    achievementItemIds.length
+      ? supabase.from('catalog_items').select('id,cover_url,hero_url').in('id', achievementItemIds)
+      : { data: [] },
   ]);
   const achievementMap = new Map((achievements ?? [])
     .filter(item => isV1AchievementCode(item.code))
     .map(item => [item.id, item]));
   const actorAvatarMap = new Map((actors ?? []).map(actor => [actor.id, actor.avatar_url]));
+  const itemArtworkMap = new Map((achievementItems ?? []).map(item => [item.id, item.cover_url || item.hero_url || null]));
 
   const notifications: AchievementNotification[] = [];
+  const seenReplyKeys = new Set<string>();
 
   for (const event of eventRows) {
     if (event.event_type === 'achievement_unlocked') {
@@ -130,6 +139,7 @@ export async function loadAchievementNotifications(userId: string, limit = 24): 
         kind: 'achievement',
         achievementCode: achievement.code,
         achievementIcon: achievement.icon,
+        achievementArtworkUrl: itemArtworkMap.get(event.item_id ?? '') ?? null,
       });
       continue;
     }
@@ -137,17 +147,23 @@ export async function loadAchievementNotifications(userId: string, limit = 24): 
     if (event.event_type === 'reply_received') {
       const actorUserId = typeof event.metadata?.actor_user_id === 'string' ? event.metadata.actor_user_id : null;
       const actorName = typeof event.metadata?.actor_name === 'string' ? event.metadata.actor_name : 'Someone';
-      const postTitle = typeof event.metadata?.post_title === 'string' ? event.metadata.post_title : 'your post';
-      const replyBody = typeof event.metadata?.reply_body === 'string' ? event.metadata.reply_body : '';
       const postId = typeof event.metadata?.post_id === 'string' ? event.metadata.post_id : null;
       const postSlug = typeof event.metadata?.post_slug === 'string' ? event.metadata.post_slug : null;
       const replyId = typeof event.metadata?.reply_id === 'string' ? event.metadata.reply_id : null;
       const threadIdentifier = postSlug || postId;
+      const replyBody = typeof event.metadata?.reply_body === 'string' ? event.metadata.reply_body.trim().replace(/\s+/g, ' ') : '';
+      const replyKey = replyId
+        ? `reply:${replyId}`
+        : replyBody
+          ? `reply:${actorUserId ?? actorName}:${postId ?? threadIdentifier ?? ''}:${replyBody}`
+          : `reply-event:${event.id}`;
+      if (seenReplyKeys.has(replyKey)) continue;
+      seenReplyKeys.add(replyKey);
 
       notifications.push({
         id: event.id,
-        title: `${actorName} replied`,
-        description: replyBody || `New reply on ${postTitle}.`,
+        title: actorName,
+        description: 'replied to your post',
         createdAt: event.created_at,
         productId: null,
         href: threadIdentifier
@@ -163,14 +179,13 @@ export async function loadAchievementNotifications(userId: string, limit = 24): 
     if (event.event_type === 'like_received') {
       const actorUserId = typeof event.metadata?.actor_user_id === 'string' ? event.metadata.actor_user_id : null;
       const actorName = typeof event.metadata?.actor_name === 'string' ? event.metadata.actor_name : 'Someone';
-      const postTitle = typeof event.metadata?.post_title === 'string' ? event.metadata.post_title : 'your post';
       const postId = typeof event.metadata?.post_id === 'string' ? event.metadata.post_id : null;
       const postSlug = typeof event.metadata?.post_slug === 'string' ? event.metadata.post_slug : null;
 
       notifications.push({
         id: event.id,
-        title: `${actorName} liked your post`,
-        description: postTitle,
+        title: actorName,
+        description: 'liked your post',
         createdAt: event.created_at,
         productId: null,
         href: postSlug || postId ? `/community/thread/${postSlug || postId}` : '/notifications',
@@ -184,13 +199,12 @@ export async function loadAchievementNotifications(userId: string, limit = 24): 
     if (event.event_type === 'message_received') {
       const actorUserId = typeof event.metadata?.actor_user_id === 'string' ? event.metadata.actor_user_id : null;
       const actorName = typeof event.metadata?.actor_name === 'string' ? event.metadata.actor_name : 'Someone';
-      const messageBody = typeof event.metadata?.message_body === 'string' ? event.metadata.message_body : '';
       const conversationId = typeof event.metadata?.conversation_id === 'string' ? event.metadata.conversation_id : null;
 
       notifications.push({
         id: event.id,
-        title: `${actorName} sent you a message`,
-        description: messageBody || 'New message in your inbox.',
+        title: actorName,
+        description: 'sent you a message',
         createdAt: event.created_at,
         productId: null,
         href: conversationId ? `/inbox?conversation=${conversationId}` : '/inbox',
@@ -204,8 +218,6 @@ export async function loadAchievementNotifications(userId: string, limit = 24): 
     if (event.event_type === 'mention_received') {
       const actorUserId = typeof event.metadata?.actor_user_id === 'string' ? event.metadata.actor_user_id : null;
       const actorName = typeof event.metadata?.actor_name === 'string' ? event.metadata.actor_name : 'Someone';
-      const postTitle = typeof event.metadata?.post_title === 'string' ? event.metadata.post_title : 'a post';
-      const postBody = typeof event.metadata?.post_body === 'string' ? event.metadata.post_body : '';
       const postId = typeof event.metadata?.post_id === 'string' ? event.metadata.post_id : null;
       const postSlug = typeof event.metadata?.post_slug === 'string' ? event.metadata.post_slug : null;
       const replyId = typeof event.metadata?.reply_id === 'string' ? event.metadata.reply_id : null;
@@ -213,8 +225,8 @@ export async function loadAchievementNotifications(userId: string, limit = 24): 
 
       notifications.push({
         id: event.id,
-        title: `${actorName} mentioned you`,
-        description: postBody || `You were mentioned in ${postTitle}.`,
+        title: actorName,
+        description: replyId ? 'mentioned you in a reply' : 'mentioned you in a post',
         createdAt: event.created_at,
         productId: null,
         href: threadIdentifier

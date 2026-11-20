@@ -104,6 +104,8 @@ export default function CommunityThreadPage() {
   const [error, setError] = useState('');
   const [setupGateOpen, setSetupGateOpen] = useState(false);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
+  const replySubmissionInFlight = useRef(false);
+  const pendingReplySubmission = useRef<{ signature: string; id: string } | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -374,7 +376,7 @@ export default function CommunityThreadPage() {
 
   async function submitReply(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!thread || !user || !profile || !replyBody.trim() || submitting) return;
+    if (!thread || !user || !profile || !replyBody.trim() || submitting || replySubmissionInFlight.current) return;
     if (!canInteract) {
       setSetupGateOpen(true);
       return;
@@ -382,6 +384,11 @@ export default function CommunityThreadPage() {
 
     const body = replyBody.trim();
     const parentReplyId = replyingTo;
+    const signature = `${thread.id}/${parentReplyId ?? 'root'}/${body}`;
+    if (pendingReplySubmission.current?.signature !== signature) {
+      pendingReplySubmission.current = { signature, id: crypto.randomUUID() };
+    }
+    const idempotencyKey = pendingReplySubmission.current.id;
     const optimisticId = `optimistic-${crypto.randomUUID()}`;
     const optimisticReply: CommunityV11Reply = {
       id: optimisticId,
@@ -395,6 +402,7 @@ export default function CommunityThreadPage() {
       local_only: isLocalPost(thread),
     };
 
+    replySubmissionInFlight.current = true;
     setSubmitting(true);
     setError('');
     setReplies(current => [...current, optimisticReply]);
@@ -417,18 +425,21 @@ export default function CommunityThreadPage() {
     try {
       const created = isLocalPost(thread)
         ? createLocalCommunityReply({
+          idempotencyKey,
           postId: thread.id,
           author: profile,
           parentReplyId,
           body,
         })
         : await createDiscussionReply({
+          idempotencyKey,
           postId: thread.id,
           authorId: user.id,
           parentReplyId,
           body,
         });
       setReplies(current => current.map(reply => reply.id === optimisticId ? created : reply));
+      pendingReplySubmission.current = null;
       closeComposer();
       setHighlightedReplyId(created.id);
       window.setTimeout(() => {
@@ -440,6 +451,7 @@ export default function CommunityThreadPage() {
       setHighlightedReplyId(null);
       setError(`${insertError instanceof Error ? insertError.message : 'Could not create this reply.'} Your draft is still here—tap Reply to retry.`);
     } finally {
+      replySubmissionInFlight.current = false;
       setSubmitting(false);
     }
   }

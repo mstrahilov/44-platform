@@ -6,8 +6,6 @@ import { PageShell, HubSection, EmptyMessage } from '@/components/Ui';
 import { Ui44Panel } from '@/components/ui44/Spacing';
 import { useMusicPlayer, type MusicQueueTrack } from '@/components/MusicPlayer';
 import { useTopbarOverflow } from '@/components/TopbarContext';
-import { PlaylistPicker } from '@/components/PlaylistPicker';
-import { useAuth } from '@/lib/useAuth';
 import {
   getSyncedRadioPlayback,
   loadRadioBundle,
@@ -16,15 +14,12 @@ import {
   type RadioPlayableTrack,
 } from '@/lib/radio';
 import { radioRotationDayKey } from '@/lib/radioRotation';
-import { OS44Button } from '@/components/OS44Button';
 import { artworkBackdrop, DETAIL_ARTWORK_SIZES, PublicArtwork } from '@/components/PublicArtwork';
 
 const REFRESH_MS = 15000;
 
 export default function RadioPage() {
   const { playQueue, currentTrack, isPlaying, toggleRadioPlayback } = useMusicPlayer();
-  const { user } = useAuth();
-  const [playlistTrackId, setPlaylistTrackId] = useState<string | null>(null);
   const [bundle, setBundle] = useState<RadioBundle | null>(null);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(() => new Date());
@@ -75,19 +70,13 @@ export default function RadioPage() {
 
   const syncedTrack = playback.index >= 0 ? bundle?.tracks[playback.index] ?? null : null;
   const heroImage = syncedTrack?.coverUrl ?? null;
-  const heroStyle = heroImage ? { backgroundImage: artworkBackdrop(heroImage) } : undefined;
+  const ambientStyle = heroImage ? { backgroundImage: artworkBackdrop(heroImage, 400) } : undefined;
   const isCurrentSyncedTrack = currentTrack?.id === syncedTrack?.trackId;
   const isSyncedTrackLive = isCurrentSyncedTrack && isPlaying;
 
   useTopbarOverflow(useMemo(() => [
     { id: 'share', label: 'Share', onSelect: () => { void navigator.clipboard?.writeText(window.location.href); } },
-    ...(syncedTrack?.trackId ? [{
-      id: 'playlist',
-      label: 'Add to Playlist',
-      disabled: !user,
-      onSelect: () => setPlaylistTrackId(syncedTrack.trackId),
-    }] : []),
-  ], [syncedTrack, user]));
+  ], []));
 
   function handlePlayLive() {
     if (!queue.length || playback.index < 0) return;
@@ -104,91 +93,89 @@ export default function RadioPage() {
 
   return (
     <PageShell>
-      {playlistTrackId && user ? <PlaylistPicker userId={user.id} trackId={playlistTrackId} onClose={() => setPlaylistTrackId(null)} /> : null}
       <main className="radio-page">
-        {loading ? (
-          <div className="radio-loading-state" role="status" aria-live="polite">
-            <EmptyMessage status>Loading Radio…</EmptyMessage>
-          </div>
-        ) : bundle?.requiresSetup ? (
-          <HubSection title="Radio Setup">
-            <Ui44Panel overflow="visible" className="radio-setup-card">
-              <div className="radio-setup-copy">
-                <h2 className="os-type-panel-title">Radio needs its playlist table first.</h2>
-                <p className="os-type-body">
-                  Apply the reviewed Radio SQL to create the playlist and import existing uploaded tracks.
-                </p>
-                {bundle.status ? <p className="os-type-body-small">{bundle.status}</p> : null}
-              </div>
-              <div className="radio-setup-actions">
-                <OS44Button href="/studio/radio" className="os-button os-button-primary">Open Radio Studio</OS44Button>
-              </div>
-            </Ui44Panel>
-          </HubSection>
-        ) : (
-          <>
-            {bundle?.status ? (
-              <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error ui44-status-block" role="alert">
-                {bundle.status}
-              </div>
-            ) : null}
+        <div className="radio-artwork-background" aria-hidden="true">
+          {ambientStyle ? <div className="radio-artwork-background-image" style={ambientStyle} /> : null}
+          {ambientStyle ? <div className="radio-artwork-background-veil" /> : null}
+        </div>
+        <div className="radio-page-content">
+          {loading ? (
+            <div className="radio-loading-state" role="status" aria-live="polite">
+              <EmptyMessage status>Loading Radio…</EmptyMessage>
+            </div>
+          ) : bundle?.requiresSetup ? (
+            <HubSection title="Radio Setup">
+              <Ui44Panel overflow="visible" className="radio-setup-card">
+                <div className="radio-setup-copy">
+                  <h2 className="os-type-panel-title">Radio needs its playlist table first.</h2>
+                  <p className="os-type-body">
+                    Apply the reviewed Radio SQL to create the playlist and import existing uploaded tracks.
+                  </p>
+                  {bundle.status ? <p className="os-type-body-small">{bundle.status}</p> : null}
+                </div>
+                <div className="radio-setup-actions">
+                  <Link href="/studio/radio" className="os-button os-button-primary">Open Radio Studio</Link>
+                </div>
+              </Ui44Panel>
+            </HubSection>
+          ) : (
+            <>
+              {bundle?.status ? (
+                <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error ui44-status-block" role="alert">
+                  {bundle.status}
+                </div>
+              ) : null}
 
-            <section
-              className={heroImage ? 'view-album-header radio-hero' : 'view-album-header view-album-header-fallback radio-hero'}
-              style={heroStyle}
-              aria-label="Now Playing"
-            >
-              <div className="view-album-eyebrow radio-hero-kicker">Now Playing</div>
-              {syncedTrack ? (
-                <Link href={withRadioSource(syncedTrack.releaseHref)} className="view-album-cover radio-hero-cover" aria-label={`Open ${syncedTrack.releaseTitle}`}>
-                  {syncedTrack.coverUrl ? (
-                    <PublicArtwork src={syncedTrack.coverUrl} alt="" sizes={DETAIL_ARTWORK_SIZES} loading="eager" fetchPriority="high" />
-                  ) : null}
-                </Link>
-              ) : (
-                <div className="view-album-cover radio-hero-cover radio-hero-cover-empty" aria-hidden="true" />
-              )}
-
-              <div className="view-album-copy radio-hero-copy">
-                <div className="view-album-eyebrow radio-hero-eyebrow">Now Playing</div>
+              <section
+                className="radio-hero"
+                aria-label="Now Playing"
+              >
+                <div className="view-album-eyebrow radio-hero-eyebrow">NOW PLAYING</div>
                 {syncedTrack ? (
-                  <Link href={withRadioSource(syncedTrack.trackHref)} className="radio-now-title-link">
-                    <h1 className="view-album-title radio-hero-title">{syncedTrack.title}</h1>
+                  <Link href={withRadioSource(syncedTrack.releaseHref)} className="view-album-cover radio-hero-cover" aria-label={`Open ${syncedTrack.releaseTitle}`}>
+                    {syncedTrack.coverUrl ? (
+                      <PublicArtwork src={syncedTrack.coverUrl} alt="" sizes={DETAIL_ARTWORK_SIZES} loading="eager" fetchPriority="high" />
+                    ) : null}
                   </Link>
                 ) : (
-                  <h1 className="view-album-title radio-hero-title">No track in rotation</h1>
+                  <div className="view-album-cover radio-hero-cover radio-hero-cover-empty" aria-hidden="true" />
                 )}
 
-                {syncedTrack ? (
-                  <Link href={withRadioSource(radioArtistHref(syncedTrack))} className="library-creator-chip radio-hero-artist">
-                    {syncedTrack.artistName}
-                  </Link>
-                ) : null}
-
-                <div className="view-album-actions radio-hero-actions">
-                  <OS44Button
-                    type="button"
-                    className="os-button os-button-primary"
-                    onClick={handleRadioAction}
-                    disabled={!queue.length || playback.index < 0}
-                  >
-                    {isSyncedTrackLive ? 'Stop Radio' : 'Play Radio'}
-                  </OS44Button>
+                <div className="view-album-copy radio-hero-copy">
                   {syncedTrack ? (
-                    <OS44Button
-                      type="button"
-                      className="os-button radio-desktop-playlist-action"
-                      onClick={() => setPlaylistTrackId(syncedTrack.trackId)}
-                      disabled={!user}
-                    >
-                      Add to Playlist
-                    </OS44Button>
+                    <Link href={withRadioSource(syncedTrack.trackHref)} className="radio-now-title-link">
+                      <h1 className="view-album-title radio-hero-title">{syncedTrack.title}</h1>
+                    </Link>
+                  ) : (
+                    <h1 className="view-album-title radio-hero-title">No track in rotation</h1>
+                  )}
+
+                  {syncedTrack ? (
+                    <Link href={withRadioSource(radioArtistHref(syncedTrack))} className="library-creator-chip radio-hero-artist">
+                      {syncedTrack.artistName}
+                    </Link>
                   ) : null}
+
+                  <div className="radio-hero-actions">
+                    <button
+                      type="button"
+                      className="radio-playback-button"
+                      onClick={handleRadioAction}
+                      disabled={!queue.length || playback.index < 0}
+                      aria-label={isSyncedTrackLive ? 'Stop Radio' : 'Play Radio'}
+                    >
+                      {isSyncedTrackLive ? (
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1" fill="currentColor" /></svg>
+                      ) : (
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5-10-6.5Z" fill="currentColor" /></svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </section>
-          </>
-        )}
+              </section>
+            </>
+          )}
+        </div>
       </main>
     </PageShell>
   );

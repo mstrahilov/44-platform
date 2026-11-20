@@ -7,9 +7,9 @@ import { isOptimizablePublicArtwork } from '@/lib/publicArtwork';
 export const CATALOG_ARTWORK_SIZES = '(max-width: 768px) 48vw, (max-width: 1100px) 33vw, 320px';
 export const DETAIL_ARTWORK_SIZES = '(max-width: 768px) 70vw, 370px';
 
-export function artworkBackdrop(src: string) {
+export function artworkBackdrop(src: string, pixelSize = 128) {
   const image = isOptimizablePublicArtwork(src)
-    ? getImageProps({ src, alt: '', width: 128, height: 128 }).props.src
+    ? getImageProps({ src, alt: '', width: pixelSize, height: pixelSize }).props.src
     : src;
   return `url(${JSON.stringify(image)})`;
 }

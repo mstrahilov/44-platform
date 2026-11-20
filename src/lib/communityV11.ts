@@ -194,13 +194,16 @@ export function listLocalCommunityReplies(postId?: string) {
 }
 
 export function createLocalCommunityReply(input: {
+  idempotencyKey: string;
   postId: string;
   author: SocialAuthor;
   parentReplyId: string | null;
   body: string;
 }) {
+  const existing = listLocalCommunityReplies(input.postId).find(reply => reply.id === `local-reply-${input.idempotencyKey}`);
+  if (existing) return existing;
   const reply: CommunityV11Reply = {
-    id: `local-reply-${crypto.randomUUID()}`,
+    id: `local-reply-${input.idempotencyKey}`,
     post_id: input.postId,
     author_id: input.author.id,
     parent_reply_id: input.parentReplyId,

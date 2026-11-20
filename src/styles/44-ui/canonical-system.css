@@ -12406,3 +12406,70 @@ body:is(.theme-dark, .theme-light) .store-home-page .home-video-title {
 body:is(.theme-dark, .theme-light) .store-home-page .home-video-shelf::-webkit-scrollbar {
   display: none;
 }
+
+/* Achievement rows use the same art column and text alignment as social rows. */
+body:is(.theme-dark, .theme-light) .notification-page-row-achievement {
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  gap: 14px;
+}
+
+body:is(.theme-dark, .theme-light) .notification-art-achievement-release {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border-radius: 12px;
+  color: transparent;
+}
+
+body:is(.theme-dark, .theme-light) .notification-page-row-achievement .notification-art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+body:is(.theme-dark, .theme-light) .notification-page-title-line {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+body:is(.theme-dark, .theme-light) .notification-page-title-line .dashboard-row-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:is(.theme-dark, .theme-light) .notification-page-row .dashboard-row-subtitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:is(.theme-dark, .theme-light) .notification-page-title-line .notification-page-new-dot {
+  flex: 0 0 9px;
+}
+
+body:is(.theme-dark, .theme-light) .notification-page-chevron {
+  display: block;
+  width: 20px;
+  height: 28px;
+  font-size: 20px;
+  line-height: 28px;
+  text-align: center;
+  color: var(--os-color-ink-muted);
+}
+
+@media (max-width: 768px) {
+  body:is(.theme-dark, .theme-light) .notification-page-row-achievement {
+    grid-template-columns: 40px minmax(0, 1fr) 44px;
+  }
+
+  body:is(.theme-dark, .theme-light) .notification-art-achievement-release {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+  }
+}

@@ -541,13 +541,30 @@ export async function setReplyLike(replyId: string, userId: string, liked: boole
   if (result.error) throw result.error;
 }
 
-export async function createDiscussionReply(input: { postId: string; authorId: string; parentReplyId: string | null; body: string }) {
+export async function createDiscussionReply(input: { idempotencyKey: string; postId: string; authorId: string; parentReplyId: string | null; body: string }) {
   const result = await supabase
     .from('content_replies')
-    .insert({ entry_id: input.postId, author_id: input.authorId, parent_reply_id: input.parentReplyId, body: input.body, reply_type: 'comment' })
+    .insert({ id: input.idempotencyKey, entry_id: input.postId, author_id: input.authorId, parent_reply_id: input.parentReplyId, body: input.body, reply_type: 'comment' })
     .select('*, authors:profiles!author_id(id, slug, display_name, username, avatar_url)')
     .single();
-  if (result.error) throw result.error;
+  if (result.error) {
+    // A network failure may arrive after Postgres committed. Retrying with
+    // the same composer key should return that row, not submit a second reply.
+    const existing = await supabase
+      .from('content_replies')
+      .select('*, authors:profiles!author_id(id, slug, display_name, username, avatar_url)')
+      .eq('id', input.idempotencyKey)
+      .maybeSingle();
+    if (!existing.error && existing.data
+      && existing.data.entry_id === input.postId
+      && existing.data.author_id === input.authorId
+      && existing.data.parent_reply_id === input.parentReplyId
+      && existing.data.body === input.body) {
+      void requestPushDelivery();
+      return normalizeContentReply(existing.data as unknown as ContentReplyRow);
+    }
+    throw result.error;
+  }
   void requestPushDelivery();
   return normalizeContentReply(result.data as unknown as ContentReplyRow);
 }

@@ -14,7 +14,7 @@ export function MobileToolbar({
   trailing?: ReactNode;
 }) {
   return (
-    <div className="os-mobile-toolbar" aria-label={`${title} toolbar`}>
+    <div className="os-mobile-toolbar" aria-label={title ? `${title} toolbar` : 'Page toolbar'}>
       <div className="os-mobile-toolbar-slot os-mobile-toolbar-slot-leading">{leading}</div>
       <h1 className={`os-mobile-toolbar-title${hideTitle ? ' os-mobile-toolbar-title-hidden' : ''}`} aria-hidden={hideTitle || undefined}>{title}</h1>
       <div className="os-mobile-toolbar-slot os-mobile-toolbar-slot-trailing">{trailing}</div>

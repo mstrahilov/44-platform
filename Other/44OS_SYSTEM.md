@@ -56,6 +56,84 @@ Core product rules:
   states.
 - No private data, privileged credentials, or provider secrets in clients.
 
+## Cross-platform product contracts
+
+This document defines the stable product contract shared by 44OS clients.
+It describes what a concept means, the user-visible behavior it promises,
+important states and access rules, and any deliberate platform difference.
+It is not a source-code inventory or a pixel-by-pixel implementation guide.
+
+The web and Swift repositories keep their own native implementations. A
+shared contract does not require identical controls or rendering: web uses
+responsive browser navigation and web interaction patterns; iOS uses SwiftUI,
+native navigation, system accessibility, and platform materials such as Liquid
+Glass where appropriate. Preserve the same core task, data meaning, action
+result, and feedback while allowing each implementation to feel at home on its
+platform. Treat a visual or behavior difference as intentional only when it is
+recorded here or accepted in a dated decision in the active Plan.
+
+Document shared design language by semantic role rather than repeated raw
+values. Record token purpose and constraints for color, typography, spacing,
+shape, motion, and layering; link detailed inventories such as
+[`44OS iOS Typography.md`](44OS%20iOS%20Typography.md) rather than copying
+large source scans into this document. For a component contract, describe its
+anatomy, inputs/content, actions, states, accessibility requirements, and
+platform-specific presentation. Include loading, empty, signed-out, disabled,
+pending, success, failure, retry, and permission-denied states when relevant.
+
+Use these evidence labels in the active Plan and in dated audit notes:
+
+- **Source-confirmed** — a behavior or structure is present in a named local
+  source revision. This does not prove it works at runtime.
+- **User-accepted** — the product owner explicitly approved the observed
+  behavior or appearance. Record the date and scenario when known.
+- **Locally verified** — the behavior was exercised on a named local build,
+  device/simulator, viewport, account role, and data state.
+- **Deployed and identity-matched** — the deployed artifact was checked and its
+  source commit/build identity was matched. A production URL alone is not
+  sufficient evidence.
+
+Record repository-relative source paths and the relevant component or route,
+not long copied excerpts or brittle line-number catalogs. Recheck references
+when the owning component moves. Keep source findings, product decisions,
+local runtime checks, and deployment evidence distinct. Update this document
+only when a shared contract or accepted platform difference changes; keep
+open work and dated parity evidence in `44OS_PLAN.md`.
+
+The public design guidance informing this approach is linked from the active
+Plan. Apple recommends consistency alongside platform-native experiences;
+Spotify publicly describes shared design-system foundations with local
+systems; Google and USWDS publish guidance for documenting platform
+translation, tokens, components, and accessibility. These sources inform our
+documentation method and do not establish private processes at those
+organizations.
+
+### Shared product baseline terminology
+
+**Shared Product Baseline 1.1** is the product snapshot used to compare mobile
+web and iOS in the current alignment effort. It is a documentation label, not
+a marketing version, package version, build number, or deployment identifier.
+Do not alter repository version/build metadata to reflect this label.
+Document the iOS 1.2 catch-up release separately from the 1.1 baseline, and
+track later 1.2 product work only after the baseline delta and release gates
+are recorded in the active Plan.
+
+### Cross-platform component map
+
+The following are source entry points for the shared concepts, not a claim that
+the implementations are already in parity. The active Plan records evidence
+and open comparisons for each surface.
+
+| Product concept | Web implementation | Native iOS implementation | Contract focus and known difference |
+| --- | --- | --- | --- |
+| Toolbar and primary navigation | `src/components/Topbar.tsx`, `src/components/MobileToolbar.tsx` | `44OS/DesignSystem/OSAppHeader.swift`, `44OS/DesignSystem/OSDesignSystem.swift` | Same destinations and action intent; browser-responsive controls versus native navigation/materials. |
+| Artwork cards and item details | `src/components/PublicArtwork.tsx`, `src/app/store/item/[identifier]/page.tsx`, `src/components/LibraryItemDetail.tsx` | `44OS/Features/Home/HomeContent.swift`, `44OS/Features/Item/ItemDetailView.swift`, `44OS/Features/Library/LibraryItemDetailView.swift` | Same content hierarchy and item meaning; verify artwork sizing, metadata, actions, and ambient treatment per state. |
+| Track lists and playlists | `src/components/PlaylistTrackList.tsx`, `src/components/PlaylistApp.tsx`, `src/components/SavedTracksLibrary.tsx` | `44OS/Features/Library/LibraryExperienceViews.swift`, `44OS/Features/Item/ItemDetailView.swift` | Same track identity, artist navigation, row actions, and playlist editing outcome; native menus and web hover/focus affordances may differ. |
+| Community and profiles | `src/app/community/page.tsx`, `src/app/community/thread/[id]/page.tsx`, `src/app/profile/[username]/page.tsx` | `44OS/Features/Community/CommunityView.swift`, `44OS/Features/Profile/PublicProfileView.swift` | Same post, mention, follow/message, and profile-navigation intent; record permissions and mutation/error states. |
+| Notifications | `src/app/notifications/page.tsx` | `44OS/Features/Notifications/NotificationView.swift` | Same notification meaning, read state, destination, and achievement/community presentation; device alert delivery is platform-specific. |
+| Library | `src/components/LibraryApp.tsx`, `src/components/PlaylistApp.tsx` | `44OS/Features/Library/LibraryView.swift`, `44OS/Features/Library/LibraryExperienceViews.swift` | Same saved-item and playlist relationship and supported actions; responsive grid versus native layout can vary. |
+| Radio | `src/app/radio/page.tsx` | `44OS/Features/Radio/RadioView.swift` | Same synchronized station and now-playing meaning; toolbar, playback controls, and ambient materials use platform conventions. |
+
 ## Web and desktop platform
 
 The web app is Next.js App Router with React, strict TypeScript, and Supabase.

@@ -13,6 +13,7 @@ import {
   type AchievementNotification,
 } from '@/lib/achievementNotifications';
 import { notificationIsEnabled } from '@/lib/notificationPreferences';
+import { PublicArtwork } from '@/components/PublicArtwork';
 import {
   loadNotificationReadState,
   saveNotificationReadState,
@@ -207,9 +208,7 @@ export default function NotificationsPage() {
               {visibleNotifications.map(item => (
                 <article
                   key={item.id}
-                  className={`${item.href
-                    ? 'dashboard-list-row notification-page-row ui44-list-row ui44-list-row-notification ui44-list-row-interactive'
-                    : 'dashboard-list-row notification-page-row ui44-list-row ui44-list-row-notification'}${newIds.has(item.id) ? ' notification-page-row-new' : ''}`}
+                  className={`dashboard-list-row notification-page-row ui44-list-row ui44-list-row-notification${item.href ? ' ui44-list-row-interactive' : ''}${newIds.has(item.id) ? ' notification-page-row-new' : ''}${item.kind === 'achievement' ? ' notification-page-row-achievement' : ''}`}
                   role={item.href ? 'link' : undefined}
                   tabIndex={item.href ? 0 : undefined}
                   onClick={() => {
@@ -223,12 +222,15 @@ export default function NotificationsPage() {
                 >
                   <NotificationArt item={item} />
                   <div className="dashboard-row-copy">
-                    <div className="dashboard-row-title">{item.title}</div>
-                    {item.description && (
-                      <div className="dashboard-row-subtitle">{item.description}</div>
+                    <div className="notification-page-title-line">
+                      <div className="dashboard-row-title">{item.title}</div>
+                      {newIds.has(item.id) ? <span className="notification-page-new-dot" aria-label="New notification" /> : null}
+                    </div>
+                    {(item.kind === 'achievement' || item.description) && (
+                      <div className="dashboard-row-subtitle">{item.kind === 'achievement' ? 'Achievement Unlocked' : item.description}</div>
                     )}
                   </div>
-                  {newIds.has(item.id) ? <span className="notification-page-new-dot" aria-label="New notification" /> : null}
+                  {item.href ? <NotificationChevron /> : null}
                 </article>
               ))}
             </div>
@@ -242,14 +244,16 @@ export default function NotificationsPage() {
 }
 
 function NotificationArt({ item }: { item: AchievementNotification }) {
-  const image = item.kind === 'achievement' ? item.achievementIcon : item.actorAvatarUrl;
+  const image = item.kind === 'achievement' ? item.achievementArtworkUrl : item.actorAvatarUrl;
   const fallback = item.kind === 'achievement' ? '★' : item.title.charAt(0).toUpperCase();
 
   return (
     <div className={item.kind === 'achievement'
-      ? 'notification-art notification-art-achievement'
+      ? 'notification-art notification-art-achievement notification-art-achievement-release'
       : 'notification-art notification-art-user ui44-identity-avatar ui44-identity-avatar-inline'} aria-hidden="true">
-      {item.kind === 'achievement' ? (
+      {item.kind === 'achievement' && image ? (
+        <PublicArtwork src={image} alt="" sizes="56px" />
+      ) : item.kind === 'achievement' ? (
         <AchievementIconGlyph code={item.achievementCode} label={item.title} />
       ) : image ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -258,5 +262,11 @@ function NotificationArt({ item }: { item: AchievementNotification }) {
         <span>{fallback}</span>
       )}
     </div>
+  );
+}
+
+function NotificationChevron() {
+  return (
+    <span className="notification-page-chevron" aria-hidden="true">›</span>
   );
 }

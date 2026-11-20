@@ -45,6 +45,13 @@ const IconCalendar = () => (
   </svg>
 );
 
+const IconShare = () => (
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 15V3m0 0L7.5 7.5M12 3l4.5 4.5" />
+    <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
+  </svg>
+);
+
 const IconPlus = () => (
   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
     <path d="M12 5v14M5 12h14" />
@@ -419,7 +426,7 @@ export function Topbar() {
   const isSavedTracksPage = pathname === '/library/music/saved-tracks';
   const isPlaylistDetailPage = /^\/library\/playlists\/[^/]+$/.test(pathname) && !isNewPlaylist;
   const playlistTrackPickerHref = back?.href ?? '/library';
-  const mobileTopbarTitle = isPlaylistDetailPage || isSavedTracksPage ? '' : toolbarTitle ?? (isNewCommunityPost ? 'New Post' : isNewPlaylist ? 'New Playlist' : isPlaylistTrackPicker ? 'Add Track' : getMobileTopbarTitle(pathname));
+  const mobileTopbarTitle = isPlaylistDetailPage || isSavedTracksPage || pathname === '/radio' ? '' : toolbarTitle ?? (isNewCommunityPost ? 'New Post' : isNewPlaylist ? 'New Playlist' : isPlaylistTrackPicker ? 'Add Track' : getMobileTopbarTitle(pathname));
   const isCommunityRoot = pathname === '/community';
   const isCommunitySurface = pathname === '/community' || (pathname.startsWith('/community/') && pathname !== '/community/new');
   const isAccountRoot = pathname === '/you';
@@ -432,6 +439,8 @@ export function Topbar() {
   const isDiscoverSurface = pathname === '/' || (pathname.startsWith('/store') && !pathname.startsWith('/store/item/'));
   const isDetailRoute = mobileTopbarState.mode === 'back' || Boolean(back);
   const hasSectionTabs = Boolean(tabs?.some(tab => tab.variant === 'section'));
+  const activeDiscoverTab = tabs?.find(tab => tab.variant === 'section' && tab.active);
+  const showHomeCalendarAction = pathname === '/' && (!activeDiscoverTab || activeDiscoverTab.id === 'all');
 
   const mobileBackAction = isDetailRoute ? (
     <button
@@ -559,17 +568,17 @@ export function Topbar() {
         {unreadNotificationCount > 0 && <span className="os-topbar-notification-dot" aria-hidden="true" />}
       </span>
     </Link>
-  ) : isRadioRoot ? (
-    <Link href="/calendar" className="ui44-symbol-button" aria-label="Radio Schedule" title="Radio Schedule">
-      <IconCalendar />
-    </Link>
-  ) : isLibraryRoot ? (
+  ) : isRadioRoot ? null : isLibraryRoot ? (
     <button type="button" className="ui44-symbol-button" aria-label="Search Library" title="Search Library" onClick={openMobileSearch}>
       <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
     </button>
   ) : mobileSearchAction;
 
-  const mobileTrailingAction = registeredMobileTrailingAction ?? (isProfilePage && overflowActions?.length ? (
+  const mobileTrailingAction = registeredMobileTrailingAction ?? (isRadioRoot ? (
+    <button type="button" className="ui44-symbol-button" aria-label="Share Radio" title="Share Radio" onClick={() => overflowActions?.find(action => action.id === 'share')?.onSelect?.()}>
+      <IconShare />
+    </button>
+  ) : isProfilePage && overflowActions?.length ? (
     <button type="button" className="ui44-symbol-button" aria-label="Profile options" title="Profile options" aria-haspopup="menu" aria-expanded={overflowOpen} onClick={() => setOverflowOpen(open => !open)}>
       <IconMore />
     </button>
@@ -595,7 +604,7 @@ export function Topbar() {
     <button type="button" data-filter-popover-trigger="true" aria-pressed={communityFilterActive} className={`ui44-symbol-button ui44-symbol-button-filter page-filter-button${communityFilterActive ? ' ui44-symbol-button-active page-filter-button-active' : ''}`} aria-label="Filter Community" title="Filter Community" onClick={() => window.dispatchEvent(new CustomEvent('44:toggle-filter-popover', { detail: { label: 'Filter Community' } }))}>
       <span className="page-filter-icon" aria-hidden="true"><i /><i /><i /></span>
     </button>
-  ) : pathname === '/' ? (
+  ) : showHomeCalendarAction ? (
     <Link href="/calendar" className="ui44-symbol-button" aria-label="Calendar" title="Calendar">
       <IconCalendar />
     </Link>
@@ -617,10 +626,6 @@ export function Topbar() {
     </Link>
   ) : isLibraryRoot ? (
     <button type="button" data-filter-popover-trigger="true" aria-pressed={librarySortActive} className={`ui44-symbol-button${librarySortActive ? ' ui44-symbol-button-active' : ''}`} aria-label="Sort Library" title="Sort Library" onClick={() => window.dispatchEvent(new CustomEvent('44:toggle-filter-popover', { detail: { label: 'Sort Library' } }))}><IconSort /></button>
-  ) : isRadioRoot ? (
-    <button type="button" className="ui44-symbol-button" aria-label="More Radio actions" title="More Radio actions" aria-expanded={overflowOpen} onClick={() => setOverflowOpen(open => !open)}>
-      <IconMore />
-    </button>
   ) : isDetailRoute && overflowActions?.length ? (
     <button type="button" className="ui44-symbol-button" aria-label="More actions" title="More actions" aria-expanded={overflowOpen} onClick={() => setOverflowOpen(open => !open)}>
       <IconMore />
@@ -707,6 +712,7 @@ export function Topbar() {
         />
 
         <div className="os-topbar-right">
+        {isRadioRoot ? <button type="button" className="ui44-symbol-button os-topbar-icon-button" aria-label="Share Radio" title="Share Radio" onClick={() => overflowActions?.find(action => action.id === 'share')?.onSelect?.()}><IconShare /></button> : null}
         {isPlaylistTrackPicker && (
           <button type="button" className="ui44-symbol-button os-topbar-icon-button" aria-label="Done adding tracks" title="Done" onClick={() => router.push(playlistTrackPickerHref)}>
             <IconCheck />

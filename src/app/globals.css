@@ -14195,3 +14195,232 @@ body:is(.theme-dark, .theme-light) .social-shell.social-profile-page {
     margin-inline: auto;
   }
 }
+
+/* Radio detail composition mirrors RadioView.swift: full-content artwork
+   atmosphere, a centered 320pt cover, compact title/artist pair, and a round
+   64pt play control. Keep this scoped to Radio so release detail styling is
+   unaffected. */
+body:is(.theme-dark, .theme-light) .view-hub:has(.radio-page) {
+  position: relative;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+body:is(.theme-dark, .theme-light) .app-main-content:has(.radio-page) {
+  overflow: visible;
+}
+
+body:is(.theme-dark, .theme-light) .radio-page {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: var(--os-color-app-environment);
+  isolation: isolate;
+}
+
+body:is(.theme-dark, .theme-light) .radio-artwork-background {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  background: var(--os-color-app-environment);
+  pointer-events: none;
+}
+
+body:is(.theme-dark, .theme-light) .radio-artwork-background-image {
+  position: absolute;
+  inset: -15%;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  filter: saturate(1.18) blur(70px);
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+body:is(.theme-dark, .theme-light) .radio-artwork-background-veil {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.38);
+  pointer-events: none;
+}
+
+body.theme-light .radio-artwork-background-veil {
+  background: rgba(0, 0, 0, 0.16);
+}
+
+body:is(.theme-dark, .theme-light) .radio-page-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+body:is(.theme-dark, .theme-light) .radio-hero {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  width: min(100%, 640px);
+  min-width: 0;
+  min-height: 520px;
+  margin: 0 auto;
+  padding: 0;
+  overflow: visible;
+  border-radius: 0;
+  background: transparent;
+  color: #fff;
+  text-align: center;
+}
+
+body:is(.theme-dark, .theme-light) .radio-hero-eyebrow {
+  display: block;
+  margin: 0;
+  color: var(--os-color-ink-secondary);
+  font-family: var(--os-font-app);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 20px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body:is(.theme-dark, .theme-light) .radio-hero .radio-hero-cover,
+body:is(.theme-dark, .theme-light) .radio-hero .view-album-cover {
+  flex: 0 0 auto;
+  width: min(320px, calc(100vw - 40px));
+  height: auto;
+  aspect-ratio: 1;
+  border: 1px solid var(--os-color-hairline);
+  border-radius: 26px;
+  background: var(--os-glass-recessed-bg);
+  box-shadow: none;
+}
+
+body:is(.theme-dark, .theme-light) .radio-hero-copy {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0;
+  text-align: center;
+}
+
+body:is(.theme-dark, .theme-light) .radio-now-title-link {
+  display: block;
+  max-width: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+body:is(.theme-dark, .theme-light) .radio-hero-title {
+  max-width: min(100%, 600px);
+  margin: 0;
+  overflow: hidden;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 25px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body:is(.theme-dark, .theme-light) .radio-hero-artist {
+  display: inline-flex;
+  justify-content: center;
+  max-width: 100%;
+  margin: 0 auto;
+  color: var(--os-color-ink-secondary);
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 25px;
+  text-decoration: none;
+}
+
+body:is(.theme-dark, .theme-light) .radio-hero-actions {
+  display: flex;
+  justify-content: center;
+  margin: 8px 0 0;
+}
+
+body:is(.theme-dark, .theme-light) .radio-playback-button {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  min-width: 64px;
+  height: 64px;
+  min-height: 64px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 50%;
+  background: #fff;
+  color: #000;
+  cursor: pointer;
+  transition: transform 140ms ease, opacity 140ms ease;
+}
+
+body:is(.theme-dark, .theme-light) .radio-playback-button svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+
+body:is(.theme-dark, .theme-light) .radio-playback-button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  body:is(.theme-dark, .theme-light) .radio-playback-button:not(:disabled):hover {
+    transform: scale(1.04);
+  }
+}
+
+body:is(.theme-dark, .theme-light) .radio-playback-button:focus-visible {
+  outline: 2px solid var(--os-color-accent);
+  outline-offset: 4px;
+}
+
+@media (max-height: 650px) {
+  body:is(.theme-dark, .theme-light) .radio-hero {
+    min-height: 0;
+  }
+
+  body:is(.theme-dark, .theme-light) .radio-hero .radio-hero-cover,
+  body:is(.theme-dark, .theme-light) .radio-hero .view-album-cover {
+    width: min(320px, calc(100vw - 40px), 42dvh);
+  }
+}
+
+/* Let Radio's artwork-derived color field continue behind the unchanged
+   toolbar controls, like OSPlaybackAmbientBackground. */
+body:is(.theme-dark, .theme-light) .app-shell:has(.radio-page) .os-topbar {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
