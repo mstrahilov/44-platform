@@ -437,7 +437,7 @@ export function Topbar() {
   const isProfilePage = /^\/profile\/[^/]+$/.test(pathname);
   const isRadioRoot = pathname === '/radio';
   const isLibraryRoot = pathname === '/library' || (pathname.startsWith('/library/') && !pathname.startsWith('/library/item/') && !pathname.startsWith('/library/playlists/') && !pathname.startsWith('/library/music/') && pathname !== '/library/search' && pathname !== '/library/add-to-playlist');
-  const isDiscoverSurface = pathname === '/' || (pathname.startsWith('/store') && !pathname.startsWith('/store/item/'));
+  const isDiscoverSurface = pathname === '/' || pathname === '/videos' || (pathname.startsWith('/store') && !pathname.startsWith('/store/item/'));
   const isDetailRoute = mobileTopbarState.mode === 'back' || Boolean(back);
   const hasSectionTabs = Boolean(tabs?.some(tab => tab.variant === 'section'));
   const activeDiscoverTab = tabs?.find(tab => tab.variant === 'section' && tab.active);

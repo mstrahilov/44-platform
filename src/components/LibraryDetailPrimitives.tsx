@@ -8,7 +8,7 @@ import type { Product } from '@/lib/products';
 import { ExternalLinkActions } from '@/components/ExternalLinkActions';
 import type { ReleaseCreatorVideo } from '@/lib/domain/releaseFeatures';
 import { OS44Button } from '@/components/OS44Button';
-import { CreatorVideoTitle } from '@/components/CreatorVideoTitle';
+import { YouTubeInlinePlayer } from '@/components/YouTubeInlinePlayer';
 import { DETAIL_ARTWORK_SIZES, PublicArtwork } from '@/components/PublicArtwork';
 
 export type ProductDetailAction = {
@@ -316,13 +316,9 @@ export function LibraryVideosSection({ videos, title = 'Visuals' }: { videos: Re
       <SectionHeader title={title} />
       <div className="library-video-card-list">
         {videos.map(video => (
-          <Link className="library-video-card" key={video.id} href={`/videos/${video.id}`} aria-label={`Open video: ${video.title}`}>
-            <span className="library-video-card-artwork" aria-hidden="true">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`https://i.ytimg.com/vi/${video.youtube_video_id}/hqdefault.jpg`} alt="" loading="lazy" />
-            </span>
-            <CreatorVideoTitle className="library-video-card-title" videoId={video.youtube_video_id} storedTitle={video.title} />
-          </Link>
+          <div className="library-video-card" key={video.id}>
+            <YouTubeInlinePlayer videoId={video.youtube_video_id} />
+          </div>
         ))}
       </div>
     </div>

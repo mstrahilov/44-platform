@@ -17,14 +17,12 @@ import {
 import { listVisibleLibraryItemIds } from '@/lib/domain/library';
 import { itemMatchesStoreType } from '@/lib/storeTaxonomy';
 import { listFollowedProfileIds } from '@/lib/domain/community';
-import { listHomeVideoPreviews, type HomeVideoPreview } from '@/lib/domain/releaseFeatures';
 import { FilterPopover } from '@/components/FilterPopover';
 import { Ui44SectionArrow } from '@/components/ui44/Controls';
 import { Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
 import { beatReviewSurfacesEnabled } from '@/lib/domain/beats';
 import { SectionTab, SectionTabs } from '@/components/SectionTabs';
 import { PublicArtwork } from '@/components/PublicArtwork';
-import { CreatorVideoTitle } from '@/components/CreatorVideoTitle';
 
 const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
   music: 'music',
@@ -142,7 +140,6 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   const [ownedProductIds, setOwnedProductIds] = useState<Set<string>>(new Set());
   const [followedProfileIds, setFollowedProfileIds] = useState<Set<string>>(new Set());
   const [newCreators, setNewCreators] = useState<DiscoveryCreator[]>([]);
-  const [homeVideos, setHomeVideos] = useState<HomeVideoPreview[]>([]);
   const [featuredItemIds, setFeaturedItemIds] = useState<string[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [error, setError] = useState('');
@@ -195,9 +192,6 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     let alive = true;
     void listNewDiscoveryCreators(10)
       .then(creators => { if (alive) setNewCreators(creators); })
-      .catch(() => undefined);
-    void listHomeVideoPreviews(4)
-      .then(videos => { if (alive) setHomeVideos(videos); })
       .catch(() => undefined);
     return () => { alive = false; };
   }, [authLoading, frontDoor]);
@@ -564,7 +558,6 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
                     </div>
                   </HubSection>}
                   {browseMusicProducts.length > 0 && <HomeProductShelf title="Browse Music" products={browseMusicProducts} ownedProductIds={ownedProductIds} onBrowse={() => browseCategory('music')} singleLineTitles={frontDoor} />}
-                  {homeVideos.length > 0 && <HomeVideoShelf videos={homeVideos} />}
                   {bookShelf.length > 0 && <HomeProductShelf title="Browse Books" products={bookShelf} ownedProductIds={ownedProductIds} onBrowse={() => browseCategory('book')} singleLineTitles={frontDoor} />}
                   {assetShelf.length > 0 && <HomeProductShelf title="Browse Assets" products={assetShelf} ownedProductIds={ownedProductIds} onBrowse={() => browseCategory('asset')} singleLineTitles={frontDoor} />}
                   {gameShelf.length > 0 && <HomeProductShelf title="Browse Games" products={gameShelf} ownedProductIds={ownedProductIds} onBrowse={() => browseCategory('interactive')} singleLineTitles={frontDoor} />}
@@ -611,29 +604,6 @@ function DiscoverFeature({ product }: { product: Product }) {
       <span className="discover-feature-link">Explore release →</span>
     </span>
   </Link>;
-}
-
-function HomeVideoShelf({ videos }: { videos: HomeVideoPreview[] }) {
-  return <HubSection title="Browse Videos" action={<Ui44SectionArrow href="/videos" label="Browse all videos" />}>
-    <div className="home-video-shelf">
-      {videos.map(video => {
-        const creator = video.display_name || video.username || 'Creator';
-        return <Link key={video.id} href={`/videos/${video.id}`} className="home-video-card">
-          <Image
-            src={`https://i.ytimg.com/vi/${video.youtube_video_id}/hqdefault.jpg`}
-            alt=""
-            width={960}
-            height={540}
-            sizes="100vw"
-            unoptimized
-          />
-          <span className="home-video-title">
-            {creator} - <CreatorVideoTitle videoId={video.youtube_video_id} storedTitle={video.title} />
-          </span>
-        </Link>;
-      })}
-    </div>
-  </HubSection>;
 }
 
 function preferredCreatorContentTab(creatorId: string, products: Product[]) {

@@ -12616,48 +12616,6 @@ body:has(.social-profile-page[data-profile-background-ready="true"]) .app-shell 
   }
 }
 
-body:is(.theme-dark, .theme-light) .store-home-page .home-video-shelf {
-  display: flex;
-  min-width: 0;
-  gap: 12px;
-  overflow-x: auto;
-  overscroll-behavior-inline: contain;
-  scroll-snap-type: inline mandatory;
-  scrollbar-width: none;
-}
-
-body:is(.theme-dark, .theme-light) .store-home-page .home-video-card {
-  display: grid;
-  flex: 0 0 100%;
-  min-width: 0;
-  gap: 12px;
-  color: inherit;
-  text-decoration: none;
-  scroll-snap-align: start;
-  scroll-snap-stop: always;
-}
-
-body:is(.theme-dark, .theme-light) .store-home-page .home-video-card img {
-  display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-  border-radius: 18px;
-}
-
-body:is(.theme-dark, .theme-light) .store-home-page .home-video-title {
-  overflow: hidden;
-  color: var(--os-color-ink);
-  font: 600 15px/20px var(--os-font-app);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-body:is(.theme-dark, .theme-light) .store-home-page .home-video-shelf::-webkit-scrollbar {
-  display: none;
-}
-
 /* Achievement rows use the same art column and text alignment as social rows. */
 body:is(.theme-dark, .theme-light) .notification-page-row-achievement {
   grid-template-columns: 44px minmax(0, 1fr) 44px;

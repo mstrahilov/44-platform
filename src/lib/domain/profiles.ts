@@ -100,7 +100,7 @@ export async function getPublicProfileContent(profile: Profile) {
       .order('sort_order'),
     supabase
       .from('creator_videos' as never)
-      .select('id,creator_id,title,youtube_video_id,youtube_published_at,created_at')
+      .select('id,creator_id,title,youtube_video_id,youtube_published_at,youtube_metadata_checked_at,created_at')
       .eq('creator_id', profile.id)
       .order('youtube_published_at', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false }),

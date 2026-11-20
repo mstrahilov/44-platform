@@ -17,7 +17,7 @@ import {
   getCreatorVideo,
   isSupportedYouTubeVideoUrl,
   listVideoAttachedReleases,
-  lookupYouTubeVideoMetadata,
+  enrichCreatorVideoMetadata,
   saveCreatorVideo,
   updateCreatorVideo,
   type CreatorVideoPage,
@@ -56,7 +56,7 @@ export function StudioVideoEditor({
   videoId?: string;
   embedded?: boolean;
   initialReleaseId?: string;
-  onSaved?: (video: SavedCreatorVideo) => void;
+  onSaved?: (video: CreatorVideoPage) => void | Promise<void>;
   onClose?: () => void;
 }) {
   const router = useRouter();
@@ -73,7 +73,6 @@ export function StudioVideoEditor({
   const [accessReady, setAccessReady] = useState(false);
   const [loadingVideo, setLoadingVideo] = useState(editing);
   const [loadingAttachments, setLoadingAttachments] = useState(true);
-  const [lookingUp, setLookingUp] = useState(false);
   const [saving, setSaving] = useState(false);
   const [mutatingAttachment, setMutatingAttachment] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -90,12 +89,13 @@ export function StudioVideoEditor({
     try {
       let saved: SavedCreatorVideo;
       if (editing && videoId) {
-        saved = await updateCreatorVideo(videoId, title, videoUrl, publishedAt);
+        const sameURL = videoUrl.trim() === `https://www.youtube.com/watch?v=${video?.youtube_video_id}`;
+        saved = await updateCreatorVideo(videoId, sameURL ? (title || 'YouTube video') : 'YouTube video', videoUrl, sameURL ? publishedAt : null);
       } else if (video) {
-        saved = await updateCreatorVideo(video.id, title, videoUrl, publishedAt);
+        saved = await updateCreatorVideo(video.id, title || 'YouTube video', videoUrl, publishedAt);
         setVideo({ ...saved, creator_id: user.id });
       } else {
-        saved = await saveCreatorVideo(title, videoUrl, publishedAt);
+        saved = await saveCreatorVideo(title || 'YouTube video', videoUrl, publishedAt);
         setVideo({ ...saved, creator_id: user.id });
       }
       if (!editing && selectedReleaseId && !attachedReleases.some(release => release.id === selectedReleaseId)) {
@@ -111,10 +111,15 @@ export function StudioVideoEditor({
           }
         }
       }
+      const savedVideo: CreatorVideoPage = { ...saved, creator_id: user.id };
       if (onSaved) {
-        onSaved(saved);
+        await onSaved(savedVideo);
+        void enrichCreatorVideoMetadata(savedVideo).then(enriched => {
+          onSaved(enriched);
+        });
         return;
       }
+      void enrichCreatorVideoMetadata(savedVideo);
       router.push('/studio?studioStatus=video-saved');
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Could not save this video. Try again.');
@@ -178,29 +183,6 @@ export function StudioVideoEditor({
     return () => { alive = false; };
   }, [editing, initialReleaseId, user, videoId]);
 
-  useEffect(() => {
-    if (!isSupportedYouTubeVideoUrl(videoUrl)) return;
-    if (editing && video && videoUrl === `https://www.youtube.com/watch?v=${video.youtube_video_id}` && publishedAt) return;
-
-    let alive = true;
-    const timeout = window.setTimeout(() => {
-      setLookingUp(true);
-      void lookupYouTubeVideoMetadata(videoUrl).then(metadata => {
-        if (!alive) return;
-        setPublishedAt(metadata?.published_at ?? null);
-        if (metadata?.title?.trim()) setTitle(metadata.title.trim());
-      }).catch(() => {
-        if (alive) setPublishedAt(null);
-      }).finally(() => {
-        if (alive) setLookingUp(false);
-      });
-    }, 500);
-    return () => {
-      alive = false;
-      window.clearTimeout(timeout);
-    };
-  }, [editing, publishedAt, video, videoUrl]);
-
   async function attachRelease() {
     if (!video || !selectedReleaseId || mutatingAttachment) return;
     const release = creatorReleases.find(row => row.id === selectedReleaseId);
@@ -257,19 +239,20 @@ export function StudioVideoEditor({
   if (!user) return embedded ? <div className="studio-video-editor-embedded"><EmptyMessage>Log in to manage videos.</EmptyMessage></div> : <PageShell><div className="dashboard-page"><HubHero title={pageTitle} /><EmptyMessage>Log in to manage videos.</EmptyMessage><OS44Button href="/login" className="os-button os-button-primary">Log In</OS44Button></div></PageShell>;
   if (error && !accessReady) return embedded ? <div className="studio-video-editor-embedded"><div className="dashboard-status dashboard-status-error" role="alert">{error}</div></div> : <PageShell><div className="dashboard-page"><HubHero title={pageTitle} /><EmptyMessage>{error}</EmptyMessage><OS44Button href="/studio" className="os-button os-button-secondary">Back to Studio</OS44Button></div></PageShell>;
 
-  const form = <form id={formId} className="dashboard-form studio-video-editor-form" onSubmit={event => void submit(event)}>
+  const form = <form id={formId} className="dashboard-form studio-video-editor-form" onSubmit={event => {
+    // The embedded editor sits inside the release editor's form. Keep its
+    // submit event from also saving the parent release and navigating away.
+    if (embedded) event.stopPropagation();
+    void submit(event);
+  }}>
         {error ? <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div> : null}
 
         <section className="dashboard-form-section">
           <SectionHeader title="Details" />
           <div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible">
             <label className="dashboard-field">
-              <span className="dashboard-field-label">Title</span>
-              <Ui44TextInput className="os-input-field" value={title} onChange={event => setTitle(event.target.value)} maxLength={120} placeholder="Video title" aria-label="Video title" />
-            </label>
-            <label className="dashboard-field">
               <span className="dashboard-field-label">YouTube Video URL</span>
-              <Ui44TextInput className="os-input-field" type="url" value={videoUrl} onChange={event => { setVideoUrl(event.target.value); setPublishedAt(null); setLookingUp(false); }} placeholder="Enter YouTube video URL" autoCapitalize="none" autoCorrect="off" inputMode="url" aria-label="YouTube Video URL" />
+              <Ui44TextInput className="os-input-field" type="url" value={videoUrl} onChange={event => { setVideoUrl(event.target.value); setPublishedAt(null); setTitle('YouTube video'); }} placeholder="Enter YouTube video URL" autoCapitalize="none" autoCorrect="off" inputMode="url" aria-label="YouTube Video URL" />
               {videoUrl && !validUrl ? <span className="dashboard-form-note">Use an HTTPS YouTube link to a video.</span> : null}
             </label>
           </div>
@@ -314,12 +297,12 @@ export function StudioVideoEditor({
               <OS44Button className="os-button os-button-destructive" type="button" disabled={deleting || saving} onClick={() => void removeVideo()}>{deleting ? 'Deleting…' : 'Delete Video'}</OS44Button>
             </div>
           </section>
-        </> : <section className="dashboard-form-section">
-          <SectionHeader title="Related Releases" />
+        </> : embedded && !initialReleaseId ? null : <section className="dashboard-form-section">
+          <SectionHeader title="Related Release" />
           <div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible studio-video-attachments">
             {loadingAttachments ? <div className="dashboard-empty ui44-state ui44-state-loading" role="status">Loading releases…</div> : creatorReleases.length === 0 ? <p className="dashboard-form-note">You have no releases to attach.</p> : <label className="dashboard-field">
               <span className="dashboard-field-label">Attach to a Release (Optional)</span>
-              <Ui44SelectInput value={selectedReleaseId} onChange={event => setSelectedReleaseId(event.target.value)}>
+              <Ui44SelectInput value={selectedReleaseId} disabled={Boolean(embedded && initialReleaseId)} onChange={event => setSelectedReleaseId(event.target.value)}>
                 <option value="">Select a release</option>
                 {creatorReleases.map(release => <option key={release.id} value={release.id}>{release.title}</option>)}
               </Ui44SelectInput>
@@ -332,7 +315,7 @@ export function StudioVideoEditor({
   if (embedded) return <div className="studio-video-editor-embedded">
     <header className="studio-video-drawer-header">
       <button type="button" className="studio-video-drawer-close" aria-label="Close Add Video" onClick={onClose}><CloseDrawerIcon /></button>
-      <h2>Add Video</h2>
+      <h2>New Video</h2>
       <button type="submit" form={formId} className="studio-video-drawer-save" aria-label={saving ? 'Saving video' : 'Save video'} title={saving ? 'Saving…' : 'Save video'} disabled={!accessReady || !isSupportedYouTubeVideoUrl(videoUrl) || saving}><CheckIcon /></button>
     </header>
     {form}

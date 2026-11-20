@@ -17,7 +17,12 @@ import { listCreatorEvents, type CreatorEvent } from '@/lib/domain/events';
 import { listCreatorUpdates, type CreatorUpdate } from '@/lib/domain/itemCommunity';
 import { useTopbarOverflow } from '@/components/TopbarContext';
 import { OS44Button } from '@/components/OS44Button';
-import { listCreatorVideos, type CreatorVideoPage } from '@/lib/domain/releaseFeatures';
+import {
+  creatorVideoMetadataUpdatedEvent,
+  enrichCreatorVideoRows,
+  listCreatorVideos,
+  type CreatorVideoPage,
+} from '@/lib/domain/releaseFeatures';
 
 type LibraryMetricRow = StudioLibraryMetric;
 type StudioRowIconName = 'calendar' | 'play' | 'music' | 'book' | 'game' | 'waveform';
@@ -107,11 +112,31 @@ export default function StudioPage() {
           ? result.reason instanceof Error ? result.reason.message : errorMessages[index]
           : '').filter(Boolean).join(' '),
       });
+      if (videos.status === 'fulfilled') {
+        void enrichCreatorVideoRows(videos.value).then(enriched => {
+          if (active) setOverview(current => ({ ...current, videos: enriched }));
+        });
+      }
     }
 
     void fetchOverview(userId);
     return () => { active = false; };
   }, [userId]);
+
+  useEffect(() => {
+    function handleVideoMetadata(event: Event) {
+      const video = (event as CustomEvent<CreatorVideoPage>).detail;
+      if (!video) return;
+      setOverview(current => ({
+        ...current,
+        videos: current.videos.some(row => row.id === video.id)
+          ? current.videos.map(row => row.id === video.id ? video : row)
+          : [video, ...current.videos],
+      }));
+    }
+    window.addEventListener(creatorVideoMetadataUpdatedEvent, handleVideoMetadata);
+    return () => window.removeEventListener(creatorVideoMetadataUpdatedEvent, handleVideoMetadata);
+  }, []);
 
   if (loading) {
     return <PageShell><main className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>;

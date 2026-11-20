@@ -11,6 +11,7 @@ import { PageShell, CenteredMessage } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
 import { SocialArtifactCard, SocialAvatar, SocialPostRow } from '@/components/Social';
 import { CreatorVideoTitle } from '@/components/CreatorVideoTitle';
+import { YouTubeInlinePlayer } from '@/components/YouTubeInlinePlayer';
 import { isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { useTopbarBack, useTopbarOverflow, useTopbarOverlay, useTopbarTitle } from '@/components/TopbarContext';
 import { authorHandle, countById, likersByPost, repliersByPost, type CountMap, type LikeRow, type LikersMap, type SocialPost } from '@/lib/social';
@@ -616,14 +617,10 @@ function PublicProfileContent({ username }: { username: string }) {
 
         {tab === 'videos' && (
           <ArtifactGrid empty="No videos published yet." ariaLabel="Videos">
-            {videos.map(video => <SocialArtifactCard
-              key={video.id}
-              href={`/videos/${video.id}`}
-              title={<CreatorVideoTitle videoId={video.youtube_video_id} storedTitle={video.title} />}
-              image={`https://i.ytimg.com/vi/${video.youtube_video_id}/hqdefault.jpg`}
-              shape="landscape"
-              singleLineTitle
-            />)}
+            {videos.map(video => <article className="video-inline-card" key={video.id}>
+              <YouTubeInlinePlayer videoId={video.youtube_video_id} />
+              <div className="video-inline-card-copy"><CreatorVideoTitle videoId={video.youtube_video_id} storedTitle={video.title} /></div>
+            </article>)}
           </ArtifactGrid>
         )}
 

@@ -636,13 +636,12 @@ function NewProductContent() {
               {isMusicProduct ? (
                 <div className="dashboard-form-grid dashboard-form-grid-3 release-core-grid ui44-form-grid">
                   <label className="dashboard-field">
-                    <div className="dashboard-field-label">{isMusicProduct ? 'Release Type' : 'Item Type'}</div>
+                    <div className="dashboard-field-label">Item Type</div>
                     <Ui44SelectInput required value={storeTypeId} onChange={event => {
                       setStoreTypeId(event.target.value);
                       setProductType(taxonomyTypes.find(type => type.id === event.target.value)?.label ?? '');
-                      setSelectedTagIds([]);
                     }}>
-                      <option value="">{isMusicProduct ? 'Select release type' : 'Select item type'}</option>
+                      <option value="">Select item type</option>
                       {taxonomyTypes.filter(type => type.category_id === categoryId && NEW_MUSIC_ITEM_TYPE_SLUGS.has(type.slug)).map(type => <option key={type.id} value={type.id}>{type.label}</option>)}
                     </Ui44SelectInput>
                   </label>
@@ -699,8 +698,8 @@ function NewProductContent() {
                 <Ui44Textarea className="os-input-field dashboard-textarea" value={description} onChange={event => setDescription(event.target.value)} placeholder="Enter description" />
               </label> : null}
 
-              {section.id !== 'assets' && !isBookProduct && !isGameProduct ? <div className="dashboard-field">
-                <div className="dashboard-field-label">{isMusicProduct ? 'Release Tags' : 'Item Tags'}</div>
+              {section.id !== 'assets' && !isBookProduct && !isGameProduct && !isMusicProduct ? <div className="dashboard-field">
+                <div className="dashboard-field-label">Item Tags</div>
                 <TagMultiSelect options={taxonomyTags.filter(tag => tag.category_id === categoryId && (!tag.item_type_id || tag.item_type_id === storeTypeId))} value={selectedTagIds} onChange={setSelectedTagIds} />
                 {!isMusicProduct ? <span className="dashboard-form-note">Optional. Select any approved genre, style, or format tags that apply.</span> : null}
               </div> : null}
@@ -958,7 +957,7 @@ function NewProductContent() {
 
             {isMusicProduct ? (
               <section className="dashboard-form-section">
-                <SectionHeader title="External Links" description="Add the release’s listening destinations." showDescription alignActionWithTitle action={(
+                <SectionHeader title="External Links" description="Link to this release on other platforms." showDescription alignActionWithTitle action={(
                   <button type="button" role="switch" aria-checked={externalLinksEnabled} className={externalLinksEnabled ? 'settings-toggle settings-toggle-on ui44-switch ui44-switch-on' : 'settings-toggle ui44-switch'} onClick={() => setExternalLinksEnabled(enabled => !enabled)} />
                 )} />
                 {externalLinksEnabled && <div className="dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-visible studio-feature-panel"><ExternalLinksEditor links={externalLinks} platforms={externalLinkPlatforms} onChange={setExternalLinks} /></div>}
@@ -970,7 +969,7 @@ function NewProductContent() {
                   <StudioVisualsEditor enabled={featureState.videoEmbedsEnabled} onEnabledChange={videoEmbedsEnabled => setFeatureState(current => ({ ...current, videoEmbedsEnabled }))} releaseId="" videos={attachedVideos} onVideosChange={setAttachedVideos} />
 
                 <section className="dashboard-form-section studio-component-section">
-                  <SectionHeader title="Achievements" description="Choose achievements for this release." showDescription alignActionWithTitle action={(
+                  <SectionHeader title="Achievements" description="Enable achievements for this release." showDescription alignActionWithTitle action={(
                     <button type="button" role="switch" aria-label="Enable achievements" aria-checked={featureState.achievementsEnabled} className={featureState.achievementsEnabled ? 'settings-toggle settings-toggle-on ui44-switch ui44-switch-on' : 'settings-toggle ui44-switch'} onClick={() => setFeatureState(current => ({
                       ...current,
                       achievementsEnabled: !current.achievementsEnabled,
@@ -999,7 +998,7 @@ function NewProductContent() {
 
             {isMusicProduct || isBookProduct ? (
               <section className="dashboard-form-section">
-                <SectionHeader title="Paid Download" description={isBookProduct ? 'Set pricing for the downloadable PDF.' : 'Set prices for downloadable files.'} showDescription alignActionWithTitle action={(
+                <SectionHeader title="Paid Download" description={isBookProduct ? 'Set pricing for the downloadable PDF.' : 'Let listeners pay to download.'} showDescription alignActionWithTitle action={(
                   <button type="button" role="switch" aria-label="Enable paid download" aria-checked={availability === 'paid'} disabled={creatorCommerceUnavailable} className={availability === 'paid' ? 'settings-toggle settings-toggle-on ui44-switch ui44-switch-on' : 'settings-toggle ui44-switch'} onClick={() => setAvailability(value => value === 'paid' ? 'free' : 'paid')} />
                 )} />
                 {availability === 'paid' ? (

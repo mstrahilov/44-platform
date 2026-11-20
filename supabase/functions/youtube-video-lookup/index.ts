@@ -14,6 +14,19 @@
 
 const YOUTUBE_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+function jsonResponse(body: Record<string, unknown>, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 function parseYouTubeVideoID(rawURL: string): string | null {
   let url: URL;
   try {
@@ -46,13 +59,16 @@ function parseYouTubeVideoID(rawURL: string): string | null {
 }
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405 });
+    return jsonResponse({ error: "Method not allowed" }, 405);
   }
   // Any signed-in member may look up a video's date — this is a read-only
   // metadata fetch, not scoped to a particular creator or release.
   if (!req.headers.get("Authorization")) {
-    return new Response(JSON.stringify({ error: "Sign in required." }), { status: 401 });
+    return jsonResponse({ error: "Sign in required." }, 401);
   }
 
   let url = "";
@@ -60,41 +76,38 @@ Deno.serve(async (req) => {
     const body = await req.json();
     url = typeof body.url === "string" ? body.url : "";
   } catch {
-    return new Response(JSON.stringify({ error: "Invalid request body." }), { status: 400 });
+    return jsonResponse({ error: "Invalid request body." }, 400);
   }
 
   const videoID = parseYouTubeVideoID(url);
   if (!videoID) {
-    return new Response(JSON.stringify({ published_at: null, title: null }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonResponse({ published_at: null, title: null }, 400);
   }
 
   const apiKey = Deno.env.get("YOUTUBE_API_KEY");
   if (!apiKey) {
-    return new Response(JSON.stringify({ published_at: null, title: null }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    console.error("YouTube Data API lookup unavailable: YOUTUBE_API_KEY is not configured.");
+    return jsonResponse({ published_at: null, title: null, lookup_error: "YOUTUBE_API_KEY is not configured." }, 503);
   }
 
   try {
     const response = await fetch(
       `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${encodeURIComponent(videoID)}&key=${apiKey}`,
     );
-    const body = response.ok ? await response.json() : null;
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      const reason = body?.error?.errors?.[0]?.reason ?? body?.error?.message ?? `HTTP ${response.status}`;
+      console.error("YouTube Data API lookup failed:", response.status, reason);
+      return jsonResponse({ published_at: null, title: null, lookup_error: String(reason) }, 502);
+    }
+    const body = await response.json();
     const snippet = body?.items?.[0]?.snippet ?? null;
     const publishedAt = snippet?.publishedAt ?? null;
     const title = typeof snippet?.title === "string" ? snippet.title : null;
-    return new Response(JSON.stringify({ published_at: publishedAt, title }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  } catch {
-    return new Response(JSON.stringify({ published_at: null, title: null }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return jsonResponse({ published_at: publishedAt, title });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown network error";
+    console.error("YouTube Data API lookup threw:", message);
+    return jsonResponse({ published_at: null, title: null, lookup_error: message }, 502);
   }
 });

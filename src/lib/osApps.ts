@@ -415,6 +415,7 @@ const MOBILE_STORE_SEARCH_ROUTES = new Set([
   '/store/beats',
   '/store/sample-packs',
   '/store/merch',
+  '/videos',
 ]);
 
 export function getMobileTopbarState(pathname: string): MobileTopbarState {
