@@ -5,9 +5,11 @@ UI language, repository ownership, and release rules. It is written for new
 developers and agents. It records how the system works now, not the history of
 how it was built.
 
-The active work list is [`44OS_PLAN.md`](44OS_PLAN.md). Do not create another
-foundation, UI, transition, audit, proposal, or roadmap document. Put stable
-behavior here and current work in the Plan.
+The active operating plan is [`44OS_PLAN.md`](44OS_PLAN.md). It holds the
+current release stage, engineering workflow, milestones, and evidence. Do not
+create another foundation, UI, transition, audit, proposal, roadmap, or
+operating-plan document. Put durable shared product and architecture contracts
+here, and current work in the Plan.
 
 ## Repository model
 
@@ -108,15 +110,26 @@ translation, tokens, components, and accessibility. These sources inform our
 documentation method and do not establish private processes at those
 organizations.
 
-### Shared product baseline terminology
+### Product version and baseline terminology
 
-**Shared Product Baseline 1.1** is the product snapshot used to compare mobile
-web and iOS in the current alignment effort. It is a documentation label, not
-a marketing version, package version, build number, or deployment identifier.
-Do not alter repository version/build metadata to reflect this label.
-Document the iOS 1.2 catch-up release separately from the 1.1 baseline, and
-track later 1.2 product work only after the baseline delta and release gates
-are recorded in the active Plan.
+The **product version** is the human-facing release identity shared by the
+web release notes and native app releases. It is distinct from a Git commit,
+an uploaded build number, an internal package version, and a deployment ID.
+Use the active Plan to record which product version is live, which is being
+prepared, and the evidence for each platform.
+
+For an aligned cross-platform release, the iOS/Xcode marketing version and
+App Store Connect version must identify the same product release. The build
+number identifies a particular native artifact within Apple’s versioning
+rules; it must not be presented as the product version. A private package
+manifest may retain an internal version only when it is clearly identified as
+such and is not exposed as a separate customer-facing product version.
+
+Keep the public release history tied to customer-visible product releases.
+Do not label unreleased work as shipped, or silently change the product
+version represented by already-published notes. Current version state and
+release-specific evidence belong in the active Plan, not in this durable
+policy section.
 
 ### Cross-platform component map
 
@@ -132,7 +145,7 @@ and open comparisons for each surface.
 | Community and profiles | `src/app/community/page.tsx`, `src/app/community/thread/[id]/page.tsx`, `src/app/profile/[username]/page.tsx` | `44OS/Features/Community/CommunityView.swift`, `44OS/Features/Profile/PublicProfileView.swift` | Same post, mention, follow/message, and profile-navigation intent; record permissions and mutation/error states. |
 | Notifications | `src/app/notifications/page.tsx` | `44OS/Features/Notifications/NotificationView.swift` | Same notification meaning, read state, destination, and achievement/community presentation; device alert delivery is platform-specific. |
 | Library | `src/components/LibraryApp.tsx`, `src/components/PlaylistApp.tsx` | `44OS/Features/Library/LibraryView.swift`, `44OS/Features/Library/LibraryExperienceViews.swift` | Same saved-item and playlist relationship and supported actions; responsive grid versus native layout can vary. |
-| Radio | `src/app/radio/page.tsx` | `44OS/Features/Radio/RadioView.swift` | Same synchronized station and now-playing meaning; toolbar, playback controls, and ambient materials use platform conventions. |
+| Radio | `src/app/radio/page.tsx`, `src/components/Topbar.tsx` | `44OS/Features/Radio/RadioView.swift` | Same synchronized station and now-playing meaning. Both toolbars place Add to Playlist on the left and Share on the right; native button/share presentation may differ. |
 
 ## Web and desktop platform
 
@@ -160,16 +173,24 @@ another application visual system.
 
 The visual system uses the system font stack, 4px spacing increments, shared
 tokens, stable artwork ratios, visible focus, accessible names, practical
-44px touch targets, and theme-aware contrast. Mobile retains safe-area and
-edge-to-edge behavior. Desktop shell edges belong to the viewport or native
-window rather than an extra nested frame.
+44px touch targets, and theme-aware contrast. Discover catalog cards use two
+artwork shapes across web and iOS: square by default, and a shared 3:4 portrait
+shape for Books and Merch. Do not give Books a separate taller shape. Mobile
+retains safe-area and edge-to-edge behavior. The Discover Merch shelf orders
+items by explicit merch sort order, apparel/accessory priority, then the shared
+release-date, creator-name, and stable tie-break rules. Desktop shell edges
+belong to the viewport or native window rather than an extra nested frame.
+The mobile Discover rail order is Featured, Music, Videos, Books, Assets,
+Games, Merch. Assets groups beats and sample packs. The Browse Merch shelf's
+arrow opens the Merch tab, which lists all available merch.
 
 ### Verified responsive behavior
 
 The browser app keeps one route and data model across mobile and desktop. At
 phone width, the primary navigation is a five-destination bottom dock:
 Home, Community, Radio, Library, and Account. Search and Notifications remain
-available from the app toolbar; Community provides a Calendar entry, and
+available from the app toolbar; Discover provides Search on the left and
+Calendar on the right, while Community no longer owns the Calendar entry.
 Support is reachable from Account. At desktop width, navigation moves to a
 left sidebar, content uses the wider center column, and contextual panels may
 occupy a right rail. The Community feed uses that rail for New Members. These
@@ -225,11 +246,13 @@ content, owner writes, commerce, Team, Studio, and advanced media behavior
 remain subject to the gates in `44OS_PLAN.md`.
 
 The current iPhone navigation has Home, Community, Radio, Library, and Account
-as its five primary destinations. Calendar opens from Community. Search scopes
-include All Results, Items, Members, Posts, and Help. The Community composer
-offers Update, Question, Showcase, and Collaboration; an untagged post is the
-General case, and Assistance is retained for old posts without being offered
-as a new tag. Settings offers account deletion behind a confirmation step.
+as its five primary destinations. Discover keeps Search on the left and opens
+Calendar from the right side of its toolbar; Community does not own that
+Calendar entry. Search scopes include All Results, Items, Members, Posts, and
+Help. The Community composer offers Update, Question, Showcase, and
+Collaboration; an untagged post is the General case, and Assistance is retained
+for old posts without being offered as a new tag. Settings offers account
+deletion behind a confirmation step.
 These native controls preserve the product semantics while using native
 presentation.
 
@@ -272,7 +295,7 @@ The Plan tracks incomplete actions and the pending browser comparisons.
 | Item detail | Public music and sample previews use the shared player. Item and track sharing, Library relationship actions, creator/related-content navigation and Community mentions are distinct actions. Beat licenses have information and free-claim or paid-cart paths; free claims do not require the external-checkout storefront gate. | `Features/Item/ItemDetailView.swift:88`, `:455`, `:737` |
 | Library relationships | Removing a free saved relationship differs from hiding an acquired entry; hiding does not revoke purchase history or entitlement. Public preview playback and protected authorization are separate. Books resolve an authorized reading URL or an available preview before opening the native reader. | `Features/Library/LibraryItemDetailView.swift:187`, `:225`; `LibraryRepository.swift` |
 | Playlists | Owner-scoped create, rename, delete, track selection/removal/reorder and artwork upload are implemented. Create initially asks for a title; artwork belongs to later editing. Normal track rows play valid public audio. Editing is not a single transaction: artwork and track additions can persist before Done; Done saves ordered tracks and title separately. | `Features/Library/LibraryView.swift`; `PlaylistDetailView.swift`; `LibraryRepository.swift:563` |
-| Radio and player | Radio's displayed synchronized track supplies Add to Playlist even while playback is stopped. Radio is one synchronized stream: seeking, queue navigation and shuffle are not its controls. On-demand tracks use the shared queue, seek, skip, shuffle and retry controls. Playback accepts public HTTPS sources in the current implementation. | `Features/Radio/RadioView.swift:80`; `Playback/PlayerStore.swift:534`; `Playback/PlaybackPresentationView.swift:255` |
+| Radio and player | Radio's displayed synchronized track supplies Add to Playlist even while playback is stopped. The toolbar has an icon-only Add to Playlist control at left and a standalone Share control at right. Disable Add to Playlist while signed out or when no synchronized track is available. Radio is one synchronized stream: seeking, queue navigation and shuffle are not its controls. On-demand tracks use the shared queue, seek, skip, shuffle and retry controls. Playback accepts public HTTPS sources in the current implementation. | `Features/Radio/RadioView.swift`; `src/app/radio/page.tsx`; `src/components/Topbar.tsx`; `Playback/PlayerStore.swift:534`; `Playback/PlaybackPresentationView.swift:255` |
 | Community | General is untagged; current tag choices are Update, Question, Showcase and Collaboration. The composer has one image attachment and one formal Item reference. Inline member mentions are separate from that Item reference. A composer opened for a particular release locks its reference, submits General and omits photo attachment. Update creation requires an Item. Owner edits/deletes, likes, threaded replies and post reports invoke repositories. The native thread reply menu exposes share/copy and owner edit/delete; it has no report-reply action. | `Features/Community/CommunityView.swift:823`, `:1067`, `:1117`, `:1150`, `:1715`, `:2157-2295`; `CommunityRepository.swift:324`, `:474`, `:625` |
 | Search | Debounced public search combines published Items, published profiles, visible Community posts and bundled help articles; scopes filter those results. Invalid/short, loading, failure, empty and scope-empty states differ. Account-scoped recent-result cache fallback is labelled in the UI. | `Features/Search/SearchRepository.swift:12`, `:187`; `SearchView.swift:81`, `:153` |
 | Messages | Inbox/thread pagination, recipient lookup, direct-conversation creation, text sending, read marking and per-member archive are implemented. Text is bounded to 4,000 characters. Drafts are scoped to account/conversation. Archiving updates membership, not the other member's messages. Opening a thread can write its read timestamp. | `Features/Messages/MessageRepository.swift`; `MessageStore.swift:395`; `MessageView.swift` |
@@ -303,10 +326,22 @@ catalog Item is archived, so reordering or removing that track remains
 possible. This contract does not change playlist playback authorization or the
 current public HTTPS playback-source behavior. On Radio, Add to Playlist
 targets the synchronized track currently shown, regardless of whether an
-on-demand track is active; hide the action when no synchronized track exists.
-Mobile web exposes the action in the toolbar overflow; desktop web exposes it
-beside the Radio playback control because toolbar overflow actions are mobile
-only. Both web controls are disabled while signed out.
+on-demand track is active. The icon-only toolbar control sits on the left and
+opens the existing playlist picker; standalone Share sits on the right. Both
+platforms disable Add to Playlist while signed out or when no synchronized
+track exists. Web uses its shared toolbar and playlist picker; iOS uses native
+toolbar controls and its existing Add to Playlist sheet.
+
+The web Add to Playlist picker uses a full-screen paper surface and shared
+`Ui44ListRow` treatment: a close control and centered title, a Create New
+Playlist row using the Library plus artwork, a Your Playlists heading, and a
+grouped list of playlist artwork, single-line titles, and track counts.
+Selecting a playlist adds the selected track or release and closes the picker.
+Creating a playlist asks for its name in a second dialog, adds the selected
+track or release to the new playlist, and closes the picker on success. A
+failed add keeps the relevant dialog open and reports the error so the member
+can retry. Platform-appropriate controls may differ while preserving this
+structure and behavior.
 
 ### Music Library and saved-track contract
 
@@ -416,10 +451,13 @@ build, contract tests, security/observability checks, smoke tests, and
 `git diff --check`. Before an iOS release, run Swift syntax checks, unit tests,
 focused UI tests, simulator acceptance, and the required physical-device pass.
 
-Keep web and iOS work paired by milestone or issue. Do not deploy platform
-changes, submit to Apple, merge release branches, or change production data
-without an explicit owner release decision. Record the exact commit, build,
-environment, and acceptance evidence in the active Plan.
+Keep web and iOS work paired by the same issue or milestone when a shared
+product contract changes. Review each repository’s change independently, then
+record the paired commits and evidence in the active Plan. A pull request or
+green check is not an approval to ship. Do not deploy platform changes, submit
+to Apple, merge release branches, or change production data without an
+explicit owner release decision. Record the exact commit, build, environment,
+and acceptance evidence in the active Plan.
 
 ## Maintenance rules
 

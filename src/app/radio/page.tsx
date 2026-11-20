@@ -5,7 +5,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { PageShell, HubSection, EmptyMessage } from '@/components/Ui';
 import { Ui44Panel } from '@/components/ui44/Spacing';
 import { useMusicPlayer, type MusicQueueTrack } from '@/components/MusicPlayer';
-import { useTopbarOverflow } from '@/components/TopbarContext';
+import { PlaylistPicker } from '@/components/PlaylistPicker';
+import { useTopbarLeadingAction, useTopbarOverflow } from '@/components/TopbarContext';
+import { useAuth } from '@/lib/useAuth';
 import {
   getSyncedRadioPlayback,
   loadRadioBundle,
@@ -20,8 +22,10 @@ const REFRESH_MS = 15000;
 
 export default function RadioPage() {
   const { playQueue, currentTrack, isPlaying, toggleRadioPlayback } = useMusicPlayer();
+  const { user } = useAuth();
   const [bundle, setBundle] = useState<RadioBundle | null>(null);
   const [loading, setLoading] = useState(true);
+  const [playlistPickerTrackId, setPlaylistPickerTrackId] = useState<string | null>(null);
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -74,6 +78,25 @@ export default function RadioPage() {
   const isCurrentSyncedTrack = currentTrack?.id === syncedTrack?.trackId;
   const isSyncedTrackLive = isCurrentSyncedTrack && isPlaying;
 
+  const addToPlaylistAction = useMemo(() => (
+    <button
+      type="button"
+      className="ui44-symbol-button os-topbar-icon-button"
+      aria-label="Add Radio track to Playlist"
+      title="Add to Playlist"
+      disabled={!user || !syncedTrack}
+      onClick={() => { if (syncedTrack) setPlaylistPickerTrackId(syncedTrack.trackId); }}
+    >
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M3 6h10M3 11h10M3 16h5" />
+        <path d="M17 14V4l5-1v10" />
+        <circle cx="15" cy="17" r="2" />
+      </svg>
+    </button>
+  ), [syncedTrack, user]);
+
+  useTopbarLeadingAction(addToPlaylistAction);
+
   useTopbarOverflow(useMemo(() => [
     { id: 'share', label: 'Share', onSelect: () => { void navigator.clipboard?.writeText(window.location.href); } },
   ], []));
@@ -93,6 +116,13 @@ export default function RadioPage() {
 
   return (
     <PageShell>
+      {playlistPickerTrackId && user ? (
+        <PlaylistPicker
+          userId={user.id}
+          trackId={playlistPickerTrackId}
+          onClose={() => setPlaylistPickerTrackId(null)}
+        />
+      ) : null}
       <main className="radio-page">
         <div className="radio-artwork-background" aria-hidden="true">
           {ambientStyle ? <div className="radio-artwork-background-image" style={ambientStyle} /> : null}

@@ -275,7 +275,7 @@ function OverviewStatCard({ label, value }: { label: string; value: string | num
   return (
     <Ui44Panel overflow="visible" className="dashboard-metric-card">
       <div className="dashboard-overview-card-inner">
-        <div className="os-type-meta">{label}</div>
+        <div className="os-type-meta studio-metric-label">{label}</div>
         <div className="os-type-page-title">{value}</div>
       </div>
     </Ui44Panel>

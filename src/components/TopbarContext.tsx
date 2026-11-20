@@ -34,6 +34,8 @@ type TopbarContextValue = {
   setOverflowActions: (actions: TopbarOverflowAction[] | undefined) => void;
   mobileTrailingAction: ReactNode | undefined;
   setMobileTrailingAction: (action: ReactNode | undefined) => void;
+  leadingAction: ReactNode | undefined;
+  setLeadingAction: (action: ReactNode | undefined) => void;
 };
 
 const TopbarContext = createContext<TopbarContextValue>({
@@ -49,6 +51,8 @@ const TopbarContext = createContext<TopbarContextValue>({
   setOverflowActions: () => {},
   mobileTrailingAction: undefined,
   setMobileTrailingAction: () => {},
+  leadingAction: undefined,
+  setLeadingAction: () => {},
 });
 
 export function TopbarProvider({ children }: { children: ReactNode }) {
@@ -58,7 +62,8 @@ export function TopbarProvider({ children }: { children: ReactNode }) {
   const [back, setBack] = useState<TopbarBack | undefined>(undefined);
   const [overflowActions, setOverflowActions] = useState<TopbarOverflowAction[] | undefined>(undefined);
   const [mobileTrailingAction, setMobileTrailingAction] = useState<ReactNode | undefined>(undefined);
-  const value = useMemo(() => ({ tabs, setTabs, toolbarTitle, setToolbarTitle, overlay, setOverlay, back, setBack, overflowActions, setOverflowActions, mobileTrailingAction, setMobileTrailingAction }), [tabs, toolbarTitle, overlay, back, overflowActions, mobileTrailingAction]);
+  const [leadingAction, setLeadingAction] = useState<ReactNode | undefined>(undefined);
+  const value = useMemo(() => ({ tabs, setTabs, toolbarTitle, setToolbarTitle, overlay, setOverlay, back, setBack, overflowActions, setOverflowActions, mobileTrailingAction, setMobileTrailingAction, leadingAction, setLeadingAction }), [tabs, toolbarTitle, overlay, back, overflowActions, mobileTrailingAction, leadingAction]);
   return <TopbarContext.Provider value={value}>{children}</TopbarContext.Provider>;
 }
 
@@ -113,4 +118,13 @@ export function useTopbarMobileTrailingAction(action: ReactNode | undefined) {
     setMobileTrailingAction(action);
     return () => setMobileTrailingAction(undefined);
   }, [action, setMobileTrailingAction]);
+}
+
+/** Register a page-specific control in the shared toolbar's leading slot. */
+export function useTopbarLeadingAction(action: ReactNode | undefined) {
+  const { setLeadingAction } = useContext(TopbarContext);
+  useEffect(() => {
+    setLeadingAction(action);
+    return () => setLeadingAction(undefined);
+  }, [action, setLeadingAction]);
 }

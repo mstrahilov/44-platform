@@ -127,7 +127,7 @@ export function Topbar() {
   const router = useRouter();
   const { user } = useAuth();
   const userId = user?.id ?? null;
-  const { tabs, back, overflowActions, toolbarTitle, overlay: topbarOverlay, mobileTrailingAction: registeredMobileTrailingAction } = useTopbar();
+  const { tabs, back, overflowActions, toolbarTitle, overlay: topbarOverlay, leadingAction: registeredLeadingAction, mobileTrailingAction: registeredMobileTrailingAction } = useTopbar();
   const [overflowOpen, setOverflowOpen] = useState(false);
   const { count: cartCount } = useCart();
   const [notificationState, setNotificationState] = useState<NotificationState | null>(null);
@@ -423,6 +423,7 @@ export function Topbar() {
   const isNewCommunityPost = pathname === '/community/new';
   const isNewPlaylist = pathname === '/library/playlists/new';
   const isPlaylistTrackPicker = /^\/library\/playlists\/[^/]+\/add$/.test(pathname);
+  const isPlaylistPickerRoute = pathname === '/library/add-to-playlist';
   const isSavedTracksPage = pathname === '/library/music/saved-tracks';
   const isPlaylistDetailPage = /^\/library\/playlists\/[^/]+$/.test(pathname) && !isNewPlaylist;
   const playlistTrackPickerHref = back?.href ?? '/library';
@@ -435,7 +436,7 @@ export function Topbar() {
   const isStudioRoot = pathname === '/studio';
   const isProfilePage = /^\/profile\/[^/]+$/.test(pathname);
   const isRadioRoot = pathname === '/radio';
-  const isLibraryRoot = pathname === '/library' || (pathname.startsWith('/library/') && !pathname.startsWith('/library/item/') && !pathname.startsWith('/library/playlists/') && !pathname.startsWith('/library/music/') && pathname !== '/library/search');
+  const isLibraryRoot = pathname === '/library' || (pathname.startsWith('/library/') && !pathname.startsWith('/library/item/') && !pathname.startsWith('/library/playlists/') && !pathname.startsWith('/library/music/') && pathname !== '/library/search' && pathname !== '/library/add-to-playlist');
   const isDiscoverSurface = pathname === '/' || (pathname.startsWith('/store') && !pathname.startsWith('/store/item/'));
   const isDetailRoute = mobileTopbarState.mode === 'back' || Boolean(back);
   const hasSectionTabs = Boolean(tabs?.some(tab => tab.variant === 'section'));
@@ -545,7 +546,11 @@ export function Topbar() {
     </button>
   ) : null;
 
-  const mobileLeadingAction = isNewCommunityPost ? (
+  const mobileLeadingAction = registeredLeadingAction ?? (isPlaylistPickerRoute ? (
+    <button type="button" className="ui44-symbol-button" aria-label="Close playlist picker" title="Close" onClick={() => router.replace(back?.href ?? '/library')}>
+      <IconClose />
+    </button>
+  ) : isNewCommunityPost ? (
     <button type="button" className="ui44-symbol-button" aria-label="Cancel new post" title="Cancel" onClick={() => router.push('/community')}>
       <IconClose />
     </button>
@@ -572,9 +577,13 @@ export function Topbar() {
     <button type="button" className="ui44-symbol-button" aria-label="Search Library" title="Search Library" onClick={openMobileSearch}>
       <span className="os-icon os-icon-search os-icon-sm" aria-hidden="true" />
     </button>
-  ) : mobileSearchAction;
+  ) : mobileSearchAction);
 
-  const mobileTrailingAction = registeredMobileTrailingAction ?? (isRadioRoot ? (
+  const mobileTrailingAction = registeredMobileTrailingAction ?? (isPlaylistPickerRoute ? (
+    <button type="button" className="ui44-symbol-button" aria-label={toolbarTitle === 'New Playlist' ? 'Create playlist' : 'Create new playlist'} title="Create playlist" onClick={() => window.dispatchEvent(new CustomEvent('playlist-picker:primary-action'))}>
+      {toolbarTitle === 'New Playlist' ? <IconCheck /> : <IconPlus />}
+    </button>
+  ) : isRadioRoot ? (
     <button type="button" className="ui44-symbol-button" aria-label="Share Radio" title="Share Radio" onClick={() => overflowActions?.find(action => action.id === 'share')?.onSelect?.()}>
       <IconShare />
     </button>
@@ -640,13 +649,18 @@ export function Topbar() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/44-topbar-logo.png" alt="" />
           </Link>
+          {registeredLeadingAction ? <div className="os-topbar-desktop-leading">{registeredLeadingAction}</div> : null}
         {back && (
           <button
             type="button"
             className="ui44-symbol-button ui44-symbol-button-back os-topbar-back"
-            aria-label={isPlaylistTrackPicker ? 'Close Add Track' : backLabel}
-            title={isPlaylistTrackPicker ? 'Close' : backLabel}
+            aria-label={isPlaylistPickerRoute ? 'Close playlist picker' : isPlaylistTrackPicker ? 'Close Add Track' : backLabel}
+            title={isPlaylistPickerRoute || isPlaylistTrackPicker ? 'Close' : backLabel}
             onClick={() => {
+              if (isPlaylistPickerRoute) {
+                router.replace(back?.href ?? '/library');
+                return;
+              }
               if (isPlaylistTrackPicker) {
                 router.push(playlistTrackPickerHref);
                 return;
@@ -662,7 +676,7 @@ export function Topbar() {
               router.push(back.href);
             }}
           >
-            {isPlaylistTrackPicker ? <IconClose /> : <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            {isPlaylistPickerRoute || isPlaylistTrackPicker ? <IconClose /> : <svg width="18" height="18" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M13 5l-6 6 6 6"/>
             </svg>}
           </button>
@@ -713,6 +727,7 @@ export function Topbar() {
 
         <div className="os-topbar-right">
         {isRadioRoot ? <button type="button" className="ui44-symbol-button os-topbar-icon-button" aria-label="Share Radio" title="Share Radio" onClick={() => overflowActions?.find(action => action.id === 'share')?.onSelect?.()}><IconShare /></button> : null}
+        {isPlaylistPickerRoute ? <button type="button" className="ui44-symbol-button os-topbar-icon-button" aria-label={toolbarTitle === 'New Playlist' ? 'Create playlist' : 'Create new playlist'} title={toolbarTitle === 'New Playlist' ? 'Create playlist' : 'Create playlist'} onClick={() => window.dispatchEvent(new CustomEvent('playlist-picker:primary-action'))}>{toolbarTitle === 'New Playlist' ? <IconCheck /> : <IconPlus />}</button> : null}
         {isPlaylistTrackPicker && (
           <button type="button" className="ui44-symbol-button os-topbar-icon-button" aria-label="Done adding tracks" title="Done" onClick={() => router.push(playlistTrackPickerHref)}>
             <IconCheck />

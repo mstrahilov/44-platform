@@ -100,6 +100,7 @@ const MOBILE_DISCOVER_CATEGORIES: Array<{
   { category: 'books', filter: 'book', label: 'Books', href: '/store/books' },
   { category: 'sample-packs', filter: 'asset', label: 'Assets', href: '/store/sample-packs' },
   { category: 'games', filter: 'interactive', label: 'Games', href: '/store/games' },
+  { category: 'merch', filter: 'physical', label: 'Merch', href: '/store/merch' },
 ];
 
 function matchesStoreExperience(product: Product, experience: StoreFilter | ProductExperience | null) {
@@ -446,15 +447,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
   }, [category, effectiveTypeFilter, urlFilterReady]);
 
-  const discoverOptions = MOBILE_DISCOVER_CATEGORIES.filter(option => {
-    if (option.category === 'videos') return true;
-    if (option.category === 'all') return true;
-    if (option.category === 'music') return products.some(product => getProductExperience(product) === 'music' && !isBeatProduct(product));
-    if (option.category === 'books') return products.some(product => getProductExperience(product) === 'book');
-    if (option.category === 'sample-packs') return products.some(product => matchesStoreExperience(product, 'asset'));
-    if (option.category === 'games') return products.some(product => getProductExperience(product) === 'interactive');
-    return false;
-  });
+  const discoverOptions = MOBILE_DISCOVER_CATEGORIES;
   function discoverOptionSelected(option: (typeof MOBILE_DISCOVER_CATEGORIES)[number]) {
     if (option.category === 'videos') return false;
     return category === 'all'

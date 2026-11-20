@@ -24,6 +24,7 @@ export type Playlist = {
   created_at: string;
   updated_at: string;
   artwork_url?: string | null;
+  trackCount?: number;
   tracks?: PlaylistTrack[];
 };
 
@@ -62,9 +63,10 @@ const PLAYLIST_TRACK_SELECT = 'id,playlist_id,track_id,sort_order,added_at,track
 const PLAYLIST_ARTWORK_SELECT = `${PLAYLIST_SELECT},artwork:playlist_tracks(track:tracks!inner(item:catalog_items!inner(cover_url)))`;
 
 export async function listPlaylists(userId: string, { includeArtwork = true } = {}): Promise<Playlist[]> {
+  const select = `${PLAYLIST_SELECT},track_count:playlist_tracks(count)`;
   const query = supabase
     .from('playlists' as never)
-    .select(includeArtwork ? PLAYLIST_ARTWORK_SELECT : PLAYLIST_SELECT)
+    .select(includeArtwork ? `${PLAYLIST_ARTWORK_SELECT},track_count:playlist_tracks(count)` : select)
     .eq('user_id', userId)
     .order('updated_at', { ascending: false });
   const result = await (includeArtwork ? query
@@ -87,10 +89,12 @@ export async function listPlaylists(userId: string, { includeArtwork = true } = 
   }
   const playlists = (result.data ?? []) as unknown as Array<Playlist & {
     artwork?: Array<{ track: { item: { cover_url: string } } }>;
+    track_count?: Array<{ count: number }>;
   }>;
-  return playlists.map(({ artwork, ...playlist }) => ({
+  return playlists.map(({ artwork, track_count, ...playlist }) => ({
     ...playlist,
     artwork_url: playlist.cover_url || artwork?.[0]?.track?.item?.cover_url || null,
+    trackCount: track_count?.[0]?.count ?? 0,
   }));
 }
 
@@ -103,6 +107,16 @@ export async function getPlaylist(userId: string, playlistId: string) {
   if (tracksResult.error) throw tracksResult.error;
   if (!playlistResult.data) return null;
   return { ...(playlistResult.data as unknown as Playlist), tracks: (tracksResult.data ?? []) as unknown as PlaylistTrack[] };
+}
+
+/** Return playlists that already contain this track. RLS limits the result to the signed-in user's playlists. */
+export async function listPlaylistIdsContainingTrack(trackId: string) {
+  const result = await supabase
+    .from('playlist_tracks' as never)
+    .select('playlist_id')
+    .eq('track_id', trackId);
+  if (result.error) throw result.error;
+  return ((result.data ?? []) as unknown as Array<{ playlist_id: string }>).map(row => row.playlist_id);
 }
 
 export async function createPlaylist(userId: string, title: string, coverUrl?: string | null) {

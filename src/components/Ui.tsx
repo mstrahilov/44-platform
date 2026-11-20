@@ -54,7 +54,7 @@ export function ProductCard({ product, owned: ownedProp, singleLineTitle = false
   const image = product.cover_url || product.hero_url;
   const creatorLabel = product.creators?.display_name || product.creator || '44 Creator';
   const experience = getProductExperience(product);
-  const shape = experience === 'physical' ? 'portrait' : experience === 'book' ? 'book' : 'square';
+  const shape = experience === 'physical' || experience === 'book' ? 'portrait' : 'square';
   const [localOwnership, setLocalOwnership] = useState<{ productId: string; userId: string } | null>(null);
   const owned = ownedProp || Boolean(user && localOwnership?.productId === product.id && localOwnership.userId === user.id);
 

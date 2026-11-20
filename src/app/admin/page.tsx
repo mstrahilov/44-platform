@@ -61,7 +61,7 @@ function AdminStat({ href, label, value }: { href: string; label: string; value:
   return <Link href={href} className="admin-stat-link">
     <Ui44Panel overflow="visible" className="dashboard-metric-card">
       <div className="dashboard-overview-card-inner">
-        <div className="os-type-meta">{label}</div>
+        <div className="os-type-meta admin-metric-label">{label}</div>
         <div className="os-type-page-title">{value}</div>
       </div>
     </Ui44Panel>
