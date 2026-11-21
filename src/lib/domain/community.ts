@@ -261,6 +261,7 @@ export async function searchCommunityMentions(query: string) {
     .from('profiles')
     .select('id,username,display_name,avatar_url')
     .ilike('username', `${query}%`)
+    .is('deletion_requested_at', null)
     .limit(6);
   if (result.error) throw result.error;
   return (result.data as CommunityMentionProfile[] | null) ?? [];
@@ -275,11 +276,13 @@ export async function searchCommunityReferences(query: string) {
       .from('profiles')
       .select('id,username,display_name,avatar_url,role')
       .ilike('username', `${normalizedQuery}%`)
+      .is('deletion_requested_at', null)
       .limit(4),
     supabase
       .from('profiles')
       .select('id,username,display_name,avatar_url,role')
       .ilike('display_name', `%${normalizedQuery}%`)
+      .is('deletion_requested_at', null)
       .limit(4),
     supabase
       .from('catalog_items')

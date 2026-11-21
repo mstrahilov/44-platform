@@ -14,6 +14,7 @@ export async function getPublicProfile(identifier: string) {
     .from('profiles')
     .select('*')
     .eq('username_normalized', usernameKey(identifier))
+    .is('deletion_requested_at', null)
     .maybeSingle();
   if (usernameResult.error) throw usernameResult.error;
   if (usernameResult.data) return usernameResult.data as Profile;
@@ -22,6 +23,7 @@ export async function getPublicProfile(identifier: string) {
     .from('profiles')
     .select('*')
     .eq('slug', identifier.trim().toLowerCase())
+    .is('deletion_requested_at', null)
     .maybeSingle();
   if (slugResult.error) throw slugResult.error;
   return slugResult.data as Profile | null;
@@ -38,6 +40,7 @@ export async function listRecentCommunityMembers(limit = 8) {
     .from('profiles')
     .select('id,slug,username,display_name,avatar_url,created_at')
     .not('avatar_url', 'is', null)
+    .is('deletion_requested_at', null)
     .order('created_at', { ascending: false })
     .limit(limit);
   if (result.error) throw result.error;

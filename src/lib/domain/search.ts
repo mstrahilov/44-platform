@@ -21,6 +21,7 @@ async function fetchSearchDirectory() {
       .from('profiles')
       .select('id,slug,username,display_name,avatar_url,bio,role,creator_type')
       .eq('is_published', true)
+      .is('deletion_requested_at', null)
       .order('display_name', { ascending: true })
       .limit(120),
   ]);
