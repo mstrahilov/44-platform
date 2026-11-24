@@ -11,6 +11,13 @@ const CONTENT_TYPES_BY_EXTENSION: Record<string, string> = {
   wav: 'audio/wav',
 };
 
+const AUDIO_EXTENSIONS = new Set(Object.keys(CONTENT_TYPES_BY_EXTENSION));
+
+type DetectedAudio = {
+  contentType: string;
+  extension: keyof typeof CONTENT_TYPES_BY_EXTENSION;
+};
+
 function sanitizeFileName(name: string) {
   return name
     .toLowerCase()
@@ -21,9 +28,60 @@ function sanitizeFileName(name: string) {
 }
 
 function contentTypeForFile(file: File) {
-  if (file.type) return file.type;
   const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
-  return CONTENT_TYPES_BY_EXTENSION[extension] ?? 'application/octet-stream';
+  // Browsers report vendor-specific audio MIME types (notably
+  // `audio/x-m4a`) inconsistently. Storage metadata is sent back to native
+  // players, so prefer the canonical type for known audio extensions instead
+  // of trusting `File.type`. This keeps M4A streams as `audio/mp4` and MP3
+  // streams as `audio/mpeg` across web and iOS.
+  return CONTENT_TYPES_BY_EXTENSION[extension] ?? file.type ?? 'application/octet-stream';
+}
+
+function replaceFileExtension(name: string, extension: string) {
+  const withoutExtension = name.replace(/\.[^./\\]+$/, '');
+  return `${withoutExtension}.${extension}`;
+}
+
+/**
+ * Browsers and file pickers can preserve a misleading filename/MIME pair.
+ * Read only the small container signature so a mislabeled M4A/MP4 uploaded as
+ * `.mp3` is stored with the metadata native players expect. If the signature
+ * is unknown, the extension/MIME fallback remains unchanged.
+ */
+async function detectAudioContainer(file: File): Promise<DetectedAudio | null> {
+  const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
+  if (!AUDIO_EXTENSIONS.has(extension)) return null;
+
+  try {
+    const bytes = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+    if (bytes.length >= 12) {
+      const riff = String.fromCharCode(...bytes.slice(0, 4));
+      const wave = String.fromCharCode(...bytes.slice(8, 12));
+      if (riff === 'RIFF' && wave === 'WAVE') return { contentType: 'audio/wav', extension: 'wav' };
+
+      const ftyp = String.fromCharCode(...bytes.slice(4, 8));
+      if (ftyp === 'ftyp') return { contentType: 'audio/mp4', extension: 'm4a' };
+    }
+
+    if (bytes.length >= 4 && String.fromCharCode(...bytes.slice(0, 4)) === 'fLaC') {
+      return { contentType: 'audio/flac', extension: 'flac' };
+    }
+
+    if (bytes.length >= 3 && String.fromCharCode(...bytes.slice(0, 3)) === 'ID3') {
+      return { contentType: 'audio/mpeg', extension: 'mp3' };
+    }
+
+    // MPEG audio frames may not carry an ID3 header. This checks the sync word
+    // without attempting to parse the full stream.
+    if (bytes.length >= 2 && bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0) {
+      return { contentType: 'audio/mpeg', extension: 'mp3' };
+    }
+  } catch {
+    // Some browser/File implementations do not expose a readable slice. The
+    // extension-based fallback below is still safe for ordinary uploads.
+  }
+
+  return null;
 }
 
 function resumableUploadEndpoint() {
@@ -35,11 +93,12 @@ function resumableUploadEndpoint() {
   return `${origin}/storage/v1/upload/resumable`;
 }
 
-async function uploadFile({ bucket, path, file }: { bucket: string; path: string; file: File }) {
+async function uploadFile({ bucket, path, file, contentType }: { bucket: string; path: string; file: File; contentType?: string }) {
+  const resolvedContentType = contentType ?? contentTypeForFile(file);
   if (file.size <= RESUMABLE_UPLOAD_THRESHOLD_BYTES) {
     const { error } = await supabase.storage.from(bucket).upload(path, file, {
       cacheControl: '3600',
-      contentType: contentTypeForFile(file),
+      contentType: resolvedContentType,
       upsert: false,
     });
     if (error) throw error;
@@ -66,7 +125,7 @@ async function uploadFile({ bucket, path, file }: { bucket: string; path: string
       metadata: {
         bucketName: bucket,
         objectName: path,
-        contentType: contentTypeForFile(file),
+        contentType: resolvedContentType,
         cacheControl: '3600',
       },
       onError: reject,
@@ -83,10 +142,14 @@ export async function uploadPublicFile(params: {
   bucket?: string;
 }) {
   const { file, folder, userId, bucket = DEFAULT_BUCKET } = params;
-  const safeName = sanitizeFileName(file.name || 'file') || 'file';
+  const detectedAudio = await detectAudioContainer(file);
+  const sourceName = detectedAudio
+    ? replaceFileExtension(file.name || 'audio-file', detectedAudio.extension)
+    : file.name || 'file';
+  const safeName = sanitizeFileName(sourceName) || 'file';
   const path = `${folder}/${userId}/${Date.now()}-${safeName}`;
 
-  await uploadFile({ bucket, path, file });
+  await uploadFile({ bucket, path, file, contentType: detectedAudio?.contentType });
 
   const { data } = supabase.storage.from(bucket).getPublicUrl(path);
   return { path, publicUrl: data.publicUrl, bucket };
