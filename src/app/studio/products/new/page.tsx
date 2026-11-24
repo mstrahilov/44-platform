@@ -29,6 +29,7 @@ import { clearStudioFormRecovery, readStudioFormRecovery, writeStudioFormRecover
 import { loadCreatorPaidSalesState, type CreatorPaidSalesState } from '@/lib/domain/creatorCommerce';
 import { normalizeOptionalReleaseDate, releaseYear } from '@/lib/releaseDates';
 import { StudioDigitalPricingFields, StudioPriceInput } from '@/components/StudioPricingFields';
+import { StudioRelatedItemsField } from '@/components/StudioRelatedItemsField';
 import { OS44Button } from '@/components/OS44Button';
 import { supabase } from '@/lib/supabase';
 import { StudioVisualsEditor } from '@/components/StudioVisualsEditor';
@@ -158,6 +159,7 @@ function NewProductContent() {
   const [externalLinks, setExternalLinks] = useState<ExternalLinkDraft[]>([]);
   const [externalLinksEnabled, setExternalLinksEnabled] = useState(false);
   const [relatedItemsEnabled, setRelatedItemsEnabled] = useState(false);
+  const [selectedRelatedItemIds, setSelectedRelatedItemIds] = useState<string[]>([]);
   const [externalLinkPlatforms, setExternalLinkPlatforms] = useState<ExternalLinkPlatform[]>([]);
   const [saving, setSaving] = useState(false);
   const [activeUploadCount, setActiveUploadCount] = useState(0);
@@ -432,13 +434,13 @@ function NewProductContent() {
       return;
     }
 
-    if (isMusicProduct) {
+    if (isMusicProduct || isBookProduct) {
       const componentSettings = await supabase.rpc('update_owned_item' as never, {
         target_item_id: insertedProductId,
         patch: {
           external_links_enabled: externalLinksEnabled,
           visuals_enabled: featureState.videoEmbedsEnabled,
-          related_items_enabled: relatedItemsEnabled,
+          related_items_enabled: isBookProduct || relatedItemsEnabled,
           community_enabled: true,
         },
       } as never);
@@ -446,6 +448,17 @@ function NewProductContent() {
         setSaving(false);
         setError(componentSettings.error.message || 'Could not save release section settings.');
         return;
+      }
+      if (isBookProduct && selectedRelatedItemIds.length > 0) {
+        const relatedResult = await supabase.rpc('set_item_related_items' as never, {
+          target_item_id: insertedProductId,
+          related_ids: selectedRelatedItemIds,
+        } as never);
+        if (relatedResult.error) {
+          setSaving(false);
+          setError(relatedResult.error.message || 'Could not save Related Items.');
+          return;
+        }
       }
     }
 
@@ -669,7 +682,7 @@ function NewProductContent() {
                     </Ui44SelectInput>
                   </label>
                   <label className="dashboard-field">
-                    <div className="dashboard-field-label">Release Date (Optional)</div>
+                    <div className="dashboard-field-label">Release Date</div>
                     <Ui44TextInput className="os-input-field release-date-input" type="date" value={releaseDate} onChange={event => { setReleaseDate(event.target.value); setYear(event.target.value.slice(0, 4)); }} />
                   </label>
                 </div>
@@ -693,7 +706,10 @@ function NewProductContent() {
                 </div>
               ) : null}
 
-              {isGameProduct ? <label className="dashboard-field">
+              {isBookProduct ? <label className="dashboard-field">
+                <div className="dashboard-field-label">Description</div>
+                <Ui44Textarea className="os-input-field dashboard-textarea" value={description} onChange={event => setDescription(event.target.value)} placeholder="Enter description" />
+              </label> : isGameProduct ? <label className="dashboard-field">
                 <div className="dashboard-field-label">Description</div>
                 <Ui44Textarea className="os-input-field dashboard-textarea" value={description} onChange={event => setDescription(event.target.value)} placeholder="Enter description" />
               </label> : null}
@@ -791,13 +807,6 @@ function NewProductContent() {
                 </div>
               ) : null}
 
-              {(isBookProduct || section.id === 'assets') ? (
-                <label className="dashboard-field">
-                  <div className="dashboard-field-label">Description</div>
-                  <Ui44Textarea className="os-input-field dashboard-textarea" value={description} onChange={event => setDescription(event.target.value)} placeholder="Enter description" />
-                </label>
-              ) : null}
-
               {isGameProduct ? <>
                 <UploadField
                   label="Unity WebGL Export"
@@ -814,18 +823,6 @@ function NewProductContent() {
                   Upload one ZIP containing the complete Unity WebGL export. 44OS will inspect, unpack, and host the game before it goes live.
                 </div>
               </> : null}
-
-              {isBookProduct ? <UploadField
-                label="Book File"
-                folder="products/books"
-                storage="private-item"
-                userId={user.id}
-                value={itemFileUrl}
-                accept="application/pdf,.pdf"
-                buttonLabel="Upload PDF"
-                onChange={setItemFileUrl}
-                onUploadingChange={handleUploadActivity}
-              /> : null}
 
               {!isMusicProduct && !isBookProduct && !isGameProduct ? <UploadField
               label={isMerchProduct ? 'Product Image' : 'Artwork'}
@@ -904,6 +901,23 @@ function NewProductContent() {
               ) : null}
               </div>
             </section>
+
+            {isBookProduct ? <section className="dashboard-form-section">
+              <SectionHeader title="Book PDF" showDescription={false} />
+              <div className="dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-visible studio-feature-panel">
+                <UploadField
+                  label="Book PDF"
+                  folder="products/books"
+                  storage="private-item"
+                  userId={user.id}
+                  value={itemFileUrl}
+                  accept="application/pdf,.pdf"
+                  buttonLabel="Upload PDF"
+                  onChange={setItemFileUrl}
+                  onUploadingChange={handleUploadActivity}
+                />
+              </div>
+            </section> : null}
 
             {section.id === 'assets' ? <StudioSamplePreviewFields userId={user.id} samples={samplePreviews} onChange={setSamplePreviews} onUploadingChange={handleUploadActivity} /> : null}
 
@@ -1024,6 +1038,14 @@ function NewProductContent() {
                   </div>
                 ) : null}
               </section>
+            ) : null}
+
+            {isBookProduct ? (
+              <StudioRelatedItemsField
+                userId={user.id}
+                selectedIds={selectedRelatedItemIds}
+                onSelectedIdsChange={setSelectedRelatedItemIds}
+              />
             ) : null}
 
             {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div>}

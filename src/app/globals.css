@@ -2913,7 +2913,7 @@ body.theme-dark .os-category-icon img {
 
 .product-tile-art-square     { aspect-ratio: 1 / 1; }
 .product-tile-art-portrait   { aspect-ratio: 3 / 4; }
-.product-tile-art-book       { aspect-ratio: 2 / 3; }
+.product-tile-art-book       { aspect-ratio: 3 / 4; }
 .product-tile-art-landscape  { aspect-ratio: 3 / 2; }
 .product-tile-art-wide       { aspect-ratio: 16 / 10; }
 
@@ -5288,8 +5288,8 @@ body:is(.theme-dark, .theme-light) .web-push-prompt.ui44-paper-menu {
 .view-album-cover-book {
   position: relative;
   width: clamp(240px, 23vw, 368px);
-  height: clamp(240px, 23vw, 368px);
-  aspect-ratio: 1;
+  height: auto;
+  aspect-ratio: 3 / 4;
   box-sizing: border-box;
 }
 
@@ -9218,8 +9218,8 @@ body.accent-violet {
   .view-album-cover-book,
   .view-album-cover-physical {
     width: min(calc(100vw - 64px), 320px);
-    height: min(calc(100vw - 64px), 320px);
-    aspect-ratio: 1;
+    height: auto;
+    aspect-ratio: 3 / 4;
   }
 
   .view-album-copy,

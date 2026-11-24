@@ -294,7 +294,7 @@ body.playlist-detail-route .view-hub {
 .ui44-track-copy { display: grid; align-content: center; min-width: 0; }
 .ui44-track-subtitle { overflow: hidden; color: var(--os-color-ink-secondary); font-size: var(--44ui-type-footnote-size, 13px); line-height: var(--44ui-type-footnote-line, 18px); text-overflow: ellipsis; white-space: nowrap; }
 .saved-tracks-empty { margin-top: 24px; }
-.library-item-groups .product-tile-art-book { aspect-ratio: 1 / 1; }
+.library-item-groups .product-tile-art-book { aspect-ratio: 3 / 4; }
 .library-filter-menu { position: fixed; z-index: 40; top: calc(var(--os-topbar-height) + 8px); right: 16px; min-width: 180px; }
 
 @media (max-width: 768px) {
@@ -12070,7 +12070,7 @@ body:is(.theme-dark, .theme-light) .studio-artwork-surface {
 
 body:is(.theme-dark, .theme-light) .studio-artwork-surface-book {
   width: min(100%, 360px);
-  aspect-ratio: 2 / 3;
+  aspect-ratio: 3 / 4;
 }
 
 body:is(.theme-dark, .theme-light) .studio-artwork-image {

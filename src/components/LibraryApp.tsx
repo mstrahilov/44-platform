@@ -336,7 +336,7 @@ function LibraryCard({ row, onRemove }: { row: LibraryRow; onRemove: (row: Libra
 
   return (
     <Link className="product-tile ui44-catalog-card" href={href} onContextMenu={event => openContextMenu(event, entries)}>
-      <span className={`product-tile-art product-tile-art-${experience === 'book' ? 'book' : 'square'} ui44-catalog-art`}>
+      <span className={`product-tile-art product-tile-art-${experience === 'book' ? 'portrait' : 'square'} ui44-catalog-art`}>
         {image && <PublicArtwork src={image} alt="" sizes={CATALOG_ARTWORK_SIZES} />}
       </span>
       <span className="product-tile-info ui44-catalog-copy">

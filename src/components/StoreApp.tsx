@@ -120,14 +120,16 @@ function compareRecentlyAddedProducts(a: Product, b: Product) {
   return createdAtDifference || a.id.localeCompare(b.id);
 }
 
-function keepNewestProductPerCreator(products: Product[], avoidedProductIds = new Set<string>()) {
+function keepNewestProductPerCreator(products: Product[], avoidedCreatorKeys = new Set<string>()) {
   const productsByCreator = new Map<string, Product[]>();
   products.forEach(product => {
     const creatorId = creatorFilterKey(product);
     productsByCreator.set(creatorId, [...(productsByCreator.get(creatorId) ?? []), product]);
   });
   return Array.from(productsByCreator.values()).flatMap(creatorProducts => {
-    const product = creatorProducts.find(candidate => !avoidedProductIds.has(candidate.id));
+    const creatorId = creatorFilterKey(creatorProducts[0]);
+    if (avoidedCreatorKeys.has(creatorId)) return [];
+    const product = creatorProducts[0];
     return product ? [product] : [];
   });
 }
@@ -500,6 +502,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   if (category === 'all') {
     const musicProducts = products.filter(product => getProductExperience(product) === 'music' && !isBeatProduct(product));
     const sortedMusicProducts = [...musicProducts].sort(comparePublicCatalogProducts);
+    const recentlyAddedMusicProducts = [...musicProducts].sort(compareRecentlyAddedProducts);
     const shelfProducts = (filter: StoreFilter) => products
       .filter(product => getProductExperience(product) === filter)
       .sort(comparePublicCatalogProducts)
@@ -512,7 +515,8 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
       .map(itemId => products.find(product => product.id === itemId))
       .find(Boolean) ?? sortedMusicProducts[0] ?? null;
     const featuredProductIds = new Set(featuredProduct ? [featuredProduct.id] : []);
-    const newReleaseProducts = keepNewestProductPerCreator(sortedMusicProducts, featuredProductIds).slice(0, 8);
+    const featuredCreatorKeys = new Set(featuredProduct ? [creatorFilterKey(featuredProduct)] : []);
+    const newReleaseProducts = keepNewestProductPerCreator(recentlyAddedMusicProducts, featuredCreatorKeys).slice(0, 8);
     const newReleaseProductIds = new Set(newReleaseProducts.map(product => product.id));
     const browseMusicProducts = sortedMusicProducts
       .filter(product => !featuredProductIds.has(product.id) && !newReleaseProductIds.has(product.id))
