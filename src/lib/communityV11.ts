@@ -30,6 +30,7 @@ export type CommunityV11Reply = SocialReply & {
 
 const LOCAL_POSTS_KEY = '44os.community-v11.local-posts';
 const LOCAL_REPLIES_KEY = '44os.community-v11.local-replies';
+const LOCAL_SAVED_POSTS_KEY = '44os.community-v11.saved-posts';
 
 export const COMMUNITY_INTENT_LABELS: Record<CommunityIntent, string> = {
   general: 'General',
@@ -57,6 +58,7 @@ export const COMMUNITY_INTENT_PLACEHOLDERS: Record<CommunityIntent, string> = {
 };
 
 export const communityV11LocalPreviewEnabled = process.env.NODE_ENV === 'development';
+export const communityPostSavesEnabled = process.env.NEXT_PUBLIC_COMMUNITY_SAVES_ENABLED !== 'false';
 
 function readLocalArray<T>(key: string) {
   if (!communityV11LocalPreviewEnabled || typeof window === 'undefined') return [] as T[];
@@ -191,6 +193,18 @@ export function updateLocalCommunityPost(postId: string, body: string) {
 export function listLocalCommunityReplies(postId?: string) {
   const replies = readLocalArray<CommunityV11Reply>(LOCAL_REPLIES_KEY);
   return postId ? replies.filter(reply => reply.post_id === postId) : replies;
+}
+
+export function listLocalCommunitySavedPostIds() {
+  return new Set(readLocalArray<string>(LOCAL_SAVED_POSTS_KEY));
+}
+
+export function setLocalCommunityPostSaved(postId: string, saved: boolean) {
+  const current = listLocalCommunitySavedPostIds();
+  if (saved) current.add(postId);
+  else current.delete(postId);
+  writeLocalArray(LOCAL_SAVED_POSTS_KEY, Array.from(current));
+  return current;
 }
 
 export function createLocalCommunityReply(input: {

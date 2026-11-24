@@ -15,16 +15,18 @@ import { HubHero, PageShell } from '@/components/Ui';
 import { OS44Button } from '@/components/OS44Button';
 import { hasCommunityIdentity } from '@/lib/communityProfile';
 import {
-  COMMUNITY_INTENT_LABELS,
   COMMUNITY_INTENT_PLACEHOLDERS,
   communityItemReference,
+  communityPostSavesEnabled,
   communityV11LocalPreviewEnabled,
   createLocalCommunityPost,
   inferCommunityIntent,
   inferItemReferences,
   listLocalCommunityPosts,
   listLocalCommunityReplies,
+  listLocalCommunitySavedPostIds,
   removeLocalCommunityPost,
+  setLocalCommunityPostSaved,
   updateLocalCommunityPost,
   type CommunityCatalogItem,
   type CommunityIntent,
@@ -36,7 +38,9 @@ import {
   createCommunityPost,
   listFollowedProfileIds,
   loadCommunityFeed,
+  loadSavedCommunityPostIds,
   searchCommunityReferences,
+  setCommunityPostSaved,
   setDiscussionLike,
   updateDiscussion,
   type CommunityReferenceOption,
@@ -67,6 +71,7 @@ type FollowingState = {
 };
 
 type IntentView = 'all' | CommunityIntent;
+type CommunityPostFilter = 'all' | 'following' | 'saved';
 
 const INTENT_TABS: Array<{ id: IntentView; label: string; href: string }> = [
   { id: 'all', label: 'All', href: '/community' },
@@ -145,6 +150,8 @@ function CommunityPageContent() {
   const [followingState, setFollowingState] = useState<FollowingState | null>(null);
   const [profileState, setProfileState] = useState<CommunityProfileState | null>(null);
   const [likingId, setLikingId] = useState('');
+  const [savedPostIds, setSavedPostIds] = useState<Set<string>>(() => new Set());
+  const [savingPostId, setSavingPostId] = useState('');
   const [composerOpen, setComposerOpen] = useState(false);
   const [composerIntent, setComposerIntent] = useState<CommunityIntent | ''>('');
   const [postBody, setPostBody] = useState('');
@@ -173,10 +180,14 @@ function CommunityPageContent() {
             : pathname === '/community/updates'
               ? 'update'
               : 'all';
-  const postFilter = searchParams.get('filter') === 'following' ? 'following' : 'all';
+  const postFilter: CommunityPostFilter = searchParams.get('filter') === 'following'
+    ? 'following'
+    : searchParams.get('filter') === 'saved'
+      ? 'saved'
+      : 'all';
 
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent('44:community-filter-state', { detail: { active: postFilter === 'following' } }));
+    window.dispatchEvent(new CustomEvent('44:community-filter-state', { detail: { active: postFilter !== 'all' } }));
   }, [postFilter]);
 
   const activeMentionQuery = composerOpen ? extractMentionQuery(postBody) : '';
@@ -244,6 +255,27 @@ function CommunityPageContent() {
   }, [userId]);
 
   useEffect(() => {
+    if (!communityPostSavesEnabled || !userId) {
+      Promise.resolve().then(() => setSavedPostIds(new Set()));
+      return;
+    }
+    let alive = true;
+    void loadSavedCommunityPostIds(userId).then(ids => {
+      if (alive) setSavedPostIds(new Set([...ids, ...listLocalCommunitySavedPostIds()]));
+    }).catch(loadError => {
+      if (!alive) return;
+      // The local preview can be used before the new Supabase migration is applied.
+      // Keep the feature usable locally without masking real production errors.
+      if (communityV11LocalPreviewEnabled) {
+        setSavedPostIds(listLocalCommunitySavedPostIds());
+      } else {
+        setError(loadError instanceof Error ? loadError.message : 'Could not load your saved posts.');
+      }
+    });
+    return () => { alive = false; };
+  }, [userId]);
+
+  useEffect(() => {
     if (!activeMentionQuery) {
       Promise.resolve().then(() => setMentionOptions([]));
       return;
@@ -274,8 +306,9 @@ function CommunityPageContent() {
   const visiblePosts = useMemo(() => posts.filter(post => {
     if (activeIntent !== 'all' && inferCommunityIntent(post) !== activeIntent) return false;
     if (postFilter === 'following' && !(post.author_id && followingIds.has(post.author_id))) return false;
+    if (postFilter === 'saved' && !savedPostIds.has(post.id)) return false;
     return true;
-  }), [activeIntent, followingIds, postFilter, posts]);
+  }), [activeIntent, followingIds, postFilter, posts, savedPostIds]);
   function requireCommunityAction(action: () => void) {
     if (!user) {
       router.push('/login');
@@ -398,6 +431,51 @@ function CommunityPageContent() {
     setLikingId('');
   }
 
+  async function toggleSave(post: CommunityV11Post) {
+    if (!communityPostSavesEnabled || savingPostId) return;
+    if (!user) {
+      const query = searchParams.toString();
+      const returnTo = `${pathname}${query ? `?${query}` : ''}`;
+      router.push(`/login?returnTo=${encodeURIComponent(returnTo)}`);
+      return;
+    }
+    if (!canInteract) {
+      setSetupGateOpen(true);
+      return;
+    }
+    setSavingPostId(post.id);
+    setError('');
+    const saved = savedPostIds.has(post.id);
+    setSavedPostIds(current => {
+      const next = new Set(current);
+      if (saved) next.delete(post.id);
+      else next.add(post.id);
+      return next;
+    });
+    try {
+      if (post.local_only) {
+        setLocalCommunityPostSaved(post.id, !saved);
+      } else {
+        await setCommunityPostSaved(post.id, user.id, !saved);
+      }
+    } catch (saveError) {
+      if (communityV11LocalPreviewEnabled && !post.local_only) {
+        setLocalCommunityPostSaved(post.id, !saved);
+        setSavingPostId('');
+        return;
+      }
+      setSavedPostIds(current => {
+        const next = new Set(current);
+        if (saved) next.add(post.id);
+        else next.delete(post.id);
+        return next;
+      });
+      setError(saveError instanceof Error ? saveError.message : 'Could not update this saved post.');
+    } finally {
+      setSavingPostId('');
+    }
+  }
+
   async function deletePost(post: CommunityV11Post) {
     if (!user || post.author_id !== user.id) return;
     if (!window.confirm('Delete this post? This cannot be undone.')) return;
@@ -503,6 +581,7 @@ function CommunityPageContent() {
         {({ close }) => <>
           {[
             { id: 'all', label: 'All Posts', href: pathname },
+            { id: 'saved', label: 'Saved Posts', href: `${pathname}?filter=saved` },
             { id: 'following', label: 'People You Follow', href: `${pathname}?filter=following` },
           ].map(option => (
             <button
@@ -511,6 +590,10 @@ function CommunityPageContent() {
               className={postFilter === option.id ? 'ui44-paper-menu-item ui44-paper-menu-item-selected page-filter-option page-filter-option-active' : 'ui44-paper-menu-item page-filter-option'}
               onClick={() => {
                 close();
+                if (option.id === 'saved' && !user) {
+                  router.push(`/login?returnTo=${encodeURIComponent(option.href)}`);
+                  return;
+                }
                 router.push(option.href);
               }}
             >
@@ -521,6 +604,8 @@ function CommunityPageContent() {
       </FilterPopover>
     </div>
   );
+
+  const filterQuery = postFilter === 'all' ? '' : `?filter=${postFilter}`;
 
   return (
     <PageShell>
@@ -534,7 +619,7 @@ function CommunityPageContent() {
             toolbarSpacing
             topbarTabs={INTENT_TABS.map(tab => ({
               ...tab,
-              href: `${tab.href}${postFilter === 'following' ? '?filter=following' : ''}`,
+              href: `${tab.href}${filterQuery}`,
               active: activeIntent === tab.id,
               variant: 'section' as const,
             }))}
@@ -542,7 +627,7 @@ function CommunityPageContent() {
             {INTENT_TABS.map(tab => (
               <SectionTab
                 key={tab.id}
-                  href={`${tab.href}${postFilter === 'following' ? '?filter=following' : ''}`}
+                  href={`${tab.href}${filterQuery}`}
                 active={activeIntent === tab.id}
               >
                 {tab.label}
@@ -618,7 +703,11 @@ function CommunityPageContent() {
               <div className="dashboard-empty ui44-state ui44-state-loading" role="status" aria-live="polite">Loading posts...</div>
             ) : visiblePosts.length === 0 ? (
               <div className="dashboard-empty">
-                {postFilter === 'following' ? 'No posts from people you follow yet.' : `No ${activeIntent === 'all' ? 'posts' : INTENT_TABS.find(tab => tab.id === activeIntent)?.label.toLocaleLowerCase()} yet.`}
+                {postFilter === 'following'
+                  ? 'No posts from people you follow yet.'
+                  : postFilter === 'saved'
+                    ? 'No saved posts yet.'
+                    : `No ${activeIntent === 'all' ? 'posts' : INTENT_TABS.find(tab => tab.id === activeIntent)?.label.toLocaleLowerCase()} yet.`}
               </div>
             ) : (
               visiblePosts.map(post => {
@@ -633,14 +722,15 @@ function CommunityPageContent() {
                       repliers={repliersMap[post.id] ?? []}
                       liked={likedIds.has(post.id)}
                       onLike={() => { void toggleLike(post); }}
+                      saved={savedPostIds.has(post.id)}
+                      onSave={() => { void toggleSave(post); }}
+                      saveDisabled={savingPostId === post.id}
                       onDelete={() => { void deletePost(post); }}
                       onEdit={() => beginEditingPost(post)}
                       onReport={() => openPostReport(post)}
                       canDelete={Boolean(user && post.author_id === user.id)}
                       canEdit={Boolean(user && post.author_id === user.id)}
                       disabled={likingId === post.id}
-                      meta={intent === 'general' ? undefined : <span className="community-intent-label">{COMMUNITY_INTENT_LABELS[intent]}</span>}
-                      metaPlacement="actions"
                       references={referencesForPost(post)}
                       editing={editingPostId === post.id}
                       rowClassName="community-post-card"

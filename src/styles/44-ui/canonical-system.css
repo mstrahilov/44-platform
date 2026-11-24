@@ -12671,6 +12671,94 @@ body:is(.theme-dark, .theme-light) .notification-page-chevron {
   color: var(--os-color-ink-muted);
 }
 
+/* Community action rows: keep like/reply groups on fixed columns while
+   giving both icon-to-count pairs the same visual rhythm. The parent action
+   controls retain a 44px hit area; only the visible icon surface is tightened
+   so a like count does not appear farther from its icon than a reply count. */
+body:is(.theme-dark, .theme-light)
+  :is(.community-v11-page, .community-thread-v11)
+  .social-actions:not(:has(.social-action-reply-label)) {
+  display: grid;
+  grid-template-columns: 44px 44px;
+  column-gap: 8px;
+  align-items: center;
+  min-height: 44px;
+  gap: 0 8px;
+  margin-top: 0;
+}
+
+body:is(.theme-dark, .theme-light)
+  :is(.community-v11-page, .community-thread-v11)
+  .social-actions:not(:has(.social-action-reply-label))
+  .ui44-row-action {
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  box-sizing: border-box;
+  justify-content: flex-start;
+  gap: 6px;
+  padding-inline: 0;
+}
+
+body:is(.theme-dark, .theme-light)
+  :is(.community-v11-page, .community-thread-v11)
+  .social-actions:not(:has(.social-action-reply-label))
+  .social-action-like {
+  width: 44px;
+  min-width: 44px;
+  flex: 0 0 44px;
+  padding-inline: 0;
+}
+
+body:is(.theme-dark, .theme-light)
+  :is(.community-v11-page, .community-thread-v11)
+  .social-actions:not(:has(.social-action-reply-label))
+  .social-action-like-hit {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  border-radius: 50%;
+}
+
+body:is(.theme-dark, .theme-light)
+  :is(.community-v11-page, .community-thread-v11)
+  .social-actions:not(:has(.social-action-reply-label))
+  .social-action-icon {
+  width: 20px;
+  height: 20px;
+}
+
+body:is(.theme-dark, .theme-light)
+  :is(.community-v11-page, .community-thread-v11)
+  .social-actions:not(:has(.social-action-reply-label)):has(.social-action-save) {
+  grid-template-columns: 44px 44px minmax(0, 1fr);
+}
+
+body:is(.theme-dark, .theme-light)
+  :is(.community-v11-page, .community-thread-v11)
+  .social-actions:not(:has(.social-action-reply-label))
+  .social-action-save {
+  grid-column: 3;
+  justify-self: end;
+  color: var(--os-color-ink);
+  justify-content: center;
+}
+
+body:is(.theme-dark, .theme-light)
+  :is(.community-v11-page, .community-thread-v11)
+  .social-actions:not(:has(.social-action-reply-label))
+  .social-action-save .social-action-icon {
+  position: relative;
+  left: 6px;
+}
+
+body:is(.theme-dark, .theme-light)
+  :is(.community-v11-page, .community-thread-v11)
+  .social-actions:not(:has(.social-action-reply-label))
+  .social-action-save[data-saved="true"] {
+  color: var(--os-color-ink);
+}
+
 @media (max-width: 768px) {
   body:is(.theme-dark, .theme-light) .notification-page-row-achievement {
     grid-template-columns: 40px minmax(0, 1fr) 44px;

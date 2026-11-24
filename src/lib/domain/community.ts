@@ -456,6 +456,23 @@ export async function setDiscussionLike(postId: string, userId: string, liked: b
   if (result.error) throw result.error;
 }
 
+export async function loadSavedCommunityPostIds(userId: string) {
+  const result = await supabase
+    .from('content_entry_saves')
+    .select('entry_id')
+    .eq('profile_id', userId)
+    .order('saved_at', { ascending: false });
+  if (result.error) throw result.error;
+  return (result.data ?? []).map(row => row.entry_id);
+}
+
+export async function setCommunityPostSaved(postId: string, userId: string, saved: boolean) {
+  const result = saved
+    ? await supabase.from('content_entry_saves').insert({ entry_id: postId, profile_id: userId })
+    : await supabase.from('content_entry_saves').delete().eq('entry_id', postId).eq('profile_id', userId);
+  if (result.error) throw result.error;
+}
+
 export async function deleteDiscussion(postId: string, ownerId: string) {
   const result = await supabase.from('content_entries').delete().eq('id', postId).eq('author_id', ownerId);
   if (result.error) throw result.error;

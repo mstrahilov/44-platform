@@ -224,6 +224,14 @@ function ChatBubbleIcon() {
   );
 }
 
+function BookmarkIcon({ saved }: { saved: boolean }) {
+  return (
+    <svg className="social-action-icon ui44-row-action-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M5 4.5h14v15.2L12 16l-7 3.7z" fill={saved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function TrashIcon() {
   return (
     <svg className="social-action-icon ui44-row-action-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -279,6 +287,9 @@ export function SocialPostRow({
   likeCount = 0,
   liked = false,
   onLike,
+  saved = false,
+  onSave,
+  saveDisabled = false,
   onDelete,
   onEdit,
   onReport,
@@ -320,6 +331,9 @@ export function SocialPostRow({
   likers?: SocialLiker[];
   repliers?: SocialLiker[];
   onLike?: () => void;
+  saved?: boolean;
+  onSave?: () => void;
+  saveDisabled?: boolean;
   onDelete?: () => void;
   onEdit?: () => void;
   onReport?: () => void;
@@ -586,11 +600,18 @@ export function SocialPostRow({
               {replyCount > 0 && <span className="social-action-count">{replyCount}</span>}
             </Link>
           )}
-          {metaPlacement === 'actions' && meta && (
-            <span className="community-post-tag">
-              <span aria-hidden="true">#</span>
-              {meta}
-            </span>
+          {onSave && (
+            <button
+              type="button"
+              className="social-action social-action-save ui44-row-action"
+              data-saved={saved ? 'true' : 'false'}
+              onClick={onSave}
+              disabled={saveDisabled}
+              aria-label={saved ? 'Remove saved post' : 'Save post'}
+              title={saved ? 'Remove saved post' : 'Save post'}
+            >
+              <BookmarkIcon saved={saved} />
+            </button>
           )}
         </div>
       </div>

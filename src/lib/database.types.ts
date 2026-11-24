@@ -2319,6 +2319,39 @@ export type Database = {
           },
         ]
       }
+      content_entry_saves: {
+        Row: {
+          entry_id: string
+          profile_id: string
+          saved_at: string
+        }
+        Insert: {
+          entry_id: string
+          profile_id: string
+          saved_at?: string
+        }
+        Update: {
+          entry_id?: string
+          profile_id?: string
+          saved_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_entry_saves_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "content_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_entry_saves_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_question_details: {
         Row: {
           accepted_reply_id: string | null
