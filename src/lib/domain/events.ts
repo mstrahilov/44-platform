@@ -109,6 +109,24 @@ export async function saveCreatorEvent(id: string | null, payload: EventPayload)
   return result.data as string;
 }
 
+export async function getCreatorEventRelatedRelease(eventId: string) {
+  const result = await supabase
+    .from('creator_event_related_items' as never)
+    .select('related_item_id')
+    .eq('event_id', eventId)
+    .maybeSingle();
+  if (result.error) throw result.error;
+  return (result.data as { related_item_id: string } | null)?.related_item_id ?? null;
+}
+
+export async function setCreatorEventRelatedRelease(eventId: string, releaseId: string | null) {
+  const result = await supabase.rpc('set_creator_event_related_release' as never, {
+    target_event_id: eventId,
+    target_release_id: releaseId,
+  } as never);
+  if (result.error) throw result.error;
+}
+
 export async function setCreatorEventState(id: string, state: 'scheduled'|'cancelled'|'removed') {
   const result = await supabase.rpc('set_creator_event_state', { target_event_id: id, target_state: state });
   if (result.error) throw result.error;

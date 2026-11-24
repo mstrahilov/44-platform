@@ -5,7 +5,9 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { EmptyMessage, HubHero, PageShell, SectionHeader } from '@/components/Ui';
 import { useTopbarBack, useTopbarMobileTrailingAction, useTopbarTitle } from '@/components/TopbarContext';
-import { Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
+import { StudioCreateCancel } from '@/components/StudioCreateCancel';
+import { StudioReleasePicker } from '@/components/StudioReleasePicker';
+import { Ui44TextInput } from '@/components/ui44/Inputs';
 import { OS44Button } from '@/components/OS44Button';
 import { useAuth } from '@/lib/useAuth';
 import { isCreatorProfile, loadStudioProfile } from '@/lib/studioProfiles';
@@ -39,9 +41,9 @@ function SharePlaceholderArtwork() {
   </span>;
 }
 
-function StudioVideoToolbar({ pageTitle, mobileSaveAction }: { pageTitle: string; mobileSaveAction: React.ReactNode }) {
+function StudioVideoToolbar({ pageTitle, mobileSaveAction, editing }: { pageTitle: string; mobileSaveAction: React.ReactNode; editing: boolean }) {
   useTopbarTitle(pageTitle);
-  useTopbarBack({ href: '/studio', label: 'Studio' });
+  useTopbarBack(editing ? { href: '/studio', label: 'Studio' } : undefined);
   useTopbarMobileTrailingAction(mobileSaveAction);
   return null;
 }
@@ -70,6 +72,8 @@ export function StudioVideoEditor({
   const [attachedReleases, setAttachedReleases] = useState<VideoAttachmentTarget[]>([]);
   const [creatorReleases, setCreatorReleases] = useState<VideoAttachmentTarget[]>([]);
   const [selectedReleaseId, setSelectedReleaseId] = useState('');
+  const [relatedReleaseEnabled, setRelatedReleaseEnabled] = useState(false);
+  const [releasePickerOpen, setReleasePickerOpen] = useState(false);
   const [accessReady, setAccessReady] = useState(false);
   const [loadingVideo, setLoadingVideo] = useState(editing);
   const [loadingAttachments, setLoadingAttachments] = useState(true);
@@ -98,7 +102,7 @@ export function StudioVideoEditor({
         saved = await saveCreatorVideo(title || 'YouTube video', videoUrl, publishedAt);
         setVideo({ ...saved, creator_id: user.id });
       }
-      if (!editing && selectedReleaseId && !attachedReleases.some(release => release.id === selectedReleaseId)) {
+      if (!editing && relatedReleaseEnabled && selectedReleaseId && !attachedReleases.some(release => release.id === selectedReleaseId)) {
         const release = creatorReleases.find(row => row.id === selectedReleaseId);
         if (release) {
           try {
@@ -125,7 +129,7 @@ export function StudioVideoEditor({
       setError(saveError instanceof Error ? saveError.message : 'Could not save this video. Try again.');
       setSaving(false);
     }
-  }, [attachedReleases, creatorReleases, editing, onSaved, publishedAt, router, saving, selectedReleaseId, title, user, video, videoId, videoUrl]);
+  }, [attachedReleases, creatorReleases, editing, onSaved, publishedAt, relatedReleaseEnabled, router, saving, selectedReleaseId, title, user, video, videoId, videoUrl]);
 
   const mobileSaveAction = useMemo(() => <button
     type="submit"
@@ -159,15 +163,27 @@ export function StudioVideoEditor({
         setVideoUrl(`https://www.youtube.com/watch?v=${loadedVideo.youtube_video_id}`);
         setPublishedAt(loadedVideo.youtube_published_at);
         setAttachedReleases(attached);
-        setCreatorReleases(releases.map(release => ({ id: release.id, title: release.title, cover_url: release.cover_url })));
+        setCreatorReleases(releases.filter(release => release.experience_type === 'music' || release.experience_type === 'game').map(release => ({
+          id: release.id,
+          title: release.title,
+          cover_url: release.cover_url,
+          item_type: release.browse_type?.label || release.item_type || release.experience_type || null,
+        })));
         setLoadingVideo(false);
         setLoadingAttachments(false);
       } else {
         const releases = await listCreatorItems(profile.id);
         if (!alive) return;
-        const targets = releases.map(release => ({ id: release.id, title: release.title, cover_url: release.cover_url }));
+        const targets = releases.filter(release => release.experience_type === 'music' || release.experience_type === 'game').map(release => ({
+          id: release.id,
+          title: release.title,
+          cover_url: release.cover_url,
+          item_type: release.browse_type?.label || release.item_type || release.experience_type || null,
+        }));
         setCreatorReleases(targets);
-        setSelectedReleaseId(targets.some(release => release.id === initialReleaseId) ? initialReleaseId ?? '' : '');
+        const initialSelection = targets.some(release => release.id === initialReleaseId) ? initialReleaseId ?? '' : '';
+        setSelectedReleaseId(initialSelection);
+        setRelatedReleaseEnabled(Boolean(initialSelection));
         setLoadingAttachments(false);
       }
       if (alive) {
@@ -183,16 +199,20 @@ export function StudioVideoEditor({
     return () => { alive = false; };
   }, [editing, initialReleaseId, user, videoId]);
 
-  async function attachRelease() {
-    if (!video || !selectedReleaseId || mutatingAttachment) return;
-    const release = creatorReleases.find(row => row.id === selectedReleaseId);
-    if (!release) return;
+  async function selectRelease(release: VideoAttachmentTarget) {
+    if (mutatingAttachment) return;
+    if (!editing) {
+      setSelectedReleaseId(release.id);
+      setReleasePickerOpen(false);
+      return;
+    }
+    if (!video || attachedReleases.some(row => row.id === release.id)) return;
     setMutatingAttachment(true);
     setError('');
     try {
       await attachCreatorVideoToRelease(video.id, release.id);
       setAttachedReleases(current => [...current, release]);
-      setSelectedReleaseId('');
+      setReleasePickerOpen(false);
     } catch (attachmentError) {
       setError(attachmentError instanceof Error ? attachmentError.message : 'Could not attach this release.');
     } finally {
@@ -231,6 +251,7 @@ export function StudioVideoEditor({
   const validUrl = isSupportedYouTubeVideoUrl(videoUrl);
   const availableReleases = creatorReleases.filter(release => !attachedReleases.some(attached => attached.id === release.id));
   const formId = embedded ? 'studio-video-editor-form-embedded' : 'studio-video-editor-form';
+  const createVideoDirty = !editing && Boolean(videoUrl.trim() || selectedReleaseId || relatedReleaseEnabled);
 
   if (authLoading || loadingVideo || (editing && !accessReady && !error)) {
     const loadingState = <div className="dashboard-empty ui44-state ui44-state-loading" role="status">Loading video…</div>;
@@ -248,11 +269,11 @@ export function StudioVideoEditor({
         {error ? <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div> : null}
 
         <section className="dashboard-form-section">
-          <SectionHeader title="Details" />
+          <SectionHeader title="Details" description="Add the video’s core details." showDescription />
           <div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible">
             <label className="dashboard-field">
-              <span className="dashboard-field-label">YouTube Video URL</span>
-              <Ui44TextInput className="os-input-field" type="url" value={videoUrl} onChange={event => { setVideoUrl(event.target.value); setPublishedAt(null); setTitle('YouTube video'); }} placeholder="Enter YouTube video URL" autoCapitalize="none" autoCorrect="off" inputMode="url" aria-label="YouTube Video URL" />
+              <span className="dashboard-field-label">YouTube link</span>
+              <Ui44TextInput className="os-input-field" type="url" value={videoUrl} onChange={event => { setVideoUrl(event.target.value); setPublishedAt(null); setTitle('YouTube video'); }} placeholder="Paste a YouTube video URL" autoCapitalize="none" autoCorrect="off" inputMode="url" aria-label="YouTube link" />
               {videoUrl && !validUrl ? <span className="dashboard-form-note">Use an HTTPS YouTube link to a video.</span> : null}
             </label>
           </div>
@@ -275,15 +296,8 @@ export function StudioVideoEditor({
                   style={{ display: 'grid', flex: '0 0 28px', width: 28, minWidth: 28, height: 28, placeItems: 'center', padding: 0, border: 'none', borderRadius: '50%', backgroundColor: '#ff3048', color: '#fff', position: 'relative', zIndex: 20, cursor: 'pointer' }}
                 ><RemoveAttachmentIcon /></button>
               </div>)}
-              {!loadingAttachments && attachedReleases.length < 10 ? <div className="studio-video-attach-control">
-                <label className="dashboard-field">
-                  <span className="dashboard-field-label">Attach to a Release</span>
-                  <Ui44SelectInput value={selectedReleaseId} onChange={event => setSelectedReleaseId(event.target.value)}>
-                    <option value="">Select a release</option>
-                    {availableReleases.map(release => <option key={release.id} value={release.id}>{release.title}</option>)}
-                  </Ui44SelectInput>
-                </label>
-                <OS44Button className="os-button os-button-secondary" type="button" disabled={!selectedReleaseId || mutatingAttachment} onClick={() => void attachRelease()}>{mutatingAttachment ? 'Saving…' : 'Attach'}</OS44Button>
+              {!loadingAttachments && attachedReleases.length < 10 ? <div className="studio-visual-video-actions studio-video-release-picker-action">
+                <button className="os-button os-button-secondary" type="button" disabled={!availableReleases.length || mutatingAttachment} onClick={() => setReleasePickerOpen(true)}>Select Release</button>
               </div> : null}
               {!loadingAttachments && attachedReleases.length >= 10 ? <p className="dashboard-form-note">A video can be attached to up to 10 releases.</p> : null}
               {!loadingAttachments && attachedReleases.length < 10 && attachedReleases.length === 0 && availableReleases.length === 0 ? <p className="dashboard-form-note">You have no releases to attach.</p> : null}
@@ -298,16 +312,36 @@ export function StudioVideoEditor({
             </div>
           </section>
         </> : embedded && !initialReleaseId ? null : <section className="dashboard-form-section">
-          <SectionHeader title="Related Release" />
-          <div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible studio-video-attachments">
-            {loadingAttachments ? <div className="dashboard-empty ui44-state ui44-state-loading" role="status">Loading releases…</div> : creatorReleases.length === 0 ? <p className="dashboard-form-note">You have no releases to attach.</p> : <label className="dashboard-field">
-              <span className="dashboard-field-label">Attach to a Release (Optional)</span>
-              <Ui44SelectInput value={selectedReleaseId} disabled={Boolean(embedded && initialReleaseId)} onChange={event => setSelectedReleaseId(event.target.value)}>
-                <option value="">Select a release</option>
-                {creatorReleases.map(release => <option key={release.id} value={release.id}>{release.title}</option>)}
-              </Ui44SelectInput>
-            </label>}
-          </div>
+          <SectionHeader
+            title="Related Release"
+            description="Attach this video to a related release."
+            showDescription
+            alignActionWithTitle
+            action={<button
+              type="button"
+              role="switch"
+              aria-label="Enable related release"
+              aria-checked={relatedReleaseEnabled}
+              className={relatedReleaseEnabled ? 'settings-toggle settings-toggle-on ui44-switch ui44-switch-on' : 'settings-toggle ui44-switch'}
+              onClick={() => {
+                setRelatedReleaseEnabled(current => {
+                  const next = !current;
+                  if (!next) setSelectedReleaseId('');
+                  return next;
+                });
+              }}
+            />}
+          />
+          {relatedReleaseEnabled ? <div className="studio-video-release-picker-controls">
+            {loadingAttachments ? <div className="dashboard-empty ui44-state ui44-state-loading" role="status">Loading releases…</div> : creatorReleases.length === 0 ? <p className="dashboard-form-note">You have no releases to attach.</p> : selectedReleaseId ? (() => {
+              const selectedRelease = creatorReleases.find(release => release.id === selectedReleaseId);
+              return selectedRelease ? <div className="studio-video-release-row studio-video-release-row-selected">
+                {selectedRelease.cover_url ? <Image className="studio-video-release-artwork" src={selectedRelease.cover_url} alt="" width={56} height={56} unoptimized /> : <SharePlaceholderArtwork />}
+                <span className="studio-video-release-title">{selectedRelease.title}</span>
+                <button type="button" className="os-button os-button-secondary os-button-compact" onClick={() => setReleasePickerOpen(true)}>Change</button>
+              </div> : null;
+            })() : <button type="button" className="os-button os-button-secondary studio-video-select-release-button" onClick={() => setReleasePickerOpen(true)}>Select Release</button>}
+          </div> : null}
         </section>}
 
   </form>;
@@ -322,11 +356,13 @@ export function StudioVideoEditor({
   </div>;
 
   return <PageShell>
+    {!editing ? <StudioCreateCancel dirty={createVideoDirty} href="/studio" /> : null}
     <main className="dashboard-page studio-video-editor-page">
-      <StudioVideoToolbar pageTitle={pageTitle} mobileSaveAction={mobileSaveAction} />
+      <StudioVideoToolbar pageTitle={pageTitle} mobileSaveAction={mobileSaveAction} editing={editing} />
       <HubHero title={pageTitle} hideDivider={!editing} />
       {form}
     </main>
+    {releasePickerOpen ? <StudioReleasePicker releases={editing ? availableReleases : creatorReleases} selectedId={selectedReleaseId} onSelect={release => void selectRelease(release)} onClose={() => setReleasePickerOpen(false)} /> : null}
   </PageShell>;
 }
 

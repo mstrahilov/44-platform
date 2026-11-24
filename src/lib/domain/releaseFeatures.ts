@@ -37,6 +37,8 @@ export type VideoAttachmentTarget = {
   id: string;
   title: string;
   cover_url: string | null;
+  item_type?: string | null;
+  experience_type?: string | null;
 };
 
 type CreatorVideoRpcRow = Pick<CreatorVideoPage, 'id' | 'title' | 'youtube_video_id' | 'youtube_published_at'>;
@@ -312,7 +314,7 @@ export async function deleteCreatorVideo(videoId: string) {
 export async function listVideoAttachedReleases(videoId: string) {
   const result = await supabase
     .from('item_video_attachments' as never)
-    .select('catalog_items(id,title,cover_url)')
+    .select('catalog_items(id,title,cover_url,item_type,experience_type)')
     .eq('video_id', videoId);
   if (result.error) throw result.error;
   return ((result.data ?? []) as unknown as Array<{ catalog_items: VideoAttachmentTarget | VideoAttachmentTarget[] | null }>)

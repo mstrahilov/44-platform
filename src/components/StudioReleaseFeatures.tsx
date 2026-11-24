@@ -49,6 +49,10 @@ function supportsAchievementsForSection(sectionId: StudioCatalogSectionId) {
   return sectionId === 'music';
 }
 
+function supportsVisualsForSection(sectionId: StudioCatalogSectionId) {
+  return sectionId === 'music' || sectionId === 'games';
+}
+
 const OVERACHIEVER_CODE = 'overachiever';
 const EMPTY_BONUS_ITEM: DraftBonusContent = {
   title: '',
@@ -108,7 +112,7 @@ export function normalizeFeatureStateForSection(state: ReleaseFeatureState, sect
       visibility: 'achievement',
       achievementCode: supportsAchievements ? OVERACHIEVER_CODE : '',
     })),
-    videoEmbedsEnabled: supportsAchievements ? state.videoEmbedsEnabled : false,
+    videoEmbedsEnabled: supportsVisualsForSection(sectionId) ? state.videoEmbedsEnabled : false,
     achievements,
   };
 }

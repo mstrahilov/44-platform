@@ -11,6 +11,7 @@ type ConfirmDialogProps = {
   cancelLabel?: string;
   destructive?: boolean;
   busy?: boolean;
+  variant?: 'default' | 'studio-discard';
   onConfirm: () => void;
   onCancel: () => void;
 };
@@ -23,6 +24,7 @@ export function ConfirmDialog({
   cancelLabel = 'Cancel',
   destructive = false,
   busy = false,
+  variant = 'default',
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -31,7 +33,7 @@ export function ConfirmDialog({
 
   return (
     <div
-      className="os-modal-backdrop ui44-dialog-overlay"
+      className={`os-modal-backdrop ui44-dialog-overlay${variant === 'studio-discard' ? ' studio-discard-dialog-backdrop' : ''}`}
       role="presentation"
       onMouseDown={event => {
         if (event.target === event.currentTarget && !busy) onCancel();
@@ -39,7 +41,7 @@ export function ConfirmDialog({
     >
       <div
         ref={dialogRef}
-        className="os-modal ui44-dialog-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip"
+        className={`os-modal ui44-dialog-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip${variant === 'studio-discard' ? ' studio-discard-dialog' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"

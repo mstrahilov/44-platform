@@ -3,6 +3,7 @@ import type {
   SelectHTMLAttributes,
   TextareaHTMLAttributes,
 } from 'react';
+import { forwardRef } from 'react';
 
 type Ui44InputSurface = 'field' | 'bare';
 
@@ -10,24 +11,25 @@ function joinClasses(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
 }
 
-export function Ui44TextInput({
+export const Ui44TextInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { surface?: Ui44InputSurface }>(function Ui44TextInput({
   className = '',
   surface = 'field',
   type,
   value,
   defaultValue,
   ...props
-}: InputHTMLAttributes<HTMLInputElement> & { surface?: Ui44InputSurface }) {
+}, ref) {
   const choiceLikeType = type === 'date' || type === 'datetime-local' || type === 'month' || type === 'time' || type === 'week';
   const emptyChoice = choiceLikeType && (value === '' || (value === undefined && defaultValue === ''));
   return <input
+    ref={ref}
     type={type}
     value={value}
     defaultValue={defaultValue}
     className={joinClasses('ui44-input', surface === 'bare' && 'ui44-input-bare', emptyChoice && 'ui44-input-empty', className)}
     {...props}
   />;
-}
+});
 
 export function Ui44Textarea({
   className = '',

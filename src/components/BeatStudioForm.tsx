@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageShell, HubHero, CenteredMessage, SectionHeader } from '@/components/Ui';
 import { useTopbarBack } from '@/components/TopbarContext';
+import { StudioCreateCancel } from '@/components/StudioCreateCancel';
 import { UploadField } from '@/components/UploadField';
 import { TagMultiSelect } from '@/components/TagMultiSelect';
 import { Ui44CheckboxInput, Ui44SelectInput, Ui44TextInput, Ui44Textarea } from '@/components/ui44/Inputs';
@@ -26,6 +27,8 @@ import {
 import { clearStudioFormRecovery, readStudioFormRecovery, writeStudioFormRecovery } from '@/lib/studioFormRecovery';
 import type { Database } from '@/lib/database.types';
 import { OS44Button } from '@/components/OS44Button';
+import { StudioDateInput } from '@/components/StudioDateInput';
+import { StudioRightsPanel } from '@/components/StudioRightsPanel';
 
 type TierCode = 'basic' | 'premium' | 'trackout';
 type BeatFormState = {
@@ -59,7 +62,7 @@ function centsToDollars(value: number) {
 }
 
 export function BeatStudioForm({ itemId = null }: { itemId?: string | null }) {
-  useTopbarBack({ href: '/studio#beats', label: 'Beats' });
+  useTopbarBack(itemId ? { href: '/studio#beats', label: 'Beats' } : undefined);
   const router = useRouter();
   const { user, loading } = useAuth();
   const [form, setForm] = useState<BeatFormState>(EMPTY_FORM);
@@ -135,6 +138,10 @@ export function BeatStudioForm({ itemId = null }: { itemId?: string | null }) {
   const selectedMoods = form.attributeTermIds.filter(id => moods.some(term => term.id === id));
   const selectedInstruments = form.attributeTermIds.filter(id => instruments.some(term => term.id === id));
   const update = <K extends keyof BeatFormState>(key: K, value: BeatFormState[K]) => setForm(current => ({ ...current, [key]: value }));
+  const beatDirty = !itemId && Boolean(
+    form.title.trim() || form.description.trim() || form.coverUrl || form.releaseDate || form.previewUrl ||
+    form.externalUrl.trim() || form.mp3Path || form.wavPath || form.stemsPath || form.enabledTiers.length || form.rightsConfirmed
+  );
 
   if (loading || !ready) return <PageShell><CenteredMessage status>Loading Beat Studio…</CenteredMessage></PageShell>;
   if (!beatReviewSurfacesEnabled) return <PageShell><CenteredMessage>This review-only surface is disabled in this build.</CenteredMessage></PageShell>;
@@ -192,21 +199,21 @@ export function BeatStudioForm({ itemId = null }: { itemId?: string | null }) {
   }
 
   return <PageShell>
+    {!itemId ? <StudioCreateCancel dirty={beatDirty} recoveryKey={recoveryKey} href="/studio#beats" /> : null}
     <main className="dashboard-page beat-studio-page">
       <HubHero title={itemId ? 'Edit Beat' : 'Add Beat'} copy="Create one canonical, shareable Beat Item with a tagged preview and standardized license offers." hideDivider={!itemId} />
       {!databaseEnabled && <div className="dashboard-status dashboard-status-warning ui44-status ui44-status-warning" role="status">Review UI is visible, but database Beat review writes remain fail-closed.</div>}
       {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div>}
       <form className="dashboard-form" onSubmit={handleSubmit}>
         <section className="dashboard-form-section">
-          <SectionHeader title="Beat" description="Set the title, artwork, public preview, and release details for this Beat." />
+          <SectionHeader title="Details" description="Add the beat’s core details." showDescription />
           <div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible">
             <div className="dashboard-form-grid dashboard-form-grid-2 ui44-form-grid">
               <label className="dashboard-field"><span className="dashboard-field-label">Title</span><Ui44TextInput value={form.title} onChange={event => update('title', event.target.value)} required /></label>
-              <label className="dashboard-field"><span className="dashboard-field-label">Release date</span><Ui44TextInput type="date" value={form.releaseDate} onChange={event => update('releaseDate', event.target.value)} required /></label>
+              <label className="dashboard-field"><span className="dashboard-field-label">Release Date</span><StudioDateInput value={form.releaseDate} onChange={value => update('releaseDate', value)} required /></label>
               <div className="dashboard-field"><UploadField label="Square artwork" folder="products/covers" userId={user.id} value={form.coverUrl} accept="image/*" previewKind="image" onChange={value => update('coverUrl', value)} /></div>
               <div className="dashboard-field"><UploadField label="Tagged MP3 preview" folder="products/beat-previews" userId={user.id} value={form.previewUrl} accept="audio/mpeg,audio/mp3" onChange={value => update('previewUrl', value)} onAudioMetadata={duration => update('previewDuration', duration.toString())} /></div>
               <label className="dashboard-field dashboard-field-wide"><span className="dashboard-field-label">Description</span><Ui44Textarea value={form.description} onChange={event => update('description', event.target.value)} rows={5} /></label>
-              <label className="dashboard-field"><span className="dashboard-field-label">YouTube link</span><Ui44TextInput type="url" value={form.externalUrl} onChange={event => update('externalUrl', event.target.value)} placeholder="https://youtube.com/…" /></label>
             </div>
           </div>
         </section>
@@ -250,7 +257,7 @@ export function BeatStudioForm({ itemId = null }: { itemId?: string | null }) {
           })}
         </div></section>
 
-        <label className="dashboard-check-row"><Ui44CheckboxInput checked={form.rightsConfirmed} onChange={event => update('rightsConfirmed', event.target.checked)} /><span>I own or control this Beat, every upload, all samples and loops, and the rights needed to offer these licenses.</span></label>
+        <StudioRightsPanel checked={form.rightsConfirmed} onChange={checked => update('rightsConfirmed', checked)} />
         <div className="dashboard-form-actions">
           <OS44Button type="submit" name="intent" value="draft" className="os-button os-button-secondary" disabled={saving || !databaseEnabled}>{saving ? 'Saving…' : 'Save Draft'}</OS44Button>
           <OS44Button type="submit" name="intent" value="submit" className="os-button os-button-primary" disabled={saving || !databaseEnabled}>{saving ? 'Saving…' : 'Save & Submit for Review'}</OS44Button>

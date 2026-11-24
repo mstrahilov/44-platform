@@ -182,7 +182,10 @@ export function StudioVisualsEditor({
             {availableVideos.map(video => <button type="button" className="studio-video-picker-row" key={video.id} disabled={mutatingVideoId === video.id} onClick={() => void addVideo(video)}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={`https://i.ytimg.com/vi/${video.youtube_video_id}/hqdefault.jpg`} alt="" />
-              <CreatorVideoTitle videoId={video.youtube_video_id} storedTitle={video.title} />
+              <span className="studio-video-picker-copy">
+                <CreatorVideoTitle videoId={video.youtube_video_id} storedTitle={video.title} />
+                <small>YouTube</small>
+              </span>
             </button>)}
           </div> : <p className="dashboard-form-note studio-video-picker-empty">{loading ? 'Loading your videos…' : 'No other videos are available to attach.'}</p>}
         </> : <StudioVideoEditor embedded initialReleaseId={releaseId} onClose={() => setDrawer(null)} onSaved={handleNewVideo} />}

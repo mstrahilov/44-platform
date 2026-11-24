@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageShell, HubHero, CenteredMessage, SectionHeader } from '@/components/Ui';
 import { useTopbarBack, useTopbarMobileTrailingAction } from '@/components/TopbarContext';
+import { StudioCreateCancel } from '@/components/StudioCreateCancel';
 import { AUDIO_UPLOAD_ACCEPT, UploadField } from '@/components/UploadField';
 import { TagMultiSelect } from '@/components/TagMultiSelect';
 import {
@@ -30,6 +31,8 @@ import { loadCreatorPaidSalesState, type CreatorPaidSalesState } from '@/lib/dom
 import { normalizeOptionalReleaseDate, releaseYear } from '@/lib/releaseDates';
 import { StudioDigitalPricingFields, StudioPriceInput } from '@/components/StudioPricingFields';
 import { StudioRelatedItemsField } from '@/components/StudioRelatedItemsField';
+import { StudioDateInput } from '@/components/StudioDateInput';
+import { StudioRightsPanel } from '@/components/StudioRightsPanel';
 import { OS44Button } from '@/components/OS44Button';
 import { supabase } from '@/lib/supabase';
 import { StudioVisualsEditor } from '@/components/StudioVisualsEditor';
@@ -152,7 +155,7 @@ function NewProductContent() {
   const [samplePreviews, setSamplePreviews] = useState<DraftSamplePreview[]>([]);
   const [year, setYear] = useState('');
   const [releaseDate, setReleaseDate] = useState('');
-  const [trackCount, setTrackCount] = useState('');
+  const [trackCount, setTrackCount] = useState('1');
   const [tracks, setTracks] = useState<DraftTrack[]>([]);
   const [featureState, setFeatureState] = useState(() => ({ ...createReleaseFeatureState(section.id), achievementsEnabled: false }));
   const [attachedVideos, setAttachedVideos] = useState<CreatorVideoPage[]>([]);
@@ -229,7 +232,7 @@ function NewProductContent() {
         setMerchShippingScope(recovered.merchShippingScope); setCoverUrl(recovered.coverUrl);
         setGalleryUrls(recovered.galleryUrls); setItemFileUrl(recovered.itemFileUrl);
         setSamplePreviews(recovered.samplePreviews); setYear(recovered.year); setReleaseDate(recovered.releaseDate ?? (recovered.year ? `${recovered.year}-01-01` : ''));
-        setTrackCount(recovered.trackCount); setTracks(recovered.tracks); setFeatureState(recovered.featureState); setAttachedVideos(recovered.attachedVideos ?? []);
+        setTrackCount(recovered.trackCount || '1'); setTracks(recovered.tracks); setFeatureState(recovered.featureState); setAttachedVideos(recovered.attachedVideos ?? []);
         setExternalLinks(recovered.externalLinks); setExternalLinksEnabled(recovered.externalLinksEnabled ?? false);
         setRelatedItemsEnabled(recovered.relatedItemsEnabled ?? false);
         setRightsConfirmed(recovered.rightsConfirmed);
@@ -261,6 +264,14 @@ function NewProductContent() {
   const needsDigitalFile = section.id === 'books' || section.id === 'games' || section.id === 'assets';
   const merchUsesLocalOnlyPricing = isMerchProduct && (merchFulfillmentMode === 'deliver' || merchShippingScope === 'local');
   const creatorCommerceUnavailable = !isMerchProduct && !isGameProduct && !paidSales?.can_sell_paid;
+  const newProductDirty = Boolean(
+    title.trim() || description.trim() || coverUrl || itemFileUrl || releaseDate ||
+    tracks.some(track => track.title.trim() || track.audioUrl) ||
+    externalLinks.some(link => link.url.trim()) || attachedVideos.length > 0 ||
+    selectedRelatedItemIds.length > 0 || rightsConfirmed || externalLinksEnabled || relatedItemsEnabled ||
+    featureState.videoEmbedsEnabled || featureState.achievementsEnabled ||
+    (section.id !== 'assets' && availability === 'paid') || price || samplePreviews.length > 0 || galleryUrls.length > 0
+  );
 
   useEffect(() => {
     if (profile && isMerchProduct && profile.role !== 'admin') router.replace('/studio');
@@ -434,13 +445,13 @@ function NewProductContent() {
       return;
     }
 
-    if (isMusicProduct || isBookProduct) {
+    if (isMusicProduct || isBookProduct || isGameProduct) {
       const componentSettings = await supabase.rpc('update_owned_item' as never, {
         target_item_id: insertedProductId,
         patch: {
-          external_links_enabled: externalLinksEnabled,
+          external_links_enabled: isMusicProduct ? externalLinksEnabled : false,
           visuals_enabled: featureState.videoEmbedsEnabled,
-          related_items_enabled: isBookProduct || relatedItemsEnabled,
+          related_items_enabled: relatedItemsEnabled,
           community_enabled: true,
         },
       } as never);
@@ -449,7 +460,7 @@ function NewProductContent() {
         setError(componentSettings.error.message || 'Could not save release section settings.');
         return;
       }
-      if (isBookProduct && selectedRelatedItemIds.length > 0) {
+      if ((isBookProduct || isGameProduct) && selectedRelatedItemIds.length > 0) {
         const relatedResult = await supabase.rpc('set_item_related_items' as never, {
           target_item_id: insertedProductId,
           related_ids: selectedRelatedItemIds,
@@ -548,7 +559,7 @@ function NewProductContent() {
       }
     }
 
-    if (section.id === 'music') {
+    if (section.id === 'music' || isGameProduct) {
       const featureError = await saveReleaseFeatures({
         productId: insertedProductId,
         sectionId: section.id,
@@ -567,12 +578,14 @@ function NewProductContent() {
         setError(videoError instanceof Error ? videoError.message : 'Could not attach videos to this release.');
         return;
       }
-      try {
-        await replaceOwnedItemExternalLinks(insertedProductId, externalLinksEnabled ? activeExternalLinkDrafts(externalLinks) : []);
-      } catch (linkSaveError) {
-        setSaving(false);
-        setError(linkSaveError instanceof Error ? linkSaveError.message : 'Could not save release links.');
-        return;
+      if (isMusicProduct) {
+        try {
+          await replaceOwnedItemExternalLinks(insertedProductId, externalLinksEnabled ? activeExternalLinkDrafts(externalLinks) : []);
+        } catch (linkSaveError) {
+          setSaving(false);
+          setError(linkSaveError instanceof Error ? linkSaveError.message : 'Could not save release links.');
+          return;
+        }
       }
     }
 
@@ -609,6 +622,7 @@ function NewProductContent() {
   if ((section.id as string) === 'assets') return <AssetStudioForm />;
   return (
     <PageShell>
+      <StudioCreateCancel dirty={newProductDirty} recoveryKey={recoveryKey} href={section.id === 'assets' ? '/studio' : section.href} />
       <div className="dashboard-editor">
         <HubHero
           title={section.createTitle}
@@ -632,7 +646,7 @@ function NewProductContent() {
               onUploadingChange={handleUploadActivity}
             /> : null}
             <section className="dashboard-form-section">
-              <SectionHeader title="Details" description={isMusicProduct ? 'Add the release’s core details.' : isBookProduct || isGameProduct ? undefined : 'Set the core title, type, artwork, and main details for this item.'} showDescription={isMusicProduct} />
+              <SectionHeader title="Details" description="Add the item’s core details." showDescription />
 
               <div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible">
 
@@ -660,13 +674,13 @@ function NewProductContent() {
                   </label>
                   <label className="dashboard-field">
                     <div className="dashboard-field-label">Release Date</div>
-                    <Ui44TextInput required className="os-input-field release-date-input" type="date" value={releaseDate} onChange={event => { setReleaseDate(event.target.value); setYear(event.target.value.slice(0, 4)); }} />
+                    <StudioDateInput required value={releaseDate} onChange={value => { setReleaseDate(value); setYear(value.slice(0, 4)); }} />
                   </label>
                 </div>
               ) : isGameProduct ? (
                 <label className="dashboard-field">
                   <div className="dashboard-field-label">Release Date</div>
-                  <Ui44TextInput className="os-input-field release-date-input" type="date" value={releaseDate} onChange={event => { setReleaseDate(event.target.value); setYear(event.target.value.slice(0, 4)); }} />
+                  <StudioDateInput value={releaseDate} onChange={value => { setReleaseDate(value); setYear(value.slice(0, 4)); }} />
                 </label>
               ) : section.id === 'books' ? (
                 <div className="dashboard-form-grid dashboard-form-grid-2 release-core-grid ui44-form-grid">
@@ -683,7 +697,7 @@ function NewProductContent() {
                   </label>
                   <label className="dashboard-field">
                     <div className="dashboard-field-label">Release Date</div>
-                    <Ui44TextInput className="os-input-field release-date-input" type="date" value={releaseDate} onChange={event => { setReleaseDate(event.target.value); setYear(event.target.value.slice(0, 4)); }} />
+                    <StudioDateInput value={releaseDate} onChange={value => { setReleaseDate(value); setYear(value.slice(0, 4)); }} />
                   </label>
                 </div>
               ) : isMerchProduct ? (
@@ -714,6 +728,38 @@ function NewProductContent() {
                 <Ui44Textarea className="os-input-field dashboard-textarea" value={description} onChange={event => setDescription(event.target.value)} placeholder="Enter description" />
               </label> : null}
 
+              {isBookProduct ? <div className="studio-inline-upload">
+                <div className="dashboard-field-label">Book file (PDF)</div>
+                <UploadField
+                  label="Book file (PDF)"
+                  hideLabel
+                  folder="products/books"
+                  storage="private-item"
+                  userId={user.id}
+                  value={itemFileUrl}
+                  accept="application/pdf,.pdf"
+                  buttonLabel="Upload"
+                  onChange={setItemFileUrl}
+                  onUploadingChange={handleUploadActivity}
+                />
+              </div> : null}
+
+              {isGameProduct ? <div className="studio-inline-upload">
+                <div className="dashboard-field-label">Unity WebGL export (ZIP)</div>
+                <UploadField
+                  label="Unity WebGL export (ZIP)"
+                  hideLabel
+                  folder="products/games"
+                  storage="private-item"
+                  userId={user.id}
+                  value={itemFileUrl}
+                  accept="application/zip,.zip"
+                  buttonLabel="Upload file"
+                  onChange={setItemFileUrl}
+                  onUploadingChange={handleUploadActivity}
+                />
+              </div> : null}
+
               {section.id !== 'assets' && !isBookProduct && !isGameProduct && !isMusicProduct ? <div className="dashboard-field">
                 <div className="dashboard-field-label">Item Tags</div>
                 <TagMultiSelect options={taxonomyTags.filter(tag => tag.category_id === categoryId && (!tag.item_type_id || tag.item_type_id === storeTypeId))} value={selectedTagIds} onChange={setSelectedTagIds} />
@@ -723,7 +769,6 @@ function NewProductContent() {
               {isMusicProduct ? <label className="dashboard-field">
                 <div className="dashboard-field-label">Track Count</div>
                 <Ui44SelectInput required value={trackCount} onChange={event => setTrackCount(event.target.value)}>
-                  <option value="">Select total tracks</option>
                   {Array.from({ length: 30 }, (_, index) => index + 1).map(count => <option key={count} value={count}>{count}</option>)}
                 </Ui44SelectInput>
               </label> : null}
@@ -807,23 +852,6 @@ function NewProductContent() {
                 </div>
               ) : null}
 
-              {isGameProduct ? <>
-                <UploadField
-                  label="Unity WebGL Export"
-                  folder="products/games"
-                  storage="private-item"
-                  userId={user.id}
-                  value={itemFileUrl}
-                  accept="application/zip,.zip"
-                  buttonLabel="Upload ZIP"
-                  onChange={setItemFileUrl}
-                  onUploadingChange={handleUploadActivity}
-                />
-                <div className="dashboard-status ui44-status" role="note">
-                  Upload one ZIP containing the complete Unity WebGL export. 44OS will inspect, unpack, and host the game before it goes live.
-                </div>
-              </> : null}
-
               {!isMusicProduct && !isBookProduct && !isGameProduct ? <UploadField
               label={isMerchProduct ? 'Product Image' : 'Artwork'}
               folder="products/covers"
@@ -902,23 +930,6 @@ function NewProductContent() {
               </div>
             </section>
 
-            {isBookProduct ? <section className="dashboard-form-section">
-              <SectionHeader title="Book PDF" showDescription={false} />
-              <div className="dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-visible studio-feature-panel">
-                <UploadField
-                  label="Book PDF"
-                  folder="products/books"
-                  storage="private-item"
-                  userId={user.id}
-                  value={itemFileUrl}
-                  accept="application/pdf,.pdf"
-                  buttonLabel="Upload PDF"
-                  onChange={setItemFileUrl}
-                  onUploadingChange={handleUploadActivity}
-                />
-              </div>
-            </section> : null}
-
             {section.id === 'assets' ? <StudioSamplePreviewFields userId={user.id} samples={samplePreviews} onChange={setSamplePreviews} onUploadingChange={handleUploadActivity} /> : null}
 
             {isMusicProduct ? (
@@ -971,18 +982,18 @@ function NewProductContent() {
 
             {isMusicProduct ? (
               <section className="dashboard-form-section">
-                <SectionHeader title="External Links" description="Link to this release on other platforms." showDescription alignActionWithTitle action={(
+                <SectionHeader title="Links" description="Link to this release on other platforms." showDescription alignActionWithTitle action={(
                   <button type="button" role="switch" aria-checked={externalLinksEnabled} className={externalLinksEnabled ? 'settings-toggle settings-toggle-on ui44-switch ui44-switch-on' : 'settings-toggle ui44-switch'} onClick={() => setExternalLinksEnabled(enabled => !enabled)} />
                 )} />
                 {externalLinksEnabled && <div className="dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-visible studio-feature-panel"><ExternalLinksEditor links={externalLinks} platforms={externalLinkPlatforms} onChange={setExternalLinks} /></div>}
               </section>
             ) : null}
 
-            {section.id === 'music' ? (
+            {section.id === 'music' || isGameProduct ? (
               <>
-                  <StudioVisualsEditor enabled={featureState.videoEmbedsEnabled} onEnabledChange={videoEmbedsEnabled => setFeatureState(current => ({ ...current, videoEmbedsEnabled }))} releaseId="" videos={attachedVideos} onVideosChange={setAttachedVideos} />
+                <StudioVisualsEditor enabled={featureState.videoEmbedsEnabled} onEnabledChange={videoEmbedsEnabled => setFeatureState(current => ({ ...current, videoEmbedsEnabled }))} releaseId="" videos={attachedVideos} onVideosChange={setAttachedVideos} />
 
-                <section className="dashboard-form-section studio-component-section">
+                {isMusicProduct ? <section className="dashboard-form-section studio-component-section">
                   <SectionHeader title="Achievements" description="Enable achievements for this release." showDescription alignActionWithTitle action={(
                     <button type="button" role="switch" aria-label="Enable achievements" aria-checked={featureState.achievementsEnabled} className={featureState.achievementsEnabled ? 'settings-toggle settings-toggle-on ui44-switch ui44-switch-on' : 'settings-toggle ui44-switch'} onClick={() => setFeatureState(current => ({
                       ...current,
@@ -1005,17 +1016,28 @@ function NewProductContent() {
                       </label>;
                     })}
                   </div> : null}
-                </section>
+                </section> : null}
 
               </>
             ) : null}
 
-            {isMusicProduct || isBookProduct ? (
+            {isBookProduct || isGameProduct ? (
+              <StudioRelatedItemsField
+                userId={user.id}
+                selectedIds={selectedRelatedItemIds}
+                onSelectedIdsChange={setSelectedRelatedItemIds}
+                enabled={relatedItemsEnabled}
+                onEnabledChange={setRelatedItemsEnabled}
+                releaseOnly
+              />
+            ) : null}
+
+            {isMusicProduct || isBookProduct || isGameProduct ? (
               <section className="dashboard-form-section">
-                <SectionHeader title="Paid Download" description={isBookProduct ? 'Set pricing for the downloadable PDF.' : 'Let listeners pay to download.'} showDescription alignActionWithTitle action={(
-                  <button type="button" role="switch" aria-label="Enable paid download" aria-checked={availability === 'paid'} disabled={creatorCommerceUnavailable} className={availability === 'paid' ? 'settings-toggle settings-toggle-on ui44-switch ui44-switch-on' : 'settings-toggle ui44-switch'} onClick={() => setAvailability(value => value === 'paid' ? 'free' : 'paid')} />
+                  <SectionHeader title="Paid Download" description="Set prices for downloadable files." showDescription alignActionWithTitle action={(
+                  <button type="button" role="switch" aria-label="Enable paid download" aria-checked={isGameProduct ? false : availability === 'paid'} disabled={creatorCommerceUnavailable || isGameProduct} className={!isGameProduct && availability === 'paid' ? 'settings-toggle settings-toggle-on ui44-switch ui44-switch-on' : 'settings-toggle ui44-switch'} onClick={() => { if (!isGameProduct) setAvailability(value => value === 'paid' ? 'free' : 'paid'); }} />
                 )} />
-                {availability === 'paid' ? (
+                {isGameProduct ? null : availability === 'paid' ? (
                   <div className="dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-visible studio-feature-panel studio-paid-download-panel">
                     {creatorCommerceUnavailable ? <p className="dashboard-form-note" id="creator-commerce-new-item-notice">Paid downloads are not available for this account.</p> : null}
                     <div className="dashboard-form-grid dashboard-form-grid-2 ui44-form-grid">
@@ -1040,22 +1062,9 @@ function NewProductContent() {
               </section>
             ) : null}
 
-            {isBookProduct ? (
-              <StudioRelatedItemsField
-                userId={user.id}
-                selectedIds={selectedRelatedItemIds}
-                onSelectedIdsChange={setSelectedRelatedItemIds}
-              />
-            ) : null}
-
             {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div>}
 
-            <label className="dashboard-field">
-              <span className="settings-checkbox-row studio-rights-checkbox">
-                <Ui44CheckboxInput checked={rightsConfirmed} onChange={event => setRightsConfirmed(event.target.checked)} />
-                <span>I confirm that I own this work or have the necessary rights and permission to publish and distribute it through 44OS.</span>
-              </span>
-            </label>
+            <StudioRightsPanel checked={rightsConfirmed} onChange={setRightsConfirmed} />
 
             {!isCreatorProfile(profile) && (
               <p className="dashboard-form-note">

@@ -5191,6 +5191,42 @@ body:is(.theme-dark, .theme-light) .web-push-prompt.ui44-paper-menu {
   background: rgba(0, 0, 0, 0.015);
 }
 
+/* Studio creation cancellation uses a quiet paper confirmation rather than
+   the older glass/blur treatment. Keep the two actions as a centered pair. */
+.studio-discard-dialog-backdrop {
+  background: rgba(0, 0, 0, .58);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.studio-discard-dialog {
+  background: var(--os-paper-bg);
+  color: var(--os-color-ink);
+}
+
+.studio-discard-dialog .os-modal-body {
+  justify-items: center;
+  padding: 28px 28px 12px;
+  text-align: center;
+}
+
+.studio-discard-dialog .os-modal-title,
+.studio-discard-dialog .os-modal-copy {
+  text-align: center;
+}
+
+.studio-discard-dialog .os-modal-copy {
+  max-width: 34ch;
+  margin: 0;
+}
+
+.studio-discard-dialog .os-modal-actions {
+  justify-content: center;
+  padding: 12px 28px 28px;
+  border-top: 0;
+  background: transparent;
+}
+
 /* Detail page — single column. No rail. */
 .view-detail-single {
   position: relative;
@@ -8409,6 +8445,223 @@ body.theme-dark .social-profile-tabs button[aria-selected="true"] {
 .studio-video-picker-row img { display: block; flex: 0 0 84px; width: 84px; height: 48px; border-radius: 8px; object-fit: cover; background: #000; }
 .studio-video-picker-row > span:last-child { min-width: 0; overflow: hidden; color: var(--os-color-accent); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .studio-video-picker-empty { padding: 18px 8px; text-align: center; }
+.studio-related-items-controls { display: grid; gap: 12px; }
+.studio-related-items-empty { margin: 0; }
+.studio-related-item-row { display: grid; min-height: 70px; grid-template-columns: 56px minmax(0, 1fr) 32px; align-items: center; gap: 14px; padding: 10px 12px; border: 1px solid var(--44ui-panel-border); border-radius: 16px; background: var(--44ui-material-glass); }
+.studio-related-item-row > img,
+.studio-related-item-artwork,
+.studio-related-item-picker-artwork { display: grid; width: 56px; height: 56px; place-items: center; border-radius: 10px; object-fit: cover; background: var(--os-glass-recessed-bg); color: var(--os-color-ink-muted); font-weight: 700; }
+.studio-related-item-copy,
+.studio-related-item-picker-copy { display: grid; min-width: 0; gap: 3px; }
+.studio-related-item-copy strong,
+.studio-related-item-picker-copy strong { overflow: hidden; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.studio-related-item-copy small,
+.studio-related-item-picker-copy small { color: var(--os-color-secondary); font-size: 14px; }
+.studio-related-item-row .studio-visual-remove-button { justify-self: end; }
+.studio-video-picker-row > .studio-related-item-picker-artwork { flex: 0 0 84px; width: 84px; height: 58px; }
+.studio-video-picker-row > .studio-related-item-picker-copy { flex: 1 1 auto; color: inherit; }
+.studio-video-picker-row > .studio-related-item-picker-copy strong { color: var(--os-color-accent); }
+.studio-related-item-picker-selected { border-color: var(--os-color-accent); }
+
+.studio-video-picker-copy {
+  display: grid;
+  min-width: 0;
+  flex: 1 1 auto;
+  gap: 3px;
+  text-align: left;
+}
+
+.studio-video-picker-copy > span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--os-color-ink);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.studio-video-picker-row > .studio-video-picker-copy,
+.studio-video-picker-row > .studio-video-picker-copy > span {
+  color: var(--os-color-ink);
+}
+
+.studio-video-picker-copy small,
+.studio-release-picker-list .studio-related-item-picker-copy small {
+  overflow: hidden;
+  color: var(--os-color-ink-muted);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.studio-release-picker-list .studio-related-item-picker-copy strong {
+  color: var(--os-color-ink);
+}
+
+.studio-date-input-control {
+  position: relative;
+  display: block;
+  z-index: 1;
+}
+
+.studio-date-input-control .studio-date-input {
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: none;
+  padding-right: 48px;
+  color-scheme: dark;
+}
+
+.studio-date-input-control .studio-date-input.ui44-input-empty {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  font-size: 0;
+}
+
+.studio-date-input-control .studio-date-input::-webkit-calendar-picker-indicator {
+  display: none;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.studio-date-input-control .studio-date-input::-webkit-datetime-edit,
+.studio-date-input-control .studio-date-input::-webkit-datetime-edit-fields-wrapper,
+.studio-date-input-control .studio-date-input::-webkit-datetime-edit-text,
+.studio-date-input-control .studio-date-input::-webkit-datetime-edit-month-field,
+.studio-date-input-control .studio-date-input::-webkit-datetime-edit-day-field,
+.studio-date-input-control .studio-date-input::-webkit-datetime-edit-year-field {
+  color: inherit;
+}
+
+.studio-date-input-control .studio-date-input.ui44-input-empty::-webkit-datetime-edit,
+.studio-date-input-control .studio-date-input.ui44-input-empty::-webkit-datetime-edit-fields-wrapper,
+.studio-date-input-control .studio-date-input.ui44-input-empty::-webkit-datetime-edit-text,
+.studio-date-input-control .studio-date-input.ui44-input-empty::-webkit-datetime-edit-month-field,
+.studio-date-input-control .studio-date-input.ui44-input-empty::-webkit-datetime-edit-day-field,
+.studio-date-input-control .studio-date-input.ui44-input-empty::-webkit-datetime-edit-year-field {
+  color: transparent;
+}
+
+.studio-date-input-placeholder {
+  position: absolute;
+  inset: 0 auto 0 16px;
+  display: flex;
+  align-items: center;
+  color: var(--44ui-input-placeholder);
+  pointer-events: none;
+}
+
+.studio-date-input-calendar {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  width: 22px;
+  height: 22px;
+  color: var(--44ui-input-placeholder);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.studio-date-input-calendar svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Keep Studio's date calendar attached to its field. Native date popups are
+   positioned by the browser and can jump over the next field on short or
+   responsive viewports, so catalog dates use this small controlled popover. */
+.studio-date-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 40;
+  width: min(320px, calc(100vw - 32px));
+  padding: 14px;
+  border: 1px solid var(--44ui-panel-border);
+  border-radius: 16px;
+  background: var(--44ui-material-glass-strong, var(--44ui-material-glass));
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .32);
+  color: var(--os-color-ink);
+}
+
+.studio-date-popover-header,
+.studio-date-popover-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.studio-date-popover-header { margin-bottom: 12px; }
+.studio-date-popover-header strong { flex: 1 1 auto; text-align: center; }
+.studio-date-popover-header button,
+.studio-date-popover-footer button {
+  border: 0;
+  background: transparent;
+  color: var(--os-color-accent);
+  cursor: pointer;
+  font: inherit;
+}
+.studio-date-popover-header button { width: 28px; height: 28px; font-size: 28px; line-height: 20px; }
+.studio-date-popover-weekdays,
+.studio-date-popover-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.studio-date-popover-weekdays { margin-bottom: 4px; color: var(--os-color-ink-muted); font-size: 12px; text-align: center; }
+.studio-date-popover-grid button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--os-color-ink);
+  cursor: pointer;
+  font: inherit;
+}
+.studio-date-popover-grid button:hover { background: color-mix(in srgb, var(--os-color-accent) 16%, transparent); }
+.studio-date-popover-grid button.is-outside-month { color: var(--os-color-ink-muted); opacity: .58; }
+.studio-date-popover-grid button.is-selected { background: var(--os-color-accent); color: #fff; font-weight: 700; }
+.studio-date-popover-footer { margin-top: 12px; }
+
+.studio-rights-panel {
+  padding: var(--44ui-panel-inset);
+}
+
+.studio-book-upload > .dashboard-field,
+.studio-game-build-upload > .dashboard-field {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+}
+
+.studio-book-upload,
+.studio-game-build-upload {
+  padding: 0;
+}
+
+.studio-book-upload > .dashboard-field > .dashboard-field-label,
+.studio-game-build-upload > .dashboard-field > .dashboard-field-label {
+  margin: 0;
+}
+
+.studio-book-upload > .dashboard-field > .ui44-upload-actions,
+.studio-game-build-upload > .dashboard-field > .ui44-upload-actions {
+  margin: 0;
+}
+
+.studio-inline-upload {
+  display: grid;
+  gap: 16px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.studio-inline-upload > .dashboard-field {
+  gap: 12px;
+}
+
+.studio-inline-upload > .dashboard-field > .ui44-upload-actions {
+  margin: 0;
+}
 .studio-video-editor-embedded { flex: 1 0 auto; }
 .studio-video-editor-embedded .studio-video-editor-form { gap: 12px; padding-bottom: 24px; }
 .studio-video-editor-embedded .dashboard-form-section { margin: 0; }
@@ -8431,6 +8684,44 @@ body.theme-dark .social-profile-tabs button[aria-selected="true"] {
 .studio-video-attachments {
   display: grid;
   gap: 14px;
+}
+
+.studio-video-release-picker-controls {
+  display: grid;
+  gap: 12px;
+}
+
+.studio-video-release-picker-action {
+  justify-content: flex-start;
+}
+
+.studio-video-select-release-button {
+  justify-self: start;
+}
+
+.studio-video-release-row-selected {
+  min-height: 66px;
+  padding: 0;
+  border-bottom: 0;
+}
+
+.studio-video-release-row-selected .studio-video-release-artwork,
+.studio-video-release-row-selected .studio-video-release-placeholder {
+  flex-basis: 56px;
+  width: 56px;
+  height: 56px;
+}
+
+.studio-release-picker-list .studio-video-picker-row {
+  min-height: 76px;
+}
+
+.studio-release-picker-list .studio-video-picker-row img,
+.studio-release-picker-list .studio-video-picker-row > .studio-related-item-picker-artwork {
+  flex-basis: 64px;
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
 }
 
 .studio-video-release-row {
@@ -8462,6 +8753,7 @@ body.theme-dark .social-profile-tabs button[aria-selected="true"] {
 
 .studio-video-release-placeholder svg { width: 100%; height: 100%; }
 .studio-video-release-title { flex: 1 1 auto; min-width: 0; overflow: hidden; font-size: 15px; font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
+.studio-video-release-row.studio-video-release-row-selected { border-bottom: 0; }
 
 .studio-video-detach-button {
   position: relative;
@@ -14458,4 +14750,57 @@ body:is(.theme-dark, .theme-light) .app-shell:has(.radio-page) .os-topbar {
 .dashboard-page .dashboard-metric-card :is(.studio-metric-label, .admin-metric-label) {
   font-size: 13px;
   line-height: 18px;
+}
+
+/* Date inputs use a custom empty-state label and calendar affordance. Keep
+   WebKit's native empty date fields from painting a second placeholder over it. */
+body:is(.theme-dark, .theme-light) .studio-date-input-control .studio-date-input.ui44-input-empty {
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+  font-size: 0 !important;
+}
+
+body:is(.theme-dark, .theme-light) .studio-date-input-control .studio-date-input.ui44-input-empty::-webkit-datetime-edit,
+body:is(.theme-dark, .theme-light) .studio-date-input-control .studio-date-input.ui44-input-empty::-webkit-datetime-edit-fields-wrapper,
+body:is(.theme-dark, .theme-light) .studio-date-input-control .studio-date-input.ui44-input-empty::-webkit-datetime-edit-text,
+body:is(.theme-dark, .theme-light) .studio-date-input-control .studio-date-input.ui44-input-empty::-webkit-datetime-edit-month-field,
+body:is(.theme-dark, .theme-light) .studio-date-input-control .studio-date-input.ui44-input-empty::-webkit-datetime-edit-day-field,
+body:is(.theme-dark, .theme-light) .studio-date-input-control .studio-date-input.ui44-input-empty::-webkit-datetime-edit-year-field {
+  color: transparent !important;
+  font-size: 0 !important;
+}
+
+/* The Studio create flow uses a deliberately simple confirmation lightbox:
+   dim the page without blurring it, and keep the dialog itself on solid paper
+   so the copy and actions never show through the form behind it. */
+.os-modal-backdrop.studio-discard-dialog-backdrop {
+  background: rgba(0, 0, 0, 0.72) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.os-modal.studio-discard-dialog {
+  background: var(--os-paper-bg) !important;
+  background-color: var(--os-paper-bg) !important;
+  color: var(--os-color-ink) !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.os-modal.studio-discard-dialog .os-modal-body {
+  justify-items: center !important;
+  text-align: center !important;
+}
+
+.os-modal.studio-discard-dialog .os-modal-title,
+.os-modal.studio-discard-dialog .os-modal-copy {
+  width: 100%;
+  text-align: center !important;
+}
+
+.os-modal.studio-discard-dialog .os-modal-actions {
+  justify-content: center !important;
+  border-top: 0 !important;
+  background: transparent !important;
 }

@@ -650,7 +650,7 @@ export function Topbar() {
             <img src="/brand/44-topbar-logo.png" alt="" />
           </Link>
           {registeredLeadingAction ? <div className="os-topbar-desktop-leading">{registeredLeadingAction}</div> : null}
-        {back && (
+        {!registeredLeadingAction && back && (
           <button
             type="button"
             className="ui44-symbol-button ui44-symbol-button-back os-topbar-back"
@@ -681,7 +681,7 @@ export function Topbar() {
             </svg>}
           </button>
         )}
-        {!back && (mobileTopbarState.mode === 'back' || mobileTopbarState.mode === 'search-back') && (
+        {!registeredLeadingAction && !back && (mobileTopbarState.mode === 'back' || mobileTopbarState.mode === 'search-back') && (
           <button
             type="button"
             className="ui44-symbol-button ui44-symbol-button-back os-topbar-back os-topbar-back-mobile-only"

@@ -4,10 +4,12 @@ import { useEffect, useMemo, useState, type FormEvent, type SetStateAction } fro
 import { useRouter } from 'next/navigation';
 import { CenteredMessage, HubHero, PageShell, SectionHeader } from '@/components/Ui';
 import { useTopbarBack, useTopbarMobileTrailingAction } from '@/components/TopbarContext';
+import { StudioCreateCancel } from '@/components/StudioCreateCancel';
 import { UploadField } from '@/components/UploadField';
 import { StudioSamplePreviewFields, type DraftSamplePreview } from '@/components/StudioNativeContentFields';
 import { Ui44CheckboxInput, Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
 import { StudioDigitalPricingFields } from '@/components/StudioPricingFields';
+import { StudioRightsPanel } from '@/components/StudioRightsPanel';
 import { useAuth } from '@/lib/useAuth';
 import { currencyForCountry, type MarketMode } from '@/lib/marketPreferences';
 import { getStudioDisplayName, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
@@ -420,8 +422,14 @@ export function AssetStudioForm({ itemId = null }: { itemId?: string | null }) {
   if (loading || !ready) return <PageShell><CenteredMessage status>Loading Asset Studio…</CenteredMessage></PageShell>;
   if (!user) return null;
   const availableTypes: AssetSubtype[] = ['beat', 'sample-packs'];
+  const assetDirty = !itemId && Boolean(
+    form.title.trim() || form.coverUrl || form.releaseDate || form.packFile || form.previewUrl ||
+    form.mp3Path || form.wavPath || form.stemsPath || form.samplePreviews.length || form.youtubeUrl ||
+    form.rightsConfirmed || form.paidDownload || form.price || form.localPrice || form.enabledTiers.length
+  );
 
   return <PageShell>
+    {!itemId ? <StudioCreateCancel dirty={assetDirty} recoveryKey={recoveryKey} href="/studio" /> : null}
     <main className="dashboard-page dashboard-editor">
       <HubHero title={itemId ? 'Edit Asset' : 'Add Asset'} hideDivider actions={<button type="submit" form="studio-asset-form" className="ui44-symbol-button studio-music-publish-desktop" aria-label={itemId ? 'Save asset' : 'Publish asset'} title={itemId ? 'Save asset' : 'Publish asset'} disabled={saving || uploading}><CheckIcon /></button>} />
       {error ? <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div> : null}
@@ -430,7 +438,7 @@ export function AssetStudioForm({ itemId = null }: { itemId?: string | null }) {
           <UploadField label="Artwork" folder="products/covers" userId={user.id} value={form.coverUrl} accept="image/*" previewKind="image" artworkSurface onChange={value => update('coverUrl', value)} onUploadingChange={setUploading} />
 
           <section className="dashboard-form-section">
-            <SectionHeader title="Details" description="Add the asset’s core details." showDescription />
+            <SectionHeader title="Details" description="Add the item’s core details." showDescription />
             <div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible">
               <label className="dashboard-field"><span className="dashboard-field-label">Title</span><Ui44TextInput required value={form.title} placeholder="Enter asset title" onChange={event => update('title', event.target.value)} /></label>
               <label className="dashboard-field"><span className="dashboard-field-label">Item Type</span><Ui44SelectInput required disabled={Boolean(itemId)} value={form.subtype} onChange={event => update('subtype', event.target.value as AssetSubtype)}><option value="">Select item type</option>{availableTypes.map(type => <option key={type} value={type}>{ASSET_TYPE_LABELS[type]}</option>)}</Ui44SelectInput></label>
@@ -438,7 +446,7 @@ export function AssetStudioForm({ itemId = null }: { itemId?: string | null }) {
           </section>
 
           {form.subtype && !beatLike ? <section className="dashboard-form-section">
-            <SectionHeader title="Pricing" description="Choose whether this Sample Pack is free or paid." showDescription />
+            <SectionHeader title="Paid Download" description="Choose whether this Sample Pack is free or paid." showDescription />
             <div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible">
               <StudioDigitalPricingFields
                 availability={form.paidDownload ? 'paid' : 'free'}
@@ -507,12 +515,7 @@ export function AssetStudioForm({ itemId = null }: { itemId?: string | null }) {
             </div>
           </section> : null}
           {form.subtype && !beatLike ? <StudioSamplePreviewFields userId={user.id} samples={form.samplePreviews} onChange={updateSamplePreviews} onUploadingChange={setUploading} /> : null}
-          {form.subtype ? <label className="dashboard-field">
-            <span className="settings-checkbox-row studio-rights-checkbox">
-              <Ui44CheckboxInput checked={form.rightsConfirmed} onChange={event => update('rightsConfirmed', event.target.checked)} />
-              <span>I confirm that I own this work or have the necessary rights and permission to publish and distribute it through 44OS.</span>
-            </span>
-          </label> : null}
+          {form.subtype ? <StudioRightsPanel checked={form.rightsConfirmed} onChange={checked => update('rightsConfirmed', checked)} /> : null}
         </form>
       </div>
     </main>
