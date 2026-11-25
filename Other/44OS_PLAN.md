@@ -50,6 +50,14 @@ These facts are intentionally separated by source and evidence. They do not all 
 
 Treat this table as a dated snapshot. Update it when a version, draft, build, branch, or deployed identity changes; do not turn the snapshot into a permanent claim.
 
+### Web deployment evidence — 2026-11-24
+
+- Owner-approved web deployment source: platform commit `460d5f3b` (`main`), pushed to `origin/main`.
+- Environment: production Vercel project serving `https://app.44os.com`; the domain returned HTTP 200 after the push.
+- Supabase: migration `20261124030000_content_aware_studio_sections.sql` applied to the linked production database and confirmed in the remote migration list.
+- Verification: strict TypeScript check and `next build` passed. Repository-wide lint still reports pre-existing React Compiler errors in unrelated files; no new lint error was introduced by the loading-state changes.
+- Scope: Studio asset/section work, route-level loading states, and the accepted web Studio parity changes. iOS remains intentionally undeployed.
+
 ## 3. Public research basis
 
 The recommendations below adapt public guidance to a small, multi-platform product. They describe what the cited material publicly says; they do not claim access to any company's private operating process.
