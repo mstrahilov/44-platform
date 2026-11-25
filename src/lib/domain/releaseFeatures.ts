@@ -71,6 +71,15 @@ export function isSupportedYouTubeVideoUrl(value: string) {
   return Boolean(path && YOUTUBE_VIDEO_ID.test(path[1]));
 }
 
+/** Return the stable YouTube ID used to build the public thumbnail URL. */
+export function getYouTubeVideoId(value: string) {
+  if (!isSupportedYouTubeVideoUrl(value)) return null;
+  const url = new URL(value.trim());
+  if (url.hostname.toLowerCase() === 'youtu.be') return url.pathname.slice(1);
+  if (url.pathname === '/watch') return url.searchParams.get('v');
+  return url.pathname.match(/^\/(?:shorts|embed)\/([A-Za-z0-9_-]{11})$/)?.[1] ?? null;
+}
+
 export async function listCreatorVideos(limit = 200, creatorId?: string) {
   let query = supabase
     .from('creator_videos' as never)

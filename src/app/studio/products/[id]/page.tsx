@@ -509,9 +509,7 @@ export default function EditProductPage() {
       ? Math.max(0, Math.round(localPriceNumber * 100))
       : null;
     const requiresGlobalPrice = isGameProduct ? false : isMerchProduct ? !merchUsesLocalOnlyPricing : !creatorCommerceUnavailable && availability === 'paid';
-    const requiresLocalPrice = isMerchProduct
-      ? merchUsesLocalOnlyPricing || marketMode === 'global_plus_local'
-      : !isGameProduct && !creatorCommerceUnavailable && availability === 'paid' && marketMode === 'global_plus_local';
+    const requiresLocalPrice = isMerchProduct ? merchUsesLocalOnlyPricing : false;
     if (requiresGlobalPrice && (!Number.isFinite(priceNumber) || priceNumber <= 0)) {
       setSaving(false);
       setError('Enter a price greater than zero for a paid Item.');
@@ -529,19 +527,28 @@ export default function EditProductPage() {
       ? savedPriceCents
       : isFree || merchUsesLocalOnlyPricing ? 0 : Math.round(priceNumber * 100);
     const localPriceCents = enteredLocalPriceCents;
+    const preserveStoredLocalPricing = !isMerchProduct && savedLocalPriceCents !== null;
     const updatePayload = {
       title: title.trim(),
       long_description: description.trim(),
       item_category_id: categoryId,
       item_type: productType.trim(),
       price_cents: merchUsesLocalOnlyPricing ? 0 : priceCents,
-      market_mode: creatorCommerceUnavailable ? savedMarketMode : isFree ? 'global' : (merchUsesLocalOnlyPricing ? 'global_plus_local' : marketMode),
+      market_mode: creatorCommerceUnavailable
+        ? savedMarketMode
+        : isMerchProduct
+          ? (isFree ? 'global' : (merchUsesLocalOnlyPricing ? 'global_plus_local' : 'global'))
+          : preserveStoredLocalPricing ? savedMarketMode : 'global',
       local_price_cents: creatorCommerceUnavailable
         ? savedLocalPriceCents
-        : isFree || (marketMode === 'global' && !merchUsesLocalOnlyPricing) ? null : localPriceCents,
+        : isMerchProduct
+          ? (isFree || !merchUsesLocalOnlyPricing ? null : localPriceCents)
+          : preserveStoredLocalPricing ? savedLocalPriceCents : null,
       local_currency: creatorCommerceUnavailable
         ? savedLocalCurrency
-        : isFree || (marketMode === 'global' && !merchUsesLocalOnlyPricing) ? null : localCurrency,
+        : isMerchProduct
+          ? (isFree || !merchUsesLocalOnlyPricing ? null : localCurrency)
+          : preserveStoredLocalPricing ? savedLocalCurrency : null,
       available_locally_only: isMerchProduct ? merchUsesLocalOnlyPricing : false,
       is_free: isFree,
       ...(!isMerchProduct && (!creatorCommerceUnavailable || isGameProduct) ? {
@@ -1026,7 +1033,7 @@ export default function EditProductPage() {
                               className="os-input-field"
                               value={track.title}
                               onChange={event => updateTrack(index, { title: event.target.value })}
-                              placeholder="Enter track title"
+                              placeholder="Enter title"
                             />
                           </label>
 
@@ -1096,23 +1103,10 @@ export default function EditProductPage() {
                   )} />
                   {availability === 'paid' ? <div className="dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-visible studio-feature-panel studio-paid-download-panel">
                     {creatorCommerceUnavailable ? <p className="dashboard-form-note" id="creator-commerce-existing-item-notice">Paid downloads are not available for this account.</p> : null}
-                    <div className="dashboard-form-grid dashboard-form-grid-2 ui44-form-grid">
-                      <label className="dashboard-field">
-                        <span className="dashboard-field-label">Market</span>
-                        <Ui44SelectInput value={marketMode} disabled={creatorCommerceUnavailable} onChange={event => setMarketMode(event.target.value as MarketMode)}>
-                          <option value="global">Global price only</option>
-                          <option value="global_plus_local">Global + local price</option>
-                        </Ui44SelectInput>
-                      </label>
-                      <label className="dashboard-field">
-                        <span className="dashboard-field-label">Global Price (USD)</span>
-                        <StudioPriceInput currency="USD" value={price} disabled={creatorCommerceUnavailable} onChange={setPrice} />
-                      </label>
-                      {marketMode === 'global_plus_local' ? <label className="dashboard-field">
-                        <span className="dashboard-field-label">Local Price ({localCurrency})</span>
-                        <StudioPriceInput currency={localCurrency} value={localPrice} disabled={creatorCommerceUnavailable} onChange={setLocalPrice} />
-                      </label> : null}
-                    </div>
+                    <label className="dashboard-field">
+                      <span className="dashboard-field-label">Price (USD)</span>
+                      <StudioPriceInput currency="USD" value={price} disabled={creatorCommerceUnavailable} onChange={setPrice} />
+                    </label>
                   </div> : null}
                 </section> : null}
               </>
@@ -1144,23 +1138,10 @@ export default function EditProductPage() {
               )} />
               {availability === 'paid' ? <div className="dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-visible studio-feature-panel studio-paid-download-panel">
                 {creatorCommerceUnavailable ? <p className="dashboard-form-note" id="creator-commerce-existing-item-notice">Paid downloads are not available for this account.</p> : null}
-                <div className="dashboard-form-grid dashboard-form-grid-2 ui44-form-grid">
-                  <label className="dashboard-field">
-                    <span className="dashboard-field-label">Market</span>
-                    <Ui44SelectInput value={marketMode} disabled={creatorCommerceUnavailable} onChange={event => setMarketMode(event.target.value as MarketMode)}>
-                      <option value="global">Global price only</option>
-                      <option value="global_plus_local">Global + local price</option>
-                    </Ui44SelectInput>
-                  </label>
-                  <label className="dashboard-field">
-                    <span className="dashboard-field-label">Global Price (USD)</span>
-                    <StudioPriceInput currency="USD" value={price} disabled={creatorCommerceUnavailable} onChange={setPrice} />
-                  </label>
-                  {marketMode === 'global_plus_local' ? <label className="dashboard-field">
-                    <span className="dashboard-field-label">Local Price ({localCurrency})</span>
-                    <StudioPriceInput currency={localCurrency} value={localPrice} disabled={creatorCommerceUnavailable} onChange={setLocalPrice} />
-                  </label> : null}
-                </div>
+                <label className="dashboard-field">
+                  <span className="dashboard-field-label">Price (USD)</span>
+                  <StudioPriceInput currency="USD" value={price} disabled={creatorCommerceUnavailable} onChange={setPrice} />
+                </label>
               </div> : null}
             </section> : null}
 

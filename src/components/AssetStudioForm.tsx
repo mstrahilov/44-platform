@@ -8,9 +8,9 @@ import { StudioCreateCancel } from '@/components/StudioCreateCancel';
 import { UploadField } from '@/components/UploadField';
 import { getUploadErrorMessage, uploadPrivateItemFile } from '@/lib/uploads';
 import { uploadProcessedAudio } from '@/lib/audioUploads';
-import { StudioSamplePreviewFields, type DraftSamplePreview } from '@/components/StudioNativeContentFields';
+import { ensureSamplePreviewCount, StudioSamplePreviewFields, type DraftSamplePreview } from '@/components/StudioNativeContentFields';
 import { Ui44CheckboxInput, Ui44FileInput, Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
-import { StudioDigitalPricingFields } from '@/components/StudioPricingFields';
+import { formatStudioPriceInput, StudioPriceInput } from '@/components/StudioPricingFields';
 import { StudioRightsPanel } from '@/components/StudioRightsPanel';
 import { useAuth } from '@/lib/useAuth';
 import { currencyForCountry, type MarketMode } from '@/lib/marketPreferences';
@@ -43,6 +43,7 @@ import type { ProductCategory } from '@/lib/platform';
 
 type AssetSubtype = 'beat' | 'sample-packs';
 type BeatPricing = '' | 'free' | 'paid';
+type SamplePackPricing = '' | 'free' | 'paid';
 type BeatTier = 'basic' | 'premium' | 'trackout' | 'exclusive' | 'free';
 type AssetFormState = {
   subtype: AssetSubtype | '';
@@ -50,6 +51,7 @@ type AssetFormState = {
   coverUrl: string;
   releaseDate: string;
   paidDownload: boolean;
+  samplePricing: SamplePackPricing;
   price: string;
   marketMode: MarketMode;
   localPrice: string;
@@ -78,7 +80,7 @@ type AssetFormState = {
 };
 
 const EMPTY_FORM: AssetFormState = {
-  subtype: '', title: '', coverUrl: '', releaseDate: '', paidDownload: false, price: '',
+  subtype: '', title: '', coverUrl: '', releaseDate: '', paidDownload: false, samplePricing: '', price: '',
   marketMode: 'global', localPrice: '', localCurrency: 'USD', packFile: '', samplePreviews: [], beatPricing: '', previewUrl: '',
   previewDuration: '', bpm: '', keyRoot: 'C', keyMode: 'minor', keyNotApplicable: false,
   timeSignature: '4/4', sampleStatus: 'none', sampleDisclosure: '', youtubeUrl: '', tagIds: [],
@@ -228,6 +230,7 @@ export function AssetStudioForm({ itemId = null }: { itemId?: string | null }) {
   const recoveryKey = userId ? `asset:${itemId ?? 'new'}:${userId}` : '';
 
   const beatLike = isBeatSubtype(form.subtype);
+  const samplePackLike = form.subtype === 'sample-packs';
   const paidUnavailable = !paidSales?.can_sell_paid;
   const selectedType = taxonomyTypes.find(type => type.slug === form.subtype);
   const requiredBeatFiles = useMemo(() => new Set(
@@ -317,6 +320,7 @@ export function AssetStudioForm({ itemId = null }: { itemId?: string | null }) {
             coverUrl: editor.item.cover_url ?? '',
             releaseDate: editor.item.release_date ?? '',
             paidDownload: !editor.item.is_free,
+            samplePricing: editor.item.is_free ? 'free' : 'paid',
             price: centsToPrice(editor.item.price_cents),
             marketMode: (editor.item.market_mode === 'global_plus_local' ? 'global_plus_local' : 'global') as MarketMode,
             localPrice: centsToPrice(editor.item.local_price_cents),
@@ -340,6 +344,7 @@ export function AssetStudioForm({ itemId = null }: { itemId?: string | null }) {
           ...nextForm,
           ...recovered,
           beatPricing: recovered.beatPricing ?? (recovered.enabledTiers?.length ? 'paid' : ''),
+          samplePricing: recovered.samplePricing ?? (recovered.paidDownload ? 'paid' : ''),
         };
       }
       setForm(nextForm);
@@ -402,11 +407,12 @@ export function AssetStudioForm({ itemId = null }: { itemId?: string | null }) {
       }
       if (form.beatPricing === 'free' && !form.mp3Path.trim()) { setError('Upload the Audio File before saving.'); return; }
     } else {
+      const paidSamplePack = form.samplePricing === 'paid';
+      if (!form.samplePricing) { setError('Select Free or Paid under Sample Pack Pricing.'); return; }
       if (!form.packFile.trim()) { setError('Upload the pack ZIP before saving.'); return; }
       if (form.samplePreviews.some(sample => !sample.title.trim() || !sample.previewUrl.trim())) { setError('Add a title and audio preview for each sample preview.'); return; }
-      if (form.paidDownload && !paidSales?.can_sell_paid) { setError('Paid downloads are not available for this account. Turn off Paid Download to publish this asset for free.'); return; }
-      if (form.paidDownload && priceToCents(form.price) === null) { setError('Enter a global price greater than zero.'); return; }
-      if (form.paidDownload && form.marketMode === 'global_plus_local' && priceToCents(form.localPrice) === null) { setError(`Enter a ${form.localCurrency} local price greater than zero.`); return; }
+      if (paidSamplePack && !paidSales?.can_sell_paid) { setError('Paid downloads are not available for this account. Select Free to publish this asset for free.'); return; }
+      if (paidSamplePack && priceToCents(form.price) === null) { setError('Enter a global price greater than zero.'); return; }
     }
     if (uploading) { setError('Wait for the current upload to finish before saving.'); return; }
 
@@ -453,8 +459,10 @@ export function AssetStudioForm({ itemId = null }: { itemId?: string | null }) {
         const ownerId = profileResult?.id ?? user.id;
         const category = categories.find(row => row.slug === 'sample-packs');
         if (!category) throw new Error('Asset catalog is not configured.');
-        const priceCents = form.paidDownload ? priceToCents(form.price) ?? 0 : 0;
-        const localPriceCents = form.paidDownload && form.marketMode === 'global_plus_local' ? priceToCents(form.localPrice) : null;
+        const paidSamplePack = form.samplePricing === 'paid';
+        const priceCents = paidSamplePack ? priceToCents(form.price) ?? 0 : 0;
+        const localPriceCents = itemId ? priceToCents(form.localPrice) : null;
+        const savedMarketMode = itemId ? form.marketMode : 'global';
         const payload = {
           author_id: ownerId,
           item_category_id: category.id,
@@ -464,13 +472,13 @@ export function AssetStudioForm({ itemId = null }: { itemId?: string | null }) {
           short_description: null,
           long_description: null,
           price_cents: priceCents,
-          market_mode: form.paidDownload ? form.marketMode : 'global',
+          market_mode: savedMarketMode,
           local_price_cents: localPriceCents,
           local_currency: localPriceCents ? form.localCurrency : null,
           available_locally_only: false,
-          is_free: !form.paidDownload,
+          is_free: !paidSamplePack,
           streaming_enabled: false,
-          download_purchase_enabled: form.paidDownload,
+          download_purchase_enabled: paidSamplePack,
           cover_url: form.coverUrl.trim(),
           hero_url: null,
           experience_type: 'asset',
@@ -540,7 +548,7 @@ export function AssetStudioForm({ itemId = null }: { itemId?: string | null }) {
   const assetDirty = !itemId && Boolean(
     form.title.trim() || form.coverUrl || form.releaseDate || form.packFile || form.previewUrl ||
     form.mp3Path || form.wavPath || form.stemsPath || form.samplePreviews.length || form.youtubeUrl ||
-    form.rightsConfirmed || form.paidDownload || form.price || form.localPrice || form.beatPricing || form.enabledTiers.length
+    form.rightsConfirmed || form.paidDownload || form.samplePricing || form.price || form.localPrice || form.beatPricing || form.enabledTiers.length
   );
 
   return <PageShell>
@@ -578,28 +586,37 @@ export function AssetStudioForm({ itemId = null }: { itemId?: string | null }) {
               {beatLike && form.beatPricing === 'paid' ? <div className="asset-beat-preview-field">
                 <UploadField label="Audio Preview" folder="products/beat-previews" userId={user.id} value={form.previewUrl} accept="audio/mpeg,audio/mp3,audio/wav" onChange={value => update('previewUrl', value)} onAudioMetadata={duration => update('previewDuration', duration.toString())} onUploadingChange={setUploading} />
               </div> : null}
+              {samplePackLike ? <>
+                <label className="dashboard-field">
+                  <span className="dashboard-field-label">Sample Pack Pricing</span>
+                  <Ui44SelectInput required value={form.samplePricing} onChange={event => {
+                    const pricing = event.target.value as SamplePackPricing;
+                    setForm(current => ({ ...current, samplePricing: pricing, paidDownload: pricing === 'paid' }));
+                  }}>
+                    <option value="">Select sample pack pricing</option>
+                    <option value="free">Free</option>
+                    <option value="paid">Paid</option>
+                  </Ui44SelectInput>
+                </label>
+                {form.samplePricing === 'paid' ? <div className="dashboard-field">
+                  <span className="dashboard-field-label">Price (USD)</span>
+                  <StudioPriceInput currency="USD" value={form.price} disabled={paidUnavailable} onChange={value => update('price', formatStudioPriceInput(value))} />
+                  {paidUnavailable ? <span className="dashboard-form-note">Paid downloads are not available for this account.</span> : null}
+                </div> : null}
+                <label className="dashboard-field">
+                  <span className="dashboard-field-label">Sample Preview Count</span>
+                  <Ui44SelectInput value={form.samplePreviews.length || ''} onChange={event => updateSamplePreviews(current => ensureSamplePreviewCount(current, Number(event.target.value)))}>
+                    <option value="">Select number of previews</option>
+                    {Array.from({ length: 30 }, (_, index) => index + 1).map(count => <option key={count} value={count}>{count}</option>)}
+                  </Ui44SelectInput>
+                </label>
+                {form.samplePricing ? <div className="asset-inline-upload">
+                  <div className="dashboard-field-label">Sample Pack File (ZIP)</div>
+                  <UploadField label="Sample Pack File (ZIP)" hideLabel folder="products/assets" userId={user.id} value={form.packFile} accept="application/zip,.zip" storage="private-item" buttonLabel="Upload file" onChange={value => update('packFile', value)} onUploadingChange={setUploading} />
+                </div> : null}
+              </> : null}
             </div>
           </section>
-
-          {form.subtype && !beatLike ? <section className="dashboard-form-section">
-            <SectionHeader title="Paid Download" description="Choose whether this Sample Pack is free or paid." showDescription />
-            <div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible">
-              <StudioDigitalPricingFields
-                availability={form.paidDownload ? 'paid' : 'free'}
-                marketMode={form.marketMode}
-                globalPrice={form.price}
-                localPrice={form.localPrice}
-                localCurrency={form.localCurrency}
-                disabled={paidUnavailable}
-                availabilityDisabled={false}
-                noticeId="asset-paid-download-notice"
-                onAvailabilityChange={availability => update('paidDownload', availability === 'paid')}
-                onMarketModeChange={value => update('marketMode', value)}
-                onGlobalPriceChange={value => update('price', value)}
-                onLocalPriceChange={value => update('localPrice', value)}
-              />
-            </div>
-          </section> : null}
 
           {form.subtype && beatLike && form.beatPricing === 'paid' ? <section className="dashboard-form-section">
             <SectionHeader title="Licenses" description="Choose the license tiers and prices to offer." showDescription />
@@ -624,13 +641,7 @@ export function AssetStudioForm({ itemId = null }: { itemId?: string | null }) {
             </div>
           </section> : null}
 
-          {form.subtype && !beatLike ? <section className="dashboard-form-section">
-            <SectionHeader title="Sample Pack File" description="Upload the protected ZIP file for this asset." showDescription />
-            <div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible">
-              <UploadField label="Upload pack ZIP" folder="products/assets" userId={user.id} value={form.packFile} accept="application/zip,.zip" storage="private-item" onChange={value => update('packFile', value)} onUploadingChange={setUploading} />
-            </div>
-          </section> : null}
-          {form.subtype && !beatLike ? <StudioSamplePreviewFields userId={user.id} samples={form.samplePreviews} onChange={updateSamplePreviews} onUploadingChange={setUploading} /> : null}
+          {form.subtype && !beatLike ? <StudioSamplePreviewFields userId={user.id} samples={form.samplePreviews} onChange={updateSamplePreviews} onUploadingChange={setUploading} showCount={false} /> : null}
           {form.subtype ? <StudioRightsPanel checked={form.rightsConfirmed} onChange={checked => update('rightsConfirmed', checked)} /> : null}
         </form>
       </div>

@@ -16,6 +16,7 @@ import {
   attachCreatorVideoToRelease,
   deleteCreatorVideo,
   detachCreatorVideoFromRelease,
+  getYouTubeVideoId,
   getCreatorVideo,
   isSupportedYouTubeVideoUrl,
   listVideoAttachedReleases,
@@ -29,10 +30,6 @@ import {
 
 function CheckIcon() {
   return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>;
-}
-
-function RemoveAttachmentIcon() {
-  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12h11" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" /></svg>;
 }
 
 function SharePlaceholderArtwork() {
@@ -163,6 +160,7 @@ export function StudioVideoEditor({
         setVideoUrl(`https://www.youtube.com/watch?v=${loadedVideo.youtube_video_id}`);
         setPublishedAt(loadedVideo.youtube_published_at);
         setAttachedReleases(attached);
+        setRelatedReleaseEnabled(attached.length > 0);
         setCreatorReleases(releases.filter(release => release.experience_type === 'music' || release.experience_type === 'game').map(release => ({
           id: release.id,
           title: release.title,
@@ -206,12 +204,21 @@ export function StudioVideoEditor({
       setReleasePickerOpen(false);
       return;
     }
-    if (!video || attachedReleases.some(row => row.id === release.id)) return;
+    if (!video) return;
+    if (attachedReleases.some(row => row.id === release.id)) {
+      setReleasePickerOpen(false);
+      return;
+    }
     setMutatingAttachment(true);
     setError('');
     try {
+      // Edit mode uses the same single-release relationship as the new-video
+      // form. Replace any existing attachment when the creator chooses a new
+      // release instead of accumulating another attachment.
+      await Promise.all(attachedReleases.map(row => detachCreatorVideoFromRelease(video.id, row.id)));
       await attachCreatorVideoToRelease(video.id, release.id);
-      setAttachedReleases(current => [...current, release]);
+      setAttachedReleases([release]);
+      setRelatedReleaseEnabled(true);
       setReleasePickerOpen(false);
     } catch (attachmentError) {
       setError(attachmentError instanceof Error ? attachmentError.message : 'Could not attach this release.');
@@ -220,13 +227,14 @@ export function StudioVideoEditor({
     }
   }
 
-  async function detachRelease(release: VideoAttachmentTarget) {
+  async function disableRelatedRelease() {
     if (!video || mutatingAttachment) return;
     setMutatingAttachment(true);
     setError('');
     try {
-      await detachCreatorVideoFromRelease(video.id, release.id);
-      setAttachedReleases(current => current.filter(row => row.id !== release.id));
+      await Promise.all(attachedReleases.map(row => detachCreatorVideoFromRelease(video.id, row.id)));
+      setAttachedReleases([]);
+      setRelatedReleaseEnabled(false);
     } catch (attachmentError) {
       setError(attachmentError instanceof Error ? attachmentError.message : 'Could not detach this release.');
     } finally {
@@ -249,7 +257,8 @@ export function StudioVideoEditor({
   }
 
   const validUrl = isSupportedYouTubeVideoUrl(videoUrl);
-  const availableReleases = creatorReleases.filter(release => !attachedReleases.some(attached => attached.id === release.id));
+  const youtubeVideoId = validUrl ? getYouTubeVideoId(videoUrl) : null;
+  const thumbnailUrl = youtubeVideoId ? `https://i.ytimg.com/vi/${youtubeVideoId}/maxresdefault.jpg` : null;
   const formId = embedded ? 'studio-video-editor-form-embedded' : 'studio-video-editor-form';
   const createVideoDirty = !editing && Boolean(videoUrl.trim() || selectedReleaseId || relatedReleaseEnabled);
 
@@ -268,6 +277,23 @@ export function StudioVideoEditor({
   }}>
         {error ? <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div> : null}
 
+        <div className="studio-video-preview-surface" aria-label="Video thumbnail preview">
+          {thumbnailUrl ? <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={thumbnailUrl}
+              alt="YouTube video thumbnail preview"
+              onError={event => {
+                const image = event.currentTarget;
+                if (!image.dataset.fallback && youtubeVideoId) {
+                  image.dataset.fallback = 'true';
+                  image.src = `https://i.ytimg.com/vi/${youtubeVideoId}/hqdefault.jpg`;
+                }
+              }}
+            />
+          </> : null}
+        </div>
+
         <section className="dashboard-form-section">
           <SectionHeader title="Details" description="Add the video’s core details." showDescription />
           <div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible">
@@ -281,39 +307,46 @@ export function StudioVideoEditor({
 
         {editing ? <>
           <section className="dashboard-form-section">
-            <SectionHeader title="Attached Releases" />
-            <div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible studio-video-attachments">
-              {loadingAttachments ? <div className="dashboard-empty ui44-state ui44-state-loading" role="status">Loading releases…</div> : attachedReleases.length === 0 ? <p className="dashboard-form-note">Not attached to any release yet.</p> : attachedReleases.map(release => <div className="studio-video-release-row" key={release.id}>
-                {release.cover_url ? <Image className="studio-video-release-artwork" src={release.cover_url} alt="" width={44} height={44} unoptimized /> : <SharePlaceholderArtwork />}
-                <span className="studio-video-release-title">{release.title}</span>
-                <button
-                  className="studio-video-detach-button"
-                  type="button"
-                  aria-label={`Remove ${release.title}`}
-                  title={`Remove ${release.title}`}
-                  disabled={mutatingAttachment}
-                  onClick={() => void detachRelease(release)}
-                  style={{ display: 'grid', flex: '0 0 28px', width: 28, minWidth: 28, height: 28, placeItems: 'center', padding: 0, border: 'none', borderRadius: '50%', backgroundColor: '#ff3048', color: '#fff', position: 'relative', zIndex: 20, cursor: 'pointer' }}
-                ><RemoveAttachmentIcon /></button>
-              </div>)}
-              {!loadingAttachments && attachedReleases.length < 10 ? <div className="studio-visual-video-actions studio-video-release-picker-action">
-                <button className="os-button os-button-secondary" type="button" disabled={!availableReleases.length || mutatingAttachment} onClick={() => setReleasePickerOpen(true)}>Select Release</button>
-              </div> : null}
-              {!loadingAttachments && attachedReleases.length >= 10 ? <p className="dashboard-form-note">A video can be attached to up to 10 releases.</p> : null}
-              {!loadingAttachments && attachedReleases.length < 10 && attachedReleases.length === 0 && availableReleases.length === 0 ? <p className="dashboard-form-note">You have no releases to attach.</p> : null}
-            </div>
+            <SectionHeader
+              title="Related Release"
+              description="Attach this video to a related release."
+              showDescription
+              alignActionWithTitle
+              action={<button
+                type="button"
+                role="switch"
+                aria-label="Enable related release"
+                aria-checked={relatedReleaseEnabled}
+                className={relatedReleaseEnabled ? 'settings-toggle settings-toggle-on ui44-switch ui44-switch-on' : 'settings-toggle ui44-switch'}
+                disabled={loadingAttachments || mutatingAttachment}
+                onClick={() => {
+                  if (relatedReleaseEnabled) {
+                    void disableRelatedRelease();
+                  } else {
+                    setRelatedReleaseEnabled(true);
+                  }
+                }}
+              />}
+            />
+            {relatedReleaseEnabled ? <div className="studio-video-release-picker-controls">
+              {loadingAttachments ? <div className="dashboard-empty ui44-state ui44-state-loading" role="status">Loading releases…</div> : creatorReleases.length === 0 ? <p className="dashboard-form-note">You have no releases to attach.</p> : attachedReleases[0] ? <div className="studio-video-release-row studio-video-release-row-selected">
+                {attachedReleases[0].cover_url ? <Image className="studio-video-release-artwork" src={attachedReleases[0].cover_url} alt="" width={56} height={56} unoptimized /> : <SharePlaceholderArtwork />}
+                <span className="studio-video-release-title">{attachedReleases[0].title}</span>
+                <button type="button" className="os-button os-button-secondary os-button-compact" disabled={mutatingAttachment} onClick={() => setReleasePickerOpen(true)}>Change</button>
+              </div> : <button type="button" className="os-button os-button-secondary studio-video-select-release-button" disabled={!creatorReleases.length || mutatingAttachment} onClick={() => setReleasePickerOpen(true)}>Select Release</button>}
+            </div> : null}
           </section>
 
           <div className="studio-edit-delete-action">
             <OS44Button className="os-button os-button-destructive" type="button" disabled={deleting || saving} onClick={() => void removeVideo()}>{deleting ? 'Deleting…' : 'Delete Video'}</OS44Button>
           </div>
-        </> : embedded && !initialReleaseId ? null : <section className="dashboard-form-section">
+        </> : embedded && !initialReleaseId ? null : <section className={`dashboard-form-section${embedded && initialReleaseId ? ' studio-video-related-release-section' : ''}`}>
           <SectionHeader
             title="Related Release"
             description="Attach this video to a related release."
             showDescription
             alignActionWithTitle
-            action={<button
+            action={embedded && initialReleaseId ? undefined : <button
               type="button"
               role="switch"
               aria-label="Enable related release"
@@ -334,7 +367,7 @@ export function StudioVideoEditor({
               return selectedRelease ? <div className="studio-video-release-row studio-video-release-row-selected">
                 {selectedRelease.cover_url ? <Image className="studio-video-release-artwork" src={selectedRelease.cover_url} alt="" width={56} height={56} unoptimized /> : <SharePlaceholderArtwork />}
                 <span className="studio-video-release-title">{selectedRelease.title}</span>
-                <button type="button" className="os-button os-button-secondary os-button-compact" onClick={() => setReleasePickerOpen(true)}>Change</button>
+                {!embedded || !initialReleaseId ? <button type="button" className="os-button os-button-secondary os-button-compact" onClick={() => setReleasePickerOpen(true)}>Change</button> : null}
               </div> : null;
             })() : <button type="button" className="os-button os-button-secondary studio-video-select-release-button" onClick={() => setReleasePickerOpen(true)}>Select Release</button>}
           </div> : null}
@@ -358,7 +391,7 @@ export function StudioVideoEditor({
       <HubHero title={pageTitle} hideDivider />
       {form}
     </main>
-    {releasePickerOpen ? <StudioReleasePicker releases={editing ? availableReleases : creatorReleases} selectedId={selectedReleaseId} onSelect={release => void selectRelease(release)} onClose={() => setReleasePickerOpen(false)} /> : null}
+    {releasePickerOpen ? <StudioReleasePicker releases={creatorReleases} selectedId={editing ? attachedReleases[0]?.id ?? '' : selectedReleaseId} onSelect={release => void selectRelease(release)} onClose={() => setReleasePickerOpen(false)} /> : null}
   </PageShell>;
 }
 

@@ -8521,6 +8521,7 @@ body.theme-dark .social-profile-tabs button[aria-selected="true"] {
   display: block;
   z-index: 1;
 }
+.studio-date-input-control.is-open { z-index: 50; }
 
 .studio-date-input-control .studio-date-input {
   width: 100%;
@@ -8595,12 +8596,14 @@ body.theme-dark .social-profile-tabs button[aria-selected="true"] {
   top: calc(100% + 8px);
   left: 0;
   z-index: 40;
-  width: min(320px, calc(100vw - 32px));
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
   padding: 14px;
   border: 1px solid var(--44ui-panel-border);
   border-radius: 16px;
-  background: var(--44ui-material-glass-strong, var(--44ui-material-glass));
-  box-shadow: 0 18px 48px rgba(0, 0, 0, .32);
+  background: var(--os-paper-bg);
+  box-shadow: var(--os-shadow-modal), var(--os-paper-highlight);
   color: var(--os-color-ink);
 }
 
@@ -8639,6 +8642,42 @@ body.theme-dark .social-profile-tabs button[aria-selected="true"] {
 .studio-date-popover-grid button.is-outside-month { color: var(--os-color-ink-muted); opacity: .58; }
 .studio-date-popover-grid button.is-selected { background: var(--os-color-accent); color: #fff; font-weight: 700; }
 .studio-date-popover-footer { margin-top: 12px; }
+
+.studio-date-time-controls {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--44ui-panel-border);
+}
+.studio-date-time-selects {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  color: var(--os-color-ink);
+  font-variant-numeric: tabular-nums;
+}
+.studio-date-time-select {
+  width: 100%;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--44ui-panel-border);
+  border-radius: 12px;
+  background: var(--44ui-material-glass-strong, rgba(255, 255, 255, 0.08));
+  color: var(--os-color-ink);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: none;
+  text-align: center;
+  text-align-last: center;
+}
+.studio-date-time-select option { text-align: center; }
+.studio-date-time-select:focus-visible {
+  outline: 2px solid var(--os-color-accent);
+  outline-offset: 2px;
+}
 
 .studio-rights-panel {
   padding: var(--44ui-panel-inset);
@@ -8681,14 +8720,43 @@ body.theme-dark .social-profile-tabs button[aria-selected="true"] {
   margin: 0;
 }
 .studio-video-editor-embedded { flex: 1 0 auto; }
-.studio-video-editor-embedded .studio-video-editor-form { gap: 12px; padding-bottom: 24px; }
+.studio-video-editor-embedded .studio-video-editor-form {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+  padding-bottom: 24px;
+}
 .studio-video-editor-embedded .dashboard-form-section { margin: 0; }
 .studio-video-editor-embedded .dashboard-form-section > .hub-section-head { display: none; }
+.studio-video-editor-embedded .dashboard-form-section.studio-video-related-release-section > .hub-section-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
 .studio-video-editor-embedded .dashboard-form-step { padding: 16px; }
 
 .studio-video-editor-form {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 26px;
+  min-width: 0;
+}
+
+.studio-video-preview-surface {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid var(--os-color-hairline);
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--os-color-ink) 9%, transparent);
+}
+
+.studio-video-preview-surface img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
 }
 
 .studio-video-published-value {
@@ -8746,6 +8814,9 @@ body.theme-dark .social-profile-tabs button[aria-selected="true"] {
   display: flex;
   gap: 12px;
   align-items: center;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   padding: 10px 0;
   border-bottom: 1px solid var(--os-color-hairline);
 }
@@ -8770,7 +8841,7 @@ body.theme-dark .social-profile-tabs button[aria-selected="true"] {
 }
 
 .studio-video-release-placeholder svg { width: 100%; height: 100%; }
-.studio-video-release-title { flex: 1 1 auto; min-width: 0; overflow: hidden; font-size: 15px; font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
+.studio-video-release-title { flex: 1 1 auto; min-width: 0; max-width: 100%; overflow: hidden; font-size: 15px; font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
 .studio-video-release-row.studio-video-release-row-selected { border-bottom: 0; }
 
 .studio-video-detach-button {

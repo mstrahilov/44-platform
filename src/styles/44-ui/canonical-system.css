@@ -4316,6 +4316,36 @@ body:is(.theme-dark, .theme-light) .studio-sample-preview-count-field {
   margin-top: 16px;
 }
 
+body:is(.theme-dark, .theme-light) .asset-inline-upload {
+  display: grid;
+  gap: var(--44ui-panel-content-gap);
+}
+
+body:is(.theme-dark, .theme-light) .asset-inline-upload > .dashboard-field {
+  margin: 0;
+}
+
+body:is(.theme-dark, .theme-light)
+  .studio-sample-preview-header-stacked
+  .hub-section-head {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+body:is(.theme-dark, .theme-light)
+  .studio-sample-preview-header-stacked
+  .hub-section-title {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+body:is(.theme-dark, .theme-light)
+  .studio-sample-preview-header-stacked
+  .hub-section-description {
+  grid-column: 1;
+  grid-row: 2;
+  width: 100%;
+}
+
 body:is(.theme-dark, .theme-light)
   :is(.os-topbar-notification-menu, .os-topbar-account-menu) {
   position: relative;

@@ -323,8 +323,13 @@ export function Topbar() {
     const scrollerElement = document.querySelector<HTMLElement>('.app-main-content');
     if (!scrollerElement) return;
     const scroller: HTMLElement = scrollerElement;
+    const isStudioEditorPath = /^\/studio\/(?:products|videos|assets|events)\//.test(pathname);
 
-    const saved = window.sessionStorage.getItem(storageKey);
+    // Studio editors should always open at their toolbar. Restoring a prior
+    // list position here can drop creators into Achievements or another
+    // lower section when they reopen an item.
+    if (isStudioEditorPath) window.sessionStorage.removeItem(storageKey);
+    const saved = isStudioEditorPath ? null : window.sessionStorage.getItem(storageKey);
     const target = saved === null ? 0 : Number(saved);
     let restoreFrame = 0;
     let saveFrame = 0;
@@ -350,6 +355,7 @@ export function Topbar() {
     }
 
     function persistScroll() {
+      if (isStudioEditorPath) return;
       window.sessionStorage.setItem(storageKey, String(scroller.scrollTop));
     }
 

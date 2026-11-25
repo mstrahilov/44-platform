@@ -129,22 +129,7 @@ export function StudioDigitalPricingFields({
 
       {paid ? (
         <label className="dashboard-field">
-          <div className="dashboard-field-label">Market</div>
-          <Ui44SelectInput
-            value={marketMode}
-            disabled={disabled}
-            onChange={event => onMarketModeChange(event.target.value as MarketMode)}
-          >
-            <option value="global">Global price only</option>
-            <option value="global_plus_local">Global + local price</option>
-          </Ui44SelectInput>
-          <span className="dashboard-form-note">Add a separate local price only when it helps listeners in your home market.</span>
-        </label>
-      ) : null}
-
-      {paid ? (
-        <label className="dashboard-field">
-          <div className="dashboard-field-label">Global Price (USD)</div>
+          <div className="dashboard-field-label">Price (USD)</div>
           <StudioPriceInput
             currency="USD"
             value={globalPrice}
@@ -154,18 +139,6 @@ export function StudioDigitalPricingFields({
         </label>
       ) : null}
 
-      {paid && marketMode === 'global_plus_local' ? (
-        <label className="dashboard-field">
-          <div className="dashboard-field-label">Local Price ({localCurrency})</div>
-          <StudioPriceInput
-            currency={localCurrency}
-            value={localPrice}
-            disabled={disabled}
-            onChange={onLocalPriceChange}
-          />
-          <span className="dashboard-form-note">Set this amount independently from the global USD price.</span>
-        </label>
-      ) : null}
     </div>
   );
 }

@@ -19,6 +19,31 @@ function formatDate(value: string) {
   return date ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(date) : '';
 }
 
+function parseDateTime(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return null;
+  const [, year, month, day, hour, minute] = match;
+  const date = new Date(Number(year), Number(month) - 1, Number(day));
+  if (Number.isNaN(date.getTime())) return null;
+  return { date, hour, minute };
+}
+
+function formatDateTime(value: string) {
+  const parsed = parseDateTime(value);
+  return parsed
+    ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(
+      new Date(parsed.date.getFullYear(), parsed.date.getMonth(), parsed.date.getDate(), Number(parsed.hour), Number(parsed.minute)),
+    )
+    : '';
+}
+
+function localTimeParts(date = new Date()) {
+  return {
+    hour: String(date.getHours()).padStart(2, '0'),
+    minute: String(date.getMinutes()).padStart(2, '0'),
+  };
+}
+
 function shiftMonth(date: Date, amount: number) {
   return new Date(date.getFullYear(), date.getMonth() + amount, 1);
 }
@@ -146,27 +171,113 @@ export function StudioDateTimeInput({
   required?: boolean;
   id?: string;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const rootRef = useRef<HTMLSpanElement>(null);
+  const [open, setOpen] = useState(false);
+  const parsed = parseDateTime(value);
+  const selected = parsed?.date ?? null;
+  const [visibleMonth, setVisibleMonth] = useState(() => {
+    const initial = parsed?.date ?? new Date();
+    return new Date(initial.getFullYear(), initial.getMonth(), 1);
+  });
 
-  return <span className="studio-date-input-control">
+  useEffect(() => {
+    if (!open) return;
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', closeOnOutsideClick);
+    return () => document.removeEventListener('mousedown', closeOnOutsideClick);
+  }, [open]);
+
+  const days = useMemo(() => {
+    const firstDay = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), 1);
+    const start = new Date(firstDay);
+    start.setDate(1 - firstDay.getDay());
+    return Array.from({ length: 42 }, (_, index) => {
+      const day = new Date(start);
+      day.setDate(start.getDate() + index);
+      return day;
+    });
+  }, [visibleMonth]);
+
+  const timeParts = parsed ? { hour: parsed.hour, minute: parsed.minute } : localTimeParts();
+  const updateValue = (date: Date, hour: string, minute: string) => {
+    onChange(`${dateKey(date)}T${hour}:${minute}`);
+  };
+
+  const chooseDate = (date: Date) => {
+    updateValue(date, timeParts.hour, timeParts.minute);
+    setVisibleMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+  };
+
+  const chooseTime = (part: 'hour' | 'minute', nextValue: string) => {
+    const date = selected ?? new Date();
+    updateValue(date, part === 'hour' ? nextValue : timeParts.hour, part === 'minute' ? nextValue : timeParts.minute);
+  };
+
+  return <span ref={rootRef} className={`studio-date-input-control${open ? ' is-open' : ''}`}>
     <Ui44TextInput
       id={id}
-      type="datetime-local"
-      ref={inputRef}
-      value={value}
+      type="text"
+      value={formatDateTime(value)}
+      readOnly
       required={required}
       aria-label={placeholder}
+      aria-haspopup="dialog"
+      aria-expanded={open}
       className="os-input-field studio-date-input"
+      placeholder={placeholder}
       onClick={() => {
-        try {
-          inputRef.current?.showPicker?.();
-        } catch {
-          // Browsers that do not expose showPicker still use the native input behavior.
-        }
+        const next = parseDateTime(value)?.date ?? new Date();
+        setVisibleMonth(new Date(next.getFullYear(), next.getMonth(), 1));
+        setOpen(current => !current);
       }}
-      onChange={event => onChange(event.target.value)}
+      onKeyDown={event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          setOpen(current => !current);
+        }
+        if (event.key === 'Escape') setOpen(false);
+      }}
     />
     {!value ? <span className="studio-date-input-placeholder" aria-hidden="true">{placeholder}</span> : null}
     <span className="studio-date-input-calendar" aria-hidden="true"><CalendarIcon dateTime /></span>
+    {open ? <div className="studio-date-popover studio-date-time-popover" role="dialog" aria-label={placeholder}>
+      <div className="studio-date-popover-header">
+        <button type="button" onClick={() => setVisibleMonth(current => shiftMonth(current, -1))} aria-label="Previous month">‹</button>
+        <strong>{new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(visibleMonth)}</strong>
+        <button type="button" onClick={() => setVisibleMonth(current => shiftMonth(current, 1))} aria-label="Next month">›</button>
+      </div>
+      <div className="studio-date-popover-weekdays" aria-hidden="true">{['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => <span key={`${day}-${index}`}>{day}</span>)}</div>
+      <div className="studio-date-popover-grid">
+        {days.map(day => {
+          const isCurrentMonth = day.getMonth() === visibleMonth.getMonth();
+          const isSelected = selected ? dateKey(day) === dateKey(selected) : false;
+          return <button
+            type="button"
+            key={dateKey(day)}
+            className={`${isCurrentMonth ? '' : 'is-outside-month'} ${isSelected ? 'is-selected' : ''}`}
+            onClick={() => chooseDate(day)}
+            aria-label={new Intl.DateTimeFormat(undefined, { dateStyle: 'full' }).format(day)}
+            aria-pressed={isSelected}
+          >{day.getDate()}</button>;
+        })}
+      </div>
+      <div className="studio-date-time-controls">
+        <div className="studio-date-time-selects">
+          <select className="studio-date-time-select" aria-label="Hour" value={timeParts.hour} onChange={event => chooseTime('hour', event.target.value)}>
+            {Array.from({ length: 24 }, (_, hour) => { const value = String(hour).padStart(2, '0'); return <option key={value} value={value}>{value}</option>; })}
+          </select>
+          <span aria-hidden="true">:</span>
+          <select className="studio-date-time-select" aria-label="Minute" value={timeParts.minute} onChange={event => chooseTime('minute', event.target.value)}>
+            {Array.from({ length: 60 }, (_, minute) => { const value = String(minute).padStart(2, '0'); return <option key={value} value={value}>{value}</option>; })}
+          </select>
+        </div>
+      </div>
+      <div className="studio-date-popover-footer">
+        <button type="button" onClick={() => { onChange(''); setOpen(false); }}>Clear</button>
+        <button type="button" onClick={() => setOpen(false)}>Done</button>
+      </div>
+    </div> : null}
   </span>;
 }

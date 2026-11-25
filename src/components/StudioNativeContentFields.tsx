@@ -76,55 +76,58 @@ export function StudioBookFields({ userId, previewUrl, onPreviewUrlChange, total
   );
 }
 
-export function StudioSamplePreviewFields({ userId, samples, onChange, onUploadingChange }: { userId: string; samples: DraftSamplePreview[]; onChange: Dispatch<SetStateAction<DraftSamplePreview[]>>; onUploadingChange?: (uploading: boolean) => void }) {
+export function StudioSamplePreviewFields({ userId, samples, onChange, onUploadingChange, showCount = true }: { userId: string; samples: DraftSamplePreview[]; onChange: Dispatch<SetStateAction<DraftSamplePreview[]>>; onUploadingChange?: (uploading: boolean) => void; showCount?: boolean }) {
   function update(index: number, patch: Partial<DraftSamplePreview>) {
     onChange(current => current.map((sample, sampleIndex) => sampleIndex === index ? { ...sample, ...patch } : sample));
   }
   return (
     <section className="dashboard-form-section studio-tracks-section">
-      <div className="studio-sample-preview-header">
+      <div className={`studio-sample-preview-header${showCount ? '' : ' studio-sample-preview-header-stacked'}`}>
         <SectionHeader
           title="Sample Previews"
-          description="Add a title and audio preview for each sample in the pack."
+          description="Add each sample preview title and audio file."
+          showDescription
         />
-        <label className="dashboard-field studio-native-short-field studio-sample-preview-count-field">
+        {showCount ? <label className="dashboard-field studio-native-short-field studio-sample-preview-count-field">
           <span className="dashboard-field-label">Sample Preview Count</span>
           <Ui44SelectInput value={samples.length || ''} onChange={event => onChange(current => ensureSamplePreviewCount(current, Number(event.target.value)))}>
             <option value="">Select number of previews</option>
             {Array.from({ length: 30 }, (_, index) => index + 1).map(count => <option key={count} value={count}>{count}</option>)}
           </Ui44SelectInput>
-        </label>
+        </label> : null}
       </div>
-      <div className="dashboard-track-editor-list">
-        {samples.map((sample, index) => (
-          <div className="dashboard-track-editor-row" key={`sample-${index}`}>
-            <div className="dashboard-track-editor-copy">
-              <label className="dashboard-field studio-track-title-field">
-                <span className="dashboard-field-label">Sample Preview {index + 1}</span>
-                <Ui44TextInput className="os-input-field" value={sample.title} placeholder="Enter sample preview title" onChange={event => update(index, { title: event.target.value })} />
-              </label>
-              <UploadField
-                label="Preview Audio"
-                folder="products/sample-previews"
-                userId={userId}
-                value={sample.previewUrl}
-                accept={AUDIO_UPLOAD_ACCEPT}
-                buttonLabel="Upload preview audio"
-                previewKind="none"
-                hideLabel
-                hideSuccessMessage
-                onChange={previewUrl => update(index, { previewUrl })}
-                onUploadingChange={onUploadingChange}
-                onAudioAnalysis={analysis => update(index, {
-                  durationSeconds: analysis.durationSeconds,
-                  waveformPeaks: analysis.waveformPeaks,
-                  mimeType: analysis.mimeType,
-                  fileSizeBytes: analysis.fileSizeBytes,
-                })}
-              />
+      <div className="dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip studio-track-panel">
+        <div className="dashboard-track-editor-list">
+          {samples.map((sample, index) => (
+            <div className="dashboard-track-editor-row" key={`sample-${index}`}>
+              <div className="dashboard-track-editor-copy">
+                <label className="dashboard-field studio-track-title-field">
+                  <span className="dashboard-field-label">Sample Preview {index + 1}</span>
+                  <Ui44TextInput className="os-input-field" value={sample.title} placeholder="Enter title" onChange={event => update(index, { title: event.target.value })} />
+                </label>
+                <UploadField
+                  label="Audio File"
+                  folder="products/sample-previews"
+                  userId={userId}
+                  value={sample.previewUrl}
+                  accept={AUDIO_UPLOAD_ACCEPT}
+                  buttonLabel="Upload audio"
+                  previewKind="none"
+                  hideLabel
+                  hideSuccessMessage
+                  onChange={previewUrl => update(index, { previewUrl })}
+                  onUploadingChange={onUploadingChange}
+                  onAudioAnalysis={analysis => update(index, {
+                    durationSeconds: analysis.durationSeconds,
+                    waveformPeaks: analysis.waveformPeaks,
+                    mimeType: analysis.mimeType,
+                    fileSizeBytes: analysis.fileSizeBytes,
+                  })}
+                />
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </section>
   );

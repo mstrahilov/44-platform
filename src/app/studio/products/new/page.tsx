@@ -386,9 +386,7 @@ function NewProductContent() {
       ? Math.max(0, Math.round(localPriceNumber * 100))
       : null;
     const requiresGlobalPrice = isGameProduct ? false : isMerchProduct ? !merchUsesLocalOnlyPricing : !creatorCommerceUnavailable && availability === 'paid';
-    const requiresLocalPrice = isMerchProduct
-      ? merchUsesLocalOnlyPricing || marketMode === 'global_plus_local'
-      : !isGameProduct && !creatorCommerceUnavailable && availability === 'paid' && marketMode === 'global_plus_local';
+    const requiresLocalPrice = isMerchProduct ? merchUsesLocalOnlyPricing : false;
     if (requiresGlobalPrice && (!Number.isFinite(priceNumber) || priceNumber <= 0)) {
       setSaving(false);
       setError('Enter a price greater than zero for a paid Item.');
@@ -414,9 +412,9 @@ function NewProductContent() {
       short_description: null,
       long_description: description.trim(),
       price_cents: merchUsesLocalOnlyPricing ? 0 : priceCents,
-      market_mode: isFree ? 'global' : (merchUsesLocalOnlyPricing ? 'global_plus_local' : marketMode),
-      local_price_cents: isFree || (marketMode === 'global' && !merchUsesLocalOnlyPricing) ? null : localPriceCents,
-      local_currency: isFree || (marketMode === 'global' && !merchUsesLocalOnlyPricing) ? null : localCurrency,
+      market_mode: isFree ? 'global' : (merchUsesLocalOnlyPricing ? 'global_plus_local' : 'global'),
+      local_price_cents: isFree || !merchUsesLocalOnlyPricing ? null : localPriceCents,
+      local_currency: isFree || !merchUsesLocalOnlyPricing ? null : localCurrency,
       available_locally_only: isMerchProduct ? merchUsesLocalOnlyPricing : false,
       is_free: isFree,
       streaming_enabled: isMusicProduct ? true : isGameProduct ? false : undefined,
@@ -961,7 +959,7 @@ function NewProductContent() {
                               className="os-input-field"
                               value={track.title}
                               onChange={event => updateTrack(index, { title: event.target.value })}
-                              placeholder="Enter track title"
+                              placeholder="Enter title"
                             />
                           </label>
 
@@ -1050,23 +1048,10 @@ function NewProductContent() {
                 {isGameProduct ? null : availability === 'paid' ? (
                   <div className="dashboard-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-visible studio-feature-panel studio-paid-download-panel">
                     {creatorCommerceUnavailable ? <p className="dashboard-form-note" id="creator-commerce-new-item-notice">Paid downloads are not available for this account.</p> : null}
-                    <div className="dashboard-form-grid dashboard-form-grid-2 ui44-form-grid">
-                      <label className="dashboard-field">
-                        <span className="dashboard-field-label">Market</span>
-                        <Ui44SelectInput value={marketMode} disabled={creatorCommerceUnavailable} onChange={event => setMarketMode(event.target.value as MarketMode)}>
-                          <option value="global">Global price only</option>
-                          <option value="global_plus_local">Global + local price</option>
-                        </Ui44SelectInput>
-                      </label>
-                      <label className="dashboard-field">
-                        <span className="dashboard-field-label">Global Price (USD)</span>
-                        <StudioPriceInput currency="USD" value={price} disabled={creatorCommerceUnavailable} onChange={setPrice} />
-                      </label>
-                      {marketMode === 'global_plus_local' ? <label className="dashboard-field">
-                        <span className="dashboard-field-label">Local Price ({localCurrency})</span>
-                        <StudioPriceInput currency={localCurrency} value={localPrice} disabled={creatorCommerceUnavailable} onChange={setLocalPrice} />
-                      </label> : null}
-                    </div>
+                    <label className="dashboard-field">
+                      <span className="dashboard-field-label">Price (USD)</span>
+                      <StudioPriceInput currency="USD" value={price} disabled={creatorCommerceUnavailable} onChange={setPrice} />
+                    </label>
                   </div>
                 ) : null}
               </section>
