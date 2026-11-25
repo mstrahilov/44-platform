@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { PageShell } from '@/components/Ui';
+import { PageShell, RouteLoading } from '@/components/Ui';
 import { supabase } from '@/lib/supabase';
 import { loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { useAuth } from '@/lib/useAuth';
@@ -82,7 +82,7 @@ export default function WelcomeApp() {
   }, [authLoading, user]);
 
   if (authLoading || loading) {
-    return <PageShell><main className="welcome-page"><div className="ui44-loading-shell" role="status" aria-label="Loading welcome" /></main></PageShell>;
+    return <RouteLoading label="Loading Welcome" />;
   }
 
   if (!user) {

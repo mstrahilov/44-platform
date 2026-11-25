@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { HubHero, PageShell, SectionHeader } from '@/components/Ui';
+import { HubHero, PageShell, RouteLoading, SectionHeader } from '@/components/Ui';
 import { Ui44Panel } from '@/components/ui44/Spacing';
 import { AdminAccessBoundary } from '@/components/admin/AdminPrimitives';
 import { getAdminDashboardSummary, type AdminDashboardSummary } from '@/lib/domain/adminOperations';
@@ -14,18 +14,27 @@ export default function AdminPage() {
 
 function AdminDashboard() {
   const [summary, setSummary] = useState<AdminDashboardSummary | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
   const [error, setError] = useState('');
   useTopbarBack({ href: '/you', label: 'Account', alwaysNavigate: true });
 
   useEffect(() => {
     let alive = true;
     void getAdminDashboardSummary().then(data => {
-      if (alive) setSummary(data);
+      if (alive) {
+        setSummary(data);
+        setSummaryLoading(false);
+      }
     }).catch(loadError => {
-      if (alive) setError(loadError instanceof Error ? loadError.message : 'Could not load administrator status.');
+      if (alive) {
+        setError(loadError instanceof Error ? loadError.message : 'Could not load administrator status.');
+        setSummaryLoading(false);
+      }
     });
     return () => { alive = false; };
   }, []);
+
+  if (summaryLoading) return <RouteLoading label="Loading Administrator" />;
 
   return <PageShell><main className="dashboard-page admin-page" aria-label="Administrator workspace">
     <HubHero title="Admin" className="admin-page-header" />

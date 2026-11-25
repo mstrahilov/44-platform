@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
 import { getThemePreference, saveThemePreference } from '@/lib/domain/preferences';
 import { getProfileMarketPreferences, saveProfileMarketPreferences } from '@/lib/domain/profiles';
-import { PageShell, HubHero, EmptyMessage, SectionHeader } from '@/components/Ui';
+import { PageShell, HubHero, EmptyMessage, RouteLoading, SectionHeader } from '@/components/Ui';
 import { Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
 import {
   ACCENTS,
@@ -52,7 +52,7 @@ function normalizeSettingsAnchor(value: string | null | undefined): SettingsSect
 
 export default function SettingsPage() {
   return (
-    <Suspense fallback={<PageShell><div /></PageShell>}>
+    <Suspense fallback={<RouteLoading label="Loading Settings" />}>
       <SettingsContent />
     </Suspense>
   );
@@ -83,7 +83,7 @@ function SettingsContent() {
   }, [loading, searchParams]);
 
   if (loading) {
-    return <PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>;
+    return <RouteLoading label="Loading Settings" />;
   }
 
   if (!user) {

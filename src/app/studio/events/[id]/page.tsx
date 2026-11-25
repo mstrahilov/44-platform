@@ -20,8 +20,8 @@ const blank = (): Draft => ({ title:'',shortDescription:'',format:'',startLocal:
 
 export default function StudioEventEditor() {
   const { id } = useParams<{id:string}>(); const isNew=id==='new'; const { user }=useAuth(); const router=useRouter();
-  const returnHref = isNew ? '/studio' : '/studio/events';
-  useTopbarBack(isNew ? undefined : { href: returnHref, label: 'Events' });
+  const returnHref = '/studio';
+  useTopbarBack(isNew ? undefined : { href: returnHref, label: 'Studio' });
   const [draft,setDraft]=useState<Draft>(blank); const [relatedReleases,setRelatedReleases]=useState<StudioReleasePickerItem[]>([]); const [releasePickerOpen,setReleasePickerOpen]=useState(false); const [ready,setReady]=useState(false); const [saving,setSaving]=useState(false); const [uploading,setUploading]=useState(false); const [deleting,setDeleting]=useState(false); const [error,setError]=useState('');
   const mobileSaveAction=useMemo(()=> <button type="submit" form="studio-event-form" className="ui44-symbol-button studio-music-publish-action" aria-label="Save event" title="Save event" disabled={!user||!ready||saving||uploading}><EventSaveIcon /></button>,[ready,saving,uploading,user]);
   useTopbarMobileTrailingAction(mobileSaveAction);
@@ -34,15 +34,15 @@ export default function StudioEventEditor() {
     draft.locationText.trim() || draft.onlineUrl.trim() || draft.relatedReleaseEnabled || draft.relatedReleaseId ||
     draft.infoUrl.trim() || draft.coverUrl
   );
-  async function submit(e:React.FormEvent){e.preventDefault();setSaving(true);setError('');try{if(!draft.startLocal||!draft.endLocal)throw new Error('Enter both a start and end date.');if(!draft.format)throw new Error('Choose an event location.');const starts=instantFromLocalInput(draft.startLocal,draft.timezone);const ends=instantFromLocalInput(draft.endLocal,draft.timezone);if(new Date(ends)<=new Date(starts))throw new Error('End must be after start.');const isOnline=draft.format==='online';const isVenue=draft.format==='in_person'||draft.format==='hybrid';if(isVenue&&!draft.locationText.trim())throw new Error('Enter the venue address.');if((draft.format==='online'||draft.format==='hybrid')&&!draft.onlineUrl.trim())throw new Error('Enter the online event URL.');const savedEventId=await saveCreatorEvent(isNew?null:id,{title:draft.title,short_description:draft.shortDescription,format:draft.format,starts_at:starts,ends_at:ends,timezone:draft.timezone,venue_name:isVenue?draft.locationText.trim():null,address_line1:null,address_line2:null,locality:null,region:null,postal_code:null,country_code:null,online_url:isOnline||draft.format==='hybrid'?draft.onlineUrl.trim():null,info_url:draft.infoUrl||null,cover_url:draft.coverUrl||null});await setCreatorEventRelatedRelease(savedEventId,draft.relatedReleaseEnabled?draft.relatedReleaseId||null:null);clearStudioFormRecovery(recoveryKey);router.push('/studio/events');}catch(saveError){setError(saveError instanceof Error?saveError.message:'Could not save event.');setSaving(false);}}
-  async function deleteEvent(){if(isNew)return;setDeleting(true);setError('');try{await setCreatorEventState(id,'removed');clearStudioFormRecovery(recoveryKey);router.push('/studio/events');}catch(deleteError){setError(deleteError instanceof Error?deleteError.message:'Could not delete event.');setDeleting(false);}}
-  if (!ready) return <PageShell><main className="dashboard-editor"><HubHero title={isNew ? 'New Event' : 'Edit Event'} hideDivider={isNew} /><div className="ui44-state ui44-state-loading" role="status" aria-live="polite">Loading...</div></main></PageShell>;
+  async function submit(e:React.FormEvent){e.preventDefault();setSaving(true);setError('');try{if(!draft.startLocal||!draft.endLocal)throw new Error('Enter both a start and end date.');if(!draft.format)throw new Error('Choose an event location.');const starts=instantFromLocalInput(draft.startLocal,draft.timezone);const ends=instantFromLocalInput(draft.endLocal,draft.timezone);if(new Date(ends)<=new Date(starts))throw new Error('End must be after start.');const isOnline=draft.format==='online';const isVenue=draft.format==='in_person'||draft.format==='hybrid';if(isVenue&&!draft.locationText.trim())throw new Error('Enter the venue address.');if((draft.format==='online'||draft.format==='hybrid')&&!draft.onlineUrl.trim())throw new Error('Enter the online event URL.');const savedEventId=await saveCreatorEvent(isNew?null:id,{title:draft.title,short_description:draft.shortDescription,format:draft.format,starts_at:starts,ends_at:ends,timezone:draft.timezone,venue_name:isVenue?draft.locationText.trim():null,address_line1:null,address_line2:null,locality:null,region:null,postal_code:null,country_code:null,online_url:isOnline||draft.format==='hybrid'?draft.onlineUrl.trim():null,info_url:draft.infoUrl||null,cover_url:draft.coverUrl||null});await setCreatorEventRelatedRelease(savedEventId,draft.relatedReleaseEnabled?draft.relatedReleaseId||null:null);clearStudioFormRecovery(recoveryKey);router.push('/studio');}catch(saveError){setError(saveError instanceof Error?saveError.message:'Could not save event.');setSaving(false);}}
+  async function deleteEvent(){if(isNew)return;setDeleting(true);setError('');try{await setCreatorEventState(id,'removed');clearStudioFormRecovery(recoveryKey);router.push('/studio');}catch(deleteError){setError(deleteError instanceof Error?deleteError.message:'Could not delete event.');setDeleting(false);}}
+  if (!ready) return <PageShell><main className="dashboard-editor"><HubHero title={isNew ? 'New Event' : 'Edit Event'} hideDivider /><div className="ui44-state ui44-state-loading" role="status" aria-live="polite">Loading...</div></main></PageShell>;
 
   return (
     <PageShell>
       {isNew ? <StudioCreateCancel dirty={eventDirty} recoveryKey={recoveryKey} href="/studio" /> : null}
       <main className="dashboard-editor">
-        <HubHero title={isNew ? 'New Event' : 'Edit Event'} hideDivider={isNew} actions={<button type="submit" form="studio-event-form" className="ui44-symbol-button studio-music-publish-desktop" aria-label="Save event" title="Save event" disabled={!user||!ready||saving||uploading}><EventSaveIcon /></button>} />
+        <HubHero title={isNew ? 'New Event' : 'Edit Event'} hideDivider actions={<button type="submit" form="studio-event-form" className="ui44-symbol-button studio-music-publish-desktop" aria-label="Save event" title="Save event" disabled={!user||!ready||saving||uploading}><EventSaveIcon /></button>} />
         <div className="dashboard-section">
           <form id="studio-event-form" className="dashboard-form studio-music-create-form" onSubmit={submit}>
             <UploadField label="Event artwork" folder="events/covers" userId={user?.id ?? ''} value={draft.coverUrl} accept="image/*" artworkSurface onChange={value=>set('coverUrl',value)} onUploadingChange={setUploading} />
@@ -114,10 +114,9 @@ export default function StudioEventEditor() {
               </div> : null}
             </section>
 
-            {!isNew ? <section className="dashboard-form-section">
-              <SectionHeader title="Event Management" description="Remove this event from your profile and the calendar." />
+            {!isNew ? <div className="studio-edit-delete-action">
               <button type="button" className="os-button os-button-danger" disabled={deleting||saving||uploading} onClick={() => { if (window.confirm('Delete this event? It will no longer appear on your profile or the calendar.')) void deleteEvent(); }}>Delete Event</button>
-            </section> : null}
+            </div> : null}
 
             {error && <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div>}
           </form>

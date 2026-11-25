@@ -11,7 +11,7 @@ import {
 } from '@/components/CommunityReportDialog';
 import { FilterPopover } from '@/components/FilterPopover';
 import { SocialAvatar, SocialPostRow } from '@/components/Social';
-import { HubHero, PageShell } from '@/components/Ui';
+import { HubHero, PageShell, RouteLoading } from '@/components/Ui';
 import { OS44Button } from '@/components/OS44Button';
 import { hasCommunityIdentity } from '@/lib/communityProfile';
 import {
@@ -607,6 +607,10 @@ function CommunityPageContent() {
 
   const filterQuery = postFilter === 'all' ? '' : `?filter=${postFilter}`;
 
+  if (postsLoading) {
+    return <RouteLoading label="Loading Community" />;
+  }
+
   return (
     <PageShell>
       <main className="app-page community-app-page community-v11-page">
@@ -817,11 +821,7 @@ export default function CommunityPage() {
   return (
     <Suspense
       fallback={(
-        <PageShell>
-          <main className="social-shell">
-            <div className="dashboard-empty ui44-state ui44-state-loading" role="status" aria-live="polite">Loading community...</div>
-          </main>
-        </PageShell>
+        <RouteLoading label="Loading Community" />
       )}
     >
       <CommunityPageContent />

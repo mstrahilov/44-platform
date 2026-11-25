@@ -8,7 +8,7 @@ import { FilterPopover } from '@/components/FilterPopover';
 import { SectionTab, SectionTabs } from '@/components/SectionTabs';
 import { OS44Button } from '@/components/OS44Button';
 import type { TopbarTab } from '@/components/TopbarContext';
-import { PageShell, HubHero, CenteredMessage, EmptyMessage } from '@/components/Ui';
+import { PageShell, HubHero, EmptyMessage, RouteLoading } from '@/components/Ui';
 import { getProductExperience, productLibraryHref } from '@/lib/experience';
 import { pinDockItem } from '@/lib/dockPreferences';
 import type { LibraryCategory } from '@/lib/libraryRoutes';
@@ -184,7 +184,7 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
     router.replace(availableCategories[0].href);
   }, [availableCategories, category, collectionLoading, router]);
   if (authLoading) {
-    return <PageShell><CenteredMessage status>Loading...</CenteredMessage></PageShell>;
+    return <RouteLoading label="Loading Library" />;
   }
 
   if (!user) {
@@ -202,7 +202,7 @@ export default function LibraryApp({ category }: { category: LibraryCategory }) 
   }
 
   if (collectionLoading) {
-    return <PageShell><CenteredMessage status>Loading...</CenteredMessage></PageShell>;
+    return <RouteLoading label="Loading Library" />;
   }
 
   async function removeLibraryRow(row: LibraryRow) {

@@ -87,6 +87,7 @@ export interface Item {
   external_links_enabled?: boolean | null;
   visuals_enabled?: boolean | null;
   related_items_enabled?: boolean | null;
+  achievements_enabled?: boolean | null;
   community_enabled?: boolean | null;
   paid_sales_available?: boolean;
   paid_sales_status?: string;

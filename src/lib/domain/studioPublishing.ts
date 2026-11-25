@@ -2,6 +2,7 @@ import type { Database } from '@/lib/database.types';
 import type { Product } from '@/lib/products';
 import type { ProductCategory, Track } from '@/lib/platform';
 import { supabase } from '@/lib/supabase';
+import { isMissingFunctionError } from '@/lib/schemaCompat';
 import { listReleaseCreatorVideos, type ReleaseCreatorVideo } from '@/lib/domain/releaseFeatures';
 
 type ItemInsert = Database['public']['Tables']['catalog_items']['Insert'];
@@ -117,7 +118,7 @@ export async function loadStudioItemEditor(itemId: string, ownerId: string) {
   if (itemResult.error) throw itemResult.error;
   if (!itemResult.data) return null;
 
-  const [trackResult, assetResult, achievementResult, typeResult, tagResult, linkResult, bookResult, samplesResult, videos, audioAssetResult] = await Promise.all([
+  const [trackResult, assetResult, achievementResult, typeResult, tagResult, linkResult, relatedResult, bookResult, samplesResult, videos, audioAssetResult] = await Promise.all([
     supabase.from('tracks').select('*').eq('item_id', itemId).order('number'),
     supabase.from('item_assets').select('asset_type,title,file_url,storage_path').eq('item_id', itemId).order('sort_order'),
     supabase
@@ -128,13 +129,14 @@ export async function loadStudioItemEditor(itemId: string, ownerId: string) {
     supabase.from('item_type_assignments').select('item_type_id').eq('item_id', itemId).maybeSingle(),
     supabase.from('item_tag_assignments').select('item_tag_id').eq('item_id', itemId),
     supabase.from('item_external_links').select('platform,url,sort_order').eq('item_id', itemId).order('sort_order'),
+    supabase.from('item_related_items' as never).select('related_item_id').eq('item_id', itemId).order('sort_order'),
     supabase.from('book_contents').select('*').eq('item_id', itemId).maybeSingle(),
     supabase.from('sample_pack_files').select('*').eq('item_id', itemId).order('sort_order'),
     listReleaseCreatorVideos(itemId),
     supabase.from('audio_assets' as never).select('id,track_id,status,stream_public_url').in('track_id',
       (await supabase.from('tracks').select('id').eq('item_id', itemId)).data?.map(track => track.id) ?? []),
   ]);
-  const error = trackResult.error || assetResult.error || achievementResult.error || typeResult.error || tagResult.error || linkResult.error || bookResult.error || samplesResult.error || audioAssetResult.error;
+  const error = trackResult.error || assetResult.error || achievementResult.error || typeResult.error || tagResult.error || linkResult.error || relatedResult.error || bookResult.error || samplesResult.error || audioAssetResult.error;
   if (error) throw error;
 
   return {
@@ -145,6 +147,7 @@ export async function loadStudioItemEditor(itemId: string, ownerId: string) {
     taxonomyTypeId: typeResult.data?.item_type_id ?? null,
     taxonomyTagIds: (tagResult.data ?? []).map(row => row.item_tag_id),
     externalLinks: (linkResult.data ?? []).map(row => ({ platform: row.platform, url: row.url })),
+    relatedItemIds: ((relatedResult.data ?? []) as unknown as Array<{ related_item_id: string }>).map(row => row.related_item_id),
     bookContent: bookResult.data,
     sampleFiles: samplesResult.data ?? [],
     attachedVideos: videos as ReleaseCreatorVideo[],
@@ -158,6 +161,17 @@ export async function updateStudioItem(itemId: string, ownerId: string, payload:
   delete itemPatch.status;
   const result = await supabase.rpc('update_owned_item', { target_item_id: itemId, patch: itemPatch });
   if (result.error) throw new Error(result.error.message);
+}
+
+export async function setStudioAchievementsEnabled(itemId: string, enabled: boolean) {
+  const result = await supabase.rpc('set_owned_item_achievements_enabled' as never, {
+    target_item_id: itemId,
+    target_enabled: enabled,
+  } as never);
+  // Older projects can run the web bundle briefly before the accompanying
+  // migration has been applied. Keep those saves usable; once the function is
+  // present, all new saves persist the explicit flag.
+  if (result.error && !isMissingFunctionError(result.error)) throw result.error;
 }
 
 export async function setStudioPublicationStatus(itemId: string, status: 'draft' | 'published') {

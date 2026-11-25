@@ -304,13 +304,9 @@ export function StudioVideoEditor({
             </div>
           </section>
 
-          <section className="dashboard-form-section studio-video-management">
-            <SectionHeader title="Video Management" />
-            <div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible">
-              <p className="dashboard-form-note">Remove this video from your library and every release it is attached to.</p>
-              <OS44Button className="os-button os-button-destructive" type="button" disabled={deleting || saving} onClick={() => void removeVideo()}>{deleting ? 'Deleting…' : 'Delete Video'}</OS44Button>
-            </div>
-          </section>
+          <div className="studio-edit-delete-action">
+            <OS44Button className="os-button os-button-destructive" type="button" disabled={deleting || saving} onClick={() => void removeVideo()}>{deleting ? 'Deleting…' : 'Delete Video'}</OS44Button>
+          </div>
         </> : embedded && !initialReleaseId ? null : <section className="dashboard-form-section">
           <SectionHeader
             title="Related Release"
@@ -359,7 +355,7 @@ export function StudioVideoEditor({
     {!editing ? <StudioCreateCancel dirty={createVideoDirty} href="/studio" /> : null}
     <main className="dashboard-page studio-video-editor-page">
       <StudioVideoToolbar pageTitle={pageTitle} mobileSaveAction={mobileSaveAction} editing={editing} />
-      <HubHero title={pageTitle} hideDivider={!editing} />
+      <HubHero title={pageTitle} hideDivider />
       {form}
     </main>
     {releasePickerOpen ? <StudioReleasePicker releases={editing ? availableReleases : creatorReleases} selectedId={selectedReleaseId} onSelect={release => void selectRelease(release)} onClose={() => setReleasePickerOpen(false)} /> : null}

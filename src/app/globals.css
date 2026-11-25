@@ -604,6 +604,10 @@ body:is(.theme-dark, .theme-light) .ui44-list-row.admin-user-row.admin-user-requ
 .asset-license-title { color: var(--os-color-ink); cursor: pointer; }
 .asset-license-description { color: var(--os-color-ink-secondary); }
 .asset-license-choice-row .beat-tier-price { width: min(100%, 260px); margin: 14px 0 0; }
+.asset-license-copy > .dashboard-field + .dashboard-field,
+.asset-license-choice-row .asset-license-copy > .beat-tier-price + .dashboard-field {
+  margin-top: var(--44ui-panel-content-gap);
+}
 .beat-license-list { display: grid; }
 .beat-license-offer { display: grid; min-width: 0; min-height: 104px; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: center; padding: 20px var(--os-row-pad-x); }
 .beat-license-offer + .beat-license-offer { border-top: 1px solid var(--os-color-hairline); }
@@ -5016,6 +5020,20 @@ body:is(.theme-dark, .theme-light) .web-push-prompt.ui44-paper-menu {
   padding-top: 12px;
   margin-top: 4px;
   border-top: 1px solid rgba(17, 24, 39, 0.08);
+}
+
+.studio-edit-delete-action {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 16px;
+}
+
+.studio-edit-delete-action > .os-button,
+.studio-edit-delete-action > .ui44-action-button {
+  width: 100% !important;
+  max-width: none !important;
+  flex: 1 1 auto !important;
+  min-height: 52px;
 }
 
 .dashboard-form-actions-left,

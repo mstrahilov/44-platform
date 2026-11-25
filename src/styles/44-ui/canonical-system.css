@@ -4145,6 +4145,40 @@ body:is(.theme-dark, .theme-light) .ui44-loading-shell {
   min-height: 40vh;
 }
 
+/* A route-level fetch should occupy the whole content pane so the spinner is
+   centered in the viewport, rather than appearing underneath a partially
+   rendered page shell. */
+body:is(.theme-dark, .theme-light) .view-hub:has(> .ui44-route-loading) {
+  flex: 1 1 auto;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  box-sizing: border-box;
+}
+
+body:is(.theme-dark, .theme-light) .ui44-route-loading {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+/* Anchor route loading to the actual scroll pane.  Absolute centering avoids
+   percentage-height resolution against the auto-sized hub on mobile and keeps
+   the indicator centered between the topbar and bottom dock. */
+body:is(.theme-dark, .theme-light) .app-main-content:has(.ui44-route-loading) {
+  position: relative;
+}
+
+body:is(.theme-dark, .theme-light) .app-main-content:has(.ui44-route-loading) .ui44-route-loading {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  min-height: 0;
+}
+
 body:is(.theme-dark, .theme-light) .ui44-route-state {
   padding: 80px var(--44ui-page-inset);
   color: var(--os-color-ink-muted);

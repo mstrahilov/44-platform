@@ -22,7 +22,12 @@ export type DetailedLibraryItemRow = {
 export type ItemAssetManifestRow = Database['public']['Functions']['list_item_asset_manifest']['Returns'][number];
 
 export async function getMusicAchievementBundle(userId: string, itemId: string) {
-  const [achievementResult, unlockedResult] = await Promise.all([
+  const [itemResult, achievementResult, unlockedResult] = await Promise.all([
+    supabase
+      .from('catalog_items')
+      .select('*')
+      .eq('id', itemId)
+      .maybeSingle(),
     supabase
       .from('item_achievements')
       .select('id,item_id,code,title,description,trigger_type,trigger_config,reward_item_id,reward_config,points,icon,sort_order,is_secret')
@@ -34,9 +39,11 @@ export async function getMusicAchievementBundle(userId: string, itemId: string) 
       .eq('user_id', userId)
       .eq('item_id', itemId),
   ]);
-  if (achievementResult.error || unlockedResult.error) throw achievementResult.error || unlockedResult.error;
+  if (itemResult.error || achievementResult.error || unlockedResult.error) throw itemResult.error || achievementResult.error || unlockedResult.error;
   return {
-    achievements: ((achievementResult.data ?? []) as ProductAchievement[]).filter(item => isV1AchievementCode(item.code)),
+    achievements: itemResult.data?.achievements_enabled
+      ? ((achievementResult.data ?? []) as ProductAchievement[]).filter(item => isV1AchievementCode(item.code))
+      : [],
     unlockedAchievements: (unlockedResult.data ?? []) as UserAchievement[],
   };
 }

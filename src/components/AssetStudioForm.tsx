@@ -1,13 +1,15 @@
 'use client';
 
-import { useEffect, useMemo, useState, type FormEvent, type SetStateAction } from 'react';
+import { useEffect, useId, useMemo, useState, type ChangeEvent, type FormEvent, type SetStateAction } from 'react';
 import { useRouter } from 'next/navigation';
 import { CenteredMessage, HubHero, PageShell, SectionHeader } from '@/components/Ui';
 import { useTopbarBack, useTopbarMobileTrailingAction } from '@/components/TopbarContext';
 import { StudioCreateCancel } from '@/components/StudioCreateCancel';
 import { UploadField } from '@/components/UploadField';
+import { getUploadErrorMessage, uploadPrivateItemFile } from '@/lib/uploads';
+import { uploadProcessedAudio } from '@/lib/audioUploads';
 import { StudioSamplePreviewFields, type DraftSamplePreview } from '@/components/StudioNativeContentFields';
-import { Ui44CheckboxInput, Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
+import { Ui44CheckboxInput, Ui44FileInput, Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
 import { StudioDigitalPricingFields } from '@/components/StudioPricingFields';
 import { StudioRightsPanel } from '@/components/StudioRightsPanel';
 import { useAuth } from '@/lib/useAuth';
@@ -40,6 +42,7 @@ import type { Database } from '@/lib/database.types';
 import type { ProductCategory } from '@/lib/platform';
 
 type AssetSubtype = 'beat' | 'sample-packs';
+type BeatPricing = '' | 'free' | 'paid';
 type BeatTier = 'basic' | 'premium' | 'trackout' | 'exclusive' | 'free';
 type AssetFormState = {
   subtype: AssetSubtype | '';
@@ -53,6 +56,7 @@ type AssetFormState = {
   localCurrency: string;
   packFile: string;
   samplePreviews: DraftSamplePreview[];
+  beatPricing: BeatPricing;
   previewUrl: string;
   previewDuration: string;
   bpm: string;
@@ -75,7 +79,7 @@ type AssetFormState = {
 
 const EMPTY_FORM: AssetFormState = {
   subtype: '', title: '', coverUrl: '', releaseDate: '', paidDownload: false, price: '',
-  marketMode: 'global', localPrice: '', localCurrency: 'USD', packFile: '', samplePreviews: [], previewUrl: '',
+  marketMode: 'global', localPrice: '', localCurrency: 'USD', packFile: '', samplePreviews: [], beatPricing: '', previewUrl: '',
   previewDuration: '', bpm: '', keyRoot: 'C', keyMode: 'minor', keyNotApplicable: false,
   timeSignature: '4/4', sampleStatus: 'none', sampleDisclosure: '', youtubeUrl: '', tagIds: [],
   attributeTermIds: [], mp3Path: '', wavPath: '', stemsPath: '', enabledTiers: [],
@@ -88,11 +92,15 @@ const ASSET_TYPE_LABELS: Record<AssetSubtype, string> = {
 };
 
 const BEAT_TIERS: Array<{ code: BeatTier; title: string; copy: string; requiredFiles: Array<'mp3Path' | 'wavPath' | 'stemsPath'> }> = [
-  { code: 'basic', title: 'Basic License', copy: 'Non-exclusive license with an untagged MP3.', requiredFiles: ['mp3Path'] },
-  { code: 'premium', title: 'Premium License', copy: 'Non-exclusive license with untagged MP3 and WAV files.', requiredFiles: ['mp3Path', 'wavPath'] },
-  { code: 'trackout', title: 'Trackout License', copy: 'Non-exclusive license with MP3, WAV, and stems.', requiredFiles: ['mp3Path', 'wavPath', 'stemsPath'] },
-  { code: 'exclusive', title: 'Exclusive License', copy: 'One exclusive sale with MP3, WAV, and stems.', requiredFiles: ['mp3Path', 'wavPath', 'stemsPath'] },
-  { code: 'free', title: 'Free License', copy: 'Non-exclusive license with an untagged MP3, at no cost.', requiredFiles: ['mp3Path'] },
+  { code: 'basic', title: 'Basic License', copy: 'Non-exclusive license (MP3)', requiredFiles: ['mp3Path'] },
+  { code: 'premium', title: 'Premium License', copy: 'Non-exclusive license (WAV)', requiredFiles: ['wavPath'] },
+  { code: 'exclusive', title: 'Exclusive License', copy: 'Exclusive license (WAV + stems)', requiredFiles: ['stemsPath'] },
+];
+
+const BEAT_FILE_FIELDS: Array<{ key: 'mp3Path' | 'wavPath' | 'stemsPath'; label: string; folder: string; accept: string }> = [
+  { key: 'mp3Path', label: 'MP3 file', folder: 'beats/mp3', accept: 'audio/mpeg,audio/mp3' },
+  { key: 'wavPath', label: 'WAV file', folder: 'beats/wav', accept: 'audio/wav,audio/x-wav' },
+  { key: 'stemsPath', label: 'WAV + Stems (ZIP)', folder: 'beats/stems', accept: 'application/zip,.zip' },
 ];
 
 function isBeatSubtype(subtype: AssetSubtype | ''): subtype is 'beat' {
@@ -127,6 +135,78 @@ function CheckIcon() {
   return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>;
 }
 
+function FreeBeatAudioUpload({
+  userId,
+  value,
+  onChange,
+  onPreviewChange,
+  onDurationChange,
+  onUploadingChange,
+}: {
+  userId: string;
+  value: string;
+  onChange: (value: string) => void;
+  onPreviewChange: (value: string) => void;
+  onDurationChange: (value: string) => void;
+  onUploadingChange: (uploading: boolean) => void;
+}) {
+  const inputId = useId();
+  const [uploading, setUploading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [messageTone, setMessageTone] = useState<'status' | 'success' | 'error'>('status');
+
+  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    onUploadingChange(true);
+    setMessage('');
+    setMessageTone('status');
+    try {
+      const privateUpload = await uploadPrivateItemFile({ file, folder: 'beats/mp3', userId });
+      const processed = await uploadProcessedAudio(file, status => {
+        setMessageTone('status');
+        setMessage(status);
+      });
+      onChange(privateUpload.path);
+      onPreviewChange(processed.streamUrl);
+      if (processed.durationSeconds) onDurationChange(Math.ceil(processed.durationSeconds).toString());
+      setMessageTone('success');
+      setMessage('Upload complete.');
+    } catch (error) {
+      setMessageTone('error');
+      setMessage(getUploadErrorMessage(error));
+    } finally {
+      setUploading(false);
+      onUploadingChange(false);
+      event.target.value = '';
+    }
+  }
+
+  function clearFile() {
+    onChange('');
+    onPreviewChange('');
+    onDurationChange('');
+    setMessage('');
+  }
+
+  return <div className="dashboard-field">
+    <div className="dashboard-field-label">Audio File</div>
+    {value ? <div className="upload-preview upload-preview-file ui44-media-preview ui44-media-preview-file">
+      <span>{value.split('/').pop() || 'Uploaded MP3'}</span>
+      <button type="button" className="upload-preview-remove" aria-label="Remove beat audio file" onClick={clearFile}>×</button>
+    </div> : null}
+    <div className="ui44-upload-actions">
+      <label htmlFor={inputId} className={`os-button os-button-secondary os-button-compact${uploading ? ' ui44-upload-button-busy' : ''}`}>
+        {uploading ? 'Uploading…' : 'Upload file'}
+      </label>
+      <Ui44FileInput id={inputId} accept="audio/mpeg,audio/mp3,.mp3" onChange={handleFileChange} disabled={uploading} className="ui44-file-input-hidden" />
+      {value ? <span className="upload-state upload-state-complete">Uploaded</span> : null}
+    </div>
+    {message ? <div className={messageTone === 'error' ? 'dashboard-status dashboard-status-error ui44-status ui44-status-error' : messageTone === 'success' ? 'dashboard-status dashboard-status-success ui44-status ui44-status-success' : 'dashboard-status ui44-status'} role={messageTone === 'error' ? 'alert' : 'status'}>{message}</div> : null}
+  </div>;
+}
+
 export function AssetStudioForm({ itemId = null }: { itemId?: string | null }) {
   useTopbarBack({ href: '/studio', label: 'Studio' });
   const router = useRouter();
@@ -151,8 +231,11 @@ export function AssetStudioForm({ itemId = null }: { itemId?: string | null }) {
   const paidUnavailable = !paidSales?.can_sell_paid;
   const selectedType = taxonomyTypes.find(type => type.slug === form.subtype);
   const requiredBeatFiles = useMemo(() => new Set(
-    BEAT_TIERS.filter(tier => form.enabledTiers.includes(tier.code)).flatMap(tier => tier.requiredFiles),
-  ), [form.enabledTiers]);
+    (form.beatPricing === 'free'
+      ? ['mp3Path']
+      : BEAT_TIERS.filter(tier => form.enabledTiers.includes(tier.code)).flatMap(tier => tier.requiredFiles)
+    ).concat(form.tierPrices.trackout.trim() ? ['mp3Path', 'wavPath', 'stemsPath'] : []),
+  ), [form.beatPricing, form.enabledTiers, form.tierPrices.trackout]);
 
   useTopbarMobileTrailingAction(useMemo(() => (
     <button type="submit" form="studio-asset-form" className="ui44-symbol-button studio-music-publish-action" aria-label={itemId ? 'Save asset' : 'Publish asset'} title={itemId ? 'Save asset' : 'Publish asset'} disabled={!userId || !ready || saving || uploading}>
@@ -192,9 +275,11 @@ export function AssetStudioForm({ itemId = null }: { itemId?: string | null }) {
           if (!alive) return;
           const offers = beatEditor?.beat?.licenseOffers ?? [];
           const priceByTier = new Map(offers.map(offer => [offer.tierCode, offer.priceCents]));
+          const hasPaidOffers = ['basic', 'premium', 'trackout', 'exclusive'].some(tier => priceByTier.has(tier));
           nextForm = {
             ...nextForm,
             subtype: 'beat',
+            beatPricing: hasPaidOffers ? 'paid' : priceByTier.has('free') ? 'free' : '',
             title: beatEditor?.item.title ?? editor.item.title,
             coverUrl: beatEditor?.item.cover_url ?? editor.item.cover_url ?? '',
             releaseDate: beatEditor?.item.release_date ?? editor.item.release_date ?? '',
@@ -214,7 +299,13 @@ export function AssetStudioForm({ itemId = null }: { itemId?: string | null }) {
             wavPath: beatEditor?.privateFiles.untagged_wav ?? '',
             stemsPath: beatEditor?.privateFiles.stems_zip ?? '',
             enabledTiers: BEAT_TIERS.filter(tier => priceByTier.has(tier.code)).map(tier => tier.code),
-            tierPrices: Object.fromEntries(BEAT_TIERS.map(tier => [tier.code, tier.code === 'free' ? '0' : centsToPrice(priceByTier.get(tier.code))])) as AssetFormState['tierPrices'],
+            tierPrices: {
+              ...Object.fromEntries(BEAT_TIERS.map(tier => [tier.code, tier.code === 'free' ? '0' : centsToPrice(priceByTier.get(tier.code))])),
+              // Trackout remains supported by the existing RPC and stored offers, but is intentionally
+              // hidden from the new UI. Carry its current price/files through edits so it is not archived
+              // just because the user saved the redesigned form.
+              trackout: centsToPrice(priceByTier.get('trackout')),
+            } as AssetFormState['tierPrices'],
             rightsConfirmed: true,
           };
         } else {
@@ -245,7 +336,11 @@ export function AssetStudioForm({ itemId = null }: { itemId?: string | null }) {
         }
       } else {
         const recovered = readStudioFormRecovery<AssetFormState>(recoveryKey);
-        if (recovered) nextForm = { ...nextForm, ...recovered };
+        if (recovered) nextForm = {
+          ...nextForm,
+          ...recovered,
+          beatPricing: recovered.beatPricing ?? (recovered.enabledTiers?.length ? 'paid' : ''),
+        };
       }
       setForm(nextForm);
       setReady(true);
@@ -273,6 +368,17 @@ export function AssetStudioForm({ itemId = null }: { itemId?: string | null }) {
     }));
   }
 
+  function toggleBeatTier(tier: BeatTier, checked: boolean) {
+    setForm(current => {
+      return {
+        ...current,
+        enabledTiers: checked
+          ? Array.from(new Set([...current.enabledTiers, tier]))
+          : current.enabledTiers.filter(code => code !== tier),
+      };
+    });
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!user || saving) return;
@@ -285,13 +391,16 @@ export function AssetStudioForm({ itemId = null }: { itemId?: string | null }) {
     if (!form.rightsConfirmed) { setError('Confirm that you own this work or have the necessary rights and permission to publish and distribute it through 44OS.'); return; }
     if (beatLike) {
       if (!beatReviewSurfacesEnabled || !databaseEnabled) { setError('Beat creation is currently unavailable because the Beat review control is off.'); return; }
+      if (!form.beatPricing) { setError('Select Free or Paid licenses under Beat Pricing.'); return; }
       const bpm = Number(form.bpm);
-      if (!form.previewUrl.trim() || bpm < 40 || bpm > 240) { setError('Add a tagged preview and a BPM from 40–240.'); return; }
-      for (const tier of BEAT_TIERS.filter(row => form.enabledTiers.includes(row.code))) {
-        const cents = tier.code === 'free' ? 0 : priceToCents(form.tierPrices[tier.code]);
+      if (!form.previewUrl.trim() || bpm < 40 || bpm > 240) { setError(form.beatPricing === 'free' ? 'Upload the Audio File and add a BPM from 40–240.' : 'Add an Audio Preview and a BPM from 40–240.'); return; }
+      if (form.beatPricing === 'paid' && form.enabledTiers.length === 0) { setError('Select at least one paid license.'); return; }
+      for (const tier of BEAT_TIERS.filter(row => form.beatPricing === 'paid' && form.enabledTiers.includes(row.code))) {
+        const cents = priceToCents(form.tierPrices[tier.code]);
         if (cents === null) { setError(`Add a valid USD price for the ${tier.title}.`); return; }
         if (tier.requiredFiles.some(key => !form[key].trim())) { setError(`${tier.title} is missing a required private delivery file.`); return; }
       }
+      if (form.beatPricing === 'free' && !form.mp3Path.trim()) { setError('Upload the Audio File before saving.'); return; }
     } else {
       if (!form.packFile.trim()) { setError('Upload the pack ZIP before saving.'); return; }
       if (form.samplePreviews.some(sample => !sample.title.trim() || !sample.previewUrl.trim())) { setError('Add a title and audio preview for each sample preview.'); return; }
@@ -330,7 +439,13 @@ export function AssetStudioForm({ itemId = null }: { itemId?: string | null }) {
             untagged_wav: requiredBeatFiles.has('wavPath') ? form.wavPath : '',
             stems_zip: requiredBeatFiles.has('stemsPath') ? form.stemsPath : '',
           },
-          tierPrices: Object.fromEntries(form.enabledTiers.map(tier => [tier, tier === 'free' ? 0 : priceToCents(form.tierPrices[tier])])) as Record<BeatTier, number>,
+          tierPrices: Object.fromEntries([
+            ...(form.beatPricing === 'free' ? [['free', 0]] : form.enabledTiers.map(tier => [tier, priceToCents(form.tierPrices[tier])])),
+            // Preserve legacy Trackout offers while keeping the option out of the visible selector.
+            ...(form.beatPricing === 'paid' && form.tierPrices.trackout.trim() && priceToCents(form.tierPrices.trackout) !== null
+              ? [['trackout', priceToCents(form.tierPrices.trackout)]]
+              : []),
+          ]) as Record<BeatTier, number>,
         });
         await attestStudioItemRights(savedId);
       } else {
@@ -425,13 +540,13 @@ export function AssetStudioForm({ itemId = null }: { itemId?: string | null }) {
   const assetDirty = !itemId && Boolean(
     form.title.trim() || form.coverUrl || form.releaseDate || form.packFile || form.previewUrl ||
     form.mp3Path || form.wavPath || form.stemsPath || form.samplePreviews.length || form.youtubeUrl ||
-    form.rightsConfirmed || form.paidDownload || form.price || form.localPrice || form.enabledTiers.length
+    form.rightsConfirmed || form.paidDownload || form.price || form.localPrice || form.beatPricing || form.enabledTiers.length
   );
 
   return <PageShell>
     {!itemId ? <StudioCreateCancel dirty={assetDirty} recoveryKey={recoveryKey} href="/studio" /> : null}
     <main className="dashboard-page dashboard-editor">
-      <HubHero title={itemId ? 'Edit Asset' : 'Add Asset'} hideDivider actions={<button type="submit" form="studio-asset-form" className="ui44-symbol-button studio-music-publish-desktop" aria-label={itemId ? 'Save asset' : 'Publish asset'} title={itemId ? 'Save asset' : 'Publish asset'} disabled={saving || uploading}><CheckIcon /></button>} />
+      <HubHero title={itemId ? 'Edit Asset' : 'New Asset'} hideDivider actions={<button type="submit" form="studio-asset-form" className="ui44-symbol-button studio-music-publish-desktop" aria-label={itemId ? 'Save asset' : 'Publish asset'} title={itemId ? 'Save asset' : 'Publish asset'} disabled={saving || uploading}><CheckIcon /></button>} />
       {error ? <div className="dashboard-status dashboard-status-error ui44-status ui44-status-error" role="alert">{error}</div> : null}
       <div className="dashboard-section">
         <form id="studio-asset-form" className="dashboard-form studio-artwork-create-form" onSubmit={handleSubmit}>
@@ -442,6 +557,27 @@ export function AssetStudioForm({ itemId = null }: { itemId?: string | null }) {
             <div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible">
               <label className="dashboard-field"><span className="dashboard-field-label">Title</span><Ui44TextInput required value={form.title} placeholder="Enter asset title" onChange={event => update('title', event.target.value)} /></label>
               <label className="dashboard-field"><span className="dashboard-field-label">Item Type</span><Ui44SelectInput required disabled={Boolean(itemId)} value={form.subtype} onChange={event => update('subtype', event.target.value as AssetSubtype)}><option value="">Select item type</option>{availableTypes.map(type => <option key={type} value={type}>{ASSET_TYPE_LABELS[type]}</option>)}</Ui44SelectInput></label>
+              {beatLike ? <label className="dashboard-field"><span className="dashboard-field-label">BPM</span><Ui44TextInput required type="number" min={40} max={240} value={form.bpm} onChange={event => update('bpm', event.target.value)} /></label> : null}
+              {beatLike ? <label className="dashboard-field"><span className="dashboard-field-label">Beat Pricing</span><Ui44SelectInput required value={form.beatPricing} onChange={event => {
+                const pricing = event.target.value as BeatPricing;
+                update('beatPricing', pricing);
+                if (pricing === 'free') update('enabledTiers', []);
+              }}>
+                <option value="">Select beat pricing</option>
+                <option value="free">Free</option>
+                <option value="paid">Paid license</option>
+              </Ui44SelectInput></label> : null}
+              {beatLike && form.beatPricing === 'free' ? <FreeBeatAudioUpload
+                userId={user.id}
+                value={form.mp3Path}
+                onChange={value => update('mp3Path', value)}
+                onPreviewChange={value => update('previewUrl', value)}
+                onDurationChange={value => update('previewDuration', value)}
+                onUploadingChange={setUploading}
+              /> : null}
+              {beatLike && form.beatPricing === 'paid' ? <div className="asset-beat-preview-field">
+                <UploadField label="Audio Preview" folder="products/beat-previews" userId={user.id} value={form.previewUrl} accept="audio/mpeg,audio/mp3,audio/wav" onChange={value => update('previewUrl', value)} onAudioMetadata={duration => update('previewDuration', duration.toString())} onUploadingChange={setUploading} />
+              </div> : null}
             </div>
           </section>
 
@@ -465,48 +601,28 @@ export function AssetStudioForm({ itemId = null }: { itemId?: string | null }) {
             </div>
           </section> : null}
 
-          {form.subtype && beatLike ? <>
-            <section className="dashboard-form-section">
-              <SectionHeader title="Beat" description="Add the beat’s tempo, key, and time signature." showDescription />
-              <div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible">
-                <div className="dashboard-form-grid dashboard-form-grid-2 ui44-form-grid">
-                  <label className="dashboard-field"><span className="dashboard-field-label">BPM</span><Ui44TextInput required type="number" min={40} max={240} value={form.bpm} onChange={event => update('bpm', event.target.value)} /></label>
-                  <label className="dashboard-field"><span className="dashboard-field-label">Time Signature</span><Ui44SelectInput value={form.timeSignature} onChange={event => update('timeSignature', event.target.value)}>{['2/4', '3/4', '4/4', '5/4', '6/8', '7/8', '12/8'].map(value => <option key={value}>{value}</option>)}</Ui44SelectInput></label>
-                  <label className="dashboard-field"><span className="dashboard-field-label">Key</span><Ui44SelectInput value={form.keyRoot} onChange={event => { update('keyNotApplicable', false); update('keyRoot', event.target.value); }}>{['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].map(value => <option key={value}>{value}</option>)}</Ui44SelectInput></label>
-                  <label className="dashboard-field"><span className="dashboard-field-label">Mode</span><Ui44SelectInput value={form.keyMode} onChange={event => { update('keyNotApplicable', false); update('keyMode', event.target.value); }}><option value="major">Major</option><option value="minor">Minor</option></Ui44SelectInput></label>
-                </div>
-              </div>
-            </section>
-
-            <section className="dashboard-form-section">
-              <SectionHeader title="Licenses" description="Choose the license tiers and prices to offer." showDescription />
-              <div className="dashboard-achievement-picker dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip asset-license-list">
-                {BEAT_TIERS.map(tier => {
-                  const enabled = form.enabledTiers.includes(tier.code);
-                  return <div className="dashboard-achievement-choice-row asset-license-choice-row" key={tier.code}>
-                    <span className="dashboard-achievement-toggle asset-license-toggle">
-                      <Ui44CheckboxInput id={`asset-license-${tier.code}`} aria-label={`Offer ${tier.title}`} checked={enabled} onChange={event => update('enabledTiers', event.target.checked ? [...form.enabledTiers, tier.code] : form.enabledTiers.filter(code => code !== tier.code))} />
-                    </span>
-                    <div className="dashboard-achievement-copy asset-license-copy">
-                      <label className="os-type-card-title asset-license-title" htmlFor={`asset-license-${tier.code}`}>{tier.title}</label>
-                      <span className="os-type-body-small asset-license-description">{tier.copy}</span>
-                      {enabled ? tier.code === 'free' ? <div className="dashboard-field beat-tier-price"><span className="dashboard-field-label">Price (USD)</span><div className="dashboard-form-note">Free</div></div> : <label className="dashboard-field beat-tier-price"><span className="dashboard-field-label">Price (USD)</span><Ui44TextInput inputMode="decimal" value={form.tierPrices[tier.code]} onChange={event => update('tierPrices', { ...form.tierPrices, [tier.code]: event.target.value.replace(/[^\d.]/g, '') })} placeholder="0.00" /></label> : null}
-                    </div>
-                  </div>;
-                })}
-              </div>
-            </section>
-
-            <section className="dashboard-form-section">
-              <SectionHeader title="Uploads" description="Add a tagged preview and files needed for the selected licenses." showDescription />
-              <div className="dashboard-form-step ui44-panel ui44-panel-glass ui44-panel-overflow-visible">
-                <UploadField label="Tagged Preview" folder="products/beat-previews" userId={user.id} value={form.previewUrl} accept="audio/mpeg,audio/mp3,audio/wav" onChange={value => update('previewUrl', value)} onAudioMetadata={duration => update('previewDuration', duration.toString())} onUploadingChange={setUploading} />
-                {requiredBeatFiles.has('mp3Path') ? <UploadField label="Untagged MP3" folder="beats/mp3" userId={user.id} value={form.mp3Path} accept="audio/mpeg,audio/mp3" storage="private-item" onChange={value => update('mp3Path', value)} onUploadingChange={setUploading} /> : null}
-                {requiredBeatFiles.has('wavPath') ? <UploadField label="Untagged WAV" folder="beats/wav" userId={user.id} value={form.wavPath} accept="audio/wav,audio/x-wav" storage="private-item" onChange={value => update('wavPath', value)} onUploadingChange={setUploading} /> : null}
-                {requiredBeatFiles.has('stemsPath') ? <UploadField label="Stems / Trackouts ZIP" folder="beats/stems" userId={user.id} value={form.stemsPath} accept="application/zip,.zip" storage="private-item" onChange={value => update('stemsPath', value)} onUploadingChange={setUploading} /> : null}
-              </div>
-            </section>
-          </> : null}
+          {form.subtype && beatLike && form.beatPricing === 'paid' ? <section className="dashboard-form-section">
+            <SectionHeader title="Licenses" description="Choose the license tiers and prices to offer." showDescription />
+            <div className="dashboard-achievement-picker dashboard-list-surface ui44-list-surface ui44-panel ui44-panel-glass ui44-panel-overflow-clip asset-license-list">
+              {BEAT_TIERS.map(tier => {
+                const enabled = form.enabledTiers.includes(tier.code);
+                const fields = tier.requiredFiles.map(key => BEAT_FILE_FIELDS.find(field => field.key === key)).filter((field): field is typeof BEAT_FILE_FIELDS[number] => Boolean(field));
+                return <div className="dashboard-achievement-choice-row asset-license-choice-row" key={tier.code}>
+                  <span className="dashboard-achievement-toggle asset-license-toggle">
+                    <Ui44CheckboxInput id={`asset-license-${tier.code}`} aria-label={`Offer ${tier.title}`} checked={enabled} onChange={event => toggleBeatTier(tier.code, event.target.checked)} />
+                  </span>
+                  <div className="dashboard-achievement-copy asset-license-copy">
+                    <label className="os-type-card-title asset-license-title" htmlFor={`asset-license-${tier.code}`}>{tier.title}</label>
+                    <span className="os-type-body-small asset-license-description">{tier.copy}</span>
+                    {enabled ? <>
+                      <div className="dashboard-field beat-tier-price"><span className="dashboard-field-label">Price (USD)</span><Ui44TextInput inputMode="decimal" value={form.tierPrices[tier.code]} onChange={event => update('tierPrices', { ...form.tierPrices, [tier.code]: event.target.value.replace(/[^\d.]/g, '') })} placeholder="0.00" /></div>
+                      {fields.map(field => <UploadField key={field.key} label={field.label} folder={field.folder} userId={user.id} value={form[field.key]} accept={field.accept} storage="private-item" onChange={value => update(field.key, value)} onUploadingChange={setUploading} />)}
+                    </> : null}
+                  </div>
+                </div>;
+              })}
+            </div>
+          </section> : null}
 
           {form.subtype && !beatLike ? <section className="dashboard-form-section">
             <SectionHeader title="Sample Pack File" description="Upload the protected ZIP file for this asset." showDescription />

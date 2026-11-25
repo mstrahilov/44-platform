@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PageShell, HubHero, CenteredMessage } from '@/components/Ui';
+import { PageShell, HubHero, RouteLoading } from '@/components/Ui';
 import { AchievementIconGlyph } from '@/components/AchievementIconGlyph';
 import { useAuth } from '@/lib/useAuth';
 import { supabase } from '@/lib/supabase';
@@ -111,7 +111,7 @@ export default function NotificationsPage() {
   const enabledNotifications = notifications.filter(item => notificationIsEnabled(item));
 
   if (loading || !user) {
-    return <PageShell><CenteredMessage status>Loading…</CenteredMessage></PageShell>;
+    return <RouteLoading label="Loading Notifications" />;
   }
 
   const visibleNotifications = enabledNotifications.filter(item => {

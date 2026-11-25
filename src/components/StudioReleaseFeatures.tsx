@@ -6,6 +6,7 @@ import type { StudioCatalogSectionId } from '@/lib/studioCatalog';
 import { getAchievementIconPath } from '@/lib/achievementIcons';
 import { replaceStudioReleaseFeatures } from '@/lib/domain/studioPublishing';
 import { Ui44CheckboxInput } from '@/components/ui44/Inputs';
+import { hasConfiguredAchievements } from '@/lib/studioSectionState';
 
 export type DraftAchievement = {
   code: string;
@@ -145,7 +146,7 @@ export function validateReleaseFeatureState(state: ReleaseFeatureState, sectionI
 }
 
 export function buildAchievementRows(productId: string, state: ReleaseFeatureState, sectionId: StudioCatalogSectionId) {
-  if (!supportsAchievementsForSection(sectionId) || !state.achievementsEnabled) return [];
+  if (!supportsAchievementsForSection(sectionId) || !state.achievementsEnabled || !hasConfiguredAchievements(state.achievements)) return [];
   const bonusItems = enabledBonusItems(state);
 
   return state.achievements

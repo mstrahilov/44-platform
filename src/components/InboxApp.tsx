@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { PageShell } from '@/components/Ui';
+import { PageShell, RouteLoading } from '@/components/Ui';
 import { CommunitySetupGate } from '@/components/CommunitySetupGate';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Ui44TextInput, Ui44Textarea } from '@/components/ui44/Inputs';
@@ -51,7 +51,7 @@ function MessageSendGlyph() {
 
 export default function MessagesPage({ conversationId }: { conversationId?: string }) {
   return (
-    <Suspense fallback={<PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>}>
+    <Suspense fallback={<RouteLoading label="Loading Messages" />}>
       <MessagesContent conversationId={conversationId} />
     </Suspense>
   );
@@ -437,13 +437,7 @@ function MessagesContent({ conversationId: routeConversationId }: { conversation
   }
 
   if (loading) {
-    return (
-      <PageShell>
-        <main className="social-shell">
-          <div className="app-empty-text ui44-state ui44-state-loading" role="status" aria-live="polite">Loading messages...</div>
-        </main>
-      </PageShell>
-    );
+    return <RouteLoading label="Loading Messages" />;
   }
   if (!user) {
     return (

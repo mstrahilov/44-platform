@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/useAuth';
 import { loadStudioProfile } from '@/lib/studioProfiles';
+import { RouteLoading } from '@/components/Ui';
 
 export default function ProfileRedirect() {
   const router = useRouter();
@@ -26,5 +27,5 @@ export default function ProfileRedirect() {
     redirect();
   }, [loading, router, user]);
 
-  return <div className="panel-scroll" />;
+  return <RouteLoading label="Loading Profile" />;
 }

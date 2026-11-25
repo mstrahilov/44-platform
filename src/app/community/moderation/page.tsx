@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { PageShell, HubHero, EmptyMessage } from '@/components/Ui';
+import { PageShell, HubHero, EmptyMessage, RouteLoading } from '@/components/Ui';
 import { useAuth } from '@/lib/useAuth';
 import { loadStudioProfile } from '@/lib/studioProfiles';
 import { listModerationReports, resolveContentReport } from '@/lib/domain/moderation';
@@ -51,7 +51,7 @@ export default function CommunityModerationPage() {
     }
   }
 
-  if (authLoading || loading) return <PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>;
+  if (authLoading || loading) return <RouteLoading label="Loading Moderation" />;
   if (!authorized) return <PageShell><EmptyMessage>Administrator access is required.</EmptyMessage></PageShell>;
 
   return (

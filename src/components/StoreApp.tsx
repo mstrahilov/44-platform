@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { PageShell, ProductCard, ProductGrid, HubHero, HubSection, EmptyMessage } from '@/components/Ui';
+import { PageShell, ProductCard, ProductGrid, HubHero, HubSection, EmptyMessage, RouteLoading } from '@/components/Ui';
 import { getProductExperience, type ProductExperience } from '@/lib/experience';
 import { comparePublicCatalogProducts, type Product } from '@/lib/products';
 import type { StoreCategory } from '@/lib/storeRoutes';
@@ -442,6 +442,10 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     else url.searchParams.set('type', effectiveTypeFilter.toLowerCase());
     window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
   }, [category, effectiveTypeFilter, urlFilterReady]);
+
+  if (authLoading || loading) {
+    return <RouteLoading label="Loading Discover" />;
+  }
 
   const discoverOptions = MOBILE_DISCOVER_CATEGORIES;
   function discoverOptionSelected(option: (typeof MOBILE_DISCOVER_CATEGORIES)[number]) {

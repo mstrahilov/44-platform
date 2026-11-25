@@ -18,7 +18,7 @@ import { currencyForCountry, type MarketMode } from '@/lib/marketPreferences';
 import { getStudioDisplayName, isCreatorProfile, loadStudioProfile, type StudioProfile } from '@/lib/studioProfiles';
 import { normalizeTaxonomyValue } from '@/lib/taxonomy';
 import { getStudioCatalogSection, type StudioCatalogSectionId } from '@/lib/studioCatalog';
-import { addStudioAssets, addStudioTracks, attachStudioAudioAssets, attestStudioItemRights, createStudioItem, isPublishingReviewRequired, listCatalogTaxonomy, listItemCategories, replaceStudioItemTaxonomy, setStudioPublicationStatus, submitStudioItemForReview } from '@/lib/domain/studioPublishing';
+import { addStudioAssets, addStudioTracks, attachStudioAudioAssets, attestStudioItemRights, createStudioItem, isPublishingReviewRequired, listCatalogTaxonomy, listItemCategories, replaceStudioItemTaxonomy, setStudioAchievementsEnabled, setStudioPublicationStatus, submitStudioItemForReview } from '@/lib/domain/studioPublishing';
 import { audioPipelineEnabled } from '@/lib/audioUploads';
 import type { Database } from '@/lib/database.types';
 import { ExternalLinksEditor } from '@/components/ExternalLinksEditor';
@@ -38,6 +38,7 @@ import { supabase } from '@/lib/supabase';
 import { StudioVisualsEditor } from '@/components/StudioVisualsEditor';
 import { replaceStudioReleaseVideoAttachments, type CreatorVideoPage } from '@/lib/domain/releaseFeatures';
 import { AssetStudioForm } from '@/components/AssetStudioForm';
+import { hasConfiguredAchievements } from '@/lib/studioSectionState';
 
 function buildSlug(title: string) {
   const base = normalizeTaxonomyValue(title) || 'item';
@@ -419,7 +420,7 @@ function NewProductContent() {
       available_locally_only: isMerchProduct ? merchUsesLocalOnlyPricing : false,
       is_free: isFree,
       streaming_enabled: isMusicProduct ? true : isGameProduct ? false : undefined,
-      download_purchase_enabled: !isMerchProduct ? (isGameProduct ? false : !isFree) : undefined,
+      download_purchase_enabled: !isMerchProduct ? (isGameProduct ? false : !isFree && priceCents > 0) : undefined,
       cover_url: coverUrl.trim() || null,
       hero_url: null,
       experience_type: experienceTypeForSection(section.id),
@@ -449,9 +450,9 @@ function NewProductContent() {
       const componentSettings = await supabase.rpc('update_owned_item' as never, {
         target_item_id: insertedProductId,
         patch: {
-          external_links_enabled: isMusicProduct ? externalLinksEnabled : false,
-          visuals_enabled: featureState.videoEmbedsEnabled,
-          related_items_enabled: relatedItemsEnabled,
+          external_links_enabled: isMusicProduct && externalLinksEnabled && activeExternalLinkDrafts(externalLinks).length > 0,
+          visuals_enabled: featureState.videoEmbedsEnabled && attachedVideos.length > 0,
+          related_items_enabled: relatedItemsEnabled && selectedRelatedItemIds.length > 0,
           community_enabled: true,
         },
       } as never);
@@ -570,6 +571,15 @@ function NewProductContent() {
         setSaving(false);
         setError(featureError);
         return;
+      }
+      if (isMusicProduct) {
+        try {
+          await setStudioAchievementsEnabled(insertedProductId, featureState.achievementsEnabled && hasConfiguredAchievements(featureState.achievements));
+        } catch (achievementToggleError) {
+          setSaving(false);
+          setError(achievementToggleError instanceof Error ? achievementToggleError.message : 'Could not save achievement settings.');
+          return;
+        }
       }
       try {
         await replaceStudioReleaseVideoAttachments(insertedProductId, attachedVideos.map(video => video.id));

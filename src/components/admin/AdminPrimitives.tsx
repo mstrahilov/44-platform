@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { useEffect, useState, type ReactNode } from 'react';
-import { EmptyMessage, PageShell } from '@/components/Ui';
+import { EmptyMessage, PageShell, RouteLoading } from '@/components/Ui';
 import { useAuth } from '@/lib/useAuth';
 import { loadStudioProfile } from '@/lib/studioProfiles';
 import { OS44Button } from '@/components/OS44Button';
@@ -34,7 +34,7 @@ export function useAdminAccess() {
 
 export function AdminAccessBoundary({ children }: { children: ReactNode }) {
   const access = useAdminAccess();
-  if (access.loading) return <PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading administrator workspace" /></PageShell>;
+  if (access.loading) return <RouteLoading label="Loading Administrator" />;
   if (!access.authorized) return <PageShell><EmptyMessage>Administrator access is required.</EmptyMessage></PageShell>;
   return children;
 }

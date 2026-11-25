@@ -20,6 +20,19 @@ export function PageShell({ children }: { children: ReactNode }) {
   return <div className="view-hub">{children}</div>;
 }
 
+/**
+ * Route-level loading state.  The application chrome (topbar and navigation)
+ * lives outside the route, so loading routes only need to render this centered
+ * state while their data is being fetched.
+ */
+export function RouteLoading({ label = 'Loading' }: { label?: string }) {
+  return (
+    <PageShell>
+      <div className="ui44-route-loading ui44-state-loading" role="status" aria-label={label} />
+    </PageShell>
+  );
+}
+
 export function SectionHeader({
   title,
   description,

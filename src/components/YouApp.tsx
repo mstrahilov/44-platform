@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SocialAvatar } from '@/components/Social';
 import { AuthExperience } from '@/components/AuthExperience';
-import { PageShell } from '@/components/Ui';
+import { PageShell, RouteLoading } from '@/components/Ui';
 import { loadAccountOverview, type AccountOverview } from '@/lib/domain/accountOverview';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/useAuth';
@@ -69,7 +69,7 @@ export function YouApp() {
   }, [authLoading, userId]);
 
   if (authLoading || loading) {
-    return <PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading Account" /></PageShell>;
+    return <RouteLoading label="Loading Account" />;
   }
 
   if (!user) {

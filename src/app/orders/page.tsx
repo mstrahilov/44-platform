@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { EmptyMessage, HubHero, PageShell } from '@/components/Ui';
+import { EmptyMessage, HubHero, PageShell, RouteLoading } from '@/components/Ui';
 import { useAuth } from '@/lib/useAuth';
 import { listCustomerOrders, type CustomerOrder } from '@/lib/domain/customerCommerce';
 import { OS44Button } from '@/components/OS44Button';
@@ -31,7 +31,7 @@ export default function OrdersPage() {
   }, [user]);
 
   if (loading || !user) {
-    return <PageShell><div className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>;
+    return <RouteLoading label="Loading Orders" />;
   }
 
   return (

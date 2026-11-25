@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { PublicArtwork } from '@/components/PublicArtwork';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { PageShell, HubHero, EmptyMessage, SectionHeader } from '@/components/Ui';
+import { PageShell, HubHero, EmptyMessage, RouteLoading, SectionHeader } from '@/components/Ui';
 import { Ui44Panel } from '@/components/ui44/Spacing';
 import { useAuth } from '@/lib/useAuth';
 import { comparePublicCatalogItems, type Product } from '@/lib/products';
@@ -47,6 +47,7 @@ export default function StudioPage() {
     typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('studioStatus')
   ));
   const [profile, setProfile] = useState<StudioProfile | null>(null);
+  const [overviewLoading, setOverviewLoading] = useState(true);
   const studioToolbarActions = useMemo(() => STUDIO_CREATE_ACTIONS.map(action => ({
     id: action.href,
     label: action.label,
@@ -79,7 +80,10 @@ export default function StudioPage() {
       const profileResult = await loadStudioProfile(activeUserId);
       if (!active) return;
       setProfile(profileResult.profile);
-      if (profileResult.profile && !isCreatorProfile(profileResult.profile)) return;
+      if (profileResult.profile && !isCreatorProfile(profileResult.profile)) {
+        setOverviewLoading(false);
+        return;
+      }
       const profileId = profileResult.profile?.id ?? activeUserId;
       const results = await Promise.allSettled([
         getCreatorCatalogOverview(profileId),
@@ -112,6 +116,7 @@ export default function StudioPage() {
           ? result.reason instanceof Error ? result.reason.message : errorMessages[index]
           : '').filter(Boolean).join(' '),
       });
+      setOverviewLoading(false);
       if (videos.status === 'fulfilled') {
         void enrichCreatorVideoRows(videos.value).then(enriched => {
           if (active) setOverview(current => ({ ...current, videos: enriched }));
@@ -139,7 +144,11 @@ export default function StudioPage() {
   }, []);
 
   if (loading) {
-    return <PageShell><main className="ui44-loading-shell" role="status" aria-label="Loading" /></PageShell>;
+    return <RouteLoading label="Loading Studio" />;
+  }
+
+  if (user && overviewLoading) {
+    return <RouteLoading label="Loading Studio" />;
   }
 
   if (!user) {
@@ -221,19 +230,9 @@ export default function StudioPage() {
             Submitted for review. Your release will remain in its current published state until an administrator approves the update.
           </div>
         )}
-        {studioStatus === 'published' && (
-          <div className="dashboard-status dashboard-status-success ui44-status ui44-status-success studio-submission-banner" role="status">
-            Published successfully. Your release is now live in the catalog.
-          </div>
-        )}
         {studioStatus === 'game-submitted' && (
           <div className="dashboard-status dashboard-status-warning ui44-status ui44-status-warning studio-submission-banner" role="status">
             Game package saved for review. 44OS will inspect and host the WebGL build before it can go live.
-          </div>
-        )}
-        {studioStatus === 'update-published' && (
-          <div className="dashboard-status dashboard-status-success ui44-status ui44-status-success studio-submission-banner" role="status">
-            Update published successfully.
           </div>
         )}
 

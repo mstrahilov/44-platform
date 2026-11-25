@@ -1104,6 +1104,7 @@ export type Database = {
       catalog_items: {
         Row: {
           author_id: string | null
+          achievements_enabled: boolean
           available_locally_only: boolean
           community_enabled: boolean
           cover_url: string | null
@@ -1147,6 +1148,7 @@ export type Database = {
         }
         Insert: {
           author_id?: string | null
+          achievements_enabled?: boolean
           available_locally_only?: boolean
           community_enabled?: boolean
           cover_url?: string | null
@@ -1190,6 +1192,7 @@ export type Database = {
         }
         Update: {
           author_id?: string | null
+          achievements_enabled?: boolean
           available_locally_only?: boolean
           community_enabled?: boolean
           cover_url?: string | null
