@@ -447,7 +447,11 @@ export function Topbar() {
   const isDetailRoute = mobileTopbarState.mode === 'back' || Boolean(back);
   const hasSectionTabs = Boolean(tabs?.some(tab => tab.variant === 'section'));
   const activeDiscoverTab = tabs?.find(tab => tab.variant === 'section' && tab.active);
-  const showHomeCalendarAction = pathname === '/' && (!activeDiscoverTab || activeDiscoverTab.id === 'all');
+  const discoverTabFromURL = new URLSearchParams(searchKey).get('tab');
+  const showHomeCalendarAction = pathname === '/' && (
+    activeDiscoverTab?.id === 'all'
+      || (!activeDiscoverTab && (!discoverTabFromURL || discoverTabFromURL === 'all'))
+  );
 
   const mobileBackAction = isDetailRoute ? (
     <button

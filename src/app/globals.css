@@ -8392,6 +8392,102 @@ body.theme-dark .social-profile-tabs button[aria-selected="true"] {
 .video-inline-card { display: grid; min-width: 0; gap: 10px; }
 .video-feed-load-more { display: flex; min-height: 1px; justify-content: center; padding: 12px 0 24px; color: var(--os-color-secondary-label); }
 
+.store-home-content { min-width: 0; max-width: 100%; }
+
+.home-video-shelf {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 100%;
+  gap: 18px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scroll-snap-type: inline mandatory;
+  scrollbar-width: none;
+}
+
+.home-video-shelf::-webkit-scrollbar { display: none; }
+
+.video-thumbnail-preview-card {
+  display: grid;
+  min-width: 0;
+  max-width: 100%;
+  gap: 10px;
+  scroll-snap-align: start;
+}
+
+.video-thumbnail-preview-frame {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid var(--os-color-hairline);
+  border-radius: 18px;
+  background: #000;
+}
+
+.video-thumbnail-preview-frame > iframe,
+.video-thumbnail-preview-frame > .video-thumbnail-preview-trigger,
+.video-thumbnail-preview-frame > .video-thumbnail-preview-trigger > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.video-thumbnail-preview-frame > iframe { position: absolute; inset: 0; }
+
+.video-thumbnail-preview-trigger {
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+  appearance: none;
+  cursor: pointer;
+  background: #000;
+}
+
+.video-thumbnail-preview-trigger > img { object-fit: cover; }
+
+.video-thumbnail-preview-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 3px 14px rgb(0 0 0 / 28%);
+  transform: translate(-50%, -50%);
+}
+
+.video-thumbnail-preview-play > span {
+  width: 0;
+  height: 0;
+  margin-left: 4px;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-left: 15px solid #1b1d22;
+}
+
+.video-thumbnail-preview-trigger:focus-visible {
+  outline: 3px solid var(--os-color-accent);
+  outline-offset: -3px;
+}
+
+.video-thumbnail-preview-title {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .library-video-card-list {
   display: grid;
   gap: 22px;
@@ -8426,6 +8522,12 @@ body.theme-dark .social-profile-tabs button[aria-selected="true"] {
 .library-video-card:hover .library-video-card-title { color: var(--os-color-accent); }
 
 .app-grid.video-browse-grid { grid-template-columns: minmax(0, 1fr); }
+
+.video-browse-list {
+  display: grid;
+  min-width: 0;
+  gap: 24px;
+}
 
 @media (max-width: 720px) {
   body:is(.theme-dark, .theme-light) .app-grid.video-browse-grid { grid-template-columns: minmax(0, 1fr); }
@@ -14625,6 +14727,18 @@ body:is(.theme-dark, .theme-light) .app-main-content:has(.radio-page) {
   overflow: visible;
 }
 
+/* The ambient Radio field must remain visible beneath the shared toolbar.
+   The shell normally paints an opaque glass layer, which is especially
+   noticeable in installed iOS/PWA Safari where the toolbar is composited in a
+   separate layer. */
+body:is(.theme-dark, .theme-light) .app-shell:has(.radio-page),
+body:is(.theme-dark, .theme-light) .app-main:has(.radio-page),
+body:is(.theme-dark, .theme-light) .app-main-content:has(.radio-page),
+body:is(.theme-dark, .theme-light) .view-hub:has(.radio-page),
+body:is(.theme-dark, .theme-light) .radio-page {
+  background: transparent;
+}
+
 body:is(.theme-dark, .theme-light) .radio-page {
   position: relative;
   display: block;
@@ -14634,7 +14748,7 @@ body:is(.theme-dark, .theme-light) .radio-page {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background: var(--os-color-app-environment);
+  background: transparent;
   isolation: isolate;
 }
 

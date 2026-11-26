@@ -6,7 +6,7 @@ import { PageShell, HubSection, EmptyMessage } from '@/components/Ui';
 import { Ui44Panel } from '@/components/ui44/Spacing';
 import { useMusicPlayer, type MusicQueueTrack } from '@/components/MusicPlayer';
 import { PlaylistPicker } from '@/components/PlaylistPicker';
-import { useTopbarLeadingAction, useTopbarOverflow } from '@/components/TopbarContext';
+import { useTopbarLeadingAction, useTopbarOverflow, useTopbarOverlay } from '@/components/TopbarContext';
 import { useAuth } from '@/lib/useAuth';
 import {
   getSyncedRadioPlayback,
@@ -96,6 +96,10 @@ export default function RadioPage() {
   ), [syncedTrack, user]);
 
   useTopbarLeadingAction(addToPlaylistAction);
+  // Radio uses the artwork-derived atmosphere as its page background. Keep the
+  // shared toolbar over that atmosphere on mobile/PWA shells, just like the
+  // profile and release detail surfaces.
+  useTopbarOverlay(true);
 
   useTopbarOverflow(useMemo(() => [
     { id: 'share', label: 'Share', onSelect: () => { void navigator.clipboard?.writeText(window.location.href); } },

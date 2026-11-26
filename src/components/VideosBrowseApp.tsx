@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { EmptyMessage, HubHero, PageShell, ProductGrid } from '@/components/Ui';
+import { EmptyMessage, HubHero, PageShell } from '@/components/Ui';
 import { SectionTab, SectionTabs } from '@/components/SectionTabs';
 import {
   creatorVideoMetadataUpdatedEvent,
@@ -9,9 +9,9 @@ import {
   type CreatorVideoBrowseRow,
 } from '@/lib/domain/releaseFeatures';
 import { OS44Button } from '@/components/OS44Button';
-import { YouTubeInlinePlayer } from '@/components/YouTubeInlinePlayer';
 import { FilterPopover } from '@/components/FilterPopover';
 import { Ui44SelectInput } from '@/components/ui44/Inputs';
+import { VideoThumbnailPreviewCard } from '@/components/VideoThumbnailPreviewCard';
 
 type VideoSort = 'release-date' | 'recently-added';
 
@@ -152,11 +152,9 @@ export default function VideosBrowseApp() {
           <span>{error}</span>{' '}
           <OS44Button type="button" className="os-button os-button-secondary" onClick={() => { setLoading(true); setAttempt(value => value + 1); }}>Try Again</OS44Button>
         </EmptyMessage> : loading || videos === null ? <EmptyMessage status>Loading videos...</EmptyMessage> : visibleVideos.length === 0 ? <EmptyMessage>{creatorFilter === 'all' ? 'No videos are published yet.' : 'No videos match this creator.'}</EmptyMessage> : (
-          <ProductGrid className="video-browse-grid">
-            {displayedVideos.map(video => <article className="video-inline-card" key={video.id}>
-              <YouTubeInlinePlayer videoId={video.youtube_video_id} />
-            </article>)}
-          </ProductGrid>
+          <div className="video-browse-list">
+            {displayedVideos.map(video => <VideoThumbnailPreviewCard key={video.id} video={video} />)}
+          </div>
         )}
         {!error && !loading && displayedVideos.length < visibleVideos.length ? <div ref={loadMoreRef} className="video-feed-load-more">
           {!supportsAutoLoad ? <OS44Button type="button" className="os-button os-button-secondary" onClick={() => setRenderCount(current => Math.min(current + 5, visibleVideos.length))}>Load 5 more videos</OS44Button> : <span role="status">Loading more videos as you scroll…</span>}

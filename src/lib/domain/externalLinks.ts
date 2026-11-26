@@ -14,7 +14,25 @@ export async function listExternalLinkPlatforms(scope: ExternalLinkScope) {
     .eq('is_active', true)
     .order('sort_order');
   if (result.error) throw result.error;
-  return (result.data as ExternalLinkPlatform[] | null) ?? [];
+  const platforms = (result.data as ExternalLinkPlatform[] | null) ?? [];
+  // Keep the Studio UI forward-compatible with the already-supported
+  // SoundCloud destination on iOS when an older environment has not yet
+  // surfaced the platform row from Supabase. No schema or data migration is
+  // performed here; persisted links still use the existing platform key.
+  if (!platforms.some(platform => platform.key === 'soundcloud')) {
+    platforms.push({
+      created_at: '',
+      host_patterns: ['soundcloud.com', '*.soundcloud.com'],
+      is_active: true,
+      key: 'soundcloud',
+      label: 'SoundCloud',
+      sort_order: platforms.length,
+      supports_items: scope === 'item',
+      supports_profiles: scope === 'profile',
+      updated_at: '',
+    });
+  }
+  return platforms;
 }
 
 export async function listOwnProfileExternalLinks(profileId: string) {

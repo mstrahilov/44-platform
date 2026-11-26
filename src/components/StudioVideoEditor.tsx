@@ -19,6 +19,9 @@ import {
   getYouTubeVideoId,
   getCreatorVideo,
   isSupportedYouTubeVideoUrl,
+  isPlaceholderCreatorVideoTitle,
+  lookupYouTubeVideoMetadata,
+  updateCreatorVideoMetadata,
   listVideoAttachedReleases,
   enrichCreatorVideoMetadata,
   saveCreatorVideo,
@@ -88,15 +91,24 @@ export function StudioVideoEditor({
     setSaving(true);
     setError('');
     try {
+      // Resolve the current YouTube metadata before the row is written so new
+      // videos do not spend their first browse visit showing the placeholder
+      // title. The post-save enrichment remains as a retry/fallback path.
+      const metadata = await lookupYouTubeVideoMetadata(videoUrl);
+      const sameURL = editing && videoUrl.trim() === `https://www.youtube.com/watch?v=${video?.youtube_video_id}`;
+      const metadataTitle = metadata?.title?.trim();
+      const resolvedTitle = metadataTitle && !isPlaceholderCreatorVideoTitle(metadataTitle)
+        ? metadataTitle
+        : sameURL && title && !isPlaceholderCreatorVideoTitle(title) ? title : 'YouTube video';
+      const resolvedPublishedAt = metadata?.published_at || (sameURL ? publishedAt : null);
       let saved: SavedCreatorVideo;
       if (editing && videoId) {
-        const sameURL = videoUrl.trim() === `https://www.youtube.com/watch?v=${video?.youtube_video_id}`;
-        saved = await updateCreatorVideo(videoId, sameURL ? (title || 'YouTube video') : 'YouTube video', videoUrl, sameURL ? publishedAt : null);
+        saved = await updateCreatorVideo(videoId, resolvedTitle, videoUrl, resolvedPublishedAt);
       } else if (video) {
-        saved = await updateCreatorVideo(video.id, title || 'YouTube video', videoUrl, publishedAt);
+        saved = await updateCreatorVideo(video.id, resolvedTitle, videoUrl, resolvedPublishedAt);
         setVideo({ ...saved, creator_id: user.id });
       } else {
-        saved = await saveCreatorVideo(title || 'YouTube video', videoUrl, publishedAt);
+        saved = await saveCreatorVideo(resolvedTitle, videoUrl, resolvedPublishedAt);
         setVideo({ ...saved, creator_id: user.id });
       }
       if (!editing && relatedReleaseEnabled && selectedReleaseId && !attachedReleases.some(release => release.id === selectedReleaseId)) {
@@ -112,7 +124,14 @@ export function StudioVideoEditor({
           }
         }
       }
-      const savedVideo: CreatorVideoPage = { ...saved, creator_id: user.id };
+      const savedVideo: CreatorVideoPage = {
+        ...saved,
+        creator_id: user.id,
+        youtube_thumbnail_url: metadata?.thumbnail_url ?? null,
+      };
+      if (metadata) {
+        try { await updateCreatorVideoMetadata(saved.id, metadata); } catch { /* best effort; the scheduled worker retries */ }
+      }
       if (onSaved) {
         await onSaved(savedVideo);
         void enrichCreatorVideoMetadata(savedVideo).then(enriched => {

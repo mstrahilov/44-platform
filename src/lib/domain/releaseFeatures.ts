@@ -5,12 +5,13 @@ export type CreatorVideoPage = {
   creator_id: string;
   title: string;
   youtube_video_id: string;
+  youtube_thumbnail_url?: string | null;
   youtube_published_at: string | null;
   youtube_metadata_checked_at?: string | null;
   created_at?: string;
 };
 
-export type HomeVideoPreview = Pick<CreatorVideoPage, 'id' | 'creator_id' | 'title' | 'youtube_video_id'> & {
+export type HomeVideoPreview = Pick<CreatorVideoPage, 'id' | 'creator_id' | 'title' | 'youtube_video_id' | 'youtube_thumbnail_url'> & {
   username: string | null;
   display_name: string | null;
   avatar_url: string | null;
@@ -29,6 +30,7 @@ export type SavedCreatorVideo = Pick<CreatorVideoPage, 'id' | 'title' | 'youtube
 
 export type YouTubeVideoMetadata = {
   title: string | null;
+  thumbnail_url: string | null;
   published_at: string | null;
   lookup_error?: string | null;
 };
@@ -48,7 +50,7 @@ const CREATOR_VIDEO_METADATA_UPDATED_EVENT = '44:creator-video-metadata-updated'
 const creatorVideoMetadataRequests = new Map<string, Promise<CreatorVideoPage>>();
 const youtubeMetadataLookups = new Map<string, Promise<YouTubeVideoMetadata | null>>();
 
-function isPlaceholderCreatorVideoTitle(title: string | null | undefined) {
+export function isPlaceholderCreatorVideoTitle(title: string | null | undefined) {
   return !title?.trim() || /^(?:youtube\s+)?video(?:\s+\d+)?$/i.test(title.trim());
 }
 
@@ -170,8 +172,11 @@ export function lookupYouTubeVideoMetadata(url: string): Promise<YouTubeVideoMet
       supabase.functions.invoke('youtube-video-lookup', { body: { url: url.trim() } }),
       fetch(`/api/videos/metadata?videoId=${encodeURIComponent(videoId)}`).then(async response => {
         if (!response.ok) return null;
-        const payload = await response.json() as { title?: unknown };
-        return typeof payload.title === 'string' ? payload.title : null;
+        const payload = await response.json() as { title?: unknown; thumbnail_url?: unknown };
+        return {
+          title: typeof payload.title === 'string' ? payload.title : null,
+          thumbnail_url: typeof payload.thumbnail_url === 'string' ? payload.thumbnail_url : null,
+        };
       }),
     ]);
     const value = dataApiResult.status === 'fulfilled' && !dataApiResult.value.error
@@ -180,10 +185,11 @@ export function lookupYouTubeVideoMetadata(url: string): Promise<YouTubeVideoMet
     const lookupError = dataApiResult.status === 'rejected'
       ? String(dataApiResult.reason)
       : dataApiResult.value.error?.message ?? (typeof value?.lookup_error === 'string' ? value.lookup_error : null);
-    const oEmbedTitle = oEmbedResult.status === 'fulfilled' ? oEmbedResult.value : null;
+    const oEmbedMetadata = oEmbedResult.status === 'fulfilled' ? oEmbedResult.value : null;
     if (lookupError) console.warn('YouTube upload-date lookup failed:', lookupError);
     return {
-      title: typeof value?.title === 'string' ? value.title : oEmbedTitle,
+      title: typeof value?.title === 'string' ? value.title : oEmbedMetadata?.title ?? null,
+      thumbnail_url: oEmbedMetadata?.thumbnail_url ?? (typeof value?.thumbnail_url === 'string' ? value.thumbnail_url : null),
       published_at: typeof value?.published_at === 'string' ? value.published_at : null,
       lookup_error: lookupError,
     } satisfies YouTubeVideoMetadata;
@@ -198,14 +204,23 @@ export function lookupYouTubeVideoMetadata(url: string): Promise<YouTubeVideoMet
 
 /** Best-effort enrichment after the video row is safely saved. */
 export async function updateCreatorVideoMetadata(videoId: string, metadata: YouTubeVideoMetadata) {
-  const patch: { title?: string; youtube_published_at?: string; youtube_metadata_checked_at: string } = {
+  const patch: { title?: string; youtube_thumbnail_url?: string; youtube_published_at?: string; youtube_metadata_checked_at: string } = {
     youtube_metadata_checked_at: new Date().toISOString(),
   };
   const title = metadata.title?.trim().slice(0, 120);
   if (title && !isPlaceholderCreatorVideoTitle(title)) patch.title = title;
+  const thumbnailUrl = metadata.thumbnail_url?.trim();
+  if (thumbnailUrl && /^https:\/\//i.test(thumbnailUrl)) patch.youtube_thumbnail_url = thumbnailUrl.slice(0, 500);
   if (metadata.published_at) patch.youtube_published_at = metadata.published_at;
   if (Object.keys(patch).length === 0) return;
-  const result = await supabase.from('creator_videos' as never).update(patch as never).eq('id', videoId);
+  let result = await supabase.from('creator_videos' as never).update(patch as never).eq('id', videoId);
+  // Keep metadata repair working while an older deployment is waiting for
+  // the thumbnail-column migration. Title/date updates are still safe to
+  // persist against that schema.
+  if (result.error && 'youtube_thumbnail_url' in patch) {
+    const { youtube_thumbnail_url: _thumbnail, ...legacyPatch } = patch;
+    result = await supabase.from('creator_videos' as never).update(legacyPatch as never).eq('id', videoId);
+  }
   if (result.error) throw result.error;
 }
 
@@ -229,13 +244,14 @@ export function enrichCreatorVideoMetadata(video: CreatorVideoPage): Promise<Cre
         const retry = await lookupYouTubeVideoMetadata(url);
         if (retry) metadata = {
           title: retry.title || metadata?.title || null,
+          thumbnail_url: retry.thumbnail_url || metadata?.thumbnail_url || null,
           published_at: retry.published_at,
         };
       }
       if (!metadata) {
         const checkedAt = new Date().toISOString();
         try {
-          await updateCreatorVideoMetadata(video.id, { title: null, published_at: null });
+          await updateCreatorVideoMetadata(video.id, { title: null, thumbnail_url: null, published_at: null });
         } catch {
           // Best effort. A later visit can retry if this row could not be updated.
         }
@@ -246,6 +262,7 @@ export function enrichCreatorVideoMetadata(video: CreatorVideoPage): Promise<Cre
         title: metadata.title?.trim() && !isPlaceholderCreatorVideoTitle(metadata.title)
           ? metadata.title.trim().slice(0, 120)
           : video.title,
+        youtube_thumbnail_url: metadata.thumbnail_url || video.youtube_thumbnail_url || null,
         youtube_published_at: metadata.published_at || video.youtube_published_at,
         youtube_metadata_checked_at: new Date().toISOString(),
       };

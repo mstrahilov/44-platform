@@ -104,7 +104,10 @@ Deno.serve(async (req) => {
     const snippet = body?.items?.[0]?.snippet ?? null;
     const publishedAt = snippet?.publishedAt ?? null;
     const title = typeof snippet?.title === "string" ? snippet.title : null;
-    return jsonResponse({ published_at: publishedAt, title });
+    const thumbnails = snippet?.thumbnails ?? {};
+    const thumbnailUrl = [thumbnails.high?.url, thumbnails.standard?.url, thumbnails.medium?.url, thumbnails.default?.url, thumbnails.maxres?.url]
+      .find((candidate): candidate is string => typeof candidate === "string" && candidate.startsWith("https://")) ?? null;
+    return jsonResponse({ published_at: publishedAt, title, thumbnail_url: thumbnailUrl });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown network error";
     console.error("YouTube Data API lookup threw:", message);

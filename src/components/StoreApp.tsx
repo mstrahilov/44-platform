@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { PageShell, ProductCard, ProductGrid, HubHero, HubSection, EmptyMessage, RouteLoading } from '@/components/Ui';
 import { getProductExperience, type ProductExperience } from '@/lib/experience';
 import { comparePublicCatalogProducts, type Product } from '@/lib/products';
@@ -14,6 +15,7 @@ import {
   loadStoreDiscoveryCatalog,
   type DiscoveryCreator,
 } from '@/lib/domain/catalog';
+import { listHomeVideoPreviews, type HomeVideoPreview } from '@/lib/domain/releaseFeatures';
 import { listVisibleLibraryItemIds } from '@/lib/domain/library';
 import { itemMatchesStoreType } from '@/lib/storeTaxonomy';
 import { listFollowedProfileIds } from '@/lib/domain/community';
@@ -23,6 +25,7 @@ import { Ui44SelectInput, Ui44TextInput } from '@/components/ui44/Inputs';
 import { beatReviewSurfacesEnabled } from '@/lib/domain/beats';
 import { SectionTab, SectionTabs } from '@/components/SectionTabs';
 import { PublicArtwork } from '@/components/PublicArtwork';
+import { VideoThumbnailPreviewCard } from '@/components/VideoThumbnailPreviewCard';
 
 const CATEGORY_EXPERIENCE: Partial<Record<StoreCategory, ProductExperience>> = {
   music: 'music',
@@ -135,6 +138,7 @@ function keepNewestProductPerCreator(products: Product[], avoidedCreatorKeys = n
 }
 
 export default function StoreApp({ category, frontDoor = false }: { category: StoreCategory; frontDoor?: boolean }) {
+  const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const userId = user?.id;
   const viewerId = userId ?? null;
@@ -142,11 +146,16 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
   const [ownedProductIds, setOwnedProductIds] = useState<Set<string>>(new Set());
   const [followedProfileIds, setFollowedProfileIds] = useState<Set<string>>(new Set());
   const [newCreators, setNewCreators] = useState<DiscoveryCreator[]>([]);
+  const [homeVideoPreviews, setHomeVideoPreviews] = useState<HomeVideoPreview[]>([]);
   const [featuredItemIds, setFeaturedItemIds] = useState<string[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<StoreFilter>('all');
+  const [activeFilter, setActiveFilter] = useState<StoreFilter>(() => {
+    if (!frontDoor || category !== 'all' || typeof window === 'undefined') return 'all';
+    const requestedTab = new URLSearchParams(window.location.search).get('tab');
+    return MOBILE_DISCOVER_CATEGORIES.find(item => item.category === requestedTab && item.category !== 'videos')?.filter ?? 'all';
+  });
   const [sortBy, setSortBy] = useState<StoreSort>('release-date');
   const [typeFilter, setTypeFilter] = useState('all');
   const [urlFilterReady, setUrlFilterReady] = useState(false);
@@ -195,6 +204,15 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     void listNewDiscoveryCreators(10)
       .then(creators => { if (alive) setNewCreators(creators); })
       .catch(() => undefined);
+    return () => { alive = false; };
+  }, [authLoading, frontDoor]);
+
+  useEffect(() => {
+    if (authLoading || !frontDoor) return;
+    let alive = true;
+    void listHomeVideoPreviews(8)
+      .then(videos => { if (alive) setHomeVideoPreviews(videos); })
+      .catch(() => { if (alive) setHomeVideoPreviews([]); });
     return () => { alive = false; };
   }, [authLoading, frontDoor]);
 
@@ -422,6 +440,16 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
     setTagFilter('all');
     setCreatorFilter('all');
     setQuery('');
+    if (frontDoor && category === 'all' && typeof window !== 'undefined') {
+      const nextTab = filter === 'all'
+        ? null
+        : MOBILE_DISCOVER_CATEGORIES.find(item => item.filter === filter && item.category !== 'videos')?.category ?? null;
+      const url = new URL(window.location.href);
+      if (nextTab) url.searchParams.set('tab', nextTab);
+      else url.searchParams.delete('tab');
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }
     document.querySelector<HTMLElement>('.app-main-content')?.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -566,6 +594,7 @@ export default function StoreApp({ category, frontDoor = false }: { category: St
                     </div>
                   </HubSection>}
                   {browseMusicProducts.length > 0 && <HomeProductShelf title="Browse Music" products={browseMusicProducts} ownedProductIds={ownedProductIds} onBrowse={() => browseCategory('music')} singleLineTitles={frontDoor} />}
+                  {homeVideoPreviews.length > 0 && <HomeVideoShelf videos={homeVideoPreviews} onBrowse={() => router.push('/videos')} />}
                   {bookShelf.length > 0 && <HomeProductShelf title="Browse Books" products={bookShelf} ownedProductIds={ownedProductIds} onBrowse={() => browseCategory('book')} singleLineTitles={frontDoor} />}
                   {assetShelf.length > 0 && <HomeProductShelf title="Browse Assets" products={assetShelf} ownedProductIds={ownedProductIds} onBrowse={() => browseCategory('asset')} singleLineTitles={frontDoor} />}
                   {gameShelf.length > 0 && <HomeProductShelf title="Browse Games" products={gameShelf} ownedProductIds={ownedProductIds} onBrowse={() => browseCategory('interactive')} singleLineTitles={frontDoor} />}
@@ -635,6 +664,18 @@ function DiscoveryCreatorCard({ creator, preferredTab }: { creator: DiscoveryCre
       <strong>{name}</strong>
     </span>
   </Link>;
+}
+
+function HomeVideoShelf({ videos, onBrowse }: { videos: HomeVideoPreview[]; onBrowse: () => void }) {
+  return <HubSection title="Browse Videos" action={<Ui44SectionArrow label="Open Browse Videos" onClick={onBrowse} />}>
+    <div className="home-video-shelf" aria-label="Browse Videos">
+      {videos.map(video => <HomeVideoPreviewCard key={video.id} video={video} />)}
+    </div>
+  </HubSection>;
+}
+
+function HomeVideoPreviewCard({ video }: { video: HomeVideoPreview }) {
+  return <VideoThumbnailPreviewCard video={video} className="home-video-preview-card" />;
 }
 
 function HomeProductShelf({ title, products, ownedProductIds, onBrowse, singleLineTitles }: {

@@ -40,7 +40,7 @@ export function ExternalLinkActions({ links, context, label, variant = context =
 }
 
 function itemPlatformOrder(platform: string) {
-  const order = ['spotify', 'apple_music', 'youtube', 'bandcamp'];
+  const order = ['spotify', 'apple_music', 'youtube', 'soundcloud', 'bandcamp'];
   const index = order.indexOf(platform.toLowerCase());
   return index === -1 ? order.length : index;
 }

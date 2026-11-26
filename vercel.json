@@ -11,6 +11,10 @@
     {
       "path": "/api/push/apns/process",
       "schedule": "29 5 * * *"
+    },
+    {
+      "path": "/api/videos/refresh",
+      "schedule": "41 5 * * *"
     }
   ]
 }
